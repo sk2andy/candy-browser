@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- A general browser must be able to open legacy HTTP pages. Mixed HTTP resources on
+         HTTPS pages remain blocked by WebSettings.MIXED_CONTENT_NEVER_ALLOW. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

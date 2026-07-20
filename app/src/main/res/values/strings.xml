@@ -1,0 +1,100 @@
+<resources>
+    <string name="app_name">Candy Browser</string>
+
+    <!-- Navigation -->
+    <string name="address_search_google_or_url">Search Google or enter a URL</string>
+    <string name="address_empty_hint">Search or enter an address</string>
+    <string name="search_or_enter_url">Search or enter a URL</string>
+    <string name="cd_open_search">Open search</string>
+    <string name="cd_close_address_input">Close address input</string>
+    <string name="cd_more_options">More options</string>
+    <string name="action_back">Back</string>
+    <string name="action_forward">Forward</string>
+
+    <!-- Tabs -->
+    <string name="new_tab_title">New tab</string>
+    <string name="cd_new_tab">New tab</string>
+    <string name="cd_close_tab_overview">Close tab overview</string>
+    <string name="cd_close_tab">Close tab</string>
+    <string name="action_switch_to_tab">Switch to tab</string>
+    <string name="blocked_items_badge">◈ %1$d</string>
+    <string name="incognito">Incognito</string>
+    <string name="cd_make_blank_tab_incognito">Make blank tab incognito</string>
+    <string name="cd_make_blank_tab_regular">Make blank tab regular</string>
+
+    <!-- Menus and dialogs -->
+    <string name="action_stop_loading">Stop loading</string>
+    <string name="action_reload">Reload</string>
+    <string name="action_add_favorite">Add to favorites</string>
+    <string name="action_remove_favorite">Remove from favorites</string>
+    <string name="action_open_external_app">Open in external app</string>
+    <string name="default_browser_current">Default browser ✓</string>
+    <string name="action_set_default_browser">Set as default browser</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_clear_browsing_data">Clear browsing data</string>
+    <string name="clear_data_title">Clear browsing data?</string>
+    <string name="clear_data_message">Cookies, site storage, cache, and this session’s history will be deleted.</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+
+    <!-- Favorites and page content -->
+    <string name="favorites_title">Favorites</string>
+    <string name="favorites_empty">No favorites yet — add them from the ⋮ menu.</string>
+    <string name="content_actions_title">Page content</string>
+    <string name="action_open_link_background_tab">Open link in new background tab</string>
+    <string name="action_download_image">Download image</string>
+    <string name="download_notification_description">Download</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_tabs">Tabs</string>
+    <string name="settings_auto_close_tabs">Automatically close tabs</string>
+    <string name="tab_lifetime_never">Never</string>
+    <plurals name="tab_lifetime_hours">
+        <item quantity="one">After %1$d hour</item>
+        <item quantity="other">After %1$d hours</item>
+    </plurals>
+    <plurals name="tab_lifetime_days">
+        <item quantity="one">After %1$d day</item>
+        <item quantity="other">After %1$d days</item>
+    </plurals>
+    <string name="settings_section_search">Search</string>
+    <string name="settings_search_engine">Search engine</string>
+    <string name="settings_section_browser">Browser</string>
+    <string name="settings_default_browser">Default browser</string>
+    <string name="settings_default_browser_active">Candy Browser is your default browser</string>
+    <string name="settings_make_default_browser">Make Candy Browser the default</string>
+    <string name="settings_section_gestures">Gestures</string>
+    <string name="settings_tab_dismiss_resistance">Tab dismissal resistance</string>
+    <string name="settings_tab_dismiss_resistance_summary">Resistance applies to the first %1$d%% of the swipe</string>
+    <string name="settings_section_protection">Protection &amp; cookies</string>
+    <plurals name="blocked_requests_count">
+        <item quantity="one">%1$d request blocked on this tab</item>
+        <item quantity="other">%1$d requests blocked on this tab</item>
+    </plurals>
+    <string name="settings_block_ads_title">Block ads &amp; trackers</string>
+    <string name="settings_block_ads_subtitle">Local domain list, including service workers</string>
+    <string name="settings_hide_cookie_banners_title">Hide cookie banners</string>
+    <string name="settings_hide_cookie_banners_subtitle">Known consent overlays are removed</string>
+    <string name="settings_block_third_party_cookies_title">Block third-party cookies</string>
+    <string name="settings_block_third_party_cookies_subtitle">First-party cookies remain enabled for sign-ins</string>
+    <string name="settings_protection_disclaimer">Local heuristic protection. Some ads, CNAME trackers, and banners in closed frames may get through.</string>
+
+    <!-- Toasts and errors -->
+    <string name="toast_tab_limit_reached">Maximum of %1$d tabs</string>
+    <string name="toast_already_default_browser">Already the default browser</string>
+    <string name="toast_default_browser_selection_unavailable">Default browser selection is unavailable</string>
+    <string name="toast_no_external_app">No external app installed</string>
+    <string name="toast_no_matching_app">No suitable app installed</string>
+    <string name="toast_browsing_data_cleared">Browsing data cleared</string>
+    <string name="error_unsafe_tls_blocked">Unsafe TLS connection blocked</string>
+    <string name="error_unsafe_site_blocked">Unsafe website blocked</string>
+    <string name="error_renderer_crashed">Web renderer stopped unexpectedly</string>
+    <string name="error_renderer_terminated">Web renderer was stopped by the system</string>
+    <string name="toast_download_type_unsupported">Download type not supported</string>
+    <string name="toast_download_started">Download started: %1$s</string>
+    <string name="error_download_invalid_address">Invalid download address</string>
+    <string name="error_download_start_failed">Download could not be started</string>
+    <string name="error_page_unreachable">Page can’t be reached</string>
+    <string name="action_retry">Try again</string>
+</resources>

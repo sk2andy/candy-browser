@@ -1,0 +1,116 @@
+package dev.sk2andy.materialbrowser.browser
+
+import android.os.SystemClock
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.test.core.app.ActivityScenario
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.MainActivity
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class WebViewWindowInsetsInstrumentedTest {
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+    @Test
+    fun chromiumReceivesSystemBarsAsCssSafeAreaWithoutPageMutation() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val webView = awaitWebView(scenario)
+            val expectedTopCssPixels = AtomicReference<Float>()
+            scenario.onActivity { activity ->
+                val topPixels = ViewCompat.getRootWindowInsets(webView)
+                    ?.getInsets(
+                        WindowInsetsCompat.Type.systemBars() or
+                            WindowInsetsCompat.Type.displayCutout(),
+                    )
+                    ?.top
+                    ?: 0
+                expectedTopCssPixels.set(topPixels / activity.resources.displayMetrics.density)
+                webView.loadDataWithBaseURL(
+                    "https://example.test/",
+                    """
+                        <!doctype html>
+                        <html>
+                          <head>
+                            <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+                          </head>
+                          <body><div id="probe" style="padding-top:env(safe-area-inset-top)"></div></body>
+                        </html>
+                    """.trimIndent(),
+                    "text/html",
+                    "utf-8",
+                    null,
+                )
+            }
+
+            awaitProbe(webView)
+            val topInset = evaluate(
+                webView,
+                "parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop)",
+            ).toFloat()
+            val pageWasMutated = evaluate(
+                webView,
+                "Boolean(document.getElementById('candy-browser-status-inset-style') || " +
+                    "document.body.hasAttribute('data-candy-browser-status-inset'))",
+            )
+
+            assertTrue(expectedTopCssPixels.get() > 0f)
+            assertEquals(expectedTopCssPixels.get(), topInset, 0.5f)
+            assertEquals("false", pageWasMutated)
+        }
+    }
+
+    private fun awaitWebView(scenario: ActivityScenario<MainActivity>): WebView {
+        val result = AtomicReference<WebView>()
+        repeat(100) {
+            scenario.onActivity { activity ->
+                result.compareAndSet(null, findWebView(activity.window.decorView))
+            }
+            result.get()?.let { return it }
+            SystemClock.sleep(50)
+        }
+        assertNotNull("WebView was not attached", result.get())
+        return result.get()
+    }
+
+    private fun findWebView(view: View): WebView? {
+        if (view is WebView) return view
+        if (view !is ViewGroup) return null
+        for (index in 0 until view.childCount) {
+            findWebView(view.getChildAt(index))?.let { return it }
+        }
+        return null
+    }
+
+    private fun awaitProbe(webView: WebView) {
+        repeat(100) {
+            if (evaluate(webView, "Boolean(document.getElementById('probe'))") == "true") return
+            SystemClock.sleep(50)
+        }
+        throw AssertionError("WebView test page did not finish loading")
+    }
+
+    private fun evaluate(webView: WebView, script: String): String {
+        val result = AtomicReference<String>()
+        val evaluated = CountDownLatch(1)
+        instrumentation.runOnMainSync {
+            webView.evaluateJavascript(script) { value ->
+                result.set(value)
+                evaluated.countDown()
+            }
+        }
+        assertTrue(evaluated.await(10, TimeUnit.SECONDS))
+        return result.get()
+    }
+}
