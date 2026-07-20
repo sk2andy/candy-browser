@@ -12,6 +12,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.MainActivity
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -37,6 +38,7 @@ class WebViewWindowInsetsInstrumentedTest {
                     ?.top
                     ?: 0
                 expectedTopCssPixels.set(topPixels / activity.resources.displayMetrics.density)
+                webView.stopLoading()
                 webView.loadDataWithBaseURL(
                     "https://example.test/",
                     """
@@ -55,6 +57,7 @@ class WebViewWindowInsetsInstrumentedTest {
             }
 
             awaitProbe(webView)
+            awaitWebViewTop(webView, 0)
             val topInset = evaluate(
                 webView,
                 "parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop)",
@@ -68,6 +71,69 @@ class WebViewWindowInsetsInstrumentedTest {
             assertTrue(expectedTopCssPixels.get() > 0f)
             assertEquals(expectedTopCssPixels.get(), topInset, 0.5f)
             assertEquals("false", pageWasMutated)
+        }
+    }
+
+    @Test
+    fun pageWithoutCoverStaysBelowSystemBarsAndReceivesZeroCssSafeArea() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val webView = awaitWebView(scenario)
+            val expectedTopPixels = AtomicInteger()
+            scenario.onActivity {
+                expectedTopPixels.set(
+                    ViewCompat.getRootWindowInsets(webView)
+                        ?.getInsets(
+                            WindowInsetsCompat.Type.systemBars() or
+                                WindowInsetsCompat.Type.displayCutout(),
+                        )
+                        ?.top
+                        ?: 0,
+                )
+                webView.stopLoading()
+                webView.loadDataWithBaseURL(
+                    "https://example.test/",
+                    """
+                        <!doctype html>
+                        <html>
+                          <head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+                          <body><div id="probe" style="padding-top:env(safe-area-inset-top)"></div></body>
+                        </html>
+                    """.trimIndent(),
+                    "text/html",
+                    "utf-8",
+                    null,
+                )
+            }
+
+            awaitProbe(webView)
+            awaitWebViewTop(webView, expectedTopPixels.get())
+            val topInset = evaluate(
+                webView,
+                "parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop)",
+            ).toFloat()
+
+            assertTrue(expectedTopPixels.get() > 0)
+            assertEquals(0f, topInset, 0.1f)
+
+            evaluate(
+                webView,
+                "document.querySelector('meta[name=viewport]').content = 'viewport-fit=cover'",
+            )
+            awaitWebViewTop(webView, 0)
+
+            evaluate(
+                webView,
+                "document.querySelector('meta[name=viewport]').content = " +
+                    "'viewport-fit=cover, viewport-fit=contain'",
+            )
+            awaitWebViewTop(webView, expectedTopPixels.get())
+
+            evaluate(
+                webView,
+                "document.querySelector('meta[name=viewport]').content = " +
+                    "'viewport-fit=cover; width=device-width'",
+            )
+            awaitWebViewTop(webView, expectedTopPixels.get())
         }
     }
 
@@ -99,6 +165,16 @@ class WebViewWindowInsetsInstrumentedTest {
             SystemClock.sleep(50)
         }
         throw AssertionError("WebView test page did not finish loading")
+    }
+
+    private fun awaitWebViewTop(webView: WebView, expectedTop: Int) {
+        val location = IntArray(2)
+        repeat(100) {
+            instrumentation.runOnMainSync { webView.getLocationInWindow(location) }
+            if (location[1] == expectedTop) return
+            SystemClock.sleep(50)
+        }
+        throw AssertionError("WebView top was ${location[1]}, expected $expectedTop")
     }
 
     private fun evaluate(webView: WebView, script: String): String {

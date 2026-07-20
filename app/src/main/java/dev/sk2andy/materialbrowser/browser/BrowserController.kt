@@ -13,6 +13,7 @@ import android.view.PixelCopy
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
 import android.webkit.GeolocationPermissions
+import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.SafeBrowsingResponse
@@ -35,6 +36,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
@@ -99,6 +101,8 @@ class BrowserController(private val activity: Activity) {
         get() = bottomBarCompactStates[selectedTabId] == true
 
     private val webViews = mutableMapOf<String, WebView>()
+    private val edgeToEdgePages = mutableMapOf<String, Boolean>()
+    private val navigationGenerations = mutableMapOf<String, Int>()
     private val popupOpeners = mutableMapOf<String, String>()
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -111,6 +115,7 @@ class BrowserController(private val activity: Activity) {
     private var previewCaptureInFlight = false
     private var dirtyPreviewTabId: String? = null
     private var previewCaptureEnabled = true
+    private var lastWindowInsets: WindowInsetsCompat? = null
     private var previewEpoch = 0
     private var faviconEpoch = 0
     private val faviconGenerations = mutableMapOf<String, Int>()
@@ -166,17 +171,18 @@ class BrowserController(private val activity: Activity) {
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
-        dispatchCurrentWindowInsets(webView)
+        dispatchCurrentWindowInsets(selectedTabId, webView)
         SystemWebViewCredentials.onAttached(webView)
         if (isActivityResumed) resumeWebView(selectedTabId, webView)
     }
 
     fun onWindowInsetsChanged(insets: WindowInsetsCompat) {
+        lastWindowInsets = insets
         // Compose owns the root inset listener. AndroidView children do not receive that
         // callback, so forward every change to Chromium's WebView inset controller.
-        webViews.values.forEach { webView ->
+        webViews.forEach { (tabId, webView) ->
             if (webView.isAttachedToWindow) {
-                ViewCompat.dispatchApplyWindowInsets(webView, insets)
+                applyWindowInsets(tabId, webView, insets)
             }
         }
     }
@@ -185,14 +191,80 @@ class BrowserController(private val activity: Activity) {
         container.removeAllViews()
     }
 
-    private fun dispatchCurrentWindowInsets(webView: WebView) {
+    private fun dispatchCurrentWindowInsets(tabId: String, webView: WebView) {
         // A reused WebView can attach after the content root's inset traversal. requestApplyInsets()
         // alone does not cross this Compose AndroidView holder, so dispatch the current snapshot.
         webView.doOnAttach { attachedView ->
-            ViewCompat.getRootWindowInsets(attachedView)?.let { insets ->
-                ViewCompat.dispatchApplyWindowInsets(attachedView, insets)
+            val insets = ViewCompat.getRootWindowInsets(attachedView) ?: lastWindowInsets
+            if (insets != null) applyWindowInsets(tabId, webView, insets)
+        }
+    }
+
+    private fun applyWindowInsets(
+        tabId: String,
+        webView: WebView,
+        insets: WindowInsetsCompat,
+    ) {
+        val drawsEdgeToEdge = edgeToEdgePages[tabId] == true
+        val safeArea = insets.getInsets(SAFE_AREA_INSET_TYPES)
+        val margins = if (drawsEdgeToEdge) Insets.NONE else safeArea
+        (webView.layoutParams as? FrameLayout.LayoutParams)?.let { layoutParams ->
+            if (
+                layoutParams.leftMargin != margins.left ||
+                layoutParams.topMargin != margins.top ||
+                layoutParams.rightMargin != margins.right ||
+                layoutParams.bottomMargin != margins.bottom
+            ) {
+                layoutParams.setMargins(margins.left, margins.top, margins.right, margins.bottom)
+                webView.layoutParams = layoutParams
             }
         }
+        val rendererInsets = if (drawsEdgeToEdge) {
+            insets
+        } else {
+            WindowInsetsCompat.Builder(insets)
+                .setInsets(SAFE_AREA_INSET_TYPES, Insets.NONE)
+                .build()
+        }
+        ViewCompat.dispatchApplyWindowInsets(webView, rendererInsets)
+    }
+
+    private fun detectPageEdgeToEdge(tabId: String, webView: WebView) {
+        val navigationGeneration = navigationGenerations[tabId] ?: return
+        webView.evaluateJavascript(PageViewportFit.observerScript(navigationGeneration)) { result ->
+            if (
+                webViews[tabId] !== webView ||
+                navigationGenerations[tabId] != navigationGeneration
+            ) {
+                return@evaluateJavascript
+            }
+            setPageEdgeToEdge(tabId, webView, PageViewportFit.isCoverResult(result))
+        }
+    }
+
+    private inner class ViewportFitBridge(
+        private val tabId: String,
+        private val webView: WebView,
+    ) {
+        @JavascriptInterface
+        fun update(navigationGeneration: Int, enabled: Boolean) {
+            mainHandler.post {
+                if (
+                    webViews[tabId] !== webView ||
+                    navigationGenerations[tabId] != navigationGeneration
+                ) {
+                    return@post
+                }
+                setPageEdgeToEdge(tabId, webView, enabled)
+            }
+        }
+    }
+
+    private fun setPageEdgeToEdge(tabId: String, webView: WebView, enabled: Boolean) {
+        val previous = edgeToEdgePages.put(tabId, enabled)
+        if (previous == enabled) return
+        val insets = ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets ?: return
+        applyWindowInsets(tabId, webView, insets)
     }
 
     fun submitAddress(input: String) {
@@ -566,6 +638,8 @@ class BrowserController(private val activity: Activity) {
         persist()
         webViews.values.forEach(::destroyWebView)
         webViews.clear()
+        edgeToEdgePages.clear()
+        navigationGenerations.clear()
         clearIncognitoProfile()
         if (
             WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) &&
@@ -593,6 +667,9 @@ class BrowserController(private val activity: Activity) {
 
     private fun createWebView(tabId: String): WebView = WebView(activity).apply {
         val tab = tabs.first { it.id == tabId }
+        edgeToEdgePages[tabId] = false
+        navigationGenerations[tabId] = 0
+        addJavascriptInterface(ViewportFitBridge(tabId, this), PageViewportFit.bridgeName)
         if (tab.isIncognito && supportsMultipleProfiles()) {
             WebViewCompat.setProfile(this, INCOGNITO_PROFILE_NAME)
             configureIncognitoServiceWorkerBlocking(this)
@@ -680,6 +757,8 @@ class BrowserController(private val activity: Activity) {
     private fun browserWebViewClient(tabId: String) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             pageUrls[tabId] = url
+            navigationGenerations[tabId] = (navigationGenerations[tabId] ?: 0) + 1
+            setPageEdgeToEdge(tabId, view, false)
             val previousUrl = tabs.firstOrNull { it.id == tabId }?.url
             if (previousUrl != null && FaviconRules.changedSite(previousUrl, url)) {
                 invalidateFavicon(tabId)
@@ -692,6 +771,7 @@ class BrowserController(private val activity: Activity) {
         }
 
         override fun onPageCommitVisible(view: WebView, url: String) {
+            detectPageEdgeToEdge(tabId, view)
             injectCookieConsentCss(view)
         }
 
@@ -708,6 +788,7 @@ class BrowserController(private val activity: Activity) {
                 )
             }
             recordHistory(tabId, url, title)
+            detectPageEdgeToEdge(tabId, view)
             finalizeCookieConsentBlocking(view)
             view.postVisualStateCallback(
                 System.nanoTime(),
@@ -799,6 +880,8 @@ class BrowserController(private val activity: Activity) {
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
             webViews.remove(tabId)
+            edgeToEdgePages.remove(tabId)
+            navigationGenerations.remove(tabId)
             (view.parent as? FrameLayout)?.removeView(view)
             view.destroy()
             webViewRevision++
@@ -1278,6 +1361,8 @@ class BrowserController(private val activity: Activity) {
         popupOpeners.remove(tabId)
         popupOpeners.entries.removeAll { (_, openerId) -> openerId == tabId }
         webViews.remove(tabId)?.let(::destroyWebView)
+        edgeToEdgePages.remove(tabId)
+        navigationGenerations.remove(tabId)
         pageUrls.remove(tabId)
         pendingBlockedCounts.remove(tabId)
         bottomBarCompactStates.remove(tabId)
@@ -1337,6 +1422,8 @@ class BrowserController(private val activity: Activity) {
     }
 
     private companion object {
+        val SAFE_AREA_INSET_TYPES =
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
         const val INCOGNITO_PROFILE_NAME = "candy_incognito"
         const val PREVIEW_CAPTURE_IDLE_DELAY_MS = 220L
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
