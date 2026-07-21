@@ -1,0 +1,58 @@
+# Generated EasyList/EasyPrivacy domain-scoped allow exceptions. Do not edit by hand.
+# Format: request-host<TAB>page-host
+# Source: https://github.com/easylist/easylist
+# Source revision: 54849f55642f155a67649b46fe3b87c39607c1c5
+# License: CC BY-SA 3.0 or later; see content_filter.LICENSE.txt
+# Generated host pairs: 52
+ad.linksynergy.com	extrarebates.com
+ads-static.conde.digital	wired.com
+adsninja.ca	androidpolice.com
+adsninja.ca	babygaga.com
+adsninja.ca	backyardboss.net
+adsninja.ca	carbuzz.com
+adsninja.ca	cbr.com
+adsninja.ca	collider.com
+adsninja.ca	dualshockers.com
+adsninja.ca	footballfancast.com
+adsninja.ca	footballleagueworld.co.uk
+adsninja.ca	gamerant.com
+adsninja.ca	givemesport.com
+adsninja.ca	hardcoregamer.com
+adsninja.ca	hotcars.com
+adsninja.ca	howtogeek.com
+adsninja.ca	makeuseof.com
+adsninja.ca	moms.com
+adsninja.ca	movieweb.com
+adsninja.ca	pocket-lint.com
+adsninja.ca	pocketnow.com
+adsninja.ca	screenrant.com
+adsninja.ca	simpleflying.com
+adsninja.ca	thegamer.com
+adsninja.ca	therichest.com
+adsninja.ca	thesportster.com
+adsninja.ca	thethings.com
+adsninja.ca	thetravel.com
+adsninja.ca	topspeed.com
+adsninja.ca	xda-developers.com
+adtraction.com	ebjudande.se
+browser-intake-datadoghq.com	grubhub.com
+browser-intake-datadoghq.com	mightyape.co.nz
+clouderrorreporting.googleapis.com	waze.com
+forexprostools.com	fx-rashinban.com
+howsmyssl.com	trenitalia.fr
+moatads.com	imsa.com
+moatads.com	nascar.com
+public.profitwell.com	adblockplus.org
+public.profitwell.com	getadblock.com
+snowplow.swm.digital	7plus.com.au
+tag.aticdn.net	gouv.fr
+tag.aticdn.net	openservices.enedis.fr
+tag.aticdn.net	rte.ie
+tag.aticdn.net	tv5monde.com
+tag.aticdn.net	uktvplay.co.uk
+tag.aticdn.net	visaconcierge.eu
+tag.aticdn.net	yourstory.com
+try.abtasty.com	tickpick.com
+valuecommerce.com	pointtown.com
+wf.typesquare.com	app.studio.design
+wf.typesquare.com	morisawafonts.com

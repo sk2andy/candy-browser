@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.print.PrintManager
 import android.view.PixelCopy
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
@@ -41,6 +42,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
 import androidx.webkit.ProfileStore
+import androidx.webkit.ScriptHandler
 import androidx.webkit.ServiceWorkerClientCompat
 import androidx.webkit.ServiceWorkerControllerCompat
 import androidx.webkit.WebSettingsCompat
@@ -54,9 +56,15 @@ import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
 import dev.sk2andy.materialbrowser.browser.credentials.SystemWebViewCredentials
+import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
+import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryRequest
+import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryResult
 import dev.sk2andy.materialbrowser.browser.integration.DefaultBrowserRole
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.browser.integration.ExternalLaunchResult
+import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
+import dev.sk2andy.materialbrowser.browser.integration.PageShareRequest
+import dev.sk2andy.materialbrowser.browser.integration.PageShareResult
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -65,6 +73,8 @@ import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
+import dev.sk2andy.materialbrowser.data.TabDeletionRules
+import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
 import java.io.ByteArrayInputStream
@@ -75,6 +85,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class BrowserController(private val activity: Activity) {
     val tabs = mutableStateListOf<BrowserTab>()
+    val profiles = mutableStateListOf<BrowserProfile>()
     val previews = mutableStateMapOf<String, Bitmap>()
     val favicons = mutableStateMapOf<String, Bitmap>()
     val history = mutableStateListOf<HistoryEntry>()
@@ -82,6 +93,8 @@ class BrowserController(private val activity: Activity) {
     val contentActions = WebContentActionState()
 
     var selectedTabId by mutableStateOf("")
+        private set
+    var activeProfileId by mutableStateOf(DEFAULT_PROFILE_ID)
         private set
     var blockerSettings by mutableStateOf(BlockerSettings())
         private set
@@ -104,6 +117,7 @@ class BrowserController(private val activity: Activity) {
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val popupOpeners = mutableMapOf<String, String>()
+    private val consentScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingPreviewCapture: Runnable? = null
@@ -125,12 +139,19 @@ class BrowserController(private val activity: Activity) {
     private val contentBlocker = ContentBlocker(activity)
     private val downloadManager = BrowserDownloadManager(activity)
     private val externalApps = ExternalAppLauncher(activity)
+    private val assistantSummary = AssistantSummaryLauncher(activity)
+    private val pageShare = PageShareLauncher(activity)
 
     @Volatile
     private var workerSettings = store.loadBlockerSettings()
 
     val selectedTab: BrowserTab
-        get() = tabs.firstOrNull { it.id == selectedTabId } ?: tabs.first()
+        get() = tabs.firstOrNull { it.id == selectedTabId }
+            ?: activeTabs.firstOrNull()
+            ?: tabs.first()
+
+    val activeTabs: List<BrowserTab>
+        get() = tabs.filter { it.profileId == activeProfileId }
 
     init {
         val nowMillis = System.currentTimeMillis()
@@ -139,12 +160,25 @@ class BrowserController(private val activity: Activity) {
         searchEngine = store.loadSearchEngine()
         dismissResistancePercent = store.loadDismissResistancePercent()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
+        val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
+        profiles += restoredProfiles.take(MAX_PROFILES)
+        activeProfileId = restoredActiveProfileId
+            .takeIf { id -> profiles.any { it.id == id } }
+            ?: profiles.first().id
         val (restoredTabs, restoredSelection) = store.loadTabs(nowMillis)
         history += store.loadHistory()
         favorites += store.loadFavorites()
-        tabs += restoredTabs.take(MAX_TABS)
-        if (tabs.isEmpty()) tabs += newTabState(nowMillis = nowMillis)
-        selectedTabId = restoredSelection?.takeIf { id -> tabs.any { it.id == id } } ?: tabs.first().id
+        val profileIds = profiles.mapTo(mutableSetOf(), BrowserProfile::id)
+        tabs += restoredTabs.take(MAX_TABS).map { tab ->
+            if (tab.profileId in profileIds) tab else tab.copy(profileId = profiles.first().id)
+        }
+        if (activeTabs.isEmpty()) tabs += newTabState(nowMillis = nowMillis)
+        val rememberedSelection = profiles.first { it.id == activeProfileId }.selectedTabId
+        selectedTabId = rememberedSelection
+            ?.takeIf { id -> activeTabs.any { it.id == id } }
+            ?: restoredSelection?.takeIf { id -> activeTabs.any { it.id == id } }
+            ?: activeTabs.first().id
+        rememberSelectedTab(activeProfileId, selectedTabId)
         pruneStaleTabs(nowMillis, persistChanges = false)
         touchTab(selectedTabId, nowMillis)
         persist()
@@ -365,9 +399,14 @@ class BrowserController(private val activity: Activity) {
         } else {
             AddressResolver.resolve(initialUrl, searchEngine)
         }
-        val tab = newTabState(url = resolvedUrl, nowMillis = nowMillis, isIncognito = isIncognito)
+        val tab = newTabState(
+            url = resolvedUrl,
+            nowMillis = nowMillis,
+            isIncognito = isIncognito,
+        )
         tabs += tab
         selectedTabId = tab.id
+        rememberSelectedTab(activeProfileId, tab.id)
         bottomBarCompactStates[tab.id] = false
         persist()
         return tab.id
@@ -396,6 +435,129 @@ class BrowserController(private val activity: Activity) {
         contentActions.requestAddressBarPulse()
         contentActions.dismiss()
         return tab.id
+    }
+
+    fun createProfile(emoji: String): String? {
+        if (profiles.size >= MAX_PROFILES) {
+            Toast.makeText(
+                activity,
+                activity.resources.getQuantityString(
+                    R.plurals.toast_profile_limit_reached,
+                    MAX_PROFILES,
+                    MAX_PROFILES,
+                ),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return null
+        }
+        if (tabs.size >= MAX_TABS) {
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.toast_tab_limit_reached, MAX_TABS),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return null
+        }
+        val safeEmoji = emoji.trim().takeIf(String::isNotEmpty) ?: return null
+        val previousTabId = selectedTabId
+        touchTab(previousTabId, System.currentTimeMillis())
+        webViews[previousTabId]?.let(::pauseWebView)
+        val profile = BrowserProfile(id = UUID.randomUUID().toString(), emoji = safeEmoji)
+        profiles += profile
+        activeProfileId = profile.id
+        val tab = newTabState()
+        tabs += tab
+        selectedTabId = tab.id
+        rememberSelectedTab(profile.id, tab.id)
+        bottomBarCompactStates[tab.id] = false
+        persist()
+        return profile.id
+    }
+
+    fun selectProfile(profileId: String): Boolean {
+        if (profileId == activeProfileId || profiles.none { it.id == profileId }) return false
+        val previousTabId = selectedTabId
+        touchTab(previousTabId, System.currentTimeMillis())
+        rememberSelectedTab(activeProfileId, previousTabId)
+        webViews[previousTabId]?.let(::pauseWebView)
+        activeProfileId = profileId
+        val profile = profiles.first { it.id == profileId }
+        val targetTab = profile.selectedTabId
+            ?.let { tabId -> tabs.firstOrNull { it.id == tabId && it.profileId == profileId } }
+            ?: activeTabs.maxByOrNull(BrowserTab::lastAccessedAt)
+            ?: newTabState().also(tabs::add)
+        selectedTabId = targetTab.id
+        touchTab(targetTab.id, System.currentTimeMillis())
+        rememberSelectedTab(profileId, targetTab.id)
+        persist()
+        return true
+    }
+
+    fun updateProfileEmoji(profileId: String, emoji: String): Boolean {
+        val safeEmoji = emoji.trim().takeIf(String::isNotEmpty) ?: return false
+        val index = profiles.indexOfFirst { it.id == profileId }
+        if (index < 0 || profiles[index].emoji == safeEmoji) return false
+        profiles[index] = profiles[index].copy(emoji = safeEmoji)
+        persist()
+        return true
+    }
+
+    fun deleteProfile(profileId: String): Boolean {
+        if (profiles.size <= 1) return false
+        val profileIndex = profiles.indexOfFirst { it.id == profileId }
+        if (profileIndex < 0) return false
+        val fallbackProfile = if (profileId == activeProfileId) {
+            profiles.getOrNull(profileIndex + 1) ?: profiles[profileIndex - 1]
+        } else {
+            profiles.first { it.id == activeProfileId }
+        }
+        val movedTabs = tabs.filter { it.profileId == profileId }
+            .map { it.copy(profileId = fallbackProfile.id) }
+        tabs.removeAll { it.profileId == profileId }
+        tabs += movedTabs
+        profiles.removeAt(profileIndex)
+        if (profileId == activeProfileId) activeProfileId = fallbackProfile.id
+        val fallbackTabs = tabs.filter { it.profileId == fallbackProfile.id }
+        replaceProfileTabs(fallbackProfile.id, TabPinningRules.orderedTabs(fallbackTabs))
+        val fallbackSelection = selectedTabId.takeIf { selectedId ->
+            tabs.any { it.id == selectedId && it.profileId == fallbackProfile.id }
+        } ?: fallbackProfile.selectedTabId?.takeIf { selectedId ->
+            tabs.any { it.id == selectedId && it.profileId == fallbackProfile.id }
+        } ?: activeTabs.first().id
+        if (activeProfileId == fallbackProfile.id) {
+            selectedTabId = fallbackSelection
+            rememberSelectedTab(fallbackProfile.id, fallbackSelection)
+        }
+        persist()
+        return true
+    }
+
+    fun moveTabToProfile(tabId: String, profileId: String): Boolean {
+        val sourceTab = tabs.firstOrNull { it.id == tabId } ?: return false
+        if (sourceTab.profileId == profileId || profiles.none { it.id == profileId }) return false
+        if (sourceTab.profileId == activeProfileId && activeTabs.size == 1 && tabs.size >= MAX_TABS) {
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.toast_tab_limit_reached, MAX_TABS),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return false
+        }
+        val sourceIndex = activeTabs.indexOfFirst { it.id == tabId }
+        if (tabId == selectedTabId) webViews[tabId]?.let(::pauseWebView)
+        updateTab(tabId) { it.copy(profileId = profileId) }
+        replaceProfileTabs(
+            profileId,
+            TabPinningRules.orderedTabs(tabs.filter { it.profileId == profileId }),
+        )
+        if (tabId == selectedTabId) {
+            selectedTabId = activeTabs.getOrNull(sourceIndex.coerceAtMost(activeTabs.lastIndex))?.id
+                ?: newTabState(isIncognito = sourceTab.isIncognito).also(tabs::add).id
+            touchTab(selectedTabId, System.currentTimeMillis())
+            rememberSelectedTab(activeProfileId, selectedTabId)
+        }
+        persist()
+        return true
     }
 
     fun downloadContextImage() {
@@ -452,8 +614,70 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
+    fun summarizeSelectedPageWithAssistant() {
+        val tab = selectedTab
+        val request = AssistantSummaryRequest.create(
+            url = tab.url,
+            title = tab.title,
+            instruction = activity.getString(R.string.assistant_summary_prompt),
+        ) ?: return
+        if (assistantSummary.launch(request) == AssistantSummaryResult.Unsupported) {
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.toast_assistant_unavailable),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    fun shareSelectedPage() {
+        val tab = selectedTab
+        val request = PageShareRequest.create(
+            url = tab.url,
+            title = tab.title,
+        ) ?: return
+        if (pageShare.launch(request) == PageShareResult.Unsupported) {
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.toast_no_matching_app),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    fun printSelectedPage() {
+        val tab = selectedTab
+        if (tab.url == BLANK_URL) return
+        val webView = webViews[tab.id]
+        val printManager = activity.getSystemService(PrintManager::class.java)
+        if (webView == null || printManager == null) {
+            showPrintingUnavailable()
+            return
+        }
+        val jobName = tab.title.trim().takeIf(String::isNotEmpty)
+            ?: AddressResolver.displayText(tab.url).takeIf(String::isNotBlank)
+            ?: activity.getString(R.string.app_name)
+        runCatching {
+            printManager.print(
+                jobName,
+                webView.createPrintDocumentAdapter(jobName),
+                null,
+            )
+        }.onFailure {
+            showPrintingUnavailable()
+        }
+    }
+
+    private fun showPrintingUnavailable() {
+        Toast.makeText(
+            activity,
+            activity.getString(R.string.toast_printing_unavailable),
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
+
     fun selectTab(tabId: String) {
-        if (tabs.none { it.id == tabId }) return
+        if (activeTabs.none { it.id == tabId }) return
         val nowMillis = System.currentTimeMillis()
         touchTab(selectedTabId, nowMillis)
         touchTab(tabId, nowMillis)
@@ -464,11 +688,12 @@ class BrowserController(private val activity: Activity) {
         }
         webViews[selectedTabId]?.let(::pauseWebView)
         selectedTabId = tabId
+        rememberSelectedTab(activeProfileId, tabId)
         persist()
     }
 
     fun switchToOpenTab(tabId: String): Boolean {
-        if (tabId == selectedTabId || tabs.none { it.id == tabId }) return false
+        if (tabId == selectedTabId || activeTabs.none { it.id == tabId }) return false
         val blankSourceTabId = selectedTab.takeIf(BrowserTab::isFreshBlankTab)?.id
         selectTab(tabId)
         blankSourceTabId?.let(::closeTab)
@@ -505,23 +730,38 @@ class BrowserController(private val activity: Activity) {
         val index = tabs.indexOfFirst { it.id == tabId }
         if (index < 0) return
         val closingTab = tabs[index]
+        if (!TabDeletionRules.canDelete(closingTab)) return
+        val profileIndex = activeTabs.indexOfFirst { it.id == tabId }
         val popupOpenerId = popupOpeners.remove(tabId)
         removeTabResources(tabId)
         tabs.removeAt(index)
         if (selectedTabId == tabId) {
             selectedTabId = popupOpenerId
-                ?.takeIf { openerId -> tabs.any { it.id == openerId } }
-                ?: tabs.getOrNull(index.coerceAtMost(tabs.lastIndex))?.id
+                ?.takeIf { openerId -> activeTabs.any { it.id == openerId } }
+                ?: activeTabs.getOrNull(profileIndex.coerceAtMost(activeTabs.lastIndex))?.id
                 ?: newTabState(
                     nowMillis = nowMillis,
                     isIncognito = closingTab.isIncognito,
                 ).also(tabs::add).id
             touchTab(selectedTabId, nowMillis)
+            rememberSelectedTab(activeProfileId, selectedTabId)
         }
         if (closingTab.isIncognito && tabs.none(BrowserTab::isIncognito)) {
             clearIncognitoProfile()
         }
         persist()
+    }
+
+    fun setTabPinned(tabId: String, isPinned: Boolean): Boolean {
+        val updatedTabs = TabPinningRules.withPinnedState(
+            tabs = activeTabs,
+            tabId = tabId,
+            isPinned = isPinned,
+        )
+        if (updatedTabs == activeTabs) return false
+        replaceProfileTabs(activeProfileId, updatedTabs)
+        persist()
+        return true
     }
 
     fun goBack() = webViews[selectedTabId]?.takeIf(WebView::canGoBack)?.goBack() ?: Unit
@@ -539,7 +779,7 @@ class BrowserController(private val activity: Activity) {
     fun addressSuggestions(query: String, limit: Int = 8): List<AddressSuggestion> =
         BrowsingLibraryRules.addressSuggestions(
             history = history,
-            tabs = tabs,
+            tabs = activeTabs,
             selectedTabId = selectedTabId,
             isIncognito = selectedTab.isIncognito,
             query = query,
@@ -595,8 +835,10 @@ class BrowserController(private val activity: Activity) {
         if (cookieConsentSettingChanged) {
             webViews.values.forEach { webView ->
                 if (settings.hideCookieConsent) {
-                    injectCookieConsentCss(webView)
+                    installCookieConsentDocumentStartScript(webView)
+                    webView.evaluateJavascript(contentBlocker.consentScript, null)
                 } else {
+                    removeCookieConsentDocumentStartScript(webView)
                     webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
                 }
             }
@@ -688,6 +930,7 @@ class BrowserController(private val activity: Activity) {
         persist()
         webViews.values.forEach(::destroyWebView)
         webViews.clear()
+        consentScriptHandlers.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
         clearIncognitoProfile()
@@ -754,6 +997,7 @@ class BrowserController(private val activity: Activity) {
         webViewClient = browserWebViewClient(tabId)
         webChromeClient = browserChromeClient(tabId)
         setDownloadListener(downloadListener(tabId))
+        installCookieConsentDocumentStartScript(this)
         setOnLongClickListener { clickedView ->
             val webView = clickedView as? WebView ?: return@setOnLongClickListener false
             val hit = webView.hitTestResult
@@ -823,7 +1067,7 @@ class BrowserController(private val activity: Activity) {
 
         override fun onPageCommitVisible(view: WebView, url: String) {
             detectPageEdgeToEdge(tabId, view)
-            injectCookieConsentCss(view)
+            injectCookieConsentCssFallback(view)
         }
 
         override fun onPageFinished(view: WebView, url: String) {
@@ -931,6 +1175,7 @@ class BrowserController(private val activity: Activity) {
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
             webViews.remove(tabId)
+            removeCookieConsentDocumentStartScript(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
             (view.parent as? FrameLayout)?.removeView(view)
@@ -950,9 +1195,34 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
-    private fun injectCookieConsentCss(view: WebView) {
-        if (workerSettings.hideCookieConsent) {
+    private fun injectCookieConsentCssFallback(view: WebView) {
+        if (workerSettings.hideCookieConsent && view !in consentScriptHandlers) {
             view.evaluateJavascript(contentBlocker.consentScript, null)
+        }
+    }
+
+    private fun installCookieConsentDocumentStartScript(view: WebView) {
+        removeCookieConsentDocumentStartScript(view)
+        if (
+            !workerSettings.hideCookieConsent ||
+            !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+        ) return
+
+        // Document-start injection runs before page JavaScript. The script itself exits subframes;
+        // keep the onPageCommitVisible fallback for WebView providers lacking this feature.
+        // https://developer.android.com/reference/androidx/webkit/WebViewCompat#addDocumentStartJavaScript(android.webkit.WebView,java.lang.String,java.util.Set)
+        runCatching {
+            WebViewCompat.addDocumentStartJavaScript(
+                view,
+                contentBlocker.consentScript,
+                ALL_WEB_ORIGINS,
+            )
+        }.getOrNull()?.let { handler -> consentScriptHandlers[view] = handler }
+    }
+
+    private fun removeCookieConsentDocumentStartScript(view: WebView) {
+        consentScriptHandlers.remove(view)?.let { handler ->
+            runCatching(handler::remove)
         }
     }
 
@@ -1360,7 +1630,10 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
-    private fun persist() = store.saveTabs(tabs.toList(), selectedTabId)
+    private fun persist() {
+        store.saveTabs(tabs.toList(), selectedTabId)
+        store.saveProfiles(profiles.toList(), activeProfileId)
+    }
 
     private fun newTabState(
         url: String = BLANK_URL,
@@ -1369,6 +1642,7 @@ class BrowserController(private val activity: Activity) {
     ) = BrowserTab(
         id = UUID.randomUUID().toString(),
         lastAccessedAt = nowMillis,
+        profileId = activeProfileId,
         isIncognito = isIncognito,
         url = url,
         title = if (url == BLANK_URL) "" else AddressResolver.displayText(url),
@@ -1378,6 +1652,21 @@ class BrowserController(private val activity: Activity) {
     private fun touchTab(tabId: String, nowMillis: Long) {
         val index = tabs.indexOfFirst { it.id == tabId }
         if (index >= 0) tabs[index] = tabs[index].copy(lastAccessedAt = nowMillis)
+    }
+
+    private fun rememberSelectedTab(profileId: String, tabId: String) {
+        val index = profiles.indexOfFirst { it.id == profileId }
+        if (index >= 0 && profiles[index].selectedTabId != tabId) {
+            profiles[index] = profiles[index].copy(selectedTabId = tabId)
+        }
+    }
+
+    private fun replaceProfileTabs(profileId: String, orderedTabs: List<BrowserTab>) {
+        val insertionIndex = tabs.indexOfFirst { it.profileId == profileId }
+            .takeIf { it >= 0 }
+            ?: tabs.size
+        tabs.removeAll { it.profileId == profileId }
+        tabs.addAll(insertionIndex.coerceAtMost(tabs.size), orderedTabs)
     }
 
     private fun pruneStaleTabs(
@@ -1397,9 +1686,10 @@ class BrowserController(private val activity: Activity) {
         if (removedIncognitoTab && tabs.none(BrowserTab::isIncognito)) {
             clearIncognitoProfile()
         }
-        if (tabs.isEmpty()) {
+        if (activeTabs.isEmpty()) {
             tabs += newTabState(nowMillis = nowMillis)
-            selectedTabId = tabs.first().id
+            selectedTabId = activeTabs.first().id
+            rememberSelectedTab(activeProfileId, selectedTabId)
         }
         if (persistChanges) persist()
         return true
@@ -1445,6 +1735,7 @@ class BrowserController(private val activity: Activity) {
     }
 
     private fun destroyWebView(webView: WebView) {
+        removeCookieConsentDocumentStartScript(webView)
         (webView.parent as? FrameLayout)?.removeView(webView)
         webView.setOnScrollChangeListener(null)
         webView.stopLoading()
@@ -1473,6 +1764,7 @@ class BrowserController(private val activity: Activity) {
     }
 
     private companion object {
+        val ALL_WEB_ORIGINS = setOf("*")
         val SAFE_AREA_INSET_TYPES =
             WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
         const val INCOGNITO_PROFILE_NAME = "candy_incognito"

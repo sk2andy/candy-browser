@@ -8,6 +8,7 @@
     <string name="cd_open_search">Open search</string>
     <string name="cd_close_address_input">Close address input</string>
     <string name="cd_more_options">More options</string>
+    <string name="cd_scan_qr_code">Scan QR code</string>
     <string name="action_back">Back</string>
     <string name="action_forward">Forward</string>
 
@@ -17,6 +18,19 @@
     <string name="cd_close_tab_overview">Close tab overview</string>
     <string name="cd_close_tab">Close tab</string>
     <string name="action_switch_to_tab">Switch to tab</string>
+    <string name="tab_actions_title">Tab options</string>
+    <string name="action_pin_tab">Pin tab</string>
+    <string name="action_remove_pin">Remove pin</string>
+    <string name="cd_pinned_tab">Pinned tab</string>
+    <string name="cd_profile">Profile</string>
+    <string name="cd_add_profile">Add profile</string>
+    <string name="action_edit_profile">Edit profile</string>
+    <string name="profile_actions_title">Profile options</string>
+    <string name="action_change_profile_icon">Change icon</string>
+    <string name="action_delete_profile_keep_tabs">Delete profile · keep tabs</string>
+    <string name="add_profile_title">Choose an icon for the new profile</string>
+    <string name="change_profile_icon_title">Choose a new icon</string>
+    <string name="action_move_tab_to_profile">Move to profile</string>
     <string name="blocked_items_badge">◈ %1$d</string>
     <string name="incognito">Incognito</string>
     <string name="cd_make_blank_tab_incognito">Make blank tab incognito</string>
@@ -28,6 +42,10 @@
     <string name="action_add_favorite">Add to favorites</string>
     <string name="action_remove_favorite">Remove from favorites</string>
     <string name="action_open_external_app">Open in external app</string>
+    <string name="action_summarize_with_assistant">Summarize with Assistant</string>
+    <string name="assistant_summary_prompt">Summarize the following website in English.</string>
+    <string name="action_share">Share</string>
+    <string name="action_print">Print</string>
     <string name="default_browser_current">Default browser ✓</string>
     <string name="action_set_default_browser">Set as default browser</string>
     <string name="action_settings">Settings</string>
@@ -66,7 +84,7 @@
     <string name="settings_make_default_browser">Make Candy Browser the default</string>
     <string name="settings_section_gestures">Gestures</string>
     <string name="settings_tab_dismiss_resistance">Tab dismissal resistance</string>
-    <string name="settings_tab_dismiss_resistance_summary">Resistance applies to the first %1$d%% of the swipe</string>
+    <string name="settings_tab_dismiss_resistance_summary">Resistance phase: %1$d%% of the closing distance</string>
     <string name="settings_section_protection">Protection &amp; cookies</string>
     <plurals name="blocked_requests_count">
         <item quantity="one">%1$d request blocked on this tab</item>
@@ -82,10 +100,17 @@
 
     <!-- Toasts and errors -->
     <string name="toast_tab_limit_reached">Maximum of %1$d tabs</string>
+    <plurals name="toast_profile_limit_reached">
+        <item quantity="one">Maximum of %1$d profile</item>
+        <item quantity="other">Maximum of %1$d profiles</item>
+    </plurals>
     <string name="toast_already_default_browser">Already the default browser</string>
     <string name="toast_default_browser_selection_unavailable">Default browser selection is unavailable</string>
     <string name="toast_no_external_app">No external app installed</string>
+    <string name="toast_assistant_unavailable">No compatible assistant is configured</string>
     <string name="toast_no_matching_app">No suitable app installed</string>
+    <string name="toast_printing_unavailable">Printing is unavailable on this device</string>
+    <string name="toast_qr_scan_failed">QR code could not be scanned</string>
     <string name="toast_browsing_data_cleared">Browsing data cleared</string>
     <string name="error_unsafe_tls_blocked">Unsafe TLS connection blocked</string>
     <string name="error_unsafe_site_blocked">Unsafe website blocked</string>

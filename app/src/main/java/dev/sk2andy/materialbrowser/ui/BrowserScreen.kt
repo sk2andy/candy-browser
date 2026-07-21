@@ -1,7 +1,8 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 
 package dev.sk2andy.materialbrowser.ui
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.VibrationEffect
@@ -11,6 +12,7 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 import android.webkit.WebView
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -23,15 +25,24 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.Orientation
@@ -118,6 +129,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -142,10 +154,16 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.input.ImeAction
@@ -161,23 +179,31 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
+import dev.sk2andy.materialbrowser.data.TabDeletionRules
+import dev.sk2andy.materialbrowser.data.TabPinningRules
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlin.math.absoluteValue
@@ -196,6 +222,12 @@ private data class TabExitHero(
     val preview: Bitmap?,
     val startBounds: Rect,
     val isIncognito: Boolean,
+)
+
+private data class TabReorderAnimation(
+    val tabId: String,
+    val targetIndex: Int,
+    val indexDeltas: Map<String, Int>,
 )
 
 private enum class BrowserBackTarget {
@@ -224,7 +256,17 @@ fun BrowserScreen(controller: BrowserController) {
     val settingsBackProgress = remember { Animatable(0f) }
     val backAnimationScope = rememberCoroutineScope()
     var settingsBackEdgeSign by remember { mutableIntStateOf(1) }
+    var qrScanInProgress by remember { mutableStateOf(false) }
     val selectedTab = controller.selectedTab
+    val context = LocalContext.current
+    val qrScanFailureMessage = stringResource(R.string.toast_qr_scan_failed)
+    val qrScanner = remember(context) {
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .enableAutoZoom()
+            .build()
+        GmsBarcodeScanning.getClient(context, options)
+    }
     val density = LocalDensity.current
     val rootView = LocalView.current
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
@@ -356,6 +398,7 @@ fun BrowserScreen(controller: BrowserController) {
             tabOverviewVisible = tabOverviewVisible,
             onLiveFrame = reportLiveFrame,
             onSearch = openAddressEditor,
+            onReload = controller::reload,
         )
 
         if (addressEditorVisible) {
@@ -368,7 +411,7 @@ fun BrowserScreen(controller: BrowserController) {
                 suggestions = controller.addressSuggestions(addressValue.text, limit = 6),
                 onSelect = { suggestion ->
                     val target = suggestion.openTabId
-                        ?.let { tabId -> controller.tabs.firstOrNull { it.id == tabId } }
+                        ?.let { tabId -> controller.activeTabs.firstOrNull { it.id == tabId } }
                     if (target == null) {
                         controller.submitAddress(suggestion.url)
                     } else {
@@ -408,11 +451,40 @@ fun BrowserScreen(controller: BrowserController) {
                 controller.submitAddress(it)
                 addressEditorVisible = false
             },
+            onScanQrCode = {
+                if (!qrScanInProgress) {
+                    qrScanInProgress = true
+                    qrScanner.startScan()
+                        .addOnSuccessListener { barcode ->
+                            qrScanInProgress = false
+                            val scannedValue = barcode.rawValue?.trim().orEmpty()
+                            if (scannedValue.isEmpty()) {
+                                Toast.makeText(
+                                    context,
+                                    qrScanFailureMessage,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            } else {
+                                controller.submitAddress(scannedValue)
+                                addressEditorVisible = false
+                            }
+                        }
+                        .addOnCanceledListener { qrScanInProgress = false }
+                        .addOnFailureListener {
+                            qrScanInProgress = false
+                            Toast.makeText(
+                                context,
+                                qrScanFailureMessage,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                }
+            },
             onExpand = controller::expandBottomBar,
             onTabDrag = { delta ->
                 if (!addressEditorVisible && !tabOverviewVisible) {
                     val proposed = browserDragOffset.floatValue + delta
-                    val tabs = controller.tabs
+                    val tabs = controller.activeTabs
                     val currentIndex = tabs.indexOfFirst { it.id == controller.selectedTabId }
                     val hasTarget = if (proposed < 0f) {
                         currentIndex in 0 until tabs.lastIndex
@@ -431,7 +503,7 @@ fun BrowserScreen(controller: BrowserController) {
             },
             onTabDragStopped = { velocity ->
                 val direction = browserDragOffset.floatValue.compareTo(0f)
-                val tabs = controller.tabs
+                val tabs = controller.activeTabs
                 val currentIndex = tabs.indexOfFirst { it.id == controller.selectedTabId }
                 val targetTab = tabs.getOrNull(currentIndex - direction)
                 val minTravel = with(density) { 24.dp.toPx() }
@@ -486,6 +558,9 @@ fun BrowserScreen(controller: BrowserController) {
             onClearData = { clearDialogVisible = true },
             addressBarPulseNonce = controller.contentActions.addressBarPulseNonce,
             onOpenExternal = controller::openSelectedPageExternally,
+            onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
+            onShare = controller::shareSelectedPage,
+            onPrint = controller::printSelectedPage,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
@@ -494,7 +569,7 @@ fun BrowserScreen(controller: BrowserController) {
             visible = tabOverviewVisible,
             onClose = { tabOverviewVisible = false },
             onSelect = {
-                val target = controller.tabs.firstOrNull { tab -> tab.id == it }
+                val target = controller.activeTabs.firstOrNull { tab -> tab.id == it }
                 if (target != null && target.id != controller.selectedTabId) {
                     liveFrameTabId = null
                     tabHandoff = TabHandoff(
@@ -595,17 +670,49 @@ private fun BrowserViewport(
     tabOverviewVisible: Boolean,
     onLiveFrame: (String) -> Unit,
     onSearch: () -> Unit,
+    onReload: () -> Unit,
 ) {
     val density = LocalDensity.current
+    val touchSlop = LocalViewConfiguration.current.touchSlop
     val dragDirection by remember(dragOffset) {
         derivedStateOf { dragOffset.floatValue.compareTo(0f) }
     }
-    val tabs = controller.tabs
+    val tabs = controller.activeTabs
     val selectedTabIndex = tabs.indexOfFirst { it.id == controller.selectedTabId }
     val adjacentTab = when {
         dragDirection < 0 -> tabs.getOrNull(selectedTabIndex + 1)
         dragDirection > 0 -> tabs.getOrNull(selectedTabIndex - 1)
         else -> null
+    }
+    var pullProgress by remember(selectedTab.id) { mutableFloatStateOf(0f) }
+    var pullRefreshActive by remember(selectedTab.id) { mutableStateOf(false) }
+    val pullRefreshEnabled = selectedTab.url != BLANK_URL &&
+        !selectedTab.isLoading &&
+        !tabOverviewVisible
+    val currentPullRefreshEnabled = rememberUpdatedState(pullRefreshEnabled)
+    val currentPullProgress = rememberUpdatedState<(Float) -> Unit> { pullProgress = it }
+    val currentPullRefresh = rememberUpdatedState {
+        if (!pullRefreshActive) {
+            pullRefreshActive = true
+            pullProgress = 0f
+            onReload()
+        }
+    }
+    val pullRefreshTouchListener = remember(selectedTab.id, density.density, touchSlop) {
+        PagePullRefreshTouchListener(
+            maxStartScroll = PagePullRefreshRules.MAX_START_SCROLL_DP * density.density,
+            triggerDistance = PagePullRefreshRules.TRIGGER_DISTANCE_DP * density.density,
+            touchSlop = touchSlop,
+            isEnabled = { currentPullRefreshEnabled.value },
+            onProgress = { currentPullProgress.value(it) },
+            onRefresh = { currentPullRefresh.value() },
+        )
+    }
+    LaunchedEffect(selectedTab.id, selectedTab.isLoading, pullRefreshActive) {
+        if (pullRefreshActive && !selectedTab.isLoading) {
+            pullRefreshActive = false
+            pullProgress = 0f
+        }
     }
 
     adjacentTab?.let { tab ->
@@ -644,6 +751,7 @@ private fun BrowserViewport(
             controller = controller,
             visible = !tabOverviewVisible,
             onLiveFrame = onLiveFrame,
+            pullRefreshTouchListener = pullRefreshTouchListener,
         )
 
         AnimatedVisibility(
@@ -666,6 +774,21 @@ private fun BrowserViewport(
                 modifier = Modifier.align(Alignment.Center),
             )
         }
+
+        AnimatedVisibility(
+            visible = pullProgress > 0f || pullRefreshActive,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 16.dp),
+            enter = fadeIn(tween(120)),
+            exit = fadeOut(tween(160)),
+        ) {
+            ExpressivePullRefreshIndicator(
+                progress = pullProgress,
+                refreshing = pullRefreshActive,
+            )
+        }
     }
 
     handoff?.let { currentHandoff ->
@@ -680,11 +803,13 @@ private fun BrowserViewport(
     }
 }
 
+@SuppressLint("ClickableViewAccessibility")
 @Composable
 private fun ActiveWebView(
     controller: BrowserController,
     visible: Boolean,
     onLiveFrame: (String) -> Unit,
+    pullRefreshTouchListener: View.OnTouchListener,
 ) {
     val selectedTabId = controller.selectedTabId
     val webViewRevision = controller.webViewRevision
@@ -699,6 +824,7 @@ private fun ActiveWebView(
             controller.attachSelectedWebView(hostState.container)
             val attachedWebView = hostState.container.getChildAt(0) as? WebView
             if (attachedWebView != null) {
+                hostState.bindTouchListener(attachedWebView, pullRefreshTouchListener)
                 hostState.bind(
                     tabId = selectedTabId,
                     revision = webViewRevision,
@@ -718,10 +844,81 @@ private fun ActiveWebView(
     )
 }
 
+@Composable
+private fun ExpressivePullRefreshIndicator(
+    progress: Float,
+    refreshing: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val effectiveProgress by animateFloatAsState(
+        targetValue = if (refreshing) 1f else progress.coerceIn(0f, 1f),
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 700f),
+        label = "Pull-to-refresh progress",
+    )
+    val motion = rememberInfiniteTransition(label = "Expressive loading motion")
+    val rotation by motion.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+        ),
+        label = "Expressive loading rotation",
+    )
+    val morph by motion.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 450, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "Expressive loading morph",
+    )
+    val shapeProgress = if (refreshing) morph else effectiveProgress
+
+    Surface(
+        modifier = modifier
+            .size(52.dp)
+            .then(
+                if (refreshing) {
+                    Modifier.progressSemantics()
+                } else {
+                    Modifier.progressSemantics(effectiveProgress)
+                },
+            )
+            .graphicsLayer {
+                val entrance = effectiveProgress.coerceIn(0f, 1f)
+                alpha = entrance
+                scaleX = 0.72f + 0.28f * entrance
+                scaleY = scaleX
+                translationY = (1f - entrance) * -size.height * 0.35f
+            },
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+        tonalElevation = 8.dp,
+        shadowElevation = 6.dp,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .graphicsLayer {
+                        rotationZ = if (refreshing) rotation else 120f * effectiveProgress
+                        scaleX = 0.88f + 0.20f * shapeProgress
+                        scaleY = 1.08f - 0.20f * shapeProgress
+                        shape = RoundedCornerShape((5f + 8f * shapeProgress).dp)
+                        clip = true
+                    }
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+        }
+    }
+}
+
 private class WebViewHostState(val container: FrameLayout) {
     private var boundTabId: String? = null
     private var boundRevision = -1
     private var boundWebView: WebView? = null
+    private var touchWebView: WebView? = null
     private var generation = 0
     private var drawObserver: android.view.ViewTreeObserver? = null
     private var drawListener: android.view.ViewTreeObserver.OnDrawListener? = null
@@ -792,9 +989,20 @@ private class WebViewHostState(val container: FrameLayout) {
         drawFallback = Runnable(::awaitNextDraw).also { container.postDelayed(it, 500L) }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
+    fun bindTouchListener(webView: WebView, listener: View.OnTouchListener) {
+        if (touchWebView !== webView) {
+            touchWebView?.setOnTouchListener(null)
+            touchWebView = webView
+        }
+        webView.setOnTouchListener(listener)
+    }
+
     fun release() {
         generation++
         clearCallbacks()
+        touchWebView?.setOnTouchListener(null)
+        touchWebView = null
         boundTabId = null
         boundRevision = -1
         boundWebView = null
@@ -1016,6 +1224,7 @@ private fun BrowserBottomBar(
     onEditValueChange: (TextFieldValue) -> Unit,
     onDismissEditor: () -> Unit,
     onSubmitAddress: (String) -> Unit,
+    onScanQrCode: () -> Unit,
     onExpand: () -> Unit,
     onTabDrag: (Float) -> Unit,
     onTabDragStopped: suspend (Float) -> Unit,
@@ -1030,6 +1239,9 @@ private fun BrowserBottomBar(
     onClearData: () -> Unit,
     addressBarPulseNonce: Int,
     onOpenExternal: () -> Unit,
+    onSummarizeWithAssistant: () -> Unit,
+    onShare: () -> Unit,
+    onPrint: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -1126,7 +1338,6 @@ private fun BrowserBottomBar(
                                 )
                                 AddressBarGrabArea(
                                     onSwipeUp = onTabs,
-                                    onSwipeDown = onReload,
                                     modifier = Modifier.align(Alignment.TopCenter),
                                 )
                             }
@@ -1148,6 +1359,7 @@ private fun BrowserBottomBar(
                             keyboard?.hide()
                             onSubmitAddress(it)
                         },
+                        onScanQrCode = onScanQrCode,
                         onTabDrag = onTabDrag,
                         onTabDragStopped = onTabDragStopped,
                         onTabs = onTabs,
@@ -1160,6 +1372,9 @@ private fun BrowserBottomBar(
                         onSettings = onSettings,
                         onClearData = onClearData,
                         onOpenExternal = onOpenExternal,
+                        onSummarizeWithAssistant = onSummarizeWithAssistant,
+                        onShare = onShare,
+                        onPrint = onPrint,
                         )
                     }
                 }
@@ -1196,11 +1411,9 @@ private fun BrowserBottomBar(
 @Composable
 private fun AddressBarGrabArea(
     onSwipeUp: () -> Unit,
-    onSwipeDown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
-    val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
     val gestureView = LocalView.current
     Box(
         modifier = modifier
@@ -1221,7 +1434,6 @@ private fun AddressBarGrabArea(
                         )
                         when (action) {
                             AddressBarVerticalAction.OpenTabs -> currentOnSwipeUp()
-                            AddressBarVerticalAction.Reload -> currentOnSwipeDown()
                             AddressBarVerticalAction.None -> Unit
                         }
                         if (action != AddressBarVerticalAction.None) {
@@ -1249,6 +1461,7 @@ private fun ExpandedBottomBarContent(
     focusRequester: androidx.compose.ui.focus.FocusRequester,
     onDismissEditor: () -> Unit,
     onSubmitAddress: (String) -> Unit,
+    onScanQrCode: () -> Unit,
     onTabDrag: (Float) -> Unit,
     onTabDragStopped: suspend (Float) -> Unit,
     onTabs: () -> Unit,
@@ -1261,6 +1474,9 @@ private fun ExpandedBottomBarContent(
     onSettings: () -> Unit,
     onClearData: () -> Unit,
     onOpenExternal: () -> Unit,
+    onSummarizeWithAssistant: () -> Unit,
+    onShare: () -> Unit,
+    onPrint: () -> Unit,
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
     Column {
@@ -1361,7 +1577,6 @@ private fun ExpandedBottomBarContent(
                     if (!editing) {
                         AddressBarGrabArea(
                             onSwipeUp = onTabs,
-                            onSwipeDown = onReload,
                             modifier = Modifier.align(Alignment.TopCenter),
                         )
                     }
@@ -1378,6 +1593,14 @@ private fun ExpandedBottomBarContent(
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_new_tab))
                 }
             }
+            if (editing && tab.url == BLANK_URL) {
+                IconButton(onClick = onScanQrCode) {
+                    Icon(
+                        painterResource(R.drawable.ic_qr_code_scanner),
+                        contentDescription = stringResource(R.string.cd_scan_qr_code),
+                    )
+                }
+            } else {
                 Box {
                 IconButton(onClick = { onMenuExpandedChange(true) }) {
                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
@@ -1468,6 +1691,49 @@ private fun ExpandedBottomBarContent(
                         leadingIcon = { Text("↗", fontSize = 20.sp) },
                     )
                     DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_summarize_with_assistant)) },
+                        enabled = tab.url != BLANK_URL,
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onSummarizeWithAssistant()
+                        },
+                        leadingIcon = {
+                            Text(
+                                "✦",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 20.sp,
+                            )
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_share)) },
+                        enabled = tab.url != BLANK_URL,
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onShare()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painterResource(R.drawable.ic_share),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_print)) },
+                        enabled = tab.url != BLANK_URL,
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onPrint()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painterResource(R.drawable.ic_print),
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_settings)) },
                         onClick = {
                             onMenuExpandedChange(false)
@@ -1485,6 +1751,7 @@ private fun ExpandedBottomBarContent(
                     )
                 }
                 }
+            }
             }
     }
 }
@@ -1760,13 +2027,13 @@ private fun TabOverview(
 ) {
     val rootView = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val overviewTabs = controller.tabs
+    val overviewTabs = controller.activeTabs
     val initialPage = remember {
         overviewTabs.indexOfFirst { it.id == controller.selectedTabId }.coerceAtLeast(0)
     }
     val pagerState = rememberPagerState(
         initialPage = initialPage,
-        pageCount = { controller.tabs.size },
+        pageCount = { controller.activeTabs.size },
     )
     val pagerFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
@@ -1797,6 +2064,16 @@ private fun TabOverview(
     var userPagerGestureActive by remember { mutableStateOf(false) }
     var lastHapticPage by remember { mutableStateOf<Int?>(null) }
     var pagerSessionEndJob by remember { mutableStateOf<Job?>(null) }
+    var tabActionsTabId by remember { mutableStateOf<String?>(null) }
+    var profileActionsProfileId by remember { mutableStateOf<String?>(null) }
+    var emojiPickerTargetId by remember { mutableStateOf<String?>(null) }
+    var movingTabId by remember { mutableStateOf<String?>(null) }
+    var profileSwitching by remember { mutableStateOf(false) }
+    var reorderAnimation by remember { mutableStateOf<TabReorderAnimation?>(null) }
+    var reorderLayoutReady by remember { mutableStateOf(false) }
+    val reorderProgress = remember { Animatable(1f) }
+    val moveProgress = remember { Animatable(0f) }
+    val profileSwitchProgress = remember { Animatable(1f) }
     val tabFocusHapticEvents = remember {
         Channel<Unit>(
             capacity = 8,
@@ -1873,16 +2150,34 @@ private fun TabOverview(
                 }
             }
     }
-    LaunchedEffect(controller.tabs.size, controller.selectedTabId, dismissingTabId) {
-        if (dismissingTabId != null) return@LaunchedEffect
-        val selectedIndex = controller.tabs.indexOfFirst { it.id == controller.selectedTabId }
+    LaunchedEffect(
+        controller.activeTabs.size,
+        controller.activeProfileId,
+        controller.selectedTabId,
+        dismissingTabId,
+        profileSwitching,
+    ) {
+        if (dismissingTabId != null || profileSwitching) return@LaunchedEffect
+        val selectedIndex = controller.activeTabs.indexOfFirst { it.id == controller.selectedTabId }
             .coerceAtLeast(0)
         if (
-            controller.tabs.isNotEmpty() &&
+            controller.activeTabs.isNotEmpty() &&
             pagerState.currentPage != selectedIndex
         ) {
             pagerState.scrollToPage(selectedIndex)
         }
+    }
+    LaunchedEffect(controller.activeProfileId) {
+        if (profileSwitching) return@LaunchedEffect
+        profileSwitchProgress.snapTo(0f)
+        val selectedIndex = controller.activeTabs
+            .indexOfFirst { it.id == controller.selectedTabId }
+            .coerceAtLeast(0)
+        if (pagerState.currentPage != selectedIndex) pagerState.scrollToPage(selectedIndex)
+        profileSwitchProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.78f, stiffness = 520f),
+        )
     }
 
     BoxWithConstraints(
@@ -1898,6 +2193,7 @@ private fun TabOverview(
         val isExiting = exitHero != null
         val tabCardWidth = (maxWidth * 0.68f).coerceIn(244.dp, 292.dp)
         val pageSlotWidth = tabCardWidth + 18.dp
+        val pageSlotWidthPx = with(density) { pageSlotWidth.toPx() }
         val pageHorizontalPadding = ((maxWidth - pageSlotWidth) / 2).coerceAtLeast(0.dp)
 
         LaunchedEffect(visible, heroTarget) {
@@ -1962,22 +2258,115 @@ private fun TabOverview(
                 .statusBarsPadding()
                 .navigationBarsPadding(),
         ) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
+            ProfileSwitcher(
+                profiles = controller.profiles,
+                activeProfileId = controller.activeProfileId,
+                enabled = dismissingTabId == null &&
+                    movingTabId == null &&
+                    !profileSwitching &&
+                    exitHero == null &&
+                    reorderAnimation == null &&
+                    tabActionsTabId == null &&
+                    profileActionsProfileId == null &&
+                    emojiPickerTargetId == null,
+                onSelect = { profileId ->
+                    if (profileId == controller.activeProfileId) return@ProfileSwitcher
+                    overviewScope.launch {
+                        profileSwitching = true
+                        try {
+                            profileSwitchProgress.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(
+                                    durationMillis = 120,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
+                            if (pagerState.currentPage != 0) pagerState.scrollToPage(0)
+                            if (controller.selectProfile(profileId)) {
+                                val selectedIndex = controller.activeTabs
+                                    .indexOfFirst { it.id == controller.selectedTabId }
+                                    .coerceAtLeast(0)
+                                if (pagerState.currentPage != selectedIndex) {
+                                    pagerState.scrollToPage(selectedIndex)
+                                }
+                                withFrameNanos { }
+                                rootView.performConfirmHaptic()
+                            }
+                            profileSwitchProgress.animateTo(
+                                targetValue = 1f,
+                                animationSpec = spring(
+                                    dampingRatio = 0.78f,
+                                    stiffness = 460f,
+                                ),
+                            )
+                        } finally {
+                            withContext(NonCancellable) {
+                                profileSwitchProgress.snapTo(1f)
+                                profileSwitching = false
+                            }
+                        }
+                    }
+                },
+                onLongClick = { profileId ->
+                    rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    profileActionsProfileId = profileId
+                },
+                onAdd = {
+                    rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    emojiPickerTargetId = NEW_PROFILE_TARGET
+                },
+                modifier = Modifier.graphicsLayer {
+                    val chromeProgress =
+                        ((heroProgress.value - 0.34f) / 0.66f).coerceIn(0f, 1f)
+                    alpha = chromeProgress
+                    translationY = (1f - chromeProgress) * -18f
+                },
+            )
+            Spacer(Modifier.height(4.dp))
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .graphicsLayer {
+                        val progress = profileSwitchProgress.value
+                        alpha = progress
+                        translationY = (1f - progress) * 14f
+                        val scale = 0.97f + progress * 0.03f
+                        scaleX = scale
+                        scaleY = scale
+                    },
                 contentPadding = PaddingValues(horizontal = pageHorizontalPadding, vertical = 4.dp),
                 pageSpacing = 0.dp,
                 pageSize = PageSize.Fixed(pageSlotWidth),
                 flingBehavior = pagerFlingBehavior,
                 verticalAlignment = Alignment.CenterVertically,
-                beyondViewportPageCount = 1,
-                userScrollEnabled = dismissingTabId == null && exitHero == null,
-                key = { page -> controller.tabs[page].id },
+                beyondViewportPageCount = if (reorderAnimation == null) {
+                    1
+                } else {
+                    (controller.activeTabs.size - 1).coerceAtLeast(0)
+                },
+                userScrollEnabled = dismissingTabId == null &&
+                    movingTabId == null &&
+                    exitHero == null &&
+                    reorderAnimation == null &&
+                    tabActionsTabId == null,
+                key = { page ->
+                    if (reorderAnimation == null) {
+                        controller.activeTabs[page].id
+                    } else {
+                        "tab-reorder-$page"
+                    }
+                },
             ) { page ->
-                val tab = controller.tabs[page]
+                val tab = controller.activeTabs[page]
+                val cardGestureScope = rememberCoroutineScope()
                 var dismissOffset by remember(tab.id) { mutableFloatStateOf(0f) }
                 var rawDismissOffset by remember(tab.id) { mutableFloatStateOf(0f) }
+                val breakFreeProgress = remember(tab.id) { Animatable(0f) }
+                var breakFreeJob by remember(tab.id) { mutableStateOf<Job?>(null) }
+                var dragActive by remember(tab.id) { mutableStateOf(false) }
+                var resistanceCleared by remember(tab.id) { mutableStateOf(false) }
                 var rubberbandHapticActive by remember(tab.id) { mutableStateOf(false) }
                 var dismissHapticPlayed by remember(tab.id) { mutableStateOf(false) }
                 var cardBounds by remember(tab.id) { mutableStateOf<Rect?>(null) }
@@ -1989,12 +2378,12 @@ private fun TabOverview(
                     if (delta < 0f || rawDismissOffset < 0f) {
                         rawDismissOffset = (rawDismissOffset + delta).coerceAtMost(0f)
                         val rawDistance = -rawDismissOffset
-                        val visualDistance = TabDismissPhysics.visualDistance(
+                        val hasClearedResistance = TabDismissPhysics.hasClearedResistance(
                             rawDistance = rawDistance,
                             dismissThreshold = dismissThreshold,
                             resistanceFraction = resistanceFraction,
                         )
-                        val shouldVibrate = TabDismissPhysics.isInResistanceBand(
+                        val shouldVibrate = TabDismissPhysics.isInResistancePhase(
                             rawDistance = rawDistance,
                             dismissThreshold = dismissThreshold,
                             resistanceFraction = resistanceFraction,
@@ -2006,23 +2395,28 @@ private fun TabOverview(
                             rootView.stopRubberbandHaptic()
                             rubberbandHapticActive = false
                         }
+                        if (hasClearedResistance != resistanceCleared) {
+                            resistanceCleared = hasClearedResistance
+                            breakFreeJob?.cancel()
+                            breakFreeJob = cardGestureScope.launch {
+                                breakFreeProgress.animateTo(
+                                    targetValue = if (hasClearedResistance) 1f else 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.72f,
+                                        stiffness = 800f,
+                                    ),
+                                )
+                            }
+                        }
                         if (
-                            TabDismissPhysics.isDismissed(
-                                rawDistance,
-                                dismissThreshold,
-                                resistanceFraction,
-                            ) &&
+                            hasClearedResistance &&
                             !dismissHapticPlayed
                         ) {
-                            rootView.stopRubberbandHaptic()
-                            rubberbandHapticActive = false
                             rootView.performConfirmHaptic()
                             dismissHapticPlayed = true
                         }
-                        dismissOffset = -visualDistance
                     }
                 }
-                val dismissProgress = (-dismissOffset / (dismissThreshold * 1.7f)).coerceIn(0f, 1f)
                 val isInitialCard = tab.id == initialTabId
                 val realCardVisible = TabOverviewHeroRules.isCardVisible(
                     isInitialCard = isInitialCard,
@@ -2032,8 +2426,25 @@ private fun TabOverview(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(if (dismissOffset < 0f) 2f else 0f)
-                        .graphicsLayer { alpha = 1f },
+                        .zIndex(
+                            when {
+                                reorderAnimation?.tabId == tab.id -> 4f
+                                dragActive || dismissOffset < 0f -> 2f
+                                else -> 0f
+                            },
+                        )
+                        .graphicsLayer {
+                            alpha = 1f
+                            translationX = TabReorderMotion.translationX(
+                                indexDelta = if (reorderLayoutReady) {
+                                    reorderAnimation?.indexDeltas?.get(tab.id) ?: 0
+                                } else {
+                                    0
+                                },
+                                pageSlotWidthPx = pageSlotWidthPx,
+                                progress = reorderProgress.value,
+                            )
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(
@@ -2041,39 +2452,75 @@ private fun TabOverview(
                             .graphicsLayer {
                                 clip = false
                                 compositingStrategy = CompositingStrategy.ModulateAlpha
-                                translationY = dismissOffset
+                                val currentDismissOffset = if (dragActive) {
+                                    -TabDismissPhysics.visualDistance(
+                                        rawDistance = -rawDismissOffset,
+                                        releaseProgress = breakFreeProgress.value,
+                                    )
+                                } else {
+                                    dismissOffset
+                                }
+                                translationY = currentDismissOffset
+                                val dismissProgress =
+                                    (-currentDismissOffset / (dismissThreshold * 1.7f))
+                                        .coerceIn(0f, 1f)
                                 val entryAlpha = if (isInitialCard) {
                                     1f
                                 } else {
                                     TabOverviewHeroRules.neighborAlpha(heroProgress.value)
                                 }
-                                alpha = (1f - dismissProgress * 0.72f) * entryAlpha
-                                val dismissScale = 1f - dismissProgress * 0.05f
-                                scaleX = dismissScale
-                                scaleY = dismissScale
+                                val movingProgress = if (movingTabId == tab.id) {
+                                    moveProgress.value
+                                } else {
+                                    0f
+                                }
+                                alpha = (1f - dismissProgress * 0.72f) *
+                                    entryAlpha *
+                                    (1f - movingProgress * 0.82f)
+                                translationX = movingProgress * 48f
+                                val scale = (1f - dismissProgress * 0.05f) *
+                                    (1f - movingProgress * 0.06f)
+                                scaleX = scale
+                                scaleY = scale
                             }
                             .draggable(
                                 state = dragState,
                                 orientation = Orientation.Vertical,
                                 enabled = heroCompleted && !heroVisible &&
-                                    dismissingTabId == null && exitHero == null,
+                                    TabDeletionRules.canDelete(tab) &&
+                                    dismissingTabId == null &&
+                                    movingTabId == null &&
+                                    exitHero == null &&
+                                    reorderAnimation == null &&
+                                    tabActionsTabId == null,
                                 onDragStarted = {
+                                    breakFreeJob?.cancel()
+                                    breakFreeProgress.snapTo(0f)
                                     rootView.stopRubberbandHaptic()
                                     rawDismissOffset = 0f
+                                    dragActive = true
+                                    resistanceCleared = false
                                     rubberbandHapticActive = false
                                     dismissHapticPlayed = false
                                 },
                                 onDragStopped = {
                                     rootView.stopRubberbandHaptic()
                                     rubberbandHapticActive = false
-                                    val farEnough = TabDismissPhysics.isDismissed(
+                                    breakFreeJob?.cancel()
+                                    breakFreeProgress.stop()
+                                    dismissOffset = -TabDismissPhysics.visualDistance(
+                                        rawDistance = -rawDismissOffset,
+                                        releaseProgress = breakFreeProgress.value,
+                                    )
+                                    dragActive = false
+                                    val farEnough = TabDismissPhysics.hasClearedResistance(
                                         rawDistance = -rawDismissOffset,
                                         dismissThreshold = dismissThreshold,
                                         resistanceFraction = resistanceFraction,
                                     )
                                     if (farEnough) {
                                         val dismissedId = tab.id
-                                        val tabs = controller.tabs
+                                        val tabs = controller.activeTabs
                                         val centeredId = tabs
                                             .getOrNull(pagerState.currentPage)?.id
                                         val anchorId = if (centeredId == dismissedId) {
@@ -2093,7 +2540,7 @@ private fun TabOverview(
                                                     ),
                                                 ) { dismissOffset = value }
                                                 anchorId?.let { stableAnchorId ->
-                                                    val oldAnchorIndex = controller.tabs
+                                                    val oldAnchorIndex = controller.activeTabs
                                                         .indexOfFirst { it.id == stableAnchorId }
                                                     if (
                                                         oldAnchorIndex >= 0 &&
@@ -2111,7 +2558,7 @@ private fun TabOverview(
                                                 }
                                                 controller.closeTab(dismissedId)
                                                 val targetId = anchorId ?: controller.selectedTabId
-                                                val newAnchorIndex = controller.tabs
+                                                val newAnchorIndex = controller.activeTabs
                                                     .indexOfFirst { it.id == targetId }
                                                     .coerceAtLeast(0)
                                                 if (pagerState.currentPage != newAnchorIndex) {
@@ -2127,6 +2574,8 @@ private fun TabOverview(
                                             animationSpec = spring(dampingRatio = 0.78f, stiffness = 520f),
                                         ) { dismissOffset = value }
                                         rawDismissOffset = 0f
+                                        breakFreeProgress.snapTo(0f)
+                                        resistanceCleared = false
                                         dismissHapticPlayed = false
                                     }
                                 },
@@ -2163,7 +2612,13 @@ private fun TabOverview(
                                     if (isInitialCard) heroTargetBounds = bounds
                                 },
                             onClick = {
-                                if (dismissingTabId != null || exitHero != null) {
+                                if (
+                                    dismissingTabId != null ||
+                                    movingTabId != null ||
+                                    exitHero != null ||
+                                    reorderAnimation != null ||
+                                    tabActionsTabId != null
+                                ) {
                                     return@TabCard
                                 }
                                 val bounds = cardBounds
@@ -2189,6 +2644,16 @@ private fun TabOverview(
                                     onClose()
                                 }
                             },
+                            onLongClick = {
+                                if (
+                                    dismissingTabId == null &&
+                                    movingTabId == null &&
+                                    exitHero == null &&
+                                    reorderAnimation == null
+                                ) {
+                                    tabActionsTabId = tab.id
+                                }
+                            },
                         )
                     }
                 }
@@ -2212,7 +2677,11 @@ private fun TabOverview(
                         rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         onNewTab()
                     },
-                    enabled = dismissingTabId == null && exitHero == null,
+                    enabled = dismissingTabId == null &&
+                        movingTabId == null &&
+                        exitHero == null &&
+                        reorderAnimation == null &&
+                        tabActionsTabId == null,
                 ) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_new_tab))
                 }
@@ -2296,9 +2765,296 @@ private fun TabOverview(
                 }
             }
         }
+
+        val actionTab = tabActionsTabId?.let { tabId ->
+            controller.activeTabs.firstOrNull { it.id == tabId }
+        }
+        TabActionsSheet(
+            tab = actionTab,
+            profiles = controller.profiles,
+            onTogglePinned = {
+                val target = actionTab ?: return@TabActionsSheet
+                tabActionsTabId = null
+                overviewScope.launch {
+                    val oldOrder = controller.activeTabs.map(BrowserTab::id)
+                    val newOrder = TabPinningRules.withPinnedState(
+                        tabs = controller.activeTabs,
+                        tabId = target.id,
+                        isPinned = !target.isPinned,
+                    ).map(BrowserTab::id)
+                    if (oldOrder == newOrder) {
+                        if (controller.setTabPinned(target.id, !target.isPinned)) {
+                            rootView.performConfirmHaptic()
+                        }
+                        return@launch
+                    }
+                    val animation = TabReorderAnimation(
+                        tabId = target.id,
+                        targetIndex = newOrder.indexOf(target.id).coerceAtLeast(0),
+                        indexDeltas = TabReorderMotion.indexDeltas(oldOrder, newOrder),
+                    )
+                    try {
+                        reorderProgress.snapTo(0f)
+                        reorderAnimation = animation
+                        // Switch Pager to temporary position keys before list mutation. Stable tab
+                        // keys would move viewport anchor with target and break FLIP start positions.
+                        withFrameNanos { }
+                        if (!controller.setTabPinned(target.id, !target.isPinned)) return@launch
+                        reorderLayoutReady = true
+                        withFrameNanos { }
+                        rootView.performConfirmHaptic()
+                        reorderProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = 360,
+                                easing = FastOutSlowInEasing,
+                            ),
+                        )
+                        if (pagerState.currentPage != animation.targetIndex) {
+                            pagerState.animateScrollToPage(
+                                page = animation.targetIndex,
+                                animationSpec = tween(
+                                    durationMillis = 240,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
+                        }
+                    } finally {
+                        reorderProgress.snapTo(1f)
+                        reorderLayoutReady = false
+                        reorderAnimation = null
+                    }
+                }
+            },
+            onMoveToProfile = { profileId ->
+                val target = actionTab ?: return@TabActionsSheet
+                tabActionsTabId = null
+                overviewScope.launch {
+                    try {
+                        movingTabId = target.id
+                        moveProgress.snapTo(0f)
+                        moveProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(180, easing = FastOutSlowInEasing),
+                        )
+                        if (controller.moveTabToProfile(target.id, profileId)) {
+                            rootView.performConfirmHaptic()
+                        }
+                    } finally {
+                        moveProgress.snapTo(0f)
+                        movingTabId = null
+                    }
+                }
+            },
+            onDismiss = { tabActionsTabId = null },
+        )
+
+        val actionProfile = profileActionsProfileId?.let { profileId ->
+            controller.profiles.firstOrNull { it.id == profileId }
+        }
+        ProfileActionsSheet(
+            profile = actionProfile,
+            canDelete = controller.profiles.size > 1,
+            onChangeEmoji = {
+                val target = actionProfile ?: return@ProfileActionsSheet
+                profileActionsProfileId = null
+                emojiPickerTargetId = target.id
+            },
+            onDelete = {
+                val target = actionProfile ?: return@ProfileActionsSheet
+                profileActionsProfileId = null
+                if (controller.deleteProfile(target.id)) rootView.performConfirmHaptic()
+            },
+            onDismiss = { profileActionsProfileId = null },
+        )
+
+        val emojiPickerTarget = emojiPickerTargetId
+        EmojiPickerSheet(
+            visible = emojiPickerTarget != null,
+            creatingProfile = emojiPickerTarget == NEW_PROFILE_TARGET,
+            selectedEmoji = controller.profiles
+                .firstOrNull { it.id == emojiPickerTarget }
+                ?.emoji,
+            onSelect = { emoji ->
+                val target = emojiPickerTarget ?: return@EmojiPickerSheet
+                emojiPickerTargetId = null
+                val changed = if (target == NEW_PROFILE_TARGET) {
+                    controller.createProfile(emoji) != null
+                } else {
+                    controller.updateProfileEmoji(target, emoji)
+                }
+                if (changed) rootView.performConfirmHaptic()
+            },
+            onDismiss = { emojiPickerTargetId = null },
+        )
     }
 
 }
+
+@Composable
+private fun ProfileSwitcher(
+    profiles: List<BrowserProfile>,
+    activeProfileId: String,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+    onLongClick: (String) -> Unit,
+    onAdd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val profileDescription = stringResource(R.string.cd_profile)
+    val scrollState = rememberScrollState()
+    val activeIndex = profiles.indexOfFirst { it.id == activeProfileId }.coerceAtLeast(0)
+    val indicatorSlotOffset by animateDpAsState(
+        targetValue = (activeIndex * PROFILE_SLOT_WIDTH).dp,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 430f),
+        label = "profile-indicator-offset",
+    )
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(64.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        val profileContentWidth = (profiles.size * PROFILE_SLOT_WIDTH).dp
+        val barWidth = (profileContentWidth + 60.dp)
+            .coerceAtMost(maxWidth - 24.dp)
+            .coerceAtLeast(116.dp)
+        val profileViewportWidth = barWidth - 60.dp
+        val density = LocalDensity.current
+        LaunchedEffect(activeIndex, profiles.size, profileViewportWidth) {
+            withFrameNanos { }
+            val slotWidthPx = with(density) { PROFILE_SLOT_WIDTH.dp.roundToPx() }
+            val viewportWidthPx = with(density) { profileViewportWidth.roundToPx() }
+            val selectedStart = activeIndex * slotWidthPx
+            val selectedEnd = selectedStart + slotWidthPx
+            val targetScroll = when {
+                selectedStart < scrollState.value -> selectedStart
+                selectedEnd > scrollState.value + viewportWidthPx ->
+                    selectedEnd - viewportWidthPx
+                else -> scrollState.value
+            }.coerceIn(0, scrollState.maxValue)
+            if (targetScroll != scrollState.value) scrollState.animateScrollTo(targetScroll)
+        }
+        Surface(
+            modifier = Modifier
+                .width(barWidth)
+                .height(60.dp),
+            shape = RoundedCornerShape(32.dp),
+            color = Color(0xFF20222C),
+            shadowElevation = 8.dp,
+        ) {
+            Row(
+                modifier = Modifier.padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(profileViewportWidth)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(28.dp))
+                        .horizontalScroll(scrollState),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(profileContentWidth)
+                            .fillMaxHeight(),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .offset {
+                                    IntOffset(
+                                        x = (indicatorSlotOffset + 2.dp).roundToPx(),
+                                        y = 0,
+                                    )
+                                }
+                                .size(52.dp)
+                                .background(Color.White.copy(alpha = 0.12f), CircleShape),
+                        )
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .offset {
+                                    IntOffset(
+                                        x = (indicatorSlotOffset + 4.dp).roundToPx(),
+                                        y = 0,
+                                    )
+                                }
+                                .size(48.dp),
+                            shape = CircleShape,
+                            color = Color(0xFF5E6572),
+                            shadowElevation = 9.dp,
+                        ) {}
+                        Row(modifier = Modifier.fillMaxHeight()) {
+                            profiles.forEach { profile ->
+                                val isSelected = profile.id == activeProfileId
+                                val scale by animateFloatAsState(
+                                    targetValue = if (isSelected) 1.06f else 0.92f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.68f,
+                                        stiffness = 540f,
+                                    ),
+                                    label = "profile-emoji-scale",
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .width(PROFILE_SLOT_WIDTH.dp)
+                                        .fillMaxHeight()
+                                        .semantics {
+                                            contentDescription =
+                                                "$profileDescription ${profile.emoji}"
+                                            selected = isSelected
+                                        }
+                                        .combinedClickable(
+                                            enabled = enabled,
+                                            role = Role.Tab,
+                                            onClick = { onSelect(profile.id) },
+                                            onLongClick = { onLongClick(profile.id) },
+                                            onLongClickLabel = stringResource(
+                                                R.string.action_edit_profile,
+                                            ),
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    AnimatedContent(
+                                        targetState = profile.emoji,
+                                        transitionSpec = {
+                                            fadeIn(tween(150)) togetherWith fadeOut(tween(90))
+                                        },
+                                        label = "profile-emoji",
+                                    ) { emoji ->
+                                        Text(
+                                            text = emoji,
+                                            modifier = Modifier.graphicsLayer {
+                                                scaleX = scale
+                                                scaleY = scale
+                                            },
+                                            fontSize = 25.sp,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                IconButton(
+                    onClick = onAdd,
+                    enabled = enabled,
+                    modifier = Modifier.size(52.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = stringResource(R.string.cd_add_profile),
+                        tint = Color.White,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val PROFILE_SLOT_WIDTH = 56
 
 @Composable
 private fun TabHeroLayer(
@@ -2321,9 +3077,9 @@ private fun TabHeroLayer(
                 val width = rootWidthPx + (targetBounds.width - rootWidthPx) * fraction
                 val height = rootHeightPx + (targetBounds.height - rootHeightPx) * fraction
                 val scale = width / rootWidthPx
+                val clipTop = (rootHeightPx - height / scale) * PREVIEW_CROP_TOP_FRACTION
                 translationX = targetBounds.left * fraction
-                translationY = targetBounds.top * fraction +
-                    (height - rootHeightPx * scale) / 2f
+                translationY = targetBounds.top * fraction - clipTop * scale
                 scaleX = scale
                 scaleY = scale
                 transformOrigin = TransformOrigin(0f, 0f)
@@ -2334,7 +3090,7 @@ private fun TabHeroLayer(
                 val height = rootHeightPx + (targetBounds.height - rootHeightPx) * fraction
                 val scale = width / rootWidthPx
                 val visibleHeight = height / scale
-                val clipTop = (rootHeightPx - visibleHeight) / 2f
+                val clipTop = (rootHeightPx - visibleHeight) * PREVIEW_CROP_TOP_FRACTION
                 val cornerRadius = targetCornerRadiusPx * fraction / scale
                 heroClipPath.reset()
                 heroClipPath.addRoundRect(
@@ -2406,6 +3162,15 @@ private fun TabTitleRow(
             color = contentColor,
             fontWeight = FontWeight.SemiBold,
         )
+        if (tab.isPinned) {
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                painter = painterResource(R.drawable.ic_push_pin),
+                contentDescription = stringResource(R.string.cd_pinned_tab),
+                modifier = Modifier.size(18.dp),
+                tint = contentColor,
+            )
+        }
     }
 }
 
@@ -2425,13 +3190,21 @@ private fun TabCard(
     cardWidth: Dp,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     Card(
-        onClick = onClick,
         modifier = Modifier
             .width(cardWidth)
             .aspectRatio(0.53f)
-            .then(modifier),
+            .then(modifier)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+                onLongClickLabel = stringResource(
+                    if (tab.isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
+                ),
+                role = Role.Button,
+            ),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -2453,6 +3226,10 @@ private fun TabCard(
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
+                    alignment = BiasAlignment(
+                        horizontalBias = 0f,
+                        verticalBias = PREVIEW_CROP_TOP_FRACTION * 2f - 1f,
+                    ),
                 )
             } else {
                 TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
@@ -2460,6 +3237,198 @@ private fun TabCard(
         }
     }
 }
+
+@Composable
+private fun TabActionsSheet(
+    tab: BrowserTab?,
+    profiles: List<BrowserProfile>,
+    onTogglePinned: () -> Unit,
+    onMoveToProfile: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (tab == null) return
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+        ) {
+            Text(
+                stringResource(R.string.tab_actions_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(12.dp))
+            TextButton(
+                onClick = onTogglePinned,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(
+                        if (tab.isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
+                    ),
+                )
+            }
+            val targetProfiles = profiles.filter { it.id != tab.profileId }
+            if (targetProfiles.isNotEmpty()) {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Text(
+                    stringResource(R.string.action_move_tab_to_profile),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    targetProfiles.forEach { profile ->
+                        Surface(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clickable(
+                                    role = Role.Button,
+                                    onClick = { onMoveToProfile(profile.id) },
+                                ),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(profile.emoji, fontSize = 24.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileActionsSheet(
+    profile: BrowserProfile?,
+    canDelete: Boolean,
+    onChangeEmoji: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (profile == null) return
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(profile.emoji, fontSize = 30.sp)
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    stringResource(R.string.profile_actions_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            TextButton(
+                onClick = onChangeEmoji,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.action_change_profile_icon))
+            }
+            if (canDelete) {
+                TextButton(
+                    onClick = onDelete,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(R.string.action_delete_profile_keep_tabs),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmojiPickerSheet(
+    visible: Boolean,
+    creatingProfile: Boolean,
+    selectedEmoji: String?,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (!visible) return
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+        ) {
+            Text(
+                stringResource(
+                    if (creatingProfile) R.string.add_profile_title
+                    else R.string.change_profile_icon_title,
+                ),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(16.dp))
+            PROFILE_EMOJIS.chunked(6).forEach { rowEmojis ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    rowEmojis.forEach { emoji ->
+                        val isSelected = emoji == selectedEmoji
+                        Surface(
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .size(48.dp)
+                                .clickable(
+                                    role = Role.Button,
+                                    onClick = { onSelect(emoji) },
+                                ),
+                            shape = CircleShape,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            },
+                            tonalElevation = if (isSelected) 5.dp else 0.dp,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(emoji, fontSize = 23.sp)
+                            }
+                        }
+                    }
+                    repeat(6 - rowEmojis.size) { Spacer(Modifier.size(48.dp)) }
+                }
+            }
+        }
+    }
+}
+
+private const val PREVIEW_CROP_TOP_FRACTION = 0.25f
+private const val NEW_PROFILE_TARGET = "__new_profile__"
+private val PROFILE_EMOJIS = listOf(
+    "🍬", "⭐", "💼", "🛒", "🎮", "📚",
+    "✈️", "🏠", "🎵", "🧪", "📰", "❤️",
+    "🔥", "🌙", "🌿", "🎨", "🏋️", "💡",
+    "🏫", "🎒", "✏️", "🎓", "📖", "🧑‍🎓",
+    "👶", "🧸", "🍼", "👨‍👩‍👧", "💍", "💒",
+    "💰", "💳", "🪙", "📈", "🎬", "🍿",
+    "📺", "📷", "💻", "📱", "🚗", "🚲",
+    "⚽", "🏀", "🏖️", "🍕", "☕", "🎉",
+    "🎁", "🐶", "🐱", "🌍", "🩺", "📅",
+)
 
 @Composable
 private fun IncognitoTabPlaceholder() {
@@ -2920,7 +3889,7 @@ private fun View.startRubberbandHaptic() {
             )
         } else {
             VibrationEffect.createWaveform(
-                longArrayOf(0L, 4L, 96L),
+                longArrayOf(0L, 3L, 117L),
                 intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0),
                 0,
             )

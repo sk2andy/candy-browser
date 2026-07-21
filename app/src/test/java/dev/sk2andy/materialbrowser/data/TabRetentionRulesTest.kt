@@ -53,6 +53,17 @@ class TabRetentionRulesTest {
         )
     }
 
+    @Test
+    fun pinnedInactiveTabNeverExpires() {
+        val pinned = oldTab("pinned").copy(isPinned = true)
+        val regular = oldTab("regular")
+
+        assertEquals(
+            setOf("regular"),
+            expired(InactiveTabLifetime.SixHours, pinned, regular),
+        )
+    }
+
     private fun expired(lifetime: InactiveTabLifetime, vararg tabs: BrowserTab): Set<String> =
         TabRetentionRules.expiredTabIds(
             tabs = listOf(tab("selected", now)) + tabs,

@@ -28,4 +28,56 @@ class RequestBlockerTest {
         assertFalse(blocker.shouldBlock("not a url", "https://news.example"))
         assertFalse(blocker.shouldBlock("data:text/plain,hello", "https://news.example"))
     }
+
+    @Test
+    fun `normalizes adblock host anchors and ignores unsupported rules`() {
+        val anchored = RequestBlocker(
+            sequenceOf("||Ads.Example.^", "||bad.example/path^", "*.wildcard.example"),
+        )
+
+        assertTrue(anchored.shouldBlock("https://cdn.ads.example/file.js", "https://news.example"))
+        assertFalse(anchored.shouldBlock("https://bad.example/path", "https://news.example"))
+        assertFalse(anchored.shouldBlock("https://x.wildcard.example/file.js", "https://news.example"))
+    }
+
+    @Test
+    fun `accepts case insensitive web schemes`() {
+        assertTrue(blocker.shouldBlock("HTTPS://doubleclick.net/ad.js", "https://news.example"))
+    }
+
+    @Test
+    fun `allows upstream exception only on matching page host`() {
+        val exceptionAware = RequestBlocker(
+            hostRules = sequenceOf("adsninja.ca"),
+            allowedHostPairs = sequenceOf("adsninja.ca\thowtogeek.com"),
+        )
+
+        assertFalse(
+            exceptionAware.shouldBlock(
+                "https://cdn.adsninja.ca/adsninja_client.js",
+                "https://www.howtogeek.com/article",
+            ),
+        )
+        assertTrue(
+            exceptionAware.shouldBlock(
+                "https://cdn.adsninja.ca/adsninja_client.js",
+                "https://unrelated.example/article",
+            ),
+        )
+    }
+
+    @Test
+    fun `does not treat parent of allowed page as matching subdomain`() {
+        val exceptionAware = RequestBlocker(
+            hostRules = sequenceOf("tracker.example"),
+            allowedHostPairs = sequenceOf("tracker.example\tlocal.news.example"),
+        )
+
+        assertTrue(
+            exceptionAware.shouldBlock(
+                "https://tracker.example/pixel",
+                "https://news.example/article",
+            ),
+        )
+    }
 }

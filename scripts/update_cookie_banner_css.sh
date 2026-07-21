@@ -24,6 +24,7 @@ fi
     printf '%s\n' ' * Authors: The EasyList authors (https://easylist.to/)'
     printf '%s\n' ' * License: Creative Commons Attribution-ShareAlike 3.0 Unported or later'
     printf '%s\n' ' * https://creativecommons.org/licenses/by-sa/3.0/'
+    printf '%s\n' ' * Full attribution: app/src/main/assets/content_filter.LICENSE.txt'
     printf '%s\n' ' * Modified by compiling generic Adblock Plus element-hiding rules into CSS.'
     printf ' * Generated selectors: %s\n' "$SELECTOR_COUNT"
     printf '%s\n' ' */'

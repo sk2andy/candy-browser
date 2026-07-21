@@ -6,6 +6,7 @@
     <string name="cd_open_search">Suche öffnen</string>
     <string name="cd_close_address_input">Eingabe schließen</string>
     <string name="cd_more_options">Weitere Optionen</string>
+    <string name="cd_scan_qr_code">QR-Code scannen</string>
     <string name="action_back">Zurück</string>
     <string name="action_forward">Vor</string>
     <string name="new_tab_title">Neuer Tab</string>
@@ -13,6 +14,19 @@
     <string name="cd_close_tab_overview">Tab-Übersicht schließen</string>
     <string name="cd_close_tab">Tab schließen</string>
     <string name="action_switch_to_tab">Zum Tab wechseln</string>
+    <string name="tab_actions_title">Tab-Optionen</string>
+    <string name="action_pin_tab">Tab anpinnen</string>
+    <string name="action_remove_pin">Pin entfernen</string>
+    <string name="cd_pinned_tab">Angepinnter Tab</string>
+    <string name="cd_profile">Profil</string>
+    <string name="cd_add_profile">Profil hinzufügen</string>
+    <string name="action_edit_profile">Profil bearbeiten</string>
+    <string name="profile_actions_title">Profil-Optionen</string>
+    <string name="action_change_profile_icon">Icon ändern</string>
+    <string name="action_delete_profile_keep_tabs">Profil löschen · Tabs behalten</string>
+    <string name="add_profile_title">Icon für das neue Profil wählen</string>
+    <string name="change_profile_icon_title">Neues Icon wählen</string>
+    <string name="action_move_tab_to_profile">In Profil verschieben</string>
     <string name="blocked_items_badge">◈ %1$d</string>
     <string name="incognito">Inkognito</string>
     <string name="cd_make_blank_tab_incognito">Leeren Tab als Inkognito-Tab verwenden</string>
@@ -22,6 +36,10 @@
     <string name="action_add_favorite">Zu Favoriten hinzufügen</string>
     <string name="action_remove_favorite">Aus Favoriten entfernen</string>
     <string name="action_open_external_app">In externer App öffnen</string>
+    <string name="action_summarize_with_assistant">Mit Assistent zusammenfassen</string>
+    <string name="assistant_summary_prompt">Fasse die folgende Website auf Deutsch zusammen.</string>
+    <string name="action_share">Teilen</string>
+    <string name="action_print">Drucken</string>
     <string name="default_browser_current">Standardbrowser ✓</string>
     <string name="action_set_default_browser">Als Standardbrowser festlegen</string>
     <string name="action_settings">Einstellungen</string>
@@ -56,7 +74,7 @@
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>
     <string name="settings_section_gestures">Gesten</string>
     <string name="settings_tab_dismiss_resistance">Widerstand beim Schließen von Tabs</string>
-    <string name="settings_tab_dismiss_resistance_summary">Widerstand gilt für die ersten %1$d%% der Wischbewegung</string>
+    <string name="settings_tab_dismiss_resistance_summary">Widerstandsphase: %1$d%% des Schließwegs</string>
     <string name="settings_section_protection">Schutz &amp; Cookies</string>
     <plurals name="blocked_requests_count">
         <item quantity="one">%1$d Anfrage auf diesem Tab blockiert</item>
@@ -70,10 +88,17 @@
     <string name="settings_block_third_party_cookies_subtitle">Cookies von Erstanbietern bleiben für Anmeldungen aktiv</string>
     <string name="settings_protection_disclaimer">Lokaler heuristischer Schutz. Manche Werbung, CNAME-Tracker und Banner in geschlossenen Frames können durchkommen.</string>
     <string name="toast_tab_limit_reached">Maximal %1$d Tabs</string>
+    <plurals name="toast_profile_limit_reached">
+        <item quantity="one">Maximal %1$d Profil</item>
+        <item quantity="other">Maximal %1$d Profile</item>
+    </plurals>
     <string name="toast_already_default_browser">Bereits Standardbrowser</string>
     <string name="toast_default_browser_selection_unavailable">Standardbrowser-Auswahl nicht verfügbar</string>
     <string name="toast_no_external_app">Keine externe App installiert</string>
+    <string name="toast_assistant_unavailable">Kein kompatibler Assistent eingerichtet</string>
     <string name="toast_no_matching_app">Keine passende App installiert</string>
+    <string name="toast_printing_unavailable">Drucken ist auf diesem Gerät nicht verfügbar</string>
+    <string name="toast_qr_scan_failed">QR-Code konnte nicht gescannt werden</string>
     <string name="toast_browsing_data_cleared">Browserdaten gelöscht</string>
     <string name="error_unsafe_tls_blocked">Unsichere TLS-Verbindung blockiert</string>
     <string name="error_unsafe_site_blocked">Unsichere Website blockiert</string>

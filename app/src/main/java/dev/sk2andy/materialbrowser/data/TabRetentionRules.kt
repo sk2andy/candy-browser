@@ -17,6 +17,7 @@ internal object TabRetentionRules {
         val cutoff = nowMillis - maxAgeMillis
         return tabs.asSequence()
             .filter { it.id != protectedTabId }
+            .filter(TabDeletionRules::canDelete)
             .filter { it.lastAccessedAt > 0L && it.lastAccessedAt < cutoff }
             .map(BrowserTab::id)
             .toSet()

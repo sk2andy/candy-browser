@@ -6,6 +6,7 @@
     <string name="cd_open_search">Abrir búsqueda</string>
     <string name="cd_close_address_input">Cerrar campo de dirección</string>
     <string name="cd_more_options">Más opciones</string>
+    <string name="cd_scan_qr_code">Escanear código QR</string>
     <string name="action_back">Atrás</string>
     <string name="action_forward">Adelante</string>
     <string name="new_tab_title">Nueva pestaña</string>
@@ -13,6 +14,19 @@
     <string name="cd_close_tab_overview">Cerrar vista de pestañas</string>
     <string name="cd_close_tab">Cerrar pestaña</string>
     <string name="action_switch_to_tab">Cambiar a la pestaña</string>
+    <string name="tab_actions_title">Opciones de la pestaña</string>
+    <string name="action_pin_tab">Fijar pestaña</string>
+    <string name="action_remove_pin">Quitar fijación</string>
+    <string name="cd_pinned_tab">Pestaña fijada</string>
+    <string name="cd_profile">Perfil</string>
+    <string name="cd_add_profile">Añadir perfil</string>
+    <string name="action_edit_profile">Editar perfil</string>
+    <string name="profile_actions_title">Opciones del perfil</string>
+    <string name="action_change_profile_icon">Cambiar icono</string>
+    <string name="action_delete_profile_keep_tabs">Eliminar perfil · conservar pestañas</string>
+    <string name="add_profile_title">Elige un icono para el perfil nuevo</string>
+    <string name="change_profile_icon_title">Elige un icono nuevo</string>
+    <string name="action_move_tab_to_profile">Mover al perfil</string>
     <string name="blocked_items_badge">◈ %1$d</string>
     <string name="incognito">Incógnito</string>
     <string name="cd_make_blank_tab_incognito">Convertir la pestaña vacía en una pestaña de incógnito</string>
@@ -22,6 +36,10 @@
     <string name="action_add_favorite">Añadir a favoritos</string>
     <string name="action_remove_favorite">Quitar de favoritos</string>
     <string name="action_open_external_app">Abrir en una aplicación externa</string>
+    <string name="action_summarize_with_assistant">Resumir con el asistente</string>
+    <string name="assistant_summary_prompt">Resume el siguiente sitio web en español.</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_print">Imprimir</string>
     <string name="default_browser_current">Navegador predeterminado ✓</string>
     <string name="action_set_default_browser">Establecer como navegador predeterminado</string>
     <string name="action_settings">Ajustes</string>
@@ -58,7 +76,7 @@
     <string name="settings_make_default_browser">Establecer Candy Browser como navegador predeterminado</string>
     <string name="settings_section_gestures">Gestos</string>
     <string name="settings_tab_dismiss_resistance">Resistencia al cerrar pestañas</string>
-    <string name="settings_tab_dismiss_resistance_summary">La resistencia se aplica al primer %1$d%% del gesto</string>
+    <string name="settings_tab_dismiss_resistance_summary">Fase de resistencia: %1$d%% del recorrido de cierre</string>
     <string name="settings_section_protection">Protección y cookies</string>
     <plurals name="blocked_requests_count">
         <item quantity="one">%1$d solicitud bloqueada en esta pestaña</item>
@@ -73,10 +91,18 @@
     <string name="settings_block_third_party_cookies_subtitle">Las cookies propias permanecen activas para iniciar sesión</string>
     <string name="settings_protection_disclaimer">Protección heurística local. Algunos anuncios, rastreadores CNAME y banners en marcos cerrados pueden pasar.</string>
     <string name="toast_tab_limit_reached">Máximo de %1$d pestañas</string>
+    <plurals name="toast_profile_limit_reached">
+        <item quantity="one">Máximo de %1$d perfil</item>
+        <item quantity="many">Máximo de %1$d perfiles</item>
+        <item quantity="other">Máximo de %1$d perfiles</item>
+    </plurals>
     <string name="toast_already_default_browser">Ya es el navegador predeterminado</string>
     <string name="toast_default_browser_selection_unavailable">La selección del navegador predeterminado no está disponible</string>
     <string name="toast_no_external_app">No hay ninguna aplicación externa instalada</string>
+    <string name="toast_assistant_unavailable">No hay ningún asistente compatible configurado</string>
     <string name="toast_no_matching_app">No hay ninguna aplicación compatible instalada</string>
+    <string name="toast_printing_unavailable">La impresión no está disponible en este dispositivo</string>
+    <string name="toast_qr_scan_failed">No se pudo escanear el código QR</string>
     <string name="toast_browsing_data_cleared">Datos de navegación borrados</string>
     <string name="error_unsafe_tls_blocked">Conexión TLS no segura bloqueada</string>
     <string name="error_unsafe_site_blocked">Sitio web no seguro bloqueado</string>

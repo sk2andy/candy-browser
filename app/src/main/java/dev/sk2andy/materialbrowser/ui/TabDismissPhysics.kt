@@ -3,35 +3,40 @@ package dev.sk2andy.materialbrowser.ui
 internal object TabDismissPhysics {
     const val DEFAULT_RESISTANCE_FRACTION = 0.4f
     private const val RESISTANCE_MULTIPLIER = 0.55f
+    private const val MAX_RELEASE_PROGRESS = 1.1f
 
     fun visualDistance(
         rawDistance: Float,
-        dismissThreshold: Float,
-        resistanceFraction: Float = DEFAULT_RESISTANCE_FRACTION,
+        releaseProgress: Float = 0f,
     ): Float {
-        if (dismissThreshold <= 0f) return 0f
         val safeRawDistance = rawDistance.coerceAtLeast(0f)
-        val resistanceEnd = dismissThreshold * resistanceFraction.coerceIn(0.1f, 0.9f)
-        return if (safeRawDistance <= resistanceEnd) {
-            safeRawDistance * RESISTANCE_MULTIPLIER
-        } else {
-            resistanceEnd * RESISTANCE_MULTIPLIER + (safeRawDistance - resistanceEnd)
-        }
+        val resistedDistance = safeRawDistance * RESISTANCE_MULTIPLIER
+        return resistedDistance +
+            (safeRawDistance - resistedDistance) *
+            releaseProgress.coerceIn(0f, MAX_RELEASE_PROGRESS)
     }
 
-    fun isInResistanceBand(
+    fun hasClearedResistance(
         rawDistance: Float,
         dismissThreshold: Float,
         resistanceFraction: Float = DEFAULT_RESISTANCE_FRACTION,
     ): Boolean {
         if (dismissThreshold <= 0f) return false
-        val resistanceEnd = dismissThreshold * resistanceFraction.coerceIn(0.1f, 0.9f)
-        return rawDistance > 0f && rawDistance < resistanceEnd
+        return rawDistance >= resistanceEnd(dismissThreshold, resistanceFraction)
     }
 
-    fun isDismissed(
+    fun isInResistancePhase(
         rawDistance: Float,
         dismissThreshold: Float,
         resistanceFraction: Float = DEFAULT_RESISTANCE_FRACTION,
-    ): Boolean = visualDistance(rawDistance, dismissThreshold, resistanceFraction) >= dismissThreshold
+    ): Boolean {
+        if (dismissThreshold <= 0f) return false
+        return rawDistance > 0f &&
+            !hasClearedResistance(rawDistance, dismissThreshold, resistanceFraction)
+    }
+
+    private fun resistanceEnd(
+        dismissThreshold: Float,
+        resistanceFraction: Float,
+    ): Float = dismissThreshold * resistanceFraction.coerceIn(0.1f, 0.9f)
 }

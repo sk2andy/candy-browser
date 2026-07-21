@@ -34,4 +34,14 @@ class ConsentBlockerScriptTest {
         assertTrue(script.contains("getComputedStyle(banner).display !== 'none'"))
         assertTrue(ConsentBlockerScript.cleanupScript.contains("__materialBrowserUnlockCookieScroll"))
     }
+
+    @Test
+    fun `document start work stays in top frame and observes late cmp locks`() {
+        val script = ConsentBlockerScript.create("#banner {}".toByteArray())
+
+        assertTrue(script.contains("window.top !== window"))
+        assertTrue(script.contains("new MutationObserver"))
+        assertTrue(script.contains("attributeFilter: ['class', 'style']"))
+        assertTrue(ConsentBlockerScript.removalScript.contains(".disconnect()"))
+    }
 }

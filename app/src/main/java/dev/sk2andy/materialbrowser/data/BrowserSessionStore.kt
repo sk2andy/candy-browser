@@ -3,7 +3,10 @@ package dev.sk2andy.materialbrowser.data
 import android.content.Context
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
+import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,14 +27,20 @@ class BrowserSessionStore(context: Context) {
                             lastAccessedAt = item.optLong("lastAccessedAt")
                                 .takeIf { it > 0L }
                                 ?: nowMillis,
+                            profileId = item.optString("profileId", DEFAULT_PROFILE_ID)
+                                .takeIf(String::isNotBlank)
+                                ?: DEFAULT_PROFILE_ID,
                             isIncognito = item.optBoolean("isIncognito", false),
+                            isPinned = item.optBoolean("isPinned", false),
                             title = item.optString("title", ""),
                             url = item.optString("url", BLANK_URL),
                         ),
                     )
                 }
             }
-            val persistentTabs = TabPersistenceRules.persistentTabs(tabs)
+            val persistentTabs = TabPinningRules.orderedTabs(
+                TabPersistenceRules.persistentTabs(tabs),
+            )
             persistentTabs to preferences.getString(KEY_SELECTED_TAB, null)
                 ?.takeIf { selectedId -> persistentTabs.any { it.id == selectedId } }
         }.getOrDefault(emptyList<BrowserTab>() to null)
@@ -46,7 +55,9 @@ class BrowserSessionStore(context: Context) {
                 JSONObject()
                     .put("id", tab.id)
                     .put("lastAccessedAt", tab.lastAccessedAt)
+                    .put("profileId", tab.profileId)
                     .put("isIncognito", false)
+                    .put("isPinned", tab.isPinned)
                     .put("title", tab.title)
                     .put("url", tab.url),
             )
@@ -60,6 +71,59 @@ class BrowserSessionStore(context: Context) {
 
     fun saveSelectedTab(selectedTabId: String) {
         preferences.edit().putString(KEY_SELECTED_TAB, selectedTabId).apply()
+    }
+
+    fun loadProfiles(): Pair<List<BrowserProfile>, String> {
+        val profiles = preferences.getString(KEY_PROFILES, null)
+            ?.let { raw ->
+                runCatching {
+                    val array = JSONArray(raw)
+                    buildList<BrowserProfile> {
+                        for (index in 0 until array.length()) {
+                            val item = array.getJSONObject(index)
+                            val id = item.optString("id").trim()
+                            val emoji = item.optString("emoji").trim()
+                            if (id.isNotEmpty() && emoji.isNotEmpty() && none { it.id == id }) {
+                                add(
+                                    BrowserProfile(
+                                        id = id,
+                                        emoji = emoji,
+                                        selectedTabId = item.optString("selectedTabId")
+                                            .takeIf(String::isNotBlank),
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }.getOrNull()
+            }
+            .orEmpty()
+            .ifEmpty { listOf(DEFAULT_BROWSER_PROFILE) }
+        val activeProfileId = preferences.getString(KEY_ACTIVE_PROFILE, null)
+            ?.takeIf { candidate -> profiles.any { it.id == candidate } }
+            ?: profiles.first().id
+        return profiles to activeProfileId
+    }
+
+    fun saveProfiles(profiles: List<BrowserProfile>, activeProfileId: String) {
+        val safeProfiles = profiles.ifEmpty { listOf(DEFAULT_BROWSER_PROFILE) }
+        val array = JSONArray()
+        safeProfiles.forEach { profile ->
+            array.put(
+                JSONObject()
+                    .put("id", profile.id)
+                    .put("emoji", profile.emoji)
+                    .put("selectedTabId", profile.selectedTabId),
+            )
+        }
+        preferences.edit()
+            .putString(KEY_PROFILES, array.toString())
+            .putString(
+                KEY_ACTIVE_PROFILE,
+                activeProfileId.takeIf { id -> safeProfiles.any { it.id == id } }
+                    ?: safeProfiles.first().id,
+            )
+            .apply()
     }
 
     @Synchronized
@@ -165,6 +229,8 @@ class BrowserSessionStore(context: Context) {
     private companion object {
         const val KEY_TABS = "tabs"
         const val KEY_SELECTED_TAB = "selected_tab"
+        const val KEY_PROFILES = "profiles"
+        const val KEY_ACTIVE_PROFILE = "active_profile"
         const val KEY_BLOCK_ADS = "block_ads"
         const val KEY_HIDE_CONSENT = "hide_consent"
         const val KEY_BLOCK_THIRD_PARTY_COOKIES = "block_third_party_cookies"

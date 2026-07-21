@@ -1,5 +1,8 @@
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:antialias="true"
-    android:filter="true"
-    android:gravity="fill"
-    android:src="@drawable/ic_launcher_foreground_art" />
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="8dp">
+    <bitmap
+        android:antialias="true"
+        android:filter="true"
+        android:gravity="fill"
+        android:src="@drawable/ic_launcher_foreground_art" />
+</inset>

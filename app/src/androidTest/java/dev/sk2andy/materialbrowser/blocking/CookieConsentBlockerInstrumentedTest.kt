@@ -4,12 +4,15 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -85,6 +88,82 @@ class CookieConsentBlockerInstrumentedTest {
         )
 
         assertEquals("\"hidden|block\"", result)
+    }
+
+    @Test
+    fun installsCookieCssBeforePageJavaScriptWhenDocumentStartIsSupported() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val blocker = ContentBlocker(instrumentation.targetContext)
+        val pageLoaded = CountDownLatch(1)
+        val createdView = AtomicReference<WebView>()
+        instrumentation.runOnMainSync {
+            createdView.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    WebViewCompat.addDocumentStartJavaScript(this, blocker.consentScript, setOf("*"))
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) {
+                            pageLoaded.countDown()
+                        }
+                    }
+                    loadDataWithBaseURL(
+                        "https://example.test/",
+                        """
+                            <!doctype html>
+                            <html><head><script>
+                              const banner = document.createElement('div');
+                              banner.id = 'CybotCookiebotDialog';
+                              document.documentElement.appendChild(banner);
+                              window.blockerState = [
+                                document.getElementById('material-browser-easylist-cookie-css') !== null,
+                                getComputedStyle(banner).display
+                              ].join('|');
+                            </script></head><body></body></html>
+                        """.trimIndent(),
+                        "text/html",
+                        "utf-8",
+                        null,
+                    )
+                },
+            )
+        }
+        assertTrue(pageLoaded.await(10, TimeUnit.SECONDS))
+        val view = createdView.get().also(webView::set)
+
+        assertEquals("\"true|none\"", evaluate(view, "window.blockerState"))
+    }
+
+    @Test
+    fun unlocksScrollWhenCmpAppliesLockAfterPageFinished() {
+        val view = loadPage(
+            """
+                <!doctype html>
+                <html><head></head><body><main>Article</main></body></html>
+            """.trimIndent(),
+        )
+        evaluate(view, ContentBlocker(instrumentation.targetContext).consentScript)
+
+        evaluate(
+            view,
+            """
+                (() => {
+                  const lateBanner = document.createElement('div');
+                  lateBanner.id = 'CybotCookiebotDialog';
+                  document.body.appendChild(lateBanner);
+                  document.body.style.overflow = 'hidden';
+                })();
+            """.trimIndent(),
+        )
+
+        assertEquals("\"cleared|none\"", evaluate(
+            view,
+            """
+                [
+                  document.body.style.overflow || 'cleared',
+                  getComputedStyle(document.getElementById('CybotCookiebotDialog')).display
+                ].join('|');
+            """.trimIndent(),
+        ))
     }
 
     private fun loadPage(html: String): WebView {

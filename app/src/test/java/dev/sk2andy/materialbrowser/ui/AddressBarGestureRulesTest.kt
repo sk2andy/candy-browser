@@ -5,9 +5,9 @@ import org.junit.Test
 
 class AddressBarGestureRulesTest {
     @Test
-    fun `down swipe reloads`() {
+    fun `down swipe does not act from address bar`() {
         assertEquals(
-            AddressBarVerticalAction.Reload,
+            AddressBarVerticalAction.None,
             AddressBarGestureRules.action(dragDistance = 56f, threshold = 56f),
         )
     }

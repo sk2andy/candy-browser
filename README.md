@@ -16,7 +16,7 @@ und lokalen Content-Schutz.
 - Pull-to-refresh und Material-3-Ladefortschritt direkt in der Adressleiste
 - Direkte URL-Navigation; sonst Google-Suche
 - Lokaler Verlauf mit Autovervollständigung sowie persistente Favoriten auf neuen Tabs
-- Lokaler Werbe-/Tracker-Filter inklusive Service-Worker-Anfragen
+- Lokaler Werbe-/Tracker-Filter mit rund 55.000 kompilierten EasyList-/EasyPrivacy-Hosts inklusive Service-Worker-Anfragen
 - Drittanbieter-Cookies standardmäßig blockiert; First-party-Cookies für Logins erlaubt
 - Früher Cookie-Banner-Blocker auf Basis der EasyList Cookie List
 - Safe Browsing, TLS-Abbruch, verbotene Datei-/Content-Schemes und externe Scheme-Allowlist
@@ -46,7 +46,8 @@ ist absichtlich nicht Standard, weil es Logins und viele Websites bricht.
 
 ## Filterquellen
 
-Die kosmetischen Cookie-Banner-Regeln stammen von den EasyList-Autoren und werden unter
+Werbe-/Tracker-Hosts sowie kosmetische Cookie-Banner-Regeln stammen von den EasyList-Autoren und werden unter
 Creative Commons Attribution-ShareAlike 3.0 oder neuer verwendet. Quelle und Lizenz stehen zusätzlich in
-`app/src/main/assets/easylist_cookie.LICENSE.txt`. Mit
-`scripts/update_cookie_banner_css.sh` lässt sich die eingebettete Regelliste aktualisieren.
+`app/src/main/assets/content_filter.LICENSE.txt`. Mit
+`scripts/update_content_filter_hosts.sh` und `scripts/update_cookie_banner_css.sh` lassen sich die
+eingebetteten, auf feste Quellrevisionen gepinnten Regellisten reproduzierbar aktualisieren.

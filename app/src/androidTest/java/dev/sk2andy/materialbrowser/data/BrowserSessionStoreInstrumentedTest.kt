@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -40,6 +42,8 @@ class BrowserSessionStoreInstrumentedTest {
         val (legacyTabs, selectedId) = store.loadTabs(nowMillis = 42_000L)
         assertEquals(42_000L, legacyTabs.single().lastAccessedAt)
         assertFalse(legacyTabs.single().isIncognito)
+        assertFalse(legacyTabs.single().isPinned)
+        assertEquals(DEFAULT_PROFILE_ID, legacyTabs.single().profileId)
         assertEquals("legacy", selectedId)
 
         store.saveTabs(
@@ -47,6 +51,65 @@ class BrowserSessionStoreInstrumentedTest {
             selectedTabId = "saved",
         )
         assertEquals(84_000L, store.loadTabs(nowMillis = 1L).first.single().lastAccessedAt)
+    }
+
+    @Test
+    fun pinnedTabsRoundTripBeforeRegularTabs() {
+        val store = BrowserSessionStore(context)
+        store.saveTabs(
+            tabs = listOf(
+                BrowserTab(id = "regular", lastAccessedAt = 10L),
+                BrowserTab(id = "pinned", lastAccessedAt = 20L, isPinned = true),
+            ),
+            selectedTabId = "regular",
+        )
+
+        val (tabs, selectedId) = store.loadTabs()
+
+        assertEquals(listOf("pinned", "regular"), tabs.map(BrowserTab::id))
+        assertEquals(listOf(true, false), tabs.map(BrowserTab::isPinned))
+        assertEquals("regular", selectedId)
+    }
+
+    @Test
+    fun profilesAndPerProfileSelectionsRoundTrip() {
+        val store = BrowserSessionStore(context)
+        val profiles = listOf(
+            BrowserProfile(id = "candy", emoji = "🍬", selectedTabId = "personal-tab"),
+            BrowserProfile(id = "work", emoji = "💼", selectedTabId = "work-tab"),
+        )
+
+        store.saveProfiles(profiles, activeProfileId = "work")
+        store.saveTabs(
+            tabs = listOf(
+                BrowserTab(id = "personal-tab", lastAccessedAt = 10L),
+                BrowserTab(id = "work-tab", lastAccessedAt = 20L, profileId = "work"),
+            ),
+            selectedTabId = "work-tab",
+        )
+
+        val (restoredProfiles, activeProfileId) = store.loadProfiles()
+        val (restoredTabs, selectedTabId) = store.loadTabs()
+
+        assertEquals(profiles, restoredProfiles)
+        assertEquals("work", activeProfileId)
+        assertEquals(listOf(DEFAULT_PROFILE_ID, "work"), restoredTabs.map(BrowserTab::profileId))
+        assertEquals("work-tab", selectedTabId)
+    }
+
+    @Test
+    fun missingOrInvalidProfilesFallBackToCandy() {
+        val store = BrowserSessionStore(context)
+        assertEquals(listOf("candy"), store.loadProfiles().first.map(BrowserProfile::id))
+        assertEquals("candy", store.loadProfiles().second)
+
+        preferences.edit()
+            .putString("profiles", "not-json")
+            .putString("active_profile", "missing")
+            .commit()
+
+        assertEquals(listOf("candy"), store.loadProfiles().first.map(BrowserProfile::id))
+        assertEquals("candy", store.loadProfiles().second)
     }
 
     @Test

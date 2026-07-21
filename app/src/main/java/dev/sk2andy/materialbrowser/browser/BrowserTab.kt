@@ -5,7 +5,9 @@ import android.graphics.Bitmap
 data class BrowserTab(
     val id: String,
     val lastAccessedAt: Long,
+    val profileId: String = DEFAULT_PROFILE_ID,
     val isIncognito: Boolean = false,
+    val isPinned: Boolean = false,
     val title: String = "",
     val url: String = BLANK_URL,
     val progress: Int = 0,
