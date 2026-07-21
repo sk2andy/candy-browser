@@ -96,7 +96,9 @@ class WebViewWindowInsetsInstrumentedTest {
                         <!doctype html>
                         <html>
                           <head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-                          <body><div id="probe" style="padding-top:env(safe-area-inset-top)"></div></body>
+                          <body style="min-height:4000px">
+                            <div id="probe" style="padding-top:env(safe-area-inset-top)"></div>
+                          </body>
                         </html>
                     """.trimIndent(),
                     "text/html",
@@ -114,6 +116,13 @@ class WebViewWindowInsetsInstrumentedTest {
 
             assertTrue(expectedTopPixels.get() > 0)
             assertEquals(0f, topInset, 0.1f)
+            awaitWebViewBottomAtParentBottom(webView)
+
+            evaluate(webView, "window.scrollTo(0, 1000)")
+            awaitWebViewTop(webView, 0)
+
+            evaluate(webView, "window.scrollTo(0, 0)")
+            awaitWebViewTop(webView, expectedTopPixels.get())
 
             evaluate(
                 webView,
@@ -175,6 +184,25 @@ class WebViewWindowInsetsInstrumentedTest {
             SystemClock.sleep(50)
         }
         throw AssertionError("WebView top was ${location[1]}, expected $expectedTop")
+    }
+
+    private fun awaitWebViewBottomAtParentBottom(webView: WebView) {
+        val webViewLocation = IntArray(2)
+        val parentLocation = IntArray(2)
+        repeat(100) {
+            var webViewBottom = 0
+            var parentBottom = 0
+            instrumentation.runOnMainSync {
+                val parent = webView.parent as View
+                webView.getLocationInWindow(webViewLocation)
+                parent.getLocationInWindow(parentLocation)
+                webViewBottom = webViewLocation[1] + webView.height
+                parentBottom = parentLocation[1] + parent.height
+            }
+            if (webViewBottom == parentBottom) return
+            SystemClock.sleep(50)
+        }
+        throw AssertionError("WebView did not reach its parent's bottom edge")
     }
 
     private fun evaluate(webView: WebView, script: String): String {

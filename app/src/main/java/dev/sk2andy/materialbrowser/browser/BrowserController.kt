@@ -207,7 +207,25 @@ class BrowserController(private val activity: Activity) {
     ) {
         val drawsEdgeToEdge = edgeToEdgePages[tabId] == true
         val safeArea = insets.getInsets(SAFE_AREA_INSET_TYPES)
-        val margins = if (drawsEdgeToEdge) Insets.NONE else safeArea
+        val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+        val tappableElements = insets.getInsets(WindowInsetsCompat.Type.tappableElement())
+        val hasTappableNavigation =
+            (navigationBars.left > 0 && tappableElements.left > 0) ||
+                (navigationBars.top > 0 && tappableElements.top > 0) ||
+                (navigationBars.right > 0 && tappableElements.right > 0) ||
+                (navigationBars.bottom > 0 && tappableElements.bottom > 0)
+        val usesGestureNavigation = navigationBars != Insets.NONE && !hasTappableNavigation
+        val topMargin = if (drawsEdgeToEdge) {
+            0
+        } else {
+            (safeArea.top - webView.scrollY).coerceAtLeast(0)
+        }
+        val bottomMargin = if (drawsEdgeToEdge || usesGestureNavigation) 0 else safeArea.bottom
+        val margins = if (drawsEdgeToEdge) {
+            Insets.NONE
+        } else {
+            Insets.of(safeArea.left, topMargin, safeArea.right, bottomMargin)
+        }
         (webView.layoutParams as? FrameLayout.LayoutParams)?.let { layoutParams ->
             if (
                 layoutParams.leftMargin != margins.left ||
@@ -223,10 +241,32 @@ class BrowserController(private val activity: Activity) {
             insets
         } else {
             WindowInsetsCompat.Builder(insets)
-                .setInsets(SAFE_AREA_INSET_TYPES, Insets.NONE)
+                .setInsets(
+                    SAFE_AREA_INSET_TYPES,
+                    Insets.of(
+                        0,
+                        safeArea.top - topMargin,
+                        0,
+                        safeArea.bottom - bottomMargin,
+                    ),
+                )
                 .build()
         }
         ViewCompat.dispatchApplyWindowInsets(webView, rendererInsets)
+    }
+
+    private fun updateScrollAwareInsets(
+        tabId: String,
+        webView: WebView,
+        scrollY: Int,
+        oldScrollY: Int,
+    ) {
+        if (edgeToEdgePages[tabId] == true) return
+        val insets = ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets ?: return
+        val safeTop = insets.getInsets(SAFE_AREA_INSET_TYPES).top
+        val topMargin = (safeTop - scrollY).coerceAtLeast(0)
+        val oldTopMargin = (safeTop - oldScrollY).coerceAtLeast(0)
+        if (topMargin != oldTopMargin) applyWindowInsets(tabId, webView, insets)
     }
 
     private fun detectPageEdgeToEdge(tabId: String, webView: WebView) {
@@ -238,7 +278,12 @@ class BrowserController(private val activity: Activity) {
             ) {
                 return@evaluateJavascript
             }
-            setPageEdgeToEdge(tabId, webView, PageViewportFit.isCoverResult(result))
+            setPageEdgeToEdge(
+                tabId,
+                webView,
+                enabled = PageViewportFit.isCoverResult(result),
+                force = true,
+            )
         }
     }
 
@@ -260,9 +305,14 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
-    private fun setPageEdgeToEdge(tabId: String, webView: WebView, enabled: Boolean) {
+    private fun setPageEdgeToEdge(
+        tabId: String,
+        webView: WebView,
+        enabled: Boolean,
+        force: Boolean = false,
+    ) {
         val previous = edgeToEdgePages.put(tabId, enabled)
-        if (previous == enabled) return
+        if (!force && previous == enabled) return
         val insets = ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets ?: return
         applyWindowInsets(tabId, webView, insets)
     }
@@ -729,6 +779,7 @@ class BrowserController(private val activity: Activity) {
         var previousDirection = 0
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
             if (tabId != selectedTabId) return@setOnScrollChangeListener
+            updateScrollAwareInsets(tabId, this, scrollY, oldScrollY)
             schedulePreviewCapture(tabId)
             if (scrollY <= 0) {
                 accumulatedDistance = 0f
