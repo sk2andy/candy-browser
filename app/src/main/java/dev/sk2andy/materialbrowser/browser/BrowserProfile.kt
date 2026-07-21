@@ -4,6 +4,7 @@ data class BrowserProfile(
     val id: String,
     val emoji: String,
     val selectedTabId: String? = null,
+    val isolationEnabled: Boolean = false,
 )
 
 const val DEFAULT_PROFILE_ID = "candy"

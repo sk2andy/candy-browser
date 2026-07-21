@@ -27,6 +27,13 @@
     <string name="add_profile_title">Icon für das neue Profil wählen</string>
     <string name="change_profile_icon_title">Neues Icon wählen</string>
     <string name="action_move_tab_to_profile">In Profil verschieben</string>
+    <string name="settings_profile_isolation_title">Eigener Speicher · Isolationsmodus</string>
+    <string name="settings_profile_isolation_subtitle">Trennt Cookies, Logins, Website-Daten, Cache und Service Worker für dieses Profil</string>
+    <string name="settings_profile_isolation_unsupported">Nicht verfügbar: Der installierte WebView-Anbieter unterstützt keinen getrennten Profilspeicher</string>
+    <string name="profile_isolation_confirm_title">Profilspeicher wechseln?</string>
+    <string name="profile_isolation_enable_message">Tabs dieses Profils werden mit getrenntem Speicher neu geladen. Bestehende gemeinsame Logins werden nicht übernommen.</string>
+    <string name="profile_isolation_disable_message">Tabs dieses Profils werden mit gemeinsamem Speicher neu geladen. Logins aus dem isolierten Speicher sind dann nicht mehr aktiv.</string>
+    <string name="action_switch_storage">Speicher wechseln</string>
     <string name="blocked_items_badge">◈ %1$d</string>
     <string name="incognito">Inkognito</string>
     <string name="cd_make_blank_tab_incognito">Leeren Tab als Inkognito-Tab verwenden</string>
@@ -100,6 +107,7 @@
     <string name="toast_printing_unavailable">Drucken ist auf diesem Gerät nicht verfügbar</string>
     <string name="toast_qr_scan_failed">QR-Code konnte nicht gescannt werden</string>
     <string name="toast_browsing_data_cleared">Browserdaten gelöscht</string>
+    <string name="toast_incognito_unsupported">Inkognito ist nicht verfügbar, weil dieser WebView-Anbieter den Speicher nicht isolieren kann</string>
     <string name="error_unsafe_tls_blocked">Unsichere TLS-Verbindung blockiert</string>
     <string name="error_unsafe_site_blocked">Unsichere Website blockiert</string>
     <string name="error_renderer_crashed">Web-Renderer wurde unerwartet beendet</string>

@@ -27,6 +27,13 @@
     <string name="add_profile_title">Escolha um ícone para o novo perfil</string>
     <string name="change_profile_icon_title">Escolha um novo ícone</string>
     <string name="action_move_tab_to_profile">Mover para o perfil</string>
+    <string name="settings_profile_isolation_title">Armazenamento próprio · Modo isolado</string>
+    <string name="settings_profile_isolation_subtitle">Separa cookies, sessões, dados dos sites, cache e service workers deste perfil</string>
+    <string name="settings_profile_isolation_unsupported">Indisponível: o fornecedor WebView instalado não suporta armazenamento separado por perfil</string>
+    <string name="profile_isolation_confirm_title">Alterar o armazenamento do perfil?</string>
+    <string name="profile_isolation_enable_message">Os separadores deste perfil serão recarregados com armazenamento separado. As sessões partilhadas existentes não serão transferidas.</string>
+    <string name="profile_isolation_disable_message">Os separadores deste perfil serão recarregados com armazenamento partilhado. As sessões do armazenamento isolado deixarão de estar ativas.</string>
+    <string name="action_switch_storage">Alterar armazenamento</string>
     <string name="blocked_items_badge">◈ %1$d</string>
     <string name="incognito">Navegação anónima</string>
     <string name="cd_make_blank_tab_incognito">Tornar o separador vazio anónimo</string>
@@ -104,6 +111,7 @@
     <string name="toast_printing_unavailable">A impressão não está disponível neste dispositivo</string>
     <string name="toast_qr_scan_failed">Não foi possível ler o código QR</string>
     <string name="toast_browsing_data_cleared">Dados de navegação limpos</string>
+    <string name="toast_incognito_unsupported">A navegação anónima não está disponível porque este fornecedor WebView não consegue isolar o armazenamento</string>
     <string name="error_unsafe_tls_blocked">Ligação TLS não segura bloqueada</string>
     <string name="error_unsafe_site_blocked">Site não seguro bloqueado</string>
     <string name="error_renderer_crashed">O processador web terminou inesperadamente</string>

@@ -46,6 +46,7 @@ import androidx.webkit.ScriptHandler
 import androidx.webkit.ServiceWorkerClientCompat
 import androidx.webkit.ServiceWorkerControllerCompat
 import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebStorageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.R
@@ -108,6 +109,8 @@ class BrowserController(private val activity: Activity) {
         private set
     var webViewRevision by mutableIntStateOf(0)
         private set
+    val isProfileIsolationSupported: Boolean =
+        WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
     private val bottomBarCompactStates = mutableStateMapOf<String, Boolean>()
 
     val isBottomBarCompact: Boolean
@@ -119,6 +122,9 @@ class BrowserController(private val activity: Activity) {
     private val popupOpeners = mutableMapOf<String, String>()
     private val consentScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val pageUrls = ConcurrentHashMap<String, String>()
+    private val webViewProfileKeys = ConcurrentHashMap<String, String>()
+    private val configuredServiceWorkerProfiles = mutableSetOf<String>()
+    private var incognitoWebViewProfileName = newIncognitoWebViewProfileName()
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingPreviewCapture: Runnable? = null
     private val pendingBlockedCounts = ConcurrentHashMap<String, AtomicInteger>()
@@ -134,6 +140,8 @@ class BrowserController(private val activity: Activity) {
     private var faviconEpoch = 0
     private val faviconGenerations = mutableMapOf<String, Int>()
     private val store = BrowserSessionStore(activity)
+    private val profileDeletionCoordinator =
+        WebViewProfileDeletionCoordinator(store, ::tryDeleteNamedWebViewProfile)
     private val previewRepository = TabPreviewRepository.get(activity)
     private val faviconRepository = FaviconRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
@@ -154,6 +162,7 @@ class BrowserController(private val activity: Activity) {
         get() = tabs.filter { it.profileId == activeProfileId }
 
     init {
+        deletePendingWebViewProfiles()
         val nowMillis = System.currentTimeMillis()
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
@@ -502,6 +511,17 @@ class BrowserController(private val activity: Activity) {
         return true
     }
 
+    fun setProfileIsolation(profileId: String, enabled: Boolean): Boolean {
+        if (!isProfileIsolationSupported) return false
+        val index = profiles.indexOfFirst { it.id == profileId }
+        if (index < 0 || profiles[index].isolationEnabled == enabled) return false
+        val affectedTabIds = WebViewProfileRules.regularTabIdsForStorageChange(tabs, profileId)
+        profiles[index] = profiles[index].copy(isolationEnabled = enabled)
+        recreateWebViews(affectedTabIds)
+        persist()
+        return true
+    }
+
     fun deleteProfile(profileId: String): Boolean {
         if (profiles.size <= 1) return false
         val profileIndex = profiles.indexOfFirst { it.id == profileId }
@@ -511,9 +531,18 @@ class BrowserController(private val activity: Activity) {
         } else {
             profiles.first { it.id == activeProfileId }
         }
-        val movedTabs = tabs.filter { it.profileId == profileId }
-            .map { it.copy(profileId = fallbackProfile.id) }
-        tabs.removeAll { it.profileId == profileId }
+        val movedTabIds = WebViewProfileRules.tabIdsForProfileDeletion(tabs, profileId)
+        val webViewProfileName = WebViewProfileRules.isolatedProfileName(profileId)
+        clearExistingWebViewProfileData(webViewProfileName)
+        clearProfileServiceWorkerClient(webViewProfileName)
+        recreateWebViews(movedTabIds)
+        deleteOrScheduleWebViewProfile(webViewProfileName)
+        val movedTabs = WebViewProfileRules.moveTabs(
+            tabs = tabs,
+            sourceProfileId = profileId,
+            targetProfileId = fallbackProfile.id,
+        )
+        tabs.clear()
         tabs += movedTabs
         profiles.removeAt(profileIndex)
         if (profileId == activeProfileId) activeProfileId = fallbackProfile.id
@@ -544,8 +573,12 @@ class BrowserController(private val activity: Activity) {
             return false
         }
         val sourceIndex = activeTabs.indexOfFirst { it.id == tabId }
+        val oldAssignment = profileAssignmentFor(sourceTab)
+        val movedTab = sourceTab.copy(profileId = profileId)
+        val newAssignment = profileAssignmentFor(movedTab)
         if (tabId == selectedTabId) webViews[tabId]?.let(::pauseWebView)
-        updateTab(tabId) { it.copy(profileId = profileId) }
+        if (oldAssignment != newAssignment) recreateWebViews(setOf(tabId))
+        updateTab(tabId) { movedTab }
         replaceProfileTabs(
             profileId,
             TabPinningRules.orderedTabs(tabs.filter { it.profileId == profileId }),
@@ -566,7 +599,7 @@ class BrowserController(private val activity: Activity) {
         val selectedWebView = webViews[selectedTabId]
         val action = target.downloadImageAction(
             userAgent = selectedWebView?.settings?.userAgentString,
-            cookies = cookieManagerFor(selectedTabId).getCookie(imageUrl),
+            cookies = cookiesFor(selectedTabId, imageUrl),
         ) ?: return
         val result = downloadManager.enqueue(action.request)
         contentActions.reportDownload(result)
@@ -703,9 +736,18 @@ class BrowserController(private val activity: Activity) {
     fun setBlankTabIncognito(enabled: Boolean): Boolean {
         val tab = selectedTab
         if (tab.url != BLANK_URL || tab.isIncognito == enabled) return false
+        if (enabled && !isProfileIsolationSupported) {
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.toast_incognito_unsupported),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return false
+        }
         val wasLastIncognitoTab = tab.isIncognito && tabs.count(BrowserTab::isIncognito) == 1
         cancelPendingPreviewCapture()
         if (dirtyPreviewTabId == tab.id) dirtyPreviewTabId = null
+        if (wasLastIncognitoTab) prepareIncognitoProfileForRemoval()
         removeTabResources(tab.id, preserveFaviconGeneration = true)
         updateTab(tab.id) {
             it.copy(
@@ -731,6 +773,9 @@ class BrowserController(private val activity: Activity) {
         if (index < 0) return
         val closingTab = tabs[index]
         if (!TabDeletionRules.canDelete(closingTab)) return
+        val closesLastIncognitoTab =
+            closingTab.isIncognito && tabs.count(BrowserTab::isIncognito) == 1
+        if (closesLastIncognitoTab) prepareIncognitoProfileForRemoval()
         val profileIndex = activeTabs.indexOfFirst { it.id == tabId }
         val popupOpenerId = popupOpeners.remove(tabId)
         removeTabResources(tabId)
@@ -868,18 +913,14 @@ class BrowserController(private val activity: Activity) {
         mainHandler.removeCallbacks(blockerCountFlush)
         pendingBlockedCounts.clear()
         blockerFlushScheduled.set(false)
-        CookieManager.getInstance().removeAllCookies(null)
-        CookieManager.getInstance().flush()
-        WebStorage.getInstance().deleteAllData()
+        clearAllWebViewProfileData()
         val incognitoTabIds = tabs.asSequence()
             .filter(BrowserTab::isIncognito)
             .map(BrowserTab::id)
             .toList()
-        incognitoTabIds.forEach { tabId ->
-            webViews.remove(tabId)?.let(::destroyWebView)
-        }
+        if (incognitoTabIds.isNotEmpty()) prepareIncognitoProfileForRemoval()
+        recreateWebViews(incognitoTabIds.toSet())
         clearIncognitoProfile()
-        if (incognitoTabIds.isNotEmpty()) webViewRevision++
         webViews.values.forEach {
             it.clearCache(true)
             it.clearFormData()
@@ -908,6 +949,9 @@ class BrowserController(private val activity: Activity) {
         cancelPendingPreviewCapture()
         webViews.values.forEach(::pauseWebView)
         CookieManager.getInstance().flush()
+        webViews.values.forEach { webView ->
+            if (isProfileIsolationSupported) cookieManagerFor(webView).flush()
+        }
         persist()
     }
 
@@ -928,8 +972,11 @@ class BrowserController(private val activity: Activity) {
         pendingBlockedCounts.clear()
         blockerFlushScheduled.set(false)
         persist()
+        if (tabs.any(BrowserTab::isIncognito)) prepareIncognitoProfileForRemoval()
+        configuredServiceWorkerProfiles.toList().forEach(::clearProfileServiceWorkerClient)
         webViews.values.forEach(::destroyWebView)
         webViews.clear()
+        webViewProfileKeys.clear()
         consentScriptHandlers.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
@@ -941,6 +988,7 @@ class BrowserController(private val activity: Activity) {
             ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(null)
         }
         pageUrls.clear()
+        configuredServiceWorkerProfiles.clear()
         popupOpeners.clear()
         bottomBarCompactStates.clear()
         previews.clear()
@@ -960,13 +1008,19 @@ class BrowserController(private val activity: Activity) {
 
     private fun createWebView(tabId: String): WebView = WebView(activity).apply {
         val tab = tabs.first { it.id == tabId }
+        val profileAssignment = profileAssignmentFor(tab)
+        when (profileAssignment) {
+            WebViewProfileAssignment.Default -> Unit
+            is WebViewProfileAssignment.Incognito ->
+                WebViewCompat.setProfile(this, profileAssignment.profileName)
+            is WebViewProfileAssignment.Isolated ->
+                WebViewCompat.setProfile(this, profileAssignment.profileName)
+        }
+        webViewProfileKeys[tabId] = profileAssignment.storageKey
+        configureProfileServiceWorkerBlocking(profileAssignment, this)
         edgeToEdgePages[tabId] = false
         navigationGenerations[tabId] = 0
         addJavascriptInterface(ViewportFitBridge(tabId, this), PageViewportFit.bridgeName)
-        if (tab.isIncognito && supportsMultipleProfiles()) {
-            WebViewCompat.setProfile(this, INCOGNITO_PROFILE_NAME)
-            configureIncognitoServiceWorkerBlocking(this)
-        }
         val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         setBackgroundColor(if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE)
         with(settings) {
@@ -1097,6 +1151,12 @@ class BrowserController(private val activity: Activity) {
         }
 
         override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+            val visibleUrl = url?.takeIf(String::isNotBlank)
+                ?: view.url?.takeIf(String::isNotBlank)
+            if (visibleUrl != null) {
+                pageUrls[tabId] = visibleUrl
+                updateTab(tabId) { tab -> WebViewProfileRules.withVisibleUrl(tab, visibleUrl) }
+            }
             updateNavigationState(tabId, view)
         }
 
@@ -1174,7 +1234,9 @@ class BrowserController(private val activity: Activity) {
         }
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            clearServiceWorkerClientsLosingLastWebView(setOf(tabId))
             webViews.remove(tabId)
+            webViewProfileKeys.remove(tabId)
             removeCookieConsentDocumentStartScript(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
@@ -1279,36 +1341,44 @@ class BrowserController(private val activity: Activity) {
             .setServiceWorkerClient(
                 object : ServiceWorkerClientCompat() {
                     override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
-                        return interceptServiceWorkerRequest(request, isIncognito = false)
+                        return interceptServiceWorkerRequest(request, DEFAULT_STORAGE_KEY)
                     }
                 },
             )
     }
 
-    private fun configureIncognitoServiceWorkerBlocking(webView: WebView) {
+    private fun configureProfileServiceWorkerBlocking(
+        assignment: WebViewProfileAssignment,
+        webView: WebView,
+    ) {
+        if (assignment == WebViewProfileAssignment.Default) return
         if (
             !WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) ||
             !WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST)
         ) return
+        val storageKey = assignment.storageKey
+        if (!configuredServiceWorkerProfiles.add(storageKey)) return
         runCatching {
             WebViewCompat.getProfile(webView).serviceWorkerController.setServiceWorkerClient(
                 object : ServiceWorkerClient() {
                     override fun shouldInterceptRequest(
                         request: WebResourceRequest,
-                    ): WebResourceResponse? = interceptServiceWorkerRequest(request, isIncognito = true)
+                    ): WebResourceResponse? = interceptServiceWorkerRequest(request, storageKey)
                 },
             )
+        }.onFailure {
+            configuredServiceWorkerProfiles.remove(storageKey)
         }
     }
 
     private fun interceptServiceWorkerRequest(
         request: WebResourceRequest,
-        isIncognito: Boolean,
+        storageKey: String,
     ): WebResourceResponse? {
         if (!workerSettings.blockAdsAndTrackers) return null
-        val relevantPageUrls = tabs.asSequence()
-            .filter { it.isIncognito == isIncognito }
-            .mapNotNull { pageUrls[it.id] }
+        val relevantPageUrls = pageUrls.entries.asSequence()
+            .filter { (tabId, _) -> webViewProfileKeys[tabId] == storageKey }
+            .map { (_, pageUrl) -> pageUrl }
             .toList()
         if (relevantPageUrls.isEmpty()) return null
         val requestUrl = request.url.toString()
@@ -1354,7 +1424,7 @@ class BrowserController(private val activity: Activity) {
                 contentDisposition = contentDisposition,
                 mimeType = mimeType,
                 userAgent = userAgent,
-                cookies = cookieManagerFor(tabId).getCookie(url),
+                cookies = cookiesFor(tabId, url),
             )
             if (request == null) {
                 Toast.makeText(
@@ -1643,7 +1713,7 @@ class BrowserController(private val activity: Activity) {
         id = UUID.randomUUID().toString(),
         lastAccessedAt = nowMillis,
         profileId = activeProfileId,
-        isIncognito = isIncognito,
+        isIncognito = isIncognito && isProfileIsolationSupported,
         url = url,
         title = if (url == BLANK_URL) "" else AddressResolver.displayText(url),
         isLoading = url != BLANK_URL,
@@ -1681,6 +1751,12 @@ class BrowserController(private val activity: Activity) {
         )
         if (expiredIds.isEmpty()) return false
         val removedIncognitoTab = tabs.any { it.id in expiredIds && it.isIncognito }
+        if (
+            removedIncognitoTab &&
+            tabs.none { it.isIncognito && it.id !in expiredIds }
+        ) {
+            prepareIncognitoProfileForRemoval()
+        }
         expiredIds.forEach(::removeTabResources)
         tabs.removeAll { it.id in expiredIds }
         if (removedIncognitoTab && tabs.none(BrowserTab::isIncognito)) {
@@ -1702,6 +1778,7 @@ class BrowserController(private val activity: Activity) {
         popupOpeners.remove(tabId)
         popupOpeners.entries.removeAll { (_, openerId) -> openerId == tabId }
         webViews.remove(tabId)?.let(::destroyWebView)
+        webViewProfileKeys.remove(tabId)
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
         pageUrls.remove(tabId)
@@ -1713,24 +1790,162 @@ class BrowserController(private val activity: Activity) {
         if (!preserveFaviconGeneration) faviconGenerations.remove(tabId)
     }
 
-    private fun cookieManagerFor(tabId: String): CookieManager =
-        webViews[tabId]?.let(::cookieManagerFor) ?: CookieManager.getInstance()
+    private fun cookiesFor(tabId: String, url: String): String? {
+        val webView = webViews[tabId]
+        if (webView != null) return cookieManagerFor(webView).getCookie(url)
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return null
+        return if (profileAssignmentFor(tab) == WebViewProfileAssignment.Default) {
+            CookieManager.getInstance().getCookie(url)
+        } else {
+            null
+        }
+    }
 
     private fun cookieManagerFor(webView: WebView): CookieManager =
-        if (supportsMultipleProfiles()) {
-            runCatching { WebViewCompat.getProfile(webView).cookieManager }
-                .getOrDefault(CookieManager.getInstance())
+        if (isProfileIsolationSupported) {
+            WebViewCompat.getProfile(webView).cookieManager
         } else {
             CookieManager.getInstance()
         }
 
-    private fun supportsMultipleProfiles(): Boolean =
-        WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
+    private fun profileAssignmentFor(tab: BrowserTab): WebViewProfileAssignment =
+        WebViewProfileRules.assignment(
+            tab = tab,
+            profiles = profiles,
+            multiProfileSupported = isProfileIsolationSupported,
+            incognitoProfileName = incognitoWebViewProfileName,
+        )
+
+    private fun recreateWebViews(tabIds: Set<String>) {
+        if (tabIds.isEmpty()) return
+        if (selectedTabId in tabIds) cancelPendingPreviewCapture()
+        if (dirtyPreviewTabId in tabIds) dirtyPreviewTabId = null
+        clearServiceWorkerClientsLosingLastWebView(tabIds)
+        tabIds.forEach { tabId ->
+            webViews.remove(tabId)?.let(::destroyWebView)
+            webViewProfileKeys.remove(tabId)
+            edgeToEdgePages.remove(tabId)
+            navigationGenerations.remove(tabId)
+            pageUrls.remove(tabId)
+            pendingBlockedCounts.remove(tabId)
+        }
+        webViewRevision++
+    }
+
+    private fun tryDeleteNamedWebViewProfile(profileName: String): Boolean {
+        configuredServiceWorkerProfiles.remove(profileName)
+        return runCatching {
+            val profileStore = ProfileStore.getInstance()
+            profileName !in profileStore.allProfileNames || profileStore.deleteProfile(profileName)
+        }.getOrDefault(false)
+    }
+
+    private fun deleteOrScheduleWebViewProfile(profileName: String) {
+        if (!isProfileIsolationSupported) return
+        profileDeletionCoordinator.deleteOrSchedule(profileName)
+    }
+
+    private fun deletePendingWebViewProfiles() {
+        if (!isProfileIsolationSupported) return
+        val orphanedIncognitoProfiles = runCatching { ProfileStore.getInstance().allProfileNames }
+            .getOrDefault(emptyList())
+            .filterTo(linkedSetOf()) { it.startsWith(INCOGNITO_WEBVIEW_PROFILE_PREFIX) }
+        profileDeletionCoordinator.retry(
+            store.loadPendingWebViewProfileDeletions() + orphanedIncognitoProfiles,
+        )
+    }
+
+    private fun clearServiceWorkerClientsLosingLastWebView(tabIds: Set<String>) {
+        WebViewProfileRules.storageKeysLosingLastWebView(
+            assignments = webViewProfileKeys.toMap(),
+            removedTabIds = tabIds,
+        ).forEach(::clearProfileServiceWorkerClient)
+    }
+
+    private fun clearProfileServiceWorkerClient(profileName: String) {
+        existingWebViewForProfile(profileName)?.let { webView ->
+            runCatching {
+                WebViewCompat.getProfile(webView).serviceWorkerController.setServiceWorkerClient(null)
+            }
+        }
+        configuredServiceWorkerProfiles.remove(profileName)
+    }
+
+    private fun prepareIncognitoProfileForRemoval() {
+        clearExistingWebViewProfileData(incognitoWebViewProfileName)
+        clearProfileServiceWorkerClient(incognitoWebViewProfileName)
+    }
 
     private fun clearIncognitoProfile() {
-        if (!supportsMultipleProfiles()) return
+        if (!isProfileIsolationSupported) return
+        deleteOrScheduleWebViewProfile(incognitoWebViewProfileName)
+        incognitoWebViewProfileName = newIncognitoWebViewProfileName()
+    }
+
+    private fun clearAllWebViewProfileData() {
+        clearProfileData(
+            webStorage = WebStorage.getInstance(),
+            cookieManager = CookieManager.getInstance(),
+            geolocationPermissions = GeolocationPermissions.getInstance(),
+        )
+        if (!isProfileIsolationSupported) return
+        val profileNames = runCatching { ProfileStore.getInstance().allProfileNames }
+            .getOrDefault(emptyList())
+            .filter { profileName ->
+                profileName.startsWith(INCOGNITO_WEBVIEW_PROFILE_PREFIX) ||
+                    WebViewProfileRules.isManagedIsolatedProfileName(profileName)
+            }
+        profileNames.forEach(::clearNamedWebViewProfileData)
+    }
+
+    private fun clearNamedWebViewProfileData(profileName: String) {
+        val existingWebView = existingWebViewForProfile(profileName)
+        val temporaryWebView = if (existingWebView == null) {
+            WebView(activity).also { webView -> WebViewCompat.setProfile(webView, profileName) }
+        } else {
+            null
+        }
+        val webView = existingWebView ?: temporaryWebView ?: return
         runCatching {
-            ProfileStore.getInstance().deleteProfile(INCOGNITO_PROFILE_NAME)
+            val profile = WebViewCompat.getProfile(webView)
+            clearProfileData(
+                webStorage = profile.webStorage,
+                cookieManager = profile.cookieManager,
+                geolocationPermissions = profile.geolocationPermissions,
+            )
+        }
+        temporaryWebView?.let(::destroyWebView)
+    }
+
+    private fun clearExistingWebViewProfileData(profileName: String) {
+        val webView = existingWebViewForProfile(profileName) ?: return
+        runCatching {
+            val profile = WebViewCompat.getProfile(webView)
+            clearProfileData(
+                webStorage = profile.webStorage,
+                cookieManager = profile.cookieManager,
+                geolocationPermissions = profile.geolocationPermissions,
+            )
+        }
+    }
+
+    private fun existingWebViewForProfile(profileName: String): WebView? =
+        webViews.entries
+            .firstOrNull { (tabId, _) -> webViewProfileKeys[tabId] == profileName }
+            ?.value
+
+    private fun clearProfileData(
+        webStorage: WebStorage,
+        cookieManager: CookieManager,
+        geolocationPermissions: GeolocationPermissions,
+    ) {
+        geolocationPermissions.clearAll()
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)) {
+            WebStorageCompat.deleteBrowsingData(webStorage) {}
+        } else {
+            cookieManager.removeAllCookies(null)
+            cookieManager.flush()
+            webStorage.deleteAllData()
         }
     }
 
@@ -1739,11 +1954,13 @@ class BrowserController(private val activity: Activity) {
         (webView.parent as? FrameLayout)?.removeView(webView)
         webView.setOnScrollChangeListener(null)
         webView.stopLoading()
-        webView.loadUrl(BLANK_URL)
         webView.clearHistory()
         webView.removeAllViews()
         webView.destroy()
     }
+
+    private fun newIncognitoWebViewProfileName(): String =
+        INCOGNITO_WEBVIEW_PROFILE_PREFIX + UUID.randomUUID().toString()
 
     private fun pauseWebView(webView: WebView) {
         webView.onPause()
@@ -1767,7 +1984,6 @@ class BrowserController(private val activity: Activity) {
         val ALL_WEB_ORIGINS = setOf("*")
         val SAFE_AREA_INSET_TYPES =
             WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-        const val INCOGNITO_PROFILE_NAME = "candy_incognito"
         const val PREVIEW_CAPTURE_IDLE_DELAY_MS = 220L
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
     }

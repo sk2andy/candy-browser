@@ -76,7 +76,12 @@ class BrowserSessionStoreInstrumentedTest {
         val store = BrowserSessionStore(context)
         val profiles = listOf(
             BrowserProfile(id = "candy", emoji = "🍬", selectedTabId = "personal-tab"),
-            BrowserProfile(id = "work", emoji = "💼", selectedTabId = "work-tab"),
+            BrowserProfile(
+                id = "work",
+                emoji = "💼",
+                selectedTabId = "work-tab",
+                isolationEnabled = true,
+            ),
         )
 
         store.saveProfiles(profiles, activeProfileId = "work")
@@ -110,6 +115,33 @@ class BrowserSessionStoreInstrumentedTest {
 
         assertEquals(listOf("candy"), store.loadProfiles().first.map(BrowserProfile::id))
         assertEquals("candy", store.loadProfiles().second)
+    }
+
+    @Test
+    fun legacyProfileDefaultsToSharedStorage() {
+        preferences.edit()
+            .putString(
+                "profiles",
+                """[{"id":"legacy","emoji":"🧭","selectedTabId":"tab"}]""",
+            )
+            .putString("active_profile", "legacy")
+            .commit()
+
+        val profile = BrowserSessionStore(context).loadProfiles().first.single()
+
+        assertFalse(profile.isolationEnabled)
+    }
+
+    @Test
+    fun pendingWebViewProfileDeletionsRoundTrip() {
+        val store = BrowserSessionStore(context)
+
+        store.savePendingWebViewProfileDeletions(setOf("profile-a", "profile-b"))
+
+        assertEquals(
+            setOf("profile-a", "profile-b"),
+            store.loadPendingWebViewProfileDeletions(),
+        )
     }
 
     @Test

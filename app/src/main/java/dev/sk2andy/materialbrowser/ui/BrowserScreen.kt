@@ -2066,6 +2066,7 @@ private fun TabOverview(
     var pagerSessionEndJob by remember { mutableStateOf<Job?>(null) }
     var tabActionsTabId by remember { mutableStateOf<String?>(null) }
     var profileActionsProfileId by remember { mutableStateOf<String?>(null) }
+    var profileIsolationChange by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     var emojiPickerTargetId by remember { mutableStateOf<String?>(null) }
     var movingTabId by remember { mutableStateOf<String?>(null) }
     var profileSwitching by remember { mutableStateOf(false) }
@@ -2269,6 +2270,7 @@ private fun TabOverview(
                     reorderAnimation == null &&
                     tabActionsTabId == null &&
                     profileActionsProfileId == null &&
+                    profileIsolationChange == null &&
                     emojiPickerTargetId == null,
                 onSelect = { profileId ->
                     if (profileId == controller.activeProfileId) return@ProfileSwitcher
@@ -2855,6 +2857,7 @@ private fun TabOverview(
         ProfileActionsSheet(
             profile = actionProfile,
             canDelete = controller.profiles.size > 1,
+            isolationSupported = controller.isProfileIsolationSupported,
             onChangeEmoji = {
                 val target = actionProfile ?: return@ProfileActionsSheet
                 profileActionsProfileId = null
@@ -2865,8 +2868,45 @@ private fun TabOverview(
                 profileActionsProfileId = null
                 if (controller.deleteProfile(target.id)) rootView.performConfirmHaptic()
             },
+            onIsolationChange = { enabled ->
+                val target = actionProfile ?: return@ProfileActionsSheet
+                profileActionsProfileId = null
+                profileIsolationChange = target.id to enabled
+            },
             onDismiss = { profileActionsProfileId = null },
         )
+
+        profileIsolationChange?.let { (profileId, enabled) ->
+            AlertDialog(
+                onDismissRequest = { profileIsolationChange = null },
+                title = { Text(stringResource(R.string.profile_isolation_confirm_title)) },
+                text = {
+                    Text(
+                        stringResource(
+                            if (enabled) R.string.profile_isolation_enable_message
+                            else R.string.profile_isolation_disable_message,
+                        ),
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (controller.setProfileIsolation(profileId, enabled)) {
+                                rootView.performConfirmHaptic()
+                            }
+                            profileIsolationChange = null
+                        },
+                    ) {
+                        Text(stringResource(R.string.action_switch_storage))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { profileIsolationChange = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                },
+            )
+        }
 
         val emojiPickerTarget = emojiPickerTargetId
         EmojiPickerSheet(
@@ -3312,8 +3352,10 @@ private fun TabActionsSheet(
 private fun ProfileActionsSheet(
     profile: BrowserProfile?,
     canDelete: Boolean,
+    isolationSupported: Boolean,
     onChangeEmoji: () -> Unit,
     onDelete: () -> Unit,
+    onIsolationChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (profile == null) return
@@ -3340,6 +3382,16 @@ private fun ProfileActionsSheet(
             ) {
                 Text(stringResource(R.string.action_change_profile_icon))
             }
+            SettingsSwitch(
+                title = stringResource(R.string.settings_profile_isolation_title),
+                subtitle = stringResource(
+                    if (isolationSupported) R.string.settings_profile_isolation_subtitle
+                    else R.string.settings_profile_isolation_unsupported,
+                ),
+                checked = profile.isolationEnabled && isolationSupported,
+                enabled = isolationSupported,
+                onCheckedChange = onIsolationChange,
+            )
             if (canDelete) {
                 TextButton(
                     onClick = onDelete,
@@ -3818,25 +3870,40 @@ private fun SettingsSwitch(
     title: String,
     subtitle: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+            )
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                    alpha = if (enabled) 1f else 0.6f,
+                ),
             )
         }
         Spacer(Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked,
+            enabled = enabled,
+            onCheckedChange = onCheckedChange,
+        )
     }
 }
 

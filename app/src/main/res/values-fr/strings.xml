@@ -27,6 +27,13 @@
     <string name="add_profile_title">Choisissez une icône pour le nouveau profil</string>
     <string name="change_profile_icon_title">Choisissez une nouvelle icône</string>
     <string name="action_move_tab_to_profile">Déplacer vers le profil</string>
+    <string name="settings_profile_isolation_title">Stockage propre · Mode isolé</string>
+    <string name="settings_profile_isolation_subtitle">Sépare les cookies, connexions, données des sites, cache et service workers de ce profil</string>
+    <string name="settings_profile_isolation_unsupported">Indisponible : le fournisseur WebView installé ne prend pas en charge le stockage séparé des profils</string>
+    <string name="profile_isolation_confirm_title">Changer le stockage du profil ?</string>
+    <string name="profile_isolation_enable_message">Les onglets de ce profil seront rechargés avec un stockage séparé. Les connexions partagées existantes ne seront pas transférées.</string>
+    <string name="profile_isolation_disable_message">Les onglets de ce profil seront rechargés avec le stockage partagé. Les connexions du stockage isolé ne seront plus actives.</string>
+    <string name="action_switch_storage">Changer de stockage</string>
     <string name="blocked_items_badge">◈ %1$d</string>
     <string name="incognito">Navigation privée</string>
     <string name="cd_make_blank_tab_incognito">Passer l’onglet vide en navigation privée</string>
@@ -104,6 +111,7 @@
     <string name="toast_printing_unavailable">L’impression n’est pas disponible sur cet appareil</string>
     <string name="toast_qr_scan_failed">Impossible de scanner le code QR</string>
     <string name="toast_browsing_data_cleared">Données de navigation effacées</string>
+    <string name="toast_incognito_unsupported">La navigation privée est indisponible, car ce fournisseur WebView ne peut pas isoler son stockage</string>
     <string name="error_unsafe_tls_blocked">Connexion TLS non sécurisée bloquée</string>
     <string name="error_unsafe_site_blocked">Site web dangereux bloqué</string>
     <string name="error_renderer_crashed">Le moteur de rendu web s’est arrêté de manière inattendue</string>

@@ -90,6 +90,7 @@ class BrowserSessionStore(context: Context) {
                                         emoji = emoji,
                                         selectedTabId = item.optString("selectedTabId")
                                             .takeIf(String::isNotBlank),
+                                        isolationEnabled = item.optBoolean("isolationEnabled", false),
                                     ),
                                 )
                             }
@@ -113,7 +114,8 @@ class BrowserSessionStore(context: Context) {
                 JSONObject()
                     .put("id", profile.id)
                     .put("emoji", profile.emoji)
-                    .put("selectedTabId", profile.selectedTabId),
+                    .put("selectedTabId", profile.selectedTabId)
+                    .put("isolationEnabled", profile.isolationEnabled),
             )
         }
         preferences.edit()
@@ -123,6 +125,17 @@ class BrowserSessionStore(context: Context) {
                 activeProfileId.takeIf { id -> safeProfiles.any { it.id == id } }
                     ?: safeProfiles.first().id,
             )
+            .apply()
+    }
+
+    fun loadPendingWebViewProfileDeletions(): Set<String> =
+        preferences.getStringSet(KEY_PENDING_WEBVIEW_PROFILE_DELETIONS, emptySet())
+            ?.toSet()
+            .orEmpty()
+
+    fun savePendingWebViewProfileDeletions(profileNames: Set<String>) {
+        preferences.edit()
+            .putStringSet(KEY_PENDING_WEBVIEW_PROFILE_DELETIONS, profileNames)
             .apply()
     }
 
@@ -231,6 +244,7 @@ class BrowserSessionStore(context: Context) {
         const val KEY_SELECTED_TAB = "selected_tab"
         const val KEY_PROFILES = "profiles"
         const val KEY_ACTIVE_PROFILE = "active_profile"
+        const val KEY_PENDING_WEBVIEW_PROFILE_DELETIONS = "pending_webview_profile_deletions"
         const val KEY_BLOCK_ADS = "block_ads"
         const val KEY_HIDE_CONSENT = "hide_consent"
         const val KEY_BLOCK_THIRD_PARTY_COOKIES = "block_third_party_cookies"
