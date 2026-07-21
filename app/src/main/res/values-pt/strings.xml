@@ -25,6 +25,7 @@
     <string name="action_change_profile_icon">Alterar ícone</string>
     <string name="action_delete_profile_keep_tabs">Eliminar perfil · manter separadores</string>
     <string name="add_profile_title">Escolha um ícone para o novo perfil</string>
+    <string name="action_create_profile">Criar perfil</string>
     <string name="change_profile_icon_title">Escolha um novo ícone</string>
     <string name="action_move_tab_to_profile">Mover para o perfil</string>
     <string name="settings_profile_isolation_title">Armazenamento próprio · Modo isolado</string>

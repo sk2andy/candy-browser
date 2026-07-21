@@ -19,6 +19,9 @@ sealed interface WebViewProfileAssignment {
 }
 
 object WebViewProfileRules {
+    fun effectiveIsolationEnabled(requested: Boolean, multiProfileSupported: Boolean): Boolean =
+        requested && multiProfileSupported
+
     fun assignment(
         tab: BrowserTab,
         profiles: List<BrowserProfile>,

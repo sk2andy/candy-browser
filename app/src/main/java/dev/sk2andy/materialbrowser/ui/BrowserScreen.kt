@@ -2912,17 +2912,23 @@ private fun TabOverview(
         EmojiPickerSheet(
             visible = emojiPickerTarget != null,
             creatingProfile = emojiPickerTarget == NEW_PROFILE_TARGET,
+            isolationSupported = controller.isProfileIsolationSupported,
             selectedEmoji = controller.profiles
                 .firstOrNull { it.id == emojiPickerTarget }
                 ?.emoji,
+            onCreate = { emoji, isolationEnabled ->
+                if (emojiPickerTarget != NEW_PROFILE_TARGET) return@EmojiPickerSheet
+                val changed = controller.createProfile(emoji, isolationEnabled) != null
+                if (changed) {
+                    emojiPickerTargetId = null
+                    rootView.performConfirmHaptic()
+                }
+            },
             onSelect = { emoji ->
                 val target = emojiPickerTarget ?: return@EmojiPickerSheet
+                if (target == NEW_PROFILE_TARGET) return@EmojiPickerSheet
                 emojiPickerTargetId = null
-                val changed = if (target == NEW_PROFILE_TARGET) {
-                    controller.createProfile(emoji) != null
-                } else {
-                    controller.updateProfileEmoji(target, emoji)
-                }
+                val changed = controller.updateProfileEmoji(target, emoji)
                 if (changed) rootView.performConfirmHaptic()
             },
             onDismiss = { emojiPickerTargetId = null },
@@ -3408,14 +3414,18 @@ private fun ProfileActionsSheet(
 }
 
 @Composable
-private fun EmojiPickerSheet(
+internal fun EmojiPickerSheet(
     visible: Boolean,
     creatingProfile: Boolean,
+    isolationSupported: Boolean,
     selectedEmoji: String?,
+    onCreate: (String, Boolean) -> Unit,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (!visible) return
+    var draftEmoji by remember(creatingProfile, selectedEmoji) { mutableStateOf(selectedEmoji) }
+    var draftIsolationEnabled by remember(creatingProfile) { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -3439,14 +3449,16 @@ private fun EmojiPickerSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     rowEmojis.forEach { emoji ->
-                        val isSelected = emoji == selectedEmoji
+                        val isSelected = emoji == draftEmoji
                         Surface(
                             modifier = Modifier
                                 .padding(vertical = 4.dp)
                                 .size(48.dp)
                                 .clickable(
                                     role = Role.Button,
-                                    onClick = { onSelect(emoji) },
+                                    onClick = {
+                                        if (creatingProfile) draftEmoji = emoji else onSelect(emoji)
+                                    },
                                 ),
                             shape = CircleShape,
                             color = if (isSelected) {
@@ -3462,6 +3474,29 @@ private fun EmojiPickerSheet(
                         }
                     }
                     repeat(6 - rowEmojis.size) { Spacer(Modifier.size(48.dp)) }
+                }
+            }
+            if (creatingProfile) {
+                Spacer(Modifier.height(12.dp))
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_profile_isolation_title),
+                    subtitle = stringResource(
+                        if (isolationSupported) R.string.settings_profile_isolation_subtitle
+                        else R.string.settings_profile_isolation_unsupported,
+                    ),
+                    checked = draftIsolationEnabled && isolationSupported,
+                    enabled = isolationSupported,
+                    onCheckedChange = { draftIsolationEnabled = it },
+                )
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        draftEmoji?.let { emoji -> onCreate(emoji, draftIsolationEnabled) }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = draftEmoji != null,
+                ) {
+                    Text(stringResource(R.string.action_create_profile))
                 }
             }
         }

@@ -25,6 +25,7 @@
     <string name="action_change_profile_icon">Icon ändern</string>
     <string name="action_delete_profile_keep_tabs">Profil löschen · Tabs behalten</string>
     <string name="add_profile_title">Icon für das neue Profil wählen</string>
+    <string name="action_create_profile">Profil erstellen</string>
     <string name="change_profile_icon_title">Neues Icon wählen</string>
     <string name="action_move_tab_to_profile">In Profil verschieben</string>
     <string name="settings_profile_isolation_title">Eigener Speicher · Isolationsmodus</string>

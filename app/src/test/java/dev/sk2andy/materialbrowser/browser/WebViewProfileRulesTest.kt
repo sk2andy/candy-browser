@@ -15,6 +15,13 @@ class WebViewProfileRulesTest {
     )
 
     @Test
+    fun `profile creation enables isolation only with provider support`() {
+        assertTrue(WebViewProfileRules.effectiveIsolationEnabled(true, true))
+        assertFalse(WebViewProfileRules.effectiveIsolationEnabled(true, false))
+        assertFalse(WebViewProfileRules.effectiveIsolationEnabled(false, true))
+    }
+
+    @Test
     fun `stable isolated name is injective and independent of emoji`() {
         val first = WebViewProfileRules.isolatedProfileName(isolated.id)
         val sameIdDifferentEmoji = WebViewProfileRules.isolatedProfileName(

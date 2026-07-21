@@ -446,7 +446,7 @@ class BrowserController(private val activity: Activity) {
         return tab.id
     }
 
-    fun createProfile(emoji: String): String? {
+    fun createProfile(emoji: String, isolationEnabled: Boolean = false): String? {
         if (profiles.size >= MAX_PROFILES) {
             Toast.makeText(
                 activity,
@@ -471,7 +471,14 @@ class BrowserController(private val activity: Activity) {
         val previousTabId = selectedTabId
         touchTab(previousTabId, System.currentTimeMillis())
         webViews[previousTabId]?.let(::pauseWebView)
-        val profile = BrowserProfile(id = UUID.randomUUID().toString(), emoji = safeEmoji)
+        val profile = BrowserProfile(
+            id = UUID.randomUUID().toString(),
+            emoji = safeEmoji,
+            isolationEnabled = WebViewProfileRules.effectiveIsolationEnabled(
+                requested = isolationEnabled,
+                multiProfileSupported = isProfileIsolationSupported,
+            ),
+        )
         profiles += profile
         activeProfileId = profile.id
         val tab = newTabState()
