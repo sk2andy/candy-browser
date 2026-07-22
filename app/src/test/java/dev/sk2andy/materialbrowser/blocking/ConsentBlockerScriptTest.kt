@@ -7,6 +7,17 @@ import org.junit.Test
 
 class ConsentBlockerScriptTest {
     @Test
+    fun `paused hosts are embedded as normalized document-start guard`() {
+        val script = ConsentBlockerScript.create(
+            cssBytes = "body{}".toByteArray(),
+            pausedHosts = listOf("News.Example", "notexample.com"),
+        )
+
+        assertTrue(script.contains("const pausedHosts = [\"news.example\", \"notexample.com\"]"))
+        assertTrue(script.contains("pageHost.endsWith('.' + host)"))
+    }
+
+    @Test
     fun `embeds css as utf8 base64 instead of executable source`() {
         val css = "#cookie-ä { display: none } </style><script>bad()</script>"
 

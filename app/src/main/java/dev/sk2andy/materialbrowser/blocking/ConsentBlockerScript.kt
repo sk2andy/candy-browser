@@ -26,11 +26,19 @@ internal object ConsentBlockerScript {
         })();
     """.trimIndent()
 
-    fun create(cssBytes: ByteArray): String {
+    fun create(cssBytes: ByteArray, pausedHosts: Collection<String> = emptyList()): String {
         val encodedCss = Base64.getEncoder().encodeToString(cssBytes)
+        val pausedHostArray = pausedHosts.asSequence()
+            .mapNotNull(PrivacyRequestSanitizer::normalizeHost)
+            .distinct()
+            .sorted()
+            .joinToString(prefix = "[", postfix = "]") { host -> "\"$host\"" }
         return """
             (() => {
               if (window.top !== window) return;
+              const pausedHosts = $pausedHostArray;
+              const pageHost = location.hostname.toLowerCase().replace(/\.$/, '');
+              if (pausedHosts.some(host => pageHost === host || pageHost.endsWith('.' + host))) return;
               const styleId = '$STYLE_ID';
               if (document.getElementById(styleId)) return;
 

@@ -243,6 +243,7 @@ fun BrowserScreen(controller: BrowserController) {
     var tabOverviewVisible by remember { mutableStateOf(false) }
     var addressEditorVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
+    var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
     var clearDialogVisible by remember { mutableStateOf(false) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
@@ -321,6 +322,11 @@ fun BrowserScreen(controller: BrowserController) {
         if (selectedTab.error != null && tabHandoff?.tabId == selectedTab.id) {
             tabHandoff = null
         }
+    }
+
+    LaunchedEffect(controller.tabs.size, privacyXRayTabId) {
+        val xRayTabId = privacyXRayTabId ?: return@LaunchedEffect
+        if (controller.tabs.none { it.id == xRayTabId }) privacyXRayTabId = null
     }
 
     LaunchedEffect(tabOverviewVisible, addressEditorVisible, settingsVisible) {
@@ -556,6 +562,10 @@ fun BrowserScreen(controller: BrowserController) {
                 settingsVisible = true
             },
             onClearData = { clearDialogVisible = true },
+            onPrivacyXRay = {
+                privacyXRayTabId = selectedTab.id
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            },
             addressBarPulseNonce = controller.contentActions.addressBarPulseNonce,
             onOpenExternal = controller::openSelectedPageExternally,
             onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
@@ -623,6 +633,23 @@ fun BrowserScreen(controller: BrowserController) {
                     clip = progress > 0f
                 },
             )
+        }
+
+
+        privacyXRayTabId?.let { tabId ->
+            val xRayTab = controller.tabs.firstOrNull { it.id == tabId }
+            if (xRayTab != null) {
+                PrivacyXRaySheet(
+                    snapshot = controller.privacySnapshot(tabId),
+                    blockerSettings = controller.blockerSettings,
+                    siteState = controller.siteProtectionState(tabId),
+                    onPause = { persistently ->
+                        controller.pauseSiteProtection(tabId, persistently)
+                    },
+                    onResume = { controller.resumeSiteProtection(tabId) },
+                    onDismiss = { privacyXRayTabId = null },
+                )
+            }
         }
 
     }
@@ -1237,6 +1264,7 @@ private fun BrowserBottomBar(
     onToggleFavorite: () -> Unit,
     onSettings: () -> Unit,
     onClearData: () -> Unit,
+    onPrivacyXRay: () -> Unit,
     addressBarPulseNonce: Int,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
@@ -1371,6 +1399,7 @@ private fun BrowserBottomBar(
                         onToggleFavorite = onToggleFavorite,
                         onSettings = onSettings,
                         onClearData = onClearData,
+                        onPrivacyXRay = onPrivacyXRay,
                         onOpenExternal = onOpenExternal,
                         onSummarizeWithAssistant = onSummarizeWithAssistant,
                         onShare = onShare,
@@ -1473,6 +1502,7 @@ private fun ExpandedBottomBarContent(
     onToggleFavorite: () -> Unit,
     onSettings: () -> Unit,
     onClearData: () -> Unit,
+    onPrivacyXRay: () -> Unit,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
@@ -1485,7 +1515,6 @@ private fun ExpandedBottomBarContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
             Surface(
-                onClick = { if (!editing) onAddress() },
                 modifier = Modifier
                     .weight(1f)
                     .draggable(
@@ -1549,29 +1578,33 @@ private fun ExpandedBottomBarContent(
                         }
                     }
                     } else {
-                        Row(
-                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = if (tab.url == BLANK_URL) {
-                                stringResource(R.string.address_empty_hint)
-                            } else {
-                                AddressResolver.displayText(tab.url)
-                            },
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                        if (tab.blockedCount > 0) {
-                            Spacer(Modifier.width(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = stringResource(R.string.blocked_items_badge, tab.blockedCount),
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.labelSmall,
+                                text = if (tab.url == BLANK_URL) {
+                                    stringResource(R.string.address_empty_hint)
+                                } else {
+                                    AddressResolver.displayText(tab.url)
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable(onClick = onAddress)
+                                    .padding(
+                                        start = 13.dp,
+                                        end = 6.dp,
+                                        top = 15.dp,
+                                        bottom = 15.dp,
+                                    ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelLarge,
                             )
-                        }
+                            if (tab.blockedCount > 0) {
+                                PrivacyXRayBadge(
+                                    blockedCount = tab.blockedCount,
+                                    onClick = onPrivacyXRay,
+                                    modifier = Modifier.padding(end = 2.dp),
+                                )
+                            }
                         }
                     }
                     if (!editing) {
