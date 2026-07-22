@@ -71,6 +71,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
@@ -157,6 +158,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -618,6 +620,10 @@ fun BrowserScreen(controller: BrowserController) {
                 onSearchEngineChanged = controller::updateSearchEngine,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onRequestDefaultBrowser = controller::requestDefaultBrowserRole,
+                onPrivacyXRay = {
+                    privacyXRayTabId = selectedTab.id
+                    rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                },
                 onDismiss = { settingsVisible = false },
                 modifier = Modifier.graphicsLayer {
                     val progress = settingsBackProgress.value
@@ -1602,7 +1608,9 @@ private fun ExpandedBottomBarContent(
                                 PrivacyXRayBadge(
                                     blockedCount = tab.blockedCount,
                                     onClick = onPrivacyXRay,
-                                    modifier = Modifier.padding(end = 2.dp),
+                                    modifier = Modifier
+                                        .zIndex(2f)
+                                        .padding(end = 2.dp),
                                 )
                             }
                         }
@@ -3559,6 +3567,7 @@ private fun SettingsScreen(
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onRequestDefaultBrowser: () -> Unit,
+    onPrivacyXRay: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -3731,14 +3740,9 @@ private fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_protection))
             Spacer(Modifier.height(6.dp))
-            Text(
-                pluralStringResource(
-                    R.plurals.blocked_requests_count,
-                    blockedCount,
-                    blockedCount,
-                ),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleSmall,
+            PrivacyXRaySettingsCounter(
+                blockedCount = blockedCount,
+                onClick = onPrivacyXRay,
             )
             Spacer(Modifier.height(18.dp))
             SettingsSwitch(
@@ -3770,6 +3774,46 @@ private fun SettingsScreen(
                 stringResource(R.string.settings_protection_disclaimer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun PrivacyXRaySettingsCounter(
+    blockedCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .sizeIn(minHeight = 48.dp)
+            .testTag(PrivacyXRayTestTags.SettingsCounter),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                pluralStringResource(
+                    R.plurals.blocked_requests_count,
+                    blockedCount,
+                    blockedCount,
+                ),
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                "◈",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
             )
         }
     }

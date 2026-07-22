@@ -80,6 +80,7 @@ import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 
 internal object PrivacyXRayTestTags {
     const val Counter = "privacy_xray_counter"
+    const val SettingsCounter = "privacy_xray_settings_counter"
     const val Sheet = "privacy_xray_sheet"
     const val Total = "privacy_xray_total"
     const val Domains = "privacy_xray_domains"
