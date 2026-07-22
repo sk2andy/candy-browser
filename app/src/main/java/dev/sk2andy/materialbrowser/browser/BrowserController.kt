@@ -52,6 +52,13 @@ import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.ContentBlocker
+import dev.sk2andy.materialbrowser.blocking.PrivacyRequestSanitizer
+import dev.sk2andy.materialbrowser.blocking.PrivacyPolicyRules
+import dev.sk2andy.materialbrowser.blocking.PrivacyXRayRepository
+import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
+import dev.sk2andy.materialbrowser.blocking.RequestProtectionRules
+import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
+import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
@@ -91,6 +98,7 @@ class BrowserController(private val activity: Activity) {
     val favicons = mutableStateMapOf<String, Bitmap>()
     val history = mutableStateListOf<HistoryEntry>()
     val favorites = mutableStateListOf<FavoriteEntry>()
+    val privacySnapshots = mutableStateMapOf<String, PrivacyXRaySnapshot>()
     val contentActions = WebContentActionState()
 
     var selectedTabId by mutableStateOf("")
@@ -129,6 +137,10 @@ class BrowserController(private val activity: Activity) {
     private var pendingPreviewCapture: Runnable? = null
     private val pendingBlockedCounts = ConcurrentHashMap<String, AtomicInteger>()
     private val blockerFlushScheduled = AtomicBoolean(false)
+    private val privacyXRayRepository = PrivacyXRayRepository()
+    private val privacyEventLock = Any()
+    private val temporarySiteExceptions = ConcurrentHashMap<String, Set<String>>()
+    private val protectionRequestContexts = ConcurrentHashMap<String, ProtectionRequestContext>()
     private var isActivityResumed = true
     @Volatile
     private var destroyed = false
@@ -151,6 +163,10 @@ class BrowserController(private val activity: Activity) {
     private val pageShare = PageShareLauncher(activity)
 
     @Volatile
+    private var permanentSiteExceptions = store.loadPermanentSiteExceptions()
+    private var siteExceptionRevision by mutableIntStateOf(0)
+
+    @Volatile
     private var workerSettings = store.loadBlockerSettings()
 
     val selectedTab: BrowserTab
@@ -160,6 +176,30 @@ class BrowserController(private val activity: Activity) {
 
     val activeTabs: List<BrowserTab>
         get() = tabs.filter { it.profileId == activeProfileId }
+
+    fun privacySnapshot(tabId: String): PrivacyXRaySnapshot =
+        privacySnapshots[tabId] ?: PrivacyXRaySnapshot.Empty
+
+    fun siteProtectionState(tabId: String): SiteProtectionState {
+        siteExceptionRevision
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return SiteProtectionState()
+        val host = PrivacyRequestSanitizer.webHost(pageUrls[tabId] ?: tab.url)
+            ?: return SiteProtectionState(canPersist = SiteExceptionRules.mayPersist(tab.isIncognito))
+        val temporaryPaused = SiteExceptionRules.isPaused(
+            pageHost = host,
+            exceptions = temporarySiteExceptions[tabId].orEmpty(),
+        )
+        val persistentPaused = !tab.isIncognito && SiteExceptionRules.isPaused(
+            pageHost = host,
+            exceptions = permanentSiteExceptions[tab.profileId].orEmpty(),
+        )
+        return SiteProtectionState(
+            host = host,
+            isPaused = temporaryPaused || persistentPaused,
+            isPersistent = persistentPaused,
+            canPersist = SiteExceptionRules.mayPersist(tab.isIncognito),
+        )
+    }
 
     init {
         deletePendingWebViewProfiles()
@@ -171,6 +211,15 @@ class BrowserController(private val activity: Activity) {
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
         profiles += restoredProfiles.take(MAX_PROFILES)
+        val restoredProfileIds = profiles.mapTo(mutableSetOf(), BrowserProfile::id)
+        permanentSiteExceptions = permanentSiteExceptions
+            .filterKeys(restoredProfileIds::contains)
+            .mapValues { (_, hosts) ->
+                hosts.mapNotNull(SiteExceptionRules::normalizedException)
+                    .take(SiteExceptionRules.MAX_PER_PROFILE)
+                    .toSet()
+            }
+        store.savePermanentSiteExceptions(permanentSiteExceptions)
         activeProfileId = restoredActiveProfileId
             .takeIf { id -> profiles.any { it.id == id } }
             ?: profiles.first().id
@@ -539,6 +588,12 @@ class BrowserController(private val activity: Activity) {
             profiles.first { it.id == activeProfileId }
         }
         val movedTabIds = WebViewProfileRules.tabIdsForProfileDeletion(tabs, profileId)
+        movedTabIds.forEach(::clearPrivacyDataForTab)
+        if (permanentSiteExceptions.containsKey(profileId)) {
+            permanentSiteExceptions = permanentSiteExceptions - profileId
+            store.savePermanentSiteExceptions(permanentSiteExceptions)
+            siteExceptionRevision++
+        }
         val webViewProfileName = WebViewProfileRules.isolatedProfileName(profileId)
         clearExistingWebViewProfileData(webViewProfileName)
         clearProfileServiceWorkerClient(webViewProfileName)
@@ -551,6 +606,19 @@ class BrowserController(private val activity: Activity) {
         )
         tabs.clear()
         tabs += movedTabs
+        movedTabIds.forEach { tabId ->
+            updateProtectionRequestContext(tabId, pageUrls[tabId])
+            webViews[tabId]?.let { webView ->
+                if (workerSettings.hideCookieConsent) {
+                    installCookieConsentDocumentStartScript(tabId, webView)
+                }
+                applySiteProtectionForNavigation(
+                    tabId = tabId,
+                    webView = webView,
+                    pageUrl = pageUrls[tabId] ?: tabs.first { it.id == tabId }.url,
+                )
+            }
+        }
         profiles.removeAt(profileIndex)
         if (profileId == activeProfileId) activeProfileId = fallbackProfile.id
         val fallbackTabs = tabs.filter { it.profileId == fallbackProfile.id }
@@ -584,8 +652,20 @@ class BrowserController(private val activity: Activity) {
         val movedTab = sourceTab.copy(profileId = profileId)
         val newAssignment = profileAssignmentFor(movedTab)
         if (tabId == selectedTabId) webViews[tabId]?.let(::pauseWebView)
+        clearPrivacyDataForTab(tabId)
         if (oldAssignment != newAssignment) recreateWebViews(setOf(tabId))
         updateTab(tabId) { movedTab }
+        updateProtectionRequestContext(tabId, pageUrls[tabId])
+        webViews[tabId]?.let { webView ->
+            if (workerSettings.hideCookieConsent) {
+                installCookieConsentDocumentStartScript(tabId, webView)
+            }
+            applySiteProtectionForNavigation(
+                tabId = tabId,
+                webView = webView,
+                pageUrl = pageUrls[tabId] ?: sourceTab.url,
+            )
+        }
         replaceProfileTabs(
             profileId,
             TabPinningRules.orderedTabs(tabs.filter { it.profileId == profileId }),
@@ -881,14 +961,21 @@ class BrowserController(private val activity: Activity) {
         blockerSettings = settings
         workerSettings = settings
         store.saveBlockerSettings(settings)
-        webViews.values.forEach {
-            cookieManagerFor(it).setAcceptThirdPartyCookies(it, !settings.blockThirdPartyCookies)
+        webViews.forEach { (tabId, webView) ->
+            applyCookiePolicy(tabId, webView, pageUrls[tabId])
         }
         if (cookieConsentSettingChanged) {
-            webViews.values.forEach { webView ->
+            webViews.forEach { (tabId, webView) ->
                 if (settings.hideCookieConsent) {
-                    installCookieConsentDocumentStartScript(webView)
-                    webView.evaluateJavascript(contentBlocker.consentScript, null)
+                    installCookieConsentDocumentStartScript(tabId, webView)
+                    if (isSiteProtectionPaused(tabId, pageUrls[tabId])) {
+                        webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
+                    } else {
+                        webView.evaluateJavascript(
+                            contentBlocker.consentScriptFor(siteExceptionHostsForTab(tabId)),
+                            null,
+                        )
+                    }
                 } else {
                     removeCookieConsentDocumentStartScript(webView)
                     webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
@@ -896,6 +983,64 @@ class BrowserController(private val activity: Activity) {
             }
         }
         reload()
+    }
+
+    fun pauseSiteProtection(tabId: String, persistently: Boolean): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val host = PrivacyRequestSanitizer.webHost(pageUrls[tabId] ?: tab.url) ?: return false
+        if (persistently && SiteExceptionRules.mayPersist(tab.isIncognito)) {
+            permanentSiteExceptions = permanentSiteExceptions + (
+                tab.profileId to SiteExceptionRules.withException(
+                    permanentSiteExceptions[tab.profileId].orEmpty(),
+                    host,
+                )
+            )
+            temporarySiteExceptions.computeIfPresent(tabId) { _, hosts ->
+                hosts.filterNot { exception ->
+                    SiteExceptionRules.isPaused(host, listOf(exception))
+                }.toSet().takeIf(Set<String>::isNotEmpty)
+            }
+            store.savePermanentSiteExceptions(permanentSiteExceptions)
+            refreshProtectionForProfile(tab.profileId)
+        } else temporarySiteExceptions[tabId] = setOf(host)
+        siteExceptionRevision++
+        reloadTabWithProtection(tabId)
+        return true
+    }
+
+    fun resumeSiteProtection(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val host = PrivacyRequestSanitizer.webHost(pageUrls[tabId] ?: tab.url) ?: return false
+        var changed = false
+        var persistentChanged = false
+        temporarySiteExceptions.computeIfPresent(tabId) { _, hosts ->
+            val retained = hosts.filterNot { exception ->
+                SiteExceptionRules.isPaused(host, listOf(exception))
+            }.toSet()
+            changed = changed || retained.size != hosts.size
+            retained.takeIf(Set<String>::isNotEmpty)
+        }
+        if (!tab.isIncognito) {
+            val profileHosts = permanentSiteExceptions[tab.profileId].orEmpty()
+            val retained = profileHosts.filterNot { exception ->
+                SiteExceptionRules.isPaused(host, listOf(exception))
+            }.toSet()
+            if (retained.size != profileHosts.size) {
+                changed = true
+                persistentChanged = true
+                permanentSiteExceptions = if (retained.isEmpty()) {
+                    permanentSiteExceptions - tab.profileId
+                } else {
+                    permanentSiteExceptions + (tab.profileId to retained)
+                }
+                store.savePermanentSiteExceptions(permanentSiteExceptions)
+            }
+        }
+        if (!changed) return false
+        if (persistentChanged) refreshProtectionForProfile(tab.profileId)
+        siteExceptionRevision++
+        reloadTabWithProtection(tabId)
+        return true
     }
 
     fun updateInactiveTabLifetime(lifetime: InactiveTabLifetime) {
@@ -917,10 +1062,27 @@ class BrowserController(private val activity: Activity) {
     fun clearBrowsingData() {
         cancelPendingPreviewCapture()
         dirtyPreviewTabId = null
+        tabs.forEach { tab ->
+            updateProtectionRequestContext(tab.id, pageUrls[tab.id] ?: tab.url)
+        }
         mainHandler.removeCallbacks(blockerCountFlush)
-        pendingBlockedCounts.clear()
-        blockerFlushScheduled.set(false)
+        synchronized(privacyEventLock) {
+            pendingBlockedCounts.clear()
+            blockerFlushScheduled.set(false)
+            privacyXRayRepository.clear()
+        }
         clearAllWebViewProfileData()
+        privacySnapshots.clear()
+        temporarySiteExceptions.clear()
+        permanentSiteExceptions = emptyMap()
+        store.savePermanentSiteExceptions(emptyMap())
+        siteExceptionRevision++
+        webViews.forEach { (tabId, webView) ->
+            val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
+                ?: BLANK_URL
+            if (workerSettings.hideCookieConsent) installCookieConsentDocumentStartScript(tabId, webView)
+            applySiteProtectionForNavigation(tabId, webView, pageUrl)
+        }
         val incognitoTabIds = tabs.asSequence()
             .filter(BrowserTab::isIncognito)
             .map(BrowserTab::id)
@@ -976,8 +1138,13 @@ class BrowserController(private val activity: Activity) {
         destroyed = true
         cancelPendingPreviewCapture()
         mainHandler.removeCallbacks(blockerCountFlush)
-        pendingBlockedCounts.clear()
-        blockerFlushScheduled.set(false)
+        synchronized(privacyEventLock) {
+            pendingBlockedCounts.clear()
+            blockerFlushScheduled.set(false)
+            privacyXRayRepository.clear()
+            protectionRequestContexts.clear()
+        }
+        temporarySiteExceptions.clear()
         persist()
         if (tabs.any(BrowserTab::isIncognito)) prepareIncognitoProfileForRemoval()
         configuredServiceWorkerProfiles.toList().forEach(::clearProfileServiceWorkerClient)
@@ -1000,6 +1167,7 @@ class BrowserController(private val activity: Activity) {
         bottomBarCompactStates.clear()
         previews.clear()
         favicons.clear()
+        privacySnapshots.clear()
         faviconGenerations.clear()
     }
 
@@ -1025,6 +1193,7 @@ class BrowserController(private val activity: Activity) {
         }
         webViewProfileKeys[tabId] = profileAssignment.storageKey
         configureProfileServiceWorkerBlocking(profileAssignment, this)
+        updateProtectionRequestContext(tabId, tab.url)
         edgeToEdgePages[tabId] = false
         navigationGenerations[tabId] = 0
         addJavascriptInterface(ViewportFitBridge(tabId, this), PageViewportFit.bridgeName)
@@ -1051,14 +1220,12 @@ class BrowserController(private val activity: Activity) {
             WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
         }
         val configuredWebView = this
-        cookieManagerFor(this).apply {
-            setAcceptCookie(true)
-            setAcceptThirdPartyCookies(configuredWebView, !workerSettings.blockThirdPartyCookies)
-        }
+        cookieManagerFor(this).setAcceptCookie(true)
+        applyCookiePolicy(tabId, configuredWebView, tab.url)
         webViewClient = browserWebViewClient(tabId)
         webChromeClient = browserChromeClient(tabId)
         setDownloadListener(downloadListener(tabId))
-        installCookieConsentDocumentStartScript(this)
+        installCookieConsentDocumentStartScript(tabId, this)
         setOnLongClickListener { clickedView ->
             val webView = clickedView as? WebView ?: return@setOnLongClickListener false
             val hit = webView.hitTestResult
@@ -1113,6 +1280,8 @@ class BrowserController(private val activity: Activity) {
     private fun browserWebViewClient(tabId: String) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             pageUrls[tabId] = url
+            updateProtectionRequestContext(tabId, url)
+            applySiteProtectionForNavigation(tabId, view, url)
             navigationGenerations[tabId] = (navigationGenerations[tabId] ?: 0) + 1
             setPageEdgeToEdge(tabId, view, false)
             val previousUrl = tabs.firstOrNull { it.id == tabId }?.url
@@ -1128,7 +1297,7 @@ class BrowserController(private val activity: Activity) {
 
         override fun onPageCommitVisible(view: WebView, url: String) {
             detectPageEdgeToEdge(tabId, view)
-            injectCookieConsentCssFallback(view)
+            injectCookieConsentCssFallback(tabId, view)
         }
 
         override fun onPageFinished(view: WebView, url: String) {
@@ -1145,7 +1314,7 @@ class BrowserController(private val activity: Activity) {
             }
             recordHistory(tabId, url, title)
             detectPageEdgeToEdge(tabId, view)
-            finalizeCookieConsentBlocking(view)
+            finalizeCookieConsentBlocking(tabId, view)
             view.postVisualStateCallback(
                 System.nanoTime(),
                 object : WebView.VisualStateCallback() {
@@ -1171,12 +1340,23 @@ class BrowserController(private val activity: Activity) {
             view: WebView,
             request: WebResourceRequest,
         ): WebResourceResponse? {
-            if (
-                !request.isForMainFrame &&
-                workerSettings.blockAdsAndTrackers &&
-                contentBlocker.shouldBlock(request.url.toString(), pageUrls[tabId])
+            if (request.isForMainFrame || !workerSettings.blockAdsAndTrackers) return null
+            val requestUrl = request.url.toString()
+            val requestContext = protectionRequestContexts[tabId] ?: return null
+            val pageUrl = requestContext.pageHost?.let { host ->
+                "https://$host"
+            }
+            val sitePaused = isSiteProtectionPaused(tabId, pageUrl)
+            if (sitePaused) return null
+            val listedRequest = contentBlocker.shouldBlock(requestUrl, pageUrl)
+            if (RequestProtectionRules.shouldBlock(
+                    isForMainFrame = false,
+                    blockerEnabled = true,
+                    sitePaused = false,
+                    isListedRequest = listedRequest,
+                )
             ) {
-                queueBlockedCount(tabId)
+                queueBlockedRequest(tabId, requestUrl, pageUrl, requestContext)
                 return blockedResponse()
             }
             return null
@@ -1264,13 +1444,23 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
-    private fun injectCookieConsentCssFallback(view: WebView) {
-        if (workerSettings.hideCookieConsent && view !in consentScriptHandlers) {
-            view.evaluateJavascript(contentBlocker.consentScript, null)
+    private fun injectCookieConsentCssFallback(tabId: String, view: WebView) {
+        if (
+            workerSettings.hideCookieConsent &&
+            !isSiteProtectionPaused(tabId, pageUrls[tabId]) &&
+            view !in consentScriptHandlers
+        ) {
+            view.evaluateJavascript(
+                contentBlocker.consentScriptFor(siteExceptionHostsForTab(tabId)),
+                null,
+            )
         }
     }
 
-    private fun installCookieConsentDocumentStartScript(view: WebView) {
+    private fun installCookieConsentDocumentStartScript(
+        tabId: String,
+        view: WebView,
+    ) {
         removeCookieConsentDocumentStartScript(view)
         if (
             !workerSettings.hideCookieConsent ||
@@ -1283,7 +1473,7 @@ class BrowserController(private val activity: Activity) {
         runCatching {
             WebViewCompat.addDocumentStartJavaScript(
                 view,
-                contentBlocker.consentScript,
+                contentBlocker.consentScriptFor(siteExceptionHostsForTab(tabId)),
                 ALL_WEB_ORIGINS,
             )
         }.getOrNull()?.let { handler -> consentScriptHandlers[view] = handler }
@@ -1295,8 +1485,8 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
-    private fun finalizeCookieConsentBlocking(view: WebView) {
-        if (workerSettings.hideCookieConsent) {
+    private fun finalizeCookieConsentBlocking(tabId: String, view: WebView) {
+        if (workerSettings.hideCookieConsent && !isSiteProtectionPaused(tabId, pageUrls[tabId])) {
             view.evaluateJavascript(contentBlocker.consentCleanupScript, null)
         }
     }
@@ -1383,13 +1573,27 @@ class BrowserController(private val activity: Activity) {
         storageKey: String,
     ): WebResourceResponse? {
         if (!workerSettings.blockAdsAndTrackers) return null
-        val relevantPageUrls = pageUrls.entries.asSequence()
-            .filter { (tabId, _) -> webViewProfileKeys[tabId] == storageKey }
-            .map { (_, pageUrl) -> pageUrl }
+        val relevantPages = protectionRequestContexts.entries.asSequence()
+            .filter { (_, context) -> context.storageKey == storageKey }
+            .mapNotNull { (tabId, context) ->
+                context.pageHost?.let { pageHost -> tabId to "https://$pageHost" }
+            }
             .toList()
-        if (relevantPageUrls.isEmpty()) return null
+        if (relevantPages.isEmpty()) return null
         val requestUrl = request.url.toString()
-        return if (relevantPageUrls.all { pageUrl -> contentBlocker.shouldBlock(requestUrl, pageUrl) }) {
+        // Android does not expose a reliable originating tab here. Preserve the existing
+        // conservative all-page decision: a request is blocked only when every possible page
+        // context agrees, including site pauses and upstream allowlist rules. Never attribute
+        // these requests to a tab's X-Ray counters.
+        val shouldBlock = relevantPages.all { (tabId, pageUrl) ->
+            RequestProtectionRules.shouldBlock(
+                isForMainFrame = request.isForMainFrame,
+                blockerEnabled = true,
+                sitePaused = isSiteProtectionPaused(tabId, pageUrl),
+                isListedRequest = contentBlocker.shouldBlock(requestUrl, pageUrl),
+            )
+        }
+        return if (shouldBlock) {
             blockedResponse()
         } else {
             null
@@ -1462,11 +1666,19 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
-    private fun queueBlockedCount(tabId: String) {
-        if (destroyed) return
-        pendingBlockedCounts.getOrPut(tabId) { AtomicInteger() }.incrementAndGet()
-        if (blockerFlushScheduled.compareAndSet(false, true)) {
-            mainHandler.postDelayed(blockerCountFlush, BLOCKER_COUNT_FLUSH_DELAY_MS)
+    private fun queueBlockedRequest(
+        tabId: String,
+        requestUrl: String,
+        pageUrl: String?,
+        expectedContext: ProtectionRequestContext,
+    ) {
+        synchronized(privacyEventLock) {
+            if (destroyed || protectionRequestContexts[tabId] !== expectedContext) return
+            privacyXRayRepository.record(tabId, requestUrl, pageUrl)
+            pendingBlockedCounts.computeIfAbsent(tabId) { AtomicInteger() }.incrementAndGet()
+            if (blockerFlushScheduled.compareAndSet(false, true)) {
+                mainHandler.postDelayed(blockerCountFlush, BLOCKER_COUNT_FLUSH_DELAY_MS)
+            }
         }
     }
 
@@ -1692,7 +1904,12 @@ class BrowserController(private val activity: Activity) {
         override fun run() {
             pendingBlockedCounts.forEach { (tabId, count) ->
                 val delta = count.getAndSet(0)
-                if (delta > 0) updateTab(tabId) { it.copy(blockedCount = it.blockedCount + delta) }
+                if (delta > 0 && tabs.any { it.id == tabId }) {
+                    updateTab(tabId) { it.copy(blockedCount = it.blockedCount + delta) }
+                    privacySnapshots[tabId] = privacyXRayRepository.snapshot(tabId)
+                } else if (tabs.none { it.id == tabId }) {
+                    privacyXRayRepository.remove(tabId)
+                }
             }
             pendingBlockedCounts.entries.removeAll { (tabId, count) ->
                 count.get() == 0 && tabs.none { it.id == tabId }
@@ -1782,6 +1999,7 @@ class BrowserController(private val activity: Activity) {
         tabId: String,
         preserveFaviconGeneration: Boolean = false,
     ) {
+        clearPrivacyDataForTab(tabId)
         popupOpeners.remove(tabId)
         popupOpeners.entries.removeAll { (_, openerId) -> openerId == tabId }
         webViews.remove(tabId)?.let(::destroyWebView)
@@ -1789,7 +2007,6 @@ class BrowserController(private val activity: Activity) {
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
         pageUrls.remove(tabId)
-        pendingBlockedCounts.remove(tabId)
         bottomBarCompactStates.remove(tabId)
         previews.remove(tabId)
         previewRepository.delete(tabId)
@@ -1806,6 +2023,117 @@ class BrowserController(private val activity: Activity) {
         } else {
             null
         }
+    }
+
+    private fun clearPrivacyDataForTab(tabId: String) {
+        synchronized(privacyEventLock) {
+            protectionRequestContexts.remove(tabId)
+            pendingBlockedCounts.remove(tabId)
+            privacyXRayRepository.remove(tabId)
+        }
+        privacySnapshots.remove(tabId)
+        temporarySiteExceptions.remove(tabId)
+        siteExceptionRevision++
+    }
+
+    private fun isSiteProtectionPaused(tabId: String, pageUrl: String?): Boolean {
+        val context = protectionRequestContexts[tabId] ?: return false
+        val pageHost = pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: context.pageHost ?: return false
+        if (SiteExceptionRules.isPaused(pageHost, temporarySiteExceptions[tabId].orEmpty())) {
+            return true
+        }
+        return !context.isIncognito && SiteExceptionRules.isPaused(
+            pageHost,
+            permanentSiteExceptions[context.profileId].orEmpty(),
+        )
+    }
+
+    private fun updateProtectionRequestContext(tabId: String, pageUrl: String?) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val context = ProtectionRequestContext(
+            profileId = tab.profileId,
+            isIncognito = tab.isIncognito,
+            storageKey = profileAssignmentFor(tab).storageKey,
+            pageHost = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url),
+        )
+        synchronized(privacyEventLock) {
+            protectionRequestContexts[tabId] = context
+        }
+    }
+
+    private fun siteExceptionHostsForTab(tabId: String): Set<String> {
+        val context = protectionRequestContexts[tabId] ?: return emptySet()
+        val temporary = temporarySiteExceptions[tabId].orEmpty()
+        return if (context.isIncognito) {
+            temporary
+        } else {
+            temporary + permanentSiteExceptions[context.profileId].orEmpty()
+        }
+    }
+
+    private fun applyCookiePolicy(tabId: String, webView: WebView, pageUrl: String?) {
+        val acceptThirdPartyCookies = PrivacyPolicyRules.acceptsThirdPartyCookies(
+            blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
+            sitePaused = isSiteProtectionPaused(tabId, pageUrl),
+        )
+        cookieManagerFor(webView).setAcceptThirdPartyCookies(webView, acceptThirdPartyCookies)
+    }
+
+    private fun applySiteProtectionForNavigation(
+        tabId: String,
+        webView: WebView,
+        pageUrl: String,
+    ) {
+        applyCookiePolicy(tabId, webView, pageUrl)
+        if (!workerSettings.hideCookieConsent) {
+            removeCookieConsentDocumentStartScript(webView)
+            webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
+        } else {
+            if (webView !in consentScriptHandlers) {
+                installCookieConsentDocumentStartScript(tabId, webView)
+            }
+            if (isSiteProtectionPaused(tabId, pageUrl)) {
+                webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
+            } else {
+                webView.evaluateJavascript(
+                    contentBlocker.consentScriptFor(siteExceptionHostsForTab(tabId)),
+                    null,
+                )
+            }
+        }
+    }
+
+    private fun reloadTabWithProtection(tabId: String) {
+        val webView = webViewFor(tabId)
+        val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
+        applyCookiePolicy(tabId, webView, pageUrl)
+        if (workerSettings.hideCookieConsent) {
+            installCookieConsentDocumentStartScript(tabId, webView)
+        }
+        if (isSiteProtectionPaused(tabId, pageUrl) || !workerSettings.hideCookieConsent) {
+            webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
+        } else {
+            webView.evaluateJavascript(
+                contentBlocker.consentScriptFor(siteExceptionHostsForTab(tabId)),
+                null,
+            )
+        }
+        updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
+        webView.reload()
+    }
+
+    private fun refreshProtectionForProfile(profileId: String) {
+        tabs.asSequence()
+            .filter { tab -> tab.profileId == profileId && !tab.isIncognito }
+            .forEach { tab ->
+                val webView = webViews[tab.id] ?: return@forEach
+                val pageUrl = pageUrls[tab.id] ?: tab.url
+                updateProtectionRequestContext(tab.id, pageUrl)
+                if (workerSettings.hideCookieConsent) {
+                    installCookieConsentDocumentStartScript(tab.id, webView)
+                }
+                applySiteProtectionForNavigation(tab.id, webView, pageUrl)
+            }
     }
 
     private fun cookieManagerFor(webView: WebView): CookieManager =
@@ -1829,12 +2157,12 @@ class BrowserController(private val activity: Activity) {
         if (dirtyPreviewTabId in tabIds) dirtyPreviewTabId = null
         clearServiceWorkerClientsLosingLastWebView(tabIds)
         tabIds.forEach { tabId ->
+            clearPrivacyDataForTab(tabId)
             webViews.remove(tabId)?.let(::destroyWebView)
             webViewProfileKeys.remove(tabId)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
             pageUrls.remove(tabId)
-            pendingBlockedCounts.remove(tabId)
         }
         webViewRevision++
     }
@@ -1994,4 +2322,11 @@ class BrowserController(private val activity: Activity) {
         const val PREVIEW_CAPTURE_IDLE_DELAY_MS = 220L
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
     }
+
+    private data class ProtectionRequestContext(
+        val profileId: String,
+        val isIncognito: Boolean,
+        val storageKey: String,
+        val pageHost: String?,
+    )
 }

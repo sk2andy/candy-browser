@@ -17,6 +17,8 @@ und lokalen Content-Schutz.
 - Direkte URL-Navigation; sonst Google-Suche
 - Lokaler Verlauf mit Autovervollständigung sowie persistente Favoriten auf neuen Tabs
 - Lokaler Werbe-/Tracker-Filter mit rund 55.000 kompilierten EasyList-/EasyPrivacy-Hosts inklusive Service-Worker-Anfragen
+- Interaktives Privacy X-Ray pro Tab mit gebündelten Live-Zählern, deterministischen Kategorien,
+  begrenzter Domain-Übersicht und temporären bzw. profilbezogenen Website-Ausnahmen
 - Drittanbieter-Cookies standardmäßig blockiert; First-party-Cookies für Logins erlaubt
 - Früher Cookie-Banner-Blocker auf Basis der EasyList Cookie List
 - Safe Browsing, TLS-Abbruch, verbotene Datei-/Content-Schemes und externe Scheme-Allowlist
@@ -43,6 +45,11 @@ System WebView bietet keine Chromium-Extension-API. Der Blocker arbeitet deshalb
 heuristisch; WebSockets, CNAME-Cloaking, manche Weiterleitungen und Banner in geschlossenen
 Cross-Origin-/Shadow-DOM-Kontexten können durchkommen. Das vollständige Abschalten aller Cookies
 ist absichtlich nicht Standard, weil es Logins und viele Websites bricht.
+
+Privacy X-Ray zeigt lokal blockierte, einem Tab verlässlich zuordenbare WebView-Anfragen. Globale
+Service-Worker-Anfragen bleiben aus der Tab-Telemetrie ausgeschlossen, weil WebView dafür keine
+zuverlässige Tab-ID liefert. Cookie-Angaben beschreiben ausschließlich aktive Regeln, keine
+beobachteten Cookie-Ereignisse.
 
 ## Filterquellen
 

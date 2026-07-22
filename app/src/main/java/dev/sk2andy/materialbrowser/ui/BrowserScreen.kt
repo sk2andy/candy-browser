@@ -71,6 +71,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
@@ -157,6 +158,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -243,6 +245,7 @@ fun BrowserScreen(controller: BrowserController) {
     var tabOverviewVisible by remember { mutableStateOf(false) }
     var addressEditorVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
+    var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
     var clearDialogVisible by remember { mutableStateOf(false) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
@@ -321,6 +324,11 @@ fun BrowserScreen(controller: BrowserController) {
         if (selectedTab.error != null && tabHandoff?.tabId == selectedTab.id) {
             tabHandoff = null
         }
+    }
+
+    LaunchedEffect(controller.tabs.size, privacyXRayTabId) {
+        val xRayTabId = privacyXRayTabId ?: return@LaunchedEffect
+        if (controller.tabs.none { it.id == xRayTabId }) privacyXRayTabId = null
     }
 
     LaunchedEffect(tabOverviewVisible, addressEditorVisible, settingsVisible) {
@@ -556,6 +564,10 @@ fun BrowserScreen(controller: BrowserController) {
                 settingsVisible = true
             },
             onClearData = { clearDialogVisible = true },
+            onPrivacyXRay = {
+                privacyXRayTabId = selectedTab.id
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            },
             addressBarPulseNonce = controller.contentActions.addressBarPulseNonce,
             onOpenExternal = controller::openSelectedPageExternally,
             onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
@@ -608,6 +620,10 @@ fun BrowserScreen(controller: BrowserController) {
                 onSearchEngineChanged = controller::updateSearchEngine,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onRequestDefaultBrowser = controller::requestDefaultBrowserRole,
+                onPrivacyXRay = {
+                    privacyXRayTabId = selectedTab.id
+                    rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                },
                 onDismiss = { settingsVisible = false },
                 modifier = Modifier.graphicsLayer {
                     val progress = settingsBackProgress.value
@@ -623,6 +639,23 @@ fun BrowserScreen(controller: BrowserController) {
                     clip = progress > 0f
                 },
             )
+        }
+
+
+        privacyXRayTabId?.let { tabId ->
+            val xRayTab = controller.tabs.firstOrNull { it.id == tabId }
+            if (xRayTab != null) {
+                PrivacyXRaySheet(
+                    snapshot = controller.privacySnapshot(tabId),
+                    blockerSettings = controller.blockerSettings,
+                    siteState = controller.siteProtectionState(tabId),
+                    onPause = { persistently ->
+                        controller.pauseSiteProtection(tabId, persistently)
+                    },
+                    onResume = { controller.resumeSiteProtection(tabId) },
+                    onDismiss = { privacyXRayTabId = null },
+                )
+            }
         }
 
     }
@@ -1237,6 +1270,7 @@ private fun BrowserBottomBar(
     onToggleFavorite: () -> Unit,
     onSettings: () -> Unit,
     onClearData: () -> Unit,
+    onPrivacyXRay: () -> Unit,
     addressBarPulseNonce: Int,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
@@ -1371,6 +1405,7 @@ private fun BrowserBottomBar(
                         onToggleFavorite = onToggleFavorite,
                         onSettings = onSettings,
                         onClearData = onClearData,
+                        onPrivacyXRay = onPrivacyXRay,
                         onOpenExternal = onOpenExternal,
                         onSummarizeWithAssistant = onSummarizeWithAssistant,
                         onShare = onShare,
@@ -1473,6 +1508,7 @@ private fun ExpandedBottomBarContent(
     onToggleFavorite: () -> Unit,
     onSettings: () -> Unit,
     onClearData: () -> Unit,
+    onPrivacyXRay: () -> Unit,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
@@ -1485,7 +1521,6 @@ private fun ExpandedBottomBarContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
             Surface(
-                onClick = { if (!editing) onAddress() },
                 modifier = Modifier
                     .weight(1f)
                     .draggable(
@@ -1549,29 +1584,35 @@ private fun ExpandedBottomBarContent(
                         }
                     }
                     } else {
-                        Row(
-                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = if (tab.url == BLANK_URL) {
-                                stringResource(R.string.address_empty_hint)
-                            } else {
-                                AddressResolver.displayText(tab.url)
-                            },
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                        if (tab.blockedCount > 0) {
-                            Spacer(Modifier.width(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = stringResource(R.string.blocked_items_badge, tab.blockedCount),
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.labelSmall,
+                                text = if (tab.url == BLANK_URL) {
+                                    stringResource(R.string.address_empty_hint)
+                                } else {
+                                    AddressResolver.displayText(tab.url)
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable(onClick = onAddress)
+                                    .padding(
+                                        start = 13.dp,
+                                        end = 6.dp,
+                                        top = 15.dp,
+                                        bottom = 15.dp,
+                                    ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelLarge,
                             )
-                        }
+                            if (tab.blockedCount > 0) {
+                                PrivacyXRayBadge(
+                                    blockedCount = tab.blockedCount,
+                                    onClick = onPrivacyXRay,
+                                    modifier = Modifier
+                                        .zIndex(2f)
+                                        .padding(end = 2.dp),
+                                )
+                            }
                         }
                     }
                     if (!editing) {
@@ -3613,6 +3654,7 @@ private fun SettingsScreen(
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onRequestDefaultBrowser: () -> Unit,
+    onPrivacyXRay: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -3785,14 +3827,9 @@ private fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_protection))
             Spacer(Modifier.height(6.dp))
-            Text(
-                pluralStringResource(
-                    R.plurals.blocked_requests_count,
-                    blockedCount,
-                    blockedCount,
-                ),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleSmall,
+            PrivacyXRaySettingsCounter(
+                blockedCount = blockedCount,
+                onClick = onPrivacyXRay,
             )
             Spacer(Modifier.height(18.dp))
             SettingsSwitch(
@@ -3824,6 +3861,46 @@ private fun SettingsScreen(
                 stringResource(R.string.settings_protection_disclaimer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun PrivacyXRaySettingsCounter(
+    blockedCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .sizeIn(minHeight = 48.dp)
+            .testTag(PrivacyXRayTestTags.SettingsCounter),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                pluralStringResource(
+                    R.plurals.blocked_requests_count,
+                    blockedCount,
+                    blockedCount,
+                ),
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                "◈",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
             )
         }
     }

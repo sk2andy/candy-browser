@@ -13,14 +13,34 @@ class ContentBlocker(context: Context) {
             allowedHostPairs = loadLines("easylist_allowed_host_pairs.txt"),
         )
     }
+    private val consentCss by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        loadConsentCss(appContext)
+    }
+    private val consentScripts = linkedMapOf<List<String>, String>()
     val consentScript: String by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        ConsentBlockerScript.create(loadConsentCss(appContext))
+        ConsentBlockerScript.create(consentCss)
     }
     val consentCleanupScript: String = ConsentBlockerScript.cleanupScript
     val consentRemovalScript: String = ConsentBlockerScript.removalScript
 
     fun shouldBlock(requestUrl: String, pageUrl: String?): Boolean =
         requestBlocker.shouldBlock(requestUrl, pageUrl)
+
+    @Synchronized
+    fun consentScriptFor(pausedHosts: Collection<String>): String {
+        val key = pausedHosts.asSequence()
+            .mapNotNull(PrivacyRequestSanitizer::normalizeHost)
+            .distinct()
+            .sorted()
+            .toList()
+        consentScripts[key]?.let { return it }
+        return ConsentBlockerScript.create(consentCss, key).also { script ->
+            if (consentScripts.size >= MAX_CONSENT_SCRIPT_VARIANTS) {
+                consentScripts.remove(consentScripts.keys.first())
+            }
+            consentScripts[key] = script
+        }
+    }
 
     private fun loadLines(vararg assetNames: String): Sequence<String> = buildList {
         assetNames.forEach { assetName ->
@@ -36,5 +56,9 @@ class ContentBlocker(context: Context) {
             output.write('\n'.code)
         }
         output.toByteArray()
+    }
+
+    private companion object {
+        const val MAX_CONSENT_SCRIPT_VARIANTS = 24
     }
 }

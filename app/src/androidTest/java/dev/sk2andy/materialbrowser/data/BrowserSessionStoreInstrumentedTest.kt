@@ -209,4 +209,27 @@ class BrowserSessionStoreInstrumentedTest {
         store.saveDismissResistancePercent(500)
         assertEquals(90, store.loadDismissResistancePercent())
     }
+
+    @Test
+    fun permanentSiteExceptionsRoundTripByProfileWithoutUnsafeHosts() {
+        val store = BrowserSessionStore(context)
+        store.savePermanentSiteExceptions(
+            mapOf(
+                "candy" to setOf("News.Example", "notexample.com"),
+                "work" to setOf("tracker.example"),
+                "" to setOf("ignored.example"),
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "candy" to setOf("news.example", "notexample.com"),
+                "work" to setOf("tracker.example"),
+            ),
+            store.loadPermanentSiteExceptions(),
+        )
+
+        preferences.edit().putString("site_exceptions", "not-json").commit()
+        assertEquals(emptyMap<String, Set<String>>(), store.loadPermanentSiteExceptions())
+    }
 }

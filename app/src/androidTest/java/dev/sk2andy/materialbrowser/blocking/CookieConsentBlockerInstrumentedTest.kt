@@ -134,6 +134,53 @@ class CookieConsentBlockerInstrumentedTest {
     }
 
     @Test
+    fun documentStartScriptSkipsPausedHostBeforePageJavaScript() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val blocker = ContentBlocker(instrumentation.targetContext)
+        val pageLoaded = CountDownLatch(1)
+        val createdView = AtomicReference<WebView>()
+        instrumentation.runOnMainSync {
+            createdView.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    WebViewCompat.addDocumentStartJavaScript(
+                        this,
+                        blocker.consentScriptFor(setOf("paused.test")),
+                        setOf("*"),
+                    )
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) {
+                            pageLoaded.countDown()
+                        }
+                    }
+                    loadDataWithBaseURL(
+                        "https://paused.test/",
+                        """
+                            <!doctype html>
+                            <html><head><script>
+                              const banner = document.createElement('div');
+                              banner.id = 'CybotCookiebotDialog';
+                              document.documentElement.appendChild(banner);
+                              window.blockerState = [
+                                document.getElementById('material-browser-easylist-cookie-css') !== null,
+                                getComputedStyle(banner).display
+                              ].join('|');
+                            </script></head><body></body></html>
+                        """.trimIndent(),
+                        "text/html",
+                        "utf-8",
+                        null,
+                    )
+                },
+            )
+        }
+        assertTrue(pageLoaded.await(10, TimeUnit.SECONDS))
+        val view = createdView.get().also(webView::set)
+
+        assertEquals("\"false|block\"", evaluate(view, "window.blockerState"))
+    }
+
+    @Test
     fun unlocksScrollWhenCmpAppliesLockAfterPageFinished() {
         val view = loadPage(
             """

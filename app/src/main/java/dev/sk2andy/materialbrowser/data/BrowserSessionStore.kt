@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
+import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
@@ -191,6 +192,41 @@ class BrowserSessionStore(context: Context) {
             .apply()
     }
 
+    @Synchronized
+    fun loadPermanentSiteExceptions(): Map<String, Set<String>> =
+        loadArray(KEY_SITE_EXCEPTIONS) { item ->
+            item.optString("profileId") to item.optString("host")
+        }.mapNotNull { (profileId, host) ->
+            val safeProfileId = profileId.trim().takeIf(String::isNotEmpty) ?: return@mapNotNull null
+            val safeHost = SiteExceptionRules.normalizedException(host) ?: return@mapNotNull null
+            safeProfileId to safeHost
+        }.groupBy({ it.first }, { it.second })
+            .mapValues { (_, hosts) ->
+                hosts.distinct().take(SiteExceptionRules.MAX_PER_PROFILE).toSet()
+            }
+
+    @Synchronized
+    fun savePermanentSiteExceptions(exceptions: Map<String, Set<String>>) {
+        val values = exceptions.asSequence()
+            .flatMap { (profileId, hosts) ->
+                val safeProfileId = profileId.trim()
+                if (safeProfileId.isEmpty()) return@flatMap emptySequence()
+                hosts.asSequence()
+                    .mapNotNull(SiteExceptionRules::normalizedException)
+                    .distinct()
+                    .take(SiteExceptionRules.MAX_PER_PROFILE)
+                    .map { host -> safeProfileId to host }
+            }
+            .distinct()
+            .sortedWith(compareBy<Pair<String, String>>({ it.first }, { it.second }))
+            .toList()
+        saveArray(KEY_SITE_EXCEPTIONS, values) { (profileId, host) ->
+            JSONObject()
+                .put("profileId", profileId)
+                .put("host", host)
+        }
+    }
+
     fun loadInactiveTabLifetime(): InactiveTabLifetime =
         InactiveTabLifetime.fromWireValue(preferences.getString(KEY_INACTIVE_TAB_LIFETIME, null))
 
@@ -248,6 +284,7 @@ class BrowserSessionStore(context: Context) {
         const val KEY_BLOCK_ADS = "block_ads"
         const val KEY_HIDE_CONSENT = "hide_consent"
         const val KEY_BLOCK_THIRD_PARTY_COOKIES = "block_third_party_cookies"
+        const val KEY_SITE_EXCEPTIONS = "site_exceptions"
         const val KEY_HISTORY = "history"
         const val KEY_FAVORITES = "favorites"
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
