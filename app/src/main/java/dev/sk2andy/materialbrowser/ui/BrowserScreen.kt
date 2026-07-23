@@ -598,6 +598,11 @@ fun BrowserScreen(controller: BrowserController) {
             onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
             onShare = controller::shareSelectedPage,
             onPrint = controller::printSelectedPage,
+            onOpenCandyTrail = {
+                candyTrailSourceBounds = null
+                candyTrailTabId = selectedTab.id
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
@@ -1291,6 +1296,7 @@ private fun BrowserBottomBar(
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
     onPrint: () -> Unit,
+    onOpenCandyTrail: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -1424,6 +1430,7 @@ private fun BrowserBottomBar(
                         onSummarizeWithAssistant = onSummarizeWithAssistant,
                         onShare = onShare,
                         onPrint = onPrint,
+                        onOpenCandyTrail = onOpenCandyTrail,
                         )
                     }
                 }
@@ -1526,6 +1533,7 @@ private fun ExpandedBottomBarContent(
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
     onPrint: () -> Unit,
+    onOpenCandyTrail: () -> Unit,
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
     Column {
@@ -1696,6 +1704,21 @@ private fun ExpandedBottomBarContent(
                             if (tab.isLoading) onStop() else onReload()
                         },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_open_candy_trail)) },
+                        enabled = tab.url != BLANK_URL,
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onOpenCandyTrail()
+                        },
+                        leadingIcon = {
+                            Text(
+                                "⌘",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 20.sp,
+                            )
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.new_tab_title)) },
@@ -2236,11 +2259,12 @@ private fun TabOverview(
         )
     }
 
+    val layerVisible = CandyTrailLayerRules.isVisible(visible, candyTrailTabId)
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .zIndex(if (visible) 10f else -1f)
-            .graphicsLayer { alpha = if (visible) 1f else 0f },
+            .zIndex(if (layerVisible) 10f else -1f)
+            .graphicsLayer { alpha = if (layerVisible) 1f else 0f },
     ) {
         val density = LocalDensity.current
         val rootWidthPx = with(density) { maxWidth.toPx() }

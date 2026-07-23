@@ -8,6 +8,13 @@ import org.junit.Test
 
 class CandyTrailLayoutRulesTest {
     @Test
+    fun `menu trail keeps graph layer visible without tab overview`() {
+        assertTrue(CandyTrailLayerRules.isVisible(false, "tab"))
+        assertTrue(CandyTrailLayerRules.isVisible(true, null))
+        assertTrue(!CandyTrailLayerRules.isVisible(false, null))
+    }
+
+    @Test
     fun `layout is deterministic and keeps nodes apart`() {
         val trail = CandyTrail(
             tabId = "tab",

@@ -134,3 +134,8 @@ internal object CandyTrailMotionRules {
         return ((progress - delay) / (1f - totalDelay)).coerceIn(0f, 1f)
     }
 }
+
+internal object CandyTrailLayerRules {
+    fun isVisible(tabOverviewVisible: Boolean, candyTrailTabId: String?): Boolean =
+        tabOverviewVisible || candyTrailTabId != null
+}
