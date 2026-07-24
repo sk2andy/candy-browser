@@ -71,6 +71,32 @@ object WebViewProfileRules {
         if (tab.profileId == sourceProfileId) tab.copy(profileId = targetProfileId) else tab
     }
 
+    fun tabIdsRequiringWebViewRecreation(
+        before: List<BrowserTab>,
+        after: List<BrowserTab>,
+        profiles: List<BrowserProfile>,
+        multiProfileSupported: Boolean,
+        incognitoProfileName: String,
+    ): Set<String> {
+        val afterById = after.associateBy(BrowserTab::id)
+        return before.asSequence()
+            .filter { beforeTab ->
+                val afterTab = afterById[beforeTab.id] ?: return@filter false
+                assignment(
+                    beforeTab,
+                    profiles,
+                    multiProfileSupported,
+                    incognitoProfileName,
+                ) != assignment(
+                    afterTab,
+                    profiles,
+                    multiProfileSupported,
+                    incognitoProfileName,
+                )
+            }
+            .mapTo(linkedSetOf(), BrowserTab::id)
+    }
+
     fun withVisibleUrl(tab: BrowserTab, url: String?): BrowserTab {
         val visibleUrl = url?.takeIf(String::isNotBlank) ?: return tab
         return if (tab.url == visibleUrl) tab else tab.copy(url = visibleUrl)

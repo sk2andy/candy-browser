@@ -597,13 +597,21 @@ class BrowserController(private val activity: Activity) {
         val webViewProfileName = WebViewProfileRules.isolatedProfileName(profileId)
         clearExistingWebViewProfileData(webViewProfileName)
         clearProfileServiceWorkerClient(webViewProfileName)
-        recreateWebViews(movedTabIds)
-        deleteOrScheduleWebViewProfile(webViewProfileName)
         val movedTabs = WebViewProfileRules.moveTabs(
             tabs = tabs,
             sourceProfileId = profileId,
             targetProfileId = fallbackProfile.id,
         )
+        val tabsRequiringWebViewRecreation =
+            WebViewProfileRules.tabIdsRequiringWebViewRecreation(
+                before = tabs,
+                after = movedTabs,
+                profiles = profiles,
+                multiProfileSupported = isProfileIsolationSupported,
+                incognitoProfileName = incognitoWebViewProfileName,
+            )
+        recreateWebViews(tabsRequiringWebViewRecreation)
+        deleteOrScheduleWebViewProfile(webViewProfileName)
         tabs.clear()
         tabs += movedTabs
         movedTabIds.forEach { tabId ->
@@ -2033,6 +2041,9 @@ class BrowserController(private val activity: Activity) {
         }
         privacySnapshots.remove(tabId)
         temporarySiteExceptions.remove(tabId)
+        updateTab(tabId) { tab ->
+            if (tab.blockedCount == 0) tab else tab.copy(blockedCount = 0)
+        }
         siteExceptionRevision++
     }
 
