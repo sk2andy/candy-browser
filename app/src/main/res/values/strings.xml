@@ -55,6 +55,42 @@
     <string name="action_delete">Delete</string>
     <string name="action_cancel">Cancel</string>
 
+    <!-- Address commands -->
+    <string name="command_clear_cache_reload_name">Clear cache &amp; reload</string>
+    <string name="command_clear_cache_reload_effect">Clears Candy’s shared WebView cache, then reloads this tab</string>
+    <string name="command_delete_cookies_reload_name">Delete cookies &amp; reload</string>
+    <string name="command_delete_cookies_reload_effect_regular">Deletes cookies shared by all regular Candy profiles, then reloads this tab</string>
+    <string name="command_delete_cookies_reload_effect_private">Deletes cookies shared by all private tabs, then reloads this tab</string>
+    <string name="command_delete_cookies_reload_effect_all">Deletes cookies shared by all Candy WebViews, then reloads this tab</string>
+    <string name="command_reload_effect">Reloads the current tab</string>
+    <string name="command_stop_loading_effect">Stops loading the current tab</string>
+    <string name="command_pin_tab_effect">Keeps this tab open and places it at the front</string>
+    <string name="command_unpin_tab_effect">Allows this tab to be closed normally again</string>
+    <string name="command_close_duplicates_name">Close duplicate tabs</string>
+    <plurals name="command_close_duplicates_effect">
+        <item quantity="one">Closes %1$d duplicate tab in this profile; pinned tabs and the current tab stay open</item>
+        <item quantity="other">Closes %1$d duplicate tabs in this profile; pinned tabs and the current tab stay open</item>
+    </plurals>
+    <string name="command_move_tab_effect">Moves the current tab to profile %1$s</string>
+    <string name="command_switch_profile_name">Switch to profile</string>
+    <string name="command_switch_profile_effect">Opens profile %1$s</string>
+    <string name="command_new_regular_tab_name">New regular tab</string>
+    <string name="command_new_regular_tab_effect">Opens a regular tab and keeps address search active</string>
+    <string name="command_new_incognito_tab_name">New incognito tab</string>
+    <string name="command_new_incognito_tab_effect">Opens a private tab that is not saved</string>
+    <string name="command_open_settings_name">Open settings</string>
+    <string name="command_open_settings_effect">Opens Candy Browser settings</string>
+    <string name="command_target_profile">Profile %1$s</string>
+    <string name="command_cookie_confirm_title">Delete cookies?</string>
+    <string name="command_cookie_confirm_regular">All regular Candy profiles share these cookies and may be signed out. This tab reloads afterward.</string>
+    <string name="command_cookie_confirm_private">All private tabs share these cookies and may be signed out. This tab reloads afterward.</string>
+    <string name="command_cookie_confirm_all">All Candy WebViews share these cookies and may be signed out. This tab reloads afterward.</string>
+    <string name="command_duplicates_confirm_title">Close duplicate tabs?</string>
+    <plurals name="command_duplicates_confirm_message">
+        <item quantity="one">Close %1$d duplicate tab? Pinned tabs and the current tab stay open.</item>
+        <item quantity="other">Close %1$d duplicate tabs? Pinned tabs and the current tab stay open.</item>
+    </plurals>
+
     <!-- Favorites and page content -->
     <string name="favorites_title">Favorites</string>
     <string name="favorites_empty">No favorites yet — add them from the ⋮ menu.</string>

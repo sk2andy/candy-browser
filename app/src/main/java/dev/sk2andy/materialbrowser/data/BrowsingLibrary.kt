@@ -142,27 +142,7 @@ internal object BrowsingLibraryRules {
         return favorites.any { urlKey(it.url) == key }
     }
 
-    private fun urlKey(url: String): String? = runCatching {
-        val uri = URI(url.trim())
-        val scheme = uri.scheme?.lowercase(Locale.ROOT)
-        val host = uri.host?.lowercase(Locale.ROOT)
-        if ((scheme != "http" && scheme != "https") || host.isNullOrBlank()) return null
-        buildString {
-            append(scheme)
-            append("://")
-            append(host)
-            val port = uri.port
-            if (port >= 0 && !((scheme == "http" && port == 80) || (scheme == "https" && port == 443))) {
-                append(':')
-                append(port)
-            }
-            append(uri.rawPath.orEmpty().ifEmpty { "/" })
-            uri.rawQuery?.let {
-                append('?')
-                append(it)
-            }
-        }
-    }.getOrNull()
+    private fun urlKey(url: String): String? = CanonicalWebUrl.key(url)
 
     private fun displayHost(url: String): String = runCatching {
         URI(url).host?.removePrefix("www.")

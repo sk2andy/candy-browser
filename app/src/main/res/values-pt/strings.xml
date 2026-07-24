@@ -48,6 +48,42 @@
     <string name="clear_data_message">Os cookies, o armazenamento dos sites, a cache e o histórico desta sessão serão eliminados.</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_cancel">Cancelar</string>
+
+    <!-- Comandos de endereço -->
+    <string name="command_clear_cache_reload_name">Limpar cache e recarregar</string>
+    <string name="command_clear_cache_reload_effect">Limpa o cache WebView partilhado do Candy e recarrega este separador</string>
+    <string name="command_delete_cookies_reload_name">Eliminar cookies e recarregar</string>
+    <string name="command_delete_cookies_reload_effect_regular">Elimina os cookies partilhados por todos os perfis Candy normais e recarrega este separador</string>
+    <string name="command_delete_cookies_reload_effect_private">Elimina os cookies partilhados por todos os separadores privados e recarrega este separador</string>
+    <string name="command_delete_cookies_reload_effect_all">Elimina os cookies partilhados por todas as WebViews Candy e recarrega este separador</string>
+    <string name="command_reload_effect">Recarrega o separador atual</string>
+    <string name="command_stop_loading_effect">Para o carregamento do separador atual</string>
+    <string name="command_pin_tab_effect">Mantém este separador aberto e coloca-o no início</string>
+    <string name="command_unpin_tab_effect">Permite voltar a fechar este separador normalmente</string>
+    <string name="command_close_duplicates_name">Fechar separadores duplicados</string>
+    <plurals name="command_close_duplicates_effect">
+        <item quantity="one">Fecha %1$d separador duplicado neste perfil; os separadores fixados e o atual permanecem abertos</item>
+        <item quantity="other">Fecha %1$d separadores duplicados neste perfil; os separadores fixados e o atual permanecem abertos</item>
+    </plurals>
+    <string name="command_move_tab_effect">Move o separador atual para o perfil %1$s</string>
+    <string name="command_switch_profile_name">Mudar para o perfil</string>
+    <string name="command_switch_profile_effect">Abre o perfil %1$s</string>
+    <string name="command_new_regular_tab_name">Novo separador normal</string>
+    <string name="command_new_regular_tab_effect">Abre um separador normal e mantém a pesquisa de endereço ativa</string>
+    <string name="command_new_incognito_tab_name">Novo separador anónimo</string>
+    <string name="command_new_incognito_tab_effect">Abre um separador privado que não é guardado</string>
+    <string name="command_open_settings_name">Abrir definições</string>
+    <string name="command_open_settings_effect">Abre as definições do Candy Browser</string>
+    <string name="command_target_profile">Perfil %1$s</string>
+    <string name="command_cookie_confirm_title">Eliminar cookies?</string>
+    <string name="command_cookie_confirm_regular">Todos os perfis Candy normais partilham estes cookies e poderão terminar sessão. Este separador será recarregado depois.</string>
+    <string name="command_cookie_confirm_private">Todos os separadores privados partilham estes cookies e poderão terminar sessão. Este separador será recarregado depois.</string>
+    <string name="command_cookie_confirm_all">Todas as WebViews Candy partilham estes cookies e poderão terminar sessão. Este separador será recarregado depois.</string>
+    <string name="command_duplicates_confirm_title">Fechar separadores duplicados?</string>
+    <plurals name="command_duplicates_confirm_message">
+        <item quantity="one">Fechar %1$d separador duplicado? Os separadores fixados e o atual permanecem abertos.</item>
+        <item quantity="other">Fechar %1$d separadores duplicados? Os separadores fixados e o atual permanecem abertos.</item>
+    </plurals>
     <string name="favorites_title">Favoritos</string>
     <string name="favorites_empty">Ainda não há favoritos — adicione-os através do menu ⋮.</string>
     <string name="content_actions_title">Conteúdo da página</string>

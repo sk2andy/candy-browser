@@ -73,6 +73,9 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.PagerDefaults
@@ -138,6 +141,11 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -191,6 +199,17 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionItem
+import dev.sk2andy.materialbrowser.browser.commands.AddressSubmission
+import dev.sk2andy.materialbrowser.browser.commands.AddressSubmissionRules
+import dev.sk2andy.materialbrowser.browser.commands.BrowserCommand
+import dev.sk2andy.materialbrowser.browser.commands.BrowserCommandKind
+import dev.sk2andy.materialbrowser.browser.commands.CommandActions
+import dev.sk2andy.materialbrowser.browser.commands.CommandConfirmation
+import dev.sk2andy.materialbrowser.browser.commands.CommandCookieScope
+import dev.sk2andy.materialbrowser.browser.commands.CommandDispatcher
+import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
+import dev.sk2andy.materialbrowser.browser.commands.CommandSuggestion
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
@@ -245,6 +264,9 @@ fun BrowserScreen(controller: BrowserController) {
     var settingsVisible by remember { mutableStateOf(false) }
     var clearDialogVisible by remember { mutableStateOf(false) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
+    var highlightedSuggestionIndex by remember { mutableIntStateOf(-1) }
+    var addressFocusNonce by remember { mutableIntStateOf(0) }
+    var pendingCommand by remember { mutableStateOf<CommandSuggestion?>(null) }
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
     var tabOverviewOpening by remember { mutableStateOf(false) }
@@ -269,6 +291,7 @@ fun BrowserScreen(controller: BrowserController) {
     }
     val density = LocalDensity.current
     val rootView = LocalView.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
     val tabSwitchTravelPx = browserWidthPx + tabSwitchGapPx
     val openTabOverview = {
@@ -281,21 +304,155 @@ fun BrowserScreen(controller: BrowserController) {
             }
         }
     }
-    val openAddressEditor = {
+    val openAddressEditor: () -> Unit = {
         val initialAddress = selectedTab.url.takeUnless { it == BLANK_URL }.orEmpty()
         addressValue = TextFieldValue(
             text = initialAddress,
             selection = TextRange(initialAddress.length, 0),
         )
         addressEditorVisible = true
+        highlightedSuggestionIndex = -1
+        addressFocusNonce++
     }
-    val openNewTabAndEdit = {
+    val openNewTabAndEdit: () -> Unit = {
         val previousTabId = controller.selectedTabId
         val createdTabId = controller.createTab()
         if (createdTabId != previousTabId) {
             addressValue = TextFieldValue()
             addressEditorVisible = true
+            highlightedSuggestionIndex = -1
+            addressFocusNonce++
             rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        }
+    }
+    val suggestionItems = if (addressEditorVisible) {
+        controller.addressSuggestionItems(addressValue.text, limit = 10)
+    } else {
+        emptyList()
+    }
+    val commandActions = object : CommandActions {
+        override fun clearCacheAndReload(): Boolean = controller.clearCacheAndReload()
+        override fun clearCookiesAndReload(): Boolean = controller.clearCookiesAndReload()
+        override fun reload(): Boolean {
+            if (controller.selectedTab.url == BLANK_URL || controller.selectedTab.isLoading) return false
+            controller.reload()
+            return true
+        }
+        override fun stopLoading(): Boolean {
+            if (!controller.selectedTab.isLoading) return false
+            controller.stopLoading()
+            return true
+        }
+        override fun setSelectedTabPinned(isPinned: Boolean): Boolean =
+            controller.setTabPinned(controller.selectedTabId, isPinned)
+        override fun closeDuplicateTabs(confirmedTabIds: List<String>): Boolean =
+            controller.closeDuplicateTabs(confirmedTabIds) > 0
+        override fun moveSelectedTabToProfile(profileId: String): Boolean =
+            controller.moveTabToProfile(controller.selectedTabId, profileId)
+        override fun switchProfile(profileId: String): Boolean = controller.selectProfile(profileId)
+        override fun createTab(isIncognito: Boolean): Boolean {
+            val previousTabId = controller.selectedTabId
+            return controller.createTab(isIncognito = isIncognito) != previousTabId
+        }
+        override fun openSettings(): Boolean = true
+    }
+
+    fun runCommand(command: BrowserCommand): Boolean {
+        val completed = CommandDispatcher.dispatch(command, commandActions)
+        if (!completed) return false
+        when (command.kind) {
+            BrowserCommandKind.NewRegularTab,
+            BrowserCommandKind.NewIncognitoTab,
+            -> {
+                addressValue = TextFieldValue()
+                highlightedSuggestionIndex = -1
+                addressEditorVisible = true
+                addressFocusNonce++
+            }
+            BrowserCommandKind.OpenSettings -> {
+                addressEditorVisible = false
+                settingsVisible = true
+            }
+            else -> addressEditorVisible = false
+        }
+        rootView.performConfirmHaptic()
+        return true
+    }
+
+    fun selectCommand(suggestion: CommandSuggestion): Unit {
+        if (suggestion.command.confirmation == CommandConfirmation.None) {
+            runCommand(suggestion.command)
+        } else {
+            pendingCommand = suggestion
+            keyboard?.hide()
+        }
+    }
+
+    fun selectNavigation(suggestion: AddressSuggestion): Unit {
+        val target = suggestion.openTabId
+            ?.let { tabId -> controller.activeTabs.firstOrNull { it.id == tabId } }
+        if (target == null) {
+            controller.submitAddress(suggestion.url)
+        } else {
+            val targetHandoff = TabHandoff(
+                tabId = target.id,
+                preview = controller.previews[target.id].takeUnless { target.isIncognito },
+                title = target.title,
+                favicon = controller.favicons[target.id],
+                isIncognito = target.isIncognito,
+            )
+            if (controller.switchToOpenTab(target.id)) {
+                liveFrameTabId = null
+                tabHandoff = targetHandoff
+                backAnimationScope.launch { tabHandoffAlpha.snapTo(1f) }
+                rootView.performConfirmHaptic()
+            } else {
+                controller.submitAddress(suggestion.url)
+            }
+        }
+        addressEditorVisible = false
+    }
+
+    fun selectSuggestion(item: AddressSuggestionItem): Unit {
+        when (item) {
+            is AddressSuggestionItem.Navigation -> selectNavigation(item.suggestion)
+            is AddressSuggestionItem.Command -> selectCommand(item.suggestion)
+        }
+    }
+
+    fun submitAddressOrCommand(input: String): Unit {
+        when (
+            val submission = AddressSubmissionRules.resolve(
+                input = input,
+                suggestions = suggestionItems,
+                highlightedIndex = highlightedSuggestionIndex,
+            )
+        ) {
+            is AddressSubmission.Select -> selectSuggestion(submission.suggestion)
+            is AddressSubmission.Navigate -> {
+                controller.submitAddress(submission.input)
+                addressEditorVisible = false
+            }
+            AddressSubmission.None -> Unit
+        }
+    }
+
+    fun moveSuggestionHighlight(delta: Int): Unit {
+        if (suggestionItems.isEmpty()) return
+        highlightedSuggestionIndex = when {
+            highlightedSuggestionIndex < 0 && delta > 0 -> 0
+            highlightedSuggestionIndex < 0 -> suggestionItems.lastIndex
+            else -> (highlightedSuggestionIndex + delta).coerceIn(-1, suggestionItems.lastIndex)
+        }
+    }
+
+    LaunchedEffect(addressValue.text, suggestionItems.map(AddressSuggestionItem::stableId)) {
+        highlightedSuggestionIndex = if (
+            CommandMatcher.isExplicitCommandQuery(addressValue.text) && suggestionItems.isNotEmpty()
+        ) {
+            0
+        } else {
+            -1
         }
     }
 
@@ -408,31 +565,10 @@ fun BrowserScreen(controller: BrowserController) {
                 onDismiss = { addressEditorVisible = false },
             )
             AddressSuggestions(
-                suggestions = controller.addressSuggestions(addressValue.text, limit = 6),
-                onSelect = { suggestion ->
-                    val target = suggestion.openTabId
-                        ?.let { tabId -> controller.activeTabs.firstOrNull { it.id == tabId } }
-                    if (target == null) {
-                        controller.submitAddress(suggestion.url)
-                    } else {
-                        val targetHandoff = TabHandoff(
-                            tabId = target.id,
-                            preview = controller.previews[target.id].takeUnless { target.isIncognito },
-                            title = target.title,
-                            favicon = controller.favicons[target.id],
-                            isIncognito = target.isIncognito,
-                        )
-                        if (controller.switchToOpenTab(target.id)) {
-                            liveFrameTabId = null
-                            tabHandoff = targetHandoff
-                            backAnimationScope.launch { tabHandoffAlpha.snapTo(1f) }
-                            rootView.performConfirmHaptic()
-                        } else {
-                            controller.submitAddress(suggestion.url)
-                        }
-                    }
-                    addressEditorVisible = false
-                },
+                suggestions = suggestionItems,
+                highlightedIndex = highlightedSuggestionIndex,
+                onHighlight = { highlightedSuggestionIndex = it },
+                onSelect = ::selectSuggestion,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -446,11 +582,18 @@ fun BrowserScreen(controller: BrowserController) {
             onAddress = openAddressEditor,
             editValue = addressValue,
             onEditValueChange = { addressValue = it },
-            onDismissEditor = { addressEditorVisible = false },
-            onSubmitAddress = {
-                controller.submitAddress(it)
-                addressEditorVisible = false
+            addressFocusNonce = addressFocusNonce,
+            onMoveAddressSuggestion = ::moveSuggestionHighlight,
+            onActivateAddressSuggestion = {
+                val highlighted = suggestionItems.getOrNull(highlightedSuggestionIndex)
+                if (highlighted == null) {
+                    submitAddressOrCommand(addressValue.text)
+                } else {
+                    selectSuggestion(highlighted)
+                }
             },
+            onDismissEditor = { addressEditorVisible = false },
+            onSubmitAddress = ::submitAddressOrCommand,
             onScanQrCode = {
                 if (!qrScanInProgress) {
                     qrScanInProgress = true
@@ -644,6 +787,75 @@ fun BrowserScreen(controller: BrowserController) {
                 TextButton(onClick = { clearDialogVisible = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
+            },
+        )
+    }
+
+    pendingCommand?.let { pending ->
+        val isCookieCommand = pending.command.confirmation == CommandConfirmation.ClearCookies
+        AlertDialog(
+            onDismissRequest = {
+                pendingCommand = null
+                addressFocusNonce++
+            },
+            title = {
+                Text(
+                    stringResource(
+                        if (isCookieCommand) {
+                            R.string.command_cookie_confirm_title
+                        } else {
+                            R.string.command_duplicates_confirm_title
+                        },
+                    ),
+                )
+            },
+            text = {
+                Text(
+                    if (isCookieCommand) {
+                        stringResource(
+                            when (controller.commandCookieScope) {
+                                CommandCookieScope.SharedRegularProfile ->
+                                    R.string.command_cookie_confirm_regular
+                                CommandCookieScope.PrivateProfile ->
+                                    R.string.command_cookie_confirm_private
+                                CommandCookieScope.AllWebViews ->
+                                    R.string.command_cookie_confirm_all
+                            },
+                        )
+                    } else {
+                        pluralStringResource(
+                            R.plurals.command_duplicates_confirm_message,
+                            pending.command.duplicateCount,
+                            pending.command.duplicateCount,
+                        )
+                    },
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        pendingCommand = null
+                        if (!runCommand(pending.command)) addressFocusNonce++
+                    },
+                ) {
+                    Text(
+                        stringResource(
+                            if (isCookieCommand) {
+                                R.string.action_delete
+                            } else {
+                                R.string.command_close_duplicates_name
+                            },
+                        ),
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pendingCommand = null
+                        addressFocusNonce++
+                    },
+                ) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -1222,6 +1434,9 @@ private fun BrowserBottomBar(
     onAddress: () -> Unit,
     editValue: TextFieldValue,
     onEditValueChange: (TextFieldValue) -> Unit,
+    addressFocusNonce: Int,
+    onMoveAddressSuggestion: (Int) -> Unit,
+    onActivateAddressSuggestion: () -> Unit,
     onDismissEditor: () -> Unit,
     onSubmitAddress: (String) -> Unit,
     onScanQrCode: () -> Unit,
@@ -1354,11 +1569,10 @@ private fun BrowserBottomBar(
                         editValue = editValue,
                         onEditValueChange = onEditValueChange,
                         focusRequester = focusRequester,
+                        onMoveAddressSuggestion = onMoveAddressSuggestion,
+                        onActivateAddressSuggestion = onActivateAddressSuggestion,
                         onDismissEditor = onDismissEditor,
-                        onSubmitAddress = {
-                            keyboard?.hide()
-                            onSubmitAddress(it)
-                        },
+                        onSubmitAddress = onSubmitAddress,
                         onScanQrCode = onScanQrCode,
                         onTabDrag = onTabDrag,
                         onTabDragStopped = onTabDragStopped,
@@ -1399,7 +1613,7 @@ private fun BrowserBottomBar(
             }
         }
 
-    LaunchedEffect(editing, tab.id) {
+    LaunchedEffect(editing, tab.id, addressFocusNonce) {
         if (editing) {
             delay(40)
             focusRequester.requestFocus()
@@ -1459,6 +1673,8 @@ private fun ExpandedBottomBarContent(
     editValue: TextFieldValue,
     onEditValueChange: (TextFieldValue) -> Unit,
     focusRequester: androidx.compose.ui.focus.FocusRequester,
+    onMoveAddressSuggestion: (Int) -> Unit,
+    onActivateAddressSuggestion: () -> Unit,
     onDismissEditor: () -> Unit,
     onSubmitAddress: (String) -> Unit,
     onScanQrCode: () -> Unit,
@@ -1514,6 +1730,32 @@ private fun ExpandedBottomBarContent(
                             onValueChange = onEditValueChange,
                             modifier = Modifier
                                 .weight(1f)
+                                .onPreviewKeyEvent { event ->
+                                    when (event.key) {
+                                        Key.DirectionDown -> {
+                                            if (event.type == KeyEventType.KeyDown) {
+                                                onMoveAddressSuggestion(1)
+                                            }
+                                            true
+                                        }
+                                        Key.DirectionUp -> {
+                                            if (event.type == KeyEventType.KeyDown) {
+                                                onMoveAddressSuggestion(-1)
+                                            }
+                                            true
+                                        }
+                                        Key.Enter,
+                                        Key.NumPadEnter,
+                                        Key.DirectionCenter,
+                                        -> {
+                                            if (event.type == KeyEventType.KeyUp) {
+                                                onActivateAddressSuggestion()
+                                            }
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                }
                                 .focusRequester(focusRequester),
                             singleLine = true,
                             textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -1921,99 +2163,271 @@ private fun WebContentContextSheet(
 
 @Composable
 private fun AddressSuggestions(
-    suggestions: List<AddressSuggestion>,
-    onSelect: (AddressSuggestion) -> Unit,
+    suggestions: List<AddressSuggestionItem>,
+    highlightedIndex: Int,
+    onHighlight: (Int) -> Unit,
+    onSelect: (AddressSuggestionItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (suggestions.isEmpty()) return
+    val listState = rememberLazyListState()
+    LaunchedEffect(highlightedIndex, suggestions.map(AddressSuggestionItem::stableId)) {
+        if (highlightedIndex in suggestions.indices) {
+            listState.animateScrollToItem(highlightedIndex)
+        }
+    }
     Surface(
         modifier = modifier
             .imePadding()
             .padding(horizontal = 12.dp)
-            .padding(bottom = 76.dp)
+            .padding(bottom = 92.dp)
             .fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
         tonalElevation = 12.dp,
         shadowElevation = 12.dp,
     ) {
-        Column(
+        LazyColumn(
+            state = listState,
             modifier = Modifier
-                .heightIn(max = 320.dp)
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = 6.dp),
+                .heightIn(max = 320.dp),
+            contentPadding = PaddingValues(vertical = 6.dp),
         ) {
-            suggestions.forEach { suggestion ->
-                val switchesToOpenTab = suggestion.openTabId != null
-                Surface(
-                    modifier = Modifier
-                        .padding(horizontal = 6.dp, vertical = 1.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { onSelect(suggestion) },
-                    shape = RoundedCornerShape(16.dp),
-                    color = if (switchesToOpenTab) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        Color.Transparent
-                    },
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            painter = if (switchesToOpenTab) {
-                                painterResource(R.drawable.ic_switch_to_tab)
-                            } else {
-                                painterResource(R.drawable.ic_history)
-                            },
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = if (switchesToOpenTab) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                suggestion.title,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (switchesToOpenTab) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                            )
-                            Text(
-                                AddressResolver.displayText(suggestion.url),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (switchesToOpenTab) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.76f)
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        }
-                        if (switchesToOpenTab) {
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.action_switch_to_tab),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                style = MaterialTheme.typography.labelMedium,
-                                maxLines = 1,
-                            )
-                        }
-                    }
+            itemsIndexed(
+                items = suggestions,
+                key = { _, suggestion -> suggestion.stableId },
+            ) { index, suggestion ->
+                when (suggestion) {
+                    is AddressSuggestionItem.Navigation -> NavigationSuggestionRow(
+                        suggestion = suggestion.suggestion,
+                        highlighted = index == highlightedIndex,
+                        onHighlight = { onHighlight(index) },
+                        onClick = { onSelect(suggestion) },
+                    )
+                    is AddressSuggestionItem.Command -> CommandSuggestionRow(
+                        suggestion = suggestion.suggestion,
+                        highlighted = index == highlightedIndex,
+                        onHighlight = { onHighlight(index) },
+                        onClick = { onSelect(suggestion) },
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun NavigationSuggestionRow(
+    suggestion: AddressSuggestion,
+    highlighted: Boolean,
+    onHighlight: () -> Unit,
+    onClick: () -> Unit,
+) {
+    val switchesToOpenTab = suggestion.openTabId != null
+    val containerColor = when {
+        highlighted -> MaterialTheme.colorScheme.tertiaryContainer
+        switchesToOpenTab -> MaterialTheme.colorScheme.primaryContainer
+        else -> Color.Transparent
+    }
+    val contentColor = when {
+        highlighted -> MaterialTheme.colorScheme.onTertiaryContainer
+        switchesToOpenTab -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    Surface(
+        modifier = Modifier
+            .padding(horizontal = 6.dp, vertical = 1.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .semantics(mergeDescendants = true) { selected = highlighted }
+            .clickable(role = Role.Button) {
+                onHighlight()
+                onClick()
+            },
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(
+                    if (switchesToOpenTab) R.drawable.ic_switch_to_tab else R.drawable.ic_history,
+                ),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = contentColor,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    suggestion.title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor,
+                )
+                Text(
+                    AddressResolver.displayText(suggestion.url),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.76f),
+                )
+            }
+            if (switchesToOpenTab) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.action_switch_to_tab),
+                    color = contentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommandSuggestionRow(
+    suggestion: CommandSuggestion,
+    highlighted: Boolean,
+    onHighlight: () -> Unit,
+    onClick: () -> Unit,
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (highlighted) 1.01f else 1f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f),
+        label = "Command focus",
+    )
+    val containerColor = if (highlighted) {
+        MaterialTheme.colorScheme.tertiaryContainer
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = if (highlighted) {
+        MaterialTheme.colorScheme.onTertiaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    Surface(
+        modifier = Modifier
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .semantics(mergeDescendants = true) { selected = highlighted }
+            .clickable(role = Role.Button) {
+                onHighlight()
+                onClick()
+            },
+        shape = RoundedCornerShape(18.dp),
+        color = containerColor,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = contentColor.copy(alpha = 0.12f),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    CommandIcon(suggestion.command.kind, contentColor)
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    suggestion.name,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor,
+                )
+                Text(
+                    suggestion.effect,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.78f),
+                )
+            }
+            suggestion.command.targetProfileLabel?.let { profile ->
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = contentColor.copy(alpha = 0.12f),
+                ) {
+                    Text(
+                        text = stringResource(R.string.command_target_profile, profile),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommandIcon(kind: BrowserCommandKind, tint: Color) {
+    val modifier = Modifier.size(22.dp)
+    when (kind) {
+        BrowserCommandKind.ClearCacheAndReload,
+        BrowserCommandKind.Reload,
+        -> Icon(Icons.Default.Refresh, contentDescription = null, modifier = modifier, tint = tint)
+        BrowserCommandKind.ClearCookiesAndReload -> Icon(
+            painterResource(R.drawable.ic_delete_outline),
+            contentDescription = null,
+            modifier = modifier,
+            tint = tint,
+        )
+        BrowserCommandKind.StopLoading ->
+            Icon(Icons.Default.Close, contentDescription = null, modifier = modifier, tint = tint)
+        BrowserCommandKind.PinTab,
+        BrowserCommandKind.UnpinTab,
+        -> Icon(
+            painterResource(R.drawable.ic_push_pin),
+            contentDescription = null,
+            modifier = modifier,
+            tint = tint,
+        )
+        BrowserCommandKind.CloseDuplicateTabs -> Icon(
+            painterResource(R.drawable.ic_content_copy),
+            contentDescription = null,
+            modifier = modifier,
+            tint = tint,
+        )
+        BrowserCommandKind.MoveTabToProfile,
+        BrowserCommandKind.SwitchProfile,
+        -> Icon(
+            painterResource(R.drawable.ic_switch_to_tab),
+            contentDescription = null,
+            modifier = modifier,
+            tint = tint,
+        )
+        BrowserCommandKind.NewRegularTab ->
+            Icon(Icons.Default.Add, contentDescription = null, modifier = modifier, tint = tint)
+        BrowserCommandKind.NewIncognitoTab -> Icon(
+            painterResource(R.drawable.ic_incognito_outline),
+            contentDescription = null,
+            modifier = modifier,
+            tint = tint,
+        )
+        BrowserCommandKind.OpenSettings -> Icon(
+            painterResource(R.drawable.ic_settings),
+            contentDescription = null,
+            modifier = modifier,
+            tint = tint,
+        )
     }
 }
 

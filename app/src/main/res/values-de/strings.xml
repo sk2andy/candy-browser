@@ -48,6 +48,42 @@
     <string name="clear_data_message">Cookies, Website-Speicher, Cache und Verlauf dieser Sitzung werden gelöscht.</string>
     <string name="action_delete">Löschen</string>
     <string name="action_cancel">Abbrechen</string>
+
+    <!-- Adress-Commands -->
+    <string name="command_clear_cache_reload_name">Cache leeren &amp; neu laden</string>
+    <string name="command_clear_cache_reload_effect">Löscht Candys gemeinsamen WebView-Cache und lädt diesen Tab neu</string>
+    <string name="command_delete_cookies_reload_name">Cookies löschen &amp; neu laden</string>
+    <string name="command_delete_cookies_reload_effect_regular">Löscht Cookies aller normalen Candy-Profile und lädt diesen Tab neu</string>
+    <string name="command_delete_cookies_reload_effect_private">Löscht Cookies aller privaten Tabs und lädt diesen Tab neu</string>
+    <string name="command_delete_cookies_reload_effect_all">Löscht Cookies aller Candy-WebViews und lädt diesen Tab neu</string>
+    <string name="command_reload_effect">Lädt den aktuellen Tab neu</string>
+    <string name="command_stop_loading_effect">Stoppt das Laden des aktuellen Tabs</string>
+    <string name="command_pin_tab_effect">Hält diesen Tab offen und setzt ihn nach vorn</string>
+    <string name="command_unpin_tab_effect">Lässt diesen Tab wieder normal schließen</string>
+    <string name="command_close_duplicates_name">Doppelte Tabs schließen</string>
+    <plurals name="command_close_duplicates_effect">
+        <item quantity="one">Schließt %1$d doppelten Tab in diesem Profil; angepinnte Tabs und der aktuelle Tab bleiben offen</item>
+        <item quantity="other">Schließt %1$d doppelte Tabs in diesem Profil; angepinnte Tabs und der aktuelle Tab bleiben offen</item>
+    </plurals>
+    <string name="command_move_tab_effect">Verschiebt den aktuellen Tab in Profil %1$s</string>
+    <string name="command_switch_profile_name">Zu Profil wechseln</string>
+    <string name="command_switch_profile_effect">Öffnet Profil %1$s</string>
+    <string name="command_new_regular_tab_name">Neuer normaler Tab</string>
+    <string name="command_new_regular_tab_effect">Öffnet einen normalen Tab und lässt die Adresssuche aktiv</string>
+    <string name="command_new_incognito_tab_name">Neuer Inkognito-Tab</string>
+    <string name="command_new_incognito_tab_effect">Öffnet einen privaten Tab, der nicht gespeichert wird</string>
+    <string name="command_open_settings_name">Einstellungen öffnen</string>
+    <string name="command_open_settings_effect">Öffnet die Einstellungen von Candy Browser</string>
+    <string name="command_target_profile">Profil %1$s</string>
+    <string name="command_cookie_confirm_title">Cookies löschen?</string>
+    <string name="command_cookie_confirm_regular">Alle normalen Candy-Profile teilen diese Cookies und können abgemeldet werden. Dieser Tab wird danach neu geladen.</string>
+    <string name="command_cookie_confirm_private">Alle privaten Tabs teilen diese Cookies und können abgemeldet werden. Dieser Tab wird danach neu geladen.</string>
+    <string name="command_cookie_confirm_all">Alle Candy-WebViews teilen diese Cookies und können abgemeldet werden. Dieser Tab wird danach neu geladen.</string>
+    <string name="command_duplicates_confirm_title">Doppelte Tabs schließen?</string>
+    <plurals name="command_duplicates_confirm_message">
+        <item quantity="one">%1$d doppelten Tab schließen? Angepinnte Tabs und der aktuelle Tab bleiben offen.</item>
+        <item quantity="other">%1$d doppelte Tabs schließen? Angepinnte Tabs und der aktuelle Tab bleiben offen.</item>
+    </plurals>
     <string name="favorites_title">Favoriten</string>
     <string name="favorites_empty">Noch keine Favoriten – über das ⋮-Menü hinzufügen.</string>
     <string name="content_actions_title">Seiteninhalt</string>
