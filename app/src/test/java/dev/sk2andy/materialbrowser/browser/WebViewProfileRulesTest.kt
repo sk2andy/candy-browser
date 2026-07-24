@@ -126,6 +126,54 @@ class WebViewProfileRulesTest {
     }
 
     @Test
+    fun `profile deletion recreates only tabs whose storage assignment changes`() {
+        val sharedTarget = BrowserProfile(id = "shared-target", emoji = "🧪")
+        val isolatedTabs = listOf(
+            BrowserTab(id = "regular", lastAccessedAt = 1L, profileId = isolated.id),
+            BrowserTab(
+                id = "private",
+                lastAccessedAt = 2L,
+                profileId = isolated.id,
+                isIncognito = true,
+            ),
+        )
+        val movedFromIsolation = WebViewProfileRules.moveTabs(
+            isolatedTabs,
+            sourceProfileId = isolated.id,
+            targetProfileId = shared.id,
+        )
+        val sharedTabs = listOf(
+            BrowserTab(id = "shared", lastAccessedAt = 3L, profileId = shared.id),
+        )
+        val movedBetweenSharedProfiles = WebViewProfileRules.moveTabs(
+            sharedTabs,
+            sourceProfileId = shared.id,
+            targetProfileId = sharedTarget.id,
+        )
+
+        assertEquals(
+            setOf("regular"),
+            WebViewProfileRules.tabIdsRequiringWebViewRecreation(
+                before = isolatedTabs,
+                after = movedFromIsolation,
+                profiles = listOf(shared, sharedTarget, isolated),
+                multiProfileSupported = true,
+                incognitoProfileName = "private-session",
+            ),
+        )
+        assertEquals(
+            emptySet<String>(),
+            WebViewProfileRules.tabIdsRequiringWebViewRecreation(
+                before = sharedTabs,
+                after = movedBetweenSharedProfiles,
+                profiles = listOf(shared, sharedTarget),
+                multiProfileSupported = true,
+                incognitoProfileName = "private-session",
+            ),
+        )
+    }
+
+    @Test
     fun `visible history URL preserves state for storage recreation`() {
         val tab = BrowserTab(
             id = "spa",
