@@ -77,6 +77,7 @@ import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
+import dev.sk2andy.materialbrowser.data.CandyTrailRepository
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryEntry
@@ -99,6 +100,7 @@ class BrowserController(private val activity: Activity) {
     val history = mutableStateListOf<HistoryEntry>()
     val favorites = mutableStateListOf<FavoriteEntry>()
     val privacySnapshots = mutableStateMapOf<String, PrivacyXRaySnapshot>()
+    val candyTrails = mutableStateMapOf<String, CandyTrail>()
     val contentActions = WebContentActionState()
 
     var selectedTabId by mutableStateOf("")
@@ -151,11 +153,18 @@ class BrowserController(private val activity: Activity) {
     private var previewEpoch = 0
     private var faviconEpoch = 0
     private val faviconGenerations = mutableMapOf<String, Int>()
+    private val candyTrailHistoryBindings = mutableMapOf<String, CandyTrailHistoryBinding>()
+    private val pendingCandyTrailTargets = mutableMapOf<String, String>()
+    private val candyTrailGenerations = mutableMapOf<String, Int>()
+    private val pendingCandyTrailRestoreIds = mutableSetOf<String>()
+    private val suppressedCandyTrailTabIds = mutableSetOf<String>()
+    private var candyTrailEpoch = 0
     private val store = BrowserSessionStore(activity)
     private val profileDeletionCoordinator =
         WebViewProfileDeletionCoordinator(store, ::tryDeleteNamedWebViewProfile)
     private val previewRepository = TabPreviewRepository.get(activity)
     private val faviconRepository = FaviconRepository.get(activity)
+    private val candyTrailRepository = CandyTrailRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
     private val downloadManager = BrowserDownloadManager(activity)
     private val externalApps = ExternalAppLauncher(activity)
@@ -245,6 +254,7 @@ class BrowserController(private val activity: Activity) {
         clearIncognitoProfile()
         restorePersistedPreviews()
         restorePersistedFavicons()
+        restorePersistedCandyTrails()
         WebView.setWebContentsDebuggingEnabled(false)
         configureServiceWorkerBlocking()
     }
@@ -896,8 +906,47 @@ class BrowserController(private val activity: Activity) {
         return true
     }
 
+    fun candyTrail(tabId: String): CandyTrail = candyTrails[tabId] ?: CandyTrail(tabId)
+
+    fun navigateToCandyTrailNode(tabId: String, nodeId: String): Boolean {
+        val tab = activeTabs.firstOrNull { it.id == tabId } ?: return false
+        val trail = candyTrails[tabId] ?: return false
+        val node = trail.nodes.firstOrNull { it.id == nodeId } ?: return false
+        val selectedTrail = CandyTrailRules.selectNode(trail, nodeId, System.currentTimeMillis())
+            ?: return false
+        setCandyTrail(tab, selectedTrail)
+        pendingCandyTrailTargets[tabId] = nodeId
+        selectTab(tabId)
+
+        val existingWebView = webViews[tabId]
+        if (existingWebView == null) {
+            updateTab(tabId) { it.copy(url = node.url, title = node.title, isLoading = true, progress = 0) }
+            webViewFor(tabId, initialUrlOverride = node.url)
+            return true
+        }
+        val binding = candyTrailHistoryBindings[tabId] ?: CandyTrailHistoryBinding()
+        val targetIndex = CandyTrailHistoryReconciler.indexOfNode(binding, nodeId)
+        val delta = targetIndex?.minus(binding.currentIndex)
+        if (delta != null && delta != 0) {
+            existingWebView.goBackOrForward(delta)
+        } else if (delta == null || existingWebView.url != node.url) {
+            applyMediaPlaybackPolicy(tabId, existingWebView)
+            existingWebView.loadUrl(node.url)
+        } else {
+            pendingCandyTrailTargets.remove(tabId)
+        }
+        return true
+    }
+
     fun goBack() = webViews[selectedTabId]?.takeIf(WebView::canGoBack)?.goBack() ?: Unit
-    fun goForward() = webViews[selectedTabId]?.takeIf(WebView::canGoForward)?.goForward() ?: Unit
+    fun goForward() {
+        val webView = webViews[selectedTabId]?.takeIf(WebView::canGoForward) ?: return
+        val binding = candyTrailHistoryBindings[selectedTabId]
+        binding?.entries?.getOrNull(binding.currentIndex + 1)?.nodeId?.let { targetNodeId ->
+            pendingCandyTrailTargets[selectedTabId] = targetNodeId
+        }
+        webView.goForward()
+    }
     fun reload() {
         updateTab(selectedTabId) { it.copy(isLoading = true, progress = 0, error = null) }
         webViewFor(selectedTabId).reload()
@@ -1105,6 +1154,14 @@ class BrowserController(private val activity: Activity) {
         faviconGenerations.clear()
         favicons.clear()
         faviconRepository.clear()
+        candyTrailEpoch++
+        candyTrailGenerations.clear()
+        candyTrailHistoryBindings.clear()
+        pendingCandyTrailTargets.clear()
+        pendingCandyTrailRestoreIds.clear()
+        suppressedCandyTrailTabIds += tabs.map(BrowserTab::id)
+        candyTrails.clear()
+        candyTrailRepository.clear()
         Toast.makeText(
             activity,
             activity.getString(R.string.toast_browsing_data_cleared),
@@ -1169,14 +1226,23 @@ class BrowserController(private val activity: Activity) {
         favicons.clear()
         privacySnapshots.clear()
         faviconGenerations.clear()
+        candyTrailEpoch++
+        candyTrailHistoryBindings.clear()
+        pendingCandyTrailTargets.clear()
+        pendingCandyTrailRestoreIds.clear()
+        suppressedCandyTrailTabIds.clear()
+        candyTrails.clear()
+        candyTrailGenerations.clear()
     }
 
-    private fun webViewFor(tabId: String): WebView = webViews.getOrPut(tabId) {
+    private fun webViewFor(tabId: String, initialUrlOverride: String? = null): WebView =
+        webViews.getOrPut(tabId) {
         val tab = tabs.first { it.id == tabId }
         createWebView(tabId).also { webView ->
-            if (tab.url != BLANK_URL) {
+            val initialUrl = initialUrlOverride ?: tab.url
+            if (initialUrl != BLANK_URL) {
                 updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                webView.loadUrl(tab.url)
+                webView.loadUrl(initialUrl)
             }
         }
     }
@@ -1283,6 +1349,7 @@ class BrowserController(private val activity: Activity) {
             updateProtectionRequestContext(tabId, url)
             applySiteProtectionForNavigation(tabId, view, url)
             navigationGenerations[tabId] = (navigationGenerations[tabId] ?: 0) + 1
+            suppressedCandyTrailTabIds.remove(tabId)
             setPageEdgeToEdge(tabId, view, false)
             val previousUrl = tabs.firstOrNull { it.id == tabId }?.url
             if (previousUrl != null && FaviconRules.changedSite(previousUrl, url)) {
@@ -1313,6 +1380,9 @@ class BrowserController(private val activity: Activity) {
                 )
             }
             recordHistory(tabId, url, title)
+            if (view.url == url && pageUrls[tabId] == url) {
+                updateCandyTrailPage(tabId, url, title)
+            }
             detectPageEdgeToEdge(tabId, view)
             finalizeCookieConsentBlocking(tabId, view)
             view.postVisualStateCallback(
@@ -1334,6 +1404,7 @@ class BrowserController(private val activity: Activity) {
                 updateTab(tabId) { tab -> WebViewProfileRules.withVisibleUrl(tab, visibleUrl) }
             }
             updateNavigationState(tabId, view)
+            reconcileCandyTrailHistory(tabId, view, isReload)
         }
 
         override fun shouldInterceptRequest(
@@ -1427,6 +1498,8 @@ class BrowserController(private val activity: Activity) {
             removeCookieConsentDocumentStartScript(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
+            candyTrailHistoryBindings.remove(tabId)
+            pendingCandyTrailTargets.remove(tabId)
             (view.parent as? FrameLayout)?.removeView(view)
             view.destroy()
             webViewRevision++
@@ -1501,6 +1574,7 @@ class BrowserController(private val activity: Activity) {
         override fun onReceivedTitle(view: WebView, title: String?) {
             title?.takeIf(String::isNotBlank)?.let { value ->
                 updateTab(tabId) { it.copy(title = value) }
+                view.url?.let { url -> updateCandyTrailPage(tabId, url, value) }
             }
         }
 
@@ -1680,6 +1754,76 @@ class BrowserController(private val activity: Activity) {
                 mainHandler.postDelayed(blockerCountFlush, BLOCKER_COUNT_FLUSH_DELAY_MS)
             }
         }
+    }
+
+    private fun reconcileCandyTrailHistory(tabId: String, view: WebView, isReload: Boolean) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val history = view.copyBackForwardList()
+        if (history.currentIndex !in 0 until history.size) return
+        val urls = buildList(history.size) {
+            repeat(history.size) { index -> add(history.getItemAtIndex(index).url.orEmpty()) }
+        }
+        val currentUrl = urls[history.currentIndex]
+        if (tabId in suppressedCandyTrailTabIds) {
+            if (currentUrl == pageUrls[tabId]) return
+            suppressedCandyTrailTabIds.remove(tabId)
+        }
+        val pendingTargetNodeId = pendingCandyTrailTargets.remove(tabId)?.takeIf { targetNodeId ->
+            candyTrails[tabId]?.nodes?.any { node ->
+                node.id == targetNodeId && node.url == currentUrl
+            } == true
+        }
+        val result = CandyTrailHistoryReconciler.reconcile(
+            trail = candyTrails[tabId],
+            tabId = tabId,
+            previous = candyTrailHistoryBindings[tabId] ?: CandyTrailHistoryBinding(),
+            snapshot = CandyTrailHistorySnapshot(
+                urls = urls,
+                currentIndex = history.currentIndex,
+                isReload = isReload,
+            ),
+            title = view.title.orEmpty().ifBlank { tab.title },
+            visitedAt = System.currentTimeMillis(),
+            pendingTargetNodeId = pendingTargetNodeId,
+        )
+        candyTrailHistoryBindings[tabId] = result.binding
+        setCandyTrail(tab, result.trail)
+    }
+
+    private fun updateCandyTrailPage(tabId: String, url: String, title: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (tabId in suppressedCandyTrailTabIds || pageUrls[tabId] != url) return
+        val nowMillis = System.currentTimeMillis()
+        val trail = candyTrails[tabId]
+        if (trail == null) {
+            setCandyTrail(
+                tab,
+                CandyTrailRules.recordNavigation(
+                    current = null,
+                    tabId = tabId,
+                    url = url,
+                    title = title,
+                    visitedAt = nowMillis,
+                ),
+            )
+            return
+        }
+        setCandyTrail(
+            tab,
+            CandyTrailRules.updateCurrentPage(
+                trail = trail,
+                url = url,
+                title = title,
+                visitedAt = nowMillis,
+            ),
+        )
+    }
+
+    private fun setCandyTrail(tab: BrowserTab, trail: CandyTrail) {
+        if (candyTrails[tab.id] == trail) return
+        candyTrailGenerations[tab.id] = candyTrailGenerations.getOrDefault(tab.id, 0) + 1
+        candyTrails[tab.id] = trail
+        if (tab.id !in pendingCandyTrailRestoreIds) candyTrailRepository.save(tab, trail)
     }
 
     private fun recordHistory(tabId: String, url: String, title: String) {
@@ -1880,6 +2024,60 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
+    private fun restorePersistedCandyTrails() {
+        pendingCandyTrailRestoreIds += tabs.asSequence()
+            .filterNot(BrowserTab::isIncognito)
+            .map(BrowserTab::id)
+        val restoreEpoch = candyTrailEpoch
+        val restoreGenerations = tabs.associate { tab ->
+            tab.id to candyTrailGenerations.getOrDefault(tab.id, 0)
+        }
+        candyTrailRepository.restore(
+            tabs = tabs.toList(),
+            onLoaded = { tabId, restoredTrail -> mainHandler.post {
+                val tab = tabs.firstOrNull { it.id == tabId && !it.isIncognito }
+                val runtimeTrail = candyTrails[tabId]
+                val generationUnchanged = candyTrailGenerations.getOrDefault(tabId, 0) ==
+                    restoreGenerations[tabId]
+                if (
+                    !destroyed &&
+                    candyTrailEpoch == restoreEpoch &&
+                    tab != null
+                ) {
+                    val runtimeBinding = candyTrailHistoryBindings[tabId]
+                    val mergeResult = if (!generationUnchanged && runtimeTrail != null) {
+                        CandyTrailRules.mergeRestoredWithRuntime(restoredTrail, runtimeTrail)
+                    } else {
+                        null
+                    }
+                    val mergedTrail = mergeResult?.trail ?: restoredTrail
+                    candyTrails[tabId] = mergedTrail
+                    if (mergeResult != null && runtimeBinding != null) {
+                        candyTrailHistoryBindings[tabId] = CandyTrailHistoryReconciler.remapNodeIds(
+                            runtimeBinding,
+                            mergeResult.runtimeNodeIds,
+                        )
+                    } else {
+                        candyTrailHistoryBindings.remove(tabId)
+                    }
+                    candyTrailGenerations[tabId] =
+                        candyTrailGenerations.getOrDefault(tabId, 0) + 1
+                    pendingCandyTrailRestoreIds.remove(tabId)
+                    candyTrailRepository.save(tab, mergedTrail)
+                }
+            } },
+            onComplete = { mainHandler.post {
+                val unresolvedIds = pendingCandyTrailRestoreIds.toList()
+                pendingCandyTrailRestoreIds.clear()
+                unresolvedIds.forEach { tabId ->
+                    val tab = tabs.firstOrNull { it.id == tabId && !it.isIncognito }
+                    val trail = candyTrails[tabId]
+                    if (tab != null && trail != null) candyTrailRepository.save(tab, trail)
+                }
+            } },
+        )
+    }
+
     private fun storeFavicon(tabId: String, bitmap: Bitmap) {
         val tab = tabs.firstOrNull { it.id == tabId }
         if (bitmap.isRecycled || tab == null) return
@@ -2008,6 +2206,13 @@ class BrowserController(private val activity: Activity) {
         navigationGenerations.remove(tabId)
         pageUrls.remove(tabId)
         bottomBarCompactStates.remove(tabId)
+        candyTrailHistoryBindings.remove(tabId)
+        pendingCandyTrailTargets.remove(tabId)
+        pendingCandyTrailRestoreIds.remove(tabId)
+        suppressedCandyTrailTabIds.remove(tabId)
+        candyTrails.remove(tabId)
+        candyTrailGenerations.remove(tabId)
+        candyTrailRepository.delete(tabId)
         previews.remove(tabId)
         previewRepository.delete(tabId)
         invalidateFavicon(tabId)
@@ -2158,6 +2363,8 @@ class BrowserController(private val activity: Activity) {
         clearServiceWorkerClientsLosingLastWebView(tabIds)
         tabIds.forEach { tabId ->
             clearPrivacyDataForTab(tabId)
+            candyTrailHistoryBindings.remove(tabId)
+            pendingCandyTrailTargets.remove(tabId)
             webViews.remove(tabId)?.let(::destroyWebView)
             webViewProfileKeys.remove(tabId)
             edgeToEdgePages.remove(tabId)

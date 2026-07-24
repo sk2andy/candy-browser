@@ -9,6 +9,7 @@ und lokalen Content-Schutz.
 - Edge-to-edge-Webinhalt mit schwebender unterer Bedienleiste
 - Material-3-Dynamic-Color und OS-gesteuerter Darkmode
 - Mehrere Tabs mit Arc-inspirierter Kartenübersicht, dauerhaft gespeicherten Vorschauen, Favicon/Titel, Hero-Animation und persistenter Sitzung
+- Candy Trails: verzweigte, persistente Navigations-Journeys pro normalem Tab mit animiertem Graph, Pan/Zoom und direkter Knotennavigation
 - Tabwechsel durch horizontales Ziehen der Adressleiste; Hochwischen öffnet die Übersicht
 - Tabs lassen sich mit Rubberband-Effekt nach oben herauswischen und schließen
 - Haptisches Feedback bei Tabwechseln, Öffnen, Schließen und dem Erstellen neuer Tabs

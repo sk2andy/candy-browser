@@ -122,8 +122,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
@@ -164,6 +166,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -235,6 +238,7 @@ private data class TabReorderAnimation(
 private enum class BrowserBackTarget {
     Settings,
     AddressEditor,
+    CandyTrail,
     TabOverview,
     WebHistory,
     None,
@@ -242,7 +246,9 @@ private enum class BrowserBackTarget {
 
 @Composable
 fun BrowserScreen(controller: BrowserController) {
-    var tabOverviewVisible by remember { mutableStateOf(false) }
+    var tabOverviewVisible by rememberSaveable { mutableStateOf(false) }
+    var candyTrailTabId by rememberSaveable { mutableStateOf<String?>(null) }
+    var candyTrailSourceBounds by remember { mutableStateOf<Rect?>(null) }
     var addressEditorVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
@@ -257,8 +263,10 @@ fun BrowserScreen(controller: BrowserController) {
     val reportLiveFrame = remember { { tabId: String -> liveFrameTabIdState.value = tabId } }
     val tabHandoffAlpha = remember { Animatable(1f) }
     val settingsBackProgress = remember { Animatable(0f) }
+    val candyTrailBackProgress = remember { Animatable(0f) }
     val backAnimationScope = rememberCoroutineScope()
     var settingsBackEdgeSign by remember { mutableIntStateOf(1) }
+    var candyTrailBackEdgeSign by remember { mutableIntStateOf(1) }
     var qrScanInProgress by remember { mutableStateOf(false) }
     val selectedTab = controller.selectedTab
     val context = LocalContext.current
@@ -331,8 +339,8 @@ fun BrowserScreen(controller: BrowserController) {
         if (controller.tabs.none { it.id == xRayTabId }) privacyXRayTabId = null
     }
 
-    LaunchedEffect(tabOverviewVisible, addressEditorVisible, settingsVisible) {
-        if (tabOverviewVisible || addressEditorVisible || settingsVisible) {
+    LaunchedEffect(tabOverviewVisible, addressEditorVisible, settingsVisible, candyTrailTabId) {
+        if (tabOverviewVisible || addressEditorVisible || settingsVisible || candyTrailTabId != null) {
             controller.setPreviewCaptureEnabled(false)
         } else {
             delay(120)
@@ -344,6 +352,7 @@ fun BrowserScreen(controller: BrowserController) {
         when {
             settingsVisible -> BrowserBackTarget.Settings
             addressEditorVisible -> BrowserBackTarget.AddressEditor
+            candyTrailTabId != null -> BrowserBackTarget.CandyTrail
             tabOverviewVisible -> BrowserBackTarget.TabOverview
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
             else -> BrowserBackTarget.None
@@ -358,6 +367,11 @@ fun BrowserScreen(controller: BrowserController) {
                     receivedProgress = true
                     settingsBackEdgeSign = if (event.swipeEdge == BackEventCompat.EDGE_LEFT) 1 else -1
                     settingsBackProgress.snapTo(event.progress.coerceIn(0f, 1f))
+                } else if (target == BrowserBackTarget.CandyTrail) {
+                    receivedProgress = true
+                    candyTrailBackEdgeSign =
+                        if (event.swipeEdge == BackEventCompat.EDGE_LEFT) 1 else -1
+                    candyTrailBackProgress.snapTo(event.progress.coerceIn(0f, 1f))
                 }
             }
             when (target) {
@@ -366,6 +380,11 @@ fun BrowserScreen(controller: BrowserController) {
                     settingsVisible = false
                 }
                 BrowserBackTarget.AddressEditor -> addressEditorVisible = false
+                BrowserBackTarget.CandyTrail -> {
+                    if (receivedProgress) candyTrailBackProgress.snapTo(1f)
+                    candyTrailTabId = null
+                    candyTrailSourceBounds = null
+                }
                 BrowserBackTarget.TabOverview -> tabOverviewVisible = false
                 BrowserBackTarget.WebHistory -> controller.goBack()
                 BrowserBackTarget.None -> Unit
@@ -378,6 +397,13 @@ fun BrowserScreen(controller: BrowserController) {
                         animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f),
                     )
                 }
+            } else if (target == BrowserBackTarget.CandyTrail) {
+                backAnimationScope.launch {
+                    candyTrailBackProgress.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f),
+                    )
+                }
             }
             throw cancellation
         }
@@ -386,6 +412,17 @@ fun BrowserScreen(controller: BrowserController) {
         if (!settingsVisible && settingsBackProgress.value > 0f) {
             delay(110)
             settingsBackProgress.snapTo(0f)
+        }
+    }
+    LaunchedEffect(candyTrailTabId, controller.activeTabs) {
+        val trailTabId = candyTrailTabId
+        if (trailTabId != null && controller.activeTabs.none { it.id == trailTabId }) {
+            candyTrailTabId = null
+            candyTrailSourceBounds = null
+        }
+        if (trailTabId == null && candyTrailBackProgress.value > 0f) {
+            delay(110)
+            candyTrailBackProgress.snapTo(0f)
         }
     }
 
@@ -573,6 +610,11 @@ fun BrowserScreen(controller: BrowserController) {
             onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
             onShare = controller::shareSelectedPage,
             onPrint = controller::printSelectedPage,
+            onOpenCandyTrail = {
+                candyTrailSourceBounds = null
+                candyTrailTabId = selectedTab.id
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
@@ -600,6 +642,18 @@ fun BrowserScreen(controller: BrowserController) {
                 val previousTabId = controller.selectedTabId
                 openNewTabAndEdit()
                 if (controller.selectedTabId != previousTabId) tabOverviewVisible = false
+            },
+            candyTrailTabId = candyTrailTabId,
+            candyTrailSourceBounds = candyTrailSourceBounds,
+            candyTrailBackProgress = candyTrailBackProgress.value,
+            candyTrailBackEdgeSign = candyTrailBackEdgeSign,
+            onOpenCandyTrail = { tabId, bounds ->
+                candyTrailSourceBounds = bounds
+                candyTrailTabId = tabId
+            },
+            onCloseCandyTrail = {
+                candyTrailTabId = null
+                candyTrailSourceBounds = null
             },
         )
 
@@ -1276,6 +1330,7 @@ private fun BrowserBottomBar(
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
     onPrint: () -> Unit,
+    onOpenCandyTrail: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -1410,6 +1465,7 @@ private fun BrowserBottomBar(
                         onSummarizeWithAssistant = onSummarizeWithAssistant,
                         onShare = onShare,
                         onPrint = onPrint,
+                        onOpenCandyTrail = onOpenCandyTrail,
                         )
                     }
                 }
@@ -1513,6 +1569,7 @@ private fun ExpandedBottomBarContent(
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
     onPrint: () -> Unit,
+    onOpenCandyTrail: () -> Unit,
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
     Column {
@@ -1688,6 +1745,21 @@ private fun ExpandedBottomBarContent(
                             if (tab.isLoading) onStop() else onReload()
                         },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_open_candy_trail)) },
+                        enabled = tab.url != BLANK_URL,
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onOpenCandyTrail()
+                        },
+                        leadingIcon = {
+                            Text(
+                                "⌘",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 20.sp,
+                            )
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.new_tab_title)) },
@@ -2065,6 +2137,12 @@ private fun TabOverview(
     onClose: () -> Unit,
     onSelect: (String) -> Unit,
     onNewTab: () -> Unit,
+    candyTrailTabId: String?,
+    candyTrailSourceBounds: Rect?,
+    candyTrailBackProgress: Float,
+    candyTrailBackEdgeSign: Int,
+    onOpenCandyTrail: (String, Rect?) -> Unit,
+    onCloseCandyTrail: () -> Unit,
 ) {
     val rootView = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -2115,6 +2193,7 @@ private fun TabOverview(
     var reorderLayoutReady by remember { mutableStateOf(false) }
     val reorderProgress = remember { Animatable(1f) }
     val moveProgress = remember { Animatable(0f) }
+    val tabCardBounds = remember { mutableStateMapOf<String, Rect>() }
     val profileSwitchProgress = remember { Animatable(1f) }
     val tabFocusHapticEvents = remember {
         Channel<Unit>(
@@ -2222,11 +2301,12 @@ private fun TabOverview(
         )
     }
 
+    val layerVisible = CandyTrailLayerRules.isVisible(visible, candyTrailTabId)
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .zIndex(if (visible) 10f else -1f)
-            .graphicsLayer { alpha = if (visible) 1f else 0f },
+            .zIndex(if (layerVisible) 10f else -1f)
+            .graphicsLayer { alpha = if (layerVisible) 1f else 0f },
     ) {
         val density = LocalDensity.current
         val rootWidthPx = with(density) { maxWidth.toPx() }
@@ -2298,7 +2378,11 @@ private fun TabOverview(
                     )
                 }
                 .statusBarsPadding()
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .then(
+                    if (candyTrailTabId != null) Modifier.clearAndSetSemantics { }
+                    else Modifier,
+                ),
         ) {
             Spacer(Modifier.height(12.dp))
             ProfileSwitcher(
@@ -2652,6 +2736,7 @@ private fun TabOverview(
                                 .onGloballyPositioned { coordinates ->
                                     val bounds = coordinates.boundsInRoot()
                                     cardBounds = bounds
+                                    tabCardBounds[tab.id] = bounds
                                     if (isInitialCard) heroTargetBounds = bounds
                                 },
                             onClick = {
@@ -2694,7 +2779,7 @@ private fun TabOverview(
                                     exitHero == null &&
                                     reorderAnimation == null
                                 ) {
-                                    tabActionsTabId = tab.id
+                                    onOpenCandyTrail(tab.id, cardBounds)
                                 }
                             },
                         )
@@ -2807,6 +2892,54 @@ private fun TabOverview(
                     }
                 }
             }
+        }
+
+        val candyTrailTab = candyTrailTabId?.let { tabId ->
+            controller.activeTabs.firstOrNull { it.id == tabId }
+        }
+        if (candyTrailTab != null) {
+            CandyTrailScreen(
+                tab = candyTrailTab,
+                trail = controller.candyTrail(candyTrailTab.id),
+                favicon = controller.favicons[candyTrailTab.id],
+                sourceBounds = candyTrailSourceBounds,
+                predictiveBackProgress = candyTrailBackProgress,
+                predictiveBackEdgeSign = candyTrailBackEdgeSign,
+                onOpenTabActions = { tabActionsTabId = candyTrailTab.id },
+                onSelectNode = { nodeId ->
+                    if (controller.navigateToCandyTrailNode(candyTrailTab.id, nodeId)) {
+                        onCloseCandyTrail()
+                        val bounds = tabCardBounds[candyTrailTab.id] ?: candyTrailSourceBounds
+                        if (bounds == null) {
+                            onSelect(candyTrailTab.id)
+                            onClose()
+                        } else {
+                            val preview = controller.previews[candyTrailTab.id]
+                                ?.takeIf { !candyTrailTab.isIncognito && !it.isRecycled }
+                            exitHero = TabExitHero(
+                                candyTrailTab.id,
+                                preview,
+                                bounds,
+                                candyTrailTab.isIncognito,
+                            )
+                            overviewScope.launch {
+                                exitHeroProgress.snapTo(0f)
+                                withFrameNanos { }
+                                exitHeroProgress.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = tween(
+                                        durationMillis = 200,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                )
+                                onSelect(candyTrailTab.id)
+                                onClose()
+                            }
+                        }
+                    }
+                },
+                onDismiss = onCloseCandyTrail,
+            )
         }
 
         val actionTab = tabActionsTabId?.let { tabId ->
@@ -3287,9 +3420,7 @@ private fun TabCard(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
-                onLongClickLabel = stringResource(
-                    if (tab.isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
-                ),
+                onLongClickLabel = stringResource(R.string.action_open_candy_trail),
                 role = Role.Button,
             ),
         shape = RoundedCornerShape(28.dp),

@@ -17,6 +17,16 @@
     <string name="tab_actions_title">Tab-Optionen</string>
     <string name="action_pin_tab">Tab anpinnen</string>
     <string name="action_remove_pin">Pin entfernen</string>
+    <string name="candy_trail_title">Candy Trail</string>
+    <string name="action_open_candy_trail">Candy Trail öffnen</string>
+    <string name="candy_trail_empty">Diese Reise beginnt, sobald die erste Seite geöffnet wird.</string>
+    <string name="cd_close_candy_trail">Candy Trail schließen</string>
+    <string name="cd_tab_actions">Tab-Aktionen</string>
+    <string name="cd_candy_trail_node">%1$s, %2$s</string>
+    <string name="cd_candy_trail_current_node">Aktuelle Seite, %1$s, %2$s</string>
+    <string name="cd_zoom_out">Verkleinern</string>
+    <string name="cd_zoom_in">Vergrößern</string>
+    <string name="action_reset_zoom">Zurücksetzen</string>
     <string name="cd_pinned_tab">Angepinnter Tab</string>
     <string name="cd_profile">Profil</string>
     <string name="cd_add_profile">Profil hinzufügen</string>

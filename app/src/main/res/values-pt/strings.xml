@@ -17,6 +17,16 @@
     <string name="tab_actions_title">Opções do separador</string>
     <string name="action_pin_tab">Fixar separador</string>
     <string name="action_remove_pin">Remover fixação</string>
+    <string name="candy_trail_title">Candy Trail</string>
+    <string name="action_open_candy_trail">Abrir Candy Trail</string>
+    <string name="candy_trail_empty">Este percurso começa depois de abrir a primeira página.</string>
+    <string name="cd_close_candy_trail">Fechar Candy Trail</string>
+    <string name="cd_tab_actions">Ações do separador</string>
+    <string name="cd_candy_trail_node">%1$s, %2$s</string>
+    <string name="cd_candy_trail_current_node">Página atual, %1$s, %2$s</string>
+    <string name="cd_zoom_out">Reduzir</string>
+    <string name="cd_zoom_in">Ampliar</string>
+    <string name="action_reset_zoom">Repor</string>
     <string name="cd_pinned_tab">Separador fixado</string>
     <string name="cd_profile">Perfil</string>
     <string name="cd_add_profile">Adicionar perfil</string>

@@ -21,6 +21,16 @@
     <string name="tab_actions_title">Tab options</string>
     <string name="action_pin_tab">Pin tab</string>
     <string name="action_remove_pin">Remove pin</string>
+    <string name="candy_trail_title">Candy Trail</string>
+    <string name="action_open_candy_trail">Open Candy Trail</string>
+    <string name="candy_trail_empty">This journey starts after the first page opens.</string>
+    <string name="cd_close_candy_trail">Close Candy Trail</string>
+    <string name="cd_tab_actions">Tab actions</string>
+    <string name="cd_candy_trail_node">%1$s, %2$s</string>
+    <string name="cd_candy_trail_current_node">Current page, %1$s, %2$s</string>
+    <string name="cd_zoom_out">Zoom out</string>
+    <string name="cd_zoom_in">Zoom in</string>
+    <string name="action_reset_zoom">Reset</string>
     <string name="cd_pinned_tab">Pinned tab</string>
     <string name="cd_profile">Profile</string>
     <string name="cd_add_profile">Add profile</string>
