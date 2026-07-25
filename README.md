@@ -16,6 +16,7 @@ und lokalen Content-Schutz.
 - Flackerfreier Tab-Handoff und Hero-Animation in beide Richtungen
 - Pull-to-refresh und Material-3-Ladefortschritt direkt in der Adressleiste
 - Direkte URL-Navigation; sonst Google-Suche
+- Direkt ausführbare, lokalisierte Browser-Commands in der Adresssuche über `>`
 - Lokaler Verlauf mit Autovervollständigung sowie persistente Favoriten auf neuen Tabs
 - Lokaler Werbe-/Tracker-Filter mit rund 55.000 kompilierten EasyList-/EasyPrivacy-Hosts inklusive Service-Worker-Anfragen
 - Interaktives Privacy X-Ray pro Tab mit gebündelten Live-Zählern, deterministischen Kategorien,

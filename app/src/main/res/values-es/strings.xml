@@ -66,6 +66,44 @@
     <string name="clear_data_message">Se eliminarán las cookies, el almacenamiento de los sitios, la caché y el historial de esta sesión.</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_cancel">Cancelar</string>
+
+    <!-- Comandos de dirección -->
+    <string name="command_clear_cache_reload_name">Borrar caché y volver a cargar</string>
+    <string name="command_clear_cache_reload_effect">Borra la caché WebView compartida de Candy y vuelve a cargar esta pestaña</string>
+    <string name="command_delete_cookies_reload_name">Eliminar cookies y volver a cargar</string>
+    <string name="command_delete_cookies_reload_effect_regular">Elimina las cookies compartidas por todos los perfiles Candy normales y vuelve a cargar esta pestaña</string>
+    <string name="command_delete_cookies_reload_effect_isolated">Elimina solo las cookies de este perfil Candy aislado y vuelve a cargar esta pestaña</string>
+    <string name="command_delete_cookies_reload_effect_private">Elimina las cookies compartidas por todas las pestañas privadas y vuelve a cargar esta pestaña</string>
+    <string name="command_delete_cookies_reload_effect_all">Elimina las cookies compartidas por todas las WebViews Candy y vuelve a cargar esta pestaña</string>
+    <string name="command_reload_effect">Vuelve a cargar la pestaña actual</string>
+    <string name="command_stop_loading_effect">Detiene la carga de la pestaña actual</string>
+    <string name="command_pin_tab_effect">Mantiene esta pestaña abierta y la coloca al principio</string>
+    <string name="command_unpin_tab_effect">Permite volver a cerrar esta pestaña con normalidad</string>
+    <string name="command_close_duplicates_name">Cerrar pestañas duplicadas</string>
+    <plurals name="command_close_duplicates_effect">
+        <item quantity="one">Cierra %1$d pestaña duplicada en este perfil; las pestañas fijadas y la actual permanecen abiertas</item>
+        <item quantity="other">Cierra %1$d pestañas duplicadas en este perfil; las pestañas fijadas y la actual permanecen abiertas</item>
+    </plurals>
+    <string name="command_move_tab_effect">Mueve la pestaña actual al perfil %1$s</string>
+    <string name="command_switch_profile_name">Cambiar al perfil</string>
+    <string name="command_switch_profile_effect">Abre el perfil %1$s</string>
+    <string name="command_new_regular_tab_name">Nueva pestaña normal</string>
+    <string name="command_new_regular_tab_effect">Abre una pestaña normal y mantiene activa la búsqueda de dirección</string>
+    <string name="command_new_incognito_tab_name">Nueva pestaña de incógnito</string>
+    <string name="command_new_incognito_tab_effect">Abre una pestaña privada que no se guarda</string>
+    <string name="command_open_settings_name">Abrir ajustes</string>
+    <string name="command_open_settings_effect">Abre los ajustes de Candy Browser</string>
+    <string name="command_target_profile">Perfil %1$s</string>
+    <string name="command_cookie_confirm_title">¿Eliminar cookies?</string>
+    <string name="command_cookie_confirm_regular">Todos los perfiles Candy normales comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
+    <string name="command_cookie_confirm_isolated">Las pestañas de este perfil Candy aislado comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
+    <string name="command_cookie_confirm_private">Todas las pestañas privadas comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
+    <string name="command_cookie_confirm_all">Todas las WebViews Candy comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
+    <string name="command_duplicates_confirm_title">¿Cerrar pestañas duplicadas?</string>
+    <plurals name="command_duplicates_confirm_message">
+        <item quantity="one">¿Cerrar %1$d pestaña duplicada? Las pestañas fijadas y la actual permanecerán abiertas.</item>
+        <item quantity="other">¿Cerrar %1$d pestañas duplicadas? Las pestañas fijadas y la actual permanecerán abiertas.</item>
+    </plurals>
     <string name="favorites_title">Favoritos</string>
     <string name="favorites_empty">Aún no hay favoritos — añádelos desde el menú ⋮.</string>
     <string name="content_actions_title">Contenido de la página</string>

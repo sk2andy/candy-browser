@@ -63,6 +63,15 @@ import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
+import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionComposer
+import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionItem
+import dev.sk2andy.materialbrowser.browser.commands.AndroidCommandCatalog
+import dev.sk2andy.materialbrowser.browser.commands.BrowserCommandRegistry
+import dev.sk2andy.materialbrowser.browser.commands.CommandContext
+import dev.sk2andy.materialbrowser.browser.commands.CommandCookieScope
+import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
+import dev.sk2andy.materialbrowser.browser.commands.WebViewCommandActions
+import dev.sk2andy.materialbrowser.browser.commands.WebViewProfileCookies
 import dev.sk2andy.materialbrowser.browser.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryRequest
@@ -83,6 +92,7 @@ import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
+import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
@@ -170,6 +180,7 @@ class BrowserController(private val activity: Activity) {
     private val externalApps = ExternalAppLauncher(activity)
     private val assistantSummary = AssistantSummaryLauncher(activity)
     private val pageShare = PageShareLauncher(activity)
+    private val commandCatalog = AndroidCommandCatalog(activity)
 
     @Volatile
     private var permanentSiteExceptions = store.loadPermanentSiteExceptions()
@@ -963,6 +974,103 @@ class BrowserController(private val activity: Activity) {
     fun stopLoading() {
         webViews[selectedTabId]?.stopLoading()
         updateTab(selectedTabId) { it.copy(isLoading = false) }
+    }
+
+    fun clearCacheAndReload(): Boolean {
+        val tabId = selectedTabId
+        if (selectedTab.url == BLANK_URL) return false
+        val webView = webViewFor(tabId)
+        updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
+        WebViewCommandActions.clearCacheAndReload(webView)
+        return true
+    }
+
+    fun clearCookiesAndReload(): Boolean {
+        val tabId = selectedTabId
+        if (selectedTab.url == BLANK_URL) return false
+        val webView = webViewFor(tabId)
+        val cookieManager = WebViewProfileCookies.managerFor(webView) ?: return false
+        val navigationGeneration = navigationGenerations[tabId]
+        val capturedUrl = webView.url
+        WebViewCommandActions.clearCookiesAndReload(
+            cookieManager = cookieManager,
+            webView = webView,
+            shouldReload = {
+                val unchanged = tabs.any { it.id == tabId } &&
+                    webViews[tabId] === webView &&
+                    navigationGenerations[tabId] == navigationGeneration &&
+                    webView.url == capturedUrl
+                if (unchanged) {
+                    updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
+                }
+                unchanged
+            },
+        )
+        return true
+    }
+
+    val commandCookieScope: CommandCookieScope
+        get() = when {
+            !isProfileIsolationSupported -> CommandCookieScope.AllWebViews
+            else -> when (profileAssignmentFor(selectedTab)) {
+                WebViewProfileAssignment.Default -> CommandCookieScope.SharedRegularProfile
+                is WebViewProfileAssignment.Incognito -> CommandCookieScope.PrivateProfile
+                is WebViewProfileAssignment.Isolated -> CommandCookieScope.IsolatedRegularProfile
+            }
+        }
+
+    fun addressSuggestionItems(query: String, limit: Int = 10): List<AddressSuggestionItem> {
+        val duplicateTabIds = TabDuplicateRules.tabIdsToClose(activeTabs, selectedTabId)
+        val expiredTabCount = TabRetentionRules.expiredTabIds(
+            tabs = tabs,
+            selectedTabId = selectedTabId,
+            lifetime = inactiveTabLifetime,
+            nowMillis = System.currentTimeMillis(),
+        ).size
+        val canCreateTab = tabs.size - expiredTabCount < MAX_TABS
+        val canMoveSelectedTab = activeTabs.size > 1 || canCreateTab
+        val definitions = BrowserCommandRegistry.commands(
+            CommandContext(
+                selectedTab = selectedTab,
+                profiles = profiles,
+                activeProfileId = activeProfileId,
+                duplicateTabIds = duplicateTabIds,
+                canCreateTab = canCreateTab,
+                canCreateIncognitoTab = canCreateTab && isProfileIsolationSupported,
+                canMoveSelectedTab = canMoveSelectedTab,
+                hasLoadedPage = selectedTab.url != BLANK_URL,
+                canClearCookies = webViews[selectedTabId]
+                    ?.let(WebViewProfileCookies::managerFor) != null,
+            ),
+        )
+        val commandMatches = CommandMatcher.match(
+            query = query,
+            commands = commandCatalog.localize(definitions, commandCookieScope),
+            limit = if (CommandMatcher.isExplicitCommandQuery(query)) definitions.size else limit,
+        )
+        val navigationMatches = if (CommandMatcher.isExplicitCommandQuery(query)) {
+            emptyList()
+        } else {
+            addressSuggestions(query, limit)
+        }
+        return AddressSuggestionComposer.compose(
+            query,
+            navigationMatches,
+            commandMatches,
+            if (CommandMatcher.isExplicitCommandQuery(query)) definitions.size else limit,
+        )
+    }
+
+    fun closeDuplicateTabs(confirmedTabIds: List<String>): Int {
+        val currentlyClosable = TabDuplicateRules.tabIdsToClose(activeTabs, selectedTabId).toSet()
+        val closeIds = confirmedTabIds.filter(currentlyClosable::contains)
+        if (closeIds.isEmpty()) return 0
+        val removedIncognitoTab = tabs.any { it.id in closeIds && it.isIncognito }
+        closeIds.forEach(::removeTabResources)
+        tabs.removeAll { it.id in closeIds }
+        if (removedIncognitoTab && tabs.none(BrowserTab::isIncognito)) clearIncognitoProfile()
+        persist()
+        return closeIds.size
     }
 
     fun addressSuggestions(query: String, limit: Int = 8): List<AddressSuggestion> =

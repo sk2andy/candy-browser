@@ -66,6 +66,44 @@
     <string name="clear_data_message">Les cookies, le stockage des sites, le cache et l’historique de cette session seront supprimés.</string>
     <string name="action_delete">Supprimer</string>
     <string name="action_cancel">Annuler</string>
+
+    <!-- Commandes d’adresse -->
+    <string name="command_clear_cache_reload_name">Vider le cache et actualiser</string>
+    <string name="command_clear_cache_reload_effect">Efface le cache WebView partagé de Candy, puis actualise cet onglet</string>
+    <string name="command_delete_cookies_reload_name">Supprimer les cookies et actualiser</string>
+    <string name="command_delete_cookies_reload_effect_regular">Supprime les cookies partagés par tous les profils Candy normaux, puis actualise cet onglet</string>
+    <string name="command_delete_cookies_reload_effect_isolated">Supprime uniquement les cookies de ce profil Candy isolé, puis actualise cet onglet</string>
+    <string name="command_delete_cookies_reload_effect_private">Supprime les cookies partagés par tous les onglets privés, puis actualise cet onglet</string>
+    <string name="command_delete_cookies_reload_effect_all">Supprime les cookies partagés par toutes les WebViews Candy, puis actualise cet onglet</string>
+    <string name="command_reload_effect">Actualise l’onglet actuel</string>
+    <string name="command_stop_loading_effect">Arrête le chargement de l’onglet actuel</string>
+    <string name="command_pin_tab_effect">Garde cet onglet ouvert et le place en premier</string>
+    <string name="command_unpin_tab_effect">Permet à nouveau de fermer cet onglet normalement</string>
+    <string name="command_close_duplicates_name">Fermer les onglets en double</string>
+    <plurals name="command_close_duplicates_effect">
+        <item quantity="one">Ferme %1$d onglet en double dans ce profil ; les onglets épinglés et l’onglet actuel restent ouverts</item>
+        <item quantity="other">Ferme %1$d onglets en double dans ce profil ; les onglets épinglés et l’onglet actuel restent ouverts</item>
+    </plurals>
+    <string name="command_move_tab_effect">Déplace l’onglet actuel vers le profil %1$s</string>
+    <string name="command_switch_profile_name">Passer au profil</string>
+    <string name="command_switch_profile_effect">Ouvre le profil %1$s</string>
+    <string name="command_new_regular_tab_name">Nouvel onglet normal</string>
+    <string name="command_new_regular_tab_effect">Ouvre un onglet normal et maintient la recherche d’adresse active</string>
+    <string name="command_new_incognito_tab_name">Nouvel onglet privé</string>
+    <string name="command_new_incognito_tab_effect">Ouvre un onglet privé qui n’est pas enregistré</string>
+    <string name="command_open_settings_name">Ouvrir les paramètres</string>
+    <string name="command_open_settings_effect">Ouvre les paramètres de Candy Browser</string>
+    <string name="command_target_profile">Profil %1$s</string>
+    <string name="command_cookie_confirm_title">Supprimer les cookies ?</string>
+    <string name="command_cookie_confirm_regular">Tous les profils Candy normaux partagent ces cookies et peuvent être déconnectés. Cet onglet sera ensuite actualisé.</string>
+    <string name="command_cookie_confirm_isolated">Les onglets de ce profil Candy isolé partagent ces cookies et peuvent être déconnectés. Cet onglet sera ensuite actualisé.</string>
+    <string name="command_cookie_confirm_private">Tous les onglets privés partagent ces cookies et peuvent être déconnectés. Cet onglet sera ensuite actualisé.</string>
+    <string name="command_cookie_confirm_all">Toutes les WebViews Candy partagent ces cookies et peuvent être déconnectées. Cet onglet sera ensuite actualisé.</string>
+    <string name="command_duplicates_confirm_title">Fermer les onglets en double ?</string>
+    <plurals name="command_duplicates_confirm_message">
+        <item quantity="one">Fermer %1$d onglet en double ? Les onglets épinglés et l’onglet actuel restent ouverts.</item>
+        <item quantity="other">Fermer %1$d onglets en double ? Les onglets épinglés et l’onglet actuel restent ouverts.</item>
+    </plurals>
     <string name="favorites_title">Favoris</string>
     <string name="favorites_empty">Aucun favori pour le moment — ajoutez-en via le menu ⋮.</string>
     <string name="content_actions_title">Contenu de la page</string>
