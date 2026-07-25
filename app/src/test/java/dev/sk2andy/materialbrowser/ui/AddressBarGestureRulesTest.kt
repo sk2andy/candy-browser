@@ -24,7 +24,7 @@ class AddressBarGestureRulesTest {
     fun `short vertical drag does nothing`() {
         assertEquals(
             AddressBarVerticalAction.None,
-            AddressBarGestureRules.action(dragDistance = 55f, threshold = 56f),
+            AddressBarGestureRules.action(dragDistance = -55f, threshold = 56f),
         )
     }
 }

@@ -99,6 +99,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -112,6 +113,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -166,6 +168,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.testTag
@@ -1625,28 +1628,24 @@ private fun BrowserBottomBar(
                     if (isCompact) {
                         Surface(
                             onClick = onExpand,
-                            modifier = Modifier.draggable(
-                                state = tabDragState,
-                                orientation = Orientation.Horizontal,
-                                enabled = !editing,
-                                onDragStopped = { velocity -> onTabDragStopped(velocity) },
-                            ),
+                            modifier = Modifier
+                                .draggable(
+                                    state = tabDragState,
+                                    orientation = Orientation.Horizontal,
+                                    enabled = !editing,
+                                    onDragStopped = { velocity -> onTabDragStopped(velocity) },
+                                )
+                                .addressBarVerticalGesture(onSwipeUp = onTabs),
                             color = Color.Transparent,
                         ) {
-                            Box {
-                                Text(
-                                    text = domain,
-                                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                                AddressBarGrabArea(
-                                    onSwipeUp = onTabs,
-                                    modifier = Modifier.align(Alignment.TopCenter),
-                                )
-                            }
+                            Text(
+                                text = domain,
+                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
                         }
                     } else {
                         ExpandedBottomBarContent(
@@ -1716,42 +1715,38 @@ private fun BrowserBottomBar(
 }
 
 @Composable
-private fun AddressBarGrabArea(
+internal fun Modifier.addressBarVerticalGesture(
+    enabled: Boolean = true,
     onSwipeUp: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+): Modifier {
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val gestureView = LocalView.current
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(12.dp)
-            .pointerInput(Unit) {
-                var dragDistance = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { dragDistance = 0f },
-                    onVerticalDrag = { change, amount ->
-                        dragDistance += amount
-                        change.consume()
-                    },
-                    onDragEnd = {
-                        val action = AddressBarGestureRules.action(
-                            dragDistance = dragDistance,
-                            threshold = 56.dp.toPx(),
-                        )
-                        when (action) {
-                            AddressBarVerticalAction.OpenTabs -> currentOnSwipeUp()
-                            AddressBarVerticalAction.None -> Unit
-                        }
-                        if (action != AddressBarVerticalAction.None) {
-                            gestureView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        }
-                        dragDistance = 0f
-                    },
-                    onDragCancel = { dragDistance = 0f },
-                )
+    if (!enabled) return this
+    return pointerInput(Unit) {
+        var dragDistance = 0f
+        detectVerticalDragGestures(
+            onDragStart = { dragDistance = 0f },
+            onVerticalDrag = { change, amount ->
+                dragDistance += amount
+                change.consume()
             },
-    )
+            onDragEnd = {
+                val action = AddressBarGestureRules.action(
+                    dragDistance = dragDistance,
+                    threshold = 56.dp.toPx(),
+                )
+                when (action) {
+                    AddressBarVerticalAction.OpenTabs -> currentOnSwipeUp()
+                    AddressBarVerticalAction.None -> Unit
+                }
+                if (action != AddressBarVerticalAction.None) {
+                    gestureView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                }
+                dragDistance = 0f
+            },
+            onDragCancel = { dragDistance = 0f },
+        )
+    }
 }
 
 @Composable
@@ -1803,6 +1798,10 @@ private fun ExpandedBottomBarContent(
                         orientation = Orientation.Horizontal,
                         enabled = !editing,
                         onDragStopped = { velocity -> onTabDragStopped(velocity) },
+                    )
+                    .addressBarVerticalGesture(
+                        enabled = !editing,
+                        onSwipeUp = onTabs,
                     ),
                 shape = RoundedCornerShape(22.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -1915,12 +1914,6 @@ private fun ExpandedBottomBarContent(
                                 )
                             }
                         }
-                    }
-                    if (!editing) {
-                        AddressBarGrabArea(
-                            onSwipeUp = onTabs,
-                            modifier = Modifier.align(Alignment.TopCenter),
-                        )
                     }
                 }
             }
@@ -4014,14 +4007,52 @@ internal fun EmojiPickerSheet(
     if (!visible) return
     var draftEmoji by remember(creatingProfile, selectedEmoji) { mutableStateOf(selectedEmoji) }
     var draftIsolationEnabled by remember(creatingProfile) { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = creatingProfile)
+    val creationSheetHeight = (
+        LocalConfiguration.current.screenHeightDp * PROFILE_CREATION_SHEET_HEIGHT_FRACTION
+    ).dp
+    val dragHandle: @Composable (() -> Unit)? = if (creatingProfile) {
+        null
+    } else {
+        { BottomSheetDefaults.DragHandle() }
+    }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        modifier = Modifier.testTag(ProfileCreationTestTags.Sheet),
+        dragHandle = dragHandle,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .then(if (creatingProfile) Modifier.height(creationSheetHeight) else Modifier)
                 .navigationBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
         ) {
+            if (creatingProfile) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BottomSheetDefaults.DragHandle()
+                }
+                Box(modifier = Modifier.testTag(ProfileCreationTestTags.Isolation)) {
+                    SettingsSwitch(
+                        title = stringResource(R.string.settings_profile_isolation_title),
+                        subtitle = stringResource(
+                            if (isolationSupported) R.string.settings_profile_isolation_subtitle
+                            else R.string.settings_profile_isolation_unsupported,
+                        ),
+                        checked = draftIsolationEnabled && isolationSupported,
+                        enabled = isolationSupported,
+                        onCheckedChange = { draftIsolationEnabled = it },
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+            }
             Text(
                 stringResource(
                     if (creatingProfile) R.string.add_profile_title
@@ -4030,58 +4061,61 @@ internal fun EmojiPickerSheet(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(16.dp))
-            PROFILE_EMOJIS.chunked(6).forEach { rowEmojis ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    rowEmojis.forEach { emoji ->
-                        val isSelected = emoji == draftEmoji
-                        Surface(
-                            modifier = Modifier
-                                .padding(vertical = 4.dp)
-                                .size(48.dp)
-                                .clickable(
-                                    role = Role.Button,
-                                    onClick = {
-                                        if (creatingProfile) draftEmoji = emoji else onSelect(emoji)
-                                    },
-                                ),
-                            shape = CircleShape,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainerHigh
-                            },
-                            tonalElevation = if (isSelected) 5.dp else 0.dp,
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(emoji, fontSize = 23.sp)
+            Spacer(Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (creatingProfile) Modifier.weight(1f) else Modifier)
+                    .verticalScroll(rememberScrollState())
+                    .testTag(ProfileCreationTestTags.IconScroll),
+            ) {
+                PROFILE_EMOJIS.chunked(6).forEach { rowEmojis ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        rowEmojis.forEach { emoji ->
+                            val isSelected = emoji == draftEmoji
+                            Surface(
+                                modifier = Modifier
+                                    .padding(vertical = 4.dp)
+                                    .size(48.dp)
+                                    .clickable(
+                                        role = Role.Button,
+                                        onClick = {
+                                            if (creatingProfile) {
+                                                draftEmoji = emoji
+                                            } else {
+                                                onSelect(emoji)
+                                            }
+                                        },
+                                    ),
+                                shape = CircleShape,
+                                color = if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                },
+                                tonalElevation = if (isSelected) 5.dp else 0.dp,
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(emoji, fontSize = 23.sp)
+                                }
                             }
                         }
+                        repeat(6 - rowEmojis.size) { Spacer(Modifier.size(48.dp)) }
                     }
-                    repeat(6 - rowEmojis.size) { Spacer(Modifier.size(48.dp)) }
                 }
             }
             if (creatingProfile) {
-                Spacer(Modifier.height(12.dp))
-                SettingsSwitch(
-                    title = stringResource(R.string.settings_profile_isolation_title),
-                    subtitle = stringResource(
-                        if (isolationSupported) R.string.settings_profile_isolation_subtitle
-                        else R.string.settings_profile_isolation_unsupported,
-                    ),
-                    checked = draftIsolationEnabled && isolationSupported,
-                    enabled = isolationSupported,
-                    onCheckedChange = { draftIsolationEnabled = it },
-                )
                 Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = {
                         draftEmoji?.let { emoji -> onCreate(emoji, draftIsolationEnabled) }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(ProfileCreationTestTags.CreateButton),
                     enabled = draftEmoji != null,
                 ) {
                     Text(stringResource(R.string.action_create_profile))
@@ -4091,7 +4125,15 @@ internal fun EmojiPickerSheet(
     }
 }
 
+internal object ProfileCreationTestTags {
+    const val Sheet = "profile_creation_sheet"
+    const val Isolation = "profile_creation_isolation"
+    const val IconScroll = "profile_creation_icon_scroll"
+    const val CreateButton = "profile_creation_create_button"
+}
+
 private const val PREVIEW_CROP_TOP_FRACTION = 0.25f
+private const val PROFILE_CREATION_SHEET_HEIGHT_FRACTION = 0.66f
 private const val NEW_PROFILE_TARGET = "__new_profile__"
 private val PROFILE_EMOJIS = listOf(
     "🍬", "⭐", "💼", "🛒", "🎮", "📚",

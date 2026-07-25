@@ -108,7 +108,8 @@ internal fun PrivacyXRayBadge(
                 role = Role.Button
             },
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Box(
             modifier = Modifier.padding(horizontal = 10.dp),
@@ -116,7 +117,6 @@ internal fun PrivacyXRayBadge(
         ) {
             Text(
                 text = "◈ $blockedCount",
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -335,10 +335,15 @@ private fun PrivacyHero(
     snapshot: PrivacyXRaySnapshot,
     categoryColors: Map<PrivacyRequestCategory, Color>,
 ) {
+    val contentColor = TabOverviewContrastRules.titleContentColor(
+        primaryContainer = MaterialTheme.colorScheme.primaryContainer,
+        tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer,
+    )
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
         color = Color.Transparent,
+        contentColor = contentColor,
     ) {
         Row(
             modifier = Modifier
@@ -390,12 +395,14 @@ private fun PrivacyHero(
                     ) { count ->
                         Text(
                             count.toString(),
+                            color = contentColor,
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                         )
                     }
                     Text(
                         stringResource(R.string.privacy_xray_total_label),
+                        color = contentColor,
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
@@ -404,6 +411,7 @@ private fun PrivacyHero(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.privacy_xray_live_note),
+                    color = contentColor,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -411,7 +419,7 @@ private fun PrivacyHero(
                 Text(
                     stringResource(R.string.privacy_xray_scope_note),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = contentColor,
                 )
             }
         }
