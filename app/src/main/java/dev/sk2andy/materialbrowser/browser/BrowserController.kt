@@ -59,6 +59,17 @@ import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.RequestProtectionRules
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
+import dev.sk2andy.materialbrowser.capsule.CapsuleDeletionRules
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconRenderer
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
+import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
+import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
+import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationDecision
+import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationRules
+import dev.sk2andy.materialbrowser.capsule.CapsuleShortcutPublisher
+import dev.sk2andy.materialbrowser.capsule.SiteCapsule
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
@@ -91,6 +102,8 @@ import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
+import dev.sk2andy.materialbrowser.data.SiteCapsuleIconStore
+import dev.sk2andy.materialbrowser.data.SiteCapsuleStore
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
@@ -111,6 +124,7 @@ class BrowserController(private val activity: Activity) {
     val favorites = mutableStateListOf<FavoriteEntry>()
     val privacySnapshots = mutableStateMapOf<String, PrivacyXRaySnapshot>()
     val candyTrails = mutableStateMapOf<String, CandyTrail>()
+    val siteCapsules = mutableStateListOf<SiteCapsule>()
     val contentActions = WebContentActionState()
 
     var selectedTabId by mutableStateOf("")
@@ -127,10 +141,20 @@ class BrowserController(private val activity: Activity) {
         private set
     var isDefaultBrowser by mutableStateOf(false)
         private set
+    var activeCapsuleId by mutableStateOf<String?>(null)
+        private set
     var webViewRevision by mutableIntStateOf(0)
         private set
     val isProfileIsolationSupported: Boolean =
         WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
+    val activeSiteCapsule: SiteCapsule?
+        get() = activeCapsuleId?.let { id -> siteCapsules.firstOrNull { it.id == id } }
+    val isCapsulePinningSupported: Boolean
+        get() = capsuleShortcuts.isPinningSupported()
+    val canCreateSiteCapsule: Boolean
+        get() = SiteCapsuleRules.canCreate(siteCapsules.size)
+    val selectedFavicon: Bitmap?
+        get() = favicons[selectedTabId]
     private val bottomBarCompactStates = mutableStateMapOf<String, Boolean>()
 
     val isBottomBarCompact: Boolean
@@ -166,6 +190,9 @@ class BrowserController(private val activity: Activity) {
     private val candyTrailHistoryBindings = mutableMapOf<String, CandyTrailHistoryBinding>()
     private val pendingCandyTrailTargets = mutableMapOf<String, String>()
     private val candyTrailGenerations = mutableMapOf<String, Int>()
+    private val capsuleTabIds = mutableMapOf<String, String>()
+    var activeCapsuleTabId: String? = null
+        private set
     private val pendingCandyTrailRestoreIds = mutableSetOf<String>()
     private val suppressedCandyTrailTabIds = mutableSetOf<String>()
     private var candyTrailEpoch = 0
@@ -175,6 +202,9 @@ class BrowserController(private val activity: Activity) {
     private val previewRepository = TabPreviewRepository.get(activity)
     private val faviconRepository = FaviconRepository.get(activity)
     private val candyTrailRepository = CandyTrailRepository.get(activity)
+    private val siteCapsuleStore = SiteCapsuleStore(activity)
+    private val siteCapsuleIconStore = SiteCapsuleIconStore(activity)
+    private val capsuleShortcuts = CapsuleShortcutPublisher(activity)
     private val contentBlocker = ContentBlocker(activity)
     private val downloadManager = BrowserDownloadManager(activity)
     private val externalApps = ExternalAppLauncher(activity)
@@ -232,6 +262,11 @@ class BrowserController(private val activity: Activity) {
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
         profiles += restoredProfiles.take(MAX_PROFILES)
         val restoredProfileIds = profiles.mapTo(mutableSetOf(), BrowserProfile::id)
+        siteCapsules += siteCapsuleStore.load()
+            .filter { capsule -> capsule.profileId in restoredProfileIds }
+            .let(SiteCapsuleRules::bounded)
+        siteCapsuleStore.save(siteCapsules)
+        siteCapsuleIconStore.cleanup(siteCapsules.mapTo(hashSetOf(), SiteCapsule::id))
         permanentSiteExceptions = permanentSiteExceptions
             .filterKeys(restoredProfileIds::contains)
             .mapValues { (_, hosts) ->
@@ -450,10 +485,227 @@ class BrowserController(private val activity: Activity) {
     }
 
     fun openUrl(url: String, inNewTab: Boolean = false) {
+        leaveSiteCapsule()
         if (inNewTab) {
             createTab(url)
         } else {
             submitAddress(url)
+        }
+    }
+
+    fun resolveCapsuleLaunch(action: String?, capsuleId: String?): CapsuleLaunchResolution =
+        CapsuleIntentRules.resolve(action, capsuleId, siteCapsules)
+
+    fun openSiteCapsule(capsuleId: String, navigateToStart: Boolean = true): Boolean {
+        val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return false
+        if (profiles.none { it.id == capsule.profileId }) return false
+        if (activeProfileId != capsule.profileId) selectProfile(capsule.profileId)
+        val rememberedTab = capsuleTabIds[capsule.id]
+            ?.let { tabId -> activeTabs.firstOrNull { it.id == tabId && !it.isIncognito } }
+        val matchingSelectedTab = selectedTab.takeIf { tab ->
+            !tab.isIncognito &&
+                tab.profileId == capsule.profileId &&
+                (tab.isFreshBlankTab || tab.url == capsule.startUrl)
+        }
+        val targetTab = rememberedTab ?: matchingSelectedTab ?: run {
+            val previousTabId = selectedTabId
+            val createdTabId = createTab(isIncognito = false)
+            if (createdTabId == previousTabId && !selectedTab.isFreshBlankTab) return false
+            selectedTab
+        }
+        if (selectedTabId != targetTab.id) selectTab(targetTab.id)
+        activeCapsuleId = capsule.id
+        activeCapsuleTabId = targetTab.id
+        capsuleTabIds[capsule.id] = targetTab.id
+        capsuleShortcuts.reportUsed(capsule)
+        if (navigateToStart && targetTab.url != capsule.startUrl) submitAddress(capsule.startUrl)
+        return true
+    }
+
+    fun restoreSiteCapsule(capsuleId: String, tabId: String?): Boolean {
+        val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return false
+        val targetTab = tabId?.let { restoredId -> tabs.firstOrNull { it.id == restoredId } }
+            ?: return false
+        if (targetTab.isIncognito || targetTab.profileId != capsule.profileId) return false
+        if (targetTab.url != BLANK_URL &&
+            CapsuleNavigationRules.decide(capsule, targetTab.url) !=
+            CapsuleNavigationDecision.StayInCapsule
+        ) {
+            return false
+        }
+        if (activeProfileId != capsule.profileId) selectProfile(capsule.profileId)
+        if (selectedTabId != targetTab.id) selectTab(targetTab.id)
+        activeCapsuleId = capsule.id
+        activeCapsuleTabId = targetTab.id
+        capsuleTabIds[capsule.id] = targetTab.id
+        capsuleShortcuts.reportUsed(capsule)
+        if (targetTab.url == BLANK_URL) submitAddress(capsule.startUrl)
+        return true
+    }
+
+    fun leaveSiteCapsule() {
+        activeCapsuleId = null
+        activeCapsuleTabId = null
+    }
+
+    fun openSiteCapsuleInFullCandy() {
+        leaveSiteCapsule()
+    }
+
+    fun openNormalHomeFromInvalidCapsule() {
+        leaveSiteCapsule()
+        if (selectedTab.isIncognito) {
+            updateTab(selectedTabId) {
+                it.copy(
+                    title = "",
+                    url = BLANK_URL,
+                    progress = 0,
+                    isLoading = false,
+                    canGoBack = false,
+                    canGoForward = false,
+                    blockedCount = 0,
+                    error = null,
+                )
+            }
+            setBlankTabIncognito(false)
+            webViewFor(selectedTabId).loadUrl(BLANK_URL)
+        } else if (!selectedTab.isFreshBlankTab) {
+            val previousTabId = selectedTabId
+            if (createTab(BLANK_URL, isIncognito = false) == previousTabId) {
+                submitAddress(BLANK_URL)
+            }
+        }
+    }
+
+    fun upsertSiteCapsule(draft: SiteCapsuleDraft, sourceFavicon: Bitmap? = null): CapsuleSaveResult {
+        val existing = draft.id?.let { id -> siteCapsules.firstOrNull { it.id == id } }
+        if (existing == null && !SiteCapsuleRules.canCreate(siteCapsules.size)) {
+            return CapsuleSaveResult.LimitReached
+        }
+        if (profiles.none { it.id == draft.profileId }) return CapsuleSaveResult.Invalid
+        val nowMillis = System.currentTimeMillis()
+        val capsule = if (existing == null) {
+            SiteCapsuleRules.create(
+                draft = draft,
+                id = UUID.randomUUID().toString(),
+                nowMillis = nowMillis,
+                multiProfileSupported = isProfileIsolationSupported,
+            )
+        } else {
+            SiteCapsuleRules.update(
+                existing = existing,
+                draft = draft,
+                nowMillis = nowMillis,
+                multiProfileSupported = isProfileIsolationSupported,
+            )
+        } ?: return CapsuleSaveResult.Invalid
+        val updated = siteCapsules.filterNot { it.id == capsule.id } + capsule
+        siteCapsules.clear()
+        siteCapsules += SiteCapsuleRules.bounded(updated)
+        siteCapsuleStore.save(siteCapsules)
+        val profileEmoji = profiles.firstOrNull { it.id == capsule.profileId }?.emoji.orEmpty()
+        val storedIcon = siteCapsuleIconStore.load(capsule.id)
+        val icon = if (
+            capsule.iconMode == CapsuleIconMode.Favicon &&
+            sourceFavicon == null &&
+            storedIcon != null
+        ) {
+            storedIcon
+        } else {
+            CapsuleIconRenderer.render(
+                name = capsule.name,
+                profileEmoji = profileEmoji,
+                favicon = sourceFavicon.takeIf { capsule.iconMode == CapsuleIconMode.Favicon },
+            )
+        }
+        siteCapsuleIconStore.save(capsule.id, icon)
+        return if (existing == null) {
+            if (!capsuleShortcuts.isPinningSupported()) {
+                CapsuleSaveResult.PinningUnsupported
+            } else if (capsuleShortcuts.requestPin(capsule, icon)) {
+                CapsuleSaveResult.PinRequested
+            } else {
+                CapsuleSaveResult.PinRequestFailed
+            }
+        } else if (!capsuleShortcuts.isPinned(capsule)) {
+            if (!capsuleShortcuts.isPinningSupported()) {
+                CapsuleSaveResult.PinningUnsupported
+            } else if (capsuleShortcuts.requestPin(capsule, icon)) {
+                CapsuleSaveResult.PinRequested
+            } else {
+                CapsuleSaveResult.PinRequestFailed
+            }
+        } else {
+            if (capsuleShortcuts.update(capsule, icon)) {
+                CapsuleSaveResult.Updated
+            } else {
+                CapsuleSaveResult.UpdateFailed
+            }
+        }
+    }
+
+    fun deleteSiteCapsule(capsuleId: String, deleteDedicatedProfileConfirmed: Boolean): Boolean {
+        val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return false
+        val remaining = siteCapsules.filterNot { it.id == capsuleId }
+        val plan = CapsuleDeletionRules.plan(
+            capsule = capsule,
+            remainingCapsules = remaining,
+            deleteDedicatedProfileConfirmed = deleteDedicatedProfileConfirmed,
+        )
+        if (plan.deleteDedicatedProfile) {
+            if (profiles.size == 1 && profiles.single().id != DEFAULT_PROFILE_ID) {
+                profiles += DEFAULT_BROWSER_PROFILE
+            }
+            if (!deleteProfile(capsule.profileId, capsuleId)) return false
+        }
+        if (activeCapsuleId == capsuleId) leaveSiteCapsule()
+        capsuleTabIds.remove(capsuleId)
+        siteCapsules.clear()
+        siteCapsules += remaining
+        siteCapsuleStore.save(siteCapsules)
+        siteCapsuleIconStore.delete(capsuleId)
+        capsuleShortcuts.disable(capsule, activity.getString(R.string.capsule_shortcut_deleted))
+        return true
+    }
+
+    fun siteCapsuleIcon(capsuleId: String): Bitmap? = siteCapsuleIconStore.load(capsuleId)
+
+    private fun reassignSiteCapsules(
+        sourceProfileId: String,
+        fallbackProfile: BrowserProfile,
+        excludedCapsuleId: String? = null,
+    ) {
+        val affected = siteCapsules.filter {
+            it.profileId == sourceProfileId && it.id != excludedCapsuleId
+        }
+        if (affected.isEmpty()) return
+        val nowMillis = System.currentTimeMillis()
+        val replacements = affected.associate { capsule ->
+            capsule.id to capsule.copy(
+                profileId = fallbackProfile.id,
+                ownsDedicatedProfile = false,
+                isolatedStorageRequested = false,
+                updatedAtMillis = nowMillis,
+            )
+        }
+        siteCapsules.replaceAll { capsule -> replacements[capsule.id] ?: capsule }
+        siteCapsuleStore.save(siteCapsules)
+        replacements.values.forEach { capsule ->
+            val icon = if (capsule.iconMode == CapsuleIconMode.ProfileFallback) {
+                CapsuleIconRenderer.render(
+                    name = capsule.name,
+                    profileEmoji = fallbackProfile.emoji,
+                    favicon = null,
+                )
+            } else {
+                siteCapsuleIconStore.load(capsule.id) ?: CapsuleIconRenderer.render(
+                    name = capsule.name,
+                    profileEmoji = fallbackProfile.emoji,
+                    favicon = null,
+                )
+            }
+            siteCapsuleIconStore.save(capsule.id, icon)
+            capsuleShortcuts.update(capsule, icon)
         }
     }
 
@@ -471,6 +723,7 @@ class BrowserController(private val activity: Activity) {
             ).show()
             return selectedTabId
         }
+        if (activeCapsuleTabId != null) leaveSiteCapsule()
         touchTab(selectedTabId, nowMillis)
         webViews[selectedTabId]?.let(::pauseWebView)
         val resolvedUrl = if (initialUrl == BLANK_URL) {
@@ -599,7 +852,7 @@ class BrowserController(private val activity: Activity) {
         return true
     }
 
-    fun deleteProfile(profileId: String): Boolean {
+    fun deleteProfile(profileId: String, excludedCapsuleId: String? = null): Boolean {
         if (profiles.size <= 1) return false
         val profileIndex = profiles.indexOfFirst { it.id == profileId }
         if (profileIndex < 0) return false
@@ -608,6 +861,7 @@ class BrowserController(private val activity: Activity) {
         } else {
             profiles.first { it.id == activeProfileId }
         }
+        reassignSiteCapsules(profileId, fallbackProfile, excludedCapsuleId)
         val movedTabIds = WebViewProfileRules.tabIdsForProfileDeletion(tabs, profileId)
         movedTabIds.forEach(::clearPrivacyDataForTab)
         if (permanentSiteExceptions.containsKey(profileId)) {
@@ -827,6 +1081,7 @@ class BrowserController(private val activity: Activity) {
 
     fun selectTab(tabId: String) {
         if (activeTabs.none { it.id == tabId }) return
+        if (activeCapsuleTabId != null && activeCapsuleTabId != tabId) leaveSiteCapsule()
         val nowMillis = System.currentTimeMillis()
         touchTab(selectedTabId, nowMillis)
         touchTab(tabId, nowMillis)
@@ -889,6 +1144,7 @@ class BrowserController(private val activity: Activity) {
         if (index < 0) return
         val closingTab = tabs[index]
         if (!TabDeletionRules.canDelete(closingTab)) return
+        if (activeCapsuleTabId == tabId) leaveSiteCapsule()
         val closesLastIncognitoTab =
             closingTab.isIncognito && tabs.count(BrowserTab::isIncognito) == 1
         if (closesLastIncognitoTab) prepareIncognitoProfileForRemoval()
@@ -957,7 +1213,19 @@ class BrowserController(private val activity: Activity) {
         return true
     }
 
-    fun goBack() = webViews[selectedTabId]?.takeIf(WebView::canGoBack)?.goBack() ?: Unit
+    fun goBack() {
+        val webView = webViews[selectedTabId]?.takeIf(WebView::canGoBack) ?: return
+        val history = webView.copyBackForwardList()
+        val targetUrl = history.getItemAtIndex(history.currentIndex - 1)?.url
+        val capsule = activeCapsuleForTab(selectedTabId)
+        if (capsule != null && targetUrl != null &&
+            CapsuleNavigationRules.decide(capsule, targetUrl) ==
+            CapsuleNavigationDecision.OpenInFullCandy
+        ) {
+            leaveSiteCapsule()
+        }
+        webView.goBack()
+    }
     fun goForward() {
         val webView = webViews[selectedTabId]?.takeIf(WebView::canGoForward) ?: return
         val binding = candyTrailHistoryBindings[selectedTabId]
@@ -1459,8 +1727,30 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
+    private fun activeCapsuleForTab(tabId: String): SiteCapsule? = activeSiteCapsule
+        ?.takeIf { activeCapsuleTabId == tabId && selectedTabId == tabId }
+
+    private fun openCapsuleTargetInFullCandy(tabId: String, view: WebView, targetUrl: String) {
+        if (activeCapsuleTabId != tabId) return
+        leaveSiteCapsule()
+        val previousTabId = selectedTabId
+        if (createTab(targetUrl, isIncognito = false) == previousTabId) {
+            applyMediaPlaybackPolicy(tabId, view)
+            view.loadUrl(targetUrl)
+        }
+    }
+
     private fun browserWebViewClient(tabId: String) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+            val capsule = activeCapsuleForTab(tabId)
+            if (capsule != null &&
+                CapsuleNavigationRules.decide(capsule, url) ==
+                CapsuleNavigationDecision.OpenInFullCandy
+            ) {
+                view.stopLoading()
+                openCapsuleTargetInFullCandy(tabId, view, url)
+                return
+            }
             pageUrls[tabId] = url
             updateProtectionRequestContext(tabId, url)
             applySiteProtectionForNavigation(tabId, view, url)
@@ -1551,7 +1841,21 @@ class BrowserController(private val activity: Activity) {
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             val scheme = request.url.scheme?.lowercase()
-            if (scheme == "http" || scheme == "https") return false
+            if (scheme == "http" || scheme == "https") {
+                val capsule = activeCapsuleForTab(tabId)
+                    ?.takeIf { request.isForMainFrame }
+                if (capsule == null) return false
+                return when (CapsuleNavigationRules.decide(capsule, request.url.toString())) {
+                    CapsuleNavigationDecision.StayInCapsule -> false
+                    CapsuleNavigationDecision.OpenInFullCandy -> {
+                        mainHandler.post {
+                            openCapsuleTargetInFullCandy(tabId, view, request.url.toString())
+                        }
+                        true
+                    }
+                    CapsuleNavigationDecision.UseExistingUriPolicy -> false
+                }
+            }
             if (!request.isForMainFrame || !request.hasGesture()) return true
             return when (val result = externalApps.open(request.url)) {
                 ExternalLaunchResult.Launched -> true
@@ -1812,6 +2116,7 @@ class BrowserController(private val activity: Activity) {
             isIncognito = tabs.firstOrNull { it.id == openerTabId }?.isIncognito
                 ?: selectedTab.isIncognito,
         )
+        leaveSiteCapsule()
         popupOpeners[popupTabId] = openerTabId
         transport.webView = webViewFor(popupTabId)
         resultMsg.sendToTarget()
@@ -2655,4 +2960,14 @@ class BrowserController(private val activity: Activity) {
         val storageKey: String,
         val pageHost: String?,
     )
+}
+
+enum class CapsuleSaveResult {
+    PinRequested,
+    PinningUnsupported,
+    PinRequestFailed,
+    Updated,
+    UpdateFailed,
+    LimitReached,
+    Invalid,
 }
