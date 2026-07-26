@@ -215,6 +215,7 @@ import dev.sk2andy.materialbrowser.browser.commands.CommandCookieScope
 import dev.sk2andy.materialbrowser.browser.commands.CommandDispatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandSuggestion
+import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
@@ -265,6 +266,10 @@ private enum class BrowserBackTarget {
 
 @Composable
 fun BrowserScreen(controller: BrowserController) {
+    controller.activeSiteCapsule?.let { capsule ->
+        SiteCapsuleBrowserScreen(controller, capsule)
+        return
+    }
     var tabOverviewVisible by rememberSaveable { mutableStateOf(false) }
     var candyTrailTabId by rememberSaveable { mutableStateOf<String?>(null) }
     var candyTrailSourceBounds by remember { mutableStateOf<Rect?>(null) }
@@ -272,6 +277,9 @@ fun BrowserScreen(controller: BrowserController) {
     var settingsVisible by remember { mutableStateOf(false) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
     var clearDialogVisible by remember { mutableStateOf(false) }
+    var capsuleEditorVisible by remember { mutableStateOf(false) }
+    var editingCapsuleId by remember { mutableStateOf<String?>(null) }
+    var pendingCapsuleDelete by remember { mutableStateOf<SiteCapsule?>(null) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
     var highlightedSuggestionIndex by remember { mutableIntStateOf(-1) }
     var addressFocusNonce by remember { mutableIntStateOf(0) }
@@ -758,6 +766,11 @@ fun BrowserScreen(controller: BrowserController) {
                 candyTrailTabId = selectedTab.id
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             },
+            onAddSiteCapsule = {
+                editingCapsuleId = null
+                capsuleEditorVisible = true
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
@@ -812,6 +825,7 @@ fun BrowserScreen(controller: BrowserController) {
                 dismissResistancePercent = controller.dismissResistancePercent,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
+                siteCapsules = controller.siteCapsules,
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onSearchEngineChanged = controller::updateSearchEngine,
@@ -821,6 +835,11 @@ fun BrowserScreen(controller: BrowserController) {
                     privacyXRayTabId = selectedTab.id
                     rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 },
+                onEditCapsule = { capsule ->
+                    editingCapsuleId = capsule.id
+                    capsuleEditorVisible = true
+                },
+                onDeleteCapsule = { capsule -> pendingCapsuleDelete = capsule },
                 onDismiss = { settingsVisible = false },
                 modifier = Modifier.graphicsLayer {
                     val progress = settingsBackProgress.value
@@ -955,6 +974,69 @@ fun BrowserScreen(controller: BrowserController) {
             onOpenLinkInBackground = controller::openContextLinkInBackground,
             onDownloadImage = controller::downloadContextImage,
             onDismiss = controller.contentActions::dismiss,
+        )
+    }
+
+    if (capsuleEditorVisible) {
+        SiteCapsuleEditorSheet(
+            controller = controller,
+            existing = editingCapsuleId?.let { id ->
+                controller.siteCapsules.firstOrNull { it.id == id }
+            },
+            sourceTitle = selectedTab.title.ifBlank { AddressResolver.displayText(selectedTab.url) },
+            sourceUrl = selectedTab.url,
+            sourceFavicon = if (editingCapsuleId == null) controller.selectedFavicon else null,
+            onDismiss = { capsuleEditorVisible = false },
+        )
+    }
+
+    pendingCapsuleDelete?.let { capsule ->
+        AlertDialog(
+            onDismissRequest = { pendingCapsuleDelete = null },
+            title = { Text(stringResource(R.string.capsule_delete_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        if (capsule.ownsDedicatedProfile) {
+                            R.string.capsule_delete_dedicated_message
+                        } else {
+                            R.string.capsule_delete_message
+                        },
+                    ),
+                )
+            },
+            confirmButton = {
+                if (capsule.ownsDedicatedProfile) {
+                    Button(
+                        onClick = {
+                            controller.deleteSiteCapsule(capsule.id, true)
+                            pendingCapsuleDelete = null
+                        },
+                    ) { Text(stringResource(R.string.capsule_delete_with_profile)) }
+                } else {
+                    Button(
+                        onClick = {
+                            controller.deleteSiteCapsule(capsule.id, false)
+                            pendingCapsuleDelete = null
+                        },
+                    ) { Text(stringResource(R.string.action_delete)) }
+                }
+            },
+            dismissButton = {
+                Row {
+                    if (capsule.ownsDedicatedProfile) {
+                        TextButton(
+                            onClick = {
+                                controller.deleteSiteCapsule(capsule.id, false)
+                                pendingCapsuleDelete = null
+                            },
+                        ) { Text(stringResource(R.string.capsule_delete_only)) }
+                    }
+                    TextButton(onClick = { pendingCapsuleDelete = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            },
         )
     }
 }
@@ -1548,6 +1630,7 @@ private fun BrowserBottomBar(
     onShare: () -> Unit,
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
+    onAddSiteCapsule: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -1682,6 +1765,7 @@ private fun BrowserBottomBar(
                         onShare = onShare,
                         onPrint = onPrint,
                         onOpenCandyTrail = onOpenCandyTrail,
+                        onAddSiteCapsule = onAddSiteCapsule,
                         )
                     }
                 }
@@ -1788,6 +1872,7 @@ private fun ExpandedBottomBarContent(
     onShare: () -> Unit,
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
+    onAddSiteCapsule: () -> Unit,
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
     Column {
@@ -2003,6 +2088,39 @@ private fun ExpandedBottomBarContent(
                                 color = MaterialTheme.colorScheme.primary,
                                 fontSize = 20.sp,
                             )
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(stringResource(R.string.capsule_add_action))
+                                if (tab.isIncognito) {
+                                    Text(
+                                        stringResource(R.string.capsule_unavailable_private),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                } else if (tab.url == BLANK_URL ||
+                                    (!tab.url.startsWith("https://") &&
+                                        !tab.url.startsWith("http://"))
+                                ) {
+                                    Text(
+                                        stringResource(R.string.capsule_unavailable_web_only),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        },
+                        enabled = tab.url != BLANK_URL &&
+                            !tab.isIncognito &&
+                            (tab.url.startsWith("https://") || tab.url.startsWith("http://")),
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onAddSiteCapsule()
+                        },
+                        leadingIcon = {
+                            Text("◉", color = MaterialTheme.colorScheme.primary, fontSize = 20.sp)
                         },
                     )
                     DropdownMenuItem(
@@ -4196,12 +4314,15 @@ private fun SettingsScreen(
     dismissResistancePercent: Int,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
+    siteCapsules: List<SiteCapsule>,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onRequestDefaultBrowser: () -> Unit,
     onPrivacyXRay: () -> Unit,
+    onEditCapsule: (SiteCapsule) -> Unit,
+    onDeleteCapsule: (SiteCapsule) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -4368,6 +4489,63 @@ private fun SettingsScreen(
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
                     )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            SettingsSectionTitle(stringResource(R.string.capsule_settings_title))
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.capsule_settings_launcher_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            if (siteCapsules.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Text(
+                        stringResource(R.string.capsule_settings_empty),
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                siteCapsules.forEach { capsule ->
+                    Surface(
+                        onClick = { onEditCapsule(capsule) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(start = 18.dp, top = 8.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(capsule.name, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    AddressResolver.displayText(capsule.startUrl),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            IconButton(onClick = { onDeleteCapsule(capsule) }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.capsule_delete_title),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

@@ -6,8 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
+import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
+import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
+import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 
@@ -22,7 +25,15 @@ class MainActivity : ComponentActivity() {
             browserController.onWindowInsetsChanged(insets)
             insets
         }
-        if (savedInstanceState == null) openIntentUrl(intent)
+        val restoredCapsuleId = savedInstanceState?.getString(STATE_CAPSULE_ID)
+        if (restoredCapsuleId != null) {
+            val restoredTabId = savedInstanceState.getString(STATE_CAPSULE_TAB_ID)
+            if (!browserController.restoreSiteCapsule(restoredCapsuleId, restoredTabId)) {
+                browserController.openNormalHomeFromInvalidCapsule()
+            }
+        } else if (savedInstanceState == null) {
+            openIntent(intent)
+        }
         setContent {
             MaterialBrowserTheme {
                 BrowserScreen(browserController)
@@ -33,7 +44,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        openIntentUrl(intent)
+        openIntent(intent)
     }
 
     override fun onPause() {
@@ -51,9 +62,42 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    private fun openIntentUrl(intent: Intent) {
+    override fun onSaveInstanceState(outState: Bundle) {
+        browserController.activeCapsuleId?.let { outState.putString(STATE_CAPSULE_ID, it) }
+        browserController.activeCapsuleTabId?.let { outState.putString(STATE_CAPSULE_TAB_ID, it) }
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun openIntent(intent: Intent) {
+        when (
+            val resolution = browserController.resolveCapsuleLaunch(
+                action = intent.action,
+                capsuleId = intent.getStringExtra(CapsuleIntentRules.EXTRA_CAPSULE_ID),
+            )
+        ) {
+            is CapsuleLaunchResolution.Open -> {
+                if (!browserController.openSiteCapsule(resolution.capsule.id)) {
+                    browserController.openNormalHomeFromInvalidCapsule()
+                }
+                return
+            }
+            CapsuleLaunchResolution.NormalHome -> {
+                browserController.openNormalHomeFromInvalidCapsule()
+                return
+            }
+            CapsuleLaunchResolution.NotCapsuleIntent -> Unit
+        }
+        if (intent.action == Intent.ACTION_MAIN) browserController.leaveSiteCapsule()
         IncomingBrowserIntent.from(intent)?.let { request ->
             browserController.openUrl(request.url)
         }
+    }
+
+    @VisibleForTesting
+    fun browserControllerForTesting(): BrowserController = browserController
+
+    private companion object {
+        const val STATE_CAPSULE_ID = "active_site_capsule_id"
+        const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
     }
 }
