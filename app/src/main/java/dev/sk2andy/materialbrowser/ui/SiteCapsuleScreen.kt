@@ -87,6 +87,7 @@ object SiteCapsuleTestTags {
     const val WebView = "site_capsule_webview"
     const val Editor = "site_capsule_editor"
     const val Save = "site_capsule_save"
+    const val Chrome = "site_capsule_chrome"
 }
 
 @Composable
@@ -117,14 +118,14 @@ fun SiteCapsuleBrowserScreen(
             },
     ) {
         CapsuleWebViewHost(controller)
-        tab.error?.let { error ->
+        tab.error?.takeIf { capsule.chromeMode.showsControls }?.let { error ->
             CapsuleErrorCard(
                 message = error,
                 onRetry = controller::reload,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
-        if (tab.isLoading) {
+        if (capsule.chromeMode.showsControls && tab.isLoading) {
             LinearProgressIndicator(
                 progress = { (tab.progress / 100f).coerceIn(0f, 1f) },
                 modifier = Modifier
@@ -133,18 +134,20 @@ fun SiteCapsuleBrowserScreen(
                     .align(Alignment.TopCenter),
             )
         }
-        CapsuleChrome(
-            capsule = capsule,
-            currentUrl = tab.url,
-            canGoBack = tab.canGoBack,
-            isLoading = tab.isLoading,
-            onBack = controller::goBack,
-            onReloadOrStop = {
-                if (tab.isLoading) controller.stopLoading() else controller.reload()
-            },
-            onOpenFullCandy = controller::openSiteCapsuleInFullCandy,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        if (capsule.chromeMode.showsControls) {
+            CapsuleChrome(
+                capsule = capsule,
+                currentUrl = tab.url,
+                canGoBack = tab.canGoBack,
+                isLoading = tab.isLoading,
+                onBack = controller::goBack,
+                onReloadOrStop = {
+                    if (tab.isLoading) controller.stopLoading() else controller.reload()
+                },
+                onOpenFullCandy = controller::openSiteCapsuleInFullCandy,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 }
 
@@ -180,7 +183,8 @@ private fun CapsuleChrome(
         modifier = modifier
             .navigationBarsPadding()
             .padding(horizontal = 14.dp, vertical = 12.dp)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .testTag(SiteCapsuleTestTags.Chrome),
         shape = RoundedCornerShape(30.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.97f),
         tonalElevation = 12.dp,
@@ -693,9 +697,11 @@ private fun CapsuleNavigationMode.summaryResource(): Int = when (this) {
 private fun CapsuleChromeMode.titleResource(): Int = when (this) {
     CapsuleChromeMode.Minimal -> R.string.capsule_chrome_minimal
     CapsuleChromeMode.Compact -> R.string.capsule_chrome_compact
+    CapsuleChromeMode.NoControls -> R.string.capsule_chrome_none
 }
 
 private fun CapsuleChromeMode.summaryResource(): Int = when (this) {
     CapsuleChromeMode.Minimal -> R.string.capsule_chrome_minimal_summary
     CapsuleChromeMode.Compact -> R.string.capsule_chrome_compact_summary
+    CapsuleChromeMode.NoControls -> R.string.capsule_chrome_none_summary
 }

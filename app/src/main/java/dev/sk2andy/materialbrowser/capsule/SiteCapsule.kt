@@ -17,7 +17,11 @@ enum class CapsuleNavigationMode(val wireValue: String) {
 enum class CapsuleChromeMode(val wireValue: String) {
     Minimal("minimal"),
     Compact("compact"),
+    NoControls("no_controls"),
     ;
+
+    val showsControls: Boolean
+        get() = this != NoControls
 
     companion object {
         fun fromWireValue(value: String?): CapsuleChromeMode =

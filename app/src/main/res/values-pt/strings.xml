@@ -236,6 +236,8 @@
     <string name="capsule_chrome_minimal_summary">Mostra apenas o nome e os controlos essenciais</string>
     <string name="capsule_chrome_compact">Endereço compacto</string>
     <string name="capsule_chrome_compact_summary">Mostra também o endereço atual do site</string>
+    <string name="capsule_chrome_none">Sem controlos</string>
+    <string name="capsule_chrome_none_summary">Mostra apenas o site, sem controlos nem sobreposições Candy</string>
     <string name="capsule_request_pin">Pedir atalho no ecrã inicial</string>
     <string name="capsule_pin_requested">Capsule guardada. Confirma o atalho no iniciador.</string>
     <string name="capsule_pinning_unsupported">Este iniciador não suporta atalhos afixados. A configuração continua guardada.</string>

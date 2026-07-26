@@ -8,6 +8,17 @@ import org.junit.Test
 
 class SiteCapsuleRulesTest {
     @Test
+    fun `no controls chrome mode round trips and hides all Candy overlays`() {
+        assertEquals(
+            CapsuleChromeMode.NoControls,
+            CapsuleChromeMode.fromWireValue("no_controls"),
+        )
+        assertFalse(CapsuleChromeMode.NoControls.showsControls)
+        assertTrue(CapsuleChromeMode.Minimal.showsControls)
+        assertTrue(CapsuleChromeMode.Compact.showsControls)
+    }
+
+    @Test
     fun `creation limit is explicit and never silently evicts`() {
         assertTrue(SiteCapsuleRules.canCreate(63))
         assertFalse(SiteCapsuleRules.canCreate(64))

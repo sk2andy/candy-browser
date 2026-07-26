@@ -193,6 +193,8 @@
     <string name="capsule_chrome_minimal_summary">Zeigt nur Capsule-Name und wesentliche Steuerung</string>
     <string name="capsule_chrome_compact">Kompakte Adresse</string>
     <string name="capsule_chrome_compact_summary">Zeigt zusätzlich die aktuelle Website-Adresse</string>
+    <string name="capsule_chrome_none">Keine Steuerung</string>
+    <string name="capsule_chrome_none_summary">Zeigt nur die Website, ohne Candy-Steuerung oder Einblendungen</string>
     <string name="capsule_request_pin">Homescreen-Verknüpfung anfragen</string>
     <string name="capsule_pin_requested">Capsule gespeichert. Bestätige die Verknüpfung im Launcher.</string>
     <string name="capsule_pinning_unsupported">Dieser Launcher unterstützt keine angehefteten Verknüpfungen. Die Capsule-Konfiguration bleibt gespeichert.</string>

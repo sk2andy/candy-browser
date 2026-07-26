@@ -205,6 +205,8 @@
     <string name="capsule_chrome_minimal_summary">Shows the Capsule name and essential controls only</string>
     <string name="capsule_chrome_compact">Compact address</string>
     <string name="capsule_chrome_compact_summary">Also shows the current site address</string>
+    <string name="capsule_chrome_none">No controls</string>
+    <string name="capsule_chrome_none_summary">Shows only the website, without Candy controls or overlays</string>
     <string name="capsule_request_pin">Request home-screen shortcut</string>
     <string name="capsule_pin_requested">Capsule saved. Confirm the shortcut with your launcher.</string>
     <string name="capsule_pinning_unsupported">This launcher does not support pinned shortcuts. The Capsule configuration is still saved.</string>

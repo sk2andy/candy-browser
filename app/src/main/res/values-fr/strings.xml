@@ -236,6 +236,8 @@
     <string name="capsule_chrome_minimal_summary">Affiche seulement le nom et les commandes essentielles</string>
     <string name="capsule_chrome_compact">Adresse compacte</string>
     <string name="capsule_chrome_compact_summary">Affiche aussi l’adresse actuelle du site</string>
+    <string name="capsule_chrome_none">Aucune commande</string>
+    <string name="capsule_chrome_none_summary">Affiche uniquement le site, sans commandes ni superpositions Candy</string>
     <string name="capsule_request_pin">Demander le raccourci d’accueil</string>
     <string name="capsule_pin_requested">Capsule enregistrée. Confirmez le raccourci dans le lanceur.</string>
     <string name="capsule_pinning_unsupported">Ce lanceur ne gère pas les raccourcis épinglés. La configuration reste enregistrée.</string>

@@ -236,6 +236,8 @@
     <string name="capsule_chrome_minimal_summary">Muestra solo el nombre y los controles esenciales</string>
     <string name="capsule_chrome_compact">Dirección compacta</string>
     <string name="capsule_chrome_compact_summary">También muestra la dirección actual del sitio</string>
+    <string name="capsule_chrome_none">Sin controles</string>
+    <string name="capsule_chrome_none_summary">Muestra solo el sitio, sin controles ni superposiciones de Candy</string>
     <string name="capsule_request_pin">Solicitar acceso directo de inicio</string>
     <string name="capsule_pin_requested">Capsule guardada. Confirma el acceso directo en el iniciador.</string>
     <string name="capsule_pinning_unsupported">Este iniciador no admite accesos directos fijados. La configuración sigue guardada.</string>

@@ -38,7 +38,7 @@ class SiteCapsuleStoreInstrumentedTest {
             ownsDedicatedProfile = true,
             isolatedStorageRequested = true,
             navigationMode = CapsuleNavigationMode.SameRegistrableDomain,
-            chromeMode = CapsuleChromeMode.Minimal,
+            chromeMode = CapsuleChromeMode.NoControls,
             createdAtMillis = 10L,
             updatedAtMillis = 20L,
         )
