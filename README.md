@@ -21,6 +21,8 @@ und lokalen Content-Schutz.
 - Lokaler Werbe-/Tracker-Filter mit rund 55.000 kompilierten EasyList-/EasyPrivacy-Hosts inklusive Service-Worker-Anfragen
 - Interaktives Privacy X-Ray pro Tab mit gebündelten Live-Zählern, deterministischen Kategorien,
   begrenzter Domain-Übersicht und temporären bzw. profilbezogenen Website-Ausnahmen
+- Filter Studio für globale oder profilbezogene Host-, Site→Host- und originbegrenzte CSS-Regeln;
+  Privacy X-Ray kann konkrete Block-/Allow-Regeln direkt anlegen und deren Trefferregel öffnen
 - Drittanbieter-Cookies standardmäßig blockiert; First-party-Cookies für Logins erlaubt
 - Früher Cookie-Banner-Blocker auf Basis der EasyList Cookie List
 - Safe Browsing, TLS-Abbruch, verbotene Datei-/Content-Schemes und externe Scheme-Allowlist
@@ -52,6 +54,19 @@ Privacy X-Ray zeigt lokal blockierte, einem Tab verlässlich zuordenbare WebView
 Service-Worker-Anfragen bleiben aus der Tab-Telemetrie ausgeschlossen, weil WebView dafür keine
 zuverlässige Tab-ID liefert. Cookie-Angaben beschreiben ausschließlich aktive Regeln, keine
 beobachteten Cookie-Ereignisse.
+
+### Candy Rules v1
+
+Filter Studio importiert und exportiert ausschließlich das kleine, versionierte Candy-Format —
+nicht Adblock Plus oder uBlock-Syntax. Nach der Kopfzeile `candy-rules:1` enthält jede tab-getrennte
+Zeile `rule`, Aktion (`block`, `allow`, `css`), Typ (`host`, `pair`, `origin`) und Ziel; weitere
+Felder halten CSS-Selector, ID, Profil, Gruppe und Aktivstatus. Import ist auf 512 KiB, 8.192 Zeilen
+und insgesamt 4.096 aktive Regeln begrenzt; höchstens 64 kosmetische Regeln werden angenommen.
+
+HTTPS-Abonnements werden nur nach explizitem Abruf importiert. Jede Aktualisierung zeigt zuerst
+einen Diff und verlangt Bestätigung. Abonnements akzeptieren nur Candy-Host-/Paarregeln, niemals
+CSS oder JavaScript, und folgen weder Redirects noch fremder Filtersyntax. Inkognito-Regeln und
+-Importe bleiben im Arbeitsspeicher und verändern keine persistente Subscription.
 
 ## Filterquellen
 

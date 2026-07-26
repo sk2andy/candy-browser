@@ -255,6 +255,7 @@ private data class TabReorderAnimation(
 )
 
 private enum class BrowserBackTarget {
+    FilterStudio,
     Settings,
     AddressEditor,
     CandyTrail,
@@ -271,6 +272,8 @@ fun BrowserScreen(controller: BrowserController) {
     var addressEditorVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
+    var filterStudioVisible by rememberSaveable { mutableStateOf(false) }
+    var filterStudioSelectedRuleId by rememberSaveable { mutableStateOf<String?>(null) }
     var clearDialogVisible by remember { mutableStateOf(false) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
     var highlightedSuggestionIndex by remember { mutableIntStateOf(-1) }
@@ -496,8 +499,17 @@ fun BrowserScreen(controller: BrowserController) {
         if (controller.tabs.none { it.id == xRayTabId }) privacyXRayTabId = null
     }
 
-    LaunchedEffect(tabOverviewVisible, addressEditorVisible, settingsVisible, candyTrailTabId) {
-        if (tabOverviewVisible || addressEditorVisible || settingsVisible || candyTrailTabId != null) {
+    LaunchedEffect(
+        tabOverviewVisible,
+        addressEditorVisible,
+        settingsVisible,
+        filterStudioVisible,
+        candyTrailTabId,
+    ) {
+        if (
+            tabOverviewVisible || addressEditorVisible || settingsVisible ||
+            filterStudioVisible || candyTrailTabId != null
+        ) {
             controller.setPreviewCaptureEnabled(false)
         } else {
             delay(120)
@@ -507,6 +519,7 @@ fun BrowserScreen(controller: BrowserController) {
 
     val currentBackTarget by rememberUpdatedState(
         when {
+            filterStudioVisible -> BrowserBackTarget.FilterStudio
             settingsVisible -> BrowserBackTarget.Settings
             addressEditorVisible -> BrowserBackTarget.AddressEditor
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
@@ -532,6 +545,7 @@ fun BrowserScreen(controller: BrowserController) {
                 }
             }
             when (target) {
+                BrowserBackTarget.FilterStudio -> filterStudioVisible = false
                 BrowserBackTarget.Settings -> {
                     if (receivedProgress) settingsBackProgress.snapTo(1f)
                     settingsVisible = false
@@ -821,6 +835,10 @@ fun BrowserScreen(controller: BrowserController) {
                     privacyXRayTabId = selectedTab.id
                     rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 },
+                onFilterStudio = {
+                    filterStudioSelectedRuleId = null
+                    filterStudioVisible = true
+                },
                 onDismiss = { settingsVisible = false },
                 modifier = Modifier.graphicsLayer {
                     val progress = settingsBackProgress.value
@@ -850,9 +868,52 @@ fun BrowserScreen(controller: BrowserController) {
                         controller.pauseSiteProtection(tabId, persistently)
                     },
                     onResume = { controller.resumeSiteProtection(tabId) },
+                    onRuleAction = { domain, action, siteScoped ->
+                        val rule = controller.addFilterRuleFromXRay(
+                            tabId = tabId,
+                            requestHost = domain,
+                            action = action,
+                            siteScoped = siteScoped,
+                        )
+                        if (rule != null) {
+                            filterStudioSelectedRuleId = rule.id
+                            privacyXRayTabId = null
+                            filterStudioVisible = true
+                        }
+                    },
+                    onOpenStudio = { ruleId ->
+                        filterStudioSelectedRuleId = ruleId
+                        privacyXRayTabId = null
+                        filterStudioVisible = true
+                    },
                     onDismiss = { privacyXRayTabId = null },
                 )
             }
+        }
+
+        if (filterStudioVisible) {
+            FilterStudioScreen(
+                rules = controller.filterRulesFor(controller.selectedTabId),
+                profiles = controller.profiles,
+                currentProfileId = controller.selectedTab.profileId,
+                currentUrl = controller.filterStudioTestUrl(controller.selectedTabId),
+                recentDomain = controller.privacySnapshot(controller.selectedTabId)
+                    .domains.firstOrNull()?.host,
+                selectedRuleId = filterStudioSelectedRuleId,
+                onTest = { controller.testFilterRule(controller.selectedTabId, it) },
+                onAdd = controller::addFilterRule,
+                onUpdate = controller::updateFilterRule,
+                onToggle = controller::setFilterRuleActive,
+                onDelete = controller::deleteFilterRule,
+                onParseImport = controller::importFilterRules,
+                onApplyImport = controller::applyFilterImport,
+                onApplySubscription = controller::applyFilterSubscription,
+                onExport = controller::exportFilterRules,
+                onDismiss = {
+                    filterStudioVisible = false
+                    filterStudioSelectedRuleId = null
+                },
+            )
         }
 
     }
@@ -4202,6 +4263,7 @@ private fun SettingsScreen(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onRequestDefaultBrowser: () -> Unit,
     onPrivacyXRay: () -> Unit,
+    onFilterStudio: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -4378,6 +4440,28 @@ private fun SettingsScreen(
                 blockedCount = blockedCount,
                 onClick = onPrivacyXRay,
             )
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                onClick = onFilterStudio,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .sizeIn(minHeight = 48.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp)) {
+                    Text(
+                        stringResource(R.string.filter_studio_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        stringResource(R.string.filter_studio_settings_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+            }
             Spacer(Modifier.height(18.dp))
             SettingsSwitch(
                 title = stringResource(R.string.settings_block_ads_title),

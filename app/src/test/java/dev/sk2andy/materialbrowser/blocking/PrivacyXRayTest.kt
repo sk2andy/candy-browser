@@ -168,7 +168,7 @@ class PrivacyXRayTest {
             PrivacyPartyClassifier.classify("cdn.example.com", "example.com"),
         )
         assertEquals(
-            PrivacyPartyRelation.Unknown,
+            PrivacyPartyRelation.ThirdParty,
             PrivacyPartyClassifier.classify("notexample.com", "example.com"),
         )
         assertEquals(
@@ -179,6 +179,31 @@ class PrivacyXRayTest {
             PrivacyPartyRelation.Unknown,
             PrivacyPartyClassifier.classify("tracker.example", null),
         )
+        assertEquals(
+            PrivacyPartyRelation.ThirdParty,
+            PrivacyPartyClassifier.classify("cdn.publisher.co.uk", "news.other.co.uk"),
+        )
+    }
+
+    @Test
+    fun `repository retains concrete allow decision without increasing blocked total`() {
+        val repository = PrivacyXRayRepository()
+        repository.recordDecision(
+            tabId = "tab",
+            requestUrl = "https://tracker.example/pixel",
+            pageUrl = "https://news.example/article",
+            wasBlocked = false,
+            decision = PrivacyRuleDecisionSummary(
+                ruleId = "allow-1",
+                label = "Privacy X-Ray",
+                action = PrivacyRuleDecisionAction.Allow,
+            ),
+        )
+
+        val snapshot = repository.snapshot("tab")
+        assertEquals(0, snapshot.totalBlocked)
+        assertEquals(1, snapshot.domains.single().allowedCount)
+        assertEquals("allow-1", snapshot.domains.single().ruleDecision?.ruleId)
     }
 
     @Test

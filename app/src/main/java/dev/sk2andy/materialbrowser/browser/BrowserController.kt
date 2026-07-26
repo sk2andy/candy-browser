@@ -51,9 +51,26 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
+import dev.sk2andy.materialbrowser.blocking.CandyCosmeticScript
+import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
+import dev.sk2andy.materialbrowser.blocking.CandyHostCanonicalizer
+import dev.sk2andy.materialbrowser.blocking.CandyMatcherSnapshot
+import dev.sk2andy.materialbrowser.blocking.CandyMatcherSnapshots
+import dev.sk2andy.materialbrowser.blocking.CandyPublicSuffixRules
+import dev.sk2andy.materialbrowser.blocking.CandyRule
+import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
+import dev.sk2andy.materialbrowser.blocking.CandyRuleDecision
+import dev.sk2andy.materialbrowser.blocking.CandyRuleFormat
+import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
+import dev.sk2andy.materialbrowser.blocking.CandyRuleOrigin
+import dev.sk2andy.materialbrowser.blocking.CandyRulePreview
+import dev.sk2andy.materialbrowser.blocking.CandyRuleValidation
+import dev.sk2andy.materialbrowser.blocking.CandyRuleValidator
 import dev.sk2andy.materialbrowser.blocking.ContentBlocker
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestSanitizer
 import dev.sk2andy.materialbrowser.blocking.PrivacyPolicyRules
+import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
+import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionSummary
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRayRepository
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.RequestProtectionRules
@@ -87,6 +104,7 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
+import dev.sk2andy.materialbrowser.data.CandyRuleRepository
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryEntry
@@ -101,6 +119,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class BrowserController(private val activity: Activity) {
     val tabs = mutableStateListOf<BrowserTab>()
@@ -110,6 +129,8 @@ class BrowserController(private val activity: Activity) {
     val history = mutableStateListOf<HistoryEntry>()
     val favorites = mutableStateListOf<FavoriteEntry>()
     val privacySnapshots = mutableStateMapOf<String, PrivacyXRaySnapshot>()
+    val filterRules = mutableStateListOf<CandyRule>()
+    private val incognitoRuleHits = mutableStateMapOf<String, Int>()
     val candyTrails = mutableStateMapOf<String, CandyTrail>()
     val contentActions = WebContentActionState()
 
@@ -141,6 +162,7 @@ class BrowserController(private val activity: Activity) {
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val popupOpeners = mutableMapOf<String, String>()
     private val consentScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
+    private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val webViewProfileKeys = ConcurrentHashMap<String, String>()
     private val configuredServiceWorkerProfiles = mutableSetOf<String>()
@@ -148,6 +170,8 @@ class BrowserController(private val activity: Activity) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingPreviewCapture: Runnable? = null
     private val pendingBlockedCounts = ConcurrentHashMap<String, AtomicInteger>()
+    private val pendingPrivacyTabs = ConcurrentHashMap.newKeySet<String>()
+    private val reportedAllowedDecisions = ConcurrentHashMap<String, MutableSet<String>>()
     private val blockerFlushScheduled = AtomicBoolean(false)
     private val privacyXRayRepository = PrivacyXRayRepository()
     private val privacyEventLock = Any()
@@ -175,12 +199,16 @@ class BrowserController(private val activity: Activity) {
     private val previewRepository = TabPreviewRepository.get(activity)
     private val faviconRepository = FaviconRepository.get(activity)
     private val candyTrailRepository = CandyTrailRepository.get(activity)
+    private val candyRuleRepository = CandyRuleRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
     private val downloadManager = BrowserDownloadManager(activity)
     private val externalApps = ExternalAppLauncher(activity)
     private val assistantSummary = AssistantSummaryLauncher(activity)
     private val pageShare = PageShareLauncher(activity)
     private val commandCatalog = AndroidCommandCatalog(activity)
+    private val matcherSnapshot = AtomicReference(CandyMatcherSnapshot.Empty)
+    private val incognitoMatcherSnapshot = AtomicReference(CandyMatcherSnapshot.Empty)
+    private val ephemeralRuleIds = mutableSetOf<String>()
 
     @Volatile
     private var permanentSiteExceptions = store.loadPermanentSiteExceptions()
@@ -199,6 +227,40 @@ class BrowserController(private val activity: Activity) {
 
     fun privacySnapshot(tabId: String): PrivacyXRaySnapshot =
         privacySnapshots[tabId] ?: PrivacyXRaySnapshot.Empty
+
+    fun filterRule(ruleId: String): CandyRule? = filterRules.firstOrNull { it.id == ruleId }
+
+    fun filterRulesFor(tabId: String): List<CandyRule> =
+        if (tabs.firstOrNull { it.id == tabId }?.isIncognito == true) {
+            filterRules.map { rule ->
+                rule.copy(
+                    hitCount = (rule.hitCount.toLong() + incognitoRuleHits.getOrDefault(rule.id, 0))
+                        .coerceAtMost(Int.MAX_VALUE.toLong())
+                        .toInt(),
+                )
+            }
+        } else {
+            filterRules.filterNot { it.id in ephemeralRuleIds }
+        }
+
+    fun filterStudioTestUrl(tabId: String): String =
+        pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url.orEmpty()
+
+    fun testFilterRule(tabId: String, requestHostOrUrl: String): CandyRuleDecision? {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return null
+        val requestUrl = if (CandyHostCanonicalizer.webHost(requestHostOrUrl) != null) {
+            requestHostOrUrl
+        } else {
+            CandyHostCanonicalizer.canonicalHost(requestHostOrUrl)?.let { "https://$it/" }
+                ?: return null
+        }
+        return matcherFor(tab.isIncognito).decide(
+            requestUrl = requestUrl,
+            pageUrl = filterStudioTestUrl(tabId),
+            profileId = tab.profileId,
+            isForMainFrame = false,
+        )
+    }
 
     fun siteProtectionState(tabId: String): SiteProtectionState {
         siteExceptionRevision
@@ -221,8 +283,214 @@ class BrowserController(private val activity: Activity) {
         )
     }
 
+    fun addFilterRuleFromXRay(
+        tabId: String,
+        requestHost: String,
+        action: CandyRuleAction,
+        siteScoped: Boolean,
+    ): CandyRule? {
+        if (action == CandyRuleAction.Cosmetic) return null
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return null
+        val safeRequestHost = CandyHostCanonicalizer.canonicalHost(requestHost) ?: return null
+        val firstPartyHost = if (siteScoped) {
+            val pageHost = CandyHostCanonicalizer.webHost(filterStudioTestUrl(tabId)) ?: return null
+            CandyPublicSuffixRules.registrableDomain(pageHost) ?: return null
+        } else {
+            null
+        }
+        val candidate = CandyRule.new(
+            action = action,
+            kind = if (siteScoped) CandyRuleKind.HostPair else CandyRuleKind.RequestHost,
+            requestHost = safeRequestHost,
+            firstPartyHost = firstPartyHost,
+            group = activity.getString(
+                if (tab.isIncognito) R.string.filter_group_private else R.string.filter_group_xray,
+            ),
+            origin = CandyRuleOrigin.PrivacyXRay,
+        )
+        return addFilterRule(candidate, temporary = tab.isIncognito)
+    }
+
+    fun addFilterRule(candidate: CandyRule, temporary: Boolean = selectedTab.isIncognito): CandyRule? {
+        val validated = (CandyRuleValidator.validate(candidate) as? CandyRuleValidation.Valid)?.rule
+            ?: return null
+        val duplicate = filterRules.firstOrNull { existing ->
+            existing.id == validated.id ||
+                (existing.action == validated.action &&
+                existing.kind == validated.kind &&
+                existing.requestHost == validated.requestHost &&
+                existing.firstPartyHost == validated.firstPartyHost &&
+                existing.cosmeticSelector == validated.cosmeticSelector &&
+                existing.profileId == validated.profileId)
+        }
+        if (duplicate != null) return duplicate.takeIf { sameRuleSemantics(it, validated) }
+        if (filterRules.size >= CandyRuleValidator.MAX_RULES) return null
+        if (validated.kind == CandyRuleKind.CosmeticCss &&
+            filterRules.count { it.kind == CandyRuleKind.CosmeticCss } >=
+            CandyRuleValidator.MAX_COSMETIC_RULES
+        ) return null
+        filterRules += validated
+        if (temporary) ephemeralRuleIds += validated.id
+        onFilterRulesChanged(persist = !temporary)
+        return validated
+    }
+
+    fun setFilterRuleActive(ruleId: String, active: Boolean): Boolean {
+        val index = filterRules.indexOfFirst { it.id == ruleId }
+        if (index < 0 || filterRules[index].active == active) return false
+        filterRules[index] = filterRules[index].copy(active = active)
+        onFilterRulesChanged(persist = ruleId !in ephemeralRuleIds)
+        return true
+    }
+
+    fun updateFilterRule(candidate: CandyRule): CandyRule? {
+        val index = filterRules.indexOfFirst { it.id == candidate.id }
+        if (index < 0) return null
+        val validated = (CandyRuleValidator.validate(candidate) as? CandyRuleValidation.Valid)?.rule
+            ?: return null
+        if (filterRules.any { it.id != validated.id && sameRuleSemantics(it, validated) }) return null
+        val previous = filterRules[index]
+        if (previous.kind != CandyRuleKind.CosmeticCss &&
+            validated.kind == CandyRuleKind.CosmeticCss &&
+            filterRules.count { it.kind == CandyRuleKind.CosmeticCss } >=
+            CandyRuleValidator.MAX_COSMETIC_RULES
+        ) return null
+        filterRules[index] = validated.copy(hitCount = previous.hitCount)
+        onFilterRulesChanged(persist = validated.id !in ephemeralRuleIds)
+        return filterRules[index]
+    }
+
+    fun deleteFilterRule(ruleId: String): Boolean {
+        val removed = filterRules.firstOrNull { it.id == ruleId } ?: return false
+        filterRules.remove(removed)
+        val temporary = ephemeralRuleIds.remove(ruleId)
+        onFilterRulesChanged(persist = !temporary)
+        privacySnapshots.replaceAll { _, snapshot ->
+            snapshot.copy(
+                domains = snapshot.domains.map { domain ->
+                    if (domain.ruleDecision?.ruleId == ruleId) {
+                        domain.copy(
+                            ruleDecision = domain.ruleDecision.copy(
+                                label = activity.getString(R.string.filter_rule_deleted),
+                            ),
+                        )
+                    } else {
+                        domain
+                    }
+                },
+            )
+        }
+        return true
+    }
+
+    fun importFilterRules(text: String): CandyRulePreview = CandyRuleFormat.parse(text)
+
+    fun applyFilterImport(preview: CandyRulePreview): Int {
+        if (!preview.isApplicable) return 0
+        val temporary = selectedTab.isIncognito
+        val additions = prepareRuleBatch(preview.rules) ?: return 0
+        if (additions.isEmpty()) return 0
+        filterRules += additions
+        if (temporary) ephemeralRuleIds += additions.map(CandyRule::id)
+        onFilterRulesChanged(persist = !temporary)
+        return additions.size
+    }
+
+    fun applyFilterSubscription(sourceUrl: String, preview: CandyRulePreview): Int {
+        if (!preview.isApplicable || !CandyRuleValidator.isSafeHttpsUrl(sourceUrl)) return 0
+        val temporary = selectedTab.isIncognito
+        val sourcePrefix = if (temporary) {
+            "private-${UUID.randomUUID()}"
+        } else {
+            "subscription-${sourceUrl.hashCode().toUInt().toString(16)}"
+        }
+        val imported = CandyRuleValidator.normalizeAll(
+            preview.rules.mapIndexed { index, rule ->
+                rule.copy(
+                    id = "$sourcePrefix-$index-${semanticRuleKey(rule).hashCode().toUInt().toString(16)}",
+                    origin = CandyRuleOrigin.Subscription,
+                    sourceUrl = sourceUrl,
+                    updatedAtMillis = System.currentTimeMillis(),
+                    group = runCatching { java.net.URI(sourceUrl).host }.getOrNull()
+                        ?.take(48)
+                        ?: activity.getString(R.string.filter_group_subscription),
+                )
+            },
+        )
+        if (temporary) {
+            val oldIds = filterRules.asSequence()
+                .filter { it.sourceUrl == sourceUrl && it.id in ephemeralRuleIds }
+                .map(CandyRule::id)
+                .toSet()
+            val retained = filterRules.filterNot { it.id in oldIds }
+            val additions = prepareRuleBatch(imported, retained) ?: return 0
+            filterRules.removeAll { it.id in oldIds }
+            ephemeralRuleIds.removeAll(oldIds)
+            incognitoRuleHits.keys.removeAll(oldIds)
+            filterRules += additions
+            ephemeralRuleIds += additions.map(CandyRule::id)
+            onFilterRulesChanged(persist = false)
+            return additions.size
+        }
+        val oldIds = filterRules.asSequence()
+            .filter { it.sourceUrl == sourceUrl && it.id !in ephemeralRuleIds }
+            .map(CandyRule::id)
+            .toSet()
+        val retained = filterRules.filterNot { it.id in oldIds }
+        val additions = prepareRuleBatch(imported, retained) ?: return 0
+        filterRules.removeAll { it.id in oldIds }
+        filterRules += additions
+        onFilterRulesChanged(persist = true)
+        return additions.size
+    }
+
+    fun exportFilterRules(): String = CandyRuleFormat.export(
+        filterRules.filterNot { it.id in ephemeralRuleIds },
+    )
+
+    private fun prepareRuleBatch(
+        input: List<CandyRule>,
+        base: List<CandyRule> = filterRules,
+    ): List<CandyRule>? {
+        val existingIds = base.mapTo(mutableSetOf(), CandyRule::id)
+        val existingSemantics = base.mapTo(mutableSetOf(), ::semanticRuleKey)
+        var cosmeticCount = base.count { it.kind == CandyRuleKind.CosmeticCss }
+        val additions = ArrayList<CandyRule>(input.size)
+        for (inputRule in input) {
+            var rule = (CandyRuleValidator.validate(inputRule) as? CandyRuleValidation.Valid)?.rule
+                ?: return null
+            if (rule.origin == CandyRuleOrigin.Import && rule.group == "Imported") {
+                rule = rule.copy(group = activity.getString(R.string.filter_group_imported))
+            }
+            val semantics = semanticRuleKey(rule)
+            if (!existingSemantics.add(semantics)) continue
+            if (rule.id in existingIds) rule = rule.copy(id = UUID.randomUUID().toString())
+            if (base.size + additions.size >= CandyRuleValidator.MAX_RULES) return null
+            if (rule.kind == CandyRuleKind.CosmeticCss &&
+                ++cosmeticCount > CandyRuleValidator.MAX_COSMETIC_RULES
+            ) return null
+            existingIds += rule.id
+            additions += rule
+        }
+        return additions
+    }
+
+    private fun semanticRuleKey(rule: CandyRule): String = listOf(
+        rule.action.name,
+        rule.kind.name,
+        rule.requestHost.orEmpty(),
+        rule.firstPartyHost.orEmpty(),
+        rule.cosmeticSelector.orEmpty(),
+        rule.profileId.orEmpty(),
+    ).joinToString("\u0000")
+
+    private fun sameRuleSemantics(left: CandyRule, right: CandyRule): Boolean =
+        semanticRuleKey(left) == semanticRuleKey(right)
+
     init {
         deletePendingWebViewProfiles()
+        filterRules += candyRuleRepository.load()
+        rebuildCandyMatcher()
         val nowMillis = System.currentTimeMillis()
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
@@ -610,6 +878,12 @@ class BrowserController(private val activity: Activity) {
         }
         val movedTabIds = WebViewProfileRules.tabIdsForProfileDeletion(tabs, profileId)
         movedTabIds.forEach(::clearPrivacyDataForTab)
+        val profileRuleIds = filterRules.filter { it.profileId == profileId }.map(CandyRule::id).toSet()
+        if (profileRuleIds.isNotEmpty()) {
+            filterRules.removeAll { it.id in profileRuleIds }
+            ephemeralRuleIds.removeAll(profileRuleIds)
+            onFilterRulesChanged(persist = true)
+        }
         if (permanentSiteExceptions.containsKey(profileId)) {
             permanentSiteExceptions = permanentSiteExceptions - profileId
             store.savePermanentSiteExceptions(permanentSiteExceptions)
@@ -1123,6 +1397,8 @@ class BrowserController(private val activity: Activity) {
 
     fun updateBlockerSettings(settings: BlockerSettings) {
         val cookieConsentSettingChanged = workerSettings.hideCookieConsent != settings.hideCookieConsent
+        val requestFilterSettingChanged =
+            workerSettings.blockAdsAndTrackers != settings.blockAdsAndTrackers
         blockerSettings = settings
         workerSettings = settings
         store.saveBlockerSettings(settings)
@@ -1144,6 +1420,17 @@ class BrowserController(private val activity: Activity) {
                 } else {
                     removeCookieConsentDocumentStartScript(webView)
                     webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
+                }
+            }
+        }
+        if (requestFilterSettingChanged) {
+            webViews.forEach { (tabId, webView) ->
+                webView.evaluateJavascript(CandyCosmeticScript.cleanupScript, null)
+                if (settings.blockAdsAndTrackers) {
+                    installCosmeticDocumentStartScripts(tabId, webView)
+                    injectCandyCosmeticFallback(tabId, webView, pageUrls[tabId] ?: webView.url)
+                } else {
+                    removeCosmeticDocumentStartScripts(webView)
                 }
             }
         }
@@ -1233,8 +1520,17 @@ class BrowserController(private val activity: Activity) {
         mainHandler.removeCallbacks(blockerCountFlush)
         synchronized(privacyEventLock) {
             pendingBlockedCounts.clear()
+            pendingPrivacyTabs.clear()
+            reportedAllowedDecisions.clear()
             blockerFlushScheduled.set(false)
             privacyXRayRepository.clear()
+        }
+        incognitoRuleHits.clear()
+        if (filterRules.any { it.hitCount > 0 }) {
+            filterRules.indices.forEach { index ->
+                filterRules[index] = filterRules[index].copy(hitCount = 0)
+            }
+            savePersistentFilterRules()
         }
         clearAllWebViewProfileData()
         privacySnapshots.clear()
@@ -1313,11 +1609,13 @@ class BrowserController(private val activity: Activity) {
         mainHandler.removeCallbacks(blockerCountFlush)
         synchronized(privacyEventLock) {
             pendingBlockedCounts.clear()
+            pendingPrivacyTabs.clear()
             blockerFlushScheduled.set(false)
             privacyXRayRepository.clear()
             protectionRequestContexts.clear()
         }
         temporarySiteExceptions.clear()
+        savePersistentFilterRules()
         persist()
         if (tabs.any(BrowserTab::isIncognito)) prepareIncognitoProfileForRemoval()
         configuredServiceWorkerProfiles.toList().forEach(::clearProfileServiceWorkerClient)
@@ -1325,6 +1623,7 @@ class BrowserController(private val activity: Activity) {
         webViews.clear()
         webViewProfileKeys.clear()
         consentScriptHandlers.clear()
+        cosmeticScriptHandlers.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
         clearIncognitoProfile()
@@ -1408,6 +1707,7 @@ class BrowserController(private val activity: Activity) {
         webChromeClient = browserChromeClient(tabId)
         setDownloadListener(downloadListener(tabId))
         installCookieConsentDocumentStartScript(tabId, this)
+        installCosmeticDocumentStartScripts(tabId, this)
         setOnLongClickListener { clickedView ->
             val webView = clickedView as? WebView ?: return@setOnLongClickListener false
             val hit = webView.hitTestResult
@@ -1481,6 +1781,7 @@ class BrowserController(private val activity: Activity) {
         override fun onPageCommitVisible(view: WebView, url: String) {
             detectPageEdgeToEdge(tabId, view)
             injectCookieConsentCssFallback(tabId, view)
+            injectCandyCosmeticFallback(tabId, view, url)
         }
 
         override fun onPageFinished(view: WebView, url: String) {
@@ -1535,6 +1836,20 @@ class BrowserController(private val activity: Activity) {
             }
             val sitePaused = isSiteProtectionPaused(tabId, pageUrl)
             if (sitePaused) return null
+            val candyDecision = matcherFor(requestContext.isIncognito).decide(
+                requestUrl = requestUrl,
+                pageUrl = pageUrl,
+                profileId = requestContext.profileId,
+                isForMainFrame = false,
+            )
+            if (candyDecision != null) {
+                queueCandyRuleDecision(tabId, requestUrl, pageUrl, requestContext, candyDecision)
+                return if (candyDecision.action == CandyDecisionAction.Block) {
+                    blockedResponse()
+                } else {
+                    null
+                }
+            }
             val listedRequest = contentBlocker.shouldBlock(requestUrl, pageUrl)
             if (RequestProtectionRules.shouldBlock(
                     isForMainFrame = false,
@@ -1543,7 +1858,17 @@ class BrowserController(private val activity: Activity) {
                     isListedRequest = listedRequest,
                 )
             ) {
-                queueBlockedRequest(tabId, requestUrl, pageUrl, requestContext)
+                queueBlockedRequest(
+                    tabId,
+                    requestUrl,
+                    pageUrl,
+                    requestContext,
+                    PrivacyRuleDecisionSummary(
+                        ruleId = null,
+                        label = activity.getString(R.string.filter_rule_builtin),
+                        action = PrivacyRuleDecisionAction.Block,
+                    ),
+                )
                 return blockedResponse()
             }
             return null
@@ -1612,6 +1937,7 @@ class BrowserController(private val activity: Activity) {
             webViews.remove(tabId)
             webViewProfileKeys.remove(tabId)
             removeCookieConsentDocumentStartScript(view)
+            removeCosmeticDocumentStartScripts(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
             candyTrailHistoryBindings.remove(tabId)
@@ -1643,6 +1969,58 @@ class BrowserController(private val activity: Activity) {
                 contentBlocker.consentScriptFor(siteExceptionHostsForTab(tabId)),
                 null,
             )
+        }
+    }
+
+    private fun injectCandyCosmeticFallback(tabId: String, view: WebView, pageUrl: String?) {
+        if (!workerSettings.blockAdsAndTrackers || isSiteProtectionPaused(tabId, pageUrl)) return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val selectors = matcherFor(tab.isIncognito)
+            .cosmeticRules(pageUrl ?: return, tab.profileId)
+            .mapNotNull(CandyRule::cosmeticSelector)
+        val script = CandyCosmeticScript.create(selectors)
+        if (script.isNotEmpty()) view.evaluateJavascript(script, null)
+    }
+
+    private fun installCosmeticDocumentStartScripts(tabId: String, view: WebView) {
+        removeCosmeticDocumentStartScripts(view)
+        if (!workerSettings.blockAdsAndTrackers ||
+            !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+        ) return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val handlers = matcherFor(tab.isIncognito).rules.asSequence()
+            .filter { rule ->
+                rule.active && rule.kind == CandyRuleKind.CosmeticCss &&
+                    (rule.profileId == null || rule.profileId == tab.profileId)
+            }
+            .sortedBy(CandyRule::id)
+            .take(MAX_COSMETIC_DOCUMENT_START_RULES)
+            .mapNotNull { rule ->
+                val host = rule.firstPartyHost ?: return@mapNotNull null
+                val selector = rule.cosmeticSelector ?: return@mapNotNull null
+                runCatching {
+                    WebViewCompat.addDocumentStartJavaScript(
+                        view,
+                        CandyCosmeticScript.create(
+                            listOf(selector),
+                            siteExceptionHostsForTab(tabId),
+                        ),
+                        setOf(
+                            "https://$host",
+                            "https://*.$host",
+                            "http://$host",
+                            "http://*.$host",
+                        ),
+                    )
+                }.getOrNull()
+            }
+            .toList()
+        if (handlers.isNotEmpty()) cosmeticScriptHandlers[view] = handlers
+    }
+
+    private fun removeCosmeticDocumentStartScripts(view: WebView) {
+        cosmeticScriptHandlers.remove(view).orEmpty().forEach { handler ->
+            runCatching(handler::remove)
         }
     }
 
@@ -1776,12 +2154,20 @@ class BrowserController(private val activity: Activity) {
         // context agrees, including site pauses and upstream allowlist rules. Never attribute
         // these requests to a tab's X-Ray counters.
         val shouldBlock = relevantPages.all { (tabId, pageUrl) ->
-            RequestProtectionRules.shouldBlock(
-                isForMainFrame = request.isForMainFrame,
-                blockerEnabled = true,
-                sitePaused = isSiteProtectionPaused(tabId, pageUrl),
-                isListedRequest = contentBlocker.shouldBlock(requestUrl, pageUrl),
-            )
+            val context = protectionRequestContexts[tabId] ?: return@all false
+            if (request.isForMainFrame || isSiteProtectionPaused(tabId, pageUrl)) return@all false
+            when (
+                matcherFor(context.isIncognito).decide(
+                    requestUrl = requestUrl,
+                    pageUrl = pageUrl,
+                    profileId = context.profileId,
+                    isForMainFrame = false,
+                )?.action
+            ) {
+                CandyDecisionAction.Allow -> false
+                CandyDecisionAction.Block -> true
+                null -> contentBlocker.shouldBlock(requestUrl, pageUrl)
+            }
         }
         return if (shouldBlock) {
             blockedResponse()
@@ -1861,14 +2247,80 @@ class BrowserController(private val activity: Activity) {
         requestUrl: String,
         pageUrl: String?,
         expectedContext: ProtectionRequestContext,
+        decision: PrivacyRuleDecisionSummary? = null,
     ) {
         synchronized(privacyEventLock) {
             if (destroyed || protectionRequestContexts[tabId] !== expectedContext) return
-            privacyXRayRepository.record(tabId, requestUrl, pageUrl)
+            if (decision == null) {
+                privacyXRayRepository.record(tabId, requestUrl, pageUrl)
+            } else {
+                privacyXRayRepository.recordDecision(
+                    tabId = tabId,
+                    requestUrl = requestUrl,
+                    pageUrl = pageUrl,
+                    wasBlocked = true,
+                    decision = decision,
+                )
+            }
             pendingBlockedCounts.computeIfAbsent(tabId) { AtomicInteger() }.incrementAndGet()
+            pendingPrivacyTabs += tabId
             if (blockerFlushScheduled.compareAndSet(false, true)) {
                 mainHandler.postDelayed(blockerCountFlush, BLOCKER_COUNT_FLUSH_DELAY_MS)
             }
+        }
+    }
+
+    private fun queueCandyRuleDecision(
+        tabId: String,
+        requestUrl: String,
+        pageUrl: String?,
+        expectedContext: ProtectionRequestContext,
+        decision: CandyRuleDecision,
+    ) {
+        if (destroyed || protectionRequestContexts[tabId] !== expectedContext) return
+        expectedContext.pendingFilterHits
+            .computeIfAbsent(decision.ruleId) { AtomicInteger() }
+            .incrementAndGet()
+        if (decision.action == CandyDecisionAction.Allow) {
+            val requestHost = CandyHostCanonicalizer.webHost(requestUrl).orEmpty()
+            val reported = reportedAllowedDecisions.computeIfAbsent(tabId) {
+                ConcurrentHashMap.newKeySet()
+            }
+            val key = "$requestHost\u0000${decision.ruleId}"
+            if (reported.size >= MAX_REPORTED_ALLOW_DECISIONS || !reported.add(key)) {
+                scheduleBlockerFlush()
+                return
+            }
+        }
+        synchronized(privacyEventLock) {
+            if (destroyed || protectionRequestContexts[tabId] !== expectedContext) return
+            val wasBlocked = decision.action == CandyDecisionAction.Block
+            privacyXRayRepository.recordDecision(
+                tabId = tabId,
+                requestUrl = requestUrl,
+                pageUrl = pageUrl,
+                wasBlocked = wasBlocked,
+                decision = PrivacyRuleDecisionSummary(
+                    ruleId = decision.ruleId,
+                    label = "${decision.rule.group} · ${decision.rule.id.take(8)}",
+                    action = if (wasBlocked) {
+                        PrivacyRuleDecisionAction.Block
+                    } else {
+                        PrivacyRuleDecisionAction.Allow
+                    },
+                ),
+            )
+            if (wasBlocked) {
+                pendingBlockedCounts.computeIfAbsent(tabId) { AtomicInteger() }.incrementAndGet()
+            }
+            pendingPrivacyTabs += tabId
+            scheduleBlockerFlush()
+        }
+    }
+
+    private fun scheduleBlockerFlush() {
+        if (blockerFlushScheduled.compareAndSet(false, true)) {
+            mainHandler.postDelayed(blockerCountFlush, BLOCKER_COUNT_FLUSH_DELAY_MS)
         }
     }
 
@@ -2228,9 +2680,42 @@ class BrowserController(private val activity: Activity) {
             pendingBlockedCounts.entries.removeAll { (tabId, count) ->
                 count.get() == 0 && tabs.none { it.id == tabId }
             }
+            pendingPrivacyTabs.toList().forEach { tabId ->
+                if (tabs.any { it.id == tabId }) {
+                    privacySnapshots[tabId] = privacyXRayRepository.snapshot(tabId)
+                }
+                pendingPrivacyTabs.remove(tabId)
+            }
+            protectionRequestContexts.values.forEach { context ->
+                context.pendingFilterHits.forEach { (ruleId, count) ->
+                    val delta = count.getAndSet(0)
+                    if (delta > 0) {
+                        val index = filterRules.indexOfFirst { it.id == ruleId }
+                        if (context.isIncognito) {
+                            incognitoRuleHits[ruleId] = (
+                                incognitoRuleHits.getOrDefault(ruleId, 0).toLong() + delta
+                                ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                        } else if (index >= 0) {
+                            val current = filterRules[index]
+                            filterRules[index] = current.copy(
+                                hitCount = (current.hitCount.toLong() + delta)
+                                    .coerceAtMost(Int.MAX_VALUE.toLong())
+                                    .toInt(),
+                            )
+                        }
+                    }
+                }
+                context.pendingFilterHits.entries.removeAll { (_, count) -> count.get() == 0 }
+            }
             blockerFlushScheduled.set(false)
             if (!destroyed &&
-                pendingBlockedCounts.values.any { it.get() > 0 } &&
+                (
+                    pendingBlockedCounts.values.any { it.get() > 0 } ||
+                        protectionRequestContexts.values.any { context ->
+                            context.pendingFilterHits.values.any { it.get() > 0 }
+                        } ||
+                        pendingPrivacyTabs.isNotEmpty()
+                    ) &&
                 blockerFlushScheduled.compareAndSet(false, true)
             ) {
                 mainHandler.postDelayed(this, BLOCKER_COUNT_FLUSH_DELAY_MS)
@@ -2241,6 +2726,30 @@ class BrowserController(private val activity: Activity) {
     private fun persist() {
         store.saveTabs(tabs.toList(), selectedTabId)
         store.saveProfiles(profiles.toList(), activeProfileId)
+        savePersistentFilterRules()
+    }
+
+    private fun savePersistentFilterRules() {
+        candyRuleRepository.save(filterRules.filterNot { it.id in ephemeralRuleIds })
+    }
+
+    private fun rebuildCandyMatcher() {
+        val snapshots = CandyMatcherSnapshots.compile(filterRules.toList(), ephemeralRuleIds)
+        matcherSnapshot.set(snapshots.persistent)
+        incognitoMatcherSnapshot.set(snapshots.incognito)
+    }
+
+    private fun matcherFor(isIncognito: Boolean): CandyMatcherSnapshot =
+        if (isIncognito) incognitoMatcherSnapshot.get() else matcherSnapshot.get()
+
+    private fun onFilterRulesChanged(persist: Boolean) {
+        rebuildCandyMatcher()
+        webViews.forEach { (tabId, webView) ->
+            installCosmeticDocumentStartScripts(tabId, webView)
+            webView.evaluateJavascript(CandyCosmeticScript.cleanupScript, null)
+            injectCandyCosmeticFallback(tabId, webView, pageUrls[tabId] ?: webView.url)
+        }
+        if (persist) savePersistentFilterRules()
     }
 
     private fun newTabState(
@@ -2353,6 +2862,7 @@ class BrowserController(private val activity: Activity) {
             privacyXRayRepository.remove(tabId)
         }
         privacySnapshots.remove(tabId)
+        reportedAllowedDecisions.remove(tabId)
         temporarySiteExceptions.remove(tabId)
         updateTab(tabId) { tab ->
             if (tab.blockedCount == 0) tab else tab.copy(blockedCount = 0)
@@ -2409,6 +2919,7 @@ class BrowserController(private val activity: Activity) {
         pageUrl: String,
     ) {
         applyCookiePolicy(tabId, webView, pageUrl)
+        installCosmeticDocumentStartScripts(tabId, webView)
         if (!workerSettings.hideCookieConsent) {
             removeCookieConsentDocumentStartScript(webView)
             webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
@@ -2431,6 +2942,7 @@ class BrowserController(private val activity: Activity) {
         val webView = webViewFor(tabId)
         val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
         applyCookiePolicy(tabId, webView, pageUrl)
+        installCosmeticDocumentStartScripts(tabId, webView)
         if (workerSettings.hideCookieConsent) {
             installCookieConsentDocumentStartScript(tabId, webView)
         }
@@ -2456,6 +2968,7 @@ class BrowserController(private val activity: Activity) {
                 if (workerSettings.hideCookieConsent) {
                     installCookieConsentDocumentStartScript(tab.id, webView)
                 }
+                installCosmeticDocumentStartScripts(tab.id, webView)
                 applySiteProtectionForNavigation(tab.id, webView, pageUrl)
             }
     }
@@ -2538,6 +3051,12 @@ class BrowserController(private val activity: Activity) {
     }
 
     private fun clearIncognitoProfile() {
+        incognitoRuleHits.clear()
+        if (ephemeralRuleIds.isNotEmpty()) {
+            filterRules.removeAll { it.id in ephemeralRuleIds }
+            ephemeralRuleIds.clear()
+            onFilterRulesChanged(persist = false)
+        }
         if (!isProfileIsolationSupported) return
         deleteOrScheduleWebViewProfile(incognitoWebViewProfileName)
         incognitoWebViewProfileName = newIncognitoWebViewProfileName()
@@ -2612,6 +3131,7 @@ class BrowserController(private val activity: Activity) {
 
     private fun destroyWebView(webView: WebView) {
         removeCookieConsentDocumentStartScript(webView)
+        removeCosmeticDocumentStartScripts(webView)
         (webView.parent as? FrameLayout)?.removeView(webView)
         webView.setOnScrollChangeListener(null)
         webView.stopLoading()
@@ -2647,6 +3167,8 @@ class BrowserController(private val activity: Activity) {
             WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
         const val PREVIEW_CAPTURE_IDLE_DELAY_MS = 220L
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
+        const val MAX_COSMETIC_DOCUMENT_START_RULES = 64
+        const val MAX_REPORTED_ALLOW_DECISIONS = 64
     }
 
     private data class ProtectionRequestContext(
@@ -2654,5 +3176,6 @@ class BrowserController(private val activity: Activity) {
         val isIncognito: Boolean,
         val storageKey: String,
         val pageHost: String?,
+        val pendingFilterHits: ConcurrentHashMap<String, AtomicInteger> = ConcurrentHashMap(),
     )
 }
