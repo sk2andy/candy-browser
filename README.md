@@ -57,11 +57,19 @@ beobachteten Cookie-Ereignisse.
 
 ### Candy Rules v1
 
-Filter Studio importiert und exportiert ausschließlich das kleine, versionierte Candy-Format —
-nicht Adblock Plus oder uBlock-Syntax. Nach der Kopfzeile `candy-rules:1` enthält jede tab-getrennte
-Zeile `rule`, Aktion (`block`, `allow`, `css`), Typ (`host`, `pair`, `origin`) und Ziel; weitere
-Felder halten CSS-Selector, ID, Profil, Gruppe und Aktivstatus. Import ist auf 512 KiB, 8.192 Zeilen
-und insgesamt 4.096 aktive Regeln begrenzt; höchstens 64 kosmetische Regeln werden angenommen.
+Filter Studio importiert das kleine, versionierte Candy-Format sowie einen bewusst begrenzten,
+sicher abbildbaren Teil von Adblock-Plus-/uBlock-Listen: exakte `||host^`-Block-/Allow-Regeln,
+positive `domain=`-/`from=`-Hostpaare, HOSTS-Einträge und ursprungsgebundene Standard-CSS-Selektoren.
+JavaScript, reguläre Ausdrücke, Negationen, Umleitungen, HTML-/Response-Header-Filter und erweiterte
+kosmetische Operatoren werden sichtbar übersprungen. Filter Studio behauptet keine vollständige
+Adblock-Plus-/uBlock-Kompatibilität. Vor dem Import wählt der Nutzer ausdrücklich ein vorhandenes
+Profil oder alle Profile; nicht unterstützte Zeilen müssen bestätigt werden.
+
+Candy-Exporte bleiben bei `candy-rules:1`. Danach enthält jede tab-getrennte Zeile `rule`, Aktion
+(`block`, `allow`, `css`), Typ (`host`, `pair`, `origin`) und Ziel; weitere Felder halten
+CSS-Selector, ID, Profil, Gruppe und Aktivstatus. Candy-Import ist auf 512 KiB und 8.192 Zeilen,
+Adblock-Import auf 5 MiB und 100.000 Zeilen begrenzt. Mehr als insgesamt 4.096 Regeln oder 64
+kosmetische Regeln werden atomar abgelehnt statt nur teilweise importiert.
 
 HTTPS-Abonnements werden nur nach explizitem Abruf importiert. Jede Aktualisierung zeigt zuerst
 einen Diff und verlangt Bestätigung. Abonnements akzeptieren nur Candy-Host-/Paarregeln, niemals

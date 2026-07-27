@@ -229,7 +229,7 @@
     <string name="filter_test_explanation">Saisissez un hôte ou une URL. Candy indique la règle active qui déciderait, sans charger l’adresse.</string>
     <string name="filter_tools_section">Import et listes de filtres</string>
     <string name="filter_transfer_title">Transférer les règles Candy</string>
-    <string name="filter_transfer_body">Importez ou exportez Candy Rules v1 comme texte. Ce format n’est pas une liste Adblock Plus ou uBlock.</string>
+    <string name="filter_transfer_body">Importez Candy Rules v1 ou le sous-ensemble pris en charge des listes Adblock Plus/uBlock. L’export utilise toujours Candy Rules v1.</string>
     <string name="filter_search">Rechercher des règles</string>
     <string name="filter_all">Tout</string>
     <string name="filter_block">Bloquer</string>
@@ -260,8 +260,19 @@
     <string name="filter_import">Importer</string>
     <string name="filter_export">Exporter</string>
     <string name="filter_import_preview">Aperçu de l’import</string>
-    <string name="filter_import_paste">Coller Candy Rules v1</string>
-    <string name="filter_preview_summary">Valides : %1$d · Erreurs : %2$d</string>
+    <string name="filter_import_paste">Coller des règles Candy, Adblock Plus ou uBlock</string>
+    <string name="filter_import_supported_body">Pris en charge depuis Adblock Plus/uBlock : règles exactes ||hôte^ de blocage et d’autorisation, restrictions domain= positives et CSS standard propre à un site avec ##. Les autres syntaxes sont signalées comme ignorées. Candy ne revendique pas une compatibilité complète.</string>
+    <string name="filter_import_format">Format détecté : %1$s</string>
+    <string name="filter_import_format_candy">Candy Rules v1</string>
+    <string name="filter_import_format_adblock">Sous-ensemble hôte Adblock Plus/uBlock</string>
+    <string name="filter_import_scope">Importer pour</string>
+    <string name="filter_profile_description">Profil %1$s</string>
+    <string name="filter_import_apply_failed">Aucune nouvelle règle n’a été importée. Elle existe peut-être déjà, ou le profil ou la capacité a changé.</string>
+    <string name="filter_analyze_import">Analyser les règles</string>
+    <string name="filter_analyzing_import">Analyse en cours…</string>
+    <string name="filter_preview_summary">Acceptées : %1$d · Ignorées : %2$d · Erreurs : %3$d</string>
+    <string name="filter_skipped_line">Ligne %1$d ignorée : %2$s</string>
+    <string name="filter_confirm_skipped">Importer les règles prises en charge et ignorer %1$d lignes non prises en charge</string>
     <string name="filter_apply_preview">Appliquer l’aperçu</string>
     <string name="filter_subscription">Liste de filtres depuis le Web</string>
     <string name="filter_web_list_body">Chargez un fichier de règles Candy depuis une adresse Web fiable. Il peut bloquer ou autoriser des hôtes partout ou seulement sur un site précis. Candy affiche chaque changement avant application ; aucune mise à jour automatique. CSS et JavaScript sont refusés.</string>
@@ -300,8 +311,10 @@
     <string name="filter_error_line">Ligne %1$d : %2$s</string>
     <string name="filter_error_https">Une URL HTTPS valide est requise.</string>
     <string name="filter_error_network">La source n’a pas pu être chargée.</string>
-    <string name="filter_error_limit">Le fichier dépasse une limite documentée.</string>
+    <string name="filter_error_limit">L’import dépasse la limite de taille, de lignes ou de règles de Candy. Rien ne sera importé.</string>
     <string name="filter_error_subscription_css">Les abonnements acceptent seulement les règles de domaine et de paire.</string>
     <string name="filter_error_header">L’en-tête Candy Rules v1 est absent.</string>
+    <string name="filter_error_no_supported_rules">Aucune règle prise en charge n’a été trouvée.</string>
+    <string name="filter_error_adblock_unsupported">Candy ne peut pas représenter cette syntaxe Adblock Plus/uBlock en toute sécurité.</string>
     <string name="filter_error_invalid">La règle est mal formée ou non prise en charge.</string>
 </resources>

@@ -54,6 +54,7 @@ import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.CandyCosmeticScript
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
 import dev.sk2andy.materialbrowser.blocking.CandyHostCanonicalizer
+import dev.sk2andy.materialbrowser.blocking.CandyImportScope
 import dev.sk2andy.materialbrowser.blocking.CandyMatcherSnapshot
 import dev.sk2andy.materialbrowser.blocking.CandyMatcherSnapshots
 import dev.sk2andy.materialbrowser.blocking.CandyPublicSuffixRules
@@ -61,6 +62,7 @@ import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleDecision
 import dev.sk2andy.materialbrowser.blocking.CandyRuleFormat
+import dev.sk2andy.materialbrowser.blocking.CandyRuleImport
 import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
 import dev.sk2andy.materialbrowser.blocking.CandyRuleOrigin
 import dev.sk2andy.materialbrowser.blocking.CandyRulePreview
@@ -383,10 +385,12 @@ class BrowserController(private val activity: Activity) {
         return true
     }
 
-    fun importFilterRules(text: String): CandyRulePreview = CandyRuleFormat.parse(text)
+    fun importFilterRules(text: String): CandyRulePreview = CandyRuleImport.parse(text)
 
     fun applyFilterImport(preview: CandyRulePreview): Int {
         if (!preview.isApplicable) return 0
+        val profileIds = profiles.map(BrowserProfile::id)
+        if (preview.rules.any { !CandyImportScope.isAllowed(it.profileId, profileIds) }) return 0
         val temporary = selectedTab.isIncognito
         val additions = prepareRuleBatch(preview.rules) ?: return 0
         if (additions.isEmpty()) return 0

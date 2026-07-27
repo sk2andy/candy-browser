@@ -238,7 +238,7 @@
     <string name="filter_test_explanation">Enter a host or URL. Candy shows which active rule would decide it without loading the address.</string>
     <string name="filter_tools_section">Import and filter lists</string>
     <string name="filter_transfer_title">Back up or restore Candy rules</string>
-    <string name="filter_transfer_body">Import or export Candy Rules v1 as text. This format is not an Adblock Plus or uBlock list.</string>
+    <string name="filter_transfer_body">Import Candy Rules v1 or the supported subset of Adblock Plus and uBlock lists. Export always uses Candy Rules v1.</string>
     <string name="filter_search">Search rules</string>
     <string name="filter_all">All</string>
     <string name="filter_block">Block</string>
@@ -269,8 +269,19 @@
     <string name="filter_import">Import</string>
     <string name="filter_export">Export</string>
     <string name="filter_import_preview">Import preview</string>
-    <string name="filter_import_paste">Paste Candy Rules v1</string>
-    <string name="filter_preview_summary">Valid: %1$d · Errors: %2$d</string>
+    <string name="filter_import_paste">Paste Candy, Adblock Plus, or uBlock rules</string>
+    <string name="filter_import_supported_body">Supported from Adblock Plus/uBlock: exact ||host^ block and allow rules, positive domain= restrictions, and site-specific standard CSS with ##. Other syntax is shown as skipped. Candy does not claim full compatibility.</string>
+    <string name="filter_import_format">Detected format: %1$s</string>
+    <string name="filter_import_format_candy">Candy Rules v1</string>
+    <string name="filter_import_format_adblock">Adblock Plus/uBlock host subset</string>
+    <string name="filter_import_scope">Import for</string>
+    <string name="filter_profile_description">Profile %1$s</string>
+    <string name="filter_import_apply_failed">No new rules were imported. They may already exist, or the selected profile or capacity changed.</string>
+    <string name="filter_analyze_import">Analyze rules</string>
+    <string name="filter_analyzing_import">Analyzing…</string>
+    <string name="filter_preview_summary">Accepted: %1$d · Skipped: %2$d · Errors: %3$d</string>
+    <string name="filter_skipped_line">Skipped line %1$d: %2$s</string>
+    <string name="filter_confirm_skipped">Import supported rules and ignore %1$d unsupported lines</string>
     <string name="filter_apply_preview">Apply preview</string>
     <string name="filter_subscription">Filter list from the web</string>
     <string name="filter_web_list_body">Load a Candy rule file from a trusted web address. It may block or allow hosts everywhere or only on one website. Candy previews every change; nothing updates automatically. CSS and JavaScript are rejected.</string>
@@ -309,8 +320,10 @@
     <string name="filter_error_line">Line %1$d: %2$s</string>
     <string name="filter_error_https">A valid HTTPS URL is required.</string>
     <string name="filter_error_network">The source could not be fetched.</string>
-    <string name="filter_error_limit">The file exceeds a documented limit.</string>
+    <string name="filter_error_limit">The import exceeds Candy’s size, line, or rule limit. Nothing will be imported.</string>
     <string name="filter_error_subscription_css">Subscriptions accept domain and pair rules only.</string>
     <string name="filter_error_header">Candy Rules v1 header is missing.</string>
+    <string name="filter_error_no_supported_rules">No supported rules were found.</string>
+    <string name="filter_error_adblock_unsupported">Candy cannot represent this Adblock Plus/uBlock syntax safely.</string>
     <string name="filter_error_invalid">The rule is malformed or unsupported.</string>
 </resources>

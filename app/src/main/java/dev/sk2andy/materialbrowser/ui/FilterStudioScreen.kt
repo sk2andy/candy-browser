@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -62,9 +64,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -73,6 +76,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
+import dev.sk2andy.materialbrowser.blocking.CandyImportFormat
+import dev.sk2andy.materialbrowser.blocking.CandyImportScope
 import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleDecision
@@ -87,6 +92,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -98,6 +104,13 @@ internal object FilterStudioTestTags {
     const val Body = "filter_studio_body"
     const val EmptyState = "filter_studio_empty_state"
     const val WebList = "filter_studio_web_list"
+    const val ImportOpen = "filter_studio_import_open"
+    const val ImportInput = "filter_studio_import_input"
+    const val ImportAnalyze = "filter_studio_import_analyze"
+    const val ImportScopeGlobal = "filter_studio_import_scope_global"
+    const val ImportScopeCurrent = "filter_studio_import_scope_current"
+    const val ImportSkippedConfirm = "filter_studio_import_skipped_confirm"
+    const val ImportConfirm = "filter_studio_import_confirm"
 }
 
 private enum class StudioTypeFilter { All, Block, Allow, Css }
@@ -367,11 +380,19 @@ internal fun FilterStudioScreen(
     }
     if (importVisible) {
         FilterImportDialog(
+            profiles = profiles,
+            currentProfileId = currentProfileId,
             onDismiss = { importVisible = false },
             onParse = onParseImport,
             onApply = {
-                onApplyImport(it)
-                importVisible = false
+                val applied = onApplyImport(it)
+                if (applied > 0) {
+                    importVisible = false
+                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    true
+                } else {
+                    false
+                }
             },
         )
     }
@@ -535,7 +556,12 @@ private fun RuleTransferCard(onImport: () -> Unit, onExport: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = onImport,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(FilterStudioTestTags.ImportOpen),
+            ) {
                 Text(stringResource(R.string.filter_import))
             }
             OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
@@ -833,66 +859,226 @@ private fun AddFilterRuleDialog(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FilterImportDialog(
+    profiles: List<BrowserProfile>,
+    currentProfileId: String,
     onDismiss: () -> Unit,
     onParse: (String) -> CandyRulePreview,
-    onApply: (CandyRulePreview) -> Unit,
+    onApply: (CandyRulePreview) -> Boolean,
 ) {
     var text by remember { mutableStateOf("") }
-    val preview = remember(text) { onParse(text) }
+    var targetProfileId by remember { mutableStateOf<String?>(currentProfileId) }
+    var skippedConfirmed by remember { mutableStateOf(false) }
+    var preview by remember { mutableStateOf<CandyRulePreview?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    var applyFailed by remember { mutableStateOf(false) }
+    var parseJob by remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
+    val scopedPreview = remember(preview, targetProfileId) {
+        preview?.let { CandyImportScope.apply(it, targetProfileId) }
+    }
+    val canApply = scopedPreview?.let {
+        it.isApplicable && (it.skippedCount == 0 || skippedConfirmed)
+    } == true
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.filter_import_preview)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    stringResource(R.string.filter_import_supported_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { text = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    onValueChange = {
+                        parseJob?.cancel()
+                        text = it
+                        preview = null
+                        skippedConfirmed = false
+                        loading = false
+                        applyFailed = false
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(FilterStudioTestTags.ImportInput),
                     minLines = 8,
                     label = { Text(stringResource(R.string.filter_import_paste)) },
                 )
-                Text(
-                    stringResource(
-                        R.string.filter_preview_summary,
-                        preview.rules.size,
-                        preview.errors.size,
-                    ),
-                    modifier = Modifier.padding(top = 8.dp),
-                    color = if (preview.isApplicable) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.error
+                OutlinedButton(
+                    onClick = {
+                        val input = text
+                        parseJob?.cancel()
+                        loading = true
+                        applyFailed = false
+                        parseJob = scope.launch {
+                            val parsed = withContext(Dispatchers.Default) { onParse(input) }
+                            if (text == input) {
+                                preview = parsed
+                                loading = false
+                            }
+                        }
                     },
-                )
-                preview.errors.take(3).forEach { error ->
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(FilterStudioTestTags.ImportAnalyze),
+                    enabled = text.isNotBlank() && !loading,
+                ) {
+                    if (loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.filter_analyzing_import))
+                    } else {
+                        Text(stringResource(R.string.filter_analyze_import))
+                    }
+                }
+                scopedPreview?.let { currentPreview ->
                     Text(
                         stringResource(
-                            R.string.filter_error_line,
-                            error.line,
-                            filterErrorLabel(error.message),
+                            R.string.filter_import_format,
+                            currentPreview.format.label(),
                         ),
-                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp),
+                        style = MaterialTheme.typography.labelLarge,
                     )
-                }
-                preview.rules.take(4).forEach { rule ->
                     Text(
-                        "• ${rule.action.label()} · ${rule.scopeLabel()} · ${rule.displayTarget()}",
-                        style = MaterialTheme.typography.bodySmall,
+                        stringResource(
+                            R.string.filter_preview_summary,
+                            currentPreview.rules.size,
+                            currentPreview.skippedCount,
+                            currentPreview.errors.size,
+                        ),
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                        },
+                        color = if (currentPreview.isApplicable) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
                     )
-                }
-                if (preview.rules.size > 4) {
                     Text(
-                        stringResource(R.string.filter_more_rules, preview.rules.size - 4),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        stringResource(R.string.filter_import_scope),
+                        modifier = Modifier.padding(top = 8.dp),
+                        style = MaterialTheme.typography.labelLarge,
                     )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = targetProfileId == null,
+                            onClick = { targetProfileId = null },
+                            modifier = Modifier.testTag(FilterStudioTestTags.ImportScopeGlobal),
+                            label = { Text(stringResource(R.string.filter_scope_global)) },
+                        )
+                        profiles.forEach { profile ->
+                            val profileDescription = stringResource(
+                                R.string.filter_profile_description,
+                                profile.emoji,
+                            )
+                            FilterChip(
+                                selected = targetProfileId == profile.id,
+                                onClick = { targetProfileId = profile.id },
+                                modifier = Modifier.testTag(
+                                    if (profile.id == currentProfileId) {
+                                        FilterStudioTestTags.ImportScopeCurrent
+                                    } else {
+                                        "filter_studio_import_scope_${profile.id}"
+                                    },
+                                ).semantics {
+                                    contentDescription = profileDescription
+                                },
+                                label = { Text(profile.emoji) },
+                            )
+                        }
+                    }
+                    currentPreview.errors.take(3).forEach { error ->
+                        Text(
+                            stringResource(
+                                R.string.filter_error_line,
+                                error.line,
+                                filterErrorLabel(error.message),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    currentPreview.skipped.take(3).forEach { skipped ->
+                        Text(
+                            stringResource(
+                                R.string.filter_skipped_line,
+                                skipped.line,
+                                filterErrorLabel(skipped.message),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (currentPreview.skippedCount > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .toggleable(
+                                    value = skippedConfirmed,
+                                    role = Role.Checkbox,
+                                    onValueChange = { skippedConfirmed = it },
+                                )
+                                .testTag(FilterStudioTestTags.ImportSkippedConfirm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = skippedConfirmed,
+                                onCheckedChange = null,
+                            )
+                            Text(
+                                stringResource(
+                                    R.string.filter_confirm_skipped,
+                                    currentPreview.skippedCount,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                    currentPreview.rules.take(4).forEach { rule ->
+                        Text(
+                            "• ${rule.action.label()} · ${rule.scopeLabel()} · ${rule.displayTarget()}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    if (currentPreview.rules.size > 4) {
+                        Text(
+                            stringResource(
+                                R.string.filter_more_rules,
+                                currentPreview.rules.size - 4,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (applyFailed) {
+                        Text(
+                            stringResource(R.string.filter_import_apply_failed),
+                            modifier = Modifier.semantics {
+                                liveRegion = LiveRegionMode.Assertive
+                            },
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            Button(onClick = { onApply(preview) }, enabled = preview.isApplicable) {
+            Button(
+                onClick = {
+                    applyFailed = scopedPreview?.let(onApply) == false
+                },
+                modifier = Modifier.testTag(FilterStudioTestTags.ImportConfirm),
+                enabled = canApply,
+            ) {
                 Text(stringResource(R.string.filter_apply_preview))
             }
         },
@@ -1044,6 +1230,14 @@ private fun StudioTypeFilter.label(): String = stringResource(
 )
 
 @Composable
+private fun CandyImportFormat.label(): String = stringResource(
+    when (this) {
+        CandyImportFormat.CandyRulesV1 -> R.string.filter_import_format_candy
+        CandyImportFormat.AdblockCompatible -> R.string.filter_import_format_adblock
+    },
+)
+
+@Composable
 private fun CandyRuleAction.label(): String = stringResource(
     when (this) {
         CandyRuleAction.Block -> R.string.filter_block
@@ -1077,6 +1271,8 @@ private fun filterErrorLabel(code: String): String = stringResource(
         code in setOf("size-limit", "line-limit", "rule-limit") -> R.string.filter_error_limit
         code == "subscription-css-forbidden" -> R.string.filter_error_subscription_css
         code == "missing-header" -> R.string.filter_error_header
+        code == "no-supported-rules" -> R.string.filter_error_no_supported_rules
+        code == "unsupported-adblock" -> R.string.filter_error_adblock_unsupported
         else -> R.string.filter_error_invalid
     },
 )

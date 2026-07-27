@@ -5,10 +5,15 @@ import java.util.Base64
 
 data class CandyRuleLineError(val line: Int, val message: String)
 
+enum class CandyImportFormat { CandyRulesV1, AdblockCompatible }
+
 data class CandyRulePreview(
     val rules: List<CandyRule>,
     val errors: List<CandyRuleLineError>,
     val truncated: Boolean = false,
+    val format: CandyImportFormat = CandyImportFormat.CandyRulesV1,
+    val skipped: List<CandyRuleLineError> = emptyList(),
+    val skippedCount: Int = skipped.size,
 ) {
     val isApplicable: Boolean get() = errors.isEmpty() && !truncated
 }
@@ -22,18 +27,20 @@ object CandyRuleFormat {
         if (text.toByteArray(Charsets.UTF_8).size > MAX_IMPORT_BYTES) {
             return CandyRulePreview(emptyList(), listOf(CandyRuleLineError(0, "size-limit")), true)
         }
-        val lines = text.lineSequence().toList()
+        val lines = text.lineSequence()
+            .map { it.trim().trimStart('\uFEFF') }
+            .toList()
         if (lines.size > MAX_IMPORT_LINES) {
             return CandyRulePreview(emptyList(), listOf(CandyRuleLineError(0, "line-limit")), true)
         }
-        val firstContent = lines.indexOfFirst { it.trim().isNotEmpty() && !it.trim().startsWith('#') }
-        if (firstContent < 0 || lines[firstContent].trim() != HEADER) {
+        val firstContent = lines.indexOfFirst { it.isNotEmpty() && !it.startsWith('#') }
+        if (firstContent < 0 || lines[firstContent] != HEADER) {
             return CandyRulePreview(emptyList(), listOf(CandyRuleLineError(1, "missing-header")))
         }
         val rules = mutableListOf<CandyRule>()
         val errors = mutableListOf<CandyRuleLineError>()
         lines.forEachIndexed { index, raw ->
-            val line = raw.trim()
+            val line = raw
             if (index <= firstContent || line.isEmpty() || line.startsWith('#')) return@forEachIndexed
             val parsed = parseLine(line, origin)
             when (parsed) {
