@@ -108,9 +108,9 @@ internal fun PrivacyXRayBadge(
             .semantics {
                 contentDescription = description
                 role = Role.Button
-            },
+        },
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = Color.Transparent,
     ) {
         Box(
             modifier = Modifier.padding(horizontal = 10.dp),
@@ -118,7 +118,7 @@ internal fun PrivacyXRayBadge(
         ) {
             Text(
                 text = "◈ $blockedCount",
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
             )
