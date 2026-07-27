@@ -1,8 +1,11 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.blocking.CandyRule
@@ -53,7 +56,45 @@ class FilterStudioScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(FilterStudioTestTags.Screen).assertExists()
         composeRule.onNodeWithText("news.example → tracker.example").assertExists()
+        composeRule.onNodeWithTag(FilterStudioTestTags.Body)
+            .performScrollToNode(hasTestTag(FilterStudioTestTags.Search))
         composeRule.onNodeWithTag(FilterStudioTestTags.Search).performTextInput("missing")
         composeRule.onNodeWithText("news.example → tracker.example").assertDoesNotExist()
+    }
+
+    @Test
+    fun emptyStudioExplainsPrimaryAndAdvancedActions() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                FilterStudioScreen(
+                    rules = emptyList(),
+                    profiles = listOf(BrowserProfile(id = "default", emoji = "🍬")),
+                    currentProfileId = "default",
+                    currentUrl = "https://news.example",
+                    recentDomain = null,
+                    selectedRuleId = null,
+                    onTest = { null },
+                    onAdd = { it },
+                    onUpdate = { it },
+                    onToggle = { _, _ -> },
+                    onDelete = {},
+                    onParseImport = { dev.sk2andy.materialbrowser.blocking.CandyRuleFormat.parse(it) },
+                    onApplyImport = { 0 },
+                    onApplySubscription = { _, _ -> 0 },
+                    onExport = { "candy-rules:1" },
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(FilterStudioTestTags.Add).assertExists()
+        composeRule.onNodeWithContentDescription("Import").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Export").assertDoesNotExist()
+        composeRule.onNodeWithTag(FilterStudioTestTags.Body)
+            .performScrollToNode(hasTestTag(FilterStudioTestTags.WebList))
+        composeRule.onNodeWithTag(FilterStudioTestTags.WebList).assertExists()
+        composeRule.onNodeWithTag(FilterStudioTestTags.Body)
+            .performScrollToNode(hasTestTag(FilterStudioTestTags.EmptyState))
+        composeRule.onNodeWithTag(FilterStudioTestTags.EmptyState).assertExists()
     }
 }

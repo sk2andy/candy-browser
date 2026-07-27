@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,22 +20,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +63,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,9 +95,14 @@ internal object FilterStudioTestTags {
     const val Search = "filter_studio_search"
     const val LiveTest = "filter_studio_live_test"
     const val Add = "filter_studio_add"
+    const val Body = "filter_studio_body"
+    const val EmptyState = "filter_studio_empty_state"
+    const val WebList = "filter_studio_web_list"
 }
 
 private enum class StudioTypeFilter { All, Block, Allow, Css }
+
+private const val RULE_ITEMS_START_INDEX = 10
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -147,7 +160,7 @@ internal fun FilterStudioScreen(
     }
     LaunchedEffect(selectedRuleId, filtered.map(CandyRule::id)) {
         val index = filtered.indexOfFirst { it.id == selectedRuleId }
-        if (index >= 0) listState.animateScrollToItem(index)
+        if (index >= 0) listState.animateScrollToItem(RULE_ITEMS_START_INDEX + index)
     }
 
     Surface(
@@ -180,132 +193,140 @@ internal fun FilterStudioScreen(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        stringResource(R.string.filter_studio_format_note),
+                        stringResource(R.string.filter_studio_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = { importVisible = true }) {
-                    Icon(Icons.Default.Add, stringResource(R.string.filter_import))
-                }
-                IconButton(onClick = { exportVisible = true }) {
-                    Icon(Icons.Default.Check, stringResource(R.string.filter_export))
-                }
-                IconButton(
-                    onClick = { addVisible = true },
-                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
-                ) {
-                    Icon(Icons.Default.Add, stringResource(R.string.filter_add_rule))
-                }
-            }
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(FilterStudioTestTags.Search),
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                label = { Text(stringResource(R.string.filter_search)) },
-                singleLine = true,
-                shape = RoundedCornerShape(22.dp),
-            )
-            Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StudioTypeFilter.entries.forEach { filter ->
-                    FilterChip(
-                        selected = typeFilter == filter,
-                        onClick = { typeFilter = filter },
-                        label = { Text(filter.label()) },
-                    )
-                }
-                FilterChip(
-                    selected = profileOnly,
-                    onClick = { profileOnly = !profileOnly },
-                    label = { Text(stringResource(R.string.filter_scope_profile)) },
-                )
-            }
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text(
-                        stringResource(R.string.filter_live_test),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = liveInput,
-                            onValueChange = { liveInput = it },
-                            modifier = Modifier.weight(1f),
-                            label = { Text(stringResource(R.string.filter_test_request)) },
-                            singleLine = true,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                liveDecision = onTest(liveInput)
-                                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                            },
-                        ) {
-                            Text(stringResource(R.string.filter_test_action))
-                        }
-                    }
-                    AnimatedContent(
-                        targetState = liveDecision,
-                        transitionSpec = { fadeIn(tween(160)) togetherWith fadeOut(tween(90)) },
-                        label = "Filter live decision",
-                    ) { decision ->
-                        Text(
-                            text = when (decision?.action) {
-                                CandyDecisionAction.Block -> stringResource(
-                                    R.string.filter_test_blocked_by,
-                                    decision.rule.group,
-                                )
-                                CandyDecisionAction.Allow -> stringResource(
-                                    R.string.filter_test_allowed_by,
-                                    decision.rule.group,
-                                )
-                                null -> stringResource(R.string.filter_test_no_match)
-                            },
-                            modifier = Modifier.padding(top = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.filter_rules_count, filtered.size),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                TextButton(onClick = { subscriptionVisible = true }) {
-                    Text(stringResource(R.string.filter_subscription))
-                }
             }
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(FilterStudioTestTags.Body),
                 state = listState,
-                verticalArrangement = Arrangement.spacedBy(9.dp),
+                contentPadding = PaddingValues(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(filtered, key = CandyRule::id) { rule ->
-                    FilterRuleCard(
-                        rule = rule,
-                        profileLabel = rule.profileId?.let { id ->
-                            profiles.firstOrNull { it.id == id }?.let { "${it.emoji} · $id" } ?: id
-                        } ?: stringResource(R.string.filter_scope_global),
-                        selected = rule.id == selectedRuleId,
-                        onToggle = { onToggle(rule.id, it) },
-                        onEdit = { editingRule = rule },
-                        onDelete = { onDelete(rule.id) },
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { addVisible = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .sizeIn(minHeight = 52.dp)
+                                .testTag(FilterStudioTestTags.Add),
+                            shape = RoundedCornerShape(18.dp),
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.filter_add_rule))
+                        }
+                        Text(
+                            stringResource(R.string.filter_add_rule_explanation),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                item {
+                    StudioSectionHeader(title = stringResource(R.string.filter_rules_section))
+                }
+                item {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(FilterStudioTestTags.Search),
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        label = { Text(stringResource(R.string.filter_search)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(22.dp),
                     )
                 }
-                item { Spacer(Modifier.height(12.dp)) }
+                item {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StudioTypeFilter.entries.forEach { filter ->
+                            FilterChip(
+                                selected = typeFilter == filter,
+                                onClick = { typeFilter = filter },
+                                label = { Text(filter.label()) },
+                            )
+                        }
+                        FilterChip(
+                            selected = profileOnly,
+                            onClick = { profileOnly = !profileOnly },
+                            label = { Text(stringResource(R.string.filter_scope_profile)) },
+                        )
+                    }
+                }
+                item {
+                    StudioSectionHeader(title = stringResource(R.string.filter_test_section))
+                }
+                item {
+                    FilterLiveTestCard(
+                        liveInput = liveInput,
+                        onInputChanged = { liveInput = it },
+                        decision = liveDecision,
+                        onTest = {
+                            liveDecision = onTest(liveInput)
+                            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        },
+                    )
+                }
+                item {
+                    StudioSectionHeader(title = stringResource(R.string.filter_tools_section))
+                }
+                item {
+                    RuleTransferCard(
+                        onImport = { importVisible = true },
+                        onExport = { exportVisible = true },
+                    )
+                }
+                item {
+                    WebFilterListCard(onOpen = { subscriptionVisible = true })
+                }
+                item {
+                    StudioSectionHeader(
+                        title = stringResource(R.string.filter_rule_results_section),
+                        trailing = stringResource(R.string.filter_rules_count, filtered.size),
+                    )
+                }
+                if (filtered.isEmpty()) {
+                    item {
+                        StudioEmptyState(
+                            title = stringResource(
+                                if (rules.isEmpty()) {
+                                    R.string.filter_empty_title
+                                } else {
+                                    R.string.filter_no_results_title
+                                },
+                            ),
+                            body = stringResource(
+                                if (rules.isEmpty()) {
+                                    R.string.filter_empty_body
+                                } else {
+                                    R.string.filter_no_results_body
+                                },
+                            ),
+                            actionVisible = rules.isEmpty(),
+                            onAdd = { addVisible = true },
+                        )
+                    }
+                } else {
+                    items(filtered, key = CandyRule::id) { rule ->
+                        FilterRuleCard(
+                            rule = rule,
+                            profileLabel = rule.profileId?.let { id ->
+                                profiles.firstOrNull { it.id == id }?.emoji ?: id
+                            } ?: stringResource(R.string.filter_scope_global),
+                            selected = rule.id == selectedRuleId,
+                            onToggle = { onToggle(rule.id, it) },
+                            onEdit = { editingRule = rule },
+                            onDelete = { onDelete(rule.id) },
+                        )
+                    }
+                }
             }
         }
     }
@@ -374,6 +395,187 @@ internal fun FilterStudioScreen(
 }
 
 @Composable
+private fun StudioSectionHeader(title: String, trailing: String? = null) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp, bottom = 2.dp)
+            .semantics { heading() },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        trailing?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StudioEmptyState(
+    title: String,
+    body: String,
+    actionVisible: Boolean,
+    onAdd: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(FilterStudioTestTags.EmptyState),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(
+                body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (actionVisible) {
+                OutlinedButton(onClick = onAdd) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.filter_add_first_rule))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterLiveTestCard(
+    liveInput: String,
+    onInputChanged: (String) -> Unit,
+    decision: CandyRuleDecision?,
+    onTest: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(FilterStudioTestTags.LiveTest),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.filter_test_explanation),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            OutlinedTextField(
+                value = liveInput,
+                onValueChange = onInputChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.filter_test_request)) },
+                singleLine = true,
+            )
+            Button(
+                onClick = onTest,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.filter_test_action))
+            }
+            AnimatedContent(
+                targetState = decision,
+                transitionSpec = { fadeIn(tween(160)) togetherWith fadeOut(tween(90)) },
+                label = "Filter live decision",
+            ) { currentDecision ->
+                Text(
+                    text = when (currentDecision?.action) {
+                        CandyDecisionAction.Block -> stringResource(
+                            R.string.filter_test_blocked_by,
+                            currentDecision.rule.group,
+                        )
+                        CandyDecisionAction.Allow -> stringResource(
+                            R.string.filter_test_allowed_by,
+                            currentDecision.rule.group,
+                        )
+                        null -> stringResource(R.string.filter_test_no_match)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RuleTransferCard(onImport: () -> Unit, onExport: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.filter_transfer_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                stringResource(R.string.filter_transfer_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.filter_import))
+            }
+            OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.filter_export))
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebFilterListCard(onOpen: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(FilterStudioTestTags.WebList),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.filter_subscription),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                stringResource(R.string.filter_web_list_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+            Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.filter_web_list_action))
+            }
+        }
+    }
+}
+
+@Composable
 private fun FilterRuleCard(
     rule: CandyRule,
     profileLabel: String,
@@ -392,7 +594,9 @@ private fun FilterRuleCard(
         label = "Filter rule highlight",
     )
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { this.selected = selected },
         shape = RoundedCornerShape(22.dp),
         color = color,
     ) {
@@ -446,17 +650,30 @@ private fun FilterRuleCard(
                     }
                 }
             }
-            val switchDescription = stringResource(R.string.filter_rule_toggle, rule.displayTarget())
+            val switchDescription = stringResource(
+                if (rule.active) {
+                    R.string.filter_rule_disable
+                } else {
+                    R.string.filter_rule_enable
+                },
+                rule.displayTarget(),
+            )
             Switch(
                 checked = rule.active,
                 onCheckedChange = onToggle,
                 modifier = Modifier.semantics { contentDescription = switchDescription },
             )
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, stringResource(R.string.filter_edit_rule))
+                Icon(
+                    Icons.Default.Edit,
+                    stringResource(R.string.filter_edit_rule_target, rule.displayTarget()),
+                )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, stringResource(R.string.filter_delete_rule))
+                Icon(
+                    Icons.Default.Delete,
+                    stringResource(R.string.filter_delete_rule_target, rule.displayTarget()),
+                )
             }
         }
     }
@@ -497,7 +714,10 @@ private fun AddFilterRuleDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(CandyRuleAction.Block, CandyRuleAction.Allow, CandyRuleAction.Cosmetic)
                         .forEach { value ->
@@ -601,7 +821,13 @@ private fun AddFilterRuleDialog(
                         ),
                     )
                 },
-            ) { Text(stringResource(R.string.action_add)) }
+            ) {
+                Text(
+                    stringResource(
+                        if (initialRule == null) R.string.action_add else R.string.action_done,
+                    ),
+                )
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
@@ -619,7 +845,7 @@ private fun FilterImportDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.filter_import_preview)) },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
@@ -651,7 +877,17 @@ private fun FilterImportDialog(
                     )
                 }
                 preview.rules.take(4).forEach { rule ->
-                    Text("• ${rule.displayTarget()}", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "• ${rule.action.label()} · ${rule.scopeLabel()} · ${rule.displayTarget()}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (preview.rules.size > 4) {
+                    Text(
+                        stringResource(R.string.filter_more_rules, preview.rules.size - 4),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         },
@@ -681,7 +917,10 @@ private fun FilterSubscriptionDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.filter_subscription)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Text(stringResource(R.string.filter_subscription_warning))
                 OutlinedTextField(
                     value = source,
@@ -701,7 +940,21 @@ private fun FilterSubscriptionDialog(
                         }
                     },
                     enabled = !loading,
-                ) { Text(stringResource(R.string.filter_fetch_preview)) }
+                ) {
+                    if (loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.filter_fetching_preview),
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        )
+                    } else {
+                        Text(stringResource(R.string.filter_fetch_preview))
+                    }
+                }
                 diff?.let { SubscriptionDiffText(it) }
                 (result as? CandySubscriptionResult.Error)?.let { error ->
                     Text(filterErrorLabel(error.reason), color = MaterialTheme.colorScheme.error)
@@ -730,16 +983,33 @@ private fun FilterSubscriptionDialog(
 
 @Composable
 private fun SubscriptionDiffText(diff: CandySubscriptionDiff) {
-    Text(
-        stringResource(
-            R.string.filter_diff_summary,
-            diff.added.size,
-            diff.removed.size,
-            diff.unchanged.size,
-        ),
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.SemiBold,
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            stringResource(
+                R.string.filter_diff_summary,
+                diff.added.size,
+                diff.removed.size,
+                diff.unchanged.size,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        diff.added.take(4).forEach { rule ->
+            Text("+ ${rule.displayTarget()}", style = MaterialTheme.typography.bodySmall)
+        }
+        diff.removed.take(4).forEach { rule ->
+            Text("− ${rule.displayTarget()}", style = MaterialTheme.typography.bodySmall)
+        }
+        val hidden = (diff.added.size - 4).coerceAtLeast(0) +
+            (diff.removed.size - 4).coerceAtLeast(0)
+        if (hidden > 0) {
+            Text(
+                stringResource(R.string.filter_more_changes, hidden),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable
@@ -748,13 +1018,16 @@ private fun TextPreviewDialog(title: String, text: String, onDismiss: () -> Unit
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = {},
-                readOnly = true,
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 10,
-            )
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 5,
+                    maxLines = 10,
+                )
+            }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_done)) } },
     )
