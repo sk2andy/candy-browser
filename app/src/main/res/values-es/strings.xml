@@ -228,6 +228,8 @@
     <string name="filter_test_section">Probar una solicitud</string>
     <string name="filter_test_explanation">Introduce un host o una URL. Candy muestra qué regla activa decidiría, sin cargar la dirección.</string>
     <string name="filter_tools_section">Importación y listas de filtros</string>
+    <string name="filter_builtin_title">Protecciones integradas</string>
+    <string name="filter_builtin_body">Candy incluye EasyList/EasyPrivacy para hosts publicitarios y de seguimiento, además de EasyList Cookie y selectores CMP verificados para banners de cookies en todos los perfiles. Estas protecciones permanecen separadas de las reglas editables y pueden desactivarse en Ajustes.</string>
     <string name="filter_transfer_title">Transferir reglas Candy</string>
     <string name="filter_transfer_body">Importa Candy Rules v1 o el subconjunto compatible de listas Adblock Plus/uBlock. La exportación siempre usa Candy Rules v1.</string>
     <string name="filter_search">Buscar reglas</string>
@@ -257,7 +259,7 @@
     <string name="filter_request_host">Host de solicitud</string>
     <string name="filter_first_party_host">Host de origen propio</string>
     <string name="filter_css_explanation_title">Ocultar parte de un sitio</string>
-    <string name="filter_css_explanation_body">Candy oculta los elementos de la página que coinciden con el selector, solo en el sitio indicado abajo. La regla no bloquea solicitudes ni ejecuta JavaScript.</string>
+    <string name="filter_css_explanation_body">Candy oculta los elementos de la página que coinciden con el selector, solo en el sitio indicado abajo. La regla no bloquea solicitudes ni ejecuta JavaScript. La protección global integrada ya cubre los banners de cookies habituales.</string>
     <string name="filter_css_site">Host del sitio (ejemplo.es)</string>
     <string name="filter_css_selector">Selector de elemento (CSS)</string>
     <string name="filter_css_selector_examples">Ejemplos: .sponsored oculta una clase; #cookie-banner un elemento con ese ID.</string>
@@ -279,9 +281,14 @@
     <string name="filter_confirm_skipped">Importar reglas compatibles e ignorar %1$d líneas no compatibles</string>
     <string name="filter_apply_preview">Aplicar vista previa</string>
     <string name="filter_subscription">Lista de filtros desde la Web</string>
-    <string name="filter_web_list_body">Carga un archivo de reglas Candy desde una dirección web de confianza. Puede bloquear o permitir hosts en todas partes o solo en un sitio concreto. Candy muestra cada cambio antes de aplicarlo; no hay actualizaciones automáticas. Se rechazan CSS y JavaScript.</string>
+    <string name="filter_web_list_body">Previsualiza una fuente Candy de confianza o una fuente Adblock/uBlock compatible antes de aplicar reglas de red compatibles. No hay actualizaciones automáticas; CSS y JavaScript nunca se importan.</string>
     <string name="filter_web_list_action">Añadir o actualizar lista</string>
-    <string name="filter_subscription_warning">Introduce una dirección HTTPS de confianza. Candy solo carga al tocar el botón, muestra cada cambio y espera confirmación. Solo se aceptan reglas de host y pares sitio→host Candy; sin CSS ni JavaScript.</string>
+    <string name="filter_subscription_warning">Introduce una dirección HTTPS de confianza. Candy solo carga tras tu acción y acepta únicamente reglas compatibles de host y pares sitio→host. La sintaxis no compatible, CSS y JavaScript quedan fuera.</string>
+    <string name="filter_subscription_private_note">Las importaciones de incógnito son adiciones temporales. Las reglas aprobadas siguen activas y estas adiciones desaparecen al finalizar la sesión privada.</string>
+    <string name="filter_ubo_preset_title">uBlock Origin – Anuncios (opcional)</string>
+    <string name="filter_ubo_preset_body">Fuente oficial de uAssets. Candy previsualiza e importa solo reglas compatibles de host y par; los filtros específicos de uBO se omiten. No se descarga nada sin tu acción.</string>
+    <string name="filter_use_ubo_preset">Usar fuente oficial</string>
+    <string name="filter_confirm_subscription_skipped">Aplicar reglas compatibles e ignorar %1$d líneas no compatibles o ajenas a la red</string>
     <string name="filter_source_url">URL de origen HTTPS</string>
     <string name="filter_fetch_preview">Obtener vista previa</string>
     <string name="filter_fetching_preview">Obteniendo vista previa…</string>

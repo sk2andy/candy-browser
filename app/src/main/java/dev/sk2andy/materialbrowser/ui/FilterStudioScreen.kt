@@ -76,6 +76,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
+import dev.sk2andy.materialbrowser.blocking.CandyFilterPresets
 import dev.sk2andy.materialbrowser.blocking.CandyImportFormat
 import dev.sk2andy.materialbrowser.blocking.CandyImportScope
 import dev.sk2andy.materialbrowser.blocking.CandyRule
@@ -115,16 +116,26 @@ internal object FilterStudioTestTags {
     const val CssExplanation = "filter_studio_css_explanation"
     const val CssSite = "filter_studio_css_site"
     const val CssSelector = "filter_studio_css_selector"
+    const val SubscriptionPreset = "filter_studio_subscription_preset"
+    const val SubscriptionSource = "filter_studio_subscription_source"
+    const val SubscriptionScopeGlobal = "filter_studio_subscription_scope_global"
+    const val SubscriptionScopeCurrent = "filter_studio_subscription_scope_current"
+    const val SubscriptionSkippedConfirm = "filter_studio_subscription_skipped_confirm"
+    const val SubscriptionConfirm = "filter_studio_subscription_confirm"
+    const val SubscriptionPrivateNote = "filter_studio_subscription_private_note"
+    const val BuiltInProtection = "filter_studio_builtin_protection"
 }
 
 private enum class StudioTypeFilter { All, Block, Allow, Css }
 
-private const val RULE_ITEMS_START_INDEX = 10
+private const val RULE_ITEMS_START_INDEX = 11
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FilterStudioScreen(
     rules: List<CandyRule>,
+    subscriptionRules: List<CandyRule> = rules,
+    isIncognito: Boolean = false,
     profiles: List<BrowserProfile>,
     currentProfileId: String,
     currentUrl: String,
@@ -295,6 +306,9 @@ internal fun FilterStudioScreen(
                     StudioSectionHeader(title = stringResource(R.string.filter_tools_section))
                 }
                 item {
+                    BuiltInProtectionCard()
+                }
+                item {
                     RuleTransferCard(
                         onImport = { importVisible = true },
                         onExport = { exportVisible = true },
@@ -409,11 +423,20 @@ internal fun FilterStudioScreen(
     }
     if (subscriptionVisible) {
         FilterSubscriptionDialog(
-            existingRules = rules,
+            existingRules = subscriptionRules,
+            profiles = profiles,
+            currentProfileId = currentProfileId,
+            isIncognito = isIncognito,
             onDismiss = { subscriptionVisible = false },
             onApply = { source, preview ->
-                onApplySubscription(source, preview)
-                subscriptionVisible = false
+                val applied = onApplySubscription(source, preview)
+                if (applied > 0) {
+                    subscriptionVisible = false
+                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    true
+                } else {
+                    false
+                }
             },
         )
     }
@@ -439,6 +462,32 @@ private fun StudioSectionHeader(title: String, trailing: String? = null) {
                 it,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BuiltInProtectionCard() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(FilterStudioTestTags.BuiltInProtection),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                stringResource(R.string.filter_builtin_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.filter_builtin_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         }
     }
@@ -578,9 +627,7 @@ private fun RuleTransferCard(onImport: () -> Unit, onExport: () -> Unit) {
 @Composable
 private fun WebFilterListCard(onOpen: () -> Unit) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(FilterStudioTestTags.WebList),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.tertiaryContainer,
     ) {
@@ -598,7 +645,12 @@ private fun WebFilterListCard(onOpen: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
             )
-            Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = onOpen,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(FilterStudioTestTags.WebList),
+            ) {
                 Text(stringResource(R.string.filter_web_list_action))
             }
         }
@@ -1138,19 +1190,35 @@ private fun FilterImportDialog(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FilterSubscriptionDialog(
     existingRules: List<CandyRule>,
+    profiles: List<BrowserProfile>,
+    currentProfileId: String,
+    isIncognito: Boolean,
     onDismiss: () -> Unit,
-    onApply: (String, CandyRulePreview) -> Unit,
+    onApply: (String, CandyRulePreview) -> Boolean,
 ) {
     var source by remember { mutableStateOf("") }
     var result by remember { mutableStateOf<CandySubscriptionResult?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var targetProfileId by remember { mutableStateOf<String?>(currentProfileId) }
+    var skippedConfirmed by remember { mutableStateOf(false) }
+    var applyFailed by remember { mutableStateOf(false) }
+    var fetchJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
     val preview = (result as? CandySubscriptionResult.Preview)?.preview
-    val previous = existingRules.filter { it.sourceUrl == source }
-    val diff = preview?.let { CandySubscriptionRules.diff(previous, it.rules) }
+    val scopedPreview = remember(preview, targetProfileId) {
+        preview?.let { CandyImportScope.apply(it, targetProfileId) }
+    }
+    val previous = existingRules.filter {
+        CandySubscriptionRules.isSameSourceScope(it, source, targetProfileId)
+    }
+    val diff = scopedPreview?.let { CandySubscriptionRules.diff(previous, it.rules) }
+    val canApply = scopedPreview?.let {
+        it.isApplicable && (it.skippedCount == 0 || skippedConfirmed)
+    } == true
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.filter_subscription)) },
@@ -1160,24 +1228,118 @@ private fun FilterSubscriptionDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(stringResource(R.string.filter_subscription_warning))
+                if (isIncognito) {
+                    Text(
+                        stringResource(R.string.filter_subscription_private_note),
+                        modifier = Modifier
+                            .testTag(FilterStudioTestTags.SubscriptionPrivateNote)
+                            .semantics { liveRegion = LiveRegionMode.Polite },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.filter_ubo_preset_title),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            stringResource(R.string.filter_ubo_preset_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                fetchJob?.cancel()
+                                source = CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL
+                                result = null
+                                loading = false
+                                skippedConfirmed = false
+                                applyFailed = false
+                            },
+                            modifier = Modifier.testTag(
+                                FilterStudioTestTags.SubscriptionPreset,
+                            ),
+                        ) {
+                            Text(stringResource(R.string.filter_use_ubo_preset))
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = source,
                     onValueChange = {
+                        fetchJob?.cancel()
                         source = it
                         result = null
+                        loading = false
+                        skippedConfirmed = false
+                        applyFailed = false
                     },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(FilterStudioTestTags.SubscriptionSource),
                     label = { Text(stringResource(R.string.filter_source_url)) },
                     singleLine = true,
                 )
+                Text(
+                    stringResource(R.string.filter_import_scope),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = targetProfileId == null,
+                        onClick = { targetProfileId = null },
+                        modifier = Modifier.testTag(
+                            FilterStudioTestTags.SubscriptionScopeGlobal,
+                        ),
+                        label = { Text(stringResource(R.string.filter_scope_global)) },
+                    )
+                    profiles.forEach { profile ->
+                        val profileDescription = stringResource(
+                            R.string.filter_profile_description,
+                            profile.emoji,
+                        )
+                        FilterChip(
+                            selected = targetProfileId == profile.id,
+                            onClick = { targetProfileId = profile.id },
+                            modifier = Modifier
+                                .testTag(
+                                    if (profile.id == currentProfileId) {
+                                        FilterStudioTestTags.SubscriptionScopeCurrent
+                                    } else {
+                                        "filter_studio_subscription_scope_${profile.id}"
+                                    },
+                                )
+                                .semantics { contentDescription = profileDescription },
+                            label = { Text(profile.emoji) },
+                        )
+                    }
+                }
                 OutlinedButton(
                     onClick = {
+                        val input = source
+                        fetchJob?.cancel()
                         loading = true
-                        scope.launch {
-                            result = withContext(Dispatchers.IO) { CandySubscriptionClient.fetch(source) }
-                            loading = false
+                        applyFailed = false
+                        fetchJob = scope.launch {
+                            val fetched = withContext(Dispatchers.IO) {
+                                CandySubscriptionClient.fetch(input)
+                            }
+                            if (source == input) {
+                                result = fetched
+                                loading = false
+                            }
                         }
                     },
-                    enabled = !loading,
+                    enabled = source.isNotBlank() && !loading,
                 ) {
                     if (loading) {
                         CircularProgressIndicator(
@@ -1191,6 +1353,59 @@ private fun FilterSubscriptionDialog(
                         )
                     } else {
                         Text(stringResource(R.string.filter_fetch_preview))
+                    }
+                }
+                scopedPreview?.let { currentPreview ->
+                    Text(
+                        stringResource(
+                            R.string.filter_preview_summary,
+                            currentPreview.rules.size,
+                            currentPreview.skippedCount,
+                            currentPreview.errors.size,
+                        ),
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                        },
+                        color = if (currentPreview.isApplicable) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                    )
+                    currentPreview.skipped.take(3).forEach { skipped ->
+                        Text(
+                            stringResource(
+                                R.string.filter_skipped_line,
+                                skipped.line,
+                                filterErrorLabel(skipped.message),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (currentPreview.skippedCount > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .toggleable(
+                                    value = skippedConfirmed,
+                                    role = Role.Checkbox,
+                                    onValueChange = { skippedConfirmed = it },
+                                )
+                                .testTag(
+                                    FilterStudioTestTags.SubscriptionSkippedConfirm,
+                                ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = skippedConfirmed, onCheckedChange = null)
+                            Text(
+                                stringResource(
+                                    R.string.filter_confirm_subscription_skipped,
+                                    currentPreview.skippedCount,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
                 diff?.let { SubscriptionDiffText(it) }
@@ -1207,12 +1422,25 @@ private fun FilterSubscriptionDialog(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
+                if (applyFailed) {
+                    Text(
+                        stringResource(R.string.filter_import_apply_failed),
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Assertive
+                        },
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { preview?.let { onApply(source, it) } },
-                enabled = preview?.isApplicable == true,
+                onClick = {
+                    applyFailed = scopedPreview?.let { onApply(source, it) } == false
+                },
+                modifier = Modifier.testTag(FilterStudioTestTags.SubscriptionConfirm),
+                enabled = canApply,
             ) { Text(stringResource(R.string.filter_confirm_update)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },

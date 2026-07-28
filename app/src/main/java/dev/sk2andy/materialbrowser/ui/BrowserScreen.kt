@@ -894,6 +894,10 @@ fun BrowserScreen(controller: BrowserController) {
         if (filterStudioVisible) {
             FilterStudioScreen(
                 rules = controller.filterRulesFor(controller.selectedTabId),
+                subscriptionRules = controller.filterSubscriptionRulesFor(
+                    controller.selectedTabId,
+                ),
+                isIncognito = controller.selectedTab.isIncognito,
                 profiles = controller.profiles,
                 currentProfileId = controller.selectedTab.profileId,
                 currentUrl = controller.filterStudioTestUrl(controller.selectedTabId),

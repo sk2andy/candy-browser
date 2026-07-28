@@ -7,6 +7,14 @@ data class CandyRuleLineError(val line: Int, val message: String)
 
 enum class CandyImportFormat { CandyRulesV1, AdblockCompatible }
 
+object CandyFilterPresets {
+    const val UBLOCK_ORIGIN_BASE_URL =
+        "https://ublockorigin.github.io/uAssets/filters/filters.txt"
+
+    fun groupFor(sourceUrl: String): String? =
+        "uBlock Origin".takeIf { sourceUrl == UBLOCK_ORIGIN_BASE_URL }
+}
+
 data class CandyRulePreview(
     val rules: List<CandyRule>,
     val errors: List<CandyRuleLineError>,
@@ -149,8 +157,8 @@ data class CandySubscriptionDiff(
 )
 
 object CandySubscriptionRules {
-    const val MAX_BYTES = 512 * 1_024
-    const val MAX_LINES = 8_192
+    const val MAX_BYTES = AdblockRuleFormat.MAX_IMPORT_BYTES
+    const val MAX_LINES = AdblockRuleFormat.MAX_IMPORT_LINES
     const val CONNECT_TIMEOUT_MS = 8_000
     const val READ_TIMEOUT_MS = 8_000
 
@@ -158,12 +166,47 @@ object CandySubscriptionRules {
         if (!CandyRuleValidator.isSafeHttpsUrl(sourceUrl)) {
             return CandyRulePreview(emptyList(), listOf(CandyRuleLineError(0, "https-required")))
         }
-        val preview = CandyRuleFormat.parse(body, CandyRuleOrigin.Subscription)
+        val skippedCss = ArrayList<CandyRuleLineError>()
+        var skippedCssCount = 0
+        val networkOnlyBody = body.lineSequence().mapIndexed { index, rawLine ->
+            val line = rawLine.trim().trimStart('\uFEFF')
+            val isCandyCss = line.startsWith("rule\tcss\t")
+            val isAdblockCosmetic = !line.startsWith('!') && listOf(
+                "##", "#@#", "#?#", "#$#", "#%#",
+            ).any(line::contains)
+            if (isCandyCss || isAdblockCosmetic) {
+                skippedCssCount++
+                if (skippedCss.size < 20) {
+                    skippedCss += CandyRuleLineError(index + 1, "subscription-css-forbidden")
+                }
+                ""
+            } else {
+                rawLine
+            }
+        }.joinToString("\n")
+        val preview = CandyRuleImport.parse(networkOnlyBody)
+        if (!preview.isApplicable) {
+            return preview.copy(
+                skipped = (skippedCss + preview.skipped).take(20),
+                skippedCount = skippedCssCount + preview.skippedCount,
+            )
+        }
         val forbidden = preview.rules.filter { it.kind == CandyRuleKind.CosmeticCss }
-        if (forbidden.isEmpty()) return preview
+        val allowed = preview.rules - forbidden.toSet()
+        val errors = buildList {
+            if (allowed.isEmpty()) add(CandyRuleLineError(0, "no-supported-rules"))
+        }
         return preview.copy(
-            rules = preview.rules - forbidden.toSet(),
-            errors = preview.errors + CandyRuleLineError(0, "subscription-css-forbidden"),
+            rules = allowed,
+            errors = errors,
+            skipped = buildList<CandyRuleLineError> {
+                addAll(skippedCss)
+                addAll(preview.skipped)
+                if (forbidden.isNotEmpty() && size < 20) {
+                    add(CandyRuleLineError(0, "subscription-css-forbidden"))
+                }
+            }.take(20),
+            skippedCount = skippedCssCount + preview.skippedCount + forbidden.size,
         )
     }
 
@@ -176,6 +219,20 @@ object CandySubscriptionRules {
             unchanged = after.filterKeys { it in before }.values.sortedBy(CandyRule::id),
         )
     }
+
+    fun isSameSourceScope(rule: CandyRule, sourceUrl: String, profileId: String?): Boolean =
+        rule.sourceUrl == sourceUrl && rule.profileId == profileId
+
+    fun storageKey(rule: CandyRule): String = listOf(
+        rule.action.name,
+        rule.kind.name,
+        rule.requestHost.orEmpty(),
+        rule.firstPartyHost.orEmpty(),
+        rule.cosmeticSelector.orEmpty(),
+        rule.profileId.orEmpty(),
+        if (rule.origin == CandyRuleOrigin.Subscription) rule.origin.name else "",
+        if (rule.origin == CandyRuleOrigin.Subscription) rule.sourceUrl.orEmpty() else "",
+    ).joinToString("\u0000")
 
     private fun semanticKey(rule: CandyRule): String = listOf(
         rule.action.name,

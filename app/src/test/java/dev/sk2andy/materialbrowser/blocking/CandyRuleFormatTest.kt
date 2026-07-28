@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.blocking
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -132,6 +133,53 @@ class CandyRuleFormatTest {
     }
 
     @Test
+    fun `subscription accepts safe adblock network subset and skips css and scriptlets`() {
+        val preview = CandySubscriptionRules.validatePreview(
+            CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL,
+            """
+            ||ads.example^
+            news.example##.cookie-overlay
+            news.example##+js(set-constant, consent, true)
+            """.trimIndent(),
+        )
+
+        assertTrue(preview.isApplicable)
+        assertEquals(listOf("ads.example"), preview.rules.map(CandyRule::requestHost))
+        assertEquals(2, preview.skippedCount)
+        assertTrue(preview.rules.none { it.kind == CandyRuleKind.CosmeticCss })
+    }
+
+    @Test
+    fun `subscription css volume cannot exhaust network rule capacity`() {
+        val body = buildString {
+            appendLine("||ads.example^")
+            repeat(CandyRuleValidator.MAX_COSMETIC_RULES + 1) { index ->
+                appendLine("site$index.example##.cookie-banner")
+            }
+        }
+
+        val preview = CandySubscriptionRules.validatePreview(
+            CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL,
+            body,
+        )
+
+        assertTrue(preview.isApplicable)
+        assertEquals(listOf("ads.example"), preview.rules.map(CandyRule::requestHost))
+        assertEquals(CandyRuleValidator.MAX_COSMETIC_RULES + 1, preview.skippedCount)
+    }
+
+    @Test
+    fun `official ublock preset is a safe explicit https source`() {
+        assertTrue(
+            CandyRuleValidator.isSafeHttpsUrl(CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL),
+        )
+        assertEquals(
+            "uBlock Origin",
+            CandyFilterPresets.groupFor(CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL),
+        )
+    }
+
+    @Test
     fun `subscription diff reports add remove and stable entries`() {
         val stable = CandyRule.new(
             CandyRuleAction.Block,
@@ -154,6 +202,63 @@ class CandyRuleFormatTest {
         assertEquals(listOf(added.id), diff.added.map(CandyRule::id))
         assertEquals(listOf(removed.id), diff.removed.map(CandyRule::id))
         assertEquals(listOf(stable.id), diff.unchanged.map(CandyRule::id))
+    }
+
+    @Test
+    fun `subscription identity keeps global and profile instances separate`() {
+        val global = CandyRule.new(
+            CandyRuleAction.Block,
+            CandyRuleKind.RequestHost,
+            requestHost = "global.example",
+        ).copy(sourceUrl = CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL)
+        val work = global.copy(id = "work", profileId = "work")
+
+        assertTrue(
+            CandySubscriptionRules.isSameSourceScope(
+                global,
+                CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL,
+                null,
+            ),
+        )
+        assertFalse(
+            CandySubscriptionRules.isSameSourceScope(
+                work,
+                CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL,
+                null,
+            ),
+        )
+        assertTrue(
+            CandySubscriptionRules.isSameSourceScope(
+                work,
+                CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL,
+                "work",
+            ),
+        )
+    }
+
+    @Test
+    fun `overlapping subscriptions keep separate source ownership`() {
+        val first = CandyRule.new(
+            CandyRuleAction.Block,
+            CandyRuleKind.RequestHost,
+            requestHost = "shared.example",
+            origin = CandyRuleOrigin.Subscription,
+            sourceUrl = "https://lists.example/a.txt",
+        )
+        val second = first.copy(
+            id = "second",
+            sourceUrl = "https://lists.example/b.txt",
+        )
+        val sameSourceUpdate = first.copy(id = "updated")
+
+        assertNotEquals(
+            CandySubscriptionRules.storageKey(first),
+            CandySubscriptionRules.storageKey(second),
+        )
+        assertEquals(
+            CandySubscriptionRules.storageKey(first),
+            CandySubscriptionRules.storageKey(sameSourceUpdate),
+        )
     }
 
     @Test

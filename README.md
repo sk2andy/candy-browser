@@ -72,9 +72,11 @@ Adblock-Import auf 5 MiB und 100.000 Zeilen begrenzt. Mehr als insgesamt 4.096 R
 kosmetische Regeln werden atomar abgelehnt statt nur teilweise importiert.
 
 HTTPS-Abonnements werden nur nach explizitem Abruf importiert. Jede Aktualisierung zeigt zuerst
-einen Diff und verlangt Bestätigung. Abonnements akzeptieren nur Candy-Host-/Paarregeln, niemals
-CSS oder JavaScript, und folgen weder Redirects noch fremder Filtersyntax. Inkognito-Regeln und
--Importe bleiben im Arbeitsspeicher und verändern keine persistente Subscription.
+einen Diff und verlangt Bestätigung. Als deaktivierter Preset ist die offizielle uBlock-Origin-
+Ads-Quelle hinterlegt; Candy lädt sie erst auf Nutzeraktion und übernimmt nur den sicher
+abbildbaren Host-/Paarumfang. Fremde Syntax, CSS, Scriptlets und JavaScript werden sichtbar
+übersprungen und niemals ausgeführt. Abonnements folgen keinen Redirects und lassen sich global
+oder genau einem Profil zuordnen. Inkognito-Regeln und -Importe bleiben im Arbeitsspeicher.
 
 ## Filterquellen
 
@@ -83,3 +85,6 @@ Creative Commons Attribution-ShareAlike 3.0 oder neuer verwendet. Quelle und Liz
 `app/src/main/assets/content_filter.LICENSE.txt`. Mit
 `scripts/update_content_filter_hosts.sh` und `scripts/update_cookie_banner_css.sh` lassen sich die
 eingebetteten, auf feste Quellrevisionen gepinnten Regellisten reproduzierbar aktualisieren.
+Der uBlock-Origin-Preset bündelt keine GPL-uAssets-Daten im APK. Er verweist auf die offizielle,
+vom Nutzer explizit abzurufende Quelle; Candy behauptet weder vollständige uBO-Kompatibilität noch
+eine Empfehlung oder Unterstützung durch das uBlock-Origin-Projekt.

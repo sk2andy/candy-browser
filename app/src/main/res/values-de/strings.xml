@@ -224,6 +224,8 @@
     <string name="filter_test_section">Anfrage testen</string>
     <string name="filter_test_explanation">Gib einen Host oder eine URL ein. Candy zeigt die entscheidende aktive Regel, ohne die Adresse zu laden.</string>
     <string name="filter_tools_section">Import und Filterlisten</string>
+    <string name="filter_builtin_title">Integrierte Standards</string>
+    <string name="filter_builtin_body">Candy enthält EasyList/EasyPrivacy für Werbe- und Tracker-Hosts sowie EasyList Cookie und geprüfte CMP-Selektoren für Cookie-Banner in allen Profilen. Diese Basis bleibt von bearbeitbaren Regeln getrennt und lässt sich in den Einstellungen abschalten.</string>
     <string name="filter_transfer_title">Candy-Regeln übertragen</string>
     <string name="filter_transfer_body">Importiere Candy Rules v1 oder den unterstützten Basisumfang aus Adblock-Plus-/uBlock-Listen. Export nutzt immer Candy Rules v1.</string>
     <string name="filter_search">Regeln suchen</string>
@@ -253,7 +255,7 @@
     <string name="filter_request_host">Request-Host</string>
     <string name="filter_first_party_host">Website-Host</string>
     <string name="filter_css_explanation_title">Teil einer Website ausblenden</string>
-    <string name="filter_css_explanation_body">Candy blendet Seitenelemente aus, die zum Selektor passen – nur auf der unten angegebenen Website. Die Regel blockiert keine Anfragen und führt kein JavaScript aus.</string>
+    <string name="filter_css_explanation_body">Candy blendet Seitenelemente aus, die zum Selektor passen – nur auf der unten angegebenen Website. Die Regel blockiert keine Anfragen und führt kein JavaScript aus. Häufige Cookie-Banner deckt bereits der integrierte globale Schutz ab.</string>
     <string name="filter_css_site">Website-Host (beispiel.de)</string>
     <string name="filter_css_selector">Seitenelement-Selektor (CSS)</string>
     <string name="filter_css_selector_examples">Beispiele: .sponsored blendet eine Klasse aus; #cookie-banner ein Element mit dieser ID.</string>
@@ -275,9 +277,14 @@
     <string name="filter_confirm_skipped">Unterstützte Regeln importieren und %1$d nicht unterstützte Zeilen ignorieren</string>
     <string name="filter_apply_preview">Vorschau anwenden</string>
     <string name="filter_subscription">Filterliste aus dem Web</string>
-    <string name="filter_web_list_body">Lade eine Candy-Regeldatei von einer vertrauenswürdigen Webadresse. Sie darf Hosts überall oder nur auf einer bestimmten Website blockieren oder erlauben. Candy zeigt jede Änderung vorab; nichts wird automatisch aktualisiert. CSS und JavaScript werden abgelehnt.</string>
+    <string name="filter_web_list_body">Prüfe eine vertrauenswürdige Candy- oder unterstützte Adblock-/uBlock-Quelle vor der Übernahme kompatibler Netzwerkregeln. Nichts aktualisiert sich automatisch; CSS und JavaScript werden nie importiert.</string>
     <string name="filter_web_list_action">Liste hinzufügen oder aktualisieren</string>
-    <string name="filter_subscription_warning">Gib eine vertrauenswürdige HTTPS-Adresse ein. Candy lädt nur nach Tippen auf die Schaltfläche, zeigt jede Änderung und wartet auf Bestätigung. Erlaubt sind nur Candy-Host- und Site→Host-Paarregeln, kein CSS oder JavaScript.</string>
+    <string name="filter_subscription_warning">Gib eine vertrauenswürdige HTTPS-Adresse ein. Candy lädt nur nach deiner Aktion und akzeptiert ausschließlich kompatible Host- und Site→Host-Regeln. Nicht unterstützte Syntax, CSS und JavaScript bleiben draußen.</string>
+    <string name="filter_subscription_private_note">Inkognito-Importe sind temporäre Ergänzungen. Freigegebene Regeln bleiben aktiv; die Ergänzungen verschwinden mit dem Ende der privaten Sitzung.</string>
+    <string name="filter_ubo_preset_title">uBlock Origin – Werbung (optional)</string>
+    <string name="filter_ubo_preset_body">Offizielle uAssets-Quelle. Candy zeigt eine Vorschau und importiert nur kompatible Host-/Paarregeln; uBO-spezifische Filter werden übersprungen. Kein Download ohne deine Aktion.</string>
+    <string name="filter_use_ubo_preset">Offizielle Quelle verwenden</string>
+    <string name="filter_confirm_subscription_skipped">Kompatible Regeln anwenden und %1$d nicht unterstützte oder Nicht-Netzwerk-Zeilen ignorieren</string>
     <string name="filter_source_url">HTTPS-Quell-URL</string>
     <string name="filter_fetch_preview">Vorschau abrufen</string>
     <string name="filter_fetching_preview">Vorschau wird geladen…</string>

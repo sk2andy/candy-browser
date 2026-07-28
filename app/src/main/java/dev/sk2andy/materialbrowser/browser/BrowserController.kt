@@ -53,6 +53,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.CandyCosmeticScript
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
+import dev.sk2andy.materialbrowser.blocking.CandyFilterPresets
 import dev.sk2andy.materialbrowser.blocking.CandyHostCanonicalizer
 import dev.sk2andy.materialbrowser.blocking.CandyImportScope
 import dev.sk2andy.materialbrowser.blocking.CandyMatcherSnapshot
@@ -68,6 +69,7 @@ import dev.sk2andy.materialbrowser.blocking.CandyRuleOrigin
 import dev.sk2andy.materialbrowser.blocking.CandyRulePreview
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidation
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidator
+import dev.sk2andy.materialbrowser.blocking.CandySubscriptionRules
 import dev.sk2andy.materialbrowser.blocking.ContentBlocker
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestSanitizer
 import dev.sk2andy.materialbrowser.blocking.PrivacyPolicyRules
@@ -245,6 +247,13 @@ class BrowserController(private val activity: Activity) {
             filterRules.filterNot { it.id in ephemeralRuleIds }
         }
 
+    fun filterSubscriptionRulesFor(tabId: String): List<CandyRule> =
+        if (tabs.firstOrNull { it.id == tabId }?.isIncognito == true) {
+            filterRules.filter { it.id in ephemeralRuleIds }
+        } else {
+            filterRules.filterNot { it.id in ephemeralRuleIds }
+        }
+
     fun filterStudioTestUrl(tabId: String): String =
         pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url.orEmpty()
 
@@ -402,6 +411,10 @@ class BrowserController(private val activity: Activity) {
 
     fun applyFilterSubscription(sourceUrl: String, preview: CandyRulePreview): Int {
         if (!preview.isApplicable || !CandyRuleValidator.isSafeHttpsUrl(sourceUrl)) return 0
+        val targetScopes = preview.rules.map(CandyRule::profileId).toSet()
+        if (targetScopes.size != 1) return 0
+        val targetProfileId = targetScopes.first()
+        if (!CandyImportScope.isAllowed(targetProfileId, profiles.map(BrowserProfile::id))) return 0
         val temporary = selectedTab.isIncognito
         val sourcePrefix = if (temporary) {
             "private-${UUID.randomUUID()}"
@@ -415,19 +428,33 @@ class BrowserController(private val activity: Activity) {
                     origin = CandyRuleOrigin.Subscription,
                     sourceUrl = sourceUrl,
                     updatedAtMillis = System.currentTimeMillis(),
-                    group = runCatching { java.net.URI(sourceUrl).host }.getOrNull()
-                        ?.take(48)
+                    group = CandyFilterPresets.groupFor(sourceUrl)
+                        ?: runCatching { java.net.URI(sourceUrl).host }.getOrNull()?.take(48)
                         ?: activity.getString(R.string.filter_group_subscription),
                 )
             },
         )
         if (temporary) {
             val oldIds = filterRules.asSequence()
-                .filter { it.sourceUrl == sourceUrl && it.id in ephemeralRuleIds }
+                .filter {
+                    CandySubscriptionRules.isSameSourceScope(it, sourceUrl, targetProfileId) &&
+                        it.id in ephemeralRuleIds
+                }
                 .map(CandyRule::id)
                 .toSet()
             val retained = filterRules.filterNot { it.id in oldIds }
-            val additions = prepareRuleBatch(imported, retained) ?: return 0
+            val persistentSourceIds = retained.asSequence()
+                .filter {
+                    CandySubscriptionRules.isSameSourceScope(it, sourceUrl, targetProfileId) &&
+                        it.id !in ephemeralRuleIds
+                }
+                .map(CandyRule::id)
+                .toSet()
+            val additions = prepareRuleBatch(
+                input = imported,
+                base = retained,
+                ignoreSemanticsForIds = persistentSourceIds,
+            ) ?: return 0
             filterRules.removeAll { it.id in oldIds }
             ephemeralRuleIds.removeAll(oldIds)
             incognitoRuleHits.keys.removeAll(oldIds)
@@ -437,7 +464,10 @@ class BrowserController(private val activity: Activity) {
             return additions.size
         }
         val oldIds = filterRules.asSequence()
-            .filter { it.sourceUrl == sourceUrl && it.id !in ephemeralRuleIds }
+            .filter {
+                CandySubscriptionRules.isSameSourceScope(it, sourceUrl, targetProfileId) &&
+                    it.id !in ephemeralRuleIds
+            }
             .map(CandyRule::id)
             .toSet()
         val retained = filterRules.filterNot { it.id in oldIds }
@@ -455,9 +485,12 @@ class BrowserController(private val activity: Activity) {
     private fun prepareRuleBatch(
         input: List<CandyRule>,
         base: List<CandyRule> = filterRules,
+        ignoreSemanticsForIds: Set<String> = emptySet(),
     ): List<CandyRule>? {
         val existingIds = base.mapTo(mutableSetOf(), CandyRule::id)
-        val existingSemantics = base.mapTo(mutableSetOf(), ::semanticRuleKey)
+        val existingSemantics = base.asSequence()
+            .filterNot { it.id in ignoreSemanticsForIds }
+            .mapTo(mutableSetOf(), CandySubscriptionRules::storageKey)
         var cosmeticCount = base.count { it.kind == CandyRuleKind.CosmeticCss }
         val additions = ArrayList<CandyRule>(input.size)
         for (inputRule in input) {
@@ -466,7 +499,7 @@ class BrowserController(private val activity: Activity) {
             if (rule.origin == CandyRuleOrigin.Import && rule.group == "Imported") {
                 rule = rule.copy(group = activity.getString(R.string.filter_group_imported))
             }
-            val semantics = semanticRuleKey(rule)
+            val semantics = CandySubscriptionRules.storageKey(rule)
             if (!existingSemantics.add(semantics)) continue
             if (rule.id in existingIds) rule = rule.copy(id = UUID.randomUUID().toString())
             if (base.size + additions.size >= CandyRuleValidator.MAX_RULES) return null

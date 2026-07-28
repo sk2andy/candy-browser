@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -17,6 +18,7 @@ import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
 import dev.sk2andy.materialbrowser.blocking.CandyRuleImport
 import dev.sk2andy.materialbrowser.blocking.CandyRulePreview
+import dev.sk2andy.materialbrowser.blocking.CandyFilterPresets
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicReference
@@ -99,11 +101,62 @@ class FilterStudioScreenInstrumentedTest {
         composeRule.onNodeWithContentDescription("Import").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Export").assertDoesNotExist()
         composeRule.onNodeWithTag(FilterStudioTestTags.Body)
+            .performScrollToNode(hasTestTag(FilterStudioTestTags.BuiltInProtection))
+        composeRule.onNodeWithTag(FilterStudioTestTags.BuiltInProtection).assertExists()
+        composeRule.onNodeWithTag(FilterStudioTestTags.Body)
             .performScrollToNode(hasTestTag(FilterStudioTestTags.WebList))
         composeRule.onNodeWithTag(FilterStudioTestTags.WebList).assertExists()
         composeRule.onNodeWithTag(FilterStudioTestTags.Body)
             .performScrollToNode(hasTestTag(FilterStudioTestTags.EmptyState))
         composeRule.onNodeWithTag(FilterStudioTestTags.EmptyState).assertExists()
+    }
+
+    @Test
+    fun officialUblockPresetRequiresExplicitFetchAndScope() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                FilterStudioScreen(
+                    rules = emptyList(),
+                    profiles = listOf(
+                        BrowserProfile(id = "default", emoji = "🍬"),
+                        BrowserProfile(id = "work", emoji = "💼"),
+                    ),
+                    currentProfileId = "default",
+                    isIncognito = true,
+                    currentUrl = "https://news.example",
+                    recentDomain = null,
+                    selectedRuleId = null,
+                    onTest = { null },
+                    onAdd = { it },
+                    onUpdate = { it },
+                    onToggle = { _, _ -> },
+                    onDelete = {},
+                    onParseImport = CandyRuleImport::parse,
+                    onApplyImport = { 0 },
+                    onApplySubscription = { _, _ -> 0 },
+                    onExport = { "candy-rules:1" },
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(FilterStudioTestTags.Body)
+            .performScrollToNode(hasTestTag(FilterStudioTestTags.WebList))
+        composeRule.onNodeWithTag(FilterStudioTestTags.WebList).performClick()
+        composeRule.onNodeWithTag(FilterStudioTestTags.SubscriptionPrivateNote).assertExists()
+        composeRule.onNodeWithTag(
+            FilterStudioTestTags.SubscriptionPreset,
+            useUnmergedTree = true,
+        ).performClick()
+        composeRule.onNodeWithTag(FilterStudioTestTags.SubscriptionSource)
+            .assertTextContains(CandyFilterPresets.UBLOCK_ORIGIN_BASE_URL)
+        composeRule.onNodeWithTag(FilterStudioTestTags.SubscriptionScopeCurrent)
+            .assertIsSelected()
+        composeRule.onNodeWithTag(FilterStudioTestTags.SubscriptionScopeGlobal)
+            .performClick()
+            .assertIsSelected()
+        composeRule.onNodeWithTag(FilterStudioTestTags.SubscriptionConfirm)
+            .assertIsNotEnabled()
     }
 
     @Test
