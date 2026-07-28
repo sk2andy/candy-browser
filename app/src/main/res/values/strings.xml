@@ -243,7 +243,7 @@
     <string name="filter_all">All</string>
     <string name="filter_block">Block</string>
     <string name="filter_allow">Allow</string>
-    <string name="filter_css">CSS</string>
+    <string name="filter_css">Hide elements</string>
     <string name="filter_scope">Scope</string>
     <string name="filter_scope_global">All profiles</string>
     <string name="filter_scope_profile">This profile</string>
@@ -265,7 +265,11 @@
     <string name="filter_type_pair">Site → host pair</string>
     <string name="filter_request_host">Request host</string>
     <string name="filter_first_party_host">First-party origin host</string>
-    <string name="filter_css_selector">Safe CSS selector</string>
+    <string name="filter_css_explanation_title">Hide part of a website</string>
+    <string name="filter_css_explanation_body">Candy hides page elements that match the selector, only on the website below. It does not block requests or run JavaScript.</string>
+    <string name="filter_css_site">Website host (example.com)</string>
+    <string name="filter_css_selector">Page element selector (CSS)</string>
+    <string name="filter_css_selector_examples">Examples: .sponsored hides a class; #cookie-banner hides an element with that ID.</string>
     <string name="filter_import">Import</string>
     <string name="filter_export">Export</string>
     <string name="filter_import_preview">Import preview</string>

@@ -230,7 +230,7 @@
     <string name="filter_all">Alle</string>
     <string name="filter_block">Blockieren</string>
     <string name="filter_allow">Erlauben</string>
-    <string name="filter_css">CSS</string>
+    <string name="filter_css">Elemente ausblenden</string>
     <string name="filter_scope">Geltungsbereich</string>
     <string name="filter_scope_global">Alle Profile</string>
     <string name="filter_scope_profile">Dieses Profil</string>
@@ -252,7 +252,11 @@
     <string name="filter_type_pair">Site→Host-Paar</string>
     <string name="filter_request_host">Request-Host</string>
     <string name="filter_first_party_host">Website-Host</string>
-    <string name="filter_css_selector">Sicherer CSS-Selektor</string>
+    <string name="filter_css_explanation_title">Teil einer Website ausblenden</string>
+    <string name="filter_css_explanation_body">Candy blendet Seitenelemente aus, die zum Selektor passen – nur auf der unten angegebenen Website. Die Regel blockiert keine Anfragen und führt kein JavaScript aus.</string>
+    <string name="filter_css_site">Website-Host (beispiel.de)</string>
+    <string name="filter_css_selector">Seitenelement-Selektor (CSS)</string>
+    <string name="filter_css_selector_examples">Beispiele: .sponsored blendet eine Klasse aus; #cookie-banner ein Element mit dieser ID.</string>
     <string name="filter_import">Importieren</string>
     <string name="filter_export">Exportieren</string>
     <string name="filter_import_preview">Importvorschau</string>

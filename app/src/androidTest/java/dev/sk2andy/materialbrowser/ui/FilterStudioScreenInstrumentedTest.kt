@@ -107,6 +107,38 @@ class FilterStudioScreenInstrumentedTest {
     }
 
     @Test
+    fun cosmeticRuleExplainsEffectWebsiteAndSelector() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                FilterStudioScreen(
+                    rules = emptyList(),
+                    profiles = listOf(BrowserProfile(id = "default", emoji = "🍬")),
+                    currentProfileId = "default",
+                    currentUrl = "https://news.example",
+                    recentDomain = null,
+                    selectedRuleId = null,
+                    onTest = { null },
+                    onAdd = { it },
+                    onUpdate = { it },
+                    onToggle = { _, _ -> },
+                    onDelete = {},
+                    onParseImport = CandyRuleImport::parse,
+                    onApplyImport = { 0 },
+                    onApplySubscription = { _, _ -> 0 },
+                    onExport = { "candy-rules:1" },
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(FilterStudioTestTags.Add).performClick()
+        composeRule.onNodeWithTag(FilterStudioTestTags.CssAction).performClick()
+        composeRule.onNodeWithTag(FilterStudioTestTags.CssExplanation).assertExists()
+        composeRule.onNodeWithTag(FilterStudioTestTags.CssSite).assertExists()
+        composeRule.onNodeWithTag(FilterStudioTestTags.CssSelector).assertExists()
+    }
+
+    @Test
     fun adblockImportRequiresScopeAndSkippedSyntaxConfirmation() {
         val applied = AtomicReference<CandyRulePreview?>()
         composeRule.setContent {

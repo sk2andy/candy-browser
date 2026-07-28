@@ -111,6 +111,10 @@ internal object FilterStudioTestTags {
     const val ImportScopeCurrent = "filter_studio_import_scope_current"
     const val ImportSkippedConfirm = "filter_studio_import_skipped_confirm"
     const val ImportConfirm = "filter_studio_import_confirm"
+    const val CssAction = "filter_studio_css_action"
+    const val CssExplanation = "filter_studio_css_explanation"
+    const val CssSite = "filter_studio_css_site"
+    const val CssSelector = "filter_studio_css_selector"
 }
 
 private enum class StudioTypeFilter { All, Block, Allow, Css }
@@ -757,6 +761,11 @@ private fun AddFilterRuleDialog(
                                         kind = CandyRuleKind.RequestHost
                                     }
                                 },
+                                modifier = if (value == CandyRuleAction.Cosmetic) {
+                                    Modifier.testTag(FilterStudioTestTags.CssAction)
+                                } else {
+                                    Modifier
+                                },
                                 label = { Text(value.label()) },
                             )
                         }
@@ -794,11 +803,50 @@ private fun AddFilterRuleDialog(
                         singleLine = true,
                     )
                 }
+                if (kind == CandyRuleKind.CosmeticCss) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(FilterStudioTestTags.CssExplanation),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.filter_css_explanation_title),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                stringResource(R.string.filter_css_explanation_body),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
                 if (kind != CandyRuleKind.RequestHost) {
                     OutlinedTextField(
                         value = firstPartyHost,
                         onValueChange = { firstPartyHost = it },
-                        label = { Text(stringResource(R.string.filter_first_party_host)) },
+                        modifier = if (kind == CandyRuleKind.CosmeticCss) {
+                            Modifier.testTag(FilterStudioTestTags.CssSite)
+                        } else {
+                            Modifier
+                        },
+                        label = {
+                            Text(
+                                stringResource(
+                                    if (kind == CandyRuleKind.CosmeticCss) {
+                                        R.string.filter_css_site
+                                    } else {
+                                        R.string.filter_first_party_host
+                                    },
+                                ),
+                            )
+                        },
                         singleLine = true,
                     )
                 }
@@ -806,7 +854,11 @@ private fun AddFilterRuleDialog(
                     OutlinedTextField(
                         value = selector,
                         onValueChange = { selector = it },
+                        modifier = Modifier.testTag(FilterStudioTestTags.CssSelector),
                         label = { Text(stringResource(R.string.filter_css_selector)) },
+                        supportingText = {
+                            Text(stringResource(R.string.filter_css_selector_examples))
+                        },
                     )
                 }
                 Text(stringResource(R.string.filter_scope), style = MaterialTheme.typography.labelLarge)

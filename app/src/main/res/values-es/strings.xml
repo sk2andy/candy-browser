@@ -234,7 +234,7 @@
     <string name="filter_all">Todas</string>
     <string name="filter_block">Bloquear</string>
     <string name="filter_allow">Permitir</string>
-    <string name="filter_css">CSS</string>
+    <string name="filter_css">Ocultar elementos</string>
     <string name="filter_scope">Ámbito</string>
     <string name="filter_scope_global">Todos los perfiles</string>
     <string name="filter_scope_profile">Este perfil</string>
@@ -256,7 +256,11 @@
     <string name="filter_type_pair">Par sitio→host</string>
     <string name="filter_request_host">Host de solicitud</string>
     <string name="filter_first_party_host">Host de origen propio</string>
-    <string name="filter_css_selector">Selector CSS seguro</string>
+    <string name="filter_css_explanation_title">Ocultar parte de un sitio</string>
+    <string name="filter_css_explanation_body">Candy oculta los elementos de la página que coinciden con el selector, solo en el sitio indicado abajo. La regla no bloquea solicitudes ni ejecuta JavaScript.</string>
+    <string name="filter_css_site">Host del sitio (ejemplo.es)</string>
+    <string name="filter_css_selector">Selector de elemento (CSS)</string>
+    <string name="filter_css_selector_examples">Ejemplos: .sponsored oculta una clase; #cookie-banner un elemento con ese ID.</string>
     <string name="filter_import">Importar</string>
     <string name="filter_export">Exportar</string>
     <string name="filter_import_preview">Vista previa de importación</string>

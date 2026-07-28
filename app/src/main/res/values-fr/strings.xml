@@ -234,7 +234,7 @@
     <string name="filter_all">Tout</string>
     <string name="filter_block">Bloquer</string>
     <string name="filter_allow">Autoriser</string>
-    <string name="filter_css">CSS</string>
+    <string name="filter_css">Masquer des éléments</string>
     <string name="filter_scope">Portée</string>
     <string name="filter_scope_global">Tous les profils</string>
     <string name="filter_scope_profile">Ce profil</string>
@@ -256,7 +256,11 @@
     <string name="filter_type_pair">Paire site→hôte</string>
     <string name="filter_request_host">Hôte de requête</string>
     <string name="filter_first_party_host">Hôte d’origine propriétaire</string>
-    <string name="filter_css_selector">Sélecteur CSS sûr</string>
+    <string name="filter_css_explanation_title">Masquer une partie d’un site</string>
+    <string name="filter_css_explanation_body">Candy masque les éléments de page correspondant au sélecteur, uniquement sur le site indiqué ci-dessous. La règle ne bloque aucune requête et n’exécute pas de JavaScript.</string>
+    <string name="filter_css_site">Hôte du site (exemple.fr)</string>
+    <string name="filter_css_selector">Sélecteur d’élément (CSS)</string>
+    <string name="filter_css_selector_examples">Exemples : .sponsored masque une classe ; #cookie-banner un élément portant cet ID.</string>
     <string name="filter_import">Importer</string>
     <string name="filter_export">Exporter</string>
     <string name="filter_import_preview">Aperçu de l’import</string>
