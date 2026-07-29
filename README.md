@@ -32,6 +32,8 @@ and local content protection.
 - User-initiated pop-ups and new windows opened as tabs
 - HTTP/HTTPS intent filters, default-browser role, and opening links in external apps
 - System Autofill for password managers and WebAuthn/passkey support provided by the installed WebView provider
+- Localized About & legal settings with developer/GitHub information, runtime license notices, offline
+  Apache terms, and the exact pinned uAssets source and GPL-3.0 license
 
 ## Build
 

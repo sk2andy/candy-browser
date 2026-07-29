@@ -839,6 +839,10 @@ fun BrowserScreen(controller: BrowserController) {
                     filterStudioSelectedRuleId = null
                     filterStudioVisible = true
                 },
+                onOpenLegalUrl = { url ->
+                    settingsVisible = false
+                    controller.openUrl(url, inNewTab = true)
+                },
                 onDismiss = { settingsVisible = false },
                 modifier = Modifier.graphicsLayer {
                     val progress = settingsBackProgress.value
@@ -4268,6 +4272,7 @@ private fun SettingsScreen(
     onRequestDefaultBrowser: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onFilterStudio: () -> Unit,
+    onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -4497,6 +4502,8 @@ private fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(24.dp))
+            AboutLegalSection(onOpenUrl = onOpenLegalUrl)
         }
     }
 }

@@ -153,6 +153,31 @@
     <string name="settings_block_third_party_cookies_title">Block third-party cookies</string>
     <string name="settings_block_third_party_cookies_subtitle">First-party cookies remain enabled for sign-ins</string>
     <string name="settings_protection_disclaimer">Local heuristic protection. Some ads, CNAME trackers, and banners in closed frames may get through.</string>
+    <string name="settings_section_about_legal">About &amp; legal</string>
+    <string name="settings_imprint_title">Developer &amp; imprint</string>
+    <string name="settings_imprint_summary">Developer identity and public GitHub project profile</string>
+    <string name="settings_open_source_title">Open-source &amp; third-party licenses</string>
+    <string name="settings_open_source_summary">Runtime libraries, services, and filter data</string>
+    <string name="settings_uassets_source_title">uBlock Origin block source</string>
+    <string name="settings_uassets_source_summary">Pinned source, scope, and GPL-3.0 license</string>
+    <string name="about_imprint_body">Candy Browser is a personal open-source project developed by %1$s. The linked public GitHub profile shows the developer and current projects.</string>
+    <string name="about_version">Candy Browser version %1$s</string>
+    <string name="about_github_action">Open GitHub profile</string>
+    <string name="about_open_source_intro">Candy uses these runtime components, services, and filter data. Google Code Scanner is listed separately because Google APIs Terms apply instead of an open-source license.</string>
+    <string name="about_license_androidx">AndroidX &amp; Jetpack Compose</string>
+    <string name="about_license_kotlin">Kotlin, Coroutines &amp; JetBrains annotations</string>
+    <string name="about_license_material_icons">Material Design Icons</string>
+    <string name="about_license_google_oss">Google open-source support libraries</string>
+    <string name="about_license_google_scanner">Google Code Scanner, ML Kit &amp; Play services</string>
+    <string name="about_license_easylist">EasyList, EasyPrivacy &amp; EasyList Cookie</string>
+    <string name="about_license_uassets">uBlock Origin uAssets</string>
+    <string name="about_source_action">Open pinned source</string>
+    <string name="about_license_action">View %1$s license</string>
+    <string name="about_terms_action">View %1$s terms</string>
+    <string name="about_bundled_notices_action">Read bundled notices offline</string>
+    <string name="about_bundled_notices_title">Bundled third-party notices</string>
+    <string name="about_notices_unavailable">Bundled notices could not be opened.</string>
+    <string name="about_uassets_body">Candy bundles a compiled subset of uAssets revision %1$s. Only exact request hosts and site-to-host pairs supported by Candy are included. Scriptlets, JavaScript, redirects, and advanced uBO syntax are excluded. This is not full uBlock Origin compatibility or endorsement.</string>
 
     <!-- Toasts and errors -->
     <string name="toast_tab_limit_reached">Maximum of %1$d tabs</string>
