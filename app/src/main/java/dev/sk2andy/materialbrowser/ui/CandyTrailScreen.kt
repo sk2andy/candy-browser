@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package dev.sk2andy.materialbrowser.ui
 
 import android.graphics.Bitmap
@@ -38,12 +40,15 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -55,6 +60,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -75,6 +81,8 @@ import androidx.compose.ui.zIndex
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.CandyTrail
+import dev.sk2andy.materialbrowser.browser.CandyTrailFork
+import dev.sk2andy.materialbrowser.browser.CandyTrailForkLifecycle
 import dev.sk2andy.materialbrowser.browser.CandyTrailNode
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -84,15 +92,18 @@ internal fun CandyTrailScreen(
     tab: BrowserTab,
     trail: CandyTrail,
     favicon: Bitmap?,
+    forkFavicons: Map<String, Bitmap>,
     sourceBounds: Rect?,
     predictiveBackProgress: Float,
     predictiveBackEdgeSign: Int,
     onOpenTabActions: () -> Unit,
     onSelectNode: (String) -> Unit,
+    onForkNode: (String) -> Boolean,
+    onSelectFork: (String) -> Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val layout = remember(trail.nodes) { CandyTrailLayoutRules.layout(trail) }
+    val layout = remember(trail.nodes, trail.forks) { CandyTrailLayoutRules.layout(trail) }
     val entryProgress = remember(tab.id) { Animatable(if (sourceBounds == null) 1f else 0f) }
     val scope = rememberCoroutineScope()
     val rootView = LocalView.current
@@ -101,9 +112,12 @@ internal fun CandyTrailScreen(
     var panY by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
     var viewportInitialized by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
     var viewportSignature by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
+    var actionNodeId by remember(tab.id) { mutableStateOf<String?>(null) }
     val density = LocalDensity.current
     val edgeColor = MaterialTheme.colorScheme.outlineVariant
     val currentEdgeColor = MaterialTheme.colorScheme.primary
+    val openForkEdgeColor = MaterialTheme.colorScheme.tertiary
+    val closedForkEdgeColor = MaterialTheme.colorScheme.outline
 
     LaunchedEffect(tab.id, sourceBounds) {
         if (sourceBounds != null) {
@@ -288,6 +302,8 @@ internal fun CandyTrailScreen(
                         progress = { entryProgress.value },
                         edgeColor = edgeColor,
                         currentEdgeColor = currentEdgeColor,
+                        openForkEdgeColor = openForkEdgeColor,
+                        closedForkEdgeColor = closedForkEdgeColor,
                     )
                     layout.positions.forEachIndexed { index, position ->
                         val node = nodeById.getValue(position.nodeId)
@@ -314,6 +330,46 @@ internal fun CandyTrailScreen(
                                 scope.launch {
                                     entryProgress.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
                                     onSelectNode(node.id)
+                                }
+                            },
+                            onMore = { actionNodeId = node.id },
+                        )
+                    }
+                    val forkById = remember(trail.forks) {
+                        trail.forks.associateBy(CandyTrailFork::id)
+                    }
+                    layout.forkPositions.forEachIndexed { index, position ->
+                        val fork = forkById.getValue(position.forkId)
+                        CandyTrailForkCard(
+                            fork = fork,
+                            favicon = fork.destinationTabId?.let(forkFavicons::get),
+                            modifier = Modifier
+                                .offset(position.x.dp, position.y.dp)
+                                .graphicsLayer {
+                                    val stagger = CandyTrailMotionRules.staggeredProgress(
+                                        progress = entryProgress.value,
+                                        index = layout.positions.size + index,
+                                        count = layout.positions.size + layout.forkPositions.size,
+                                    )
+                                    alpha = stagger
+                                    scaleX = 0.78f + 0.22f * stagger
+                                    scaleY = scaleX
+                                    translationX = (1f - stagger) * -42f
+                                },
+                            onClick = {
+                                scope.launch {
+                                    entryProgress.animateTo(
+                                        0f,
+                                        tween(180, easing = FastOutSlowInEasing),
+                                    )
+                                    if (onSelectFork(fork.id)) {
+                                        rootView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                                    } else {
+                                        entryProgress.animateTo(
+                                            1f,
+                                            tween(180, easing = FastOutSlowInEasing),
+                                        )
+                                    }
                                 }
                             },
                         )
@@ -348,6 +404,21 @@ internal fun CandyTrailScreen(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+        CandyTrailNodeActionsSheet(
+            node = actionNodeId?.let { nodeId -> trail.nodes.firstOrNull { it.id == nodeId } },
+            onFork = { nodeId ->
+                actionNodeId = null
+                scope.launch {
+                    entryProgress.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
+                    if (onForkNode(nodeId)) {
+                        rootView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    } else {
+                        entryProgress.animateTo(1f, tween(180, easing = FastOutSlowInEasing))
+                    }
+                }
+            },
+            onDismiss = { actionNodeId = null },
+        )
     }
 }
 
@@ -358,6 +429,8 @@ private fun CandyTrailEdges(
     progress: () -> Float,
     edgeColor: Color,
     currentEdgeColor: Color,
+    openForkEdgeColor: Color,
+    closedForkEdgeColor: Color,
 ) {
     val density = LocalDensity.current
     val positions = remember(layout.positions) { layout.positions.associateBy(CandyTrailNodePosition::nodeId) }
@@ -398,6 +471,45 @@ private fun CandyTrailEdges(
             )
         }
     }
+    val forkPositions = remember(layout.forkPositions) {
+        layout.forkPositions.associateBy(CandyTrailForkPosition::forkId)
+    }
+    val forkEdgePaths = remember(trail.forks, positions, forkPositions, density.density) {
+        trail.forks.mapIndexedNotNull { index, fork ->
+            val parent = positions[fork.originNodeId] ?: return@mapIndexedNotNull null
+            val child = forkPositions[fork.id] ?: return@mapIndexedNotNull null
+            val start = Offset(
+                x = (parent.x + CandyTrailLayoutRules.NODE_WIDTH) * density.density,
+                y = (parent.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f) * density.density,
+            )
+            val end = Offset(
+                x = child.x * density.density,
+                y = (child.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f) * density.density,
+            )
+            val controlDistance = (end.x - start.x) * 0.52f
+            CandyTrailForkEdgePath(
+                index = index,
+                lifecycle = fork.lifecycle,
+                path = Path().apply {
+                    moveTo(start.x, start.y)
+                    cubicTo(
+                        start.x + controlDistance,
+                        start.y,
+                        end.x - controlDistance,
+                        end.y,
+                        end.x,
+                        end.y,
+                    )
+                },
+                arrow = Path().apply {
+                    moveTo(end.x, end.y)
+                    lineTo(end.x - 12f, end.y - 7f)
+                    lineTo(end.x - 12f, end.y + 7f)
+                    close()
+                },
+            )
+        }
+    }
     Canvas(Modifier.fillMaxSize()) {
         edgePaths.forEach { edge ->
             val alpha = CandyTrailMotionRules.staggeredProgress(
@@ -418,12 +530,42 @@ private fun CandyTrailEdges(
                 (if (edgeOnCurrentPath) currentEdgeColor else edgeColor).copy(alpha = alpha),
             )
         }
+        forkEdgePaths.forEach { edge ->
+            val alpha = CandyTrailMotionRules.staggeredProgress(
+                progress = progress(),
+                index = trail.nodes.size + edge.index,
+                count = trail.nodes.size + trail.forks.size,
+            )
+            if (alpha <= 0f) return@forEach
+            val color = if (edge.lifecycle == CandyTrailForkLifecycle.Open) {
+                openForkEdgeColor
+            } else {
+                closedForkEdgeColor
+            }.copy(alpha = alpha)
+            drawPath(
+                path = edge.path,
+                color = color,
+                style = Stroke(
+                    width = 3.5f,
+                    cap = StrokeCap.Round,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 9f)),
+                ),
+            )
+            drawPath(edge.arrow, color)
+        }
     }
 }
 
 private data class CandyTrailEdgePath(
     val nodeId: String,
     val index: Int,
+    val path: Path,
+    val arrow: Path,
+)
+
+private data class CandyTrailForkEdgePath(
+    val index: Int,
+    val lifecycle: CandyTrailForkLifecycle,
     val path: Path,
     val arrow: Path,
 )
@@ -435,6 +577,7 @@ private fun CandyTrailNodeCard(
     favicon: Bitmap?,
     modifier: Modifier,
     onClick: () -> Unit,
+    onMore: () -> Unit,
 ) {
     val host = remember(node.url) { runCatching { Uri.parse(node.url).host.orEmpty() }.getOrDefault("") }
     val title = node.title.ifBlank { host.ifBlank { node.url } }
@@ -509,6 +652,130 @@ private fun CandyTrailNodeCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall,
                 )
+            }
+            IconButton(onClick = onMore) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = stringResource(R.string.cd_candy_trail_node_actions, title),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CandyTrailForkCard(
+    fork: CandyTrailFork,
+    favicon: Bitmap?,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val host = remember(fork.url) { runCatching { Uri.parse(fork.url).host.orEmpty() }.getOrDefault("") }
+    val title = fork.title.ifBlank { host.ifBlank { fork.url } }
+    val isOpen = fork.lifecycle == CandyTrailForkLifecycle.Open
+    val status = stringResource(if (isOpen) R.string.fork_status_open else R.string.fork_status_closed)
+    val description = stringResource(
+        if (isOpen) R.string.cd_candy_trail_fork_open else R.string.cd_candy_trail_fork_closed,
+        title,
+        host,
+    )
+    Surface(
+        modifier = modifier
+            .width(CandyTrailLayoutRules.NODE_WIDTH.dp)
+            .heightIn(min = CandyTrailLayoutRules.NODE_HEIGHT.dp)
+            .semantics { contentDescription = description }
+            .clickable(role = Role.Button, onClick = onClick),
+        shape = RoundedCornerShape(30.dp, 18.dp, 30.dp, 18.dp),
+        color = if (isOpen) {
+            MaterialTheme.colorScheme.tertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
+        tonalElevation = if (isOpen) 7.dp else 1.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (favicon != null && !favicon.isRecycled) {
+                Image(
+                    bitmap = favicon.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            if (isOpen) MaterialTheme.colorScheme.tertiary
+                            else MaterialTheme.colorScheme.outlineVariant,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = host.take(1).uppercase().ifBlank { "↗" },
+                        color = if (isOpen) MaterialTheme.colorScheme.onTertiary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = status,
+                    color = if (isOpen) MaterialTheme.colorScheme.onTertiaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CandyTrailNodeActionsSheet(
+    node: CandyTrailNode?,
+    onFork: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (node == null) return
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+        ) {
+            Text(
+                node.title.ifBlank { node.url },
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                stringResource(R.string.fork_url_only_disclaimer),
+                modifier = Modifier.padding(top = 6.dp, bottom = 10.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(
+                onClick = { onFork(node.id) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.action_fork_from_here))
             }
         }
     }

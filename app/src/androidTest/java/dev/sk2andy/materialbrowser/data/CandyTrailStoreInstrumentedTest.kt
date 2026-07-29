@@ -4,7 +4,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.CandyTrail
+import dev.sk2andy.materialbrowser.browser.CandyTrailFork
+import dev.sk2andy.materialbrowser.browser.CandyTrailForkLifecycle
 import dev.sk2andy.materialbrowser.browser.CandyTrailNode
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -45,6 +49,22 @@ class CandyTrailStoreInstrumentedTest {
             ),
             currentNodeId = "n2",
             nextOrdinal = 3L,
+            forks = listOf(
+                CandyTrailFork(
+                    id = "f0",
+                    originTabId = tabId,
+                    originNodeId = "n0",
+                    destinationTabId = UUID.randomUUID().toString(),
+                    profileId = "profile",
+                    isIncognito = false,
+                    url = "https://a.example",
+                    title = "A",
+                    createdAt = 4L,
+                    updatedAt = 4L,
+                    lifecycle = CandyTrailForkLifecycle.Open,
+                ),
+            ),
+            nextForkOrdinal = 1L,
         )
 
         assertTrue(store.save(tabId, trail))
@@ -60,6 +80,38 @@ class CandyTrailStoreInstrumentedTest {
 
         assertNull(store.load(tabId))
         assertFalse(file.exists())
+    }
+
+    @Test
+    fun versionOneGraphMigratesWithoutForks() {
+        val tabId = UUID.randomUUID().toString()
+        val file = store.fileFor(tabId)!!
+        file.parentFile!!.mkdirs()
+        file.writeText(
+            JSONObject()
+                .put("version", 1)
+                .put("tabId", tabId)
+                .put("currentNodeId", "n0")
+                .put("nextOrdinal", 1L)
+                .put(
+                    "nodes",
+                    JSONArray().put(
+                        JSONObject()
+                            .put("id", "n0")
+                            .put("parentId", null)
+                            .put("url", "https://legacy.example")
+                            .put("title", "Legacy")
+                            .put("visitedAt", 1L),
+                    ),
+                )
+                .toString(),
+        )
+
+        val migrated = store.load(tabId)
+
+        assertEquals(1, migrated!!.nodes.size)
+        assertTrue(migrated.forks.isEmpty())
+        assertEquals(0L, migrated.nextForkOrdinal)
     }
 
     @Test
@@ -89,6 +141,22 @@ class CandyTrailStoreInstrumentedTest {
             nodes = listOf(node("n0", null, tab.url, 1L)),
             currentNodeId = "n0",
             nextOrdinal = 1L,
+            forks = listOf(
+                CandyTrailFork(
+                    id = "f0",
+                    originTabId = tabId,
+                    originNodeId = "n0",
+                    destinationTabId = UUID.randomUUID().toString(),
+                    profileId = tab.profileId,
+                    isIncognito = true,
+                    url = tab.url,
+                    title = "Private fork",
+                    createdAt = 2L,
+                    updatedAt = 2L,
+                    lifecycle = CandyTrailForkLifecycle.Open,
+                ),
+            ),
+            nextForkOrdinal = 1L,
         )
         val completed = CountDownLatch(1)
         val repository = CandyTrailRepository.get(context)

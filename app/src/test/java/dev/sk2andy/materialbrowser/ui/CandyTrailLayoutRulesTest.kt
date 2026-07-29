@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
 import dev.sk2andy.materialbrowser.browser.CandyTrail
+import dev.sk2andy.materialbrowser.browser.CandyTrailFork
+import dev.sk2andy.materialbrowser.browser.CandyTrailForkLifecycle
 import dev.sk2andy.materialbrowser.browser.CandyTrailNode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -37,6 +39,36 @@ class CandyTrailLayoutRulesTest {
         }
         val siblings = first.positions.filter { it.nodeId == "left" || it.nodeId == "right" }
         assertTrue(kotlin.math.abs(siblings[0].y - siblings[1].y) >= CandyTrailLayoutRules.NODE_HEIGHT)
+    }
+
+    @Test
+    fun `fork endpoints are deterministic directed leaves without overlap`() {
+        val trail = CandyTrail(
+            tabId = "tab",
+            nodes = listOf(
+                node("root", null, 1L),
+                node("page", "root", 2L),
+            ),
+            currentNodeId = "page",
+            forks = listOf(
+                fork("first", "root", 3L),
+                fork("second", "root", 4L),
+            ),
+        )
+
+        val first = CandyTrailLayoutRules.layout(trail)
+        val second = CandyTrailLayoutRules.layout(trail)
+
+        assertEquals(first, second)
+        assertEquals(2, first.forkPositions.size)
+        val root = first.positions.single { it.nodeId == "root" }
+        first.forkPositions.forEach { position ->
+            assertEquals("root", position.originNodeId)
+            assertTrue(position.x > root.x)
+        }
+        val coordinates = first.positions.map { it.x to it.y } +
+            first.forkPositions.map { it.x to it.y }
+        assertEquals(coordinates.size, coordinates.distinct().size)
     }
 
     @Test
@@ -83,5 +115,19 @@ class CandyTrailLayoutRulesTest {
         url = "https://$id.example",
         title = id,
         visitedAt = at,
+    )
+
+    private fun fork(id: String, originNodeId: String, at: Long) = CandyTrailFork(
+        id = id,
+        originTabId = "tab",
+        originNodeId = originNodeId,
+        destinationTabId = "destination-$id",
+        profileId = "profile",
+        isIncognito = false,
+        url = "https://$id.example",
+        title = id,
+        createdAt = at,
+        updatedAt = at,
+        lifecycle = CandyTrailForkLifecycle.Open,
     )
 }

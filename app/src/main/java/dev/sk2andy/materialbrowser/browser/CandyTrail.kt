@@ -13,6 +13,8 @@ data class CandyTrail(
     val nodes: List<CandyTrailNode> = emptyList(),
     val currentNodeId: String? = null,
     val nextOrdinal: Long = 0L,
+    val forks: List<CandyTrailFork> = emptyList(),
+    val nextForkOrdinal: Long = 0L,
 )
 
 data class CandyTrailMergeResult(
@@ -153,6 +155,25 @@ object CandyTrailRules {
                 nextOrdinal = merged.nextOrdinal + 1L,
             )
         }
+        val runtimeForks = runtimeTrail.forks.mapNotNull { fork ->
+            val mappedOriginNodeId = mappedIds[fork.originNodeId] ?: return@mapNotNull null
+            fork.copy(originNodeId = mappedOriginNodeId)
+        }
+        runtimeForks.forEach { runtimeFork ->
+            val duplicate = merged.forks.any { restoredFork ->
+                restoredFork.originNodeId == runtimeFork.originNodeId &&
+                    restoredFork.destinationTabId == runtimeFork.destinationTabId &&
+                    restoredFork.url == runtimeFork.url &&
+                    restoredFork.lifecycle == runtimeFork.lifecycle
+            }
+            if (!duplicate) {
+                val newId = "f${merged.nextForkOrdinal}"
+                merged = merged.copy(
+                    forks = merged.forks + runtimeFork.copy(id = newId),
+                    nextForkOrdinal = merged.nextForkOrdinal + 1L,
+                )
+            }
+        }
         val retained = retain(
             merged.copy(
                 currentNodeId = runtimeTrail.currentNodeId?.let(mappedIds::get) ?: merged.currentNodeId,
@@ -207,12 +228,22 @@ object CandyTrailRules {
     }
 
     fun retain(trail: CandyTrail, maxNodes: Int = MAX_NODES): CandyTrail {
-        if (maxNodes <= 0) return CandyTrail(tabId = trail.tabId, nextOrdinal = trail.nextOrdinal)
-        if (trail.nodes.size <= maxNodes) return trail
-        val retained = trail.nodes.associateByTo(linkedMapOf(), CandyTrailNode::id)
+        if (maxNodes <= 0) {
+            return CandyTrail(
+                tabId = trail.tabId,
+                nextOrdinal = trail.nextOrdinal,
+                nextForkOrdinal = trail.nextForkOrdinal,
+            )
+        }
+        val forkNormalized = CandyTrailForkRules.normalized(trail)
+        if (forkNormalized.nodes.size <= maxNodes) return forkNormalized
+        val retained = forkNormalized.nodes.associateByTo(linkedMapOf(), CandyTrailNode::id)
 
         while (retained.size > maxNodes) {
-            val protectedIds = ancestorIds(retained, trail.currentNodeId)
+            val protectedIds = ancestorIds(retained, forkNormalized.currentNodeId)
+            forkNormalized.forks.asSequence()
+                .filter { it.lifecycle == CandyTrailForkLifecycle.Open }
+                .forEach { fork -> protectedIds += ancestorIds(retained, fork.originNodeId) }
             val parentIds = retained.values.mapNotNullTo(mutableSetOf(), CandyTrailNode::parentId)
             val removableLeaf = retained.values.asSequence()
                 .filter { it.id !in protectedIds && it.id !in parentIds }
@@ -232,8 +263,10 @@ object CandyTrailRules {
             }
         }
 
-        val currentNodeId = trail.currentNodeId?.takeIf(retained::containsKey)
-        return trail.copy(nodes = retained.values.toList(), currentNodeId = currentNodeId)
+        val currentNodeId = forkNormalized.currentNodeId?.takeIf(retained::containsKey)
+        return CandyTrailForkRules.normalized(
+            forkNormalized.copy(nodes = retained.values.toList(), currentNodeId = currentNodeId),
+        )
     }
 
     fun normalized(trail: CandyTrail): CandyTrail {
@@ -275,6 +308,7 @@ object CandyTrailRules {
                 nodes = repaired,
                 currentNodeId = currentId,
                 nextOrdinal = maxOf(trail.nextOrdinal, highestOrdinal),
+                nextForkOrdinal = trail.nextForkOrdinal.coerceAtLeast(0L),
             ),
         )
     }
