@@ -72,9 +72,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
+import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.PrivacyDomainSummary
 import dev.sk2andy.materialbrowser.blocking.PrivacyPartyRelation
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestCategory
+import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 
@@ -106,7 +108,7 @@ internal fun PrivacyXRayBadge(
             .semantics {
                 contentDescription = description
                 role = Role.Button
-            },
+        },
         shape = RoundedCornerShape(16.dp),
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -131,6 +133,9 @@ internal fun PrivacyXRaySheet(
     siteState: SiteProtectionState,
     onPause: (persistently: Boolean) -> Unit,
     onResume: () -> Unit,
+    onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
+        { _, _, _ -> },
+    onOpenStudio: (ruleId: String?) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val title = stringResource(R.string.privacy_xray_title)
@@ -153,6 +158,8 @@ internal fun PrivacyXRaySheet(
                 view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                 onResume()
             },
+            onRuleAction = onRuleAction,
+            onOpenStudio = onOpenStudio,
         )
     }
 
@@ -211,6 +218,9 @@ internal fun PrivacyXRayContent(
     siteState: SiteProtectionState,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
+    onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
+        { _, _, _ -> },
+    onOpenStudio: (ruleId: String?) -> Unit = {},
 ) {
     var detailsExpanded by remember { mutableStateOf(false) }
     val visibleDomains = if (detailsExpanded) snapshot.domains else snapshot.domains.take(3)
@@ -228,11 +238,17 @@ internal fun PrivacyXRayContent(
             .navigationBarsPadding()
             .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
     ) {
-        Text(
-            stringResource(R.string.privacy_xray_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.privacy_xray_title),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            TextButton(onClick = { onOpenStudio(null) }) {
+                Text(stringResource(R.string.filter_studio_open))
+            }
+        }
         siteState.host?.let { host ->
             Text(
                 stringResource(R.string.privacy_xray_subtitle, host),
@@ -261,9 +277,15 @@ internal fun PrivacyXRayContent(
             )
         } else {
             Column(modifier = Modifier.testTag(PrivacyXRayTestTags.Domains)) {
-                val maximum = snapshot.domains.maxOf(PrivacyDomainSummary::blockedCount)
+                val maximum = snapshot.domains.maxOf { it.blockedCount + it.allowedCount }
                 visibleDomains.forEach { domain ->
-                    PrivacyDomainBar(domain, maximum, categoryColors.getValue(domain.category))
+                    PrivacyDomainBar(
+                        domain = domain,
+                        maximumCount = maximum,
+                        color = categoryColors.getValue(domain.category),
+                        onRuleAction = onRuleAction,
+                        onOpenStudio = onOpenStudio,
+                    )
                     Spacer(Modifier.height(10.dp))
                 }
             }
@@ -470,8 +492,12 @@ private fun PrivacyDomainBar(
     domain: PrivacyDomainSummary,
     maximumCount: Int,
     color: Color,
+    onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit,
+    onOpenStudio: (ruleId: String?) -> Unit,
 ) {
-    val targetProgress = domain.blockedCount.toFloat() / maximumCount.coerceAtLeast(1)
+    var actionsVisible by remember(domain.host) { mutableStateOf(false) }
+    val total = domain.blockedCount + domain.allowedCount
+    val targetProgress = total.toFloat() / maximumCount.coerceAtLeast(1)
     val progress by animateFloatAsState(
         targetValue = targetProgress,
         animationSpec = tween(180),
@@ -482,11 +508,18 @@ private fun PrivacyDomainBar(
         R.string.privacy_domain_cd,
         domain.host,
         domain.blockedCount,
+        domain.allowedCount,
         party,
     )
-    Column(
-        modifier = Modifier.semantics { contentDescription = description },
+    Surface(
+        onClick = { actionsVisible = !actionsVisible },
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = description },
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
+        Column(modifier = Modifier.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 domain.host,
@@ -497,7 +530,7 @@ private fun PrivacyDomainBar(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                domain.blockedCount.toString(),
+                total.toString(),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
             )
@@ -522,10 +555,59 @@ private fun PrivacyDomainBar(
             )
         }
         Text(
-            party,
+            if (domain.allowedCount > 0) {
+                stringResource(R.string.filter_domain_counts, domain.blockedCount, domain.allowedCount)
+            } else {
+                party
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        domain.ruleDecision?.let { decision ->
+            TextButton(
+                onClick = { onOpenStudio(decision.ruleId) },
+                modifier = Modifier.sizeIn(minHeight = 48.dp),
+            ) {
+                Text(
+                    stringResource(
+                        R.string.filter_deciding_rule_action,
+                        if (decision.action == PrivacyRuleDecisionAction.Block) {
+                            stringResource(R.string.filter_block)
+                        } else {
+                            stringResource(R.string.filter_allow)
+                        },
+                        decision.label,
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        AnimatedVisibility(visible = actionsVisible) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(
+                        onClick = { onRuleAction(domain.host, CandyRuleAction.Block, false) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.filter_block_everywhere)) }
+                    OutlinedButton(
+                        onClick = { onRuleAction(domain.host, CandyRuleAction.Block, true) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.filter_block_on_site)) }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(
+                        onClick = { onRuleAction(domain.host, CandyRuleAction.Allow, false) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.filter_allow_everywhere)) }
+                    OutlinedButton(
+                        onClick = { onRuleAction(domain.host, CandyRuleAction.Allow, true) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.filter_allow_on_site)) }
+                }
+            }
+        }
+        }
     }
 }
 

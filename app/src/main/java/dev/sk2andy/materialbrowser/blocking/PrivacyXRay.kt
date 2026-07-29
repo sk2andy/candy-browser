@@ -25,8 +25,18 @@ data class SanitizedPrivacyRequest(
 data class PrivacyDomainSummary(
     val host: String,
     val blockedCount: Int,
+    val allowedCount: Int = 0,
     val category: PrivacyRequestCategory,
     val partyRelation: PrivacyPartyRelation,
+    val ruleDecision: PrivacyRuleDecisionSummary? = null,
+)
+
+enum class PrivacyRuleDecisionAction { Block, Allow }
+
+data class PrivacyRuleDecisionSummary(
+    val ruleId: String?,
+    val label: String,
+    val action: PrivacyRuleDecisionAction,
 )
 
 data class PrivacyXRaySnapshot(
@@ -133,9 +143,11 @@ object PrivacyPartyClassifier {
         pageHost == null -> PrivacyPartyRelation.Unknown
         SiteExceptionRules.hostMatches(requestHost, pageHost) ||
             SiteExceptionRules.hostMatches(pageHost, requestHost) -> PrivacyPartyRelation.FirstParty
-        requestHost.substringAfterLast('.') != pageHost.substringAfterLast('.') ->
-            PrivacyPartyRelation.ThirdParty
-        else -> PrivacyPartyRelation.Unknown
+        CandyPublicSuffixRules.registrableDomain(requestHost) == null ||
+            CandyPublicSuffixRules.registrableDomain(pageHost) == null -> PrivacyPartyRelation.Unknown
+        CandyPublicSuffixRules.registrableDomain(requestHost) ==
+            CandyPublicSuffixRules.registrableDomain(pageHost) -> PrivacyPartyRelation.FirstParty
+        else -> PrivacyPartyRelation.ThirdParty
     }
 }
 
@@ -213,7 +225,7 @@ object PrivacyAggregation {
         categoryCounts = categoryCounts.filterValues { it > 0 }.toMap(),
         partyCounts = partyCounts.filterValues { it > 0 }.toMap(),
         domains = domains.sortedWith(
-                compareByDescending<PrivacyDomainSummary>(PrivacyDomainSummary::blockedCount)
+                compareByDescending<PrivacyDomainSummary> { it.blockedCount + it.allowedCount }
                     .thenBy(PrivacyDomainSummary::host),
             ),
         omittedDomainRequests = omittedDomainRequests,
@@ -234,7 +246,27 @@ class PrivacyXRayRepository(
 
     fun record(tabId: String, requestUrl: String, pageUrl: String?): Boolean {
         val request = PrivacyRequestSanitizer.sanitize(requestUrl, pageUrl) ?: return false
-        accumulators.computeIfAbsent(tabId) { TabAccumulator(domainLimit) }.record(request)
+        accumulators.computeIfAbsent(tabId) { TabAccumulator(domainLimit) }.record(
+            request = request,
+            wasBlocked = true,
+            decision = null,
+        )
+        return true
+    }
+
+    fun recordDecision(
+        tabId: String,
+        requestUrl: String,
+        pageUrl: String?,
+        wasBlocked: Boolean,
+        decision: PrivacyRuleDecisionSummary,
+    ): Boolean {
+        val request = PrivacyRequestSanitizer.sanitize(requestUrl, pageUrl) ?: return false
+        accumulators.computeIfAbsent(tabId) { TabAccumulator(domainLimit) }.record(
+            request = request,
+            wasBlocked = wasBlocked,
+            decision = decision,
+        )
         return true
     }
 
@@ -257,22 +289,30 @@ class PrivacyXRayRepository(
         private var omittedDomainRequests = 0
 
         @Synchronized
-        fun record(request: SanitizedPrivacyRequest) {
+        fun record(
+            request: SanitizedPrivacyRequest,
+            wasBlocked: Boolean,
+            decision: PrivacyRuleDecisionSummary?,
+        ) {
             val category = PrivacyRequestClassifier.classify(request.requestHost)
             val party = PrivacyPartyClassifier.classify(request.requestHost, request.pageHost)
-            totalBlocked = totalBlocked.saturatedIncrement()
-            categoryCounts[category.ordinal] = categoryCounts[category.ordinal].saturatedIncrement()
-            partyCounts[party.ordinal] = partyCounts[party.ordinal].saturatedIncrement()
+            if (wasBlocked) {
+                totalBlocked = totalBlocked.saturatedIncrement()
+                categoryCounts[category.ordinal] = categoryCounts[category.ordinal].saturatedIncrement()
+                partyCounts[party.ordinal] = partyCounts[party.ordinal].saturatedIncrement()
+            }
             val existing = domains[request.requestHost]
             if (existing != null) {
-                existing.record(party)
+                existing.record(party, wasBlocked, decision)
             } else if (PrivacyRetention.mayRetainDomain(
                     retainedHosts = domains.keys,
                     candidateHost = request.requestHost,
                     limit = domainLimit,
                 )
             ) {
-                domains[request.requestHost] = DomainAccumulator(category).also { it.record(party) }
+                domains[request.requestHost] = DomainAccumulator(category).also {
+                    it.record(party, wasBlocked, decision)
+                }
             } else {
                 omittedDomainRequests = omittedDomainRequests.saturatedIncrement()
             }
@@ -294,10 +334,18 @@ class PrivacyXRayRepository(
         private class DomainAccumulator(private val category: PrivacyRequestCategory) {
             private val partyCounts = IntArray(PrivacyPartyRelation.entries.size)
             private var blockedCount = 0
+            private var allowedCount = 0
+            private var ruleDecision: PrivacyRuleDecisionSummary? = null
 
-            fun record(party: PrivacyPartyRelation) {
-                if (blockedCount < Int.MAX_VALUE) blockedCount++
+            fun record(
+                party: PrivacyPartyRelation,
+                wasBlocked: Boolean,
+                decision: PrivacyRuleDecisionSummary?,
+            ) {
+                if (wasBlocked && blockedCount < Int.MAX_VALUE) blockedCount++
+                if (!wasBlocked && allowedCount < Int.MAX_VALUE) allowedCount++
                 if (partyCounts[party.ordinal] < Int.MAX_VALUE) partyCounts[party.ordinal]++
+                if (decision != null) ruleDecision = decision
             }
 
             fun summary(host: String): PrivacyDomainSummary {
@@ -307,8 +355,10 @@ class PrivacyXRayRepository(
                 return PrivacyDomainSummary(
                     host = host,
                     blockedCount = blockedCount,
+                    allowedCount = allowedCount,
                     category = category,
                     partyRelation = PrivacyAggregation.stablePartyRelation(parties),
+                    ruleDecision = ruleDecision,
                 )
             }
         }

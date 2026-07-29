@@ -7,7 +7,15 @@
 [id^="sp_message_container_"],
 #iubenda-cs-banner,
 .osano-cm-window,
-.cmplz-cookiebanner {
+.cmplz-cookiebanner,
+/* High-confidence modern CMP roots missing from the pinned EasyList Cookie snapshot. */
+#BorlabsCookieBox,
+#didomi-host,
+#axeptio_overlay,
+[class^="axeptio_widget"],
+#cmpbox,
+.cky-consent-container,
+.cky-overlay {
     display: none !important;
     height: 0 !important;
     z-index: -99999 !important;

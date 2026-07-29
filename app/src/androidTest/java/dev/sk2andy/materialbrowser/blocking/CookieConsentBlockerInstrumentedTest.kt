@@ -35,6 +35,7 @@ class CookieConsentBlockerInstrumentedTest {
                 <!doctype html>
                 <html><head></head><body style="overflow: hidden; overflow-y: hidden">
                   <div id="CybotCookiebotDialog">Cookie banner</div>
+                  <div id="BorlabsCookieBox">Borlabs banner</div>
                   <div id="normal-modal">Normal content</div>
                 </body></html>
             """.trimIndent(),
@@ -46,13 +47,14 @@ class CookieConsentBlockerInstrumentedTest {
             """
                 (() => {
                   const lateBanner = document.createElement('div');
-                  lateBanner.className = 'qc-cmp2-container';
+                  lateBanner.id = 'didomi-host';
                   document.body.appendChild(lateBanner);
                   const injectedStyle = document.getElementById('material-browser-easylist-cookie-css');
                   return [
                     injectedStyle !== null,
                     injectedStyle && injectedStyle.sheet ? injectedStyle.sheet.cssRules.length : -1,
                     getComputedStyle(document.getElementById('CybotCookiebotDialog')).display,
+                    getComputedStyle(document.getElementById('BorlabsCookieBox')).display,
                     getComputedStyle(lateBanner).display,
                     getComputedStyle(document.getElementById('normal-modal')).display,
                     document.body.style.overflow || 'cleared',
@@ -62,7 +64,7 @@ class CookieConsentBlockerInstrumentedTest {
             """.trimIndent(),
         )
 
-        assertEquals("\"true|121|none|none|block|cleared|cleared\"", result)
+        assertEquals("\"true|121|none|none|none|block|cleared|cleared\"", result)
     }
 
     @Test

@@ -1,0 +1,14 @@
+# Generated uAssets first-party-to-blocked-host pairs. Do not edit by hand.
+# Source: https://raw.githubusercontent.com/uBlockOrigin/uAssets/05bc031ad40c2270223f068f052970201ca1bf14/filters/filters.txt
+# Source revision: 05bc031ad40c2270223f068f052970201ca1bf14
+# License: GPL-3.0; see uassets.LICENSE.txt
+# Generated rules: 8
+# Format: request-host<TAB>page-host
+digiseller.ru	leechall.com
+em0n.com	grubstreet.com
+em0n.com	twitchy.com
+hprofits.com	gogaytube.tv
+hprofits.com	shemaleporntube.tv
+mrfog.com	dr-farfar.net
+sp.booking.com	thecrazytourist.com
+vidazoo.com	readonepiece.com

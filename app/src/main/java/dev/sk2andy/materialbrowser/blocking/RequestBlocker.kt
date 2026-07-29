@@ -4,6 +4,7 @@ import java.net.URI
 
 class RequestBlocker(
     hostRules: Sequence<String>,
+    blockedHostPairs: Sequence<String> = emptySequence(),
     allowedHostPairs: Sequence<String> = emptySequence(),
 ) {
     private val blockedHosts = hostRules
@@ -14,7 +15,10 @@ class RequestBlocker(
         .distinct()
         .sorted()
         .toList()
-    private val allowedPageHostsByRequestHost = allowedHostPairs
+    private val blockedPageHostsByRequestHost = parseHostPairs(blockedHostPairs)
+    private val allowedPageHostsByRequestHost = parseHostPairs(allowedHostPairs)
+
+    private fun parseHostPairs(lines: Sequence<String>): Map<String, List<String>> = lines
         .map(String::trim)
         .filter { it.isNotEmpty() && !it.startsWith('#') }
         .mapNotNull { line ->
@@ -42,6 +46,7 @@ class RequestBlocker(
         // https://github.com/duckduckgo/Android/blob/4472de82e610b12689dcd2fc1b8421439020af62/app/src/main/java/com/duckduckgo/app/trackerdetection/TrackerDetectorImpl.kt
         if (pageHost != null && isSameHostOrSubdomain(requestHost, pageHost)) return false
         if (isAllowedByFilterException(requestHost, pageHost)) return false
+        if (isBlockedByFilterPair(requestHost, pageHost)) return true
 
         var candidate = requestHost
         while (true) {
@@ -64,6 +69,24 @@ class RequestBlocker(
                         (pageHost != null && pageHost.matchesHostOrSubdomain(allowedPageHost))
                 }
             ) return true
+
+            val dot = candidate.indexOf('.')
+            if (dot < 0) return false
+            candidate = candidate.substring(dot + 1)
+        }
+    }
+
+    private fun isBlockedByFilterPair(requestHost: String, pageHost: String?): Boolean {
+        if (pageHost == null) return false
+        var candidate = requestHost
+        while (true) {
+            val blockedPageHosts = blockedPageHostsByRequestHost[candidate]
+            if (blockedPageHosts != null && blockedPageHosts.any { blockedPageHost ->
+                    pageHost.matchesHostOrSubdomain(blockedPageHost)
+                }
+            ) {
+                return true
+            }
 
             val dot = candidate.indexOf('.')
             if (dot < 0) return false
