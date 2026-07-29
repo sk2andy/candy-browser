@@ -228,8 +228,8 @@
     <string name="filter_test_section">Probar una solicitud</string>
     <string name="filter_test_explanation">Introduce un host o una URL. Candy muestra qué regla activa decidiría, sin cargar la dirección.</string>
     <string name="filter_tools_section">Importación y listas de filtros</string>
-    <string name="filter_builtin_title">Protecciones integradas</string>
-    <string name="filter_builtin_body">Candy incluye EasyList/EasyPrivacy para hosts publicitarios y de seguimiento, además de EasyList Cookie y selectores CMP verificados para banners de cookies en todos los perfiles. Estas protecciones permanecen separadas de las reglas editables y pueden desactivarse en Ajustes.</string>
+    <string name="filter_builtin_title">La protección integrada está activa</string>
+    <string name="filter_builtin_body">Todos los perfiles usan EasyList/EasyPrivacy y un subconjunto de red compatible y fijado de uBlock Origin Ads. EasyList Cookie y selectores CMP verificados ocultan banners de cookies comunes. La protección integrada permanece separada de las reglas editables y puede desactivarse en Ajustes.</string>
     <string name="filter_transfer_title">Transferir reglas Candy</string>
     <string name="filter_transfer_body">Importa Candy Rules v1 o el subconjunto compatible de listas Adblock Plus/uBlock. La exportación siempre usa Candy Rules v1.</string>
     <string name="filter_search">Buscar reglas</string>
@@ -285,9 +285,9 @@
     <string name="filter_web_list_action">Añadir o actualizar lista</string>
     <string name="filter_subscription_warning">Introduce una dirección HTTPS de confianza. Candy solo carga tras tu acción y acepta únicamente reglas compatibles de host y pares sitio→host. La sintaxis no compatible, CSS y JavaScript quedan fuera.</string>
     <string name="filter_subscription_private_note">Las importaciones de incógnito son adiciones temporales. Las reglas aprobadas siguen activas y estas adiciones desaparecen al finalizar la sesión privada.</string>
-    <string name="filter_ubo_preset_title">uBlock Origin – Anuncios (opcional)</string>
-    <string name="filter_ubo_preset_body">Fuente oficial de uAssets. Candy previsualiza e importa solo reglas compatibles de host y par; los filtros específicos de uBO se omiten. No se descarga nada sin tu acción.</string>
-    <string name="filter_use_ubo_preset">Usar fuente oficial</string>
+    <string name="filter_ubo_preset_title">Fuente oficial de uBlock Origin</string>
+    <string name="filter_ubo_preset_body">Una instantánea compatible y fijada ya está activa en todos los perfiles. Usa la fuente uAssets actual solo para previsualizar una copia más reciente, gestionada por el usuario, para el ámbito elegido. Los filtros específicos de uBO siguen excluidos.</string>
+    <string name="filter_use_ubo_preset">Previsualizar fuente reciente</string>
     <string name="filter_confirm_subscription_skipped">Aplicar reglas compatibles e ignorar %1$d líneas no compatibles o ajenas a la red</string>
     <string name="filter_source_url">URL de origen HTTPS</string>
     <string name="filter_fetch_preview">Obtener vista previa</string>

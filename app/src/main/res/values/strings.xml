@@ -237,8 +237,8 @@
     <string name="filter_test_section">Test a request</string>
     <string name="filter_test_explanation">Enter a host or URL. Candy shows which active rule would decide it without loading the address.</string>
     <string name="filter_tools_section">Import and filter lists</string>
-    <string name="filter_builtin_title">Built-in defaults</string>
-    <string name="filter_builtin_body">Candy includes EasyList/EasyPrivacy for ad and tracker hosts plus EasyList Cookie and curated CMP selectors for cookie banners across profiles. These defaults stay separate from editable rules and can be disabled in Settings.</string>
+    <string name="filter_builtin_title">Built-in protection is active</string>
+    <string name="filter_builtin_body">All profiles use EasyList/EasyPrivacy plus a pinned, compatible uBlock Origin Ads network subset. EasyList Cookie and curated CMP selectors hide common cookie banners. Built-in protection stays separate from editable rules and can be disabled in Settings.</string>
     <string name="filter_transfer_title">Back up or restore Candy rules</string>
     <string name="filter_transfer_body">Import Candy Rules v1 or the supported subset of Adblock Plus and uBlock lists. Export always uses Candy Rules v1.</string>
     <string name="filter_search">Search rules</string>
@@ -294,9 +294,9 @@
     <string name="filter_web_list_action">Add or update list</string>
     <string name="filter_subscription_warning">Enter an HTTPS address you trust. Candy fetches only after your action and accepts only compatible host and site-to-host rules. Unsupported syntax, CSS, and JavaScript stay out.</string>
     <string name="filter_subscription_private_note">Incognito imports are temporary additions. Approved rules stay active, and these additions disappear when the private session ends.</string>
-    <string name="filter_ubo_preset_title">uBlock Origin – Ads (optional)</string>
-    <string name="filter_ubo_preset_body">Official uAssets source. Candy previews and imports only compatible host and pair rules; uBO-specific filters are skipped. Nothing downloads without your action.</string>
-    <string name="filter_use_ubo_preset">Use official source</string>
+    <string name="filter_ubo_preset_title">Official uBlock Origin source</string>
+    <string name="filter_ubo_preset_body">A pinned compatible snapshot is already active across all profiles. Use the live uAssets source only to preview a newer user-managed copy for the selected scope. uBO-specific filters stay out.</string>
+    <string name="filter_use_ubo_preset">Preview newer source</string>
     <string name="filter_confirm_subscription_skipped">Apply compatible rules and ignore %1$d unsupported or non-network lines</string>
     <string name="filter_source_url">HTTPS source URL</string>
     <string name="filter_fetch_preview">Fetch preview</string>

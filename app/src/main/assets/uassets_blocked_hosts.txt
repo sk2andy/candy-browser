@@ -1,0 +1,45 @@
+# Generated uAssets blocked hosts. Do not edit by hand.
+# Source: https://raw.githubusercontent.com/uBlockOrigin/uAssets/05bc031ad40c2270223f068f052970201ca1bf14/filters/filters.txt
+# Source revision: 05bc031ad40c2270223f068f052970201ca1bf14
+# License: GPL-3.0; see uassets.LICENSE.txt
+# Generated rules: 40
+aa.pornvideotop.com
+adblockenterpriseedition.com
+adn.porndig.com
+catsnbootsncats2020.com
+cfgr2.com
+clipbongda.info
+clivads.com
+clprr.com
+d13jhr4vol1304.cloudfront.net
+d19f0dp1dh77jq.cloudfront.net
+d1b0fk9ns6n0w9.cloudfront.net
+d1pozdfelzfhyt.cloudfront.net
+d2wpknqle9nuv8.cloudfront.net
+d3t9nyds4ufoqz.cloudfront.net
+damoh.welect.de
+ddacn6pr5v0tl.cloudfront.net
+doathair.com
+doo6pwib3qngu.cloudfront.net
+forwardrb.bid
+get-link.xyz
+hrtya.com
+ichlnk.com
+js.allporncomic.com
+kataprius.com
+n1g459ky7y.com
+okean-qoj.com
+p23hxejm1.com
+perfotrack.com
+poweredbyliquidfire.mobi
+protectsurf-a.akamaihd.net
+psaiceex.net
+pub.searchnova.net
+ronnoble.com
+sersh.com
+share.notizie.it
+strpjmp.com
+vuwomoby.pro
+willalland.info
+winfr-wtc.com
+yollamedia.com

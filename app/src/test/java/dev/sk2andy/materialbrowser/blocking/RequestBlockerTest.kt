@@ -80,4 +80,47 @@ class RequestBlockerTest {
             ),
         )
     }
+
+    @Test
+    fun `blocks a host pair only on the matching first party`() {
+        val pairBlocker = RequestBlocker(
+            hostRules = emptySequence(),
+            blockedHostPairs = sequenceOf("ads.example\tnews.example"),
+        )
+
+        assertTrue(
+            pairBlocker.shouldBlock(
+                "https://cdn.ads.example/banner.js",
+                "https://www.news.example/article",
+            ),
+        )
+        assertFalse(
+            pairBlocker.shouldBlock(
+                "https://cdn.ads.example/banner.js",
+                "https://notnews.example/article",
+            ),
+        )
+    }
+
+    @Test
+    fun `allow pair wins over pair and global blocks`() {
+        val exceptionAware = RequestBlocker(
+            hostRules = sequenceOf("ads.example"),
+            blockedHostPairs = sequenceOf("ads.example\tnews.example"),
+            allowedHostPairs = sequenceOf("ads.example\tnews.example"),
+        )
+
+        assertFalse(
+            exceptionAware.shouldBlock(
+                "https://ads.example/banner.js",
+                "https://news.example/article",
+            ),
+        )
+        assertTrue(
+            exceptionAware.shouldBlock(
+                "https://ads.example/banner.js",
+                "https://other.example/article",
+            ),
+        )
+    }
 }

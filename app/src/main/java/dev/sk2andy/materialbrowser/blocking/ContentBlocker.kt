@@ -9,8 +9,16 @@ class ContentBlocker(context: Context) {
         // Privacy Browser parses allow rules before block rules for the same WebView limitation:
         // https://www.stoutner.com/privacy-browser-android/filter-lists/
         RequestBlocker(
-            hostRules = loadLines("blocked_hosts.txt", "easylist_blocked_hosts.txt"),
-            allowedHostPairs = loadLines("easylist_allowed_host_pairs.txt"),
+            hostRules = loadLines(
+                "blocked_hosts.txt",
+                "easylist_blocked_hosts.txt",
+                "uassets_blocked_hosts.txt",
+            ),
+            blockedHostPairs = loadLines("uassets_blocked_host_pairs.txt"),
+            allowedHostPairs = loadLines(
+                "easylist_allowed_host_pairs.txt",
+                "uassets_allowed_host_pairs.txt",
+            ),
         )
     }
     private val consentCss by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
