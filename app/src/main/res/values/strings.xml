@@ -17,6 +17,7 @@
     <string name="cd_new_tab">New tab</string>
     <string name="cd_close_tab_overview">Close tab overview</string>
     <string name="cd_close_tab">Close tab</string>
+    <string name="cd_close_named_tab">Close %1$s</string>
     <string name="action_switch_to_tab">Switch to tab</string>
     <string name="tab_actions_title">Tab options</string>
     <string name="action_pin_tab">Pin tab</string>
@@ -122,6 +123,10 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_section_tabs">Tabs</string>
+    <string name="settings_tab_overview_mode">Tab overview layout</string>
+    <string name="tab_overview_mode_hero">Cover flow</string>
+    <string name="tab_overview_mode_grid">Compact grid</string>
+    <string name="tab_overview_mode_list">List without previews</string>
     <string name="settings_auto_close_tabs">Automatically close tabs</string>
     <string name="tab_lifetime_never">Never</string>
     <plurals name="tab_lifetime_hours">

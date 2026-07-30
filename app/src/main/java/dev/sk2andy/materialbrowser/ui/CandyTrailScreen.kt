@@ -264,7 +264,7 @@ internal fun CandyTrailScreen(
                 Text(
                     text = stringResource(R.string.candy_trail_empty),
                     modifier = Modifier.align(Alignment.Center).padding(32.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
                     style = MaterialTheme.typography.bodyLarge,
                 )
             } else {

@@ -46,7 +46,8 @@ import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
@@ -77,6 +78,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.PagerDefaults
@@ -140,12 +145,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -223,6 +230,7 @@ import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
+import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
@@ -243,6 +251,7 @@ private data class TabHandoff(
     val title: String,
     val favicon: Bitmap?,
     val isIncognito: Boolean,
+    val previewTopInsetPx: Int,
 )
 
 private data class TabExitHero(
@@ -250,6 +259,9 @@ private data class TabExitHero(
     val preview: Bitmap?,
     val startBounds: Rect,
     val isIncognito: Boolean,
+    val startCornerRadius: Dp = 28.dp,
+    val previewTopInsetPx: Int = 0,
+    val mode: TabOverviewMode = TabOverviewMode.Hero,
 )
 
 private data class TabReorderAnimation(
@@ -292,6 +304,8 @@ fun BrowserScreen(controller: BrowserController) {
     var pendingCommand by remember { mutableStateOf<CommandSuggestion?>(null) }
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
+    var browserHeightPx by remember { mutableFloatStateOf(1f) }
+    var bottomBarTopPx by remember { mutableFloatStateOf(Float.NaN) }
     var tabOverviewOpening by remember { mutableStateOf(false) }
     var tabHandoff by remember { mutableStateOf<TabHandoff?>(null) }
     val liveFrameTabIdState = remember { mutableStateOf<String?>(null) }
@@ -425,6 +439,7 @@ fun BrowserScreen(controller: BrowserController) {
                 title = target.title,
                 favicon = controller.favicons[target.id],
                 isIncognito = target.isIncognito,
+                previewTopInsetPx = controller.previewTopInsetPx(target.id),
             )
             if (controller.switchToOpenTab(target.id)) {
                 liveFrameTabId = null
@@ -611,7 +626,10 @@ fun BrowserScreen(controller: BrowserController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { browserWidthPx = it.width.toFloat() }
+            .onSizeChanged {
+                browserWidthPx = it.width.toFloat()
+                browserHeightPx = it.height.toFloat()
+            }
             .background(MaterialTheme.colorScheme.surfaceContainerHighest),
     ) {
         BrowserViewport(
@@ -619,6 +637,8 @@ fun BrowserScreen(controller: BrowserController) {
             selectedTab = selectedTab,
             dragOffset = browserDragOffset,
             travelDistance = tabSwitchTravelPx,
+            rootHeightPx = browserHeightPx,
+            bottomBarTopPx = bottomBarTopPx,
             handoff = tabHandoff,
             handoffAlpha = tabHandoffAlpha.value,
             liveFrameTabId = liveFrameTabId,
@@ -744,6 +764,7 @@ fun BrowserScreen(controller: BrowserController) {
                         title = targetTab.title,
                         favicon = controller.favicons[targetTab.id],
                         isIncognito = targetTab.isIncognito,
+                        previewTopInsetPx = controller.previewTopInsetPx(targetTab.id),
                     )
                     browserDragOffset.floatValue = 0f
                     controller.selectTab(targetTab.id)
@@ -788,12 +809,17 @@ fun BrowserScreen(controller: BrowserController) {
                 capsuleEditorVisible = true
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             },
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .onGloballyPositioned { coordinates ->
+                    bottomBarTopPx = coordinates.boundsInRoot().top
+                },
         )
 
         TabOverview(
             controller = controller,
             visible = tabOverviewVisible,
+            bottomBarTopPx = bottomBarTopPx,
             onClose = { tabOverviewVisible = false },
             onSelect = {
                 val target = controller.activeTabs.firstOrNull { tab -> tab.id == it }
@@ -805,6 +831,7 @@ fun BrowserScreen(controller: BrowserController) {
                         title = target.title,
                         favicon = controller.favicons[target.id],
                         isIncognito = target.isIncognito,
+                        previewTopInsetPx = controller.previewTopInsetPx(target.id),
                     )
                     controller.selectTab(target.id)
                 } else {
@@ -839,6 +866,7 @@ fun BrowserScreen(controller: BrowserController) {
                 blockerSettings = controller.blockerSettings,
                 inactiveTabLifetime = controller.inactiveTabLifetime,
                 searchEngine = controller.searchEngine,
+                tabOverviewMode = controller.tabOverviewMode,
                 dismissResistancePercent = controller.dismissResistancePercent,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
@@ -846,6 +874,7 @@ fun BrowserScreen(controller: BrowserController) {
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onSearchEngineChanged = controller::updateSearchEngine,
+                onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onRequestDefaultBrowser = controller::requestDefaultBrowserRole,
                 onPrivacyXRay = {
@@ -1119,6 +1148,8 @@ private fun BrowserViewport(
     selectedTab: BrowserTab,
     dragOffset: MutableFloatState,
     travelDistance: Float,
+    rootHeightPx: Float,
+    bottomBarTopPx: Float,
     handoff: TabHandoff?,
     handoffAlpha: Float,
     liveFrameTabId: String?,
@@ -1178,6 +1209,9 @@ private fun BrowserViewport(
             dragOffset = dragOffset,
             dragDirection = dragDirection,
             travelDistance = travelDistance,
+            rootHeightPx = rootHeightPx,
+            previewTopInsetPx = controller.previewTopInsetPx(tab.id),
+            bottomBarTopPx = bottomBarTopPx,
         )
     }
 
@@ -1249,11 +1283,14 @@ private fun BrowserViewport(
     handoff?.let { currentHandoff ->
         TabHandoffOverlay(
             handoff = currentHandoff,
+            tab = controller.activeTabs.firstOrNull { it.id == currentHandoff.tabId },
             alpha = if (liveFrameTabId == currentHandoff.tabId && !tabOverviewVisible) {
                 handoffAlpha
             } else {
                 1f
             },
+            rootHeightPx = rootHeightPx,
+            bottomBarTopPx = bottomBarTopPx,
         )
     }
 }
@@ -1479,7 +1516,10 @@ private class WebViewHostState(val container: FrameLayout) {
 @Composable
 private fun TabHandoffOverlay(
     handoff: TabHandoff,
+    tab: BrowserTab?,
     alpha: Float,
+    rootHeightPx: Float,
+    bottomBarTopPx: Float,
 ) {
     Box(
         modifier = Modifier
@@ -1487,15 +1527,17 @@ private fun TabHandoffOverlay(
             .graphicsLayer { this.alpha = alpha }
             .background(MaterialTheme.colorScheme.surface),
     ) {
-        if (handoff.isIncognito) {
-            IncognitoTabPlaceholder()
-        } else if (handoff.preview != null && !handoff.preview.isRecycled) {
-            Image(
-                bitmap = handoff.preview.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
+        if (tab != null) {
+            FullscreenTabPreviewContent(
+                tab = tab,
+                preview = handoff.preview,
+                favicon = handoff.favicon,
+                rootHeightPx = rootHeightPx,
+                previewTopInsetPx = handoff.previewTopInsetPx,
+                bottomBarTopPx = bottomBarTopPx,
             )
+        } else if (handoff.isIncognito) {
+            IncognitoTabPlaceholder()
         } else {
             TabPreviewPlaceholder(
                 title = handoff.title.ifBlank { stringResource(R.string.new_tab_title) },
@@ -1513,6 +1555,9 @@ private fun TabSwitchPreview(
     dragOffset: MutableFloatState,
     dragDirection: Int,
     travelDistance: Float,
+    rootHeightPx: Float,
+    previewTopInsetPx: Int,
+    bottomBarTopPx: Float,
 ) {
     val density = LocalDensity.current
     val startOffset = if (dragDirection < 0) travelDistance else -travelDistance
@@ -1533,17 +1578,59 @@ private fun TabSwitchPreview(
             }
             .background(MaterialTheme.colorScheme.surface),
     ) {
-        if (tab.isIncognito) {
-            IncognitoTabPlaceholder()
-        } else if (preview != null && !preview.isRecycled) {
-            Image(
-                bitmap = preview.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
-        } else {
-            TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
+        FullscreenTabPreviewContent(
+            tab = tab,
+            preview = preview,
+            favicon = favicon,
+            rootHeightPx = rootHeightPx,
+            previewTopInsetPx = previewTopInsetPx,
+            bottomBarTopPx = bottomBarTopPx,
+        )
+    }
+}
+
+@Composable
+private fun FullscreenTabPreviewContent(
+    tab: BrowserTab,
+    preview: Bitmap?,
+    favicon: Bitmap?,
+    rootHeightPx: Float,
+    previewTopInsetPx: Int,
+    bottomBarTopPx: Float,
+) {
+    val density = LocalDensity.current
+    val previewLayout = TabSwitchPreviewLayoutRules.resolve(
+        rootHeightPx = rootHeightPx,
+        previewTopInsetPx = previewTopInsetPx,
+        bottomBarTopPx = bottomBarTopPx,
+    )
+    val topInset = with(density) { previewLayout.topInsetPx.toDp() }
+    val visibleHeight = with(density) { previewLayout.visibleHeightPx.toDp() }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface),
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(y = topInset)
+                .fillMaxWidth()
+                .height(visibleHeight)
+                .clipToBounds(),
+        ) {
+            if (tab.isIncognito) {
+                IncognitoTabPlaceholder()
+            } else if (preview != null && !preview.isRecycled) {
+                Image(
+                    bitmap = preview.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                )
+            } else {
+                TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
+            }
         }
     }
 }
@@ -1781,13 +1868,13 @@ private fun BrowserBottomBar(
                         Surface(
                             onClick = onExpand,
                             modifier = Modifier
+                                .addressBarVerticalGesture(onSwipeUp = onTabs)
                                 .draggable(
                                     state = tabDragState,
                                     orientation = Orientation.Horizontal,
                                     enabled = !editing,
                                     onDragStopped = { velocity -> onTabDragStopped(velocity) },
-                                )
-                                .addressBarVerticalGesture(onSwipeUp = onTabs),
+                                ),
                             color = Color.Transparent,
                         ) {
                             Text(
@@ -1875,30 +1962,32 @@ internal fun Modifier.addressBarVerticalGesture(
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val gestureView = LocalView.current
     if (!enabled) return this
-    return pointerInput(Unit) {
-        var dragDistance = 0f
-        detectVerticalDragGestures(
-            onDragStart = { dragDistance = 0f },
-            onVerticalDrag = { change, amount ->
-                dragDistance += amount
-                change.consume()
-            },
-            onDragEnd = {
-                val action = AddressBarGestureRules.action(
-                    dragDistance = dragDistance,
-                    threshold = 56.dp.toPx(),
-                )
-                when (action) {
-                    AddressBarVerticalAction.OpenTabs -> currentOnSwipeUp()
-                    AddressBarVerticalAction.None -> Unit
-                }
-                if (action != AddressBarVerticalAction.None) {
+    return pointerInput(enabled) {
+        val threshold = 56.dp.toPx()
+        awaitEachGesture {
+            val down = awaitFirstDown(
+                requireUnconsumed = false,
+                pass = PointerEventPass.Initial,
+            )
+            var lastY = down.position.y
+            var dragDistance = 0f
+            while (true) {
+                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                dragDistance += change.position.y - lastY
+                lastY = change.position.y
+                if (
+                    AddressBarGestureRules.action(dragDistance, threshold) ==
+                    AddressBarVerticalAction.OpenTabs
+                ) {
+                    change.consume()
+                    currentOnSwipeUp()
                     gestureView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    break
                 }
-                dragDistance = 0f
-            },
-            onDragCancel = { dragDistance = 0f },
-        )
+                if (!change.pressed) break
+            }
+        }
     }
 }
 
@@ -1947,15 +2036,15 @@ private fun ExpandedBottomBarContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
+                    .addressBarVerticalGesture(
+                        enabled = !editing,
+                        onSwipeUp = onTabs,
+                    )
                     .draggable(
                         state = tabDragState,
                         orientation = Orientation.Horizontal,
                         enabled = !editing,
                         onDragStopped = { velocity -> onTabDragStopped(velocity) },
-                    )
-                    .addressBarVerticalGesture(
-                        enabled = !editing,
-                        onSwipeUp = onTabs,
                     ),
                 shape = RoundedCornerShape(22.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -2730,6 +2819,7 @@ private fun CommandIcon(kind: BrowserCommandKind, tint: Color) {
 private fun TabOverview(
     controller: BrowserController,
     visible: Boolean,
+    bottomBarTopPx: Float,
     onClose: () -> Unit,
     onSelect: (String) -> Unit,
     onNewTab: () -> Unit,
@@ -2757,7 +2847,7 @@ private fun TabOverview(
         snapAnimationSpec = spring(dampingRatio = 0.95f, stiffness = 1_000f),
         snapPositionalThreshold = 0.11f,
     )
-    val initialTabId = controller.selectedTabId
+    val initialTabId = remember(visible) { controller.selectedTabId }
     val initialTab = remember(initialTabId, overviewTabs) {
         overviewTabs.firstOrNull { it.id == initialTabId } ?: controller.selectedTab
     }
@@ -2768,9 +2858,14 @@ private fun TabOverview(
     val heroFavicon = initialTabId
         .let(controller.favicons::get)
         ?.takeIf { !it.isRecycled }
+    val initialPreviewTopInsetPx = remember(initialTabId, visible) {
+        controller.previewTopInsetPx(initialTabId)
+    }
     val heroProgress = remember { Animatable(0f) }
     val overviewScope = rememberCoroutineScope()
     var heroTargetBounds by remember { mutableStateOf<Rect?>(null) }
+    var heroTargetMode by remember { mutableStateOf<TabOverviewMode?>(null) }
+    var heroTargetTabId by remember { mutableStateOf<String?>(null) }
     var heroStarted by remember { mutableStateOf(false) }
     var heroCompleted by remember { mutableStateOf(false) }
     var heroVisible by remember { mutableStateOf(true) }
@@ -2803,6 +2898,51 @@ private fun TabOverview(
         tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer,
     )
 
+    fun startExitHero(
+        tab: BrowserTab,
+        bounds: Rect,
+        cornerRadius: Dp = 28.dp,
+    ) {
+        if (
+            dismissingTabId != null ||
+            movingTabId != null ||
+            exitHero != null ||
+            reorderAnimation != null ||
+            tabActionsTabId != null
+        ) {
+            return
+        }
+        val mode = controller.tabOverviewMode
+        val preview = controller.previews[tab.id]
+            ?.takeIf { !tab.isIncognito && !it.isRecycled }
+        exitHero = TabExitHero(
+            tabId = tab.id,
+            preview = preview,
+            startBounds = bounds,
+            isIncognito = tab.isIncognito,
+            startCornerRadius = cornerRadius,
+            previewTopInsetPx = controller.previewTopInsetPx(tab.id),
+            mode = mode,
+        )
+        overviewScope.launch {
+            try {
+                exitHeroProgress.snapTo(0f)
+                withFrameNanos { }
+                exitHeroProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = 200,
+                        easing = FastOutSlowInEasing,
+                    ),
+                )
+                onSelect(tab.id)
+                onClose()
+            } finally {
+                exitHero = null
+            }
+        }
+    }
+
     fun emitTabFocusHaptics(targetPage: Int) {
         val previousPage = lastHapticPage ?: targetPage
         lastHapticPage = targetPage
@@ -2834,7 +2974,10 @@ private fun TabOverview(
         }
     }
 
-    LaunchedEffect(pagerState.interactionSource) {
+    LaunchedEffect(pagerState.interactionSource, controller.tabOverviewMode, visible) {
+        if (controller.tabOverviewMode != TabOverviewMode.Hero || !visible) {
+            return@LaunchedEffect
+        }
         pagerState.interactionSource.interactions.collect { interaction ->
             when (interaction) {
                 is DragInteraction.Start -> {
@@ -2858,7 +3001,10 @@ private fun TabOverview(
             }
         }
     }
-    LaunchedEffect(pagerState) {
+    LaunchedEffect(pagerState, controller.tabOverviewMode, visible) {
+        if (controller.tabOverviewMode != TabOverviewMode.Hero || !visible) {
+            return@LaunchedEffect
+        }
         snapshotFlow { pagerState.currentPage }
             .distinctUntilChanged()
             .collect { focusedPage ->
@@ -2873,8 +3019,17 @@ private fun TabOverview(
         controller.selectedTabId,
         dismissingTabId,
         profileSwitching,
+        controller.tabOverviewMode,
+        visible,
     ) {
-        if (dismissingTabId != null || profileSwitching) return@LaunchedEffect
+        if (
+            controller.tabOverviewMode != TabOverviewMode.Hero ||
+            !visible ||
+            dismissingTabId != null ||
+            profileSwitching
+        ) {
+            return@LaunchedEffect
+        }
         val selectedIndex = controller.activeTabs.indexOfFirst { it.id == controller.selectedTabId }
             .coerceAtLeast(0)
         if (
@@ -2885,12 +3040,21 @@ private fun TabOverview(
         }
     }
     LaunchedEffect(controller.activeProfileId) {
+        if (!visible) {
+            profileSwitchProgress.snapTo(1f)
+            return@LaunchedEffect
+        }
         if (profileSwitching) return@LaunchedEffect
         profileSwitchProgress.snapTo(0f)
         val selectedIndex = controller.activeTabs
             .indexOfFirst { it.id == controller.selectedTabId }
             .coerceAtLeast(0)
-        if (pagerState.currentPage != selectedIndex) pagerState.scrollToPage(selectedIndex)
+        if (
+            controller.tabOverviewMode == TabOverviewMode.Hero &&
+            pagerState.currentPage != selectedIndex
+        ) {
+            pagerState.scrollToPage(selectedIndex)
+        }
         profileSwitchProgress.animateTo(
             targetValue = 1f,
             animationSpec = spring(dampingRatio = 0.78f, stiffness = 520f),
@@ -2907,24 +3071,16 @@ private fun TabOverview(
         val density = LocalDensity.current
         val rootWidthPx = with(density) { maxWidth.toPx() }
         val rootHeightPx = with(density) { maxHeight.toPx() }
-        val heroTarget = heroTargetBounds
+        val heroTarget = heroTargetBounds?.takeIf {
+            heroTargetMode == controller.tabOverviewMode && heroTargetTabId == initialTabId
+        }
         val isExiting = exitHero != null
         val tabCardWidth = (maxWidth * 0.68f).coerceIn(244.dp, 292.dp)
         val pageSlotWidth = tabCardWidth + 18.dp
         val pageSlotWidthPx = with(density) { pageSlotWidth.toPx() }
         val pageHorizontalPadding = ((maxWidth - pageSlotWidth) / 2).coerceAtLeast(0.dp)
 
-        LaunchedEffect(visible, heroTarget) {
-            if (!visible || heroStarted) return@LaunchedEffect
-            if (TabOverviewHeroRules.canStart(heroTarget != null)) {
-                heroStarted = true
-                heroProgress.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
-                heroCompleted = true
-                withFrameNanos { }
-                heroVisible = false
-            }
-        }
-        LaunchedEffect(visible) {
+        LaunchedEffect(visible, controller.tabOverviewMode, initialTabId) {
             if (!visible) {
                 heroProgress.snapTo(0f)
                 exitHeroProgress.snapTo(0f)
@@ -2934,14 +3090,39 @@ private fun TabOverview(
                 exitHero = null
                 return@LaunchedEffect
             }
-            delay(250)
-            if (!heroStarted) {
-                heroStarted = true
-                heroProgress.snapTo(1f)
-                heroCompleted = true
-                withFrameNanos { }
-                heroVisible = false
+
+            heroProgress.snapTo(0f)
+            heroStarted = false
+            heroCompleted = false
+            heroVisible = true
+
+            var waitMillis = 0L
+            while (
+                waitMillis < 250L &&
+                !TabOverviewHeroRules.canStart(
+                    heroTargetBounds != null &&
+                        heroTargetMode == controller.tabOverviewMode &&
+                        heroTargetTabId == initialTabId,
+                )
+            ) {
+                delay(16)
+                waitMillis += 16
             }
+
+            val hasStableTarget = TabOverviewHeroRules.canStart(
+                heroTargetBounds != null &&
+                    heroTargetMode == controller.tabOverviewMode &&
+                    heroTargetTabId == initialTabId,
+            )
+            heroStarted = true
+            if (hasStableTarget) {
+                heroProgress.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
+            } else {
+                heroProgress.snapTo(1f)
+            }
+            heroCompleted = true
+            withFrameNanos { }
+            heroVisible = false
         }
 
         Box(
@@ -3005,12 +3186,20 @@ private fun TabOverview(
                                     easing = FastOutSlowInEasing,
                                 ),
                             )
-                            if (pagerState.currentPage != 0) pagerState.scrollToPage(0)
+                            if (
+                                controller.tabOverviewMode == TabOverviewMode.Hero &&
+                                pagerState.currentPage != 0
+                            ) {
+                                pagerState.scrollToPage(0)
+                            }
                             if (controller.selectProfile(profileId)) {
                                 val selectedIndex = controller.activeTabs
                                     .indexOfFirst { it.id == controller.selectedTabId }
                                     .coerceAtLeast(0)
-                                if (pagerState.currentPage != selectedIndex) {
+                                if (
+                                    controller.tabOverviewMode == TabOverviewMode.Hero &&
+                                    pagerState.currentPage != selectedIndex
+                                ) {
                                     pagerState.scrollToPage(selectedIndex)
                                 }
                                 withFrameNanos { }
@@ -3047,7 +3236,8 @@ private fun TabOverview(
                 },
             )
             Spacer(Modifier.height(4.dp))
-            HorizontalPager(
+            when (controller.tabOverviewMode) {
+                TabOverviewMode.Hero -> HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
                     .weight(1f)
@@ -3081,7 +3271,7 @@ private fun TabOverview(
                         "tab-reorder-$page"
                     }
                 },
-            ) { page ->
+                ) { page ->
                 val tab = controller.activeTabs[page]
                 val cardGestureScope = rememberCoroutineScope()
                 var dismissOffset by remember(tab.id) { mutableFloatStateOf(0f) }
@@ -3333,40 +3523,20 @@ private fun TabOverview(
                                     val bounds = coordinates.boundsInRoot()
                                     cardBounds = bounds
                                     tabCardBounds[tab.id] = bounds
-                                    if (isInitialCard) heroTargetBounds = bounds
+                                    if (isInitialCard) {
+                                        heroTargetBounds = bounds
+                                        heroTargetMode = TabOverviewMode.Hero
+                                        heroTargetTabId = tab.id
+                                    }
                                 },
                             onClick = {
-                                if (
-                                    dismissingTabId != null ||
-                                    movingTabId != null ||
-                                    exitHero != null ||
-                                    reorderAnimation != null ||
-                                    tabActionsTabId != null
-                                ) {
-                                    return@TabCard
-                                }
                                 val bounds = cardBounds
                                 if (bounds == null) {
                                     onSelect(tab.id)
                                     onClose()
                                     return@TabCard
                                 }
-                                val preview = controller.previews[tab.id]
-                                    ?.takeIf { !tab.isIncognito && !it.isRecycled }
-                                exitHero = TabExitHero(tab.id, preview, bounds, tab.isIncognito)
-                                overviewScope.launch {
-                                    exitHeroProgress.snapTo(0f)
-                                    withFrameNanos { }
-                                    exitHeroProgress.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = tween(
-                                            durationMillis = 200,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
-                                    onSelect(tab.id)
-                                    onClose()
-                                }
+                                startExitHero(tab, bounds)
                             },
                             onLongClick = {
                                 if (
@@ -3381,6 +3551,88 @@ private fun TabOverview(
                         )
                     }
                 }
+                }
+                TabOverviewMode.Grid -> CompactTabGrid(
+                    tabs = controller.activeTabs,
+                    selectedTabId = controller.selectedTabId,
+                    initialTabId = initialTabId,
+                    previews = controller.previews,
+                    favicons = controller.favicons,
+                    heroProgress = { heroProgress.value },
+                    heroCompleted = heroCompleted,
+                    heroVisible = heroVisible,
+                    exitHeroTabId = exitHero?.tabId,
+                    interactionsEnabled = dismissingTabId == null &&
+                        movingTabId == null &&
+                        exitHero == null &&
+                        reorderAnimation == null &&
+                        tabActionsTabId == null,
+                    onPreviewBounds = { tab, bounds ->
+                        if (tab.id == initialTabId && !heroCompleted) {
+                            heroTargetBounds = bounds
+                            heroTargetMode = TabOverviewMode.Grid
+                            heroTargetTabId = tab.id
+                        }
+                    },
+                    onSelect = { tab, bounds -> startExitHero(tab, bounds, 22.dp) },
+                    onCloseTab = { tab ->
+                        if (TabDeletionRules.canDelete(tab)) {
+                            rootView.performConfirmHaptic()
+                            controller.closeTab(tab.id)
+                        }
+                    },
+                    onLongClick = { tab, bounds ->
+                        tabCardBounds[tab.id] = bounds
+                        onOpenCandyTrail(tab.id, bounds)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .graphicsLayer {
+                            val progress = profileSwitchProgress.value
+                            alpha = progress
+                            translationY = (1f - progress) * 14f
+                        },
+                )
+                TabOverviewMode.List -> CompactTabList(
+                    tabs = controller.activeTabs,
+                    selectedTabId = controller.selectedTabId,
+                    initialTabId = initialTabId,
+                    favicons = controller.favicons,
+                    heroProgress = { heroProgress.value },
+                    heroCompleted = heroCompleted,
+                    heroVisible = heroVisible,
+                    exitHeroTabId = exitHero?.tabId,
+                    interactionsEnabled = dismissingTabId == null &&
+                        movingTabId == null &&
+                        exitHero == null &&
+                        reorderAnimation == null &&
+                        tabActionsTabId == null,
+                    onRowBounds = { tab, bounds ->
+                        if (tab.id == initialTabId && !heroCompleted) {
+                            heroTargetBounds = bounds
+                            heroTargetMode = TabOverviewMode.List
+                            heroTargetTabId = tab.id
+                        }
+                    },
+                    onSelect = { tab, bounds -> startExitHero(tab, bounds, 22.dp) },
+                    onCloseTab = { tab ->
+                        if (TabDeletionRules.canDelete(tab)) {
+                            rootView.performConfirmHaptic()
+                            controller.closeTab(tab.id)
+                        }
+                    },
+                    onLongClick = { tab, bounds ->
+                        tabCardBounds[tab.id] = bounds
+                        onOpenCandyTrail(tab.id, bounds)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .graphicsLayer {
+                            val progress = profileSwitchProgress.value
+                            alpha = progress
+                            translationY = (1f - progress) * 14f
+                        },
+                )
             }
             Row(
                 modifier = Modifier
@@ -3417,19 +3669,44 @@ private fun TabOverview(
                 targetBounds = heroTarget,
                 rootWidthPx = rootWidthPx,
                 rootHeightPx = rootHeightPx,
+                targetCornerRadius = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
+                    28.dp
+                } else {
+                    22.dp
+                },
                 targetFraction = { heroProgress.value },
             ) {
-                if (initialTab.isIncognito) {
-                    IncognitoTabPlaceholder()
-                } else if (heroPreview != null) {
-                    Image(
-                        bitmap = heroPreview.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
+                when (controller.tabOverviewMode) {
+                    TabOverviewMode.List -> TabListHeroContent(
+                        tab = initialTab,
+                        preview = heroPreview,
+                        favicon = heroFavicon,
+                        targetBounds = heroTarget,
+                        rootWidthPx = rootWidthPx,
+                        rootHeightPx = rootHeightPx,
+                        previewTopInsetPx = initialPreviewTopInsetPx,
+                        bottomBarTopPx = bottomBarTopPx,
+                        targetFraction = { heroProgress.value },
                     )
-                } else {
-                    TabPreviewPlaceholder(title = displayTabTitle(initialTab), favicon = heroFavicon)
+                    TabOverviewMode.Hero -> TabCoverflowHeroContent(
+                        tab = initialTab,
+                        preview = heroPreview,
+                        favicon = heroFavicon,
+                        targetBounds = heroTarget,
+                        rootWidthPx = rootWidthPx,
+                        rootHeightPx = rootHeightPx,
+                        previewTopInsetPx = initialPreviewTopInsetPx,
+                        bottomBarTopPx = bottomBarTopPx,
+                        targetFraction = { heroProgress.value },
+                    )
+                    TabOverviewMode.Grid -> FullscreenTabPreviewContent(
+                        tab = initialTab,
+                        preview = heroPreview,
+                        favicon = heroFavicon,
+                        rootHeightPx = rootHeightPx,
+                        previewTopInsetPx = initialPreviewTopInsetPx,
+                        bottomBarTopPx = bottomBarTopPx,
+                    )
                 }
             }
         }
@@ -3451,18 +3728,53 @@ private fun TabOverview(
                 targetBounds = hero.startBounds,
                 rootWidthPx = rootWidthPx,
                 rootHeightPx = rootHeightPx,
+                targetCornerRadius = hero.startCornerRadius,
                 targetFraction = { 1f - exitHeroProgress.value },
                 modifier = Modifier.zIndex(20f),
             ) {
                 val preview = hero.preview
-                if (hero.isIncognito) {
-                    IncognitoTabPlaceholder()
-                } else if (preview != null && !preview.isRecycled) {
-                    Image(
-                        bitmap = preview.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
+                val heroTab = controller.activeTabs.firstOrNull { it.id == hero.tabId }
+                if (hero.mode == TabOverviewMode.List && heroTab != null) {
+                    TabListHeroContent(
+                        tab = heroTab,
+                        preview = preview,
+                        favicon = controller.favicons[hero.tabId],
+                        targetBounds = hero.startBounds,
+                        rootWidthPx = rootWidthPx,
+                        rootHeightPx = rootHeightPx,
+                        previewTopInsetPx = hero.previewTopInsetPx,
+                        bottomBarTopPx = bottomBarTopPx,
+                        targetFraction = { 1f - exitHeroProgress.value },
+                    )
+                } else if (hero.mode == TabOverviewMode.Hero && heroTab != null) {
+                    TabCoverflowHeroContent(
+                        tab = heroTab,
+                        preview = preview,
+                        favicon = controller.favicons[hero.tabId],
+                        targetBounds = hero.startBounds,
+                        rootWidthPx = rootWidthPx,
+                        rootHeightPx = rootHeightPx,
+                        previewTopInsetPx = hero.previewTopInsetPx,
+                        bottomBarTopPx = bottomBarTopPx,
+                        targetFraction = { 1f - exitHeroProgress.value },
+                    )
+                } else if (preview != null && !preview.isRecycled && heroTab != null) {
+                    FullscreenTabPreviewContent(
+                        tab = heroTab,
+                        preview = preview,
+                        favicon = controller.favicons[hero.tabId],
+                        rootHeightPx = rootHeightPx,
+                        previewTopInsetPx = hero.previewTopInsetPx,
+                        bottomBarTopPx = bottomBarTopPx,
+                    )
+                } else if (hero.isIncognito && heroTab != null) {
+                    FullscreenTabPreviewContent(
+                        tab = heroTab,
+                        preview = null,
+                        favicon = null,
+                        rootHeightPx = rootHeightPx,
+                        previewTopInsetPx = hero.previewTopInsetPx,
+                        bottomBarTopPx = bottomBarTopPx,
                     )
                 } else {
                     Box(
@@ -3517,6 +3829,8 @@ private fun TabOverview(
                                 preview,
                                 bounds,
                                 candyTrailTab.isIncognito,
+                                previewTopInsetPx = controller.previewTopInsetPx(candyTrailTab.id),
+                                mode = controller.tabOverviewMode,
                             )
                             overviewScope.launch {
                                 exitHeroProgress.snapTo(0f)
@@ -3554,6 +3868,12 @@ private fun TabOverview(
                         tabId = target.id,
                         isPinned = !target.isPinned,
                     ).map(BrowserTab::id)
+                    if (controller.tabOverviewMode != TabOverviewMode.Hero) {
+                        if (controller.setTabPinned(target.id, !target.isPinned)) {
+                            rootView.performConfirmHaptic()
+                        }
+                        return@launch
+                    }
                     if (oldOrder == newOrder) {
                         if (controller.setTabPinned(target.id, !target.isPinned)) {
                             rootView.performConfirmHaptic()
@@ -3877,12 +4197,13 @@ private fun TabHeroLayer(
     targetBounds: Rect,
     rootWidthPx: Float,
     rootHeightPx: Float,
+    targetCornerRadius: Dp = 28.dp,
     targetFraction: () -> Float,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
-    val targetCornerRadiusPx = with(density) { 28.dp.toPx() }
+    val targetCornerRadiusPx = with(density) { targetCornerRadius.toPx() }
     val heroClipPath = remember { Path() }
 
     Box(
@@ -3923,6 +4244,174 @@ private fun TabHeroLayer(
             .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         content()
+    }
+}
+
+@Composable
+private fun TabCoverflowHeroContent(
+    tab: BrowserTab,
+    preview: Bitmap?,
+    favicon: Bitmap?,
+    targetBounds: Rect,
+    rootWidthPx: Float,
+    rootHeightPx: Float,
+    previewTopInsetPx: Int,
+    bottomBarTopPx: Float,
+    targetFraction: () -> Float,
+) {
+    val density = LocalDensity.current
+    val previewLayout = TabOverviewHeroRules.coverflowPreviewLayout(
+        rootWidthPx = rootWidthPx,
+        rootHeightPx = rootHeightPx,
+        targetWidthPx = targetBounds.width,
+        targetHeightPx = targetBounds.height,
+        cropTopFraction = PREVIEW_CROP_TOP_FRACTION,
+    )
+    val targetHeight = with(density) { previewLayout.sourceHeightPx.toDp() }
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    alpha = 1f - TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
+                },
+        ) {
+            FullscreenTabPreviewContent(
+                tab = tab,
+                preview = preview,
+                favicon = favicon,
+                rootHeightPx = rootHeightPx,
+                previewTopInsetPx = previewTopInsetPx,
+                bottomBarTopPx = bottomBarTopPx,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(0, previewLayout.sourceTopPx.roundToInt()) }
+                .fillMaxWidth()
+                .height(targetHeight)
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    alpha = TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
+                },
+        ) {
+            TabPreviewContent(tab = tab, preview = preview, favicon = favicon)
+        }
+    }
+}
+
+@Composable
+private fun TabListHeroContent(
+    tab: BrowserTab,
+    preview: Bitmap?,
+    favicon: Bitmap?,
+    targetBounds: Rect,
+    rootWidthPx: Float,
+    rootHeightPx: Float,
+    previewTopInsetPx: Int,
+    bottomBarTopPx: Float,
+    targetFraction: () -> Float,
+) {
+    val density = LocalDensity.current
+    val targetScale = (targetBounds.width / rootWidthPx).coerceAtLeast(0.01f)
+    val sourceRowHeight = with(density) { (targetBounds.height / targetScale).toDp() }
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    alpha = 1f - TabOverviewHeroRules.compactChromeAlpha(targetFraction())
+                },
+        ) {
+            FullscreenTabPreviewContent(
+                tab = tab,
+                preview = preview,
+                favicon = favicon,
+                rootHeightPx = rootHeightPx,
+                previewTopInsetPx = previewTopInsetPx,
+                bottomBarTopPx = bottomBarTopPx,
+            )
+        }
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(sourceRowHeight)
+                .graphicsLayer {
+                    val fraction = targetFraction().coerceIn(0f, 1f)
+                    val width = rootWidthPx + (targetBounds.width - rootWidthPx) * fraction
+                    val height = rootHeightPx + (targetBounds.height - rootHeightPx) * fraction
+                    val scale = width / rootWidthPx
+                    val visibleHeight = height / scale
+                    translationY = (rootHeightPx - visibleHeight) * PREVIEW_CROP_TOP_FRACTION
+                    alpha = TabOverviewHeroRules.compactChromeAlpha(fraction)
+                },
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .width(4.dp)
+                        .height(36.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp),
+                        ),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TabFavicon(tab = tab, favicon = favicon, size = 36.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            displayTabTitle(tab),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            if (tab.url == BLANK_URL) {
+                                stringResource(R.string.new_tab_title)
+                            } else {
+                                AddressResolver.displayText(tab.url)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (tab.isPinned) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_push_pin),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(horizontal = 15.dp)
+                                .size(20.dp),
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.size(48.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(21.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -4032,23 +4521,448 @@ private fun TabCard(
         ),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (tab.isIncognito) {
-                IncognitoTabPlaceholder()
-            } else if (preview != null && !preview.isRecycled) {
-                Image(
-                    bitmap = preview.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    alignment = BiasAlignment(
-                        horizontalBias = 0f,
-                        verticalBias = PREVIEW_CROP_TOP_FRACTION * 2f - 1f,
-                    ),
-                )
+            TabPreviewContent(tab = tab, preview = preview, favicon = favicon)
+        }
+    }
+}
+
+private class TabBoundsHolder {
+    var bounds: Rect? = null
+}
+
+@Composable
+private fun CompactTabGrid(
+    tabs: List<BrowserTab>,
+    selectedTabId: String,
+    initialTabId: String,
+    previews: Map<String, Bitmap>,
+    favicons: Map<String, Bitmap>,
+    heroProgress: () -> Float,
+    heroCompleted: Boolean,
+    heroVisible: Boolean,
+    exitHeroTabId: String?,
+    interactionsEnabled: Boolean,
+    onPreviewBounds: (BrowserTab, Rect) -> Unit,
+    onSelect: (BrowserTab, Rect) -> Unit,
+    onCloseTab: (BrowserTab) -> Unit,
+    onLongClick: (BrowserTab, Rect) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
+    val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = selectedIndex)
+    LaunchedEffect(initialTabId, tabs.firstOrNull()?.id) {
+        if (tabs.isEmpty()) return@LaunchedEffect
+        withFrameNanos { }
+        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
+            gridState.scrollToItem(selectedIndex)
+        }
+    }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        state = gridState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        gridItemsIndexed(
+            items = tabs,
+            key = { _, tab -> tab.id },
+            contentType = { _, _ -> "tab-grid-card" },
+        ) { index, tab ->
+            CompactGridTabItem(
+                tab = tab,
+                preview = previews[tab.id],
+                favicon = favicons[tab.id],
+                selected = tab.id == selectedTabId,
+                initial = tab.id == initialTabId,
+                heroProgress = heroProgress,
+                heroCompleted = heroCompleted,
+                heroVisible = heroVisible,
+                exitTarget = tab.id == exitHeroTabId,
+                interactionsEnabled = interactionsEnabled,
+                revealDelayMillis = (index % 6) * 24L,
+                onPreviewBounds = { bounds -> onPreviewBounds(tab, bounds) },
+                onSelect = { bounds -> onSelect(tab, bounds) },
+                onClose = { onCloseTab(tab) },
+                onLongClick = { bounds -> onLongClick(tab, bounds) },
+                modifier = Modifier.animateItem(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactGridTabItem(
+    tab: BrowserTab,
+    preview: Bitmap?,
+    favicon: Bitmap?,
+    selected: Boolean,
+    initial: Boolean,
+    heroProgress: () -> Float,
+    heroCompleted: Boolean,
+    heroVisible: Boolean,
+    exitTarget: Boolean,
+    interactionsEnabled: Boolean,
+    revealDelayMillis: Long,
+    onPreviewBounds: (Rect) -> Unit,
+    onSelect: (Rect) -> Unit,
+    onClose: () -> Unit,
+    onLongClick: (Rect) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val boundsHolder = remember(tab.id) { TabBoundsHolder() }
+    val revealProgress = remember(tab.id) { Animatable(if (initial) 1f else 0f) }
+    LaunchedEffect(heroCompleted, tab.id) {
+        if (initial) {
+            revealProgress.snapTo(1f)
+        } else if (!heroCompleted) {
+            revealProgress.snapTo(0f)
+        } else {
+            delay(revealDelayMillis)
+            revealProgress.animateTo(1f, tween(110, easing = FastOutSlowInEasing))
+        }
+    }
+    val shape = RoundedCornerShape(22.dp)
+    val realCardVisible = TabOverviewHeroRules.isCardVisible(
+        isInitialCard = initial,
+        progress = if (heroCompleted) 1f else 0f,
+        isExitTarget = exitTarget,
+    )
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = when {
+                    initial -> TabOverviewHeroRules.compactChromeAlpha(heroProgress())
+                    else -> TabOverviewHeroRules.neighborAlpha(heroProgress()) *
+                        revealProgress.value
+                }
+            }
+            .semantics { this.selected = selected }
+            .combinedClickable(
+                enabled = interactionsEnabled,
+                role = Role.Button,
+                onClick = { boundsHolder.bounds?.let(onSelect) },
+                onLongClick = { boundsHolder.bounds?.let(onLongClick) },
+                onLongClickLabel = stringResource(R.string.action_open_candy_trail),
+            ),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
             } else {
-                TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
+                MaterialTheme.colorScheme.surfaceContainer
+            },
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(start = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TabFavicon(tab = tab, favicon = favicon, size = 28.dp)
+                Spacer(Modifier.width(9.dp))
+                Text(
+                    displayTabTitle(tab),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                )
+                if (tab.isPinned) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_push_pin),
+                        contentDescription = stringResource(R.string.cd_pinned_tab),
+                        modifier = Modifier
+                            .padding(horizontal = 14.dp)
+                            .size(18.dp),
+                    )
+                } else {
+                    IconButton(
+                        onClick = onClose,
+                        enabled = interactionsEnabled,
+                        modifier = Modifier.size(48.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(
+                                R.string.cd_close_named_tab,
+                                displayTabTitle(tab),
+                            ),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(0.72f)
+                    .graphicsLayer {
+                        alpha = if (realCardVisible && !heroVisible) 1f else 0f
+                    }
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .onGloballyPositioned { coordinates ->
+                        val bounds = coordinates.boundsInRoot()
+                        boundsHolder.bounds = bounds
+                        onPreviewBounds(bounds)
+                    },
+            ) {
+                TabPreviewContent(tab = tab, preview = preview, favicon = favicon)
             }
         }
+    }
+}
+
+@Composable
+private fun CompactTabList(
+    tabs: List<BrowserTab>,
+    selectedTabId: String,
+    initialTabId: String,
+    favicons: Map<String, Bitmap>,
+    heroProgress: () -> Float,
+    heroCompleted: Boolean,
+    heroVisible: Boolean,
+    exitHeroTabId: String?,
+    interactionsEnabled: Boolean,
+    onRowBounds: (BrowserTab, Rect) -> Unit,
+    onSelect: (BrowserTab, Rect) -> Unit,
+    onCloseTab: (BrowserTab) -> Unit,
+    onLongClick: (BrowserTab, Rect) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+    LaunchedEffect(initialTabId, tabs.firstOrNull()?.id) {
+        if (tabs.isEmpty()) return@LaunchedEffect
+        withFrameNanos { }
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
+            listState.scrollToItem(selectedIndex)
+        }
+    }
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        itemsIndexed(
+            items = tabs,
+            key = { _, tab -> tab.id },
+            contentType = { _, _ -> "tab-list-row" },
+        ) { _, tab ->
+            CompactListTabItem(
+                tab = tab,
+                favicon = favicons[tab.id],
+                selected = tab.id == selectedTabId,
+                initial = tab.id == initialTabId,
+                heroProgress = heroProgress,
+                heroCompleted = heroCompleted,
+                heroVisible = heroVisible,
+                exitTarget = tab.id == exitHeroTabId,
+                interactionsEnabled = interactionsEnabled,
+                onBounds = { bounds -> onRowBounds(tab, bounds) },
+                onSelect = { bounds -> onSelect(tab, bounds) },
+                onClose = { onCloseTab(tab) },
+                onLongClick = { bounds -> onLongClick(tab, bounds) },
+                modifier = Modifier.animateItem(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactListTabItem(
+    tab: BrowserTab,
+    favicon: Bitmap?,
+    selected: Boolean,
+    initial: Boolean,
+    heroProgress: () -> Float,
+    heroCompleted: Boolean,
+    heroVisible: Boolean,
+    exitTarget: Boolean,
+    interactionsEnabled: Boolean,
+    onBounds: (Rect) -> Unit,
+    onSelect: (Rect) -> Unit,
+    onClose: () -> Unit,
+    onLongClick: (Rect) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val boundsHolder = remember(tab.id) { TabBoundsHolder() }
+    val realRowVisible = TabOverviewHeroRules.isCardVisible(
+        isInitialCard = initial,
+        progress = if (heroCompleted) 1f else 0f,
+        isExitTarget = exitTarget,
+    )
+    val shape = RoundedCornerShape(18.dp)
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .graphicsLayer {
+                alpha = when {
+                    !realRowVisible || (initial && heroVisible) -> 0f
+                    initial -> 1f
+                    else -> TabOverviewHeroRules.neighborAlpha(heroProgress())
+                }
+                translationY = if (initial) 0f else {
+                    (1f - TabOverviewHeroRules.neighborAlpha(heroProgress())) * 18f
+                }
+            }
+            .onGloballyPositioned { coordinates ->
+                val bounds = coordinates.boundsInRoot()
+                boundsHolder.bounds = bounds
+                onBounds(bounds)
+            }
+            .combinedClickable(
+                enabled = interactionsEnabled,
+                role = Role.Button,
+                onClick = { boundsHolder.bounds?.let(onSelect) },
+                onLongClick = { boundsHolder.bounds?.let(onLongClick) },
+                onLongClickLabel = stringResource(R.string.action_open_candy_trail),
+            )
+            .semantics { this.selected = selected },
+        shape = shape,
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f)
+        },
+        shadowElevation = 0.dp,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .width(4.dp)
+                        .height(36.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp),
+                        ),
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TabFavicon(tab = tab, favicon = favicon, size = 36.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        displayTabTitle(tab),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                    )
+                    Text(
+                        if (tab.url == BLANK_URL) {
+                            stringResource(R.string.new_tab_title)
+                        } else {
+                            AddressResolver.displayText(tab.url)
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (tab.isPinned) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_push_pin),
+                        contentDescription = stringResource(R.string.cd_pinned_tab),
+                        modifier = Modifier
+                            .padding(horizontal = 15.dp)
+                            .size(20.dp),
+                    )
+                } else {
+                    IconButton(
+                        onClick = onClose,
+                        enabled = interactionsEnabled,
+                        modifier = Modifier.size(48.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(
+                                R.string.cd_close_named_tab,
+                                displayTabTitle(tab),
+                            ),
+                            modifier = Modifier.size(21.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabFavicon(
+    tab: BrowserTab,
+    favicon: Bitmap?,
+    size: Dp,
+) {
+    if (tab.isIncognito) {
+        Icon(
+            painter = painterResource(R.drawable.ic_incognito_outline),
+            contentDescription = null,
+            modifier = Modifier.size(size),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+    } else if (favicon != null && !favicon.isRecycled) {
+        Image(
+            bitmap = favicon.asImageBitmap(),
+            contentDescription = null,
+            modifier = Modifier.size(size),
+            contentScale = ContentScale.Fit,
+        )
+    } else {
+        Surface(
+            modifier = Modifier.size(size),
+            shape = RoundedCornerShape(size * 0.28f),
+            color = MaterialTheme.colorScheme.primary,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    displayTabTitle(tab).take(1).uppercase(),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabPreviewContent(
+    tab: BrowserTab,
+    preview: Bitmap?,
+    favicon: Bitmap?,
+) {
+    when {
+        tab.isIncognito -> IncognitoTabPlaceholder()
+        preview != null && !preview.isRecycled -> Image(
+            bitmap = preview.asImageBitmap(),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            alignment = BiasAlignment(
+                horizontalBias = 0f,
+                verticalBias = PREVIEW_CROP_TOP_FRACTION * 2f - 1f,
+            ),
+        )
+        else -> TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
     }
 }
 
@@ -4364,6 +5278,10 @@ private fun TabPreviewPlaceholder(
     title: String,
     favicon: Bitmap?,
 ) {
+    val titleContentColor = TabOverviewContrastRules.titleContentColor(
+        primaryContainer = MaterialTheme.colorScheme.primaryContainer,
+        tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer,
+    )
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -4410,7 +5328,7 @@ private fun TabPreviewPlaceholder(
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = titleContentColor,
                 fontWeight = FontWeight.SemiBold,
             )
         }
@@ -4422,6 +5340,7 @@ private fun SettingsScreen(
     blockerSettings: BlockerSettings,
     inactiveTabLifetime: InactiveTabLifetime,
     searchEngine: SearchEngine,
+    tabOverviewMode: TabOverviewMode,
     dismissResistancePercent: Int,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
@@ -4429,6 +5348,7 @@ private fun SettingsScreen(
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
+    onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onRequestDefaultBrowser: () -> Unit,
     onPrivacyXRay: () -> Unit,
@@ -4441,6 +5361,7 @@ private fun SettingsScreen(
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
     var searchEngineMenuExpanded by remember { mutableStateOf(false) }
+    var overviewModeMenuExpanded by remember { mutableStateOf(false) }
     var resistancePercent by remember(dismissResistancePercent) {
         mutableFloatStateOf(dismissResistancePercent.toFloat())
     }
@@ -4510,6 +5431,36 @@ private fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_tabs))
             Spacer(Modifier.height(8.dp))
+            Box {
+                SettingsChoice(
+                    title = stringResource(R.string.settings_tab_overview_mode),
+                    value = tabOverviewMode.displayName(),
+                    expanded = overviewModeMenuExpanded,
+                    onClick = { overviewModeMenuExpanded = true },
+                )
+                DropdownMenu(
+                    expanded = overviewModeMenuExpanded,
+                    onDismissRequest = { overviewModeMenuExpanded = false },
+                    modifier = Modifier.clip(RoundedCornerShape(24.dp)),
+                    shape = RoundedCornerShape(24.dp),
+                ) {
+                    TabOverviewMode.entries.forEach { mode ->
+                        DropdownMenuItem(
+                            text = { Text(mode.displayName()) },
+                            onClick = {
+                                overviewModeMenuExpanded = false
+                                onTabOverviewModeChanged(mode)
+                            },
+                            trailingIcon = {
+                                if (mode == tabOverviewMode) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             Box {
                 SettingsChoice(
                     title = stringResource(R.string.settings_auto_close_tabs),
@@ -4776,6 +5727,13 @@ private fun InactiveTabLifetime.displayName(): String = when (this) {
     InactiveTabLifetime.ThreeDays -> pluralStringResource(R.plurals.tab_lifetime_days, 3, 3)
     InactiveTabLifetime.SevenDays -> pluralStringResource(R.plurals.tab_lifetime_days, 7, 7)
     InactiveTabLifetime.ThirtyDays -> pluralStringResource(R.plurals.tab_lifetime_days, 30, 30)
+}
+
+@Composable
+private fun TabOverviewMode.displayName(): String = when (this) {
+    TabOverviewMode.Hero -> stringResource(R.string.tab_overview_mode_hero)
+    TabOverviewMode.Grid -> stringResource(R.string.tab_overview_mode_grid)
+    TabOverviewMode.List -> stringResource(R.string.tab_overview_mode_list)
 }
 
 @Composable

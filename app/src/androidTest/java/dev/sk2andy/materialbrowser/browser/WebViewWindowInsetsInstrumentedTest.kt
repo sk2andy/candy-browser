@@ -117,12 +117,15 @@ class WebViewWindowInsetsInstrumentedTest {
             assertTrue(expectedTopPixels.get() > 0)
             assertEquals(0f, topInset, 0.1f)
             awaitWebViewBottomAtParentBottom(webView)
+            assertEquals(expectedTopPixels.get(), previewTopInset(scenario))
 
             evaluate(webView, "window.scrollTo(0, 1000)")
             awaitWebViewTop(webView, 0)
+            assertEquals(0, previewTopInset(scenario))
 
             evaluate(webView, "window.scrollTo(0, 0)")
             awaitWebViewTop(webView, expectedTopPixels.get())
+            assertEquals(expectedTopPixels.get(), previewTopInset(scenario))
 
             evaluate(
                 webView,
@@ -174,6 +177,15 @@ class WebViewWindowInsetsInstrumentedTest {
             SystemClock.sleep(50)
         }
         throw AssertionError("WebView test page did not finish loading")
+    }
+
+    private fun previewTopInset(scenario: ActivityScenario<MainActivity>): Int {
+        val result = AtomicInteger()
+        scenario.onActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            result.set(controller.previewTopInsetPx(controller.selectedTabId))
+        }
+        return result.get()
     }
 
     private fun awaitWebViewTop(webView: WebView, expectedTop: Int) {

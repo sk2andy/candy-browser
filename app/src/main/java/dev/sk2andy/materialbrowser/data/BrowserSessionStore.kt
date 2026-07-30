@@ -259,6 +259,13 @@ class BrowserSessionStore(context: Context) {
             .apply()
     }
 
+    fun loadTabOverviewMode(): TabOverviewMode =
+        TabOverviewMode.fromWireValue(preferences.getString(KEY_TAB_OVERVIEW_MODE, null))
+
+    fun saveTabOverviewMode(mode: TabOverviewMode) {
+        preferences.edit().putString(KEY_TAB_OVERVIEW_MODE, mode.wireValue).apply()
+    }
+
     private fun <T> loadArray(key: String, read: (JSONObject) -> T): List<T> {
         val raw = preferences.getString(key, null) ?: return emptyList()
         return runCatching {
@@ -290,6 +297,7 @@ class BrowserSessionStore(context: Context) {
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
         const val KEY_SEARCH_ENGINE = "search_engine"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
+        const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
         const val DEFAULT_DISMISS_RESISTANCE_START_PERCENT = 40
         const val MIN_DISMISS_RESISTANCE_START_PERCENT = 10
         const val MAX_DISMISS_RESISTANCE_START_PERCENT = 90
