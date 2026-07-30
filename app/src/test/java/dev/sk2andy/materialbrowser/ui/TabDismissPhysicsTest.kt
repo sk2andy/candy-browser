@@ -6,6 +6,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TabDismissPhysicsTest {
+
+    @Test
+    fun signedVisualDistance_preservesBothDismissDirections() {
+        assertEquals(-22f, TabDismissPhysics.signedVisualDistance(-40f), 0.001f)
+        assertEquals(22f, TabDismissPhysics.signedVisualDistance(40f), 0.001f)
+        assertEquals(0f, TabDismissPhysics.signedVisualDistance(0f), 0.001f)
+    }
+
     @Test
     fun `configured first forty percent uses resistance`() {
         assertEquals(0f, TabDismissPhysics.visualDistance(0f), 0.001f)

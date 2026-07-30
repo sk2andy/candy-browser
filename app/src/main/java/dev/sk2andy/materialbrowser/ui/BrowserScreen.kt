@@ -148,8 +148,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -3562,6 +3564,7 @@ private fun TabOverview(
                     heroCompleted = heroCompleted,
                     heroVisible = heroVisible,
                     exitHeroTabId = exitHero?.tabId,
+                    dismissResistanceFraction = controller.dismissResistancePercent / 100f,
                     interactionsEnabled = dismissingTabId == null &&
                         movingTabId == null &&
                         exitHero == null &&
@@ -3578,6 +3581,24 @@ private fun TabOverview(
                     onCloseTab = { tab ->
                         if (TabDeletionRules.canDelete(tab)) {
                             rootView.performConfirmHaptic()
+                            controller.closeTab(tab.id)
+                        }
+                    },
+                    onSwipeDismissStart = { tab ->
+                        if (dismissingTabId == null) {
+                            dismissingTabId = tab.id
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                    onSwipeDismissEnd = { tab ->
+                        if (dismissingTabId == tab.id) {
+                            dismissingTabId = null
+                        }
+                    },
+                    onSwipeDismiss = { tab ->
+                        if (TabDeletionRules.canDelete(tab)) {
                             controller.closeTab(tab.id)
                         }
                     },
@@ -4541,10 +4562,14 @@ private fun CompactTabGrid(
     heroCompleted: Boolean,
     heroVisible: Boolean,
     exitHeroTabId: String?,
+    dismissResistanceFraction: Float,
     interactionsEnabled: Boolean,
     onPreviewBounds: (BrowserTab, Rect) -> Unit,
     onSelect: (BrowserTab, Rect) -> Unit,
     onCloseTab: (BrowserTab) -> Unit,
+    onSwipeDismissStart: (BrowserTab) -> Boolean,
+    onSwipeDismissEnd: (BrowserTab) -> Unit,
+    onSwipeDismiss: (BrowserTab) -> Unit,
     onLongClick: (BrowserTab, Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -4557,38 +4582,124 @@ private fun CompactTabGrid(
             gridState.scrollToItem(selectedIndex)
         }
     }
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        state = gridState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    val topFadeAlpha by animateFloatAsState(
+        targetValue = if (gridState.canScrollBackward) 1f else 0f,
+        animationSpec = tween(durationMillis = 120),
+        label = "gridTopFade",
+    )
+    val bottomFadeAlpha by animateFloatAsState(
+        targetValue = if (gridState.canScrollForward) 1f else 0f,
+        animationSpec = tween(durationMillis = 120),
+        label = "gridBottomFade",
+    )
+    val rootView = LocalView.current
+    var gridBounds by remember { mutableStateOf<Rect?>(null) }
+    val overviewBackgroundColors = listOf(
+        MaterialTheme.colorScheme.primaryContainer,
+        MaterialTheme.colorScheme.tertiaryContainer,
+        MaterialTheme.colorScheme.surface,
+    )
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { gridBounds = it.boundsInRoot() },
     ) {
-        gridItemsIndexed(
-            items = tabs,
-            key = { _, tab -> tab.id },
-            contentType = { _, _ -> "tab-grid-card" },
-        ) { index, tab ->
-            CompactGridTabItem(
-                tab = tab,
-                preview = previews[tab.id],
-                favicon = favicons[tab.id],
-                selected = tab.id == selectedTabId,
-                initial = tab.id == initialTabId,
-                heroProgress = heroProgress,
-                heroCompleted = heroCompleted,
-                heroVisible = heroVisible,
-                exitTarget = tab.id == exitHeroTabId,
-                interactionsEnabled = interactionsEnabled,
-                revealDelayMillis = (index % 6) * 24L,
-                onPreviewBounds = { bounds -> onPreviewBounds(tab, bounds) },
-                onSelect = { bounds -> onSelect(tab, bounds) },
-                onClose = { onCloseTab(tab) },
-                onLongClick = { bounds -> onLongClick(tab, bounds) },
-                modifier = Modifier.animateItem(),
-            )
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            state = gridState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            gridItemsIndexed(
+                items = tabs,
+                key = { _, tab -> tab.id },
+                contentType = { _, _ -> "tab-grid-card" },
+            ) { index, tab ->
+                CompactGridTabItem(
+                    tab = tab,
+                    preview = previews[tab.id],
+                    favicon = favicons[tab.id],
+                    selected = tab.id == selectedTabId,
+                    initial = tab.id == initialTabId,
+                    heroProgress = heroProgress,
+                    heroCompleted = heroCompleted,
+                    heroVisible = heroVisible,
+                    exitTarget = tab.id == exitHeroTabId,
+                    dismissResistanceFraction = dismissResistanceFraction,
+                    interactionsEnabled = interactionsEnabled,
+                    revealDelayMillis = (index % 6) * 24L,
+                    onPreviewBounds = { bounds -> onPreviewBounds(tab, bounds) },
+                    onSelect = { bounds -> onSelect(tab, bounds) },
+                    onClose = { onCloseTab(tab) },
+                    onSwipeDismissStart = { onSwipeDismissStart(tab) },
+                    onSwipeDismissEnd = { onSwipeDismissEnd(tab) },
+                    onSwipeDismiss = { onSwipeDismiss(tab) },
+                    onLongClick = { bounds -> onLongClick(tab, bounds) },
+                    modifier = Modifier.animateItem(),
+                )
+            }
         }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(28.dp)
+                .graphicsLayer {
+                    alpha = topFadeAlpha
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .drawWithContent {
+                    val topInRoot = gridBounds?.top ?: 0f
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = overviewBackgroundColors,
+                            start = Offset(0f, -topInRoot),
+                            end = Offset(
+                                rootView.width.toFloat(),
+                                rootView.height.toFloat() - topInRoot,
+                            ),
+                        ),
+                    )
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Black, Color.Transparent),
+                        ),
+                        blendMode = BlendMode.DstIn,
+                    )
+                },
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(36.dp)
+                .graphicsLayer {
+                    alpha = bottomFadeAlpha
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .drawWithContent {
+                    val bottomInRoot = gridBounds?.bottom ?: rootView.height.toFloat()
+                    val topInRoot = bottomInRoot - size.height
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = overviewBackgroundColors,
+                            start = Offset(0f, -topInRoot),
+                            end = Offset(
+                                rootView.width.toFloat(),
+                                rootView.height.toFloat() - topInRoot,
+                            ),
+                        ),
+                    )
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black),
+                        ),
+                        blendMode = BlendMode.DstIn,
+                    )
+                },
+        )
     }
 }
 
@@ -4603,16 +4714,46 @@ private fun CompactGridTabItem(
     heroCompleted: Boolean,
     heroVisible: Boolean,
     exitTarget: Boolean,
+    dismissResistanceFraction: Float,
     interactionsEnabled: Boolean,
     revealDelayMillis: Long,
     onPreviewBounds: (Rect) -> Unit,
     onSelect: (Rect) -> Unit,
     onClose: () -> Unit,
+    onSwipeDismissStart: () -> Boolean,
+    onSwipeDismissEnd: () -> Unit,
+    onSwipeDismiss: () -> Unit,
     onLongClick: (Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val rootView = LocalView.current
+    val gestureScope = rememberCoroutineScope()
     val boundsHolder = remember(tab.id) { TabBoundsHolder() }
-    val revealProgress = remember(tab.id) { Animatable(if (initial) 1f else 0f) }
+    val revealProgress = remember(tab.id) {
+        Animatable(if (initial || heroCompleted) 1f else 0f)
+    }
+    val breakFreeProgress = remember(tab.id) { Animatable(0f) }
+    var breakFreeJob by remember(tab.id) { mutableStateOf<Job?>(null) }
+    var rawDismissOffset by remember(tab.id) { mutableFloatStateOf(0f) }
+    var dismissOffset by remember(tab.id) { mutableFloatStateOf(0f) }
+    var cardWidthPx by remember(tab.id) { mutableFloatStateOf(1f) }
+    var dragActive by remember(tab.id) { mutableStateOf(false) }
+    var resistanceCleared by remember(tab.id) { mutableStateOf(false) }
+    var rubberbandHapticActive by remember(tab.id) { mutableStateOf(false) }
+    var dismissHapticPlayed by remember(tab.id) { mutableStateOf(false) }
+    var gestureRaised by remember(tab.id) { mutableStateOf(false) }
+    var dismissInProgress by remember(tab.id) { mutableStateOf(false) }
+    DisposableEffect(tab.id, rootView) {
+        onDispose {
+            breakFreeJob?.cancel()
+            if (rubberbandHapticActive) {
+                rootView.stopRubberbandHaptic()
+            }
+            if (dismissInProgress) {
+                onSwipeDismissEnd()
+            }
+        }
+    }
     LaunchedEffect(heroCompleted, tab.id) {
         if (initial) {
             revealProgress.snapTo(1f)
@@ -4629,16 +4770,145 @@ private fun CompactGridTabItem(
         progress = if (heroCompleted) 1f else 0f,
         isExitTarget = exitTarget,
     )
+    val dismissThreshold = cardWidthPx * 0.53f
+    val dragState = rememberDraggableState { delta ->
+        rawDismissOffset += delta
+        val rawDistance = rawDismissOffset.absoluteValue
+        val hasClearedResistance = TabDismissPhysics.hasClearedResistance(
+            rawDistance = rawDistance,
+            dismissThreshold = dismissThreshold,
+            resistanceFraction = dismissResistanceFraction,
+        )
+        val shouldVibrate = TabDismissPhysics.isInResistancePhase(
+            rawDistance = rawDistance,
+            dismissThreshold = dismissThreshold,
+            resistanceFraction = dismissResistanceFraction,
+        )
+        if (shouldVibrate && !rubberbandHapticActive) {
+            rootView.startRubberbandHaptic()
+            rubberbandHapticActive = true
+        } else if (!shouldVibrate && rubberbandHapticActive) {
+            rootView.stopRubberbandHaptic()
+            rubberbandHapticActive = false
+        }
+        if (hasClearedResistance != resistanceCleared) {
+            resistanceCleared = hasClearedResistance
+            breakFreeJob?.cancel()
+            breakFreeJob = gestureScope.launch {
+                breakFreeProgress.animateTo(
+                    targetValue = if (hasClearedResistance) 1f else 0f,
+                    animationSpec = spring(
+                        dampingRatio = 0.72f,
+                        stiffness = 800f,
+                    ),
+                )
+            }
+        }
+        if (hasClearedResistance && !dismissHapticPlayed) {
+            rootView.performConfirmHaptic()
+            dismissHapticPlayed = true
+        }
+    }
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .onSizeChanged { cardWidthPx = it.width.toFloat().coerceAtLeast(1f) }
+            .zIndex(if (gestureRaised) 2f else 0f)
             .graphicsLayer {
-                alpha = when {
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+                val currentDismissOffset = if (dragActive) {
+                    TabDismissPhysics.signedVisualDistance(
+                        rawDistance = rawDismissOffset,
+                        releaseProgress = breakFreeProgress.value,
+                    )
+                } else {
+                    dismissOffset
+                }
+                translationX = currentDismissOffset
+                val dismissProgress =
+                    (currentDismissOffset.absoluteValue / (dismissThreshold * 1.7f))
+                        .coerceIn(0f, 1f)
+                alpha = (when {
                     initial -> TabOverviewHeroRules.compactChromeAlpha(heroProgress())
                     else -> TabOverviewHeroRules.neighborAlpha(heroProgress()) *
                         revealProgress.value
-                }
+                }) * (1f - dismissProgress * 0.72f)
+                val dismissScale = 1f - dismissProgress * 0.05f
+                scaleX = dismissScale
+                scaleY = dismissScale
+                rotationZ = (currentDismissOffset / cardWidthPx).coerceIn(-1f, 1f) * 2f
             }
+            .draggable(
+                state = dragState,
+                orientation = Orientation.Horizontal,
+                enabled = interactionsEnabled &&
+                    heroCompleted &&
+                    !heroVisible &&
+                    TabDeletionRules.canDelete(tab),
+                onDragStarted = {
+                    breakFreeJob?.cancel()
+                    breakFreeProgress.snapTo(0f)
+                    rootView.stopRubberbandHaptic()
+                    rawDismissOffset = 0f
+                    dismissOffset = 0f
+                    dragActive = true
+                    gestureRaised = true
+                    resistanceCleared = false
+                    rubberbandHapticActive = false
+                    dismissHapticPlayed = false
+                },
+                onDragStopped = {
+                    rootView.stopRubberbandHaptic()
+                    rubberbandHapticActive = false
+                    breakFreeJob?.cancel()
+                    breakFreeProgress.stop()
+                    dismissOffset = TabDismissPhysics.signedVisualDistance(
+                        rawDistance = rawDismissOffset,
+                        releaseProgress = breakFreeProgress.value,
+                    )
+                    dragActive = false
+                    val farEnough = TabDismissPhysics.hasClearedResistance(
+                        rawDistance = rawDismissOffset.absoluteValue,
+                        dismissThreshold = dismissThreshold,
+                        resistanceFraction = dismissResistanceFraction,
+                    )
+                    if (farEnough && onSwipeDismissStart()) {
+                        dismissInProgress = true
+                        gestureScope.launch {
+                            try {
+                                val direction = if (rawDismissOffset < 0f) -1f else 1f
+                                Animatable(dismissOffset).animateTo(
+                                    targetValue = direction * rootView.width * 1.1f,
+                                    animationSpec = tween(
+                                        durationMillis = 180,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                ) { dismissOffset = value }
+                                onSwipeDismiss()
+                            } finally {
+                                dismissInProgress = false
+                                gestureRaised = false
+                                onSwipeDismissEnd()
+                            }
+                        }
+                    } else {
+                        gestureScope.launch {
+                            Animatable(dismissOffset).animateTo(
+                                targetValue = 0f,
+                                animationSpec = spring(
+                                    dampingRatio = 0.78f,
+                                    stiffness = 520f,
+                                ),
+                            ) { dismissOffset = value }
+                            rawDismissOffset = 0f
+                            breakFreeProgress.snapTo(0f)
+                            resistanceCleared = false
+                            dismissHapticPlayed = false
+                            gestureRaised = false
+                        }
+                    }
+                },
+            )
             .semantics { this.selected = selected }
             .combinedClickable(
                 enabled = interactionsEnabled,
@@ -4661,12 +4931,12 @@ private fun CompactGridTabItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
-                    .padding(start = 12.dp),
+                    .height(48.dp)
+                    .padding(start = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TabFavicon(tab = tab, favicon = favicon, size = 28.dp)
-                Spacer(Modifier.width(9.dp))
+                TabFavicon(tab = tab, favicon = favicon, size = 22.dp)
+                Spacer(Modifier.width(8.dp))
                 Text(
                     displayTabTitle(tab),
                     modifier = Modifier.weight(1f),
@@ -4680,8 +4950,8 @@ private fun CompactGridTabItem(
                         painter = painterResource(R.drawable.ic_push_pin),
                         contentDescription = stringResource(R.string.cd_pinned_tab),
                         modifier = Modifier
-                            .padding(horizontal = 14.dp)
-                            .size(18.dp),
+                            .padding(horizontal = 15.dp)
+                            .size(16.dp),
                     )
                 } else {
                     IconButton(
@@ -4695,7 +4965,7 @@ private fun CompactGridTabItem(
                                 R.string.cd_close_named_tab,
                                 displayTabTitle(tab),
                             ),
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }

@@ -1,5 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
+import kotlin.math.absoluteValue
+import kotlin.math.sign
+
 internal object TabDismissPhysics {
     const val DEFAULT_RESISTANCE_FRACTION = 0.4f
     private const val RESISTANCE_MULTIPLIER = 0.55f
@@ -15,6 +18,14 @@ internal object TabDismissPhysics {
             (safeRawDistance - resistedDistance) *
             releaseProgress.coerceIn(0f, MAX_RELEASE_PROGRESS)
     }
+
+    fun signedVisualDistance(
+        rawDistance: Float,
+        releaseProgress: Float = 0f,
+    ): Float = rawDistance.sign * visualDistance(
+        rawDistance = rawDistance.absoluteValue,
+        releaseProgress = releaseProgress,
+    )
 
     fun hasClearedResistance(
         rawDistance: Float,
