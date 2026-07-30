@@ -24,6 +24,14 @@
     <string name="cd_tab_actions">Tab-Aktionen</string>
     <string name="cd_candy_trail_node">%1$s, %2$s</string>
     <string name="cd_candy_trail_current_node">Aktuelle Seite, %1$s, %2$s</string>
+    <string name="action_fork_tab">Tab abzweigen</string>
+    <string name="action_fork_from_here">Ab hier abzweigen</string>
+    <string name="fork_url_only_disclaimer">Öffnet diese URL in einem neuen Tab. JavaScript- und Formularzustand werden nicht kopiert.</string>
+    <string name="fork_status_open">Offen</string>
+    <string name="fork_status_closed">Geschlossen</string>
+    <string name="cd_candy_trail_fork_open">Offene Abzweigung, %1$s, %2$s. Zum Tab wechseln.</string>
+    <string name="cd_candy_trail_fork_closed">Geschlossene Abzweigung, %1$s, %2$s. In neuem Tab wieder öffnen.</string>
+    <string name="cd_candy_trail_node_actions">Aktionen für %1$s</string>
     <string name="cd_zoom_out">Verkleinern</string>
     <string name="cd_zoom_in">Vergrößern</string>
     <string name="action_reset_zoom">Zurücksetzen</string>

@@ -24,6 +24,14 @@
     <string name="cd_tab_actions">Actions de l’onglet</string>
     <string name="cd_candy_trail_node">%1$s, %2$s</string>
     <string name="cd_candy_trail_current_node">Page actuelle, %1$s, %2$s</string>
+    <string name="action_fork_tab">Créer une branche d’onglet</string>
+    <string name="action_fork_from_here">Créer une branche ici</string>
+    <string name="fork_url_only_disclaimer">Ouvre cette URL dans un nouvel onglet. L’état JavaScript et les formulaires ne sont pas copiés.</string>
+    <string name="fork_status_open">Ouverte</string>
+    <string name="fork_status_closed">Fermée</string>
+    <string name="cd_candy_trail_fork_open">Branche ouverte, %1$s, %2$s. Accéder à l’onglet.</string>
+    <string name="cd_candy_trail_fork_closed">Branche fermée, %1$s, %2$s. Rouvrir dans un nouvel onglet.</string>
+    <string name="cd_candy_trail_node_actions">Actions pour %1$s</string>
     <string name="cd_zoom_out">Réduire</string>
     <string name="cd_zoom_in">Agrandir</string>
     <string name="action_reset_zoom">Réinitialiser</string>

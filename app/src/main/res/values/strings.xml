@@ -28,6 +28,14 @@
     <string name="cd_tab_actions">Tab actions</string>
     <string name="cd_candy_trail_node">%1$s, %2$s</string>
     <string name="cd_candy_trail_current_node">Current page, %1$s, %2$s</string>
+    <string name="action_fork_tab">Fork tab</string>
+    <string name="action_fork_from_here">Fork from here</string>
+    <string name="fork_url_only_disclaimer">Opens this URL in a new tab. JavaScript and form state aren’t copied.</string>
+    <string name="fork_status_open">Open</string>
+    <string name="fork_status_closed">Closed</string>
+    <string name="cd_candy_trail_fork_open">Open fork, %1$s, %2$s. Switch to tab.</string>
+    <string name="cd_candy_trail_fork_closed">Closed fork, %1$s, %2$s. Reopen in a new tab.</string>
+    <string name="cd_candy_trail_node_actions">Actions for %1$s</string>
     <string name="cd_zoom_out">Zoom out</string>
     <string name="cd_zoom_in">Zoom in</string>
     <string name="action_reset_zoom">Reset</string>

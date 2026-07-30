@@ -3494,10 +3494,15 @@ private fun TabOverview(
             controller.activeTabs.firstOrNull { it.id == tabId }
         }
         if (candyTrailTab != null) {
+            val candyTrail = controller.candyTrail(candyTrailTab.id)
             CandyTrailScreen(
                 tab = candyTrailTab,
-                trail = controller.candyTrail(candyTrailTab.id),
+                trail = candyTrail,
                 favicon = controller.favicons[candyTrailTab.id],
+                forkFavicons = candyTrail.forks.mapNotNull { fork ->
+                    val destinationId = fork.destinationTabId ?: return@mapNotNull null
+                    controller.favicons[destinationId]?.let { destinationId to it }
+                }.toMap(),
                 sourceBounds = candyTrailSourceBounds,
                 predictiveBackProgress = candyTrailBackProgress,
                 predictiveBackEdgeSign = candyTrailBackEdgeSign,
@@ -3534,6 +3539,28 @@ private fun TabOverview(
                         }
                     }
                 },
+                onForkNode = { nodeId ->
+                    val destinationId = controller.forkCandyTrailNode(candyTrailTab.id, nodeId)
+                    if (destinationId != null) {
+                        onCloseCandyTrail()
+                        onSelect(destinationId)
+                        onClose()
+                        true
+                    } else {
+                        false
+                    }
+                },
+                onSelectFork = { forkId ->
+                    val destinationId = controller.activateCandyTrailFork(candyTrailTab.id, forkId)
+                    if (destinationId != null) {
+                        onCloseCandyTrail()
+                        onSelect(destinationId)
+                        onClose()
+                        true
+                    } else {
+                        false
+                    }
+                },
                 onDismiss = onCloseCandyTrail,
             )
         }
@@ -3544,6 +3571,22 @@ private fun TabOverview(
         TabActionsSheet(
             tab = actionTab,
             profiles = controller.profiles,
+            canFork = actionTab?.let { tab ->
+                tab.url != BLANK_URL && controller.candyTrail(tab.id).currentNodeId != null
+            } == true,
+            onFork = {
+                val target = actionTab ?: return@TabActionsSheet
+                val currentNodeId = controller.candyTrail(target.id).currentNodeId
+                    ?: return@TabActionsSheet
+                tabActionsTabId = null
+                val destinationId = controller.forkCandyTrailNode(target.id, currentNodeId)
+                if (destinationId != null) {
+                    rootView.performConfirmHaptic()
+                    onCloseCandyTrail()
+                    onSelect(destinationId)
+                    onClose()
+                }
+            },
             onTogglePinned = {
                 val target = actionTab ?: return@TabActionsSheet
                 tabActionsTabId = null
@@ -4056,6 +4099,8 @@ private fun TabCard(
 private fun TabActionsSheet(
     tab: BrowserTab?,
     profiles: List<BrowserProfile>,
+    canFork: Boolean,
+    onFork: () -> Unit,
     onTogglePinned: () -> Unit,
     onMoveToProfile: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -4074,6 +4119,21 @@ private fun TabActionsSheet(
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(12.dp))
+            TextButton(
+                onClick = onFork,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = canFork,
+            ) {
+                Text(stringResource(R.string.action_fork_tab))
+            }
+            if (canFork) {
+                Text(
+                    stringResource(R.string.fork_url_only_disclaimer),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             TextButton(
                 onClick = onTogglePinned,
                 modifier = Modifier.fillMaxWidth(),

@@ -24,6 +24,14 @@
     <string name="cd_tab_actions">Ações do separador</string>
     <string name="cd_candy_trail_node">%1$s, %2$s</string>
     <string name="cd_candy_trail_current_node">Página atual, %1$s, %2$s</string>
+    <string name="action_fork_tab">Criar ramificação do separador</string>
+    <string name="action_fork_from_here">Criar ramificação aqui</string>
+    <string name="fork_url_only_disclaimer">Abre este URL num novo separador. O estado de JavaScript e dos formulários não é copiado.</string>
+    <string name="fork_status_open">Aberta</string>
+    <string name="fork_status_closed">Fechada</string>
+    <string name="cd_candy_trail_fork_open">Ramificação aberta, %1$s, %2$s. Mudar para o separador.</string>
+    <string name="cd_candy_trail_fork_closed">Ramificação fechada, %1$s, %2$s. Reabrir num novo separador.</string>
+    <string name="cd_candy_trail_node_actions">Ações para %1$s</string>
     <string name="cd_zoom_out">Reduzir</string>
     <string name="cd_zoom_in">Ampliar</string>
     <string name="action_reset_zoom">Repor</string>

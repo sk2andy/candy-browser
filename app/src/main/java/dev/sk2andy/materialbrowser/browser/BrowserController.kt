@@ -1226,6 +1226,7 @@ class BrowserController(private val activity: Activity) {
             selectedTabId = fallbackSelection
             rememberSelectedTab(fallbackProfile.id, fallbackSelection)
         }
+        reconcileCandyTrailForks(System.currentTimeMillis())
         persist()
         return true
     }
@@ -1270,6 +1271,7 @@ class BrowserController(private val activity: Activity) {
             touchTab(selectedTabId, System.currentTimeMillis())
             rememberSelectedTab(activeProfileId, selectedTabId)
         }
+        reconcileCandyTrailForks(System.currentTimeMillis())
         persist()
         return true
     }
@@ -1444,6 +1446,7 @@ class BrowserController(private val activity: Activity) {
             )
         }
         if (wasLastIncognitoTab) clearIncognitoProfile()
+        reconcileCandyTrailForks(System.currentTimeMillis())
         webViewRevision++
         persist()
         return true
@@ -1477,6 +1480,7 @@ class BrowserController(private val activity: Activity) {
         if (closingTab.isIncognito && tabs.none(BrowserTab::isIncognito)) {
             clearIncognitoProfile()
         }
+        reconcileCandyTrailForks(nowMillis)
         persist()
     }
 
@@ -1493,6 +1497,87 @@ class BrowserController(private val activity: Activity) {
     }
 
     fun candyTrail(tabId: String): CandyTrail = candyTrails[tabId] ?: CandyTrail(tabId)
+
+    fun forkCandyTrailNode(tabId: String, nodeId: String): String? {
+        val nowMillis = System.currentTimeMillis()
+        touchTab(tabId, nowMillis)
+        pruneStaleTabs(nowMillis)
+        val originTab = activeTabs.firstOrNull { it.id == tabId } ?: return null
+        val trail = candyTrails[tabId] ?: return null
+        val node = trail.nodes.firstOrNull { it.id == nodeId } ?: return null
+        if (!CandyTrailForkRules.canCreateFork(tabs.size, MAX_TABS)) {
+            showTabLimitReached()
+            return null
+        }
+        val destinationTab = newTabState(
+            url = node.url,
+            nowMillis = nowMillis,
+            isIncognito = originTab.isIncognito,
+        ).copy(title = node.title.ifBlank { AddressResolver.displayText(node.url) })
+        val forkedTrail = CandyTrailForkRules.create(
+            trail = trail,
+            originTab = originTab.toCandyTrailForkTab(),
+            originNodeId = nodeId,
+            destinationTab = destinationTab.toCandyTrailForkTab(),
+            createdAt = nowMillis,
+        ) ?: return null
+
+        touchTab(selectedTabId, nowMillis)
+        webViews[selectedTabId]?.let(::pauseWebView)
+        tabs += destinationTab
+        setCandyTrail(originTab, forkedTrail)
+        selectedTabId = destinationTab.id
+        rememberSelectedTab(activeProfileId, destinationTab.id)
+        bottomBarCompactStates[destinationTab.id] = false
+        persist()
+        return destinationTab.id
+    }
+
+    fun activateCandyTrailFork(tabId: String, forkId: String): String? {
+        val nowMillis = System.currentTimeMillis()
+        touchTab(tabId, nowMillis)
+        pruneStaleTabs(nowMillis)
+        val originTab = activeTabs.firstOrNull { it.id == tabId } ?: return null
+        val trail = candyTrails[tabId] ?: return null
+        val fork = trail.forks.firstOrNull { it.id == forkId } ?: return null
+        val openDestination = fork.destinationTabId?.let { destinationId ->
+            activeTabs.firstOrNull { destination ->
+                destination.id == destinationId &&
+                    destination.profileId == originTab.profileId &&
+                    destination.isIncognito == originTab.isIncognito
+            }
+        }
+        if (openDestination != null) {
+            selectTab(openDestination.id)
+            return openDestination.id
+        }
+        if (!CandyTrailForkRules.canCreateFork(tabs.size, MAX_TABS)) {
+            showTabLimitReached()
+            return null
+        }
+        val destinationTab = newTabState(
+            url = fork.url,
+            nowMillis = nowMillis,
+            isIncognito = originTab.isIncognito,
+        ).copy(title = fork.title.ifBlank { AddressResolver.displayText(fork.url) })
+        val reopenedTrail = CandyTrailForkRules.reopen(
+            trail = trail,
+            forkId = forkId,
+            originTab = originTab.toCandyTrailForkTab(),
+            destinationTab = destinationTab.toCandyTrailForkTab(),
+            reopenedAt = nowMillis,
+        ) ?: return null
+
+        touchTab(selectedTabId, nowMillis)
+        webViews[selectedTabId]?.let(::pauseWebView)
+        tabs += destinationTab
+        setCandyTrail(originTab, reopenedTrail)
+        selectedTabId = destinationTab.id
+        rememberSelectedTab(activeProfileId, destinationTab.id)
+        bottomBarCompactStates[destinationTab.id] = false
+        persist()
+        return destinationTab.id
+    }
 
     fun navigateToCandyTrailNode(tabId: String, nodeId: String): Boolean {
         val tab = activeTabs.firstOrNull { it.id == tabId } ?: return false
@@ -1648,6 +1733,7 @@ class BrowserController(private val activity: Activity) {
         closeIds.forEach(::removeTabResources)
         tabs.removeAll { it.id in closeIds }
         if (removedIncognitoTab && tabs.none(BrowserTab::isIncognito)) clearIncognitoProfile()
+        reconcileCandyTrailForks(System.currentTimeMillis())
         persist()
         return closeIds.size
     }
@@ -2961,7 +3047,13 @@ class BrowserController(private val activity: Activity) {
                         null
                     }
                     val mergedTrail = mergeResult?.trail ?: restoredTrail
-                    candyTrails[tabId] = mergedTrail
+                    val reconciledTrail = CandyTrailForkRules.reconcile(
+                        trail = mergedTrail,
+                        originTab = tab.toCandyTrailForkTab(),
+                        openTabs = tabs.map(BrowserTab::toCandyTrailForkTab),
+                        reconciledAt = System.currentTimeMillis(),
+                    )
+                    candyTrails[tabId] = reconciledTrail
                     if (mergeResult != null && runtimeBinding != null) {
                         candyTrailHistoryBindings[tabId] = CandyTrailHistoryReconciler.remapNodeIds(
                             runtimeBinding,
@@ -2973,7 +3065,7 @@ class BrowserController(private val activity: Activity) {
                     candyTrailGenerations[tabId] =
                         candyTrailGenerations.getOrDefault(tabId, 0) + 1
                     pendingCandyTrailRestoreIds.remove(tabId)
-                    candyTrailRepository.save(tab, mergedTrail)
+                    candyTrailRepository.save(tab, reconciledTrail)
                 }
             } },
             onComplete = { mainHandler.post {
@@ -3148,6 +3240,7 @@ class BrowserController(private val activity: Activity) {
         }
         expiredIds.forEach(::removeTabResources)
         tabs.removeAll { it.id in expiredIds }
+        reconcileCandyTrailForks(nowMillis)
         if (removedIncognitoTab && tabs.none(BrowserTab::isIncognito)) {
             clearIncognitoProfile()
         }
@@ -3184,6 +3277,29 @@ class BrowserController(private val activity: Activity) {
         previewRepository.delete(tabId)
         invalidateFavicon(tabId)
         if (!preserveFaviconGeneration) faviconGenerations.remove(tabId)
+    }
+
+    private fun reconcileCandyTrailForks(reconciledAt: Long) {
+        val openTabs = tabs.map(BrowserTab::toCandyTrailForkTab)
+        candyTrails.toMap().forEach { (originTabId, trail) ->
+            val originTab = tabs.firstOrNull { it.id == originTabId }
+            if (originTab == null) return@forEach
+            val reconciled = CandyTrailForkRules.reconcile(
+                trail = trail,
+                originTab = originTab.toCandyTrailForkTab(),
+                openTabs = openTabs,
+                reconciledAt = reconciledAt,
+            )
+            setCandyTrail(originTab, reconciled)
+        }
+    }
+
+    private fun showTabLimitReached() {
+        Toast.makeText(
+            activity,
+            activity.getString(R.string.toast_tab_limit_reached, MAX_TABS),
+            Toast.LENGTH_SHORT,
+        ).show()
     }
 
     private fun cookiesFor(tabId: String, url: String): String? {
@@ -3531,3 +3647,9 @@ enum class CapsuleSaveResult {
     LimitReached,
     Invalid,
 }
+
+private fun BrowserTab.toCandyTrailForkTab() = CandyTrailForkTab(
+    id = id,
+    profileId = profileId,
+    isIncognito = isIncognito,
+)

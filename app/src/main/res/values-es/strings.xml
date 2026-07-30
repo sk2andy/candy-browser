@@ -24,6 +24,14 @@
     <string name="cd_tab_actions">Acciones de la pestaña</string>
     <string name="cd_candy_trail_node">%1$s, %2$s</string>
     <string name="cd_candy_trail_current_node">Página actual, %1$s, %2$s</string>
+    <string name="action_fork_tab">Crear rama de pestaña</string>
+    <string name="action_fork_from_here">Crear rama desde aquí</string>
+    <string name="fork_url_only_disclaimer">Abre esta URL en una pestaña nueva. El estado de JavaScript y los formularios no se copian.</string>
+    <string name="fork_status_open">Abierta</string>
+    <string name="fork_status_closed">Cerrada</string>
+    <string name="cd_candy_trail_fork_open">Rama abierta, %1$s, %2$s. Cambiar a la pestaña.</string>
+    <string name="cd_candy_trail_fork_closed">Rama cerrada, %1$s, %2$s. Volver a abrir en una pestaña nueva.</string>
+    <string name="cd_candy_trail_node_actions">Acciones para %1$s</string>
     <string name="cd_zoom_out">Alejar</string>
     <string name="cd_zoom_in">Acercar</string>
     <string name="action_reset_zoom">Restablecer</string>
