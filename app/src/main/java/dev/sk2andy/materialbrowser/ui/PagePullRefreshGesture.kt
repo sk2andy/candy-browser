@@ -55,6 +55,10 @@ internal class PagePullRefreshTouchListener(
         val webView = view as? WebView ?: return false
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                // Chromium treats a zero-velocity fling as an explicit fling cancel. Doing this
+                // before WebView receives the same DOWN lets that pointer immediately start a
+                // drag in the opposite direction instead of only stopping the old momentum.
+                webView.flingScroll(0, 0)
                 startScrollY = webView.scrollY.toFloat().coerceAtLeast(0f)
                 tracking = isEnabled() &&
                     PagePullRefreshRules.isEligible(startScrollY, maxStartScroll)
