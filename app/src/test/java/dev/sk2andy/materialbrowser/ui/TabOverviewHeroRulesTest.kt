@@ -87,4 +87,47 @@ class TabOverviewHeroRulesTest {
             0f,
         )
     }
+
+    @Test
+    fun `compact chrome crossfades only near compact endpoint`() {
+        assertEquals(0f, TabOverviewHeroRules.compactChromeAlpha(0.62f), 0f)
+        assertEquals(0.5f, TabOverviewHeroRules.compactChromeAlpha(0.81f), 0.001f)
+        assertEquals(1f, TabOverviewHeroRules.compactChromeAlpha(1f), 0f)
+    }
+
+    @Test
+    fun `coverflow preview reaches exact card content before handoff`() {
+        assertEquals(0f, TabOverviewHeroRules.coverflowPreviewAlpha(0.82f), 0f)
+        assertEquals(0.5f, TabOverviewHeroRules.coverflowPreviewAlpha(0.91f), 0.001f)
+        assertEquals(1f, TabOverviewHeroRules.coverflowPreviewAlpha(1f), 0f)
+    }
+
+    @Test
+    fun `coverflow endpoint preview maps exactly onto target card`() {
+        val rootWidth = 1080f
+        val rootHeight = 2400f
+        val targetLeft = 210f
+        val targetTop = 620f
+        val targetWidth = 660f
+        val targetHeight = 1245f
+        val targetScale = targetWidth / rootWidth
+        val layout = TabOverviewHeroRules.coverflowPreviewLayout(
+            rootWidthPx = rootWidth,
+            rootHeightPx = rootHeight,
+            targetWidthPx = targetWidth,
+            targetHeightPx = targetHeight,
+            cropTopFraction = 0.25f,
+        )
+        val heroTranslationX = targetLeft
+        val heroTranslationY = targetTop - layout.sourceTopPx * targetScale
+
+        assertEquals(targetWidth, rootWidth * targetScale, 0.001f)
+        assertEquals(targetHeight, layout.sourceHeightPx * targetScale, 0.001f)
+        assertEquals(targetLeft, heroTranslationX, 0.001f)
+        assertEquals(
+            targetTop,
+            layout.sourceTopPx * targetScale + heroTranslationY,
+            0.001f,
+        )
+    }
 }

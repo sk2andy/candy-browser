@@ -41,14 +41,14 @@ class AddressBarVerticalGestureInstrumentedTest {
                 Box(
                     modifier = Modifier
                         .size(width = 320.dp, height = 160.dp)
+                        .addressBarVerticalGesture(onSwipeUp = swipes::incrementAndGet)
                         .draggable(
                             state = rememberDraggableState { delta ->
                                 horizontalDrag.addAndGet(delta.toInt())
                             },
                             orientation = Orientation.Horizontal,
                             onDragStopped = { horizontalDragStops.incrementAndGet() },
-                        )
-                        .addressBarVerticalGesture(onSwipeUp = swipes::incrementAndGet),
+                        ),
                 ) {
                     Box(
                         modifier = Modifier
@@ -61,7 +61,9 @@ class AddressBarVerticalGestureInstrumentedTest {
         }
 
         composeRule.onNodeWithTag(AddressBarTag).performTouchInput { swipeUp() }
+        assertEquals(1, swipes.get())
         composeRule.onNodeWithTag(AddressBarTag).performTouchInput { swipeRight() }
+        assertEquals(1, swipes.get())
         composeRule.onNodeWithTag(AddressBarTag).performTouchInput { click() }
 
         assertEquals(1, swipes.get())

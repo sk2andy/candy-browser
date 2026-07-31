@@ -13,6 +13,7 @@
     <string name="cd_new_tab">Novo separador</string>
     <string name="cd_close_tab_overview">Fechar visão geral dos separadores</string>
     <string name="cd_close_tab">Fechar separador</string>
+    <string name="cd_close_named_tab">Fechar %1$s</string>
     <string name="action_switch_to_tab">Mudar para o separador</string>
     <string name="tab_actions_title">Opções do separador</string>
     <string name="action_pin_tab">Fixar separador</string>
@@ -120,6 +121,10 @@
     <string name="download_notification_description">Transferência</string>
     <string name="settings_title">Definições</string>
     <string name="settings_section_tabs">Separadores</string>
+    <string name="settings_tab_overview_mode">Disposição da vista de separadores</string>
+    <string name="tab_overview_mode_hero">Fluxo de capas</string>
+    <string name="tab_overview_mode_grid">Grelha compacta</string>
+    <string name="tab_overview_mode_list">Lista sem pré-visualizações</string>
     <string name="settings_auto_close_tabs">Fechar separadores automaticamente</string>
     <string name="tab_lifetime_never">Nunca</string>
     <plurals name="tab_lifetime_hours">

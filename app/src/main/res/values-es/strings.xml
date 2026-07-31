@@ -13,6 +13,7 @@
     <string name="cd_new_tab">Nueva pestaña</string>
     <string name="cd_close_tab_overview">Cerrar vista de pestañas</string>
     <string name="cd_close_tab">Cerrar pestaña</string>
+    <string name="cd_close_named_tab">Cerrar %1$s</string>
     <string name="action_switch_to_tab">Cambiar a la pestaña</string>
     <string name="tab_actions_title">Opciones de la pestaña</string>
     <string name="action_pin_tab">Fijar pestaña</string>
@@ -120,6 +121,10 @@
     <string name="download_notification_description">Descarga</string>
     <string name="settings_title">Ajustes</string>
     <string name="settings_section_tabs">Pestañas</string>
+    <string name="settings_tab_overview_mode">Diseño de la vista de pestañas</string>
+    <string name="tab_overview_mode_hero">Flujo de portadas</string>
+    <string name="tab_overview_mode_grid">Cuadrícula compacta</string>
+    <string name="tab_overview_mode_list">Lista sin vistas previas</string>
     <string name="settings_auto_close_tabs">Cerrar pestañas automáticamente</string>
     <string name="tab_lifetime_never">Nunca</string>
     <plurals name="tab_lifetime_hours">

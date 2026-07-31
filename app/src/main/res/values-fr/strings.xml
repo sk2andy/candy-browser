@@ -13,6 +13,7 @@
     <string name="cd_new_tab">Nouvel onglet</string>
     <string name="cd_close_tab_overview">Fermer l’aperçu des onglets</string>
     <string name="cd_close_tab">Fermer l’onglet</string>
+    <string name="cd_close_named_tab">Fermer %1$s</string>
     <string name="action_switch_to_tab">Accéder à l’onglet</string>
     <string name="tab_actions_title">Options de l’onglet</string>
     <string name="action_pin_tab">Épingler l’onglet</string>
@@ -120,6 +121,10 @@
     <string name="download_notification_description">Téléchargement</string>
     <string name="settings_title">Paramètres</string>
     <string name="settings_section_tabs">Onglets</string>
+    <string name="settings_tab_overview_mode">Disposition de l’aperçu des onglets</string>
+    <string name="tab_overview_mode_hero">Défilement de couvertures</string>
+    <string name="tab_overview_mode_grid">Grille compacte</string>
+    <string name="tab_overview_mode_list">Liste sans aperçus</string>
     <string name="settings_auto_close_tabs">Fermer automatiquement les onglets</string>
     <string name="tab_lifetime_never">Jamais</string>
     <plurals name="tab_lifetime_hours">

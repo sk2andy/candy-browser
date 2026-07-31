@@ -131,6 +131,7 @@ import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
+import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import java.io.ByteArrayInputStream
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -163,6 +164,8 @@ class BrowserController(private val activity: Activity) {
     var searchEngine by mutableStateOf(SearchEngine.Google)
         private set
     var dismissResistancePercent by mutableIntStateOf(40)
+        private set
+    var tabOverviewMode by mutableStateOf(TabOverviewMode.Hero)
         private set
     var isDefaultBrowser by mutableStateOf(false)
         private set
@@ -563,6 +566,7 @@ class BrowserController(private val activity: Activity) {
         inactiveTabLifetime = store.loadInactiveTabLifetime()
         searchEngine = store.loadSearchEngine()
         dismissResistancePercent = store.loadDismissResistancePercent()
+        tabOverviewMode = store.loadTabOverviewMode()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
         profiles += restoredProfiles.take(MAX_PROFILES)
@@ -1786,6 +1790,18 @@ class BrowserController(private val activity: Activity) {
         previewCaptureEnabled = enabled
     }
 
+    fun previewTopInsetPx(tabId: String): Int {
+        val webView = webViews[tabId]
+        val currentMargin = (webView?.layoutParams as? FrameLayout.LayoutParams)?.topMargin
+        if (currentMargin != null) return currentMargin.coerceAtLeast(0)
+        if (edgeToEdgePages[tabId] == true) return 0
+        return lastWindowInsets
+            ?.getInsets(SAFE_AREA_INSET_TYPES)
+            ?.top
+            ?.coerceAtLeast(0)
+            ?: 0
+    }
+
     fun updateBlockerSettings(settings: BlockerSettings) {
         val cookieConsentSettingChanged = workerSettings.hideCookieConsent != settings.hideCookieConsent
         val requestFilterSettingChanged =
@@ -1900,6 +1916,11 @@ class BrowserController(private val activity: Activity) {
     fun updateDismissResistancePercent(percent: Int) {
         dismissResistancePercent = percent.coerceIn(10, 90)
         store.saveDismissResistancePercent(dismissResistancePercent)
+    }
+
+    fun updateTabOverviewMode(mode: TabOverviewMode) {
+        tabOverviewMode = mode
+        store.saveTabOverviewMode(mode)
     }
 
     fun clearBrowsingData() {

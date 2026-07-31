@@ -13,6 +13,7 @@
     <string name="cd_new_tab">Neuer Tab</string>
     <string name="cd_close_tab_overview">Tab-Übersicht schließen</string>
     <string name="cd_close_tab">Tab schließen</string>
+    <string name="cd_close_named_tab">%1$s schließen</string>
     <string name="action_switch_to_tab">Zum Tab wechseln</string>
     <string name="tab_actions_title">Tab-Optionen</string>
     <string name="action_pin_tab">Tab anpinnen</string>
@@ -120,6 +121,10 @@
     <string name="download_notification_description">Download</string>
     <string name="settings_title">Einstellungen</string>
     <string name="settings_section_tabs">Tabs</string>
+    <string name="settings_tab_overview_mode">Darstellung der Tab-Übersicht</string>
+    <string name="tab_overview_mode_hero">Coverflow</string>
+    <string name="tab_overview_mode_grid">Kompaktes Raster</string>
+    <string name="tab_overview_mode_list">Liste ohne Vorschauen</string>
     <string name="settings_auto_close_tabs">Tabs automatisch schließen</string>
     <string name="tab_lifetime_never">Nie</string>
     <plurals name="tab_lifetime_hours">

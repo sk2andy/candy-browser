@@ -211,6 +211,21 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun tabOverviewModeRoundTripsAndUnknownValueFallsBackToHero() {
+        val store = BrowserSessionStore(context)
+        assertEquals(TabOverviewMode.Hero, store.loadTabOverviewMode())
+
+        store.saveTabOverviewMode(TabOverviewMode.Grid)
+        assertEquals(TabOverviewMode.Grid, store.loadTabOverviewMode())
+
+        store.saveTabOverviewMode(TabOverviewMode.List)
+        assertEquals(TabOverviewMode.List, store.loadTabOverviewMode())
+
+        preferences.edit().putString("tab_overview_mode", "unknown").commit()
+        assertEquals(TabOverviewMode.Hero, store.loadTabOverviewMode())
+    }
+
+    @Test
     fun permanentSiteExceptionsRoundTripByProfileWithoutUnsafeHosts() {
         val store = BrowserSessionStore(context)
         store.savePermanentSiteExceptions(
