@@ -18,6 +18,10 @@
 </p>
 
 <p align="center">
+  <a href="https://buymeacoffee.com/sk2andy"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" alt="Buy me a coffee"></a>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/candy-home.png" width="30%" alt="Candy Browser start page">
   &nbsp;
   <img src="docs/screenshots/candy-tabs.png" width="30%" alt="Candy Browser cover-flow tab overview">
