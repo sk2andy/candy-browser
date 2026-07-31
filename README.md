@@ -14,6 +14,7 @@
   <img alt="Android 14+" src="https://img.shields.io/badge/Android-14%2B-3DDC84?logo=android&logoColor=white">
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-1.9.24-7F52FF?logo=kotlin&logoColor=white">
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white">
+  <a href="LICENSE"><img alt="License: PolyForm Noncommercial 1.0.0" src="https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange.svg"></a>
 </p>
 
 <p align="center">
@@ -136,6 +137,7 @@ English, German, French, Portuguese, and Spanish.
 
 ## Licensing
 
-No project license has been declared yet. Third-party components and filter data retain their own
-licenses; bundled notices are available in `app/src/main/assets/third_party_notices.txt` and inside
-the app.
+Candy Browser source code is available under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+See [licensing scope and migration](LICENSING.md) for third-party exceptions and previously granted rights.
+Third-party components and filter data retain their own licenses; bundled notices are available in
+`app/src/main/assets/third_party_notices.txt` and inside the app.
