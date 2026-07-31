@@ -4,3 +4,14 @@ local.properties
 **/build/
 captures/
 *.iml
+*.apk
+*.aab
+*.idsig
+*.jks
+*.keystore
+keystore.properties
+
+# Local Codex work logs and generated captures
+memory/
+task/
+tracking/

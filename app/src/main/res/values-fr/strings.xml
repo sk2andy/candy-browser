@@ -166,7 +166,7 @@
     <string name="settings_open_source_summary">Bibliothèques, services et données de filtrage</string>
     <string name="settings_uassets_source_title">Source de blocage uBlock Origin</string>
     <string name="settings_uassets_source_summary">Source épinglée, portée et licence GPL-3.0</string>
-    <string name="about_imprint_body">Candy Browser est un projet open source personnel développé par %1$s. Le profil GitHub public associé présente le développeur et ses projets actuels.</string>
+    <string name="about_imprint_body">Candy Browser est un projet personnel au code source accessible publiquement, développé par %1$s. Le profil GitHub public associé présente le développeur et ses projets actuels.</string>
     <string name="about_version">Candy Browser version %1$s</string>
     <string name="about_github_action">Ouvrir le profil GitHub</string>
     <string name="about_open_source_intro">Candy utilise ces composants, services et données de filtrage. Google Code Scanner est indiqué séparément, car il dépend des conditions des API Google et non d’une licence open source.</string>

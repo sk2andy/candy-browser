@@ -1,102 +1,141 @@
-# Candy Browser
+<p align="center">
+  <img src="app/src/main/res/drawable-nodpi/ic_launcher_foreground_art.png" width="120" alt="Candy Browser logo">
+</p>
 
-A small Android browser with Arc-inspired interactions and a Material 3 Expressive design. The app
-uses Android System WebView as its Chromium engine and adds its own tabs, floating browser chrome,
-and local content protection.
+<h1 align="center">Candy Browser</h1>
+
+<p align="center">
+  A gesture-first Android browser with Material 3 Expressive design, local privacy tools,
+  and a tab system built for visual navigation.
+</p>
+
+<p align="center">
+  <a href="https://github.com/sk2andy/candy-browser/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/sk2andy/candy-browser?display_name=tag&sort=semver"></a>
+  <img alt="Android 14+" src="https://img.shields.io/badge/Android-14%2B-3DDC84?logo=android&logoColor=white">
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-1.9.24-7F52FF?logo=kotlin&logoColor=white">
+  <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/candy-home.png" width="30%" alt="Candy Browser start page">
+  &nbsp;
+  <img src="docs/screenshots/candy-tabs.png" width="30%" alt="Candy Browser cover-flow tab overview">
+  &nbsp;
+  <img src="docs/screenshots/candy-privacy.png" width="30%" alt="Candy Browser Privacy X-Ray">
+</p>
+
+## Why Candy?
+
+- **Made for gestures.** Switch tabs from the address bar, swipe into the visual overview, and
+  dismiss cards with spring motion and haptic feedback.
+- **Private by design.** Filtering, history, favorites, profiles, and privacy telemetry stay local.
+- **Feels at home on Android.** Dynamic color, edge-to-edge content, Predictive Back, Autofill,
+  passkeys, downloads, sharing, printing, and default-browser integration.
 
 ## Features
 
-- Edge-to-edge web content with a floating bottom toolbar
-- Material 3 dynamic color and OS-controlled dark mode
-- Multiple tabs with an Arc-inspired card overview, persistently stored previews, favicon/title, hero animation, and persistent sessions
-- Candy Trails: branching, persistent navigation journeys for each regular tab, with an animated graph, pan/zoom, and direct node navigation
-- Tab switching by horizontally dragging the address bar; swiping up opens the overview
-- Tabs can be swiped upward and closed with a rubber-band effect
-- Haptic feedback when switching, opening, and closing tabs and when creating new tabs
-- Flicker-free tab handoff and bidirectional hero animation
-- Pull to refresh and Material 3 loading progress directly in the address bar
-- Direct URL navigation, with Google search as the fallback
-- Directly executable, localized browser commands in address search via `>`
-- Local history with autocomplete and persistent favorites on new tabs
-- Local ad/tracker filtering with about 55,000 compiled EasyList/EasyPrivacy hosts, including service worker requests
-- An additional pinned, network-only subset derived from the official uBlock Origin Ads source, bundled and active by default for every profile
-- Interactive Privacy X-Ray for each tab, with batched live counters, deterministic categories,
-  a bounded domain overview, and temporary or profile-specific site exceptions
-- Filter Studio for global or profile-specific host, site-to-host, and origin-scoped CSS rules;
-  Privacy X-Ray can create concrete block/allow rules directly and open the rule responsible for a match
-- Third-party cookies blocked by default; first-party cookies allowed for sign-ins
-- Early cookie-banner blocking based on EasyList Cookie List
-- Safe Browsing, TLS failure handling, blocked file/content schemes, and an external-scheme allowlist
-- Downloads with a system notification to the public Downloads directory
-- Long-press menu for image downloads and links in background tabs; native text selection remains available
-- User-initiated pop-ups and new windows opened as tabs
-- HTTP/HTTPS intent filters, default-browser role, and opening links in external apps
-- System Autofill for password managers and WebAuthn/passkey support provided by the installed WebView provider
-- Localized About & legal settings with developer/GitHub information, runtime license notices, offline
-  Apache terms, and the exact pinned uAssets source and GPL-3.0 license
+### Browsing and gestures
 
-## Build
+- Floating bottom chrome over edge-to-edge WebView content
+- Pull to refresh, direct URL navigation, QR scanning, and address autocomplete
+- Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, and Qwant search
+- Address commands with `>` for tab, profile, cache, cookie, and navigation actions
+- Background tabs, downloads, sharing, printing, external apps, and assistant summaries
 
-Requirements: Android SDK 35 and JDK 17. The app supports Android 14 (API 34) and later.
+<p align="center">
+  <img src="docs/screenshots/candy-commands.png" width="32%" alt="Candy Browser profile commands in the address bar">
+</p>
+
+### Tabs, profiles, and journeys
+
+- Persistent tabs with saved page previews, favicons, pinning, reordering, and automatic cleanup
+- Cover flow, compact grid, and preview-free list layouts
+- Optional per-profile WebView storage isolation where the installed provider supports it
+- Private tabs that keep their session and journey data in memory only
+- **Candy Trails:** persistent branching navigation graphs with pan, zoom, direct navigation,
+  and forkable paths
+- **Site Capsules:** profile-bound home-screen shortcuts with configurable navigation boundaries
+  and minimal browser chrome
+
+<p align="center">
+  <img src="docs/screenshots/candy-profile-creation.png" width="32%" alt="Creating an isolated Candy Browser profile">
+  &nbsp;
+  <img src="docs/screenshots/candy-trail.png" width="32%" alt="Candy Trail with a branching navigation journey">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/candy-tabs.png" width="30%" alt="Cover-flow tab overview">
+  &nbsp;
+  <img src="docs/screenshots/candy-tabs-grid.png" width="30%" alt="Compact grid tab overview">
+  &nbsp;
+  <img src="docs/screenshots/candy-tabs-list.png" width="30%" alt="Preview-free list tab overview">
+</p>
+
+### Local protection
+
+- EasyList/EasyPrivacy hosts plus a pinned, safely representable uAssets subset
+- Third-party-cookie blocking and cosmetic cookie-banner hiding
+- **Privacy X-Ray:** live per-tab block counts, categories, domains, and exceptions
+- **Filter Studio:** global or profile rules, import/export, and confirmed HTTPS subscriptions
+- Safe Browsing, TLS failure handling, blocked unsafe schemes, and external-scheme allowlisting
+
+## Download
+
+Version **0.1** requires Android 14 (API 34) or newer.
+
+[Download Candy Browser v0.1](https://github.com/sk2andy/candy-browser/releases/download/v0.1/CandyBrowser-v0.1-release.apk)
+
+Android may ask you to allow installation from your browser or file manager. Releases outside
+Google Play do not update automatically.
+
+## Build from source
+
+Requirements: Android SDK 35 and JDK 17. Point `JAVA_HOME` to your JDK 17 installation.
 
 ```bash
-JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew \
-  testDebugUnitTest lintDebug assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`
+Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 
-## Limitations
+Release builds are minified with R8. Configure your own Android signing key before distributing a
+release build; never commit a keystore or its credentials.
 
-System WebView does not expose Chromium's extension API. Content blocking therefore runs locally
-and uses limited heuristics; WebSockets, CNAME cloaking, some redirects, and banners inside closed
-cross-origin or Shadow DOM contexts may get through. Blocking every cookie is intentionally not
-the default because doing so breaks sign-ins and many websites.
+## Privacy and limitations
 
-Privacy X-Ray shows locally blocked WebView requests that can be reliably attributed to a tab.
-Global service worker requests are excluded from per-tab telemetry because WebView does not provide
-a reliable tab ID for them. Cookie information describes active policies only, not observed cookie
-events.
+Candy uses Android System WebView as its browser engine. WebView does not expose Chromium's
+extension API, so filtering uses local request interception and bounded cosmetic rules. WebSockets,
+CNAME cloaking, some redirects, and content inside closed cross-origin or Shadow DOM contexts may
+get through.
 
-### Candy Rules v1
+Privacy X-Ray includes only blocked requests that WebView can reliably attribute to one tab.
+Service-worker requests are filtered but excluded from per-tab telemetry when no reliable tab ID
+is available.
 
-Filter Studio imports the small, versioned Candy format and a deliberately limited, safely
-representable subset of Adblock Plus/uBlock lists: exact `||host^` block/allow rules, positive
-`domain=`/`from=` host pairs, HOSTS entries, and origin-scoped standard CSS selectors. JavaScript,
-regular expressions, negation, redirects, HTML/response-header filters, and advanced cosmetic
-operators are visibly skipped. Filter Studio makes no claim of full Adblock Plus or uBlock
-compatibility. Before an import, the user explicitly selects one existing profile or all profiles;
-unsupported lines require confirmation.
+<details>
+<summary><strong>Candy Rules and filter-source details</strong></summary>
 
-Candy exports remain on `candy-rules:1`. Each following tab-separated line contains `rule`, an
-action (`block`, `allow`, or `css`), a type (`host`, `pair`, or `origin`), and a target; additional
-fields store the CSS selector, ID, profile, group, and enabled state. Candy imports are limited to
-512 KiB and 8,192 lines, while Adblock imports are limited to 5 MiB and 100,000 lines. Imports with
-more than 4,096 total rules or 64 cosmetic rules are rejected atomically instead of being partially
-accepted.
+Candy Rules v1 supports exact host block/allow rules, positive site-to-host pairs, HOSTS entries,
+and origin-scoped standard CSS selectors. It deliberately rejects JavaScript, regular expressions,
+redirects, response-header filters, scriptlets, and advanced cosmetic operators rather than
+approximating them.
 
-A pinned, reproducibly generated network-rule subset of the official uBlock Origin Ads source is
-bundled with the app and active by default for every profile. Extraction accepts only Candy's exact
-host and first-party-to-third-party host-pair semantics. Unsupported paths, resource options, regular expressions,
-redirects, cosmetic syntax, scriptlets, and JavaScript are excluded rather than approximated.
+Imports are bounded and validated atomically. HTTPS subscriptions update only after a user-requested
+fetch, show a diff, and require confirmation. Private-profile imports remain in memory.
 
-User-managed HTTPS subscriptions are imported only after an explicit fetch. Every update first
-shows a diff and requires confirmation; it does not silently replace the bundled snapshot. Candy
-imports only the safely representable host/pair subset, visibly skips foreign syntax, CSS,
-scriptlets, and JavaScript, and never executes them. Subscriptions do not follow redirects and can
-apply globally or to exactly one profile. Incognito rules and imports remain in memory only.
+EasyList, EasyPrivacy, and EasyList Cookie data are distributed under CC BY-SA 3.0 or later. The
+uAssets-derived network subset is generated from a pinned revision of the official uBlock Origin Ads
+source and distributed under GPL-3.0. Exact sources, revisions, transformations, and notices ship in
+`app/src/main/assets/`.
 
-## Filter sources
+</details>
 
-Ad/tracker hosts and cosmetic cookie-banner rules come from the EasyList authors and are used under
-Creative Commons Attribution-ShareAlike 3.0 or later. Their source and license are also documented
-in `app/src/main/assets/content_filter.LICENSE.txt`. The embedded rule lists, pinned to fixed source
-revisions, can be updated reproducibly with `scripts/update_content_filter_hosts.sh` and
-`scripts/update_cookie_banner_css.sh`.
+## Languages
 
-The bundled uAssets-derived network subset is generated reproducibly from a pinned revision of the
-official uBlock Origin Ads source and distributed under GPL-3.0. Its upstream revision, source URL,
-license, transformation notice, and reproduction script are shipped with the generated asset.
-Candy makes no claim of full uBlock Origin compatibility, recommendation, or endorsement by the
-uBlock Origin project. Optional remote subscription updates remain user-initiated, previewed, and
-confirmed.
+English, German, French, Portuguese, and Spanish.
+
+## Licensing
+
+No project license has been declared yet. Third-party components and filter data retain their own
+licenses; bundled notices are available in `app/src/main/assets/third_party_notices.txt` and inside
+the app.
