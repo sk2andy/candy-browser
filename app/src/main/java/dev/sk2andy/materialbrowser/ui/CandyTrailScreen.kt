@@ -7,6 +7,8 @@ import android.net.Uri
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -50,8 +52,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,8 +65,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -84,8 +90,8 @@ import dev.sk2andy.materialbrowser.browser.CandyTrail
 import dev.sk2andy.materialbrowser.browser.CandyTrailFork
 import dev.sk2andy.materialbrowser.browser.CandyTrailForkLifecycle
 import dev.sk2andy.materialbrowser.browser.CandyTrailNode
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 internal fun CandyTrailScreen(
@@ -97,14 +103,26 @@ internal fun CandyTrailScreen(
     predictiveBackProgress: Float,
     predictiveBackEdgeSign: Int,
     onOpenTabActions: () -> Unit,
-    onSelectNode: (String) -> Unit,
-    onForkNode: (String) -> Boolean,
-    onSelectFork: (String) -> Boolean,
+    onSelectNode: (String) -> Boolean,
+    onNodeSelectionFinished: () -> Unit,
+    onForkNode: (String) -> String?,
+    onForkCreationFinished: (String) -> Unit,
+    onSelectFork: (String) -> String?,
+    onForkSelectionFinished: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val layout = remember(trail.nodes, trail.forks) { CandyTrailLayoutRules.layout(trail) }
     val entryProgress = remember(tab.id) { Animatable(if (sourceBounds == null) 1f else 0f) }
+    val edgeRevealProgress = remember(tab.id) {
+        Animatable(1f).apply { updateBounds(lowerBound = 0f, upperBound = 1f) }
+    }
+    val targetRevealProgress = remember(tab.id) {
+        Animatable(1f).apply { updateBounds(lowerBound = 0f, upperBound = 1f) }
+    }
+    val pathPulseProgress = remember(tab.id) {
+        Animatable(0f).apply { updateBounds(lowerBound = 0f, upperBound = 1f) }
+    }
     val scope = rememberCoroutineScope()
     val rootView = LocalView.current
     var scale by rememberSaveable(tab.id) { mutableFloatStateOf(1f) }
@@ -113,16 +131,87 @@ internal fun CandyTrailScreen(
     var viewportInitialized by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
     var viewportSignature by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
     var actionNodeId by remember(tab.id) { mutableStateOf<String?>(null) }
+    var revealTargets by remember(tab.id) { mutableStateOf(emptySet<CandyTrailGraphTarget>()) }
+    var pulseTarget by remember(tab.id) { mutableStateOf<CandyTrailGraphTarget?>(null) }
+    var commitInFlight by remember(tab.id) { mutableStateOf(false) }
+    var revealGeneration by remember(tab.id) { mutableStateOf(0) }
+    val graphSnapshot = remember(trail.nodes, trail.forks) {
+        CandyTrailGraphMotionRules.snapshot(trail)
+    }
+    var knownGraphSnapshot by remember(tab.id) { mutableStateOf(graphSnapshot) }
     val density = LocalDensity.current
     val edgeColor = MaterialTheme.colorScheme.outlineVariant
     val currentEdgeColor = MaterialTheme.colorScheme.primary
     val openForkEdgeColor = MaterialTheme.colorScheme.tertiary
     val closedForkEdgeColor = MaterialTheme.colorScheme.outline
+    val pulseColor = MaterialTheme.colorScheme.secondary
+
+    suspend fun revealCreatedTargets(targets: Set<CandyTrailGraphTarget>) {
+        if (targets.isEmpty()) return
+        val generation = revealGeneration + 1
+        revealGeneration = generation
+        edgeRevealProgress.snapTo(0f)
+        targetRevealProgress.snapTo(0f)
+        revealTargets = targets
+        try {
+            withFrameNanos { }
+            coroutineScope {
+                launch {
+                    edgeRevealProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(
+                            durationMillis = CandyTrailGraphMotionRules.EDGE_DRAW_DURATION_MILLIS,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                }
+                launch {
+                    targetRevealProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = CandyTrailGraphMotionRules.TARGET_SPRING_DAMPING_RATIO,
+                            stiffness = CandyTrailGraphMotionRules.TARGET_SPRING_STIFFNESS,
+                        ),
+                    )
+                }
+            }
+        } finally {
+            if (revealGeneration == generation) revealTargets = emptySet()
+        }
+    }
+
+    suspend fun pulseSelectedPath(target: CandyTrailGraphTarget) {
+        if (CandyTrailGraphMotionRules.pathTargets(trail, target).isEmpty()) return
+        pathPulseProgress.snapTo(0f)
+        pulseTarget = target
+        try {
+            withFrameNanos { }
+            pathPulseProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = CandyTrailGraphMotionRules.PATH_PULSE_DURATION_MILLIS,
+                    easing = LinearEasing,
+                ),
+            )
+        } finally {
+            pulseTarget = null
+        }
+    }
+
+    suspend fun exitGraph() {
+        entryProgress.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
+    }
 
     LaunchedEffect(tab.id, sourceBounds) {
         if (sourceBounds != null) {
             entryProgress.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
         }
+    }
+
+    LaunchedEffect(tab.id, graphSnapshot) {
+        val additions = CandyTrailGraphMotionRules.additions(knownGraphSnapshot, graphSnapshot)
+        knownGraphSnapshot = graphSnapshot
+        revealCreatedTargets(additions)
     }
 
     BoxWithConstraints(
@@ -300,10 +389,15 @@ internal fun CandyTrailScreen(
                         trail = trail,
                         layout = layout,
                         progress = { entryProgress.value },
+                        revealTargets = revealTargets,
+                        revealProgress = { edgeRevealProgress.value },
+                        pulseTarget = pulseTarget,
+                        pulseProgress = { pathPulseProgress.value },
                         edgeColor = edgeColor,
                         currentEdgeColor = currentEdgeColor,
                         openForkEdgeColor = openForkEdgeColor,
                         closedForkEdgeColor = closedForkEdgeColor,
+                        pulseColor = pulseColor,
                     )
                     layout.positions.forEachIndexed { index, position ->
                         val node = nodeById.getValue(position.nodeId)
@@ -320,16 +414,38 @@ internal fun CandyTrailScreen(
                                         index = index,
                                         count = layout.positions.size,
                                     )
-                                    alpha = stagger
-                                    scaleX = 0.82f + 0.18f * stagger
+                                    val createdProgress = if (
+                                        CandyTrailGraphTarget.Node(node.id) in revealTargets
+                                    ) {
+                                        targetRevealProgress.value
+                                    } else {
+                                        1f
+                                    }
+                                    alpha = stagger * createdProgress
+                                    scaleX = (0.82f + 0.18f * stagger) *
+                                        CandyTrailGraphMotionRules.targetScale(createdProgress)
                                     scaleY = scaleX
                                     translationY = (1f - stagger) * 34f
                                 },
                             onClick = {
-                                rootView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                                if (commitInFlight) return@CandyTrailNodeCard
+                                commitInFlight = true
                                 scope.launch {
-                                    entryProgress.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
-                                    onSelectNode(node.id)
+                                    try {
+                                        pulseSelectedPath(CandyTrailGraphTarget.Node(node.id))
+                                        exitGraph()
+                                        if (!onSelectNode(node.id)) {
+                                            entryProgress.animateTo(
+                                                1f,
+                                                tween(180, easing = FastOutSlowInEasing),
+                                            )
+                                            return@launch
+                                        }
+                                        rootView.performConfirmHaptic()
+                                        onNodeSelectionFinished()
+                                    } finally {
+                                        commitInFlight = false
+                                    }
                                 }
                             },
                             onMore = { actionNodeId = node.id },
@@ -351,24 +467,38 @@ internal fun CandyTrailScreen(
                                         index = layout.positions.size + index,
                                         count = layout.positions.size + layout.forkPositions.size,
                                     )
-                                    alpha = stagger
-                                    scaleX = 0.78f + 0.22f * stagger
+                                    val createdProgress = if (
+                                        CandyTrailGraphTarget.Fork(fork.id) in revealTargets
+                                    ) {
+                                        targetRevealProgress.value
+                                    } else {
+                                        1f
+                                    }
+                                    alpha = stagger * createdProgress
+                                    scaleX = (0.78f + 0.22f * stagger) *
+                                        CandyTrailGraphMotionRules.targetScale(createdProgress)
                                     scaleY = scaleX
                                     translationX = (1f - stagger) * -42f
                                 },
                             onClick = {
+                                if (commitInFlight) return@CandyTrailForkCard
+                                commitInFlight = true
                                 scope.launch {
-                                    entryProgress.animateTo(
-                                        0f,
-                                        tween(180, easing = FastOutSlowInEasing),
-                                    )
-                                    if (onSelectFork(fork.id)) {
-                                        rootView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                                    } else {
-                                        entryProgress.animateTo(
-                                            1f,
-                                            tween(180, easing = FastOutSlowInEasing),
-                                        )
+                                    try {
+                                        pulseSelectedPath(CandyTrailGraphTarget.Fork(fork.id))
+                                        exitGraph()
+                                        val destinationId = onSelectFork(fork.id)
+                                        if (destinationId == null) {
+                                            entryProgress.animateTo(
+                                                1f,
+                                                tween(180, easing = FastOutSlowInEasing),
+                                            )
+                                            return@launch
+                                        }
+                                        rootView.performConfirmHaptic()
+                                        onForkSelectionFinished(destinationId)
+                                    } finally {
+                                        commitInFlight = false
                                     }
                                 }
                             },
@@ -408,12 +538,25 @@ internal fun CandyTrailScreen(
             node = actionNodeId?.let { nodeId -> trail.nodes.firstOrNull { it.id == nodeId } },
             onFork = { nodeId ->
                 actionNodeId = null
+                if (commitInFlight) return@CandyTrailNodeActionsSheet
+                commitInFlight = true
                 scope.launch {
-                    entryProgress.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
-                    if (onForkNode(nodeId)) {
-                        rootView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    } else {
-                        entryProgress.animateTo(1f, tween(180, easing = FastOutSlowInEasing))
+                    var committedDestinationId: String? = null
+                    try {
+                        val target = CandyTrailGraphTarget.Fork("f${trail.nextForkOrdinal}")
+                        val destinationId = onForkNode(nodeId) ?: return@launch
+                        committedDestinationId = destinationId
+                        knownGraphSnapshot = knownGraphSnapshot.copy(
+                            forkIds = knownGraphSnapshot.forkIds + target.id,
+                        )
+                        rootView.performConfirmHaptic()
+                        revealCreatedTargets(setOf(target))
+                        exitGraph()
+                    } finally {
+                        // Creation commits before its edge can render. Complete the handoff even
+                        // when system back removes this composition during the bounded reveal.
+                        committedDestinationId?.let(onForkCreationFinished)
+                        commitInFlight = false
                     }
                 }
             },
@@ -427,14 +570,26 @@ private fun CandyTrailEdges(
     trail: CandyTrail,
     layout: CandyTrailLayout,
     progress: () -> Float,
+    revealTargets: Set<CandyTrailGraphTarget>,
+    revealProgress: () -> Float,
+    pulseTarget: CandyTrailGraphTarget?,
+    pulseProgress: () -> Float,
     edgeColor: Color,
     currentEdgeColor: Color,
     openForkEdgeColor: Color,
     closedForkEdgeColor: Color,
+    pulseColor: Color,
 ) {
     val density = LocalDensity.current
     val positions = remember(layout.positions) { layout.positions.associateBy(CandyTrailNodePosition::nodeId) }
-    val currentPath = remember(trail.nodes, trail.currentNodeId) { currentAncestorIds(trail) }
+    val currentPath = remember(trail.nodes, trail.currentNodeId) {
+        trail.currentNodeId?.let { currentNodeId ->
+            CandyTrailGraphMotionRules.pathTargets(
+                trail,
+                CandyTrailGraphTarget.Node(currentNodeId),
+            ).toSet()
+        }.orEmpty()
+    }
     val edgePaths = remember(trail.nodes, positions, density.density) {
         trail.nodes.mapIndexedNotNull { index, node ->
             val parent = node.parentId?.let(positions::get) ?: return@mapIndexedNotNull null
@@ -447,21 +602,29 @@ private fun CandyTrailEdges(
                 x = child.x * density.density,
                 y = (child.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f) * density.density,
             )
-            val controlDistance = (end.x - start.x) * 0.52f
+            val geometry = CandyTrailGraphMotionRules.edgeGeometry(
+                startX = start.x,
+                startY = start.y,
+                endX = end.x,
+                endY = end.y,
+            )
+            val drawable = CandyTrailDrawableEdge(
+                path = Path().apply {
+                    moveTo(geometry.startX, geometry.startY)
+                    cubicTo(
+                        geometry.firstControlX,
+                        geometry.firstControlY,
+                        geometry.secondControlX,
+                        geometry.secondControlY,
+                        geometry.endX,
+                        geometry.endY,
+                    )
+                },
+            )
             CandyTrailEdgePath(
                 nodeId = node.id,
                 index = index,
-                path = Path().apply {
-                    moveTo(start.x, start.y)
-                    cubicTo(
-                        start.x + controlDistance,
-                        start.y,
-                        end.x - controlDistance,
-                        end.y,
-                        end.x,
-                        end.y,
-                    )
-                },
+                drawable = drawable,
                 arrow = Path().apply {
                     moveTo(end.x, end.y)
                     lineTo(end.x - 12f, end.y - 7f)
@@ -486,21 +649,30 @@ private fun CandyTrailEdges(
                 x = child.x * density.density,
                 y = (child.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f) * density.density,
             )
-            val controlDistance = (end.x - start.x) * 0.52f
-            CandyTrailForkEdgePath(
-                index = index,
-                lifecycle = fork.lifecycle,
+            val geometry = CandyTrailGraphMotionRules.edgeGeometry(
+                startX = start.x,
+                startY = start.y,
+                endX = end.x,
+                endY = end.y,
+            )
+            val drawable = CandyTrailDrawableEdge(
                 path = Path().apply {
-                    moveTo(start.x, start.y)
+                    moveTo(geometry.startX, geometry.startY)
                     cubicTo(
-                        start.x + controlDistance,
-                        start.y,
-                        end.x - controlDistance,
-                        end.y,
-                        end.x,
-                        end.y,
+                        geometry.firstControlX,
+                        geometry.firstControlY,
+                        geometry.secondControlX,
+                        geometry.secondControlY,
+                        geometry.endX,
+                        geometry.endY,
                     )
                 },
+            )
+            CandyTrailForkEdgePath(
+                forkId = fork.id,
+                index = index,
+                lifecycle = fork.lifecycle,
+                drawable = drawable,
                 arrow = Path().apply {
                     moveTo(end.x, end.y)
                     lineTo(end.x - 12f, end.y - 7f)
@@ -510,6 +682,14 @@ private fun CandyTrailEdges(
             )
         }
     }
+    val edgePathsByNode = remember(edgePaths) { edgePaths.associateBy(CandyTrailEdgePath::nodeId) }
+    val forkEdgePathsById = remember(forkEdgePaths) {
+        forkEdgePaths.associateBy(CandyTrailForkEdgePath::forkId)
+    }
+    val pulseTargets = remember(trail.nodes, trail.forks, pulseTarget) {
+        pulseTarget?.let { target -> CandyTrailGraphMotionRules.pathTargets(trail, target) }
+            .orEmpty()
+    }
     Canvas(Modifier.fillMaxSize()) {
         edgePaths.forEach { edge ->
             val alpha = CandyTrailMotionRules.staggeredProgress(
@@ -518,16 +698,25 @@ private fun CandyTrailEdges(
                 count = trail.nodes.size,
             )
             if (alpha <= 0f) return@forEach
-            val edgeOnCurrentPath =
-                edge.nodeId == trail.currentNodeId || edge.nodeId in currentPath
-            drawPath(
-                path = edge.path,
-                color = (if (edgeOnCurrentPath) currentEdgeColor else edgeColor).copy(alpha = alpha),
+            val target = CandyTrailGraphTarget.Node(edge.nodeId)
+            val edgeOnCurrentPath = target in currentPath
+            val targetProgress = if (target in revealTargets) {
+                CandyTrailGraphMotionRules.revealProgress(revealProgress())
+            } else {
+                1f
+            }
+            val color = (if (edgeOnCurrentPath) currentEdgeColor else edgeColor).copy(alpha = alpha)
+            drawCandyTrailEdgeSegment(
+                edge = edge.drawable,
+                startFraction = 0f,
+                endFraction = targetProgress,
+                color = color,
                 style = Stroke(width = if (edgeOnCurrentPath) 4f else 2.5f, cap = StrokeCap.Round),
             )
             drawPath(
                 edge.arrow,
-                (if (edgeOnCurrentPath) currentEdgeColor else edgeColor).copy(alpha = alpha),
+                color = (if (edgeOnCurrentPath) currentEdgeColor else edgeColor).copy(alpha = alpha),
+                alpha = CandyTrailGraphMotionRules.arrowAlpha(targetProgress),
             )
         }
         forkEdgePaths.forEach { edge ->
@@ -542,8 +731,16 @@ private fun CandyTrailEdges(
             } else {
                 closedForkEdgeColor
             }.copy(alpha = alpha)
-            drawPath(
-                path = edge.path,
+            val target = CandyTrailGraphTarget.Fork(edge.forkId)
+            val targetProgress = if (target in revealTargets) {
+                CandyTrailGraphMotionRules.revealProgress(revealProgress())
+            } else {
+                1f
+            }
+            drawCandyTrailEdgeSegment(
+                edge = edge.drawable,
+                startFraction = 0f,
+                endFraction = targetProgress,
                 color = color,
                 style = Stroke(
                     width = 3.5f,
@@ -551,24 +748,88 @@ private fun CandyTrailEdges(
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 9f)),
                 ),
             )
-            drawPath(edge.arrow, color)
+            drawPath(
+                edge.arrow,
+                color,
+                alpha = CandyTrailGraphMotionRules.arrowAlpha(targetProgress),
+            )
+        }
+
+        val orderedPulseEdges = pulseTargets.mapNotNull { target ->
+            when (target) {
+                is CandyTrailGraphTarget.Node -> edgePathsByNode[target.id]?.drawable
+                is CandyTrailGraphTarget.Fork -> forkEdgePathsById[target.id]?.drawable
+            }
+        }
+        val totalPulseLength = orderedPulseEdges.sumOf { edge -> edge.length.toDouble() }.toFloat()
+        val pulseAlpha = CandyTrailGraphMotionRules.pulseAlpha(pulseProgress())
+        if (pulseAlpha > 0f && totalPulseLength > 0f) {
+            var edgeStartDistance = 0f
+            orderedPulseEdges.forEach { edge ->
+                val segment = CandyTrailGraphMotionRules.pulseSegment(
+                    progress = pulseProgress(),
+                    edgeStartDistance = edgeStartDistance,
+                    edgeLength = edge.length,
+                    totalLength = totalPulseLength,
+                )
+                if (segment != null) {
+                    drawCandyTrailEdgeSegment(
+                        edge = edge,
+                        startFraction = segment.startFraction,
+                        endFraction = segment.endFraction,
+                        color = pulseColor.copy(alpha = pulseAlpha),
+                        style = Stroke(width = 7f, cap = StrokeCap.Round),
+                    )
+                }
+                edgeStartDistance += edge.length
+            }
         }
     }
+}
+
+private class CandyTrailDrawableEdge(val path: Path) {
+    val measure = PathMeasure().apply { setPath(path, forceClosed = false) }
+    val length: Float = measure.length
 }
 
 private data class CandyTrailEdgePath(
     val nodeId: String,
     val index: Int,
-    val path: Path,
+    val drawable: CandyTrailDrawableEdge,
     val arrow: Path,
 )
 
 private data class CandyTrailForkEdgePath(
+    val forkId: String,
     val index: Int,
     val lifecycle: CandyTrailForkLifecycle,
-    val path: Path,
+    val drawable: CandyTrailDrawableEdge,
     val arrow: Path,
 )
+
+private fun DrawScope.drawCandyTrailEdgeSegment(
+    edge: CandyTrailDrawableEdge,
+    startFraction: Float,
+    endFraction: Float,
+    color: Color,
+    style: Stroke,
+) {
+    val safeStart = startFraction.coerceIn(0f, 1f)
+    val safeEnd = endFraction.coerceIn(safeStart, 1f)
+    if (safeEnd <= safeStart || edge.length <= 0f) return
+    if (safeStart == 0f && safeEnd == 1f) {
+        drawPath(edge.path, color, style = style)
+        return
+    }
+    val segment = Path()
+    edge.measure.getSegment(
+        startDistance = edge.length * safeStart,
+        stopDistance = edge.length * safeEnd,
+        destination = segment,
+        startWithMoveTo = true,
+    )
+    drawPath(segment, color, style = style)
+}
 
 @Composable
 private fun CandyTrailNodeCard(
@@ -857,12 +1118,4 @@ private fun CandyTrailZoomControls(
             }
         }
     }
-}
-
-private fun currentAncestorIds(trail: CandyTrail): Set<String> {
-    val byId = trail.nodes.associateBy(CandyTrailNode::id)
-    val ancestors = mutableSetOf<String>()
-    var cursor = byId[trail.currentNodeId]?.parentId
-    while (cursor != null && ancestors.add(cursor)) cursor = byId[cursor]?.parentId
-    return ancestors
 }

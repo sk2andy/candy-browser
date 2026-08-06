@@ -4032,60 +4032,55 @@ private fun TabOverview(
                 predictiveBackEdgeSign = candyTrailBackEdgeSign,
                 onOpenTabActions = { tabActionsTabId = candyTrailTab.id },
                 onSelectNode = { nodeId ->
-                    if (controller.navigateToCandyTrailNode(candyTrailTab.id, nodeId)) {
-                        onCloseCandyTrail()
-                        val bounds = tabCardBounds[candyTrailTab.id] ?: candyTrailSourceBounds
-                        if (bounds == null) {
+                    controller.navigateToCandyTrailNode(candyTrailTab.id, nodeId)
+                },
+                onNodeSelectionFinished = {
+                    onCloseCandyTrail()
+                    val bounds = tabCardBounds[candyTrailTab.id] ?: candyTrailSourceBounds
+                    if (bounds == null) {
+                        onSelect(candyTrailTab.id)
+                        onClose()
+                    } else {
+                        val preview = controller.previews[candyTrailTab.id]
+                            ?.takeIf { !candyTrailTab.isIncognito && !it.isRecycled }
+                        exitHero = TabExitHero(
+                            candyTrailTab.id,
+                            preview,
+                            bounds,
+                            candyTrailTab.isIncognito,
+                            previewTopInsetPx = controller.previewTopInsetPx(candyTrailTab.id),
+                            mode = controller.tabOverviewMode,
+                        )
+                        overviewScope.launch {
+                            exitHeroProgress.snapTo(0f)
+                            withFrameNanos { }
+                            exitHeroProgress.animateTo(
+                                targetValue = 1f,
+                                animationSpec = tween(
+                                    durationMillis = 200,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            )
                             onSelect(candyTrailTab.id)
                             onClose()
-                        } else {
-                            val preview = controller.previews[candyTrailTab.id]
-                                ?.takeIf { !candyTrailTab.isIncognito && !it.isRecycled }
-                            exitHero = TabExitHero(
-                                candyTrailTab.id,
-                                preview,
-                                bounds,
-                                candyTrailTab.isIncognito,
-                                previewTopInsetPx = controller.previewTopInsetPx(candyTrailTab.id),
-                                mode = controller.tabOverviewMode,
-                            )
-                            overviewScope.launch {
-                                exitHeroProgress.snapTo(0f)
-                                withFrameNanos { }
-                                exitHeroProgress.animateTo(
-                                    targetValue = 1f,
-                                    animationSpec = tween(
-                                        durationMillis = 200,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                )
-                                onSelect(candyTrailTab.id)
-                                onClose()
-                            }
                         }
                     }
                 },
                 onForkNode = { nodeId ->
-                    val destinationId = controller.forkCandyTrailNode(candyTrailTab.id, nodeId)
-                    if (destinationId != null) {
-                        onCloseCandyTrail()
-                        onSelect(destinationId)
-                        onClose()
-                        true
-                    } else {
-                        false
-                    }
+                    controller.forkCandyTrailNode(candyTrailTab.id, nodeId)
+                },
+                onForkCreationFinished = { destinationId ->
+                    onCloseCandyTrail()
+                    onSelect(destinationId)
+                    onClose()
                 },
                 onSelectFork = { forkId ->
-                    val destinationId = controller.activateCandyTrailFork(candyTrailTab.id, forkId)
-                    if (destinationId != null) {
-                        onCloseCandyTrail()
-                        onSelect(destinationId)
-                        onClose()
-                        true
-                    } else {
-                        false
-                    }
+                    controller.activateCandyTrailFork(candyTrailTab.id, forkId)
+                },
+                onForkSelectionFinished = { destinationId ->
+                    onCloseCandyTrail()
+                    onSelect(destinationId)
+                    onClose()
                 },
                 onDismiss = onCloseCandyTrail,
             )
@@ -6381,7 +6376,7 @@ private fun ErrorCard(message: String, onRetry: () -> Unit, modifier: Modifier =
     }
 }
 
-private fun View.performConfirmHaptic() {
+internal fun View.performConfirmHaptic() {
     performHapticFeedback(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             HapticFeedbackConstants.CONFIRM
