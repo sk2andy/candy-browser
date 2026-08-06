@@ -305,6 +305,9 @@ fun BrowserScreen(controller: BrowserController) {
     var highlightedSuggestionIndex by remember { mutableIntStateOf(-1) }
     var addressFocusNonce by remember { mutableIntStateOf(0) }
     var pendingCommand by remember { mutableStateOf<CommandSuggestion?>(null) }
+    var overviewGestureProgress by remember { mutableFloatStateOf(0f) }
+    var overviewGestureSettleJob by remember { mutableStateOf<Job?>(null) }
+    val overviewGestureScope = rememberCoroutineScope()
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
     var browserHeightPx by remember { mutableFloatStateOf(1f) }
@@ -346,13 +349,23 @@ fun BrowserScreen(controller: BrowserController) {
     val keyboard = LocalSoftwareKeyboardController.current
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
     val tabSwitchTravelPx = browserWidthPx + tabSwitchGapPx
+    val settleOverviewGesture: () -> Unit = {
+        overviewGestureSettleJob?.cancel()
+        overviewGestureSettleJob = overviewGestureScope.launch {
+            val settleProgress = Animatable(overviewGestureProgress)
+            settleProgress.updateBounds(lowerBound = 0f, upperBound = 1f)
+            settleProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f),
+            ) { overviewGestureProgress = value }
+        }
+    }
     val openTabOverview = {
         if (!tabOverviewVisible && !tabOverviewOpening) {
             tabOverviewOpening = true
             controller.prepareTabOverview {
                 tabOverviewOpening = false
                 tabOverviewVisible = true
-                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             }
         }
     }
@@ -652,6 +665,12 @@ fun BrowserScreen(controller: BrowserController) {
             candyTrailBackProgress.snapTo(0f)
         }
     }
+    LaunchedEffect(tabOverviewVisible) {
+        if (tabOverviewVisible) {
+            overviewGestureSettleJob?.cancel()
+            overviewGestureProgress = 0f
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -662,6 +681,24 @@ fun BrowserScreen(controller: BrowserController) {
             }
             .background(MaterialTheme.colorScheme.surfaceContainerHighest),
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = AddressBarOverviewGestureRules.resistedProgress(
+                        overviewGestureProgress,
+                    )
+                }
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.tertiaryContainer,
+                            MaterialTheme.colorScheme.surface,
+                        ),
+                    ),
+                ),
+        )
         BrowserViewport(
             controller = controller,
             selectedTab = selectedTab,
@@ -673,6 +710,7 @@ fun BrowserScreen(controller: BrowserController) {
             handoffAlpha = tabHandoffAlpha.value,
             liveFrameTabId = liveFrameTabId,
             tabOverviewVisible = tabOverviewVisible,
+            overviewGestureProgress = overviewGestureProgress,
             onLiveFrame = reportLiveFrame,
             onSearch = openAddressEditor,
             onReload = controller::reload,
@@ -821,6 +859,14 @@ fun BrowserScreen(controller: BrowserController) {
                 addressEditorVisible = false
                 openTabOverview()
             },
+            overviewGestureEnabled = !tabOverviewOpening && !tabOverviewVisible,
+            overviewGestureProgress = overviewGestureProgress,
+            onOverviewGestureProgress = { progress ->
+                overviewGestureSettleJob?.cancel()
+                overviewGestureProgress = progress.coerceIn(0f, 1f)
+            },
+            onOverviewGestureStarted = { overviewGestureSettleJob?.cancel() },
+            onOverviewGestureCancelled = settleOverviewGesture,
             onReload = controller::reload,
             onStop = controller::stopLoading,
             onNewTab = openNewTabAndEdit,
@@ -1216,6 +1262,7 @@ private fun BrowserViewport(
     handoffAlpha: Float,
     liveFrameTabId: String?,
     tabOverviewVisible: Boolean,
+    overviewGestureProgress: Float,
     onLiveFrame: (String) -> Unit,
     onSearch: () -> Unit,
     onReload: () -> Unit,
@@ -1293,13 +1340,18 @@ private fun BrowserViewport(
                 } else {
                     0f
                 }
-                val scale = 1f - 0.03f * cardProgress
+                val overviewProgress = AddressBarOverviewGestureRules.resistedProgress(
+                    overviewGestureProgress,
+                )
+                val scale = (1f - 0.03f * cardProgress) * (1f - 0.055f * overviewProgress)
                 translationX = offset
+                translationY = -with(density) { (24f * overviewProgress).dp.toPx() }
                 scaleX = scale
                 scaleY = scale
-                shape = RoundedCornerShape((32f * cardProgress).dp)
-                clip = cardProgress > 0f
-                shadowElevation = with(density) { (8f * cardProgress).dp.toPx() }
+                val shapeProgress = maxOf(cardProgress, overviewProgress)
+                shape = RoundedCornerShape((32f * shapeProgress).dp)
+                clip = shapeProgress > 0f
+                shadowElevation = with(density) { (8f * shapeProgress).dp.toPx() }
             }
             .background(MaterialTheme.colorScheme.surface),
     ) {
@@ -1907,6 +1959,11 @@ private fun BrowserBottomBar(
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     startPageSearchTransform: StartPageSearchTransformState?,
+    overviewGestureEnabled: Boolean,
+    overviewGestureProgress: Float,
+    onOverviewGestureProgress: (Float) -> Unit,
+    onOverviewGestureStarted: () -> Unit,
+    onOverviewGestureCancelled: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -1958,8 +2015,14 @@ private fun BrowserBottomBar(
             modifier = Modifier
             .width(animatedWidth)
             .graphicsLayer {
+                val overviewProgress = AddressBarOverviewGestureRules.resistedProgress(
+                    overviewGestureProgress,
+                )
                 scaleX = pulseScale.value
                 scaleY = pulseScale.value
+                scaleX *= 1f - 0.04f * overviewProgress
+                scaleY *= 1f - 0.04f * overviewProgress
+                translationY = -with(density) { (14f * overviewProgress).dp.toPx() }
             },
             shape = RoundedCornerShape(30.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
@@ -1986,7 +2049,14 @@ private fun BrowserBottomBar(
                         Surface(
                             onClick = onExpand,
                             modifier = Modifier
-                                .addressBarVerticalGesture(onSwipeUp = onTabs)
+                                .addressBarVerticalGesture(
+                                    enabled = overviewGestureEnabled,
+                                    initialProgress = overviewGestureProgress,
+                                    onProgress = onOverviewGestureProgress,
+                                    onStarted = onOverviewGestureStarted,
+                                    onCancelled = onOverviewGestureCancelled,
+                                    onSwipeUp = onTabs,
+                                )
                                 .draggable(
                                     state = tabDragState,
                                     orientation = Orientation.Horizontal,
@@ -2042,6 +2112,11 @@ private fun BrowserBottomBar(
                         onOpenCandyTrail = onOpenCandyTrail,
                         onAddSiteCapsule = onAddSiteCapsule,
                         startPageSearchTransform = startPageSearchTransform,
+                        overviewGestureEnabled = overviewGestureEnabled,
+                        overviewGestureProgress = overviewGestureProgress,
+                        onOverviewGestureProgress = onOverviewGestureProgress,
+                        onOverviewGestureStarted = onOverviewGestureStarted,
+                        onOverviewGestureCancelled = onOverviewGestureCancelled,
                         )
                     }
                 }
@@ -2061,8 +2136,16 @@ private fun BrowserBottomBar(
 @Composable
 internal fun Modifier.addressBarVerticalGesture(
     enabled: Boolean = true,
+    initialProgress: Float = 0f,
+    onProgress: (Float) -> Unit = {},
+    onStarted: () -> Unit = {},
+    onCancelled: () -> Unit = {},
     onSwipeUp: () -> Unit,
 ): Modifier {
+    val currentInitialProgress by rememberUpdatedState(initialProgress)
+    val currentOnProgress by rememberUpdatedState(onProgress)
+    val currentOnStarted by rememberUpdatedState(onStarted)
+    val currentOnCancelled by rememberUpdatedState(onCancelled)
     val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val gestureView = LocalView.current
     if (!enabled) return this
@@ -2073,23 +2156,36 @@ internal fun Modifier.addressBarVerticalGesture(
                 requireUnconsumed = false,
                 pass = PointerEventPass.Initial,
             )
+            currentOnStarted()
             var lastY = down.position.y
-            var dragDistance = 0f
-            while (true) {
-                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                dragDistance += change.position.y - lastY
-                lastY = change.position.y
-                if (
-                    AddressBarGestureRules.action(dragDistance, threshold) ==
-                    AddressBarVerticalAction.OpenTabs
-                ) {
-                    change.consume()
-                    currentOnSwipeUp()
-                    gestureView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                    break
+            var state = AddressBarOverviewGestureRules.stateForProgress(
+                progress = currentInitialProgress,
+                threshold = threshold,
+            )
+            var committed = false
+            try {
+                while (true) {
+                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    val update = AddressBarOverviewGestureRules.update(
+                        state = state,
+                        deltaY = change.position.y - lastY,
+                        threshold = threshold,
+                    )
+                    state = update.state
+                    lastY = change.position.y
+                    currentOnProgress(update.progress)
+                    if (update.shouldCommit) {
+                        committed = true
+                        change.consume()
+                        gestureView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        currentOnSwipeUp()
+                        break
+                    }
+                    if (!change.pressed) break
                 }
-                if (!change.pressed) break
+            } finally {
+                if (!committed) currentOnCancelled()
             }
         }
     }
@@ -2133,6 +2229,11 @@ private fun ExpandedBottomBarContent(
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     startPageSearchTransform: StartPageSearchTransformState?,
+    overviewGestureEnabled: Boolean,
+    overviewGestureProgress: Float,
+    onOverviewGestureProgress: (Float) -> Unit,
+    onOverviewGestureStarted: () -> Unit,
+    onOverviewGestureCancelled: () -> Unit,
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
     var newTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
@@ -2168,7 +2269,11 @@ private fun ExpandedBottomBarContent(
                         },
                     )
                     .addressBarVerticalGesture(
-                        enabled = !editing,
+                        enabled = !editing && overviewGestureEnabled,
+                        initialProgress = overviewGestureProgress,
+                        onProgress = onOverviewGestureProgress,
+                        onStarted = onOverviewGestureStarted,
+                        onCancelled = onOverviewGestureCancelled,
                         onSwipeUp = onTabs,
                     )
                     .draggable(
