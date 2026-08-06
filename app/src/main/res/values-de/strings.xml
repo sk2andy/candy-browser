@@ -1,5 +1,27 @@
 <resources>
     <string name="app_name">Candy Browser</string>
+    <string name="onboarding_welcome_title">Lernen Sie Candy Browser kennen</string>
+    <string name="onboarding_welcome_body">Ein Browser für Gesten, der Tabs, Verläufe und Datenschutz direkt in Reichweite hält.</string>
+    <string name="onboarding_welcome_card_title">Vier Gesten. Ein flüssiger Ablauf.</string>
+    <string name="onboarding_welcome_start">Gesten kennenlernen</string>
+    <string name="onboarding_skip">Überspringen</string>
+    <string name="onboarding_completion_title">Sie sind startklar!</string>
+    <string name="onboarding_completion_body">Sie beherrschen jetzt die Candy-Gesten. Surfen, wechseln und entdecken Sie in einem flüssigen Ablauf.</string>
+    <string name="onboarding_completion_cta">Jetzt lossurfen</string>
+    <string name="onboarding_follow_pointer">Folgen Sie dem Berührungspunkt mit dem Finger</string>
+    <string name="onboarding_title">Candy-Gesten lernen</string>
+    <string name="onboarding_progress">%1$d von %2$d</string>
+    <string name="onboarding_try_here">Probiere die Geste in der Karte aus</string>
+    <string name="onboarding_required_hint">Zum Fortfahren sind alle vier Gesten erforderlich.</string>
+    <string name="onboarding_accessibility_complete_action">Diese Geste als erledigt markieren</string>
+    <string name="onboarding_refresh_title">Zum Aktualisieren ziehen</string>
+    <string name="onboarding_refresh_description">Ziehe die Seite nach unten, bis sie aktualisiert wird.</string>
+    <string name="onboarding_switch_tabs_title">Tabs wechseln</string>
+    <string name="onboarding_switch_tabs_description">Wische auf der Adressleiste nach links oder rechts.</string>
+    <string name="onboarding_open_tabs_title">Tab-Übersicht öffnen</string>
+    <string name="onboarding_open_tabs_description">Wische auf der Adressleiste nach oben.</string>
+    <string name="onboarding_close_tab_title">Tab schließen</string>
+    <string name="onboarding_close_tab_description">Wische die Karte in der Tab-Übersicht nach oben.</string>
     <string name="address_search_google_or_url">Mit Google suchen oder URL eingeben</string>
     <string name="address_empty_hint">Suchen oder Adresse eingeben</string>
     <string name="search_or_enter_url">Suchen oder URL eingeben</string>

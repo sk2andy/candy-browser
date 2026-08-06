@@ -1,5 +1,27 @@
 <resources>
     <string name="app_name">Candy Browser</string>
+    <string name="onboarding_welcome_title">Découvrez Candy Browser</string>
+    <string name="onboarding_welcome_body">Un navigateur pensé pour les gestes, avec onglets, parcours et confidentialité à portée de main.</string>
+    <string name="onboarding_welcome_card_title">Quatre gestes. Une navigation fluide.</string>
+    <string name="onboarding_welcome_start">Apprendre les gestes</string>
+    <string name="onboarding_skip">Passer</string>
+    <string name="onboarding_completion_title">Vous êtes prêt !</string>
+    <string name="onboarding_completion_body">Vous maîtrisez maintenant les gestes Candy. Naviguez, changez et explorez en toute fluidité.</string>
+    <string name="onboarding_completion_cta">Commencer à naviguer</string>
+    <string name="onboarding_follow_pointer">Suivez le point tactile avec votre doigt</string>
+    <string name="onboarding_title">Apprenez les gestes de Candy</string>
+    <string name="onboarding_progress">%1$d sur %2$d</string>
+    <string name="onboarding_try_here">Essayez le geste dans la carte</string>
+    <string name="onboarding_required_hint">Les quatre gestes sont requis pour continuer.</string>
+    <string name="onboarding_accessibility_complete_action">Marquer ce geste comme terminé</string>
+    <string name="onboarding_refresh_title">Tirez pour actualiser</string>
+    <string name="onboarding_refresh_description">Faites glisser la page vers le bas jusqu’à son actualisation.</string>
+    <string name="onboarding_switch_tabs_title">Changez d’onglet</string>
+    <string name="onboarding_switch_tabs_description">Balayez la barre d’adresse vers la gauche ou la droite.</string>
+    <string name="onboarding_open_tabs_title">Ouvrez la vue des onglets</string>
+    <string name="onboarding_open_tabs_description">Balayez la barre d’adresse vers le haut.</string>
+    <string name="onboarding_close_tab_title">Fermez un onglet</string>
+    <string name="onboarding_close_tab_description">Dans la vue des onglets, balayez la carte vers le haut.</string>
     <string name="address_search_google_or_url">Rechercher avec Google ou saisir une URL</string>
     <string name="address_empty_hint">Rechercher ou saisir une adresse</string>
     <string name="search_or_enter_url">Rechercher ou saisir une URL</string>

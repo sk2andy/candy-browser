@@ -746,7 +746,12 @@ fun BrowserScreen(controller: BrowserController) {
                     velocity.absoluteValue >= with(density) { 900.dp.toPx() } &&
                     velocity.compareTo(0f) == direction
                 val shouldSwitch = targetTab != null &&
-                    (browserDragOffset.floatValue.absoluteValue >= browserWidthPx * 0.24f || fastEnough)
+                    (
+                        AddressBarTabSwitchRules.hasReachedDistance(
+                            dragDistance = browserDragOffset.floatValue.absoluteValue,
+                            viewportWidth = browserWidthPx,
+                        ) || fastEnough
+                    )
                 val settle = Animatable(browserDragOffset.floatValue)
                 settle.animateTo(
                     targetValue = if (shouldSwitch) direction * tabSwitchTravelPx else 0f,
@@ -1965,7 +1970,7 @@ internal fun Modifier.addressBarVerticalGesture(
     val gestureView = LocalView.current
     if (!enabled) return this
     return pointerInput(enabled) {
-        val threshold = 56.dp.toPx()
+        val threshold = AddressBarGestureRules.OPEN_TABS_THRESHOLD_DP.dp.toPx()
         awaitEachGesture {
             val down = awaitFirstDown(
                 requireUnconsumed = false,

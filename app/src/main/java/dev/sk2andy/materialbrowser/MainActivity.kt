@@ -5,14 +5,29 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.core.view.ViewCompat
 import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
+import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
+import dev.sk2andy.materialbrowser.ui.CandySplashScreen
+import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private lateinit var browserController: BrowserController
@@ -20,6 +35,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val onboardingStore = GestureOnboardingStore(this)
+        val onboardingRequired = onboardingStore.shouldShow()
         browserController = BrowserController(this)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             browserController.onWindowInsetsChanged(insets)
@@ -36,7 +53,37 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             MaterialBrowserTheme {
-                BrowserScreen(browserController)
+                var onboardingVisible by rememberSaveable {
+                    mutableStateOf(onboardingRequired)
+                }
+                var splashVisible by remember {
+                    mutableStateOf(
+                        savedInstanceState == null && intent.action == Intent.ACTION_MAIN,
+                    )
+                }
+                LaunchedEffect(Unit) {
+                    if (splashVisible) {
+                        delay(SPLASH_DURATION_MILLIS)
+                        splashVisible = false
+                    }
+                }
+                Box {
+                    BrowserScreen(browserController)
+                    if (onboardingVisible) {
+                        GestureOnboardingScreen(
+                            onCompleted = {
+                                onboardingStore.markCompleted()
+                                onboardingVisible = false
+                            },
+                        )
+                    }
+                    AnimatedVisibility(
+                        visible = splashVisible,
+                        exit = fadeOut(tween(260)) + scaleOut(targetScale = 0.96f),
+                    ) {
+                        CandySplashScreen()
+                    }
+                }
             }
         }
     }
@@ -97,6 +144,7 @@ class MainActivity : ComponentActivity() {
     fun browserControllerForTesting(): BrowserController = browserController
 
     private companion object {
+        const val SPLASH_DURATION_MILLIS = 1_050L
         const val STATE_CAPSULE_ID = "active_site_capsule_id"
         const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
     }

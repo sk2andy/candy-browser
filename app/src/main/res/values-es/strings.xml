@@ -1,5 +1,27 @@
 <resources>
     <string name="app_name">Candy Browser</string>
+    <string name="onboarding_welcome_title">Conoce Candy Browser</string>
+    <string name="onboarding_welcome_body">Un navegador basado en gestos que mantiene pestañas, recorridos y privacidad al alcance de la mano.</string>
+    <string name="onboarding_welcome_card_title">Cuatro gestos. Un flujo natural.</string>
+    <string name="onboarding_welcome_start">Aprender los gestos</string>
+    <string name="onboarding_skip">Omitir</string>
+    <string name="onboarding_completion_title">¡Todo listo!</string>
+    <string name="onboarding_completion_body">Ya dominas los gestos de Candy. Navega, cambia y explora con un flujo natural.</string>
+    <string name="onboarding_completion_cta">Empezar a navegar</string>
+    <string name="onboarding_follow_pointer">Sigue el punto táctil con el dedo</string>
+    <string name="onboarding_title">Aprende los gestos de Candy</string>
+    <string name="onboarding_progress">%1$d de %2$d</string>
+    <string name="onboarding_try_here">Prueba el gesto en la tarjeta</string>
+    <string name="onboarding_required_hint">Debes completar los cuatro gestos para continuar.</string>
+    <string name="onboarding_accessibility_complete_action">Marcar este gesto como completado</string>
+    <string name="onboarding_refresh_title">Desliza para actualizar</string>
+    <string name="onboarding_refresh_description">Arrastra la página hacia abajo hasta que se actualice.</string>
+    <string name="onboarding_switch_tabs_title">Cambia de pestaña</string>
+    <string name="onboarding_switch_tabs_description">Desliza la barra de direcciones a la izquierda o derecha.</string>
+    <string name="onboarding_open_tabs_title">Abre la vista de pestañas</string>
+    <string name="onboarding_open_tabs_description">Desliza la barra de direcciones hacia arriba.</string>
+    <string name="onboarding_close_tab_title">Cierra una pestaña</string>
+    <string name="onboarding_close_tab_description">En la vista de pestañas, desliza la tarjeta hacia arriba.</string>
     <string name="address_search_google_or_url">Buscar en Google o introducir una URL</string>
     <string name="address_empty_hint">Buscar o introducir una dirección</string>
     <string name="search_or_enter_url">Buscar o introducir una URL</string>

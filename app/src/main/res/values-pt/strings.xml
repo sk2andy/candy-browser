@@ -1,5 +1,27 @@
 <resources>
     <string name="app_name">Candy Browser</string>
+    <string name="onboarding_welcome_title">Conheça o Candy Browser</string>
+    <string name="onboarding_welcome_body">Um navegador feito para gestos, com abas, percursos e privacidade sempre ao alcance.</string>
+    <string name="onboarding_welcome_card_title">Quatro gestos. Um fluxo natural.</string>
+    <string name="onboarding_welcome_start">Aprender os gestos</string>
+    <string name="onboarding_skip">Ignorar</string>
+    <string name="onboarding_completion_title">Tudo pronto!</string>
+    <string name="onboarding_completion_body">Você já domina os gestos do Candy. Navegue, alterne e explore com um fluxo natural.</string>
+    <string name="onboarding_completion_cta">Começar a navegar</string>
+    <string name="onboarding_follow_pointer">Siga o ponto de toque com o dedo</string>
+    <string name="onboarding_title">Aprenda os gestos do Candy</string>
+    <string name="onboarding_progress">%1$d de %2$d</string>
+    <string name="onboarding_try_here">Experimente o gesto no cartão</string>
+    <string name="onboarding_required_hint">É necessário concluir os quatro gestos para continuar.</string>
+    <string name="onboarding_accessibility_complete_action">Marcar este gesto como concluído</string>
+    <string name="onboarding_refresh_title">Puxe para atualizar</string>
+    <string name="onboarding_refresh_description">Arraste a página para baixo até ela ser atualizada.</string>
+    <string name="onboarding_switch_tabs_title">Alterne entre abas</string>
+    <string name="onboarding_switch_tabs_description">Deslize a barra de endereço para a esquerda ou direita.</string>
+    <string name="onboarding_open_tabs_title">Abra a visão geral de abas</string>
+    <string name="onboarding_open_tabs_description">Deslize a barra de endereço para cima.</string>
+    <string name="onboarding_close_tab_title">Feche uma aba</string>
+    <string name="onboarding_close_tab_description">Na visão geral de abas, deslize o cartão para cima.</string>
     <string name="address_search_google_or_url">Pesquisar no Google ou inserir um URL</string>
     <string name="address_empty_hint">Pesquisar ou inserir um endereço</string>
     <string name="search_or_enter_url">Pesquisar ou inserir um URL</string>
