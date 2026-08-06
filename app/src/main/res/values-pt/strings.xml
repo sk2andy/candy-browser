@@ -250,6 +250,7 @@
     <string name="error_download_start_failed">Não foi possível iniciar a transferência</string>
     <string name="error_page_unreachable">Não é possível aceder à página</string>
     <string name="action_retry">Tentar novamente</string>
+    <string name="action_retrying">A tentar novamente…</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
     <string name="privacy_xray_subtitle">Vista em direto para %1$s</string>
     <string name="privacy_xray_counter_cd">Pedidos bloqueados: %1$d. Abrir Privacy X-Ray</string>

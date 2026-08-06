@@ -246,6 +246,7 @@
     <string name="error_download_start_failed">Download konnte nicht gestartet werden</string>
     <string name="error_page_unreachable">Seite nicht erreichbar</string>
     <string name="action_retry">Erneut versuchen</string>
+    <string name="action_retrying">Neuer Versuch…</string>
     <string name="action_save">Speichern</string>
     <string name="capsule_add_action">Als Site Capsule hinzufügen</string>
     <string name="capsule_unavailable_private">Im Inkognito-Modus nicht verfügbar, da Capsules dauerhaft gespeichert werden</string>

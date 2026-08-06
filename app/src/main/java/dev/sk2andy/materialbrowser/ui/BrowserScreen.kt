@@ -795,6 +795,7 @@ fun BrowserScreen(controller: BrowserController) {
             blankTabModeRevealOrigin = blankTabModeRevealOrigin,
             startPageSearchTransform = startPageSearchTransform,
             searchEditing = addressEditorVisible,
+            onRetry = controller::retryFailedPage,
         )
 
         if (addressEditorVisible) {
@@ -1397,8 +1398,10 @@ private fun BrowserViewport(
     blankTabModeRevealOrigin: Offset,
     startPageSearchTransform: StartPageSearchTransformState,
     searchEditing: Boolean,
+    onRetry: () -> Boolean,
 ) {
     val density = LocalDensity.current
+    val hapticView = LocalView.current
     val touchSlop = LocalViewConfiguration.current.touchSlop
     val dragDirection by remember(dragOffset) {
         derivedStateOf { dragOffset.floatValue.compareTo(0f) }
@@ -1412,6 +1415,15 @@ private fun BrowserViewport(
     }
     var pullProgress by remember(selectedTab.id) { mutableFloatStateOf(0f) }
     var pullRefreshActive by remember(selectedTab.id) { mutableStateOf(false) }
+    var pageErrorFeedback by remember(selectedTab.id) {
+        mutableStateOf(
+            PageErrorFeedbackRules.observe(
+                current = PageErrorFeedbackState.Hidden(),
+                error = selectedTab.error,
+                isLoading = selectedTab.isLoading,
+            ),
+        )
+    }
     val pullRefreshEnabled = selectedTab.url != BLANK_URL &&
         !selectedTab.isLoading &&
         !tabOverviewVisible
@@ -1439,6 +1451,13 @@ private fun BrowserViewport(
             pullRefreshActive = false
             pullProgress = 0f
         }
+    }
+    LaunchedEffect(selectedTab.id, selectedTab.error, selectedTab.isLoading) {
+        pageErrorFeedback = PageErrorFeedbackRules.observe(
+            current = pageErrorFeedback,
+            error = selectedTab.error,
+            isLoading = selectedTab.isLoading,
+        )
     }
 
     adjacentTab?.let { tab ->
@@ -1508,13 +1527,24 @@ private fun BrowserViewport(
             )
         }
 
-        selectedTab.error?.let { error ->
-            ErrorCard(
-                message = error,
-                onRetry = controller::reload,
-                modifier = Modifier.align(Alignment.Center),
-            )
-        }
+        PageErrorFeedback(
+            state = pageErrorFeedback,
+            onRetry = retry@{
+                val transition = PageErrorFeedbackRules.requestRetry(pageErrorFeedback)
+                if (!transition.shouldReload) return@retry
+                pageErrorFeedback = transition.state
+                if (onRetry()) {
+                    if (transition.emitConfirmHaptic) hapticView.performConfirmHaptic()
+                } else {
+                    pageErrorFeedback = PageErrorFeedbackRules.observe(
+                        current = pageErrorFeedback,
+                        error = selectedTab.error,
+                        isLoading = selectedTab.isLoading,
+                    )
+                }
+            },
+            modifier = Modifier.align(Alignment.Center),
+        )
 
         AnimatedVisibility(
             visible = pullProgress > 0f || pullRefreshActive,
@@ -6573,27 +6603,6 @@ private fun SettingsSwitch(
             enabled = enabled,
             onCheckedChange = onCheckedChange,
         )
-    }
-}
-
-@Composable
-private fun ErrorCard(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.padding(24.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        tonalElevation = 6.dp,
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(stringResource(R.string.error_page_unreachable), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            Text(message, style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
-        }
     }
 }
 

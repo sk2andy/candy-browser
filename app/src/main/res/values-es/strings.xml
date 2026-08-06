@@ -250,6 +250,7 @@
     <string name="error_download_start_failed">No se pudo iniciar la descarga</string>
     <string name="error_page_unreachable">No se puede acceder a la página</string>
     <string name="action_retry">Reintentar</string>
+    <string name="action_retrying">Reintentando…</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
     <string name="privacy_xray_subtitle">Vista en directo de %1$s</string>
     <string name="privacy_xray_counter_cd">Solicitudes bloqueadas: %1$d. Abrir Privacy X-Ray</string>

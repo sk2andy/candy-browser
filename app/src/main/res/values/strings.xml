@@ -258,6 +258,7 @@
     <string name="error_download_start_failed">Download could not be started</string>
     <string name="error_page_unreachable">Page can’t be reached</string>
     <string name="action_retry">Try again</string>
+    <string name="action_retrying">Trying again…</string>
     <string name="action_save">Save</string>
     <string name="capsule_add_action">Add as Site Capsule</string>
     <string name="capsule_unavailable_private">Unavailable in Incognito because Capsules persist</string>

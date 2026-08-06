@@ -1642,6 +1642,18 @@ class BrowserController(private val activity: Activity) {
         webViewFor(selectedTabId).reload()
     }
 
+    fun retryFailedPage(): Boolean {
+        val tabId = selectedTabId
+        if (selectedTab.error == null || selectedTab.isLoading) return false
+        val webView = webViews[tabId]
+        if (webView == null) {
+            webViewFor(tabId)
+        } else {
+            webView.reload()
+        }
+        return true
+    }
+
     fun stopLoading() {
         webViews[selectedTabId]?.stopLoading()
         updateTab(selectedTabId) { it.copy(isLoading = false) }
