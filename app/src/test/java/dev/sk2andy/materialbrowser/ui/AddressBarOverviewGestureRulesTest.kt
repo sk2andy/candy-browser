@@ -7,6 +7,42 @@ import org.junit.Test
 
 class AddressBarOverviewGestureRulesTest {
     @Test
+    fun `direction waits for slop then locks only upward vertical motion`() {
+        assertEquals(
+            AddressBarOverviewGestureDirection.Pending,
+            AddressBarOverviewGestureRules.direction(
+                dragX = 3f,
+                dragY = -7f,
+                touchSlop = 8f,
+            ),
+        )
+        assertEquals(
+            AddressBarOverviewGestureDirection.Upward,
+            AddressBarOverviewGestureRules.direction(
+                dragX = 4f,
+                dragY = -12f,
+                touchSlop = 8f,
+            ),
+        )
+        assertEquals(
+            AddressBarOverviewGestureDirection.Rejected,
+            AddressBarOverviewGestureRules.direction(
+                dragX = 12f,
+                dragY = -9f,
+                touchSlop = 8f,
+            ),
+        )
+        assertEquals(
+            AddressBarOverviewGestureDirection.Rejected,
+            AddressBarOverviewGestureRules.direction(
+                dragX = 1f,
+                dragY = 9f,
+                touchSlop = 8f,
+            ),
+        )
+    }
+
+    @Test
     fun `existing threshold commits overview`() {
         val belowThreshold = AddressBarOverviewGestureRules.update(
             state = AddressBarOverviewGestureRules.Idle,

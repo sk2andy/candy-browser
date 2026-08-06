@@ -1,5 +1,13 @@
 package dev.sk2andy.materialbrowser.ui
 
+import kotlin.math.absoluteValue
+
+internal enum class AddressBarOverviewGestureDirection {
+    Pending,
+    Upward,
+    Rejected,
+}
+
 internal data class AddressBarOverviewGestureState(
     val dragDistance: Float = 0f,
     val thresholdCrossed: Boolean = false,
@@ -13,6 +21,18 @@ internal data class AddressBarOverviewGestureUpdate(
 
 internal object AddressBarOverviewGestureRules {
     val Idle = AddressBarOverviewGestureState()
+
+    fun direction(
+        dragX: Float,
+        dragY: Float,
+        touchSlop: Float,
+    ): AddressBarOverviewGestureDirection = when {
+        maxOf(dragX.absoluteValue, dragY.absoluteValue) < touchSlop ->
+            AddressBarOverviewGestureDirection.Pending
+        dragY < 0f && dragY.absoluteValue > dragX.absoluteValue ->
+            AddressBarOverviewGestureDirection.Upward
+        else -> AddressBarOverviewGestureDirection.Rejected
+    }
 
     fun stateForProgress(progress: Float, threshold: Float): AddressBarOverviewGestureState {
         if (threshold <= 0f) return Idle
