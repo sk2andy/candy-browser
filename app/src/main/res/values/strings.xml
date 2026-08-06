@@ -90,6 +90,9 @@
     <string name="action_reload">Reload</string>
     <string name="action_add_favorite">Add to favorites</string>
     <string name="action_remove_favorite">Remove from favorites</string>
+    <string name="favorite_added_confirmation">Added to favorites</string>
+    <string name="favorite_removed_confirmation">Removed from favorites</string>
+    <string name="action_undo">Undo</string>
     <string name="action_open_external_app">Open in external app</string>
     <string name="action_summarize_with_assistant">Summarize with Assistant</string>
     <string name="assistant_summary_prompt">Summarize the following website in English.</string>

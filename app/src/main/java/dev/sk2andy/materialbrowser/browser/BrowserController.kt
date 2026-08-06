@@ -121,6 +121,8 @@ import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
 import dev.sk2andy.materialbrowser.data.CandyRuleRepository
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteMutation
+import dev.sk2andy.materialbrowser.data.FavoriteUndoRules
 import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
@@ -146,6 +148,7 @@ class BrowserController(private val activity: Activity) {
     val favicons = mutableStateMapOf<String, Bitmap>()
     val history = mutableStateListOf<HistoryEntry>()
     val favorites = mutableStateListOf<FavoriteEntry>()
+    private var favoriteRevision = 0L
     val privacySnapshots = mutableStateMapOf<String, PrivacyXRaySnapshot>()
     val filterRules = mutableStateListOf<CandyRule>()
     private val incognitoRuleHits = mutableStateMapOf<String, Int>()
@@ -1757,9 +1760,10 @@ class BrowserController(private val activity: Activity) {
 
     fun isFavorite(url: String): Boolean = BrowsingLibraryRules.isFavorite(favorites, url)
 
-    fun toggleFavorite(tabId: String = selectedTabId): Boolean {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
-        if (tab.isIncognito || tab.url == BLANK_URL) return false
+    fun toggleFavorite(tabId: String = selectedTabId): FavoriteMutation? {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return null
+        if (tab.isIncognito || tab.url == BLANK_URL) return null
+        val before = favorites.toList()
         val wasFavorite = BrowsingLibraryRules.isFavorite(favorites, tab.url)
         val updated = BrowsingLibraryRules.toggleFavorite(
             current = favorites,
@@ -1769,10 +1773,29 @@ class BrowserController(private val activity: Activity) {
                 addedAt = System.currentTimeMillis(),
             ),
         )
+        if (updated == before) return null
         favorites.clear()
         favorites += updated
         store.saveFavorites(updated)
-        return !wasFavorite
+        return FavoriteMutation(
+            before = before,
+            applied = updated,
+            added = !wasFavorite,
+            revision = ++favoriteRevision,
+        )
+    }
+
+    fun undoFavorite(mutation: FavoriteMutation): Boolean {
+        val restored = FavoriteUndoRules.restore(
+            current = favorites,
+            currentRevision = favoriteRevision,
+            mutation = mutation,
+        ) ?: return false
+        favoriteRevision++
+        favorites.clear()
+        favorites += restored
+        store.saveFavorites(restored)
+        return true
     }
 
     fun expandBottomBar() {

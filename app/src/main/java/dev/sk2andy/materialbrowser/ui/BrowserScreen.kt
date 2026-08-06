@@ -102,7 +102,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -119,6 +118,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -308,6 +311,10 @@ fun BrowserScreen(controller: BrowserController) {
     var overviewGestureProgress by remember { mutableFloatStateOf(0f) }
     var overviewGestureSettleJob by remember { mutableStateOf<Job?>(null) }
     val overviewGestureScope = rememberCoroutineScope()
+    var favoriteFeedbackId by remember { mutableIntStateOf(0) }
+    var favoriteFeedbackEvent by remember { mutableStateOf<FavoriteFeedbackEvent?>(null) }
+    var favoriteSnackbarJob by remember { mutableStateOf<Job?>(null) }
+    val favoriteSnackbarHostState = remember { SnackbarHostState() }
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
     var browserHeightPx by remember { mutableFloatStateOf(1f) }
@@ -347,6 +354,9 @@ fun BrowserScreen(controller: BrowserController) {
     val density = LocalDensity.current
     val rootView = LocalView.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val favoriteAddedMessage = stringResource(R.string.favorite_added_confirmation)
+    val favoriteRemovedMessage = stringResource(R.string.favorite_removed_confirmation)
+    val undoLabel = stringResource(R.string.action_undo)
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
     val tabSwitchTravelPx = browserWidthPx + tabSwitchGapPx
     val settleOverviewGesture: () -> Unit = {
@@ -878,7 +888,32 @@ fun BrowserScreen(controller: BrowserController) {
             blankTabModeProgress = blankTabModeProgress,
             onIncognitoControlCenterChanged = { blankTabModeRevealOrigin = it },
             isFavorite = controller.isSelectedTabFavorite,
-            onToggleFavorite = { controller.toggleFavorite() },
+            onToggleFavorite = {
+                controller.toggleFavorite()?.let { mutation ->
+                    rootView.performConfirmHaptic()
+                    favoriteFeedbackId++
+                    favoriteFeedbackEvent = FavoriteFeedbackEvent(
+                        id = favoriteFeedbackId,
+                        added = mutation.added,
+                    )
+                    favoriteSnackbarJob?.cancel()
+                    favoriteSnackbarJob = backAnimationScope.launch {
+                        val result = favoriteSnackbarHostState.showSnackbar(
+                            message = if (mutation.added) {
+                                favoriteAddedMessage
+                            } else {
+                                favoriteRemovedMessage
+                            },
+                            actionLabel = undoLabel,
+                            withDismissAction = true,
+                            duration = SnackbarDuration.Short,
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            controller.undoFavorite(mutation)
+                        }
+                    }
+                }
+            },
             onSettings = {
                 addressEditorVisible = false
                 settingsVisible = true
@@ -1082,6 +1117,29 @@ fun BrowserScreen(controller: BrowserController) {
                 },
             )
         }
+
+        favoriteFeedbackEvent?.let { event ->
+            FavoriteToggleFeedback(
+                event = event,
+                onFinished = { completedId ->
+                    if (favoriteFeedbackEvent?.id == completedId) favoriteFeedbackEvent = null
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(end = 24.dp, bottom = 104.dp)
+                    .zIndex(5f),
+            )
+        }
+
+        SnackbarHost(
+            hostState = favoriteSnackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 84.dp)
+                .zIndex(6f),
+        )
 
     }
 
@@ -1873,46 +1931,22 @@ private fun NewTabPage(
                     tonalElevation = 8.dp,
                 ) {
                     Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                        if (favorites.isEmpty()) {
+                        AnimatedVisibility(
+                            visible = favorites.isEmpty(),
+                            enter = fadeIn(tween(150)),
+                            exit = fadeOut(tween(100)),
+                        ) {
                             Text(
                                 stringResource(R.string.favorites_empty),
                                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colors.onSurfaceVariant,
                             )
-                        } else {
-                            favorites.take(6).forEach { favorite ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onFavorite(favorite.url) }
-                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        Icons.Default.Star,
-                                        contentDescription = null,
-                                        tint = colors.primary,
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            favorite.title,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.labelLarge,
-                                        )
-                                        Text(
-                                            AddressResolver.displayText(favorite.url),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = colors.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
                         }
+                        ExpressiveFavoriteRows(
+                            favorites = favorites,
+                            onFavorite = onFavorite,
+                        )
                     }
                 }
             }
@@ -2542,10 +2576,10 @@ private fun ExpandedBottomBarContent(
                             onToggleFavorite()
                         },
                         leadingIcon = {
-                            Text(
-                                if (isFavorite) "★" else "☆",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 22.sp,
+                            ExpressiveFavoriteStar(
+                                filled = isFavorite,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp),
                             )
                         },
                     )

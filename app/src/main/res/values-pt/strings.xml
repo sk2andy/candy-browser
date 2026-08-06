@@ -84,6 +84,9 @@
     <string name="action_reload">Recarregar</string>
     <string name="action_add_favorite">Adicionar aos favoritos</string>
     <string name="action_remove_favorite">Remover dos favoritos</string>
+    <string name="favorite_added_confirmation">Adicionado aos favoritos</string>
+    <string name="favorite_removed_confirmation">Removido dos favoritos</string>
+    <string name="action_undo">Desfazer</string>
     <string name="action_open_external_app">Abrir numa aplicação externa</string>
     <string name="action_summarize_with_assistant">Resumir com o assistente</string>
     <string name="assistant_summary_prompt">Resume o seguinte site em português.</string>

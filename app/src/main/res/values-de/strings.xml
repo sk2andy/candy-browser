@@ -84,6 +84,9 @@
     <string name="action_reload">Neu laden</string>
     <string name="action_add_favorite">Zu Favoriten hinzufügen</string>
     <string name="action_remove_favorite">Aus Favoriten entfernen</string>
+    <string name="favorite_added_confirmation">Zu Favoriten hinzugefügt</string>
+    <string name="favorite_removed_confirmation">Aus Favoriten entfernt</string>
+    <string name="action_undo">Rückgängig</string>
     <string name="action_open_external_app">In externer App öffnen</string>
     <string name="action_summarize_with_assistant">Mit Assistent zusammenfassen</string>
     <string name="assistant_summary_prompt">Fasse die folgende Website auf Deutsch zusammen.</string>
