@@ -2,14 +2,19 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -44,9 +49,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,6 +87,7 @@ import dev.sk2andy.materialbrowser.blocking.PrivacyRequestCategory
 import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
+import kotlinx.coroutines.delay
 
 internal object PrivacyXRayTestTags {
     const val Counter = "privacy_xray_counter"
@@ -98,12 +107,54 @@ internal fun PrivacyXRayBadge(
     blockedCount: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    tabId: String? = null,
 ) {
+    val currentBlockedCount by rememberUpdatedState(blockedCount)
+    val initialBlockedCount = remember(tabId) { blockedCount }
+    val pulseScale = remember(tabId) { Animatable(1f) }
+    LaunchedEffect(tabId) {
+        var previousCount = initialBlockedCount
+        var lastPulseCompletedAtMillis: Long? = null
+        snapshotFlow { currentBlockedCount }.collect { count ->
+            val previous = previousCount
+            previousCount = count
+            val now = SystemClock.uptimeMillis()
+            val elapsedSinceLastPulse = lastPulseCompletedAtMillis?.let { now - it }
+                ?: Long.MAX_VALUE
+            val pulseDelay = PrivacyXRayMotionRules.badgePulseDelayMillis(
+                previousCount = previous,
+                currentCount = count,
+                elapsedSinceLastPulseMillis = elapsedSinceLastPulse,
+            ) ?: return@collect
+
+            delay(pulseDelay)
+            val batchedCount = currentBlockedCount
+            previousCount = batchedCount
+            if (!PrivacyXRayMotionRules.shouldRunBatchedPulse(count, batchedCount)) {
+                return@collect
+            }
+            pulseScale.animateTo(
+                targetValue = 1.1f,
+                animationSpec = tween(110, easing = FastOutSlowInEasing),
+            )
+            pulseScale.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(190, easing = FastOutSlowInEasing),
+            )
+            lastPulseCompletedAtMillis = SystemClock.uptimeMillis()
+        }
+    }
+    if (blockedCount <= 0) return
+
     val description = stringResource(R.string.privacy_xray_counter_cd, blockedCount)
     Surface(
         onClick = onClick,
         modifier = modifier
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .graphicsLayer {
+                scaleX = pulseScale.value
+                scaleY = pulseScale.value
+            }
             .testTag(PrivacyXRayTestTags.Counter)
             .semantics {
                 contentDescription = description
@@ -361,6 +412,16 @@ private fun PrivacyHero(
         primaryContainer = MaterialTheme.colorScheme.primaryContainer,
         tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer,
     )
+    val animatedCategoryFractions = PrivacyRequestCategory.entries.associateWith { category ->
+        animateFloatAsState(
+            targetValue = PrivacyXRayMotionRules.categoryFraction(
+                count = snapshot.categoryCounts[category] ?: 0,
+                totalCount = snapshot.totalBlocked,
+            ),
+            animationSpec = tween(240, easing = FastOutSlowInEasing),
+            label = "Privacy ${category.name} arc",
+        ).value
+    }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -391,11 +452,13 @@ private fun PrivacyHero(
                     val arcSize = Size(size.width - stroke, size.height - stroke)
                     val topLeft = Offset(stroke / 2f, stroke / 2f)
                     var start = -90f
-                    val total = snapshot.totalBlocked.coerceAtLeast(1)
+                    var remainingFraction = 1f
                     PrivacyRequestCategory.entries.forEach { category ->
-                        val count = snapshot.categoryCounts[category] ?: 0
-                        if (count > 0) {
-                            val sweep = 360f * count / total
+                        val fraction = animatedCategoryFractions
+                            .getValue(category)
+                            .coerceIn(0f, remainingFraction)
+                        if (fraction > 0f) {
+                            val sweep = 360f * fraction
                             drawArc(
                                 color = categoryColors.getValue(category),
                                 startAngle = start,
@@ -406,13 +469,41 @@ private fun PrivacyHero(
                                 style = Stroke(width = stroke, cap = StrokeCap.Round),
                             )
                             start += sweep
+                            remainingFraction = (remainingFraction - fraction).coerceAtLeast(0f)
                         }
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AnimatedContent(
                         targetState = snapshot.totalBlocked,
-                        transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(90)) },
+                        transitionSpec = {
+                            val direction = PrivacyXRayMotionRules.countDirection(
+                                previousCount = initialState,
+                                currentCount = targetState,
+                            )
+                            val enterOffset: (Int) -> Int = { height ->
+                                when (direction) {
+                                    PrivacyCountDirection.Increasing -> height / 2
+                                    PrivacyCountDirection.Decreasing -> -height / 2
+                                    PrivacyCountDirection.Unchanged -> 0
+                                }
+                            }
+                            val exitOffset: (Int) -> Int = { height ->
+                                when (direction) {
+                                    PrivacyCountDirection.Increasing -> -height / 2
+                                    PrivacyCountDirection.Decreasing -> height / 2
+                                    PrivacyCountDirection.Unchanged -> 0
+                                }
+                            }
+                            (slideInVertically(
+                                animationSpec = tween(180, easing = FastOutSlowInEasing),
+                                initialOffsetY = enterOffset,
+                            ) + fadeIn(tween(140))) togetherWith
+                                (slideOutVertically(
+                                    animationSpec = tween(160, easing = FastOutSlowInEasing),
+                                    targetOffsetY = exitOffset,
+                                ) + fadeOut(tween(100)))
+                        },
                         label = "Privacy blocked total",
                     ) { count ->
                         Text(

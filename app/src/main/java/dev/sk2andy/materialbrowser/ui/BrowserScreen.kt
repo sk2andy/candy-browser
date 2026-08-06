@@ -2383,15 +2383,14 @@ private fun ExpandedBottomBarContent(
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelLarge,
                             )
-                            if (tab.blockedCount > 0) {
-                                PrivacyXRayBadge(
-                                    blockedCount = tab.blockedCount,
-                                    onClick = onPrivacyXRay,
-                                    modifier = Modifier
-                                        .zIndex(2f)
-                                        .padding(end = 2.dp),
-                                )
-                            }
+                            PrivacyXRayBadge(
+                                blockedCount = tab.blockedCount,
+                                onClick = onPrivacyXRay,
+                                modifier = Modifier
+                                    .zIndex(2f)
+                                    .padding(end = 2.dp),
+                                tabId = tab.id,
+                            )
                         }
                     }
                 }
