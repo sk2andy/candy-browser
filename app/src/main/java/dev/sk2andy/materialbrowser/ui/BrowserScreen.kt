@@ -299,7 +299,6 @@ fun BrowserScreen(controller: BrowserController) {
     var tabOverviewVisible by rememberSaveable { mutableStateOf(false) }
     var candyTrailTabId by rememberSaveable { mutableStateOf<String?>(null) }
     var candyTrailSourceBounds by remember { mutableStateOf<Rect?>(null) }
-    var newTabDestinationBounds by remember { mutableStateOf<Rect?>(null) }
     var addressEditorVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
@@ -334,7 +333,6 @@ fun BrowserScreen(controller: BrowserController) {
     val tabHandoffAlpha = remember { Animatable(1f) }
     val settingsBackProgress = remember { Animatable(0f) }
     val candyTrailBackProgress = remember { Animatable(0f) }
-    val newTabCreationMotion = rememberNewTabCreationMotionController()
     val backAnimationScope = rememberCoroutineScope()
     var settingsBackEdgeSign by remember { mutableIntStateOf(1) }
     var candyTrailBackEdgeSign by remember { mutableIntStateOf(1) }
@@ -347,8 +345,6 @@ fun BrowserScreen(controller: BrowserController) {
     var blankTabModeRevealOrigin by remember(selectedTab.id) {
         mutableStateOf(Offset.Unspecified)
     }
-    val startPageSearchTransform = remember(selectedTab.id) { StartPageSearchTransformState() }
-    val startPageSearchTransformEnabled = selectedTab.url == BLANK_URL
     val context = LocalContext.current
     val accessibilityManager = remember(context) {
         context.getSystemService(AccessibilityManager::class.java)
@@ -401,24 +397,15 @@ fun BrowserScreen(controller: BrowserController) {
             addressFocusNonce++
         }
     }
-    fun createTabWithMotion(
-        isIncognito: Boolean,
-        sourceBounds: Rect?,
-        emitHaptic: Boolean,
-    ): Boolean {
+    fun createTabAndConfirm(isIncognito: Boolean, emitHaptic: Boolean): Boolean {
         val previousTabId = controller.selectedTabId
         val createdTabId = controller.createTab(isIncognito = isIncognito)
         if (createdTabId == previousTabId) return false
-        newTabCreationMotion.launch(
-            sourceBounds = sourceBounds,
-            destinationBounds = newTabDestinationBounds,
-            isIncognito = controller.selectedTab.isIncognito,
-        )
         if (emitHaptic) rootView.performConfirmHaptic()
         return true
     }
-    val openNewTabAndEdit: (Rect?) -> Unit = { sourceBounds ->
-        if (createTabWithMotion(isIncognito = false, sourceBounds = sourceBounds, emitHaptic = true)) {
+    val openNewTabAndEdit: () -> Unit = {
+        if (createTabAndConfirm(isIncognito = false, emitHaptic = true)) {
             addressValue = TextFieldValue()
             addressEditorVisible = true
             highlightedSuggestionIndex = -1
@@ -451,9 +438,8 @@ fun BrowserScreen(controller: BrowserController) {
         override fun moveSelectedTabToProfile(profileId: String): Boolean =
             controller.moveTabToProfile(controller.selectedTabId, profileId)
         override fun switchProfile(profileId: String): Boolean = controller.selectProfile(profileId)
-        override fun createTab(isIncognito: Boolean): Boolean = createTabWithMotion(
+        override fun createTab(isIncognito: Boolean): Boolean = createTabAndConfirm(
             isIncognito = isIncognito,
-            sourceBounds = null,
             emitHaptic = false,
         )
         override fun openSettings(): Boolean = true
@@ -607,18 +593,6 @@ fun BrowserScreen(controller: BrowserController) {
             commandFeedback = null
             if (addressEditorVisible) addressFocusNonce++
         }
-    }
-
-    LaunchedEffect(
-        addressEditorVisible,
-        startPageSearchTransformEnabled,
-        startPageSearchTransform.hasSourceBounds,
-        startPageSearchTransform.hasTargetBounds,
-    ) {
-        startPageSearchTransform.animate(
-            editing = addressEditorVisible,
-            enabled = startPageSearchTransformEnabled,
-        )
     }
 
     LaunchedEffect(
@@ -790,14 +764,8 @@ fun BrowserScreen(controller: BrowserController) {
             onLiveFrame = reportLiveFrame,
             onSearch = openAddressEditor,
             onReload = controller::reload,
-            onNewTabDestinationBounds = { bounds ->
-                newTabDestinationBounds = bounds
-                newTabCreationMotion.updateDestination(bounds)
-            },
             blankTabModeProgress = blankTabModeProgress,
             blankTabModeRevealOrigin = blankTabModeRevealOrigin,
-            startPageSearchTransform = startPageSearchTransform,
-            searchEditing = addressEditorVisible,
             onRetry = controller::retryFailedPage,
         )
 
@@ -1009,9 +977,6 @@ fun BrowserScreen(controller: BrowserController) {
                 capsuleEditorVisible = true
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             },
-            startPageSearchTransform = startPageSearchTransform.takeIf {
-                startPageSearchTransformEnabled
-            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .zIndex(if (commandFeedback != null) 30f else 0f)
@@ -1019,15 +984,6 @@ fun BrowserScreen(controller: BrowserController) {
                     bottomBarTopPx = coordinates.boundsInRoot().top
                 },
         )
-
-        if (startPageSearchTransformEnabled) {
-            StartPageSearchTransformOverlay(
-                state = startPageSearchTransform,
-                editing = addressEditorVisible,
-                incognito = selectedTab.isIncognito,
-                modifier = Modifier.zIndex(1f),
-            )
-        }
 
         TabOverview(
             controller = controller,
@@ -1053,7 +1009,7 @@ fun BrowserScreen(controller: BrowserController) {
             },
             onNewTab = {
                 val previousTabId = controller.selectedTabId
-                openNewTabAndEdit(it)
+                openNewTabAndEdit()
                 if (controller.selectedTabId != previousTabId) tabOverviewVisible = false
             },
             candyTrailTabId = candyTrailTabId,
@@ -1069,8 +1025,6 @@ fun BrowserScreen(controller: BrowserController) {
                 candyTrailSourceBounds = null
             },
         )
-
-        NewTabCreationMotionHost(controller = newTabCreationMotion)
 
         AnimatedVisibility(
             visible = settingsVisible,
@@ -1395,11 +1349,8 @@ private fun BrowserViewport(
     onLiveFrame: (String) -> Unit,
     onSearch: () -> Unit,
     onReload: () -> Unit,
-    onNewTabDestinationBounds: (Rect) -> Unit,
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
-    startPageSearchTransform: StartPageSearchTransformState,
-    searchEditing: Boolean,
     onRetry: () -> Boolean,
 ) {
     val density = LocalDensity.current
@@ -1518,9 +1469,6 @@ private fun BrowserViewport(
                 revealOriginInRoot = blankTabModeRevealOrigin,
                 onSearch = onSearch,
                 onFavorite = controller::submitAddress,
-                onDestinationBounds = onNewTabDestinationBounds,
-                startPageSearchTransform = startPageSearchTransform,
-                searchEditing = searchEditing,
             )
         }
 
@@ -1922,9 +1870,6 @@ private fun NewTabPage(
     revealOriginInRoot: Offset,
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
-    onDestinationBounds: (Rect) -> Unit,
-    startPageSearchTransform: StartPageSearchTransformState,
-    searchEditing: Boolean,
 ) {
     val colors = MaterialTheme.colorScheme
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
@@ -1954,22 +1899,6 @@ private fun NewTabPage(
             Surface(
                 onClick = onSearch,
                 modifier = Modifier
-                    .onGloballyPositioned { coordinates ->
-                        onDestinationBounds(coordinates.boundsInRoot())
-                        startPageSearchTransform.updateSource(coordinates)
-                    }
-                    .graphicsLayer {
-                        alpha = if (
-                            StartPageSearchTransformRules.sourceVisible(
-                                editing = searchEditing,
-                                progress = startPageSearchTransform.progress.value,
-                            )
-                        ) {
-                            1f
-                        } else {
-                            0f
-                        }
-                    }
                     .semantics {
                         contentDescription = openSearchDescription
                     },
@@ -2079,7 +2008,7 @@ private fun BrowserBottomBar(
     onTabs: () -> Unit,
     onReload: () -> Unit,
     onStop: () -> Unit,
-    onNewTab: (Rect?) -> Unit,
+    onNewTab: () -> Unit,
     onToggleIncognito: () -> Unit,
     blankTabModeProgress: Float,
     onIncognitoControlCenterChanged: (Offset) -> Unit,
@@ -2095,7 +2024,6 @@ private fun BrowserBottomBar(
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
-    startPageSearchTransform: StartPageSearchTransformState?,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
     onOverviewGestureProgress: (Float) -> Unit,
@@ -2280,7 +2208,6 @@ private fun BrowserBottomBar(
                                 onPrint = onPrint,
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onAddSiteCapsule = onAddSiteCapsule,
-                                startPageSearchTransform = startPageSearchTransform,
                                 overviewGestureEnabled = overviewGestureEnabled,
                                 overviewGestureProgress = overviewGestureProgress,
                                 onOverviewGestureProgress = onOverviewGestureProgress,
@@ -2521,7 +2448,7 @@ private fun ExpandedBottomBarContent(
     onTabs: () -> Unit,
     onReload: () -> Unit,
     onStop: () -> Unit,
-    onNewTab: (Rect?) -> Unit,
+    onNewTab: () -> Unit,
     onToggleIncognito: () -> Unit,
     blankTabModeProgress: Float,
     onIncognitoControlCenterChanged: (Offset) -> Unit,
@@ -2536,7 +2463,6 @@ private fun ExpandedBottomBarContent(
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
-    startPageSearchTransform: StartPageSearchTransformState?,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
     onOverviewGestureProgress: (Float) -> Unit,
@@ -2544,7 +2470,6 @@ private fun ExpandedBottomBarContent(
     onOverviewGestureCancelled: () -> Unit,
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
-    var newTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
     Column {
             Row(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -2553,29 +2478,6 @@ private fun ExpandedBottomBarContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .then(
-                        if (startPageSearchTransform == null) {
-                            Modifier
-                        } else {
-                            Modifier
-                                .onGloballyPositioned { coordinates ->
-                                    if (
-                                        StartPageSearchTransformRules.shouldUpdateTargetBounds(
-                                            editing = editing,
-                                            progress = startPageSearchTransform.progress.value,
-                                        )
-                                    ) {
-                                        startPageSearchTransform.updateTarget(coordinates)
-                                    }
-                                }
-                                .graphicsLayer {
-                                    alpha = StartPageSearchTransformRules.targetContainerAlpha(
-                                        editing = editing,
-                                        progress = startPageSearchTransform.progress.value,
-                                    )
-                                }
-                        },
-                    )
                     .addressBarVerticalGesture(
                         enabled = !editing && overviewGestureEnabled,
                         initialProgress = overviewGestureProgress,
@@ -2712,12 +2614,7 @@ private fun ExpandedBottomBarContent(
                     onClick = onToggleIncognito,
                 )
             } else {
-                IconButton(
-                    onClick = { onNewTab(newTabButtonBounds) },
-                    modifier = Modifier.onGloballyPositioned { coordinates ->
-                        newTabButtonBounds = coordinates.boundsInRoot()
-                    },
-                ) {
+                IconButton(onClick = onNewTab) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_new_tab))
                 }
             }
@@ -2828,7 +2725,7 @@ private fun ExpandedBottomBarContent(
                         text = { Text(stringResource(R.string.new_tab_title)) },
                         onClick = {
                             onMenuExpandedChange(false)
-                            onNewTab(null)
+                            onNewTab()
                         },
                         leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
                     )
@@ -2941,6 +2838,8 @@ private fun AddressEditorBackdrop(
 ) {
     val colors = MaterialTheme.colorScheme
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
+    val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
+    val incognitoIconAlpha = BlankTabModeMorphRules.incognitoIconAlpha(boundedProgress)
     val backgroundModifier = if (showStartContent) {
         Modifier.blankTabModeBackground(
             progress = boundedProgress,
@@ -2965,7 +2864,47 @@ private fun AddressEditorBackdrop(
             .then(backgroundModifier)
             .clickable(onClick = onDismiss)
             .statusBarsPadding(),
-    ) { }
+    ) {
+        if (showStartContent) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(96.dp),
+                shape = RoundedCornerShape(
+                    BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
+                ),
+                color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
+                shadowElevation = 14.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_launcher_foreground_art),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(68.dp)
+                            .graphicsLayer {
+                                alpha = regularIconAlpha
+                                scaleX = BlankTabModeMorphRules.iconScale(regularIconAlpha)
+                                scaleY = scaleX
+                            },
+                        tint = Color.Unspecified,
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.ic_incognito_filled),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .graphicsLayer {
+                                alpha = incognitoIconAlpha
+                                scaleX = BlankTabModeMorphRules.iconScale(incognitoIconAlpha)
+                                scaleY = scaleX
+                            },
+                        tint = colors.inverseOnSurface,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -3285,7 +3224,7 @@ private fun TabOverview(
     bottomBarTopPx: Float,
     onClose: () -> Unit,
     onSelect: (String) -> Unit,
-    onNewTab: (Rect?) -> Unit,
+    onNewTab: () -> Unit,
     candyTrailTabId: String?,
     candyTrailSourceBounds: Rect?,
     candyTrailBackProgress: Float,
@@ -3345,7 +3284,6 @@ private fun TabOverview(
     var profileSwitching by remember { mutableStateOf(false) }
     var reorderAnimation by remember { mutableStateOf<TabReorderAnimation?>(null) }
     var reorderLayoutReady by remember { mutableStateOf(false) }
-    var newTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
     val reorderProgress = remember { Animatable(1f) }
     val moveProgress = remember { Animatable(0f) }
     val tabCardBounds = remember { mutableStateMapOf<String, Rect>() }
@@ -4132,12 +4070,7 @@ private fun TabOverview(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 FilledIconButton(
-                    onClick = {
-                        onNewTab(newTabButtonBounds)
-                    },
-                    modifier = Modifier.onGloballyPositioned { coordinates ->
-                        newTabButtonBounds = coordinates.boundsInRoot()
-                    },
+                    onClick = onNewTab,
                     enabled = dismissingTabId == null &&
                         movingTabId == null &&
                         exitHero == null &&
