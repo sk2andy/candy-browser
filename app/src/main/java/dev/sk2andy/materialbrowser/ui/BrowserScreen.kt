@@ -115,7 +115,6 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -1823,11 +1822,6 @@ private fun BrowserBottomBar(
             animationSpec = spring(dampingRatio = 0.42f, stiffness = 520f),
         )
     }
-    val animatedLoadProgress by animateFloatAsState(
-        targetValue = (tab.progress / 100f).coerceIn(0f, 1f),
-        animationSpec = tween(80),
-        label = "Ladefortschritt",
-    )
     val compactWidth = with(density) {
         textMeasurer.measure(
             text = domain,
@@ -1862,6 +1856,12 @@ private fun BrowserBottomBar(
             shadowElevation = 14.dp,
         ) {
             Box {
+                AddressLoadCapsuleFeedback(
+                    tabId = tab.id,
+                    isLoading = tab.isLoading,
+                    progressPercent = tab.progress,
+                    modifier = Modifier.matchParentSize(),
+                )
                 AnimatedContent(
                     targetState = effectiveCompact,
                     transitionSpec = {
@@ -1931,26 +1931,9 @@ private fun BrowserBottomBar(
                         )
                     }
                 }
-                AnimatedVisibility(
-                    visible = tab.isLoading,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth(),
-                    enter = fadeIn(tween(120)),
-                    exit = fadeOut(tween(90)),
-                ) {
-                    if (tab.progress in 1..99) {
-                        LinearProgressIndicator(
-                            progress = { animatedLoadProgress },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                    }
-                }
             }
         }
+    }
 
     LaunchedEffect(editing, tab.id, addressFocusNonce) {
         if (editing) {
