@@ -127,6 +127,22 @@
     <string name="command_new_incognito_tab_effect">Abre una pestaña privada que no se guarda</string>
     <string name="command_open_settings_name">Abrir ajustes</string>
     <string name="command_open_settings_effect">Abre los ajustes de Candy Browser</string>
+    <string name="command_feedback_cache_cleared">Caché borrada y pestaña recargada</string>
+    <string name="command_feedback_cookies_cleared">Cookies eliminadas y pestaña recargada</string>
+    <string name="command_feedback_reloaded">Pestaña recargada</string>
+    <string name="command_feedback_loading_stopped">Carga detenida</string>
+    <string name="command_feedback_tab_pinned">Pestaña fijada</string>
+    <string name="command_feedback_tab_unpinned">Pestaña desfijada</string>
+    <plurals name="command_feedback_duplicates_closed">
+        <item quantity="one">%1$d pestaña duplicada cerrada</item>
+        <item quantity="other">%1$d pestañas duplicadas cerradas</item>
+    </plurals>
+    <string name="command_feedback_tab_moved">Pestaña movida al perfil %1$s</string>
+    <string name="command_feedback_profile_switched">Cambio al perfil %1$s</string>
+    <string name="command_feedback_regular_tab_created">Pestaña normal abierta</string>
+    <string name="command_feedback_incognito_tab_created">Pestaña de incógnito abierta</string>
+    <string name="command_feedback_settings_opened">Ajustes abiertos</string>
+    <string name="command_feedback_rejected">No se pudo completar el comando</string>
     <string name="command_target_profile">Perfil %1$s</string>
     <string name="command_cookie_confirm_title">¿Eliminar cookies?</string>
     <string name="command_cookie_confirm_regular">Todos los perfiles Candy normales comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>

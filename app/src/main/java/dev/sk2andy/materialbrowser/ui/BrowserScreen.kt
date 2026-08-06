@@ -10,6 +10,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.HapticFeedbackConstants
 import android.view.View
+import android.view.accessibility.AccessibilityManager
 import android.webkit.WebView
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -18,6 +19,7 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -188,8 +190,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -227,6 +231,7 @@ import dev.sk2andy.materialbrowser.browser.commands.BrowserCommandKind
 import dev.sk2andy.materialbrowser.browser.commands.CommandActions
 import dev.sk2andy.materialbrowser.browser.commands.CommandConfirmation
 import dev.sk2andy.materialbrowser.browser.commands.CommandCookieScope
+import dev.sk2andy.materialbrowser.browser.commands.CommandDispatchOutcome
 import dev.sk2andy.materialbrowser.browser.commands.CommandDispatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandSuggestion
@@ -315,6 +320,8 @@ fun BrowserScreen(controller: BrowserController) {
     var favoriteFeedbackEvent by remember { mutableStateOf<FavoriteFeedbackEvent?>(null) }
     var favoriteSnackbarJob by remember { mutableStateOf<Job?>(null) }
     val favoriteSnackbarHostState = remember { SnackbarHostState() }
+    var activeCommandExecutionId by remember { mutableStateOf<String?>(null) }
+    var commandFeedback by remember { mutableStateOf<AddressCommandFeedback?>(null) }
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
     var browserHeightPx by remember { mutableFloatStateOf(1f) }
@@ -343,6 +350,9 @@ fun BrowserScreen(controller: BrowserController) {
     val startPageSearchTransform = remember(selectedTab.id) { StartPageSearchTransformState() }
     val startPageSearchTransformEnabled = selectedTab.url == BLANK_URL
     val context = LocalContext.current
+    val accessibilityManager = remember(context) {
+        context.getSystemService(AccessibilityManager::class.java)
+    }
     val qrScanFailureMessage = stringResource(R.string.toast_qr_scan_failed)
     val qrScanner = remember(context) {
         val options = GmsBarcodeScannerOptions.Builder()
@@ -380,14 +390,16 @@ fun BrowserScreen(controller: BrowserController) {
         }
     }
     val openAddressEditor: () -> Unit = {
-        val initialAddress = selectedTab.url.takeUnless { it == BLANK_URL }.orEmpty()
-        addressValue = TextFieldValue(
-            text = initialAddress,
-            selection = TextRange(initialAddress.length, 0),
-        )
-        addressEditorVisible = true
-        highlightedSuggestionIndex = -1
-        addressFocusNonce++
+        if (activeCommandExecutionId == null) {
+            val initialAddress = selectedTab.url.takeUnless { it == BLANK_URL }.orEmpty()
+            addressValue = TextFieldValue(
+                text = initialAddress,
+                selection = TextRange(initialAddress.length, 0),
+            )
+            addressEditorVisible = true
+            highlightedSuggestionIndex = -1
+            addressFocusNonce++
+        }
     }
     val openNewTabAndEdit: (Rect?) -> Unit = { sourceBounds ->
         val previousTabId = controller.selectedTabId
@@ -412,7 +424,8 @@ fun BrowserScreen(controller: BrowserController) {
     }
     val commandActions = object : CommandActions {
         override fun clearCacheAndReload(): Boolean = controller.clearCacheAndReload()
-        override fun clearCookiesAndReload(): Boolean = controller.clearCookiesAndReload()
+        override fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean =
+            controller.clearCookiesAndReload(onComplete)
         override fun reload(): Boolean {
             if (controller.selectedTab.url == BLANK_URL || controller.selectedTab.isLoading) return false
             controller.reload()
@@ -425,8 +438,8 @@ fun BrowserScreen(controller: BrowserController) {
         }
         override fun setSelectedTabPinned(isPinned: Boolean): Boolean =
             controller.setTabPinned(controller.selectedTabId, isPinned)
-        override fun closeDuplicateTabs(confirmedTabIds: List<String>): Boolean =
-            controller.closeDuplicateTabs(confirmedTabIds) > 0
+        override fun closeDuplicateTabs(confirmedTabIds: List<String>): Int =
+            controller.closeDuplicateTabs(confirmedTabIds)
         override fun moveSelectedTabToProfile(profileId: String): Boolean =
             controller.moveTabToProfile(controller.selectedTabId, profileId)
         override fun switchProfile(profileId: String): Boolean = controller.selectProfile(profileId)
@@ -437,26 +450,57 @@ fun BrowserScreen(controller: BrowserController) {
         override fun openSettings(): Boolean = true
     }
 
-    fun runCommand(command: BrowserCommand): Boolean {
-        val completed = CommandDispatcher.dispatch(command, commandActions)
-        if (!completed) return false
-        when (command.kind) {
-            BrowserCommandKind.NewRegularTab,
-            BrowserCommandKind.NewIncognitoTab,
-            -> {
-                addressValue = TextFieldValue()
-                highlightedSuggestionIndex = -1
-                addressEditorVisible = true
-                addressFocusNonce++
-            }
-            BrowserCommandKind.OpenSettings -> {
-                addressEditorVisible = false
-                settingsVisible = true
-            }
-            else -> addressEditorVisible = false
+    fun handleCommandOutcome(
+        command: BrowserCommand,
+        outcome: CommandDispatchOutcome,
+    ): Boolean = when (outcome) {
+        is CommandDispatchOutcome.Pending -> true
+        is CommandDispatchOutcome.Rejected -> {
+            commandFeedback = checkNotNull(AddressCommandFeedbackRules.from(outcome))
+            addressEditorVisible = true
+            rootView.performRejectHaptic()
+            false
         }
-        rootView.performConfirmHaptic()
-        return true
+        is CommandDispatchOutcome.Succeeded -> {
+            commandFeedback = checkNotNull(AddressCommandFeedbackRules.from(outcome))
+            when (command.kind) {
+                BrowserCommandKind.NewRegularTab,
+                BrowserCommandKind.NewIncognitoTab,
+                -> {
+                    addressValue = TextFieldValue()
+                    highlightedSuggestionIndex = -1
+                    addressEditorVisible = true
+                }
+                BrowserCommandKind.OpenSettings -> {
+                    addressEditorVisible = false
+                    settingsVisible = true
+                }
+                else -> addressEditorVisible = false
+            }
+            rootView.performConfirmHaptic()
+            true
+        }
+    }
+
+    fun runCommand(command: BrowserCommand): Boolean {
+        if (activeCommandExecutionId != null) return false
+        activeCommandExecutionId = command.executionId
+        val outcome = CommandDispatcher.dispatch(
+            command = command,
+            actions = commandActions,
+            onPendingOutcome = { completedOutcome ->
+                if (activeCommandExecutionId == command.executionId) {
+                    activeCommandExecutionId = null
+                    handleCommandOutcome(command, completedOutcome)
+                }
+            },
+        )
+        if (outcome !is CommandDispatchOutcome.Pending) {
+            activeCommandExecutionId = null
+        } else if (activeCommandExecutionId == command.executionId) {
+            addressEditorVisible = false
+        }
+        return handleCommandOutcome(command, outcome)
     }
 
     fun selectCommand(suggestion: CommandSuggestion): Unit {
@@ -534,6 +578,25 @@ fun BrowserScreen(controller: BrowserController) {
             0
         } else {
             -1
+        }
+    }
+
+    LaunchedEffect(commandFeedback) {
+        val shownFeedback = commandFeedback ?: return@LaunchedEffect
+        val baseDuration = AddressCommandFeedbackRules.displayDurationMillis(shownFeedback)
+        val recommendedDuration = accessibilityManager?.getRecommendedTimeoutMillis(
+            baseDuration.toInt(),
+            AccessibilityManager.FLAG_CONTENT_TEXT or AccessibilityManager.FLAG_CONTENT_ICONS,
+        )?.toLong() ?: baseDuration
+        delay(
+            AddressCommandFeedbackRules.accessibleDurationMillis(
+                feedback = shownFeedback,
+                recommendedTimeoutMillis = recommendedDuration,
+            ),
+        )
+        if (commandFeedback == shownFeedback) {
+            commandFeedback = null
+            if (addressEditorVisible) addressFocusNonce++
         }
     }
 
@@ -741,19 +804,23 @@ fun BrowserScreen(controller: BrowserController) {
                 revealOriginInRoot = blankTabModeRevealOrigin,
                 onDismiss = { addressEditorVisible = false },
             )
-            AddressSuggestions(
-                suggestions = suggestionItems,
-                highlightedIndex = highlightedSuggestionIndex,
-                onHighlight = { highlightedSuggestionIndex = it },
-                onSelect = ::selectSuggestion,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
+            if (commandFeedback == null) {
+                AddressSuggestions(
+                    suggestions = suggestionItems,
+                    highlightedIndex = highlightedSuggestionIndex,
+                    onHighlight = { highlightedSuggestionIndex = it },
+                    onSelect = ::selectSuggestion,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
         }
 
         BrowserBottomBar(
             tab = selectedTab,
             compact = controller.isBottomBarCompact,
             editing = addressEditorVisible,
+            commandFeedback = commandFeedback,
+            feedbackGesturesEnabled = !addressEditorVisible && !settingsVisible,
             onBack = controller::goBack,
             onForward = controller::goForward,
             onAddress = openAddressEditor,
@@ -943,6 +1010,7 @@ fun BrowserScreen(controller: BrowserController) {
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .zIndex(if (commandFeedback != null) 30f else 0f)
                 .onGloballyPositioned { coordinates ->
                     bottomBarTopPx = coordinates.boundsInRoot().top
                 },
@@ -1210,7 +1278,7 @@ fun BrowserScreen(controller: BrowserController) {
                 Button(
                     onClick = {
                         pendingCommand = null
-                        if (!runCommand(pending.command)) addressFocusNonce++
+                        runCommand(pending.command)
                     },
                 ) {
                     Text(
@@ -1954,11 +2022,19 @@ private fun NewTabPage(
     }
 }
 
+private enum class AddressBarPresentation {
+    Compact,
+    Expanded,
+    CommandFeedback,
+}
+
 @Composable
 private fun BrowserBottomBar(
     tab: BrowserTab,
     compact: Boolean,
     editing: Boolean,
+    commandFeedback: AddressCommandFeedback?,
+    feedbackGesturesEnabled: Boolean,
     onBack: () -> Unit,
     onForward: () -> Unit,
     onAddress: () -> Unit,
@@ -2003,10 +2079,15 @@ private fun BrowserBottomBar(
     var menuExpanded by remember { mutableStateOf(false) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    val effectiveCompact = compact && !editing
+    val presentation = when {
+        commandFeedback != null -> AddressBarPresentation.CommandFeedback
+        compact && !editing -> AddressBarPresentation.Compact
+        else -> AddressBarPresentation.Expanded
+    }
     val tabDragState = rememberDraggableState(onTabDrag)
     val pulseScale = remember { Animatable(1f) }
     val domain = AddressResolver.displayText(tab.url)
+    val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val imeBottom = WindowInsets.ime.getBottom(density)
@@ -2031,6 +2112,22 @@ private fun BrowserBottomBar(
             maxLines = 1,
         ).size.width.toDp() + 36.dp
     }
+    val feedbackWidth = with(density) {
+        textMeasurer.measure(
+            text = feedbackText,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+        ).size.width.toDp() + 64.dp
+    }
+    val barColor by animateColorAsState(
+        targetValue = when (commandFeedback?.tone) {
+            AddressCommandFeedbackTone.Confirm -> MaterialTheme.colorScheme.primaryContainer
+            AddressCommandFeedbackTone.Reject -> MaterialTheme.colorScheme.errorContainer
+            null -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f)
+        },
+        animationSpec = tween(160),
+        label = "Address command feedback color",
+    )
     BoxWithConstraints(
         modifier = modifier
             .offset { IntOffset(0, if (keyboardVisible) -imeBottom else 0) }
@@ -2039,7 +2136,13 @@ private fun BrowserBottomBar(
             .fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
-        val targetWidth = if (effectiveCompact) compactWidth.coerceIn(96.dp, maxWidth) else maxWidth
+        val targetWidth = when (presentation) {
+            AddressBarPresentation.Compact -> compactWidth.coerceIn(96.dp, maxWidth)
+            AddressBarPresentation.Expanded -> maxWidth
+            AddressBarPresentation.CommandFeedback -> feedbackWidth
+                .coerceAtLeast(160.dp)
+                .coerceAtMost(maxWidth)
+        }
         val animatedWidth by animateDpAsState(
             targetValue = targetWidth,
             animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
@@ -2047,124 +2150,242 @@ private fun BrowserBottomBar(
         )
         Surface(
             modifier = Modifier
-            .width(animatedWidth)
-            .graphicsLayer {
-                val overviewProgress = AddressBarOverviewGestureRules.resistedProgress(
-                    overviewGestureProgress,
-                )
-                scaleX = pulseScale.value
-                scaleY = pulseScale.value
-                scaleX *= 1f - 0.04f * overviewProgress
-                scaleY *= 1f - 0.04f * overviewProgress
-                translationY = -with(density) { (14f * overviewProgress).dp.toPx() }
-            },
+                .width(animatedWidth)
+                .graphicsLayer {
+                    val overviewProgress = AddressBarOverviewGestureRules.resistedProgress(
+                        overviewGestureProgress,
+                    )
+                    scaleX = pulseScale.value
+                    scaleY = pulseScale.value
+                    scaleX *= 1f - 0.04f * overviewProgress
+                    scaleY *= 1f - 0.04f * overviewProgress
+                    translationY = -with(density) { (14f * overviewProgress).dp.toPx() }
+                },
             shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+            color = barColor,
             tonalElevation = 12.dp,
             shadowElevation = 14.dp,
         ) {
             Box {
                 AddressLoadCapsuleFeedback(
                     tabId = tab.id,
-                    isLoading = tab.isLoading,
+                    isLoading = tab.isLoading && commandFeedback == null,
                     progressPercent = tab.progress,
                     modifier = Modifier.matchParentSize(),
                 )
                 AnimatedContent(
-                    targetState = effectiveCompact,
+                    targetState = presentation,
                     transitionSpec = {
                         ((fadeIn(tween(90)) + slideInVertically(tween(120)) { it / 3 }) togetherWith
                             (fadeOut(tween(70)) + slideOutVertically(tween(100)) { it / 4 }))
                             .using(SizeTransform(clip = false))
                     },
                     label = "Adressleisteninhalt",
-                ) { isCompact ->
-                    if (isCompact) {
-                        Surface(
-                            onClick = onExpand,
-                            modifier = Modifier
-                                .addressBarVerticalGesture(
-                                    enabled = overviewGestureEnabled,
-                                    initialProgress = overviewGestureProgress,
-                                    onProgress = onOverviewGestureProgress,
-                                    onStarted = onOverviewGestureStarted,
-                                    onCancelled = onOverviewGestureCancelled,
-                                    onSwipeUp = onTabs,
+                ) { targetPresentation ->
+                    when (targetPresentation) {
+                        AddressBarPresentation.Compact -> {
+                            Surface(
+                                onClick = onExpand,
+                                modifier = Modifier
+                                    .addressBarVerticalGesture(
+                                        enabled = overviewGestureEnabled,
+                                        initialProgress = overviewGestureProgress,
+                                        onProgress = onOverviewGestureProgress,
+                                        onStarted = onOverviewGestureStarted,
+                                        onCancelled = onOverviewGestureCancelled,
+                                        onSwipeUp = onTabs,
+                                    )
+                                    .draggable(
+                                        state = tabDragState,
+                                        orientation = Orientation.Horizontal,
+                                        enabled = !editing,
+                                        onDragStopped = { velocity -> onTabDragStopped(velocity) },
+                                    ),
+                                color = Color.Transparent,
+                            ) {
+                                Text(
+                                    text = domain,
+                                    modifier = Modifier.padding(
+                                        horizontal = 18.dp,
+                                        vertical = 11.dp,
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.labelMedium,
                                 )
-                                .draggable(
-                                    state = tabDragState,
-                                    orientation = Orientation.Horizontal,
-                                    enabled = !editing,
-                                    onDragStopped = { velocity -> onTabDragStopped(velocity) },
-                                ),
-                            color = Color.Transparent,
-                        ) {
-                            Text(
-                                text = domain,
-                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.labelMedium,
+                            }
+                        }
+                        AddressBarPresentation.Expanded -> {
+                            ExpandedBottomBarContent(
+                                tab = tab,
+                                menuExpanded = menuExpanded,
+                                onMenuExpandedChange = { menuExpanded = it },
+                                onBack = onBack,
+                                onForward = onForward,
+                                onAddress = onAddress,
+                                editing = editing,
+                                editValue = editValue,
+                                onEditValueChange = onEditValueChange,
+                                focusRequester = focusRequester,
+                                onMoveAddressSuggestion = onMoveAddressSuggestion,
+                                onActivateAddressSuggestion = onActivateAddressSuggestion,
+                                onDismissEditor = onDismissEditor,
+                                onSubmitAddress = onSubmitAddress,
+                                onScanQrCode = onScanQrCode,
+                                onTabDrag = onTabDrag,
+                                onTabDragStopped = onTabDragStopped,
+                                onTabs = onTabs,
+                                onReload = onReload,
+                                onStop = onStop,
+                                onNewTab = onNewTab,
+                                onToggleIncognito = onToggleIncognito,
+                                blankTabModeProgress = blankTabModeProgress,
+                                onIncognitoControlCenterChanged =
+                                    onIncognitoControlCenterChanged,
+                                isFavorite = isFavorite,
+                                onToggleFavorite = onToggleFavorite,
+                                onSettings = onSettings,
+                                onClearData = onClearData,
+                                onPrivacyXRay = onPrivacyXRay,
+                                onOpenExternal = onOpenExternal,
+                                onSummarizeWithAssistant = onSummarizeWithAssistant,
+                                onShare = onShare,
+                                onPrint = onPrint,
+                                onOpenCandyTrail = onOpenCandyTrail,
+                                onAddSiteCapsule = onAddSiteCapsule,
+                                startPageSearchTransform = startPageSearchTransform,
+                                overviewGestureEnabled = overviewGestureEnabled,
+                                overviewGestureProgress = overviewGestureProgress,
+                                onOverviewGestureProgress = onOverviewGestureProgress,
+                                onOverviewGestureStarted = onOverviewGestureStarted,
+                                onOverviewGestureCancelled = onOverviewGestureCancelled,
                             )
                         }
-                    } else {
-                        ExpandedBottomBarContent(
-                        tab = tab,
-                        menuExpanded = menuExpanded,
-                        onMenuExpandedChange = { menuExpanded = it },
-                        onBack = onBack,
-                        onForward = onForward,
-                        onAddress = onAddress,
-                        editing = editing,
-                        editValue = editValue,
-                        onEditValueChange = onEditValueChange,
-                        focusRequester = focusRequester,
-                        onMoveAddressSuggestion = onMoveAddressSuggestion,
-                        onActivateAddressSuggestion = onActivateAddressSuggestion,
-                        onDismissEditor = onDismissEditor,
-                        onSubmitAddress = onSubmitAddress,
-                        onScanQrCode = onScanQrCode,
-                        onTabDrag = onTabDrag,
-                        onTabDragStopped = onTabDragStopped,
-                        onTabs = onTabs,
-                        onReload = onReload,
-                        onStop = onStop,
-                        onNewTab = onNewTab,
-                        onToggleIncognito = onToggleIncognito,
-                        blankTabModeProgress = blankTabModeProgress,
-                        onIncognitoControlCenterChanged = onIncognitoControlCenterChanged,
-                        isFavorite = isFavorite,
-                        onToggleFavorite = onToggleFavorite,
-                        onSettings = onSettings,
-                        onClearData = onClearData,
-                        onPrivacyXRay = onPrivacyXRay,
-                        onOpenExternal = onOpenExternal,
-                        onSummarizeWithAssistant = onSummarizeWithAssistant,
-                        onShare = onShare,
-                        onPrint = onPrint,
-                        onOpenCandyTrail = onOpenCandyTrail,
-                        onAddSiteCapsule = onAddSiteCapsule,
-                        startPageSearchTransform = startPageSearchTransform,
-                        overviewGestureEnabled = overviewGestureEnabled,
-                        overviewGestureProgress = overviewGestureProgress,
-                        onOverviewGestureProgress = onOverviewGestureProgress,
-                        onOverviewGestureStarted = onOverviewGestureStarted,
-                        onOverviewGestureCancelled = onOverviewGestureCancelled,
-                        )
+                        AddressBarPresentation.CommandFeedback -> {
+                            commandFeedback?.let { feedback ->
+                                AddressCommandFeedbackContent(
+                                    feedback = feedback,
+                                    text = feedbackText,
+                                    gesturesEnabled = feedbackGesturesEnabled,
+                                    onAddress = if (compact) onExpand else onAddress,
+                                    onTabDrag = onTabDrag,
+                                    onTabDragStopped = onTabDragStopped,
+                                    onTabs = onTabs,
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
-
-    LaunchedEffect(editing, tab.id, addressFocusNonce) {
-        if (editing) {
+    LaunchedEffect(editing, tab.id, addressFocusNonce, commandFeedback) {
+        if (editing && commandFeedback == null) {
             delay(40)
             focusRequester.requestFocus()
             keyboard?.show()
         }
     }
+}
+
+@Composable
+private fun AddressCommandFeedbackContent(
+    feedback: AddressCommandFeedback,
+    text: String,
+    gesturesEnabled: Boolean,
+    onAddress: () -> Unit,
+    onTabDrag: (Float) -> Unit,
+    onTabDragStopped: suspend (Float) -> Unit,
+    onTabs: () -> Unit,
+) {
+    val tabDragState = rememberDraggableState(onTabDrag)
+    val contentColor = when (feedback.tone) {
+        AddressCommandFeedbackTone.Confirm -> MaterialTheme.colorScheme.onPrimaryContainer
+        AddressCommandFeedbackTone.Reject -> MaterialTheme.colorScheme.onErrorContainer
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("address_command_feedback")
+            .clickable(enabled = gesturesEnabled, onClick = onAddress)
+            .addressBarVerticalGesture(
+                enabled = gesturesEnabled,
+                onSwipeUp = onTabs,
+            )
+            .draggable(
+                state = tabDragState,
+                orientation = Orientation.Horizontal,
+                enabled = gesturesEnabled,
+                onDragStopped = { velocity -> onTabDragStopped(velocity) },
+            )
+            .semantics(mergeDescendants = true) {
+                liveRegion = if (feedback.tone == AddressCommandFeedbackTone.Reject) {
+                    LiveRegionMode.Assertive
+                } else {
+                    LiveRegionMode.Polite
+                }
+            }
+            .padding(horizontal = 18.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (feedback.tone == AddressCommandFeedbackTone.Confirm) {
+                Icons.Default.Check
+            } else {
+                Icons.Default.Close
+            },
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = text,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+@Composable
+private fun AddressCommandFeedback.localizedText(): String = when (message) {
+    AddressCommandFeedbackMessage.CacheCleared ->
+        stringResource(R.string.command_feedback_cache_cleared)
+    AddressCommandFeedbackMessage.CookiesCleared ->
+        stringResource(R.string.command_feedback_cookies_cleared)
+    AddressCommandFeedbackMessage.Reloaded ->
+        stringResource(R.string.command_feedback_reloaded)
+    AddressCommandFeedbackMessage.LoadingStopped ->
+        stringResource(R.string.command_feedback_loading_stopped)
+    AddressCommandFeedbackMessage.TabPinned ->
+        stringResource(R.string.command_feedback_tab_pinned)
+    AddressCommandFeedbackMessage.TabUnpinned ->
+        stringResource(R.string.command_feedback_tab_unpinned)
+    AddressCommandFeedbackMessage.DuplicateTabsClosed -> pluralStringResource(
+        R.plurals.command_feedback_duplicates_closed,
+        count,
+        count,
+    )
+    AddressCommandFeedbackMessage.TabMoved -> stringResource(
+        R.string.command_feedback_tab_moved,
+        targetProfileLabel.orEmpty(),
+    )
+    AddressCommandFeedbackMessage.ProfileSwitched -> stringResource(
+        R.string.command_feedback_profile_switched,
+        targetProfileLabel.orEmpty(),
+    )
+    AddressCommandFeedbackMessage.RegularTabCreated ->
+        stringResource(R.string.command_feedback_regular_tab_created)
+    AddressCommandFeedbackMessage.IncognitoTabCreated ->
+        stringResource(R.string.command_feedback_incognito_tab_created)
+    AddressCommandFeedbackMessage.SettingsOpened ->
+        stringResource(R.string.command_feedback_settings_opened)
+    AddressCommandFeedbackMessage.Rejected ->
+        stringResource(R.string.command_feedback_rejected)
 }
 
 @Composable
@@ -6382,6 +6603,16 @@ internal fun View.performConfirmHaptic() {
             HapticFeedbackConstants.CONFIRM
         } else {
             HapticFeedbackConstants.VIRTUAL_KEY
+        },
+    )
+}
+
+private fun View.performRejectHaptic() {
+    performHapticFeedback(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            HapticFeedbackConstants.REJECT
+        } else {
+            HapticFeedbackConstants.LONG_PRESS
         },
     )
 }

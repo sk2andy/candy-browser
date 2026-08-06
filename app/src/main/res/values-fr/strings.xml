@@ -127,6 +127,22 @@
     <string name="command_new_incognito_tab_effect">Ouvre un onglet privé qui n’est pas enregistré</string>
     <string name="command_open_settings_name">Ouvrir les paramètres</string>
     <string name="command_open_settings_effect">Ouvre les paramètres de Candy Browser</string>
+    <string name="command_feedback_cache_cleared">Cache vidé et onglet actualisé</string>
+    <string name="command_feedback_cookies_cleared">Cookies supprimés et onglet actualisé</string>
+    <string name="command_feedback_reloaded">Onglet actualisé</string>
+    <string name="command_feedback_loading_stopped">Chargement arrêté</string>
+    <string name="command_feedback_tab_pinned">Onglet épinglé</string>
+    <string name="command_feedback_tab_unpinned">Onglet désépinglé</string>
+    <plurals name="command_feedback_duplicates_closed">
+        <item quantity="one">%1$d onglet en double fermé</item>
+        <item quantity="other">%1$d onglets en double fermés</item>
+    </plurals>
+    <string name="command_feedback_tab_moved">Onglet déplacé vers le profil %1$s</string>
+    <string name="command_feedback_profile_switched">Profil %1$s ouvert</string>
+    <string name="command_feedback_regular_tab_created">Onglet normal ouvert</string>
+    <string name="command_feedback_incognito_tab_created">Onglet privé ouvert</string>
+    <string name="command_feedback_settings_opened">Paramètres ouverts</string>
+    <string name="command_feedback_rejected">La commande n’a pas pu être exécutée</string>
     <string name="command_target_profile">Profil %1$s</string>
     <string name="command_cookie_confirm_title">Supprimer les cookies ?</string>
     <string name="command_cookie_confirm_regular">Tous les profils Candy normaux partagent ces cookies et peuvent être déconnectés. Cet onglet sera ensuite actualisé.</string>

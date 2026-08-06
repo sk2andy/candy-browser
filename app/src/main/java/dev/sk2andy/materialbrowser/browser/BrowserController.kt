@@ -1656,13 +1656,14 @@ class BrowserController(private val activity: Activity) {
         return true
     }
 
-    fun clearCookiesAndReload(): Boolean {
+    fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean {
         val tabId = selectedTabId
         if (selectedTab.url == BLANK_URL) return false
         val webView = webViewFor(tabId)
         val cookieManager = WebViewProfileCookies.managerFor(webView) ?: return false
         val navigationGeneration = navigationGenerations[tabId]
         val capturedUrl = webView.url
+        var reloaded = false
         WebViewCommandActions.clearCookiesAndReload(
             cookieManager = cookieManager,
             webView = webView,
@@ -1674,8 +1675,10 @@ class BrowserController(private val activity: Activity) {
                 if (unchanged) {
                     updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
                 }
+                reloaded = unchanged
                 unchanged
             },
+            onComplete = { onComplete(reloaded) },
         )
         return true
     }

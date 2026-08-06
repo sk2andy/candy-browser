@@ -133,6 +133,22 @@
     <string name="command_new_incognito_tab_effect">Opens a private tab that is not saved</string>
     <string name="command_open_settings_name">Open settings</string>
     <string name="command_open_settings_effect">Opens Candy Browser settings</string>
+    <string name="command_feedback_cache_cleared">Cache cleared and tab reloaded</string>
+    <string name="command_feedback_cookies_cleared">Cookies deleted and tab reloaded</string>
+    <string name="command_feedback_reloaded">Tab reloaded</string>
+    <string name="command_feedback_loading_stopped">Loading stopped</string>
+    <string name="command_feedback_tab_pinned">Tab pinned</string>
+    <string name="command_feedback_tab_unpinned">Pin removed</string>
+    <plurals name="command_feedback_duplicates_closed">
+        <item quantity="one">%1$d duplicate tab closed</item>
+        <item quantity="other">%1$d duplicate tabs closed</item>
+    </plurals>
+    <string name="command_feedback_tab_moved">Tab moved to profile %1$s</string>
+    <string name="command_feedback_profile_switched">Switched to profile %1$s</string>
+    <string name="command_feedback_regular_tab_created">Regular tab opened</string>
+    <string name="command_feedback_incognito_tab_created">Incognito tab opened</string>
+    <string name="command_feedback_settings_opened">Settings opened</string>
+    <string name="command_feedback_rejected">Command couldn’t be completed</string>
     <string name="command_target_profile">Profile %1$s</string>
     <string name="command_cookie_confirm_title">Delete cookies?</string>
     <string name="command_cookie_confirm_regular">All regular Candy profiles share these cookies and may be signed out. This tab reloads afterward.</string>
