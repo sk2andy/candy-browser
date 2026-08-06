@@ -401,20 +401,28 @@ fun BrowserScreen(controller: BrowserController) {
             addressFocusNonce++
         }
     }
-    val openNewTabAndEdit: (Rect?) -> Unit = { sourceBounds ->
+    fun createTabWithMotion(
+        isIncognito: Boolean,
+        sourceBounds: Rect?,
+        emitHaptic: Boolean,
+    ): Boolean {
         val previousTabId = controller.selectedTabId
-        val createdTabId = controller.createTab()
-        if (createdTabId != previousTabId) {
+        val createdTabId = controller.createTab(isIncognito = isIncognito)
+        if (createdTabId == previousTabId) return false
+        newTabCreationMotion.launch(
+            sourceBounds = sourceBounds,
+            destinationBounds = newTabDestinationBounds,
+            isIncognito = controller.selectedTab.isIncognito,
+        )
+        if (emitHaptic) rootView.performConfirmHaptic()
+        return true
+    }
+    val openNewTabAndEdit: (Rect?) -> Unit = { sourceBounds ->
+        if (createTabWithMotion(isIncognito = false, sourceBounds = sourceBounds, emitHaptic = true)) {
             addressValue = TextFieldValue()
             addressEditorVisible = true
             highlightedSuggestionIndex = -1
             addressFocusNonce++
-            newTabCreationMotion.launch(
-                sourceBounds = sourceBounds,
-                destinationBounds = newTabDestinationBounds,
-                isIncognito = controller.selectedTab.isIncognito,
-            )
-            rootView.performConfirmHaptic()
         }
     }
     val suggestionItems = if (addressEditorVisible) {
@@ -443,10 +451,11 @@ fun BrowserScreen(controller: BrowserController) {
         override fun moveSelectedTabToProfile(profileId: String): Boolean =
             controller.moveTabToProfile(controller.selectedTabId, profileId)
         override fun switchProfile(profileId: String): Boolean = controller.selectProfile(profileId)
-        override fun createTab(isIncognito: Boolean): Boolean {
-            val previousTabId = controller.selectedTabId
-            return controller.createTab(isIncognito = isIncognito) != previousTabId
-        }
+        override fun createTab(isIncognito: Boolean): Boolean = createTabWithMotion(
+            isIncognito = isIncognito,
+            sourceBounds = null,
+            emitHaptic = false,
+        )
         override fun openSettings(): Boolean = true
     }
 
