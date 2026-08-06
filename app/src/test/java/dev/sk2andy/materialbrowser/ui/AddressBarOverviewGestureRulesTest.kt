@@ -43,28 +43,30 @@ class AddressBarOverviewGestureRulesTest {
     }
 
     @Test
-    fun `existing threshold commits overview`() {
+    fun `crossing threshold waits for pointer release`() {
         val belowThreshold = AddressBarOverviewGestureRules.update(
             state = AddressBarOverviewGestureRules.Idle,
-            deltaY = -55f,
-            threshold = 56f,
+            deltaY = -119f,
+            threshold = 120f,
         )
         val atThreshold = AddressBarOverviewGestureRules.update(
             state = AddressBarOverviewGestureRules.Idle,
-            deltaY = -56f,
-            threshold = 56f,
+            deltaY = -120f,
+            threshold = 120f,
         )
 
         assertFalse(belowThreshold.shouldCommit)
-        assertTrue(atThreshold.shouldCommit)
+        assertFalse(atThreshold.shouldCommit)
+        assertTrue(atThreshold.state.thresholdCrossed)
         assertEquals(1f, atThreshold.progress, 0.001f)
+        assertTrue(AddressBarOverviewGestureRules.release(atThreshold.state).shouldCommit)
     }
 
     @Test
     fun `progress clamps downward and excess upward motion`() {
-        assertEquals(0f, AddressBarOverviewGestureRules.progress(20f, 56f), 0.001f)
-        assertEquals(0.5f, AddressBarOverviewGestureRules.progress(-28f, 56f), 0.001f)
-        assertEquals(1f, AddressBarOverviewGestureRules.progress(-112f, 56f), 0.001f)
+        assertEquals(0f, AddressBarOverviewGestureRules.progress(20f, 120f), 0.001f)
+        assertEquals(0.5f, AddressBarOverviewGestureRules.progress(-60f, 120f), 0.001f)
+        assertEquals(1f, AddressBarOverviewGestureRules.progress(-240f, 120f), 0.001f)
         assertEquals(0f, AddressBarOverviewGestureRules.progress(-28f, 0f), 0.001f)
     }
 
@@ -82,10 +84,10 @@ class AddressBarOverviewGestureRulesTest {
         val regrabbed = AddressBarOverviewGestureRules.update(
             state = AddressBarOverviewGestureRules.stateForProgress(
                 progress = 0.5f,
-                threshold = 56f,
+                threshold = 120f,
             ),
-            deltaY = -14f,
-            threshold = 56f,
+            deltaY = -30f,
+            threshold = 120f,
         )
 
         assertEquals(0.75f, regrabbed.progress, 0.001f)
@@ -93,21 +95,22 @@ class AddressBarOverviewGestureRulesTest {
     }
 
     @Test
-    fun `threshold commit is one shot`() {
-        val committed = AddressBarOverviewGestureRules.update(
+    fun `dragging back below threshold cancels release`() {
+        val crossed = AddressBarOverviewGestureRules.update(
             state = AddressBarOverviewGestureRules.Idle,
-            deltaY = -56f,
-            threshold = 56f,
+            deltaY = -132f,
+            threshold = 120f,
         )
-        val continued = AddressBarOverviewGestureRules.update(
-            state = committed.state,
-            deltaY = -24f,
-            threshold = 56f,
+        val returned = AddressBarOverviewGestureRules.update(
+            state = crossed.state,
+            deltaY = 24f,
+            threshold = 120f,
         )
 
-        assertTrue(committed.shouldCommit)
-        assertFalse(continued.shouldCommit)
-        assertEquals(1f, continued.progress, 0.001f)
+        assertTrue(crossed.state.thresholdCrossed)
+        assertFalse(returned.state.thresholdCrossed)
+        assertFalse(AddressBarOverviewGestureRules.release(returned.state).shouldCommit)
+        assertEquals(0.9f, returned.progress, 0.001f)
     }
 
     @Test
@@ -116,5 +119,27 @@ class AddressBarOverviewGestureRulesTest {
         assertEquals(0.425f, AddressBarOverviewGestureRules.resistedProgress(0.5f), 0.001f)
         assertEquals(1f, AddressBarOverviewGestureRules.resistedProgress(1f), 0.001f)
         assertEquals(1f, AddressBarOverviewGestureRules.resistedProgress(2f), 0.001f)
+    }
+
+    @Test
+    fun `morph fades address content into stable plus target`() {
+        assertEquals(1f, AddressBarOverviewGestureRules.contentAlpha(0f), 0.001f)
+        assertEquals(0f, AddressBarOverviewGestureRules.contentAlpha(1f), 0.001f)
+        assertEquals(1f, AddressBarOverviewGestureRules.containerAlpha(0.58f), 0.001f)
+        assertEquals(0f, AddressBarOverviewGestureRules.containerAlpha(0.9f), 0.001f)
+        assertEquals(0f, AddressBarOverviewGestureRules.targetAlpha(0f), 0.001f)
+        assertEquals(1f, AddressBarOverviewGestureRules.targetAlpha(1f), 0.001f)
+        assertEquals(0.72f, AddressBarOverviewGestureRules.targetScale(0f), 0.001f)
+        assertEquals(1f, AddressBarOverviewGestureRules.targetScale(1f), 0.001f)
+        assertEquals(
+            0.2f,
+            AddressBarOverviewGestureRules.containerScale(1f, 280f, 56f),
+            0.001f,
+        )
+        assertEquals(
+            24f,
+            AddressBarOverviewGestureRules.landingTranslation(1f, 100f, 124f),
+            0.001f,
+        )
     }
 }

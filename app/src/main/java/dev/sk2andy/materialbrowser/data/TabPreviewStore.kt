@@ -11,6 +11,11 @@ import java.util.UUID
 
 class TabPreviewStore(context: Context) {
     private val directory = File(context.noBackupFilesDir, DIRECTORY_NAME)
+    private val legacyDirectory = File(context.noBackupFilesDir, LEGACY_DIRECTORY_NAME)
+
+    init {
+        clearDirectory(legacyDirectory)
+    }
 
     fun load(tabId: String): Bitmap? {
         val file = fileFor(tabId) ?: return null
@@ -83,17 +88,24 @@ class TabPreviewStore(context: Context) {
     }
 
     fun clear() {
-        directory.listFiles()?.forEach(File::delete)
+        clearDirectory(directory)
+        clearDirectory(legacyDirectory)
     }
 
     internal fun fileFor(tabId: String): File? = previewFileName(tabId)?.let { File(directory, it) }
 
     private companion object {
-        const val DIRECTORY_NAME = "tab_previews"
+        const val DIRECTORY_NAME = "tab_previews_v2"
+        const val LEGACY_DIRECTORY_NAME = "tab_previews"
         const val WEBP_QUALITY = 82
         const val MAX_BITMAP_DIMENSION = 4_096
         const val MAX_FILE_SIZE_BYTES = 12L * 1_024L * 1_024L
     }
+}
+
+private fun clearDirectory(directory: File) {
+    directory.listFiles()?.forEach(File::delete)
+    directory.delete()
 }
 
 internal fun previewFileName(tabId: String): String? = runCatching {

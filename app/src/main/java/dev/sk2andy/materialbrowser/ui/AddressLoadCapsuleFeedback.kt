@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
 internal enum class AddressLoadFeedbackMode {
@@ -198,14 +199,19 @@ internal fun AddressLoadCapsuleFeedback(
                 val feedbackColor = lerp(primary, tertiary, 0.22f * breath)
                 drawRoundRect(
                     color = feedbackColor.copy(
-                        alpha = (0.035f + 0.035f * breath) * settleAlpha,
+                        alpha = (0.07f + 0.05f * breath) * settleAlpha,
                     ),
                     cornerRadius = CornerRadius(size.height / 2f),
+                )
+                drawRoundRect(
+                    color = feedbackColor.copy(alpha = 0.72f * settleAlpha),
+                    cornerRadius = CornerRadius(size.height / 2f),
+                    style = Stroke(width = (1.5.dp + 0.5.dp * breath).toPx()),
                 )
 
                 val horizontalInset = 8.dp.toPx()
                 val availableWidth = (size.width - horizontalInset * 2f).coerceAtLeast(0f)
-                val indicatorHeight = (3.dp + 2.dp * breath - 1.dp * settle).toPx()
+                val indicatorHeight = (4.dp + 2.dp * breath - 1.dp * settle).toPx()
                 val indicatorTop = size.height - indicatorHeight
                 val indicatorRadius = CornerRadius(indicatorHeight / 2f)
                 drawRoundRect(

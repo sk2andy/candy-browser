@@ -87,6 +87,64 @@ class CandyTrailGraphMotionTest {
     }
 
     @Test
+    fun `selection path travels from current leaf back to root`() {
+        assertEquals(
+            listOf(
+                CandyTrailDirectedEdge(CandyTrailGraphTarget.Node("leaf"), reversed = true),
+                CandyTrailDirectedEdge(CandyTrailGraphTarget.Node("child"), reversed = true),
+            ),
+            CandyTrailGraphMotionRules.selectionPath(
+                trail = trail(),
+                fromNodeId = "leaf",
+                target = CandyTrailGraphTarget.Node("root"),
+            ),
+        )
+    }
+
+    @Test
+    fun `selection path crosses common ancestor and enters sibling branch`() {
+        val trail = trail().let { current ->
+            current.copy(
+                nodes = current.nodes + CandyTrailNode(
+                    id = "sibling",
+                    parentId = "root",
+                    url = "https://sibling.test",
+                    title = "Sibling",
+                    visitedAt = 5L,
+                ),
+            )
+        }
+
+        assertEquals(
+            listOf(
+                CandyTrailDirectedEdge(CandyTrailGraphTarget.Node("leaf"), reversed = true),
+                CandyTrailDirectedEdge(CandyTrailGraphTarget.Node("child"), reversed = true),
+                CandyTrailDirectedEdge(CandyTrailGraphTarget.Node("sibling"), reversed = false),
+            ),
+            CandyTrailGraphMotionRules.selectionPath(
+                trail = trail,
+                fromNodeId = "leaf",
+                target = CandyTrailGraphTarget.Node("sibling"),
+            ),
+        )
+    }
+
+    @Test
+    fun `selection path reaches fork after reversing to its origin`() {
+        assertEquals(
+            listOf(
+                CandyTrailDirectedEdge(CandyTrailGraphTarget.Node("leaf"), reversed = true),
+                CandyTrailDirectedEdge(CandyTrailGraphTarget.Fork("fork"), reversed = false),
+            ),
+            CandyTrailGraphMotionRules.selectionPath(
+                trail = trail(),
+                fromNodeId = "leaf",
+                target = CandyTrailGraphTarget.Fork("fork"),
+            ),
+        )
+    }
+
+    @Test
     fun `pulse clips safely across adjacent edge lengths`() {
         assertNull(
             CandyTrailGraphMotionRules.pulseSegment(
@@ -117,6 +175,20 @@ class CandyTrailGraphMotionTest {
         assertEquals(0f, CandyTrailGraphMotionRules.pulseAlpha(-1f), 0.001f)
         assertEquals(1f, CandyTrailGraphMotionRules.pulseAlpha(0.5f), 0.001f)
         assertEquals(0f, CandyTrailGraphMotionRules.pulseAlpha(2f), 0.001f)
+        assertEquals(
+            CandyTrailPathSegment(startFraction = 0.25f, endFraction = 0.75f),
+            CandyTrailGraphMotionRules.directedSegment(
+                segment = CandyTrailPathSegment(startFraction = 0.25f, endFraction = 0.75f),
+                reversed = true,
+            ),
+        )
+        assertEquals(
+            CandyTrailPathSegment(startFraction = 0.7f, endFraction = 0.9f),
+            CandyTrailGraphMotionRules.directedSegment(
+                segment = CandyTrailPathSegment(startFraction = 0.1f, endFraction = 0.3f),
+                reversed = true,
+            ),
+        )
     }
 
     private fun trail(): CandyTrail = CandyTrail(

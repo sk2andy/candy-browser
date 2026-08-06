@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.util.AtomicFile
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import java.io.File
 import java.util.UUID
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -101,5 +102,23 @@ class TabPreviewStoreInstrumentedTest {
         assertEquals(60, recovered?.height)
         source.recycle()
         recovered?.recycle()
+    }
+
+    @Test
+    fun removesLegacyPreviewDirectoryOnUpgradeAndClear() {
+        val legacyDirectory = File(context.noBackupFilesDir, "tab_previews")
+        assertTrue(legacyDirectory.mkdirs() || legacyDirectory.isDirectory)
+        val legacyPreview = File(legacyDirectory, "legacy.webp")
+        legacyPreview.writeText("old preview")
+
+        TabPreviewStore(context)
+
+        assertFalse(legacyDirectory.exists())
+
+        assertTrue(legacyDirectory.mkdirs() || legacyDirectory.isDirectory)
+        legacyPreview.writeText("old preview")
+        store.clear()
+
+        assertFalse(legacyDirectory.exists())
     }
 }

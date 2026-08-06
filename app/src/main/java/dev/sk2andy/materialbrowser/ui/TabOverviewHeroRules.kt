@@ -39,6 +39,9 @@ internal object TabOverviewHeroRules {
         ((targetFraction - COVERFLOW_PREVIEW_START) / (1f - COVERFLOW_PREVIEW_START))
             .coerceIn(0f, 1f)
 
+    fun incognitoVeilAlpha(entryProgress: Float): Float =
+        (entryProgress.coerceIn(0f, 1f) / INCOGNITO_VEIL_END).coerceIn(0f, 1f)
+
     fun coverflowPreviewLayout(
         rootWidthPx: Float,
         rootHeightPx: Float,
@@ -59,4 +62,5 @@ internal object TabOverviewHeroRules {
     private const val NEIGHBOR_ENTRY_START = 0.55f
     private const val COMPACT_CHROME_START = 0.62f
     private const val COVERFLOW_PREVIEW_START = 0.82f
+    private const val INCOGNITO_VEIL_END = 0.24f
 }

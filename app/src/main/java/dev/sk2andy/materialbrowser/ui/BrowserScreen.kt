@@ -177,6 +177,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -325,6 +326,7 @@ fun BrowserScreen(controller: BrowserController) {
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
     var browserHeightPx by remember { mutableFloatStateOf(1f) }
     var bottomBarTopPx by remember { mutableFloatStateOf(Float.NaN) }
+    var overviewNewTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
     var tabOverviewOpening by remember { mutableStateOf(false) }
     var tabHandoff by remember { mutableStateOf<TabHandoff?>(null) }
     val liveFrameTabIdState = remember { mutableStateOf<String?>(null) }
@@ -384,6 +386,11 @@ fun BrowserScreen(controller: BrowserController) {
                 tabOverviewVisible = true
             }
         }
+    }
+    val closeTabOverview = {
+        overviewGestureSettleJob?.cancel()
+        overviewGestureProgress.floatValue = 0f
+        tabOverviewVisible = false
     }
     val openAddressEditor: () -> Unit = {
         if (activeCommandExecutionId == null) {
@@ -609,7 +616,10 @@ fun BrowserScreen(controller: BrowserController) {
         }
         if (tabOverviewVisible) return@LaunchedEffect
         if (liveFrameTabId != handoff.tabId) return@LaunchedEffect
-        tabHandoffAlpha.snapTo(0f)
+        tabHandoffAlpha.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = 110, easing = FastOutSlowInEasing),
+        )
         if (tabHandoff?.tabId == handoff.tabId) tabHandoff = null
     }
 
@@ -681,7 +691,7 @@ fun BrowserScreen(controller: BrowserController) {
                     candyTrailTabId = null
                     candyTrailSourceBounds = null
                 }
-                BrowserBackTarget.TabOverview -> tabOverviewVisible = false
+                BrowserBackTarget.TabOverview -> closeTabOverview()
                 BrowserBackTarget.WebHistory -> controller.goBack()
                 BrowserBackTarget.None -> Unit
             }
@@ -722,8 +732,7 @@ fun BrowserScreen(controller: BrowserController) {
         }
     }
     LaunchedEffect(tabOverviewVisible) {
-        if (tabOverviewVisible) {
-            overviewGestureSettleJob?.cancel()
+        if (!tabOverviewVisible) {
             overviewGestureProgress.floatValue = 0f
         }
     }
@@ -782,6 +791,8 @@ fun BrowserScreen(controller: BrowserController) {
                     highlightedIndex = highlightedSuggestionIndex,
                     onHighlight = { highlightedSuggestionIndex = it },
                     onSelect = ::selectSuggestion,
+                    rootHeightPx = browserHeightPx,
+                    bottomBarTopPx = bottomBarTopPx,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -910,6 +921,7 @@ fun BrowserScreen(controller: BrowserController) {
             },
             overviewGestureEnabled = !tabOverviewOpening && !tabOverviewVisible,
             overviewGestureProgress = overviewGestureProgress,
+            overviewTargetBounds = overviewNewTabButtonBounds,
             onOverviewGestureProgress = { progress ->
                 overviewGestureSettleJob?.cancel()
                 overviewGestureProgress.floatValue = progress.coerceIn(0f, 1f)
@@ -982,6 +994,9 @@ fun BrowserScreen(controller: BrowserController) {
                 .zIndex(if (commandFeedback != null) 30f else 0f)
                 .onGloballyPositioned { coordinates ->
                     bottomBarTopPx = coordinates.boundsInRoot().top
+                    controller.setPreviewContentBottomInWindowPx(
+                        coordinates.boundsInWindow().top.roundToInt(),
+                    )
                 },
         )
 
@@ -989,7 +1004,7 @@ fun BrowserScreen(controller: BrowserController) {
             controller = controller,
             visible = tabOverviewVisible,
             bottomBarTopPx = bottomBarTopPx,
-            onClose = { tabOverviewVisible = false },
+            onClose = closeTabOverview,
             onSelect = {
                 val target = controller.activeTabs.firstOrNull { tab -> tab.id == it }
                 if (target != null && target.id != controller.selectedTabId) {
@@ -1010,8 +1025,9 @@ fun BrowserScreen(controller: BrowserController) {
             onNewTab = {
                 val previousTabId = controller.selectedTabId
                 openNewTabAndEdit()
-                if (controller.selectedTabId != previousTabId) tabOverviewVisible = false
+                if (controller.selectedTabId != previousTabId) closeTabOverview()
             },
+            onNewTabButtonBounds = { overviewNewTabButtonBounds = it },
             candyTrailTabId = candyTrailTabId,
             candyTrailSourceBounds = candyTrailSourceBounds,
             candyTrailBackProgress = candyTrailBackProgress.value,
@@ -1451,7 +1467,7 @@ private fun BrowserViewport(
         if (selectedTab.url != BLANK_URL) {
             ActiveWebView(
                 controller = controller,
-                visible = !tabOverviewVisible,
+                visible = !tabOverviewVisible || selectedTab.isIncognito,
                 onLiveFrame = onLiveFrame,
                 pullRefreshTouchListener = pullRefreshTouchListener,
             )
@@ -1838,25 +1854,27 @@ private fun FullscreenTabPreviewContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface),
     ) {
-        Box(
-            modifier = Modifier
-                .offset(y = topInset)
-                .fillMaxWidth()
-                .height(visibleHeight)
-                .clipToBounds(),
-        ) {
-            if (tab.isIncognito) {
-                IncognitoTabPlaceholder()
-            } else if (preview != null && !preview.isRecycled) {
-                Image(
-                    bitmap = preview.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    alignment = Alignment.TopCenter,
-                )
-            } else {
-                TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
+        if (tab.isIncognito) {
+            IncognitoTabPlaceholder()
+        } else {
+            Box(
+                modifier = Modifier
+                    .offset(y = topInset)
+                    .fillMaxWidth()
+                    .height(visibleHeight)
+                    .clipToBounds(),
+            ) {
+                if (preview != null && !preview.isRecycled) {
+                    Image(
+                        bitmap = preview.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        alignment = Alignment.TopCenter,
+                    )
+                } else {
+                    TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
+                }
             }
         }
     }
@@ -2026,6 +2044,7 @@ private fun BrowserBottomBar(
     onAddSiteCapsule: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
+    overviewTargetBounds: Rect?,
     onOverviewGestureProgress: (Float) -> Unit,
     onOverviewGestureStarted: () -> Unit,
     onOverviewGestureCancelled: () -> Unit,
@@ -2102,33 +2121,58 @@ private fun BrowserBottomBar(
             animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
             label = "Adressleistenbreite",
         )
-        Surface(
-            modifier = Modifier
-                .width(animatedWidth)
-                .graphicsLayer {
-                    val overviewProgress = AddressBarOverviewGestureRules.resistedProgress(
-                        overviewGestureProgress.floatValue,
-                    )
-                    scaleX = pulseScale.value
-                    scaleY = pulseScale.value
-                    scaleX *= 1f - 0.04f * overviewProgress
-                    scaleY *= 1f - 0.04f * overviewProgress
-                    translationY = -with(density) { (14f * overviewProgress).dp.toPx() }
-                },
-            shape = RoundedCornerShape(30.dp),
-            color = barColor,
-            tonalElevation = 12.dp,
-            shadowElevation = 14.dp,
-        ) {
-            Box {
-                AddressLoadCapsuleFeedback(
-                    tabId = tab.id,
-                    isLoading = tab.isLoading && commandFeedback == null,
-                    progressPercent = tab.progress,
-                    modifier = Modifier.matchParentSize(),
-                )
+        var addressBarBounds by remember { mutableStateOf<Rect?>(null) }
+        val morphTargetSize = 56.dp
+        Box(contentAlignment = Alignment.Center) {
+            Surface(
+                modifier = Modifier
+                    .width(animatedWidth)
+                    .onGloballyPositioned { coordinates ->
+                        addressBarBounds = coordinates.boundsInRoot()
+                    }
+                    .graphicsLayer {
+                        val progress = overviewGestureProgress.floatValue
+                        val source = addressBarBounds
+                        val target = overviewTargetBounds
+                        val targetSizePx = with(density) { morphTargetSize.toPx() }
+                        alpha = AddressBarOverviewGestureRules.containerAlpha(progress)
+                        scaleX = pulseScale.value *
+                            AddressBarOverviewGestureRules.containerScale(
+                                progress = progress,
+                                sourceSize = size.width,
+                                targetSize = targetSizePx,
+                            )
+                        scaleY = pulseScale.value *
+                            AddressBarOverviewGestureRules.containerScale(
+                                progress = progress,
+                                sourceSize = size.height,
+                                targetSize = targetSizePx,
+                            )
+                        if (source != null && target != null) {
+                            translationX = AddressBarOverviewGestureRules.landingTranslation(
+                                progress = progress,
+                                sourceCenter = source.center.x,
+                                targetCenter = target.center.x,
+                            )
+                            translationY = AddressBarOverviewGestureRules.landingTranslation(
+                                progress = progress,
+                                sourceCenter = source.center.y,
+                                targetCenter = target.center.y,
+                            )
+                        }
+                    },
+                shape = RoundedCornerShape(30.dp),
+                color = barColor,
+                tonalElevation = 12.dp,
+                shadowElevation = 14.dp,
+            ) {
                 AnimatedContent(
                     targetState = presentation,
+                    modifier = Modifier.graphicsLayer {
+                        alpha = AddressBarOverviewGestureRules.contentAlpha(
+                            overviewGestureProgress.floatValue,
+                        )
+                    },
                     transitionSpec = {
                         ((fadeIn(tween(90)) + slideInVertically(tween(120)) { it / 3 }) togetherWith
                             (fadeOut(tween(70)) + slideOutVertically(tween(100)) { it / 4 }))
@@ -2157,17 +2201,25 @@ private fun BrowserBottomBar(
                                     ),
                                 color = Color.Transparent,
                             ) {
-                                Text(
-                                    text = domain,
-                                    modifier = Modifier.padding(
-                                        horizontal = 18.dp,
-                                        vertical = 11.dp,
-                                    ),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
+                                Box {
+                                    Text(
+                                        text = domain,
+                                        modifier = Modifier.padding(
+                                            horizontal = 18.dp,
+                                            vertical = 11.dp,
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Center,
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                    AddressLoadCapsuleFeedback(
+                                        tabId = tab.id,
+                                        isLoading = tab.isLoading && commandFeedback == null,
+                                        progressPercent = tab.progress,
+                                        modifier = Modifier.matchParentSize(),
+                                    )
+                                }
                             }
                         }
                         AddressBarPresentation.Expanded -> {
@@ -2229,6 +2281,42 @@ private fun BrowserBottomBar(
                             }
                         }
                     }
+                }
+            }
+            Surface(
+                modifier = Modifier
+                    .size(morphTargetSize)
+                    .graphicsLayer {
+                        val progress = overviewGestureProgress.floatValue
+                        val source = addressBarBounds
+                        val target = overviewTargetBounds
+                        alpha = AddressBarOverviewGestureRules.targetAlpha(progress)
+                        val targetScale = AddressBarOverviewGestureRules.targetScale(progress)
+                        scaleX = targetScale
+                        scaleY = targetScale
+                        if (source != null && target != null) {
+                            translationX = AddressBarOverviewGestureRules.landingTranslation(
+                                progress = progress,
+                                sourceCenter = source.center.x,
+                                targetCenter = target.center.x,
+                            )
+                            translationY = AddressBarOverviewGestureRules.landingTranslation(
+                                progress = progress,
+                                sourceCenter = source.center.y,
+                                targetCenter = target.center.y,
+                            )
+                        }
+                    },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                shadowElevation = 8.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
                 }
             }
         }
@@ -2411,13 +2499,18 @@ internal fun Modifier.addressBarVerticalGesture(
                     lastY = change.position.y
                     change.consume()
                     currentOnProgress(update.progress)
-                    if (update.shouldCommit) {
-                        committed = true
-                        gestureView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        currentOnSwipeUp()
+                    if (!change.pressed) {
+                        val release = AddressBarOverviewGestureRules.release(state)
+                        if (release.shouldCommit) {
+                            committed = true
+                            currentOnProgress(release.progress)
+                            gestureView.performHapticFeedback(
+                                HapticFeedbackConstants.VIRTUAL_KEY,
+                            )
+                            currentOnSwipeUp()
+                        }
                         break
                     }
-                    if (!change.pressed) break
                 }
             } finally {
                 if (gestureActive && !committed) currentOnCancelled()
@@ -2472,7 +2565,7 @@ private fun ExpandedBottomBarContent(
     val tabDragState = rememberDraggableState(onTabDrag)
     Column {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
             Surface(
@@ -2492,7 +2585,7 @@ private fun ExpandedBottomBarContent(
                         enabled = !editing,
                         onDragStopped = { velocity -> onTabDragStopped(velocity) },
                     ),
-                shape = RoundedCornerShape(22.dp),
+                shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
             ) {
                 Box {
@@ -2603,6 +2696,12 @@ private fun ExpandedBottomBarContent(
                             )
                         }
                     }
+                    AddressLoadCapsuleFeedback(
+                        tabId = tab.id,
+                        isLoading = tab.isLoading,
+                        progressPercent = tab.progress,
+                        modifier = Modifier.matchParentSize(),
+                    )
                 }
             }
             if (editing && tab.url == BLANK_URL) {
@@ -2954,6 +3053,8 @@ private fun AddressSuggestions(
     highlightedIndex: Int,
     onHighlight: (Int) -> Unit,
     onSelect: (AddressSuggestionItem) -> Unit,
+    rootHeightPx: Float,
+    bottomBarTopPx: Float,
     modifier: Modifier = Modifier,
 ) {
     if (suggestions.isEmpty()) return
@@ -2963,10 +3064,16 @@ private fun AddressSuggestions(
             listState.animateScrollToItem(highlightedIndex)
         }
     }
+    val density = LocalDensity.current
+    val bottomPadding = AddressEditorLayoutRules.suggestionBottomPaddingDp(
+        rootHeightPx = rootHeightPx,
+        bottomBarTopPx = bottomBarTopPx,
+        density = density.density,
+    ).dp
     Surface(
         modifier = modifier
             .padding(horizontal = 12.dp)
-            .padding(bottom = 92.dp)
+            .padding(bottom = bottomPadding)
             .fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
@@ -3225,6 +3332,7 @@ private fun TabOverview(
     onClose: () -> Unit,
     onSelect: (String) -> Unit,
     onNewTab: () -> Unit,
+    onNewTabButtonBounds: (Rect) -> Unit,
     candyTrailTabId: String?,
     candyTrailSourceBounds: Rect?,
     candyTrailBackProgress: Float,
@@ -4059,18 +4167,17 @@ private fun TabOverview(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(70.dp)
-                    .padding(horizontal = 24.dp)
-                    .graphicsLayer {
-                        val chromeProgress =
-                            ((heroProgress.value - 0.42f) / 0.58f).coerceIn(0f, 1f)
-                        alpha = chromeProgress
-                        translationY = (1f - chromeProgress) * 28f
-                    },
+                    .padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 FilledIconButton(
                     onClick = onNewTab,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .onGloballyPositioned { coordinates ->
+                            onNewTabButtonBounds(coordinates.boundsInRoot())
+                        },
                     enabled = dismissingTabId == null &&
                         movingTabId == null &&
                         exitHero == null &&
@@ -4093,6 +4200,13 @@ private fun TabOverview(
                     22.dp
                 },
                 targetFraction = { heroProgress.value },
+                modifier = if (initialTab.isIncognito) {
+                    Modifier.graphicsLayer {
+                        alpha = TabOverviewHeroRules.incognitoVeilAlpha(heroProgress.value)
+                    }
+                } else {
+                    Modifier
+                },
             ) {
                 when (controller.tabOverviewMode) {
                     TabOverviewMode.List -> TabListHeroContent(

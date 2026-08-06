@@ -7,6 +7,14 @@ import org.junit.Test
 
 class TabOverviewHeroRulesTest {
     @Test
+    fun `incognito veil crossfades before hero travel`() {
+        assertEquals(0f, TabOverviewHeroRules.incognitoVeilAlpha(0f), 0.001f)
+        assertEquals(0.5f, TabOverviewHeroRules.incognitoVeilAlpha(0.12f), 0.001f)
+        assertEquals(1f, TabOverviewHeroRules.incognitoVeilAlpha(0.24f), 0.001f)
+        assertEquals(1f, TabOverviewHeroRules.incognitoVeilAlpha(1f), 0.001f)
+    }
+
+    @Test
     fun `hero waits for target bounds`() {
         assertFalse(TabOverviewHeroRules.canStart(hasTargetBounds = false))
         assertTrue(TabOverviewHeroRules.canStart(hasTargetBounds = true))

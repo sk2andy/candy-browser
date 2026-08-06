@@ -34,9 +34,14 @@ internal data class CandyTrailPathSegment(
     val endFraction: Float,
 )
 
+internal data class CandyTrailDirectedEdge(
+    val target: CandyTrailGraphTarget,
+    val reversed: Boolean,
+)
+
 internal object CandyTrailGraphMotionRules {
     const val EDGE_DRAW_DURATION_MILLIS = 260
-    const val PATH_PULSE_DURATION_MILLIS = 420
+    const val PATH_PULSE_DURATION_MILLIS = 650
     const val TARGET_SPRING_DAMPING_RATIO = 0.72f
     const val TARGET_SPRING_STIFFNESS = 520f
 
@@ -103,6 +108,79 @@ internal object CandyTrailGraphMotionRules {
             addAll(reversedNodeEdges.asReversed())
             if (target is CandyTrailGraphTarget.Fork) add(target)
         }
+    }
+
+    fun selectionPath(
+        trail: CandyTrail,
+        fromNodeId: String?,
+        target: CandyTrailGraphTarget,
+    ): List<CandyTrailDirectedEdge> {
+        val nodesById = trail.nodes.associateBy(CandyTrailNode::id)
+        val startId = fromNodeId?.takeIf(nodesById::containsKey) ?: return emptyList()
+        val targetNodeId = when (target) {
+            is CandyTrailGraphTarget.Node -> target.id
+            is CandyTrailGraphTarget.Fork -> trail.forks
+                .firstOrNull { it.id == target.id }
+                ?.originNodeId
+                ?: return emptyList()
+        }
+        if (targetNodeId !in nodesById) return emptyList()
+
+        fun ancestorIds(nodeId: String): List<String> {
+            val result = mutableListOf<String>()
+            val visited = mutableSetOf<String>()
+            var cursor = nodesById[nodeId]
+            while (cursor != null && visited.add(cursor.id)) {
+                result += cursor.id
+                cursor = cursor.parentId?.let(nodesById::get)
+            }
+            return result
+        }
+
+        val startAncestors = ancestorIds(startId)
+        val targetAncestors = ancestorIds(targetNodeId)
+        val targetAncestorSet = targetAncestors.toSet()
+        val commonAncestorId = startAncestors.firstOrNull(targetAncestorSet::contains)
+            ?: return emptyList()
+
+        return buildList {
+            var cursorId = startId
+            while (cursorId != commonAncestorId) {
+                add(
+                    CandyTrailDirectedEdge(
+                        target = CandyTrailGraphTarget.Node(cursorId),
+                        reversed = true,
+                    ),
+                )
+                cursorId = nodesById[cursorId]?.parentId ?: return@buildList
+            }
+            targetAncestors
+                .takeWhile { it != commonAncestorId }
+                .asReversed()
+                .forEach { nodeId ->
+                    add(
+                        CandyTrailDirectedEdge(
+                            target = CandyTrailGraphTarget.Node(nodeId),
+                            reversed = false,
+                        ),
+                    )
+                }
+            if (target is CandyTrailGraphTarget.Fork) {
+                add(CandyTrailDirectedEdge(target = target, reversed = false))
+            }
+        }
+    }
+
+    fun directedSegment(
+        segment: CandyTrailPathSegment,
+        reversed: Boolean,
+    ): CandyTrailPathSegment = if (reversed) {
+        CandyTrailPathSegment(
+            startFraction = 1f - segment.endFraction,
+            endFraction = 1f - segment.startFraction,
+        )
+    } else {
+        segment
     }
 
     fun revealProgress(progress: Float): Float = progress.coerceIn(0f, 1f)

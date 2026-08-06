@@ -132,6 +132,7 @@ import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
+import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import java.io.ByteArrayInputStream
@@ -217,6 +218,7 @@ class BrowserController(private val activity: Activity) {
     private var previewCaptureInFlight = false
     private var dirtyPreviewTabId: String? = null
     private var previewCaptureEnabled = true
+    private var previewContentBottomInWindowPx: Int? = null
     private var lastWindowInsets: WindowInsetsCompat? = null
     private var previewEpoch = 0
     private var faviconEpoch = 0
@@ -1828,6 +1830,10 @@ class BrowserController(private val activity: Activity) {
         previewCaptureEnabled = enabled
     }
 
+    fun setPreviewContentBottomInWindowPx(bottomPx: Int) {
+        previewContentBottomInWindowPx = bottomPx.takeIf { it > 0 }
+    }
+
     fun previewTopInsetPx(tabId: String): Int {
         val webView = webViews[tabId]
         val currentMargin = (webView?.layoutParams as? FrameLayout.LayoutParams)?.topMargin
@@ -2934,11 +2940,17 @@ class BrowserController(private val activity: Activity) {
         val location = IntArray(2)
         view.getLocationInWindow(location)
         val decorView = activity.window.decorView
+        val contentBottom = previewContentBottomInWindowPx ?: decorView.height
         val source = Rect(
             location[0].coerceAtLeast(0),
             location[1].coerceAtLeast(0),
             (location[0] + view.width).coerceAtMost(decorView.width),
-            (location[1] + view.height).coerceAtMost(decorView.height),
+            TabPreviewCaptureRules.sourceBottomPx(
+                viewTopPx = location[1],
+                viewHeightPx = view.height,
+                decorHeightPx = decorView.height,
+                contentBottomPx = contentBottom,
+            ),
         )
         if (source.width() <= 0 || source.height() <= 0) {
             onComplete()
