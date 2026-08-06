@@ -330,6 +330,8 @@ fun BrowserScreen(controller: BrowserController) {
     var blankTabModeRevealOrigin by remember(selectedTab.id) {
         mutableStateOf(Offset.Unspecified)
     }
+    val startPageSearchTransform = remember(selectedTab.id) { StartPageSearchTransformState() }
+    val startPageSearchTransformEnabled = selectedTab.url == BLANK_URL
     val context = LocalContext.current
     val qrScanFailureMessage = stringResource(R.string.toast_qr_scan_failed)
     val qrScanner = remember(context) {
@@ -513,6 +515,18 @@ fun BrowserScreen(controller: BrowserController) {
     }
 
     LaunchedEffect(
+        addressEditorVisible,
+        startPageSearchTransformEnabled,
+        startPageSearchTransform.hasSourceBounds,
+        startPageSearchTransform.hasTargetBounds,
+    ) {
+        startPageSearchTransform.animate(
+            editing = addressEditorVisible,
+            enabled = startPageSearchTransformEnabled,
+        )
+    }
+
+    LaunchedEffect(
         tabHandoff?.tabId,
         liveFrameTabId,
         tabOverviewVisible,
@@ -668,6 +682,8 @@ fun BrowserScreen(controller: BrowserController) {
             },
             blankTabModeProgress = blankTabModeProgress,
             blankTabModeRevealOrigin = blankTabModeRevealOrigin,
+            startPageSearchTransform = startPageSearchTransform,
+            searchEditing = addressEditorVisible,
         )
 
         if (addressEditorVisible) {
@@ -841,12 +857,24 @@ fun BrowserScreen(controller: BrowserController) {
                 capsuleEditorVisible = true
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             },
+            startPageSearchTransform = startPageSearchTransform.takeIf {
+                startPageSearchTransformEnabled
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .onGloballyPositioned { coordinates ->
                     bottomBarTopPx = coordinates.boundsInRoot().top
                 },
         )
+
+        if (startPageSearchTransformEnabled) {
+            StartPageSearchTransformOverlay(
+                state = startPageSearchTransform,
+                editing = addressEditorVisible,
+                incognito = selectedTab.isIncognito,
+                modifier = Modifier.zIndex(1f),
+            )
+        }
 
         TabOverview(
             controller = controller,
@@ -1194,6 +1222,8 @@ private fun BrowserViewport(
     onNewTabDestinationBounds: (Rect) -> Unit,
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
+    startPageSearchTransform: StartPageSearchTransformState,
+    searchEditing: Boolean,
 ) {
     val density = LocalDensity.current
     val touchSlop = LocalViewConfiguration.current.touchSlop
@@ -1295,6 +1325,8 @@ private fun BrowserViewport(
                 onSearch = onSearch,
                 onFavorite = controller::submitAddress,
                 onDestinationBounds = onNewTabDestinationBounds,
+                startPageSearchTransform = startPageSearchTransform,
+                searchEditing = searchEditing,
             )
         }
 
@@ -1686,6 +1718,8 @@ private fun NewTabPage(
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
     onDestinationBounds: (Rect) -> Unit,
+    startPageSearchTransform: StartPageSearchTransformState,
+    searchEditing: Boolean,
 ) {
     val colors = MaterialTheme.colorScheme
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
@@ -1717,6 +1751,19 @@ private fun NewTabPage(
                 modifier = Modifier
                     .onGloballyPositioned { coordinates ->
                         onDestinationBounds(coordinates.boundsInRoot())
+                        startPageSearchTransform.updateSource(coordinates)
+                    }
+                    .graphicsLayer {
+                        alpha = if (
+                            StartPageSearchTransformRules.sourceVisible(
+                                editing = searchEditing,
+                                progress = startPageSearchTransform.progress.value,
+                            )
+                        ) {
+                            1f
+                        } else {
+                            0f
+                        }
                     }
                     .semantics {
                         contentDescription = openSearchDescription
@@ -1859,6 +1906,7 @@ private fun BrowserBottomBar(
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
+    startPageSearchTransform: StartPageSearchTransformState?,
     modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -1993,6 +2041,7 @@ private fun BrowserBottomBar(
                         onPrint = onPrint,
                         onOpenCandyTrail = onOpenCandyTrail,
                         onAddSiteCapsule = onAddSiteCapsule,
+                        startPageSearchTransform = startPageSearchTransform,
                         )
                     }
                 }
@@ -2083,6 +2132,7 @@ private fun ExpandedBottomBarContent(
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
+    startPageSearchTransform: StartPageSearchTransformState?,
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
     var newTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
@@ -2094,6 +2144,29 @@ private fun ExpandedBottomBarContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
+                    .then(
+                        if (startPageSearchTransform == null) {
+                            Modifier
+                        } else {
+                            Modifier
+                                .onGloballyPositioned { coordinates ->
+                                    if (
+                                        StartPageSearchTransformRules.shouldUpdateTargetBounds(
+                                            editing = editing,
+                                            progress = startPageSearchTransform.progress.value,
+                                        )
+                                    ) {
+                                        startPageSearchTransform.updateTarget(coordinates)
+                                    }
+                                }
+                                .graphicsLayer {
+                                    alpha = StartPageSearchTransformRules.targetContainerAlpha(
+                                        editing = editing,
+                                        progress = startPageSearchTransform.progress.value,
+                                    )
+                                }
+                        },
+                    )
                     .addressBarVerticalGesture(
                         enabled = !editing,
                         onSwipeUp = onTabs,
@@ -2456,8 +2529,6 @@ private fun AddressEditorBackdrop(
 ) {
     val colors = MaterialTheme.colorScheme
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
-    val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
-    val incognitoIconAlpha = BlankTabModeMorphRules.incognitoIconAlpha(boundedProgress)
     val backgroundModifier = if (showStartContent) {
         Modifier.blankTabModeBackground(
             progress = boundedProgress,
@@ -2482,47 +2553,7 @@ private fun AddressEditorBackdrop(
             .then(backgroundModifier)
             .clickable(onClick = onDismiss)
             .statusBarsPadding(),
-    ) {
-        if (showStartContent) {
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(96.dp),
-                shape = RoundedCornerShape(
-                    BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
-                ),
-                color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
-                shadowElevation = 14.dp,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_launcher_foreground_art),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(68.dp)
-                            .graphicsLayer {
-                                alpha = regularIconAlpha
-                                scaleX = BlankTabModeMorphRules.iconScale(regularIconAlpha)
-                                scaleY = scaleX
-                            },
-                        tint = Color.Unspecified,
-                    )
-                    Icon(
-                        painter = painterResource(R.drawable.ic_incognito_filled),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .graphicsLayer {
-                                alpha = incognitoIconAlpha
-                                scaleX = BlankTabModeMorphRules.iconScale(incognitoIconAlpha)
-                                scaleY = scaleX
-                            },
-                        tint = colors.inverseOnSurface,
-                    )
-                }
-            }
-        }
-    }
+    ) { }
 }
 
 @Composable
