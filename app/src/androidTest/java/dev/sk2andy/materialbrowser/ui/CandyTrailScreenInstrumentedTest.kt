@@ -57,7 +57,9 @@ class CandyTrailScreenInstrumentedTest {
             nextForkOrdinal = 1L,
         )
         val forkedNodeId = AtomicReference<String?>()
+        val completedForkCreationCount = AtomicInteger()
         val selectedForkCount = AtomicInteger()
+        val completedForkSelectionCount = AtomicInteger()
         val activity = instrumentation.startActivitySync(
             Intent(instrumentation.targetContext, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -76,14 +78,21 @@ class CandyTrailScreenInstrumentedTest {
                             predictiveBackProgress = 0f,
                             predictiveBackEdgeSign = 1,
                             onOpenTabActions = {},
-                            onSelectNode = {},
+                            onSelectNode = { false },
+                            onNodeSelectionFinished = {},
                             onForkNode = { nodeId ->
                                 forkedNodeId.set(nodeId)
-                                true
+                                "fork-destination"
+                            },
+                            onForkCreationFinished = {
+                                completedForkCreationCount.incrementAndGet()
                             },
                             onSelectFork = {
                                 selectedForkCount.incrementAndGet()
-                                true
+                                "fork-destination"
+                            },
+                            onForkSelectionFinished = {
+                                completedForkSelectionCount.incrementAndGet()
                             },
                             onDismiss = {},
                         )
@@ -100,10 +109,12 @@ class CandyTrailScreenInstrumentedTest {
             )
             assertTrue(clickNode(activity.getString(R.string.action_fork_from_here)))
             assertTrue(awaitValue { forkedNodeId.get() == "n0" })
+            assertTrue(awaitValue { completedForkCreationCount.get() == 1 })
 
             render(baseTrail)
             assertTrue(clickNode("Fork destination"))
             assertTrue(awaitValue { selectedForkCount.get() == 1 })
+            assertTrue(awaitValue { completedForkSelectionCount.get() == 1 })
 
             render(
                 baseTrail.copy(
@@ -117,6 +128,7 @@ class CandyTrailScreenInstrumentedTest {
             )
             assertTrue(clickNode("Fork destination"))
             assertTrue(awaitValue { selectedForkCount.get() == 2 })
+            assertTrue(awaitValue { completedForkSelectionCount.get() == 2 })
         } finally {
             instrumentation.runOnMainSync { activity.finish() }
             instrumentation.waitForIdleSync()
@@ -179,9 +191,12 @@ class CandyTrailScreenInstrumentedTest {
                             predictiveBackProgress = 0f,
                             predictiveBackEdgeSign = 1,
                             onOpenTabActions = {},
-                            onSelectNode = {},
-                            onForkNode = { false },
-                            onSelectFork = { false },
+                            onSelectNode = { false },
+                            onNodeSelectionFinished = {},
+                            onForkNode = { null },
+                            onForkCreationFinished = {},
+                            onSelectFork = { null },
+                            onForkSelectionFinished = {},
                             onDismiss = {},
                         )
                     }
