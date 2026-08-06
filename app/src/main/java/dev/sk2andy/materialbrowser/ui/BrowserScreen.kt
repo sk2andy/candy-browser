@@ -167,6 +167,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
@@ -322,6 +323,13 @@ fun BrowserScreen(controller: BrowserController) {
     var candyTrailBackEdgeSign by remember { mutableIntStateOf(1) }
     var qrScanInProgress by remember { mutableStateOf(false) }
     val selectedTab = controller.selectedTab
+    val blankTabModeProgress = rememberBlankTabModeProgress(
+        tabId = selectedTab.id,
+        incognito = selectedTab.isIncognito,
+    )
+    var blankTabModeRevealOrigin by remember(selectedTab.id) {
+        mutableStateOf(Offset.Unspecified)
+    }
     val context = LocalContext.current
     val qrScanFailureMessage = stringResource(R.string.toast_qr_scan_failed)
     val qrScanner = remember(context) {
@@ -658,12 +666,15 @@ fun BrowserScreen(controller: BrowserController) {
                 newTabDestinationBounds = bounds
                 newTabCreationMotion.updateDestination(bounds)
             },
+            blankTabModeProgress = blankTabModeProgress,
+            blankTabModeRevealOrigin = blankTabModeRevealOrigin,
         )
 
         if (addressEditorVisible) {
             AddressEditorBackdrop(
                 showStartContent = selectedTab.url == BLANK_URL,
-                incognito = selectedTab.isIncognito,
+                modeProgress = blankTabModeProgress,
+                revealOriginInRoot = blankTabModeRevealOrigin,
                 onDismiss = { addressEditorVisible = false },
             )
             AddressSuggestions(
@@ -798,8 +809,12 @@ fun BrowserScreen(controller: BrowserController) {
             onStop = controller::stopLoading,
             onNewTab = openNewTabAndEdit,
             onToggleIncognito = {
-                controller.setBlankTabIncognito(enabled = !selectedTab.isIncognito)
+                if (controller.setBlankTabIncognito(enabled = !selectedTab.isIncognito)) {
+                    rootView.performConfirmHaptic()
+                }
             },
+            blankTabModeProgress = blankTabModeProgress,
+            onIncognitoControlCenterChanged = { blankTabModeRevealOrigin = it },
             isFavorite = controller.isSelectedTabFavorite,
             onToggleFavorite = { controller.toggleFavorite() },
             onSettings = {
@@ -1177,6 +1192,8 @@ private fun BrowserViewport(
     onSearch: () -> Unit,
     onReload: () -> Unit,
     onNewTabDestinationBounds: (Rect) -> Unit,
+    blankTabModeProgress: Float,
+    blankTabModeRevealOrigin: Offset,
 ) {
     val density = LocalDensity.current
     val touchSlop = LocalViewConfiguration.current.touchSlop
@@ -1256,12 +1273,14 @@ private fun BrowserViewport(
             }
             .background(MaterialTheme.colorScheme.surface),
     ) {
-        ActiveWebView(
-            controller = controller,
-            visible = !tabOverviewVisible,
-            onLiveFrame = onLiveFrame,
-            pullRefreshTouchListener = pullRefreshTouchListener,
-        )
+        if (selectedTab.url != BLANK_URL) {
+            ActiveWebView(
+                controller = controller,
+                visible = !tabOverviewVisible,
+                onLiveFrame = onLiveFrame,
+                pullRefreshTouchListener = pullRefreshTouchListener,
+            )
+        }
 
         AnimatedVisibility(
             visible = selectedTab.url == BLANK_URL,
@@ -1271,6 +1290,8 @@ private fun BrowserViewport(
             NewTabPage(
                 favorites = controller.favorites,
                 incognito = selectedTab.isIncognito,
+                modeProgress = blankTabModeProgress,
+                revealOriginInRoot = blankTabModeRevealOrigin,
                 onSearch = onSearch,
                 onFavorite = controller::submitAddress,
                 onDestinationBounds = onNewTabDestinationBounds,
@@ -1660,23 +1681,26 @@ private fun FullscreenTabPreviewContent(
 private fun NewTabPage(
     favorites: List<FavoriteEntry>,
     incognito: Boolean,
+    modeProgress: Float,
+    revealOriginInRoot: Offset,
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
     onDestinationBounds: (Rect) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
+    val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
+    val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
+    val incognitoIconAlpha = BlankTabModeMorphRules.incognitoIconAlpha(boundedProgress)
+    val openSearchDescription = stringResource(R.string.cd_open_search)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.radialGradient(
-                    colors = if (incognito) {
-                        listOf(colors.inverseSurface, colors.surface)
-                    } else {
-                        listOf(colors.primaryContainer, colors.surface)
-                    },
-                    radius = 1100f,
-                ),
+            .blankTabModeBackground(
+                progress = boundedProgress,
+                revealOriginInRoot = revealOriginInRoot,
+                regularCenterColor = colors.primaryContainer,
+                incognitoCenterColor = colors.inverseSurface,
+                edgeColor = colors.surface,
             )
             .safeDrawingPadding(),
     ) {
@@ -1690,11 +1714,17 @@ private fun NewTabPage(
         ) {
             Surface(
                 onClick = onSearch,
-                modifier = Modifier.onGloballyPositioned { coordinates ->
-                    onDestinationBounds(coordinates.boundsInRoot())
-                },
-                shape = CircleShape,
-                color = if (incognito) colors.inverseSurface else colors.primary,
+                modifier = Modifier
+                    .onGloballyPositioned { coordinates ->
+                        onDestinationBounds(coordinates.boundsInRoot())
+                    }
+                    .semantics {
+                        contentDescription = openSearchDescription
+                    },
+                shape = RoundedCornerShape(
+                    BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
+                ),
+                color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
                 shadowElevation = 14.dp,
             ) {
                 Box(
@@ -1702,16 +1732,28 @@ private fun NewTabPage(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        painter = painterResource(
-                            if (incognito) {
-                                R.drawable.ic_incognito_filled
-                            } else {
-                                R.drawable.ic_launcher_foreground_art
+                        painter = painterResource(R.drawable.ic_launcher_foreground_art),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(68.dp)
+                            .graphicsLayer {
+                                alpha = regularIconAlpha
+                                scaleX = BlankTabModeMorphRules.iconScale(regularIconAlpha)
+                                scaleY = scaleX
                             },
-                        ),
-                        contentDescription = stringResource(R.string.cd_open_search),
-                        modifier = Modifier.size(if (incognito) 48.dp else 68.dp),
-                        tint = if (incognito) colors.inverseOnSurface else Color.Unspecified,
+                        tint = Color.Unspecified,
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.ic_incognito_filled),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .graphicsLayer {
+                                alpha = incognitoIconAlpha
+                                scaleX = BlankTabModeMorphRules.iconScale(incognitoIconAlpha)
+                                scaleY = scaleX
+                            },
+                        tint = colors.inverseOnSurface,
                     )
                 }
             }
@@ -1803,6 +1845,8 @@ private fun BrowserBottomBar(
     onStop: () -> Unit,
     onNewTab: (Rect?) -> Unit,
     onToggleIncognito: () -> Unit,
+    blankTabModeProgress: Float,
+    onIncognitoControlCenterChanged: (Offset) -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onSettings: () -> Unit,
@@ -1936,6 +1980,8 @@ private fun BrowserBottomBar(
                         onStop = onStop,
                         onNewTab = onNewTab,
                         onToggleIncognito = onToggleIncognito,
+                        blankTabModeProgress = blankTabModeProgress,
+                        onIncognitoControlCenterChanged = onIncognitoControlCenterChanged,
                         isFavorite = isFavorite,
                         onToggleFavorite = onToggleFavorite,
                         onSettings = onSettings,
@@ -2024,6 +2070,8 @@ private fun ExpandedBottomBarContent(
     onStop: () -> Unit,
     onNewTab: (Rect?) -> Unit,
     onToggleIncognito: () -> Unit,
+    blankTabModeProgress: Float,
+    onIncognitoControlCenterChanged: (Offset) -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onSettings: () -> Unit,
@@ -2172,8 +2220,10 @@ private fun ExpandedBottomBarContent(
             }
             if (editing && tab.url == BLANK_URL) {
                 Spacer(Modifier.width(8.dp))
-                IncognitoModeButton(
+                BlankTabIncognitoModeButton(
                     enabled = tab.isIncognito,
+                    progress = blankTabModeProgress,
+                    onCenterChanged = onIncognitoControlCenterChanged,
                     onClick = onToggleIncognito,
                 )
             } else {
@@ -2398,88 +2448,38 @@ private fun ExpandedBottomBarContent(
 }
 
 @Composable
-private fun IncognitoModeButton(
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    Box(
-        modifier = Modifier.size(48.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Surface(
-            modifier = Modifier.size(40.dp),
-            shape = RoundedCornerShape(14.dp),
-            color = if (enabled) {
-                MaterialTheme.colorScheme.tertiaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHighest
-            },
-        ) {}
-        IconButton(
-            onClick = {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                onClick()
-            },
-            modifier = Modifier.size(48.dp),
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (enabled) {
-                        R.drawable.ic_incognito_filled
-                    } else {
-                        R.drawable.ic_incognito_outline
-                    },
-                ),
-                contentDescription = stringResource(
-                    if (enabled) {
-                        R.string.cd_make_blank_tab_regular
-                    } else {
-                        R.string.cd_make_blank_tab_incognito
-                    },
-                ),
-                modifier = Modifier.size(22.dp),
-                tint = if (enabled) {
-                    MaterialTheme.colorScheme.onTertiaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-        }
-    }
-}
-
-@Composable
 private fun AddressEditorBackdrop(
     showStartContent: Boolean,
-    incognito: Boolean,
+    modeProgress: Float,
+    revealOriginInRoot: Offset,
     onDismiss: () -> Unit,
 ) {
+    val colors = MaterialTheme.colorScheme
+    val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
+    val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
+    val incognitoIconAlpha = BlankTabModeMorphRules.incognitoIconAlpha(boundedProgress)
+    val backgroundModifier = if (showStartContent) {
+        Modifier.blankTabModeBackground(
+            progress = boundedProgress,
+            revealOriginInRoot = revealOriginInRoot,
+            regularCenterColor = colors.primaryContainer,
+            incognitoCenterColor = colors.inverseSurface,
+            edgeColor = colors.surface,
+        )
+    } else {
+        Modifier.background(
+            Brush.linearGradient(
+                listOf(
+                    colors.scrim.copy(alpha = 0.08f),
+                    colors.scrim.copy(alpha = 0.08f),
+                ),
+            ),
+        )
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                if (showStartContent) {
-                    Brush.radialGradient(
-                        colors = listOf(
-                            if (incognito) {
-                                MaterialTheme.colorScheme.inverseSurface
-                            } else {
-                                MaterialTheme.colorScheme.primaryContainer
-                            },
-                            MaterialTheme.colorScheme.surface,
-                        ),
-                        radius = 1100f,
-                    )
-                } else {
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.scrim.copy(alpha = 0.08f),
-                            MaterialTheme.colorScheme.scrim.copy(alpha = 0.08f),
-                        ),
-                    )
-                },
-            )
+            .then(backgroundModifier)
             .clickable(onClick = onDismiss)
             .statusBarsPadding(),
     ) {
@@ -2488,30 +2488,36 @@ private fun AddressEditorBackdrop(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(96.dp),
-                shape = CircleShape,
-                color = if (incognito) {
-                    MaterialTheme.colorScheme.inverseSurface
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
+                shape = RoundedCornerShape(
+                    BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
+                ),
+                color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
                 shadowElevation = 14.dp,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        painter = painterResource(
-                            if (incognito) {
-                                R.drawable.ic_incognito_filled
-                            } else {
-                                R.drawable.ic_launcher_foreground_art
-                            },
-                        ),
+                        painter = painterResource(R.drawable.ic_launcher_foreground_art),
                         contentDescription = null,
-                        modifier = Modifier.size(if (incognito) 48.dp else 68.dp),
-                        tint = if (incognito) {
-                            MaterialTheme.colorScheme.inverseOnSurface
-                        } else {
-                            Color.Unspecified
-                        },
+                        modifier = Modifier
+                            .size(68.dp)
+                            .graphicsLayer {
+                                alpha = regularIconAlpha
+                                scaleX = BlankTabModeMorphRules.iconScale(regularIconAlpha)
+                                scaleY = scaleX
+                            },
+                        tint = Color.Unspecified,
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.ic_incognito_filled),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .graphicsLayer {
+                                alpha = incognitoIconAlpha
+                                scaleX = BlankTabModeMorphRules.iconScale(incognitoIconAlpha)
+                                scaleY = scaleX
+                            },
+                        tint = colors.inverseOnSurface,
                     )
                 }
             }
