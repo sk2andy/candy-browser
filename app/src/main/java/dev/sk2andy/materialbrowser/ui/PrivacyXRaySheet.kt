@@ -103,6 +103,8 @@ internal object PrivacyXRayTestTags {
     const val PausePersistent = "privacy_xray_pause_persistent"
     const val CookieBannerRemoval = "privacy_xray_cookie_banner_removal"
     const val ForceVerticalScrolling = "privacy_xray_force_vertical_scrolling"
+    const val SiteOptionsTitle = "privacy_xray_site_options_title"
+    const val XRayTitle = "privacy_xray_title"
 }
 
 @Composable
@@ -304,12 +306,26 @@ internal fun PrivacyXRayContent(
             .navigationBarsPadding()
             .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
     ) {
+        siteState.host?.let {
+            PrivacySheetHeadline(
+                text = stringResource(R.string.privacy_site_options, it),
+                modifier = Modifier.testTag(PrivacyXRayTestTags.SiteOptionsTitle),
+            )
+            Spacer(Modifier.height(8.dp))
+            SitePrivacyOptionsCard(
+                settings = blockerSettings,
+                siteState = siteState,
+                onCookieBannerRemovalEnabledChange = onCookieBannerRemovalEnabledChange,
+                onForceVerticalScrollingChange = onForceVerticalScrollingChange,
+            )
+            Spacer(Modifier.height(24.dp))
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.privacy_xray_title),
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+            PrivacySheetHeadline(
+                text = stringResource(R.string.privacy_xray_title),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(PrivacyXRayTestTags.XRayTitle),
             )
             TextButton(onClick = { onOpenStudio(null) }) {
                 Text(stringResource(R.string.filter_studio_open))
@@ -412,13 +428,6 @@ internal fun PrivacyXRayContent(
         Spacer(Modifier.height(22.dp))
         PrivacyPolicyCard(blockerSettings, siteState)
         siteState.host?.let {
-            Spacer(Modifier.height(18.dp))
-            SitePrivacyOptionsCard(
-                settings = blockerSettings,
-                siteState = siteState,
-                onCookieBannerRemovalEnabledChange = onCookieBannerRemovalEnabledChange,
-                onForceVerticalScrollingChange = onForceVerticalScrollingChange,
-            )
             Spacer(Modifier.height(18.dp))
             SiteProtectionCard(siteState, onPauseClick, onResumeClick)
         }
@@ -780,14 +789,6 @@ private fun SitePrivacyOptionsCard(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.privacy_site_options, siteState.host.orEmpty()),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(12.dp))
             SiteOptionSwitch(
                 title = stringResource(R.string.privacy_cookie_banner_remove),
                 description = stringResource(
@@ -921,6 +922,21 @@ private fun SiteProtectionCard(
             }
         }
     }
+}
+
+@Composable
+private fun PrivacySheetHeadline(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        modifier = modifier,
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable

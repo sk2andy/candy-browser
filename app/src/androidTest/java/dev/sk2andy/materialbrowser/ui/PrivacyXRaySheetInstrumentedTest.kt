@@ -25,6 +25,7 @@ import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -101,8 +102,11 @@ class PrivacyXRaySheetInstrumentedTest {
 
         composeRule.onNodeWithTag(PrivacyXRayTestTags.Total).assertExists()
         composeRule.onNodeWithText("four.example").assertDoesNotExist()
-        composeRule.onNodeWithTag(PrivacyXRayTestTags.ToggleDetails).performClick()
-        composeRule.onNodeWithText("four.example").assertExists()
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.ToggleDetails)
+            .performScrollTo()
+            .performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("four.example").performScrollTo().assertExists()
 
         composeRule.onNodeWithTag(PrivacyXRayTestTags.Pause).performScrollTo().performClick()
         composeRule.waitForIdle()
@@ -165,6 +169,30 @@ class PrivacyXRaySheetInstrumentedTest {
                 )
             }
         }
+
+        val siteOptionsTop = composeRule
+            .onNodeWithTag(PrivacyXRayTestTags.SiteOptionsTitle)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+        val xRayTop = composeRule
+            .onNodeWithTag(PrivacyXRayTestTags.XRayTitle)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+        val cookieToggleTop = composeRule
+            .onNodeWithTag(PrivacyXRayTestTags.CookieBannerRemoval)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+        val scrollToggleTop = composeRule
+            .onNodeWithTag(PrivacyXRayTestTags.ForceVerticalScrolling)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+        assertTrue(siteOptionsTop < cookieToggleTop)
+        assertTrue(cookieToggleTop < scrollToggleTop)
+        assertTrue(scrollToggleTop < xRayTop)
 
         composeRule.onNodeWithTag(PrivacyXRayTestTags.CookieBannerRemoval)
             .performScrollTo()
