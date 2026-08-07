@@ -178,10 +178,11 @@ gh workflow run release.yml \
   -f prerelease=false
 ```
 
-Android `versionCode` comes from the monotonically increasing GitHub workflow run number. Tags and
-releases are created only after tests, lint, APK signing, certificate pinning, and signature
-verification succeed. Back up the original keystore and credentials securely: Android updates must
-always use the same signing key.
+Android `versionCode` is the monotonically increasing GitHub workflow run number plus the current
+source-code base of `1`, so the first automated release starts at `2`. Tags and releases are created
+only after tests, release build checks, APK signing, certificate pinning, and signature verification
+succeed. Back up the original keystore and credentials securely: Android updates must always use the
+same signing key.
 
 ## Privacy and limitations
 

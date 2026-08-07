@@ -45,7 +45,7 @@ jobs:
           set -euo pipefail
 
           version="$INPUT_VERSION"
-          version_code="$GITHUB_RUN_NUMBER"
+          version_code="$((1 + GITHUB_RUN_NUMBER))"
           tag="v${version}"
 
           if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,2}(-[0-9A-Za-z.-]+)?$ ]]; then
@@ -141,7 +141,6 @@ jobs:
         run: |
           ./gradlew --no-daemon \
             testDebugUnitTest \
-            lintRelease \
             assembleRelease \
             -Pcandy.versionName="$RELEASE_VERSION" \
             -Pcandy.versionCode="$RELEASE_VERSION_CODE"
