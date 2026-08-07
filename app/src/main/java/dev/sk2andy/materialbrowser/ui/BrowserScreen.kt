@@ -66,15 +66,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
@@ -2219,13 +2218,6 @@ private fun BrowserBottomBar(
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val keyboardVisible = editing &&
-        WindowInsets.ime.getBottom(density) > WindowInsets.navigationBars.getBottom(density)
-    val bottomPadding by animateDpAsState(
-        targetValue = if (keyboardVisible) 24.dp else 12.dp,
-        animationSpec = tween(160),
-        label = "Address bar keyboard gap",
-    )
     LaunchedEffect(addressBarPulseNonce) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
         pulseScale.snapTo(1f)
@@ -2263,12 +2255,7 @@ private fun BrowserBottomBar(
     )
     BoxWithConstraints(
         modifier = modifier
-            .padding(
-                start = 16.dp,
-                top = 12.dp,
-                end = 16.dp,
-                bottom = bottomPadding,
-            )
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .navigationBarsPadding()
             .imePadding()
             .fillMaxWidth(),
@@ -3243,6 +3230,11 @@ private fun AddressSuggestions(
         bottomBarTopPx = bottomBarTopPx,
         density = density.density,
     ).dp
+    val maxHeight = AddressEditorLayoutRules.suggestionMaxHeightDp(
+        bottomBarTopPx = bottomBarTopPx,
+        topInsetPx = WindowInsets.statusBars.getTop(density).toFloat(),
+        density = density.density,
+    ).dp
     Surface(
         modifier = modifier
             .padding(horizontal = 12.dp)
@@ -3256,7 +3248,7 @@ private fun AddressSuggestions(
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .heightIn(max = 320.dp),
+                .heightIn(max = maxHeight),
             contentPadding = PaddingValues(vertical = 6.dp),
         ) {
             itemsIndexed(

@@ -29,4 +29,30 @@ class AddressEditorLayoutRulesTest {
             0.001f,
         )
     }
+
+    @Test
+    fun `suggestions can use all space above the bottom bar`() {
+        assertEquals(
+            636f,
+            AddressEditorLayoutRules.suggestionMaxHeightDp(
+                bottomBarTopPx = 2_124f,
+                topInsetPx = 132f,
+                density = 3f,
+            ),
+            0.001f,
+        )
+    }
+
+    @Test
+    fun `invalid maximum height measurements use stable fallback`() {
+        assertEquals(
+            AddressEditorLayoutRules.FALLBACK_MAX_HEIGHT_DP,
+            AddressEditorLayoutRules.suggestionMaxHeightDp(
+                bottomBarTopPx = Float.NaN,
+                topInsetPx = 132f,
+                density = 3f,
+            ),
+            0.001f,
+        )
+    }
 }
