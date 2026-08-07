@@ -56,7 +56,39 @@ data class SiteProtectionState(
     val isPaused: Boolean = false,
     val isPersistent: Boolean = false,
     val canPersist: Boolean = false,
+    val cookieBannerRemovalDisabled: Boolean = false,
+    val forceVerticalScrolling: Boolean = false,
 )
+
+data class SitePrivacyOverrides(
+    val cookieBannerRemovalDisabled: Boolean = false,
+    val forceVerticalScrolling: Boolean = false,
+) {
+    val isDefault: Boolean
+        get() = !cookieBannerRemovalDisabled && !forceVerticalScrolling
+}
+
+object SitePrivacyOverrideRules {
+    fun withOverride(
+        current: Map<String, SitePrivacyOverrides>,
+        host: String,
+        overrides: SitePrivacyOverrides,
+        limit: Int = SiteExceptionRules.MAX_PER_PROFILE,
+    ): Map<String, SitePrivacyOverrides> {
+        val normalizedHost = PrivacyRequestSanitizer.normalizeHost(host) ?: return current
+        if (limit <= 0) return emptyMap()
+        return buildMap {
+            current.asSequence()
+                .mapNotNull { (candidate, value) ->
+                    PrivacyRequestSanitizer.normalizeHost(candidate)?.let { it to value }
+                }
+                .filter { (candidate, value) -> candidate != normalizedHost && !value.isDefault }
+                .take(if (overrides.isDefault) limit else limit - 1)
+                .forEach { (candidate, value) -> put(candidate, value) }
+            if (!overrides.isDefault) put(normalizedHost, overrides)
+        }
+    }
+}
 
 object PrivacyRequestSanitizer {
     fun sanitize(requestUrl: String, pageUrl: String?): SanitizedPrivacyRequest? {

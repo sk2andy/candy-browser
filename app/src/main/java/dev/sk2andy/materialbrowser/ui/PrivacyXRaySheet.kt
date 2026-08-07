@@ -46,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -100,6 +101,8 @@ internal object PrivacyXRayTestTags {
     const val Warning = "privacy_xray_warning"
     const val PauseTemporary = "privacy_xray_pause_temporary"
     const val PausePersistent = "privacy_xray_pause_persistent"
+    const val CookieBannerRemoval = "privacy_xray_cookie_banner_removal"
+    const val ForceVerticalScrolling = "privacy_xray_force_vertical_scrolling"
 }
 
 @Composable
@@ -184,6 +187,8 @@ internal fun PrivacyXRaySheet(
     siteState: SiteProtectionState,
     onPause: (persistently: Boolean) -> Unit,
     onResume: () -> Unit,
+    onCookieBannerRemovalEnabledChange: (Boolean) -> Unit = {},
+    onForceVerticalScrollingChange: (Boolean) -> Unit = {},
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
         { _, _, _ -> },
     onOpenStudio: (ruleId: String?) -> Unit = {},
@@ -208,6 +213,14 @@ internal fun PrivacyXRaySheet(
             onResumeClick = {
                 view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                 onResume()
+            },
+            onCookieBannerRemovalEnabledChange = { enabled ->
+                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                onCookieBannerRemovalEnabledChange(enabled)
+            },
+            onForceVerticalScrollingChange = { enabled ->
+                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                onForceVerticalScrollingChange(enabled)
             },
             onRuleAction = onRuleAction,
             onOpenStudio = onOpenStudio,
@@ -269,6 +282,8 @@ internal fun PrivacyXRayContent(
     siteState: SiteProtectionState,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
+    onCookieBannerRemovalEnabledChange: (Boolean) -> Unit = {},
+    onForceVerticalScrollingChange: (Boolean) -> Unit = {},
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
         { _, _, _ -> },
     onOpenStudio: (ruleId: String?) -> Unit = {},
@@ -397,6 +412,13 @@ internal fun PrivacyXRayContent(
         Spacer(Modifier.height(22.dp))
         PrivacyPolicyCard(blockerSettings, siteState)
         siteState.host?.let {
+            Spacer(Modifier.height(18.dp))
+            SitePrivacyOptionsCard(
+                settings = blockerSettings,
+                siteState = siteState,
+                onCookieBannerRemovalEnabledChange = onCookieBannerRemovalEnabledChange,
+                onForceVerticalScrollingChange = onForceVerticalScrollingChange,
+            )
             Spacer(Modifier.height(18.dp))
             SiteProtectionCard(siteState, onPauseClick, onResumeClick)
         }
@@ -730,7 +752,8 @@ private fun PrivacyPolicyCard(
             HorizontalDivider(Modifier.padding(vertical = 9.dp))
             PolicyRow(
                 stringResource(R.string.privacy_cookie_banner_protection),
-                active = settings.hideCookieConsent && !siteState.isPaused,
+                active = settings.hideCookieConsent && !siteState.isPaused &&
+                    !siteState.cookieBannerRemovalDisabled,
                 activeLabel = stringResource(R.string.privacy_policy_active),
             )
             Spacer(Modifier.height(12.dp))
@@ -740,6 +763,95 @@ private fun PrivacyPolicyCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun SitePrivacyOptionsCard(
+    settings: BlockerSettings,
+    siteState: SiteProtectionState,
+    onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
+    onForceVerticalScrollingChange: (Boolean) -> Unit,
+) {
+    val cookieControlEnabled = settings.hideCookieConsent && !siteState.isPaused
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.privacy_site_options, siteState.host.orEmpty()),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(12.dp))
+            SiteOptionSwitch(
+                title = stringResource(R.string.privacy_cookie_banner_remove),
+                description = stringResource(
+                    if (cookieControlEnabled) {
+                        R.string.privacy_cookie_banner_remove_description
+                    } else {
+                        R.string.privacy_cookie_banner_remove_unavailable
+                    },
+                ),
+                checked = cookieControlEnabled && !siteState.cookieBannerRemovalDisabled,
+                enabled = cookieControlEnabled,
+                testTag = PrivacyXRayTestTags.CookieBannerRemoval,
+                onCheckedChange = onCookieBannerRemovalEnabledChange,
+            )
+            HorizontalDivider(Modifier.padding(vertical = 12.dp))
+            SiteOptionSwitch(
+                title = stringResource(R.string.privacy_force_vertical_scrolling),
+                description = stringResource(R.string.privacy_force_vertical_scrolling_description),
+                checked = siteState.forceVerticalScrolling,
+                enabled = true,
+                testTag = PrivacyXRayTestTags.ForceVerticalScrolling,
+                onCheckedChange = onForceVerticalScrollingChange,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(
+                    if (siteState.canPersist) {
+                        R.string.privacy_site_options_persistent_note
+                    } else {
+                        R.string.privacy_site_options_tab_note
+                    },
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SiteOptionSwitch(
+    title: String,
+    description: String,
+    checked: Boolean,
+    enabled: Boolean,
+    testTag: String,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            modifier = Modifier.testTag(testTag),
+        )
     }
 }
 

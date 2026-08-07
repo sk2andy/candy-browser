@@ -1,5 +1,0 @@
-candy-request-rules:1
-# Strict site-scoped literal path rules. Main-frame navigations are never evaluated.
-# Format: block|allow<TAB>page-host<TAB>request-host<TAB>base64url-path-prefix<TAB>stable-id
-# An exact rule may override the general same-party escape for its audited path only.
-# Intentionally empty until a live audit identifies a safe literal path prefix.

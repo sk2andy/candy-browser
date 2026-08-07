@@ -285,6 +285,14 @@
     <string name="privacy_policy_allowed">Permitidos pela regra</string>
     <string name="privacy_policy_off">Desativada</string>
     <string name="privacy_policy_disclaimer">O estado reflete as regras locais atuais do Candy, não cookies observados nem uma garantia de segurança.</string>
+    <string name="privacy_site_options">Opções para %1$s</string>
+    <string name="privacy_cookie_banner_remove">Remover banners de cookies</string>
+    <string name="privacy_cookie_banner_remove_description">Oculta diálogos de consentimento conhecidos neste domínio</string>
+    <string name="privacy_cookie_banner_remove_unavailable">Indisponível enquanto a proteção global estiver desligada ou a proteção do site estiver em pausa</string>
+    <string name="privacy_force_vertical_scrolling">Forçar deslocamento vertical</string>
+    <string name="privacy_force_vertical_scrolling_description">Substitui bloqueios de deslocamento neste domínio</string>
+    <string name="privacy_site_options_persistent_note">Guardado para este domínio e perfil. As alterações recarregam a página.</string>
+    <string name="privacy_site_options_tab_note">Aplica-se apenas a este separador privado. As alterações recarregam a página.</string>
     <string name="privacy_site_protection">Proteção deste site</string>
     <string name="privacy_site_active">Ativa</string>
     <string name="privacy_site_paused_temporary">Em pausa neste separador</string>

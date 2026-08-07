@@ -333,6 +333,14 @@
     <string name="privacy_policy_allowed">Per Regel erlaubt</string>
     <string name="privacy_policy_off">Aus</string>
     <string name="privacy_policy_disclaimer">Der Status zeigt Candys aktuelle lokale Regeln, keine beobachteten Cookies oder Sicherheitsgarantie.</string>
+    <string name="privacy_site_options">Optionen für %1$s</string>
+    <string name="privacy_cookie_banner_remove">Cookie-Banner ausblenden</string>
+    <string name="privacy_cookie_banner_remove_description">Bekannte Einwilligungsdialoge auf dieser Domain ausblenden</string>
+    <string name="privacy_cookie_banner_remove_unavailable">Nicht verfügbar, solange der Cookie-Banner-Schutz global aus oder der Website-Schutz pausiert ist</string>
+    <string name="privacy_force_vertical_scrolling">Vertikales Scrollen erzwingen</string>
+    <string name="privacy_force_vertical_scrolling_description">Scroll-Sperren der Seite auf dieser Domain überschreiben</string>
+    <string name="privacy_site_options_persistent_note">Für diese Domain und dieses Profil gespeichert. Änderungen laden die Seite neu.</string>
+    <string name="privacy_site_options_tab_note">Gilt nur für diesen privaten Tab. Änderungen laden die Seite neu.</string>
     <string name="privacy_site_protection">Schutz für diese Website</string>
     <string name="privacy_site_active">Aktiv</string>
     <string name="privacy_site_paused_temporary">Für diesen Tab pausiert</string>

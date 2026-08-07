@@ -303,15 +303,40 @@ data class CandyMatcherSnapshot private constructor(
     private val pairRules: Map<String, Map<String, CandyRuleBucket>>,
     private val cosmeticRuleList: List<CandyRule>,
 ) {
+    val hasRequestRules: Boolean
+        get() = hostRules.isNotEmpty() || pairRules.isNotEmpty()
+
     fun decide(
         requestUrl: String,
         pageUrl: String?,
         profileId: String,
         isForMainFrame: Boolean,
     ): CandyRuleDecision? {
-        if (isForMainFrame) return null
+        if (isForMainFrame || !hasRequestRules) return null
         val requestHost = CandyHostCanonicalizer.webHost(requestUrl) ?: return null
         val pageHost = CandyHostCanonicalizer.webHost(pageUrl)
+        return decideCanonicalHosts(requestHost, pageHost, profileId)
+    }
+
+    fun decideHosts(
+        requestHost: String?,
+        pageHost: String?,
+        profileId: String,
+        isForMainFrame: Boolean,
+    ): CandyRuleDecision? {
+        if (isForMainFrame || !hasRequestRules) return null
+        val normalizedRequestHost = requestHost?.lowercase(Locale.ROOT)?.trimEnd('.')
+            ?.takeIf(String::isNotEmpty) ?: return null
+        val normalizedPageHost = pageHost?.lowercase(Locale.ROOT)?.trimEnd('.')
+            ?.takeIf(String::isNotEmpty)
+        return decideCanonicalHosts(normalizedRequestHost, normalizedPageHost, profileId)
+    }
+
+    private fun decideCanonicalHosts(
+        requestHost: String,
+        pageHost: String?,
+        profileId: String,
+    ): CandyRuleDecision? {
         var winner: CandyRule? = null
         forEachHostSuffix(requestHost) { requestCandidate ->
             winner = chooseWinner(winner, hostRules[requestCandidate]?.winner(profileId))

@@ -2,20 +2,14 @@ package dev.sk2andy.materialbrowser.blocking
 
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import java.io.ByteArrayInputStream
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -32,7 +26,7 @@ class CookieConsentBlockerInstrumentedTest {
     }
 
     @Test
-    fun hidesInitialAndLateCookieBannersWithoutHidingUnrelatedContent() {
+    fun staticCssHidesInitialAndLateBannersButPreservesPageScrollState() {
         val view = loadPage(
             """
                 <!doctype html>
@@ -52,79 +46,63 @@ class CookieConsentBlockerInstrumentedTest {
                   const lateBanner = document.createElement('div');
                   lateBanner.id = 'didomi-host';
                   document.body.appendChild(lateBanner);
-                  const injectedStyle = document.getElementById('material-browser-easylist-cookie-css');
                   return [
-                    injectedStyle !== null,
-                    injectedStyle && injectedStyle.sheet ? injectedStyle.sheet.cssRules.length : -1,
+                    document.getElementById('material-browser-easylist-cookie-css') !== null,
                     getComputedStyle(document.getElementById('CybotCookiebotDialog')).display,
                     getComputedStyle(document.getElementById('BorlabsCookieBox')).display,
                     getComputedStyle(lateBanner).display,
                     getComputedStyle(document.getElementById('normal-modal')).display,
-                    document.body.style.overflow || 'cleared',
-                    document.body.style.overflowY || 'cleared'
+                    document.body.style.overflow,
+                    document.body.style.overflowY
                   ].join('|');
                 })();
             """.trimIndent(),
         )
 
-        assertEquals("\"true|121|none|none|none|block|cleared|cleared\"", result)
+        assertEquals("\"true|none|none|none|block|hidden|hidden\"", result)
     }
 
     @Test
-    fun preservesScrollLockWhenNoKnownCookieBannerExists() {
+    fun cookieCssCanBeRemovedWithoutChangingOtherPageStyles() {
         val view = loadPage(
             """
-                <!doctype html>
-                <html><head></head><body style="overflow: hidden">
-                  <div id="normal-modal">Normal content</div>
+                <!doctype html><html><head></head><body style="overflow:hidden">
+                  <div id="CybotCookiebotDialog">Cookie banner</div>
                 </body></html>
             """.trimIndent(),
         )
-        evaluate(view, ContentBlocker(instrumentation.targetContext).consentScript)
+        val blocker = ContentBlocker(instrumentation.targetContext)
+        evaluate(view, blocker.consentScript)
+        evaluate(view, blocker.consentRemovalScript)
 
-        val result = evaluate(
-            view,
-            """
-                [
-                  document.body.style.overflow,
-                  getComputedStyle(document.getElementById('normal-modal')).display
-                ].join('|');
-            """.trimIndent(),
+        assertEquals(
+            "\"true|block|hidden\"",
+            evaluate(
+                view,
+                "[document.getElementById('material-browser-easylist-cookie-css') === null, " +
+                    "getComputedStyle(document.getElementById('CybotCookiebotDialog')).display, " +
+                    "document.body.style.overflow].join('|')",
+            ),
         )
-
-        assertEquals("\"hidden|block\"", result)
     }
 
     @Test
-    fun installsCookieCssBeforePageJavaScriptWhenDocumentStartIsSupported() {
-        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+    fun cookieCssIsInjectedDirectlyAtPageCommitVisible() {
         val blocker = ContentBlocker(instrumentation.targetContext)
-        val pageLoaded = CountDownLatch(1)
+        val injected = CountDownLatch(1)
         val createdView = AtomicReference<WebView>()
         instrumentation.runOnMainSync {
             createdView.set(
                 WebView(instrumentation.targetContext).apply {
                     settings.javaScriptEnabled = true
-                    WebViewCompat.addDocumentStartJavaScript(this, blocker.consentScript, setOf("*"))
                     webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView, url: String) {
-                            pageLoaded.countDown()
+                        override fun onPageCommitVisible(view: WebView, url: String) {
+                            view.evaluateJavascript(blocker.consentScript) { injected.countDown() }
                         }
                     }
                     loadDataWithBaseURL(
                         "https://example.test/",
-                        """
-                            <!doctype html>
-                            <html><head><script>
-                              const banner = document.createElement('div');
-                              banner.id = 'CybotCookiebotDialog';
-                              document.documentElement.appendChild(banner);
-                              window.blockerState = [
-                                document.getElementById('material-browser-easylist-cookie-css') !== null,
-                                getComputedStyle(banner).display
-                              ].join('|');
-                            </script></head><body></body></html>
-                        """.trimIndent(),
+                        "<html><body><div id='CybotCookiebotDialog'>Banner</div></body></html>",
                         "text/html",
                         "utf-8",
                         null,
@@ -132,179 +110,141 @@ class CookieConsentBlockerInstrumentedTest {
                 },
             )
         }
-        assertTrue(pageLoaded.await(10, TimeUnit.SECONDS))
+        assertTrue(injected.await(10, TimeUnit.SECONDS))
         val view = createdView.get().also(webView::set)
 
-        assertEquals("\"true|none\"", evaluate(view, "window.blockerState"))
-    }
-
-    @Test
-    fun documentStartScriptSkipsPausedHostBeforePageJavaScript() {
-        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
-        val blocker = ContentBlocker(instrumentation.targetContext)
-        val pageLoaded = CountDownLatch(1)
-        val createdView = AtomicReference<WebView>()
-        instrumentation.runOnMainSync {
-            createdView.set(
-                WebView(instrumentation.targetContext).apply {
-                    settings.javaScriptEnabled = true
-                    WebViewCompat.addDocumentStartJavaScript(
-                        this,
-                        blocker.consentScriptFor(setOf("paused.test")),
-                        setOf("*"),
-                    )
-                    webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView, url: String) {
-                            pageLoaded.countDown()
-                        }
-                    }
-                    loadDataWithBaseURL(
-                        "https://paused.test/",
-                        """
-                            <!doctype html>
-                            <html><head><script>
-                              const banner = document.createElement('div');
-                              banner.id = 'CybotCookiebotDialog';
-                              document.documentElement.appendChild(banner);
-                              window.blockerState = [
-                                document.getElementById('material-browser-easylist-cookie-css') !== null,
-                                getComputedStyle(banner).display
-                              ].join('|');
-                            </script></head><body></body></html>
-                        """.trimIndent(),
-                        "text/html",
-                        "utf-8",
-                        null,
-                    )
-                },
-            )
-        }
-        assertTrue(pageLoaded.await(10, TimeUnit.SECONDS))
-        val view = createdView.get().also(webView::set)
-
-        assertEquals("\"false|block\"", evaluate(view, "window.blockerState"))
-    }
-
-    @Test
-    fun unlocksScrollWhenCmpAppliesLockAfterPageFinished() {
-        val view = loadPage(
-            """
-                <!doctype html>
-                <html><head></head><body><main>Article</main></body></html>
-            """.trimIndent(),
+        assertEquals(
+            "\"true|none\"",
+            evaluate(
+                view,
+                "[document.getElementById('material-browser-easylist-cookie-css') !== null, " +
+                    "getComputedStyle(document.getElementById('CybotCookiebotDialog')).display]" +
+                    ".join('|')",
+            ),
         )
-        evaluate(view, ContentBlocker(instrumentation.targetContext).consentScript)
-
-        evaluate(
-            view,
-            """
-                (() => {
-                  const lateBanner = document.createElement('div');
-                  lateBanner.id = 'CybotCookiebotDialog';
-                  document.body.appendChild(lateBanner);
-                  document.body.style.overflow = 'hidden';
-                })();
-            """.trimIndent(),
-        )
-
-        assertEquals("\"cleared|none\"", evaluate(
-            view,
-            """
-                [
-                  document.body.style.overflow || 'cleared',
-                  getComputedStyle(document.getElementById('CybotCookiebotDialog')).display
-                ].join('|');
-            """.trimIndent(),
-        ))
     }
 
     @Test
-    fun preservesClassBasedScrollLockWhenHiddenCmpExists() {
+    fun siteCssHidesKnownCrossOriginConsentFrameWithoutFrameJavascript() {
         val view = loadPage(
-            """
-                <!doctype html>
-                <html><head><style>.unrelated-modal-open { overflow-y: hidden }</style></head>
-                <body class="unrelated-modal-open">
-                  <div id="CybotCookiebotDialog">Cookie banner</div>
-                  <div id="normal-modal">Unrelated modal</div>
-                </body></html>
-            """.trimIndent(),
+            "<html><body><iframe id='consent'></iframe><iframe id='content'></iframe></body></html>",
+            baseUrl = "https://web.de/",
         )
         evaluate(view, ContentBlocker(instrumentation.targetContext).consentScript)
 
         assertEquals(
-            "\"hidden|cleared|none|block\"",
+            "\"none|inline\"",
             evaluate(
                 view,
                 """
-                    [
-                      getComputedStyle(document.body).overflowY,
-                      document.body.style.overflowY || 'cleared',
-                      getComputedStyle(document.getElementById('CybotCookiebotDialog')).display,
-                      getComputedStyle(document.getElementById('normal-modal')).display
-                    ].join('|');
+                    (() => {
+                      document.getElementById('consent').setAttribute(
+                        'src',
+                        'https://plus.web.de/consent'
+                      );
+                      return [
+                        getComputedStyle(document.getElementById('consent')).display,
+                        getComputedStyle(document.getElementById('content')).display
+                      ].join('|');
+                    })()
                 """.trimIndent(),
             ),
         )
     }
 
     @Test
-    fun knownRejectActionRunsInsideCrossOriginFrame() {
-        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
-        val frameNavigated = CountDownLatch(1)
-        val mainLoaded = CountDownLatch(1)
-        val createdView = AtomicReference<WebView>()
-        val script = ConsentBlockerScript.create(
-            cssBytes = ByteArray(0),
-            actionRules = listOf(
-                BundledConsentAction("cmp-reject", "cmp.test", "#reject-all"),
+    fun forcedVerticalScrollOverridesLateInlineLocksOnExactHost() {
+        val view = loadPage(
+            """
+                <!doctype html>
+                <html class="page-scroll-lock"><head><style>
+                  html.page-scroll-lock { height: 100vh !important }
+                  html.page-scroll-lock body {
+                    overflow-y: hidden !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                  }
+                  main { height: 2400px }
+                </style></head><body><main>Article</main></body></html>
+            """.trimIndent(),
+        )
+        evaluate(view, ForcedVerticalScrollScript.create(listOf("example.test")))
+
+        assertEquals(
+            "\"auto|static|important|true\"",
+            evaluate(
+                view,
+                """
+                    [
+                      getComputedStyle(document.body).overflowY,
+                      getComputedStyle(document.body).position,
+                      document.body.style.getPropertyPriority('overflow-y'),
+                      parseFloat(getComputedStyle(document.body).height) > 2000
+                    ].join('|')
+                """.trimIndent(),
             ),
         )
-        instrumentation.runOnMainSync {
-            createdView.set(
-                WebView(instrumentation.targetContext).apply {
-                    settings.javaScriptEnabled = true
-                    WebViewCompat.addDocumentStartJavaScript(this, script, setOf("*"))
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldInterceptRequest(
-                            view: WebView,
-                            request: WebResourceRequest,
-                        ): WebResourceResponse? {
-                            val html = when (request.url.toString()) {
-                                "https://top.test/" ->
-                                    "<html><body><iframe src='https://cmp.test/frame'></iframe></body></html>"
-                                "https://cmp.test/frame" ->
-                                    "<html><body><button id='reject-all' " +
-                                        "onclick=\"location.href='https://cmp.test/done'\">Reject</button></body></html>"
-                                "https://cmp.test/done" -> {
-                                    frameNavigated.countDown()
-                                    "<html><body>Done</body></html>"
-                                }
-                                else -> return null
-                            }
-                            return WebResourceResponse(
-                                "text/html",
-                                "utf-8",
-                                ByteArrayInputStream(html.toByteArray()),
-                            )
-                        }
 
-                        override fun onPageFinished(view: WebView, url: String) {
-                            if (url == "https://top.test/") mainLoaded.countDown()
-                        }
-                    }
-                    loadUrl("https://top.test/")
-                },
-            )
-        }
-        val view = createdView.get().also(webView::set)
+        evaluate(
+            view,
+            """
+                document.body.style.setProperty('overflow-y', 'hidden', 'important');
+                document.body.style.setProperty('position', 'fixed', 'important');
+            """.trimIndent(),
+        )
+        assertEquals(
+            "\"auto|static\"",
+            evaluate(
+                view,
+                "[getComputedStyle(document.body).overflowY, " +
+                    "getComputedStyle(document.body).position].join('|')",
+            ),
+        )
 
-        assertTrue(mainLoaded.await(10, TimeUnit.SECONDS))
-        assertTrue(frameNavigated.await(10, TimeUnit.SECONDS))
-        assertEquals("\"https://top.test/\"", evaluate(view, "location.href"))
+        evaluate(
+            view,
+            """
+                (() => {
+                  const replacement = document.createElement('body');
+                  replacement.innerHTML = '<main style="height:2400px">Replacement</main>';
+                  replacement.style.setProperty('overflow-y', 'hidden', 'important');
+                  replacement.style.setProperty('position', 'fixed', 'important');
+                  document.documentElement.replaceChild(replacement, document.body);
+                })();
+            """.trimIndent(),
+        )
+        assertEquals(
+            "\"auto|static\"",
+            evaluate(
+                view,
+                "[getComputedStyle(document.body).overflowY, " +
+                    "getComputedStyle(document.body).position].join('|')",
+            ),
+        )
     }
 
-    private fun loadPage(html: String): WebView {
+    @Test
+    fun forcedVerticalScrollDoesNotAffectDifferentHost() {
+        val view = loadPage(
+            """
+                <!doctype html><html><head></head>
+                <body style="overflow-y:hidden;position:fixed"><main>Modal</main></body></html>
+            """.trimIndent(),
+        )
+        evaluate(view, ForcedVerticalScrollScript.create(listOf("other.test")))
+
+        assertEquals(
+            "\"hidden|fixed\"",
+            evaluate(
+                view,
+                "[getComputedStyle(document.body).overflowY, " +
+                    "getComputedStyle(document.body).position].join('|')",
+            ),
+        )
+    }
+
+    private fun loadPage(html: String, baseUrl: String = "https://example.test/"): WebView {
         val pageLoaded = CountDownLatch(1)
         val createdView = AtomicReference<WebView>()
         instrumentation.runOnMainSync {
@@ -317,7 +257,7 @@ class CookieConsentBlockerInstrumentedTest {
                         }
                     }
                     loadDataWithBaseURL(
-                        "https://example.test/",
+                        baseUrl,
                         html,
                         "text/html",
                         "utf-8",
@@ -339,7 +279,6 @@ class CookieConsentBlockerInstrumentedTest {
                 evaluated.countDown()
             }
         }
-
         assertTrue(evaluated.await(10, TimeUnit.SECONDS))
         return result.get()
     }

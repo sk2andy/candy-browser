@@ -4,10 +4,9 @@ import java.net.URI
 
 internal class RequestBlocker(
     hostRules: Sequence<String>,
+    private val indexedHostRules: SortedHostIndex = SortedHostIndex.Empty,
     blockedHostPairs: Sequence<String> = emptySequence(),
     allowedHostPairs: Sequence<String> = emptySequence(),
-    private val candyRules: CandyMatcherSnapshot = CandyMatcherSnapshot.Empty,
-    private val bundledRequestRules: BundledRequestRules = BundledRequestRules.Empty,
 ) {
     private val blockedHosts = hostRules
         .map(String::trim)
@@ -15,8 +14,7 @@ internal class RequestBlocker(
         .map { it.lowercase().removePrefix("||").removeSuffix("^").trim('.') }
         .filter { rule -> rule.all { it.isLetterOrDigit() || it == '.' || it == '-' } }
         .distinct()
-        .sorted()
-        .toList()
+        .toHashSet()
     private val blockedPageHostsByRequestHost = parseHostPairs(blockedHostPairs)
     private val allowedPageHostsByRequestHost = parseHostPairs(allowedHostPairs)
 
@@ -38,38 +36,30 @@ internal class RequestBlocker(
     fun shouldBlock(requestUrl: String, pageUrl: String?): Boolean {
         val request = runCatching { URI(requestUrl) }.getOrNull() ?: return false
         if (request.scheme?.lowercase() !in WEB_SCHEMES) return false
-        val requestHost = request.host?.lowercase()?.trim('.') ?: return false
+        val requestHost = request.host ?: return false
         val pageHost = pageUrl?.let { url ->
             runCatching { URI(url).host?.lowercase()?.trim('.') }.getOrNull()
         }
+        return shouldBlockHosts(requestHost, pageHost)
+    }
+
+    fun shouldBlockHosts(requestHost: String?, pageHost: String?): Boolean {
+        val normalizedRequestHost = requestHost?.lowercase()?.trim('.')
+            ?.takeIf { it.isHostRule() } ?: return false
+        val normalizedPageHost = pageHost?.lowercase()?.trim('.')?.takeIf { it.isHostRule() }
 
         // Keep the current site functional when a list contains its own host. This mirrors the
         // first-party escape used by DuckDuckGo's Android tracker detector:
         // https://github.com/duckduckgo/Android/blob/4472de82e610b12689dcd2fc1b8421439020af62/app/src/main/java/com/duckduckgo/app/trackerdetection/TrackerDetectorImpl.kt
-        if (isAllowedByFilterException(requestHost, pageHost)) return false
-        when (bundledRequestRules.decide(request, pageHost)) {
-            BundledRequestAction.Allow -> return false
-            BundledRequestAction.Block -> return true
-            null -> Unit
-        }
-        if (pageHost != null && isSameHostOrSubdomain(requestHost, pageHost)) return false
-        when (
-            candyRules.decide(
-                requestUrl = requestUrl,
-                pageUrl = pageUrl,
-                profileId = "",
-                isForMainFrame = false,
-            )?.action
-        ) {
-            CandyDecisionAction.Allow -> return false
-            CandyDecisionAction.Block -> return true
-            null -> Unit
-        }
-        if (isBlockedByFilterPair(requestHost, pageHost)) return true
+        if (normalizedPageHost != null &&
+            isSameHostOrSubdomain(normalizedRequestHost, normalizedPageHost)
+        ) return false
+        if (isAllowedByFilterException(normalizedRequestHost, normalizedPageHost)) return false
+        if (isBlockedByFilterPair(normalizedRequestHost, normalizedPageHost)) return true
 
-        var candidate = requestHost
+        var candidate = normalizedRequestHost
         while (true) {
-            if (blockedHosts.binarySearch(candidate) >= 0) return true
+            if (candidate in blockedHosts || candidate in indexedHostRules) return true
             val dot = candidate.indexOf('.')
             if (dot < 0) return false
             candidate = candidate.substring(dot + 1)
@@ -121,5 +111,106 @@ internal class RequestBlocker(
 
     private companion object {
         val WEB_SCHEMES = setOf("http", "https")
+    }
+}
+
+internal class SortedHostIndex private constructor(
+    private val bytes: ByteArray,
+    private val starts: IntArray,
+    private val ends: IntArray,
+) {
+    val size: Int
+        get() = starts.size
+
+    operator fun contains(host: String): Boolean {
+        var low = 0
+        var high = starts.lastIndex
+        while (low <= high) {
+            val middle = (low + high).ushr(1)
+            val comparison = compare(host, middle)
+            when {
+                comparison < 0 -> high = middle - 1
+                comparison > 0 -> low = middle + 1
+                else -> return true
+            }
+        }
+        return false
+    }
+
+    private fun compare(host: String, index: Int): Int {
+        val start = starts[index]
+        val length = ends[index] - start
+        val commonLength = minOf(host.length, length)
+        for (offset in 0 until commonLength) {
+            val difference = host[offset].code - bytes[start + offset].toUByte().toInt()
+            if (difference != 0) return difference
+        }
+        return host.length - length
+    }
+
+    companion object {
+        val Empty = SortedHostIndex(ByteArray(0), IntArray(0), IntArray(0))
+
+        fun from(bytes: ByteArray): SortedHostIndex {
+            var count = 0
+            forEachRuleLine(bytes) { _, _ -> count++ }
+            if (count == 0) return Empty
+            val starts = IntArray(count)
+            val ends = IntArray(count)
+            var index = 0
+            forEachRuleLine(bytes) { start, end ->
+                require(
+                    index == 0 || compareLines(
+                        bytes,
+                        starts[index - 1],
+                        ends[index - 1],
+                        start,
+                        end,
+                    ) < 0,
+                ) { "Host index must be strictly sorted" }
+                starts[index] = start
+                ends[index] = end
+                index++
+            }
+            return SortedHostIndex(bytes, starts, ends)
+        }
+
+        private fun compareLines(
+            bytes: ByteArray,
+            firstStart: Int,
+            firstEnd: Int,
+            secondStart: Int,
+            secondEnd: Int,
+        ): Int {
+            val firstLength = firstEnd - firstStart
+            val secondLength = secondEnd - secondStart
+            val commonLength = minOf(firstLength, secondLength)
+            for (offset in 0 until commonLength) {
+                val difference = bytes[firstStart + offset].toUByte().toInt() -
+                    bytes[secondStart + offset].toUByte().toInt()
+                if (difference != 0) return difference
+            }
+            return firstLength - secondLength
+        }
+
+        private inline fun forEachRuleLine(
+            bytes: ByteArray,
+            block: (start: Int, end: Int) -> Unit,
+        ) {
+            var start = 0
+            while (start < bytes.size) {
+                var end = start
+                while (end < bytes.size && bytes[end] != '\n'.code.toByte()) end++
+                val contentEnd = if (end > start && bytes[end - 1] == '\r'.code.toByte()) {
+                    end - 1
+                } else {
+                    end
+                }
+                if (contentEnd > start && bytes[start] != '#'.code.toByte()) {
+                    block(start, contentEnd)
+                }
+                start = end + 1
+            }
+        }
     }
 }

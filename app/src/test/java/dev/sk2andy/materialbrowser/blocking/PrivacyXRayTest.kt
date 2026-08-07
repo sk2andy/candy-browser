@@ -8,6 +8,32 @@ import org.junit.Test
 
 class PrivacyXRayTest {
     @Test
+    fun `site privacy overrides normalize replace and keep new value within limit`() {
+        val existing = linkedMapOf(
+            "one.example" to SitePrivacyOverrides(cookieBannerRemovalDisabled = true),
+            "two.example" to SitePrivacyOverrides(forceVerticalScrolling = true),
+        )
+
+        val updated = SitePrivacyOverrideRules.withOverride(
+            current = existing,
+            host = "News.Example",
+            overrides = SitePrivacyOverrides(forceVerticalScrolling = true),
+            limit = 2,
+        )
+
+        assertEquals(setOf("one.example", "news.example"), updated.keys)
+        assertEquals(true, updated.getValue("news.example").forceVerticalScrolling)
+        assertTrue(
+            SitePrivacyOverrideRules.withOverride(
+                current = updated,
+                host = "NEWS.EXAMPLE",
+                overrides = SitePrivacyOverrides(),
+                limit = 2,
+            ).keys == setOf("one.example"),
+        )
+    }
+
+    @Test
     fun `sanitizer retains hosts but no path query fragment or credentials`() {
         val sanitized = PrivacyRequestSanitizer.sanitize(
             "https://user:secret@Metrics.Example/private/account?email=a%40b.test#token",

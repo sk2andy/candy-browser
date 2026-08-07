@@ -14,6 +14,37 @@ class RequestBlockerTest {
     }
 
     @Test
+    fun `native host hot path avoids url parsing and keeps same-site escape`() {
+        assertTrue(blocker.shouldBlockHosts("stats.tracker.example", "news.example"))
+        assertFalse(blocker.shouldBlockHosts("stats.tracker.example", "tracker.example"))
+        assertFalse(blocker.shouldBlockHosts("not a host/path", "news.example"))
+    }
+
+    @Test
+    fun `sorted asset index matches exact ascii hosts without materializing rules`() {
+        val index = SortedHostIndex.from(
+            "# generated\r\nads.example\r\nalpha.example\nbeta.example\n".toByteArray(),
+        )
+
+        assertTrue("ads.example" in index)
+        assertTrue("alpha.example" in index)
+        assertFalse("sub.ads.example" in index)
+        assertFalse("other.example" in index)
+        assertTrue(index.size == 3)
+    }
+
+    @Test
+    fun `request blocker checks suffixes against sorted asset index`() {
+        val indexed = RequestBlocker(
+            hostRules = emptySequence(),
+            indexedHostRules = SortedHostIndex.from("ads.example\ntracker.example\n".toByteArray()),
+        )
+
+        assertTrue(indexed.shouldBlockHosts("cdn.ads.example", "news.example"))
+        assertFalse(indexed.shouldBlockHosts("notads.example", "news.example"))
+    }
+
+    @Test
     fun `does not suffix-match unrelated host`() {
         assertFalse(blocker.shouldBlock("https://notdoubleclick.net/app.js", "https://news.example"))
     }

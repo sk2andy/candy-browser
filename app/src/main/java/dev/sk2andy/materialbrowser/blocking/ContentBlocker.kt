@@ -2,73 +2,66 @@ package dev.sk2andy.materialbrowser.blocking
 
 import android.content.Context
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.CompletableFuture
 
 class ContentBlocker(context: Context) {
     private val appContext = context.applicationContext
     private val candyDefaultRules by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         BundledCandyRules.parseOrEmpty(readAssetOrEmpty("candy_default_rules.txt"))
     }
-    private val consentActions by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        BundledConsentActions.parseOrEmpty(readAssetOrEmpty("candy_consent_actions.txt"))
-    }
-    private val bundledRequestRules by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        BundledRequestRules.parseOrEmpty(readAssetOrEmpty("candy_request_rules.txt"))
-    }
-    private val requestBlocker by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+    private val requestBlocker =
         // Privacy Browser parses allow rules before block rules for the same WebView limitation:
         // https://www.stoutner.com/privacy-browser-android/filter-lists/
         RequestBlocker(
             hostRules = loadLines(
                 "blocked_hosts.txt",
-                "easylist_blocked_hosts.txt",
                 "uassets_blocked_hosts.txt",
+            ),
+            indexedHostRules = SortedHostIndex.from(
+                appContext.assets.open("easylist_blocked_hosts.txt").use { it.readBytes() },
             ),
             blockedHostPairs = loadLines("uassets_blocked_host_pairs.txt"),
             allowedHostPairs = loadLines(
                 "easylist_allowed_host_pairs.txt",
                 "uassets_allowed_host_pairs.txt",
             ),
-            candyRules = candyDefaultRules.matcher,
-            bundledRequestRules = bundledRequestRules,
         )
-    }
     private val consentCss by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         loadConsentCss(appContext)
     }
-    private val consentScripts = linkedMapOf<List<String>, String>()
-    val consentScript: String by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        ConsentBlockerScript.create(
-            cssBytes = consentCss,
-            siteRules = candyDefaultRules.cookieCosmeticRules,
-            actionRules = consentActions,
-        )
+    private val consentScriptFuture by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        CompletableFuture.supplyAsync {
+            ConsentBlockerScript.create(
+                cssBytes = consentCss,
+                siteRules = candyDefaultRules.cookieCosmeticRules,
+            )
+        }
     }
-    val consentCleanupScript: String = ConsentBlockerScript.cleanupScript
+    val consentScript: String
+        get() = consentScriptFuture.join()
     val consentRemovalScript: String = ConsentBlockerScript.removalScript
+
+    fun prepareConsentScript() {
+        consentScriptFuture
+    }
+
+    fun consentScriptIfReady(): String? = if (consentScriptFuture.isDone) {
+        runCatching { consentScriptFuture.getNow("") }.getOrNull()?.takeIf(String::isNotEmpty)
+    } else {
+        null
+    }
+
+    fun onConsentScriptReady(action: (String) -> Unit) {
+        consentScriptFuture.thenAccept { script ->
+            if (script.isNotEmpty()) action(script)
+        }
+    }
 
     fun shouldBlock(requestUrl: String, pageUrl: String?): Boolean =
         requestBlocker.shouldBlock(requestUrl, pageUrl)
 
-    @Synchronized
-    fun consentScriptFor(pausedHosts: Collection<String>): String {
-        val key = pausedHosts.asSequence()
-            .mapNotNull(PrivacyRequestSanitizer::normalizeHost)
-            .distinct()
-            .sorted()
-            .toList()
-        consentScripts[key]?.let { return it }
-        return ConsentBlockerScript.create(
-            cssBytes = consentCss,
-            pausedHosts = key,
-            siteRules = candyDefaultRules.cookieCosmeticRules,
-            actionRules = consentActions,
-        ).also { script ->
-            if (consentScripts.size >= MAX_CONSENT_SCRIPT_VARIANTS) {
-                consentScripts.remove(consentScripts.keys.first())
-            }
-            consentScripts[key] = script
-        }
-    }
+    fun shouldBlockHosts(requestHost: String?, pageHost: String?): Boolean =
+        requestBlocker.shouldBlockHosts(requestHost, pageHost)
 
     fun adCosmeticSelectors(pageUrl: String?): List<String> =
         candyDefaultRules.adCosmeticSelectors(pageUrl)
@@ -76,13 +69,13 @@ class ContentBlocker(context: Context) {
     val adCosmeticRules: List<CandyRule>
         get() = candyDefaultRules.adCosmeticRules
 
-    private fun loadLines(vararg assetNames: String): Sequence<String> = buildList {
+    private fun loadLines(vararg assetNames: String): Sequence<String> = sequence {
         assetNames.forEach { assetName ->
-            appContext.assets.open(assetName).bufferedReader().useLines { lines ->
-                lines.forEach(::add)
+            appContext.assets.open(assetName).bufferedReader().use { reader ->
+                yieldAll(reader.lineSequence())
             }
         }
-    }.asSequence()
+    }
 
     private fun readAssetOrEmpty(assetName: String): String = runCatching {
         appContext.assets.open(assetName).bufferedReader().use { it.readText() }
@@ -94,9 +87,5 @@ class ContentBlocker(context: Context) {
             output.write('\n'.code)
         }
         output.toByteArray()
-    }
-
-    private companion object {
-        const val MAX_CONSENT_SCRIPT_VARIANTS = 24
     }
 }

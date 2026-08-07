@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -134,6 +137,72 @@ class PrivacyXRaySheetInstrumentedTest {
         composeRule.onNodeWithTag(PrivacyXRayTestTags.PauseTemporary).performClick()
 
         assertEquals(1, temporaryPauses.get())
+    }
+
+    @Test
+    fun domainOptionsReflectStateAndRouteBothChanges() {
+        val cookieChanges = AtomicInteger()
+        val scrollChanges = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PrivacyXRayContent(
+                    snapshot = sampleSnapshot(),
+                    blockerSettings = BlockerSettings(),
+                    siteState = SiteProtectionState(
+                        host = "news.example",
+                        cookieBannerRemovalDisabled = true,
+                        forceVerticalScrolling = false,
+                        canPersist = true,
+                    ),
+                    onPauseClick = {},
+                    onResumeClick = {},
+                    onCookieBannerRemovalEnabledChange = { enabled ->
+                        if (enabled) cookieChanges.incrementAndGet()
+                    },
+                    onForceVerticalScrollingChange = { enabled ->
+                        if (enabled) scrollChanges.incrementAndGet()
+                    },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.CookieBannerRemoval)
+            .performScrollTo()
+            .assertIsEnabled()
+            .assertIsOff()
+            .performClick()
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.ForceVerticalScrolling)
+            .performScrollTo()
+            .assertIsEnabled()
+            .assertIsOff()
+            .performClick()
+
+        assertEquals(1, cookieChanges.get())
+        assertEquals(1, scrollChanges.get())
+    }
+
+    @Test
+    fun cookieDomainOptionIsDisabledWhenGlobalProtectionIsOff() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PrivacyXRayContent(
+                    snapshot = sampleSnapshot(),
+                    blockerSettings = BlockerSettings(hideCookieConsent = false),
+                    siteState = SiteProtectionState(host = "news.example"),
+                    onPauseClick = {},
+                    onResumeClick = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.CookieBannerRemoval)
+            .performScrollTo()
+            .assertIsNotEnabled()
+            .assertIsOff()
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.ForceVerticalScrolling)
+            .performScrollTo()
+            .assertIsEnabled()
+            .assertIsOff()
     }
 
     private fun sampleSnapshot() = PrivacyXRaySnapshot(

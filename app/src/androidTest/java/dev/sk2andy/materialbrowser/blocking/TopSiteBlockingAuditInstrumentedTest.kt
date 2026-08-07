@@ -297,12 +297,6 @@ class TopSiteBlockingAuditInstrumentedTest {
         assets.open("candy_default_rules.txt").bufferedReader().use { reader ->
             BundledCandyRules.parse(reader.readText())
         }
-        assets.open("candy_consent_actions.txt").bufferedReader().use { reader ->
-            BundledConsentActions.parse(reader.readText())
-        }
-        assets.open("candy_request_rules.txt").bufferedReader().use { reader ->
-            BundledRequestRules.parse(reader.readText())
-        }
     }
 
     private fun JSONObject.needsScreenshot(): Boolean =

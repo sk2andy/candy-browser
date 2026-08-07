@@ -23,20 +23,33 @@ class CandyDefaultRulesAssetInstrumentedTest {
         val bundled = BundledCandyRules.parse(text)
 
         assertEquals(declaredCount, bundled.rules.size)
+        assertEquals(
+            emptySet<CandyRuleKind>(),
+            bundled.rules.map(CandyRule::kind).filterNot { it == CandyRuleKind.CosmeticCss }.toSet(),
+        )
+        assertEquals(
+            setOf(
+                "iframe[src^=\"https://plus.web.de/\"]",
+                "iframe[src^=\"https://plus.gmx.net/\"]",
+            ),
+            bundled.cookieCosmeticRules.mapNotNull(CandyRule::cosmeticSelector)
+                .filter { it.startsWith("iframe[src^=") }
+                .toSet(),
+        )
     }
 
     @Test
-    fun bundledWebViewAssetsAreStrictlyValid() {
-        val assets = InstrumentationRegistry.getInstrumentation().targetContext.assets
-        val consentActions = assets.open("candy_consent_actions.txt")
-            .bufferedReader()
-            .use { BundledConsentActions.parse(it.readText()) }
-        val requestRules = assets.open("candy_request_rules.txt")
-            .bufferedReader()
-            .use { BundledRequestRules.parse(it.readText()) }
+    fun networkHostAssetBuildsAllocationLightSortedIndex() {
+        val bytes = InstrumentationRegistry.getInstrumentation().targetContext.assets
+            .open("easylist_blocked_hosts.txt")
+            .use { it.readBytes() }
 
-        assertEquals(4, consentActions.size)
-        assertEquals(0, requestRules.rules.size)
+        val index = SortedHostIndex.from(bytes)
+
+        assertEquals(55_004, index.size)
+        assertEquals(true, "0.0.0.1" in index)
+        assertEquals(true, "zzzmjfixezere.site" in index)
+        assertEquals(false, "example.com" in index)
     }
 
     private companion object {

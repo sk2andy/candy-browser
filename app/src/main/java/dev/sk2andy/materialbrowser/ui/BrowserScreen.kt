@@ -1258,6 +1258,12 @@ fun BrowserScreen(controller: BrowserController) {
                         controller.pauseSiteProtection(tabId, persistently)
                     },
                     onResume = { controller.resumeSiteProtection(tabId) },
+                    onCookieBannerRemovalEnabledChange = { enabled ->
+                        controller.setCookieBannerRemovalDisabled(tabId, !enabled)
+                    },
+                    onForceVerticalScrollingChange = { enabled ->
+                        controller.setForceVerticalScrolling(tabId, enabled)
+                    },
                     onRuleAction = { domain, action, siteScoped ->
                         val rule = controller.addFilterRuleFromXRay(
                             tabId = tabId,

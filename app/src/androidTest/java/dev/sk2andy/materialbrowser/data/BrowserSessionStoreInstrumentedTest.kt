@@ -7,6 +7,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -246,5 +247,57 @@ class BrowserSessionStoreInstrumentedTest {
 
         preferences.edit().putString("site_exceptions", "not-json").commit()
         assertEquals(emptyMap<String, Set<String>>(), store.loadPermanentSiteExceptions())
+    }
+
+    @Test
+    fun sitePrivacyOverridesRoundTripAtomicallyWithoutDefaultOrUnsafeEntries() {
+        val store = BrowserSessionStore(context)
+        store.saveSitePrivacyOverrides(
+            mapOf(
+                "candy" to mapOf(
+                    "News.Example" to SitePrivacyOverrides(
+                        cookieBannerRemovalDisabled = true,
+                        forceVerticalScrolling = true,
+                    ),
+                    "default.example" to SitePrivacyOverrides(),
+                    "unsafe host" to SitePrivacyOverrides(forceVerticalScrolling = true),
+                ),
+                "" to mapOf(
+                    "ignored.example" to SitePrivacyOverrides(forceVerticalScrolling = true),
+                ),
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "candy" to mapOf(
+                    "news.example" to SitePrivacyOverrides(
+                        cookieBannerRemovalDisabled = true,
+                        forceVerticalScrolling = true,
+                    ),
+                ),
+            ),
+            store.loadSitePrivacyOverrides(),
+        )
+
+        preferences.edit().putString("site_privacy_overrides", "not-json").commit()
+        assertEquals(
+            emptyMap<String, Map<String, SitePrivacyOverrides>>(),
+            store.loadSitePrivacyOverrides(),
+        )
+    }
+
+    @Test
+    fun sitePrivacyOverridesAreBoundedPerProfile() {
+        val store = BrowserSessionStore(context)
+        store.saveSitePrivacyOverrides(
+            mapOf(
+                "candy" to (1..70).associate { index ->
+                    "site$index.example" to SitePrivacyOverrides(forceVerticalScrolling = true)
+                },
+            ),
+        )
+
+        assertEquals(64, store.loadSitePrivacyOverrides().getValue("candy").size)
     }
 }

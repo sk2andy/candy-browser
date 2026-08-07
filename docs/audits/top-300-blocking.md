@@ -28,7 +28,7 @@ described as a separate "top 300" ranking.
 | Time zone | `Europe/Berlin` |
 | Browser | Candy Browser `MainActivity` and production `BrowserController` |
 | Authentication | None |
-| Interaction | No ad clicks, CAPTCHA bypass, or login; candidate may invoke audited Reject/Later consent actions |
+| Interaction | No clicks, CAPTCHA bypass, login, or consent actions |
 | Analysis build SHA-256 | `c4d0a1dc007c1424ac6e454681f9fe1d987a096fe14295ee3bad5a2f0bdeb83d` |
 | Hardened candidate SHA-256 | `89beb53e689eb6d93c412ecd44290993837d7b40f1e513c64d8ae4f33adea0d7` |
 
@@ -56,10 +56,8 @@ candidate or challenge remains.
 The DOM probe deliberately does not classify an element as advertising solely because an arbitrary
 class contains `ad`. Network rules require an exact host plus either evidence across independent
 first parties or a clear single-purpose vendor. Multifunctional hosts use site-scoped pairs. Cosmetic
-rules remain origin-scoped. Broad host lists retain the same-party escape. The separate bundled
-path-rule format may override that escape only for an audited exact page-host, request-host, and
-literal non-root path prefix; main-frame navigations are never evaluated. The shipped path asset is
-currently empty.
+rules remain origin-scoped. Broad host lists retain the same-party escape. Candidate defaults are
+CSS-only and never enter the per-request network-blocking path.
 Generic `promo` tokens are not classified as advertising: they commonly identify editorial polls,
 product cards, and first-party navigation. This was verified by removing the token and rerunning all
 300 ranks; NYTimes then reported zero visible ad candidates while its real DFP slots stayed hidden.
@@ -84,9 +82,8 @@ rank-to-domain fixture mapping, one non-empty pass/build ID, and exactly the con
 
 ## Results
 
-Results and accepted rules are filled from the completed runs. Cosmetic cookie rules only remove
-visual UI. Separately listed consent actions may invoke a known Reject or Remind-later control; they
-never invoke Accept. Neither mechanism guarantees that first-party storage is absent.
+Results and accepted rules are filled from the completed runs. Cosmetic cookie rules only hide
+visual UI; they do not make a consent choice and do not guarantee that first-party storage is absent.
 
 The fixed cohort contains infrastructure domains and error pages. A usable page is an HTML document
 with at least 200 visible-text characters, no challenge, and no main-frame error. The hardened run
@@ -102,7 +99,7 @@ denominator and are not replaced.
 | Scroll-locked sites | 9 | 11 |
 | Main-frame errors | 113 | 116 |
 | Timeouts | 5 | 10 |
-| Requests blocked with HTTP 204 | 296 | 297 |
+| Blocked subresource responses (historical HTTP 204) | 296 | 297 |
 | Sites with at least one blocked request | 89 | 90 |
 | Sites with observed cross-origin frames | not measured | 45 |
 | Cross-origin frames with visible cookie/ad UI | not measured | 0 |
@@ -111,9 +108,8 @@ The discovery run used the original top-frame probe; the hardened verifier added
 reports and removed the generic `promo` ad heuristic. The two columns therefore show audit stages,
 not a controlled causal benchmark. Errors, timeouts, and request totals are also live-network
 observations. Per-rank records remain available so variance is not hidden behind aggregate counts.
-The higher scroll-lock count is conservative by design: the final implementation no longer
-overrides class/computed `overflow` values and unlocks only an inline lock paired with a known hidden
-CMP.
+The higher scroll-lock count is an accepted CSS-only limitation. Automatic scroll unlocking was
+removed; users may enable the exact-domain “force vertical scrolling” override when needed.
 
 The final per-rank result is [top-300-candidate-final.csv](results/top-300-candidate-final.csv)
 (SHA-256 `849da032f9b3db3b9767074daa6ff36b0f320adaed6796b664f550bdfafb25c1`).
@@ -122,16 +118,14 @@ The final per-rank result is [top-300-candidate-final.csv](results/top-300-candi
 
 | Type | Sites | Basis |
 |---|---|---|
-| Reject/Later action | `google.com`, `web.de`, `gmx.net`, `www.nytimes.com` | Exact frame host plus exact ID; never Accept |
-| Cookie cosmetic | Bing, X, Roblox, Yahoo, MSN, Opera, WordPress, Gravatar, EU, Shopify, Forbes, Ubuntu, Roku, TinyURL, ChatGPT, NYTimes | Site-scoped stable ID, semantic attribute, or product-specific class |
+| Cookie cosmetic | web.de, GMX, Bing, X, Roblox, Yahoo, MSN, Opera, WordPress, Gravatar, EU, Shopify, Forbes, Ubuntu, Roku, TinyURL, ChatGPT, NYTimes | Site-scoped stable ID, consent-frame origin, semantic attribute, or product-specific class |
 | Ad cosmetic | web.de, GMX, NYTimes, Mail.ru, Dzen/Yandex, Reddit, Flickr, Guardian, Nature | Site-scoped ad API/slot marker or explicit product-specific ad class |
-| Request path asset | None yet | Parser and precedence are shipped, but no first-party path was safe enough to add from one run |
 
 Rejected examples include generic `promo`, `sticky`, and `mobile-nav` classes; Pinterest, Canva,
 Twitch, and several other pages exposed only obfuscated selectors. These remain visible rather than
 risking content or login breakage.
 
-### Targeted blocker smoke test
+### Historical interactive candidate (rejected)
 
 Candidate APK `06ab94968fbbd75f1a4b9ff9ea51ab753298628cf19a6375c99e89ae921cb022`
 was installed into separately cleared emulator profiles on 2026-08-07. Targeted diagnosis used the
@@ -139,12 +133,14 @@ WebView debugging protocol for DOM and network metadata only; final verification
 screenshots and accessibility dumps. Debugging is disabled in the shipped source, and no page
 content was modified by either probe.
 
+This candidate used consent actions and is not the shipping design. It is retained only as audit
+evidence; the production path is static CSS injected directly at `onPageCommitVisible`.
+
 | Site | Fresh-profile result | Network evidence |
 |---|---|---|
 | `web.de` | Final URL returned to `https://web.de/`; no consent control, registration promotion, audited ad slot, or empty top-ad wrapper visible | The clean consent flow used the exact cross-origin `plus.web.de` `#reminder` control |
 | `gmx.net` | Final URL returned to `https://www.gmx.net/`; no consent control, registration promotion, Lotto promotion, service-slot ad, or empty top-ad wrapper visible | The consent frame was observed at `plus.gmx.net`; its exact `#reminder` control was used |
 | `nytimes.com` | No Fides element or audited ad slot visible; document remained scrollable (`22,318 > 890` px) | 5 HTTP 204 responses, covering Google Publisher Tag, Amazon Ads, Media.net, and GTM |
 
-The UIM distinction matters: `dl.web.de` and `dl.gmx.net` connector frames can remain on a normal
-homepage. Consent actions are therefore scoped only to the exact `plus.web.de` or `plus.gmx.net`
-frame host and exact `#reminder` selector.
+The UIM distinction explains why the interactive experiment was rejected: it caused additional
+consent navigation on web.de and GMX and made those pages feel slow.

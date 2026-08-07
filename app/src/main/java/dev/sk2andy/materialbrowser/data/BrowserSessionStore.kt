@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 import android.content.Context
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
+import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
@@ -195,7 +196,68 @@ class BrowserSessionStore(context: Context) {
 
     @Synchronized
     fun loadPermanentSiteExceptions(): Map<String, Set<String>> =
-        loadArray(KEY_SITE_EXCEPTIONS) { item ->
+        loadProfileHosts(KEY_SITE_EXCEPTIONS)
+
+    @Synchronized
+    fun savePermanentSiteExceptions(exceptions: Map<String, Set<String>>) {
+        saveProfileHosts(KEY_SITE_EXCEPTIONS, exceptions)
+    }
+
+    @Synchronized
+    fun loadSitePrivacyOverrides(): Map<String, Map<String, SitePrivacyOverrides>> =
+        loadArray(KEY_SITE_PRIVACY_OVERRIDES) { item ->
+            Triple(
+                item.optString("profileId"),
+                item.optString("host"),
+                SitePrivacyOverrides(
+                    cookieBannerRemovalDisabled =
+                        item.optBoolean("cookieBannerRemovalDisabled", false),
+                    forceVerticalScrolling = item.optBoolean("forceVerticalScrolling", false),
+                ),
+            )
+        }.mapNotNull { (profileId, host, overrides) ->
+            val safeProfileId = profileId.trim().takeIf(String::isNotEmpty) ?: return@mapNotNull null
+            val safeHost = SiteExceptionRules.normalizedException(host) ?: return@mapNotNull null
+            if (overrides.isDefault) return@mapNotNull null
+            Triple(safeProfileId, safeHost, overrides)
+        }.groupBy(Triple<String, String, SitePrivacyOverrides>::first)
+            .mapValues { (_, entries) ->
+                entries.asSequence()
+                    .distinctBy { it.second }
+                    .take(SiteExceptionRules.MAX_PER_PROFILE)
+                    .associate { (_, host, overrides) -> host to overrides }
+            }
+
+    @Synchronized
+    fun saveSitePrivacyOverrides(
+        overridesByProfile: Map<String, Map<String, SitePrivacyOverrides>>,
+    ) {
+        val values = overridesByProfile.asSequence()
+            .flatMap { (profileId, overridesByHost) ->
+                val safeProfileId = profileId.trim()
+                if (safeProfileId.isEmpty()) return@flatMap emptySequence()
+                overridesByHost.asSequence()
+                    .mapNotNull { (host, overrides) ->
+                        val safeHost = SiteExceptionRules.normalizedException(host)
+                            ?: return@mapNotNull null
+                        if (overrides.isDefault) null else Triple(safeProfileId, safeHost, overrides)
+                    }
+                    .distinctBy { it.second }
+                    .take(SiteExceptionRules.MAX_PER_PROFILE)
+            }
+            .sortedWith(compareBy({ it.first }, { it.second }))
+            .toList()
+        saveArray(KEY_SITE_PRIVACY_OVERRIDES, values) { (profileId, host, overrides) ->
+            JSONObject()
+                .put("profileId", profileId)
+                .put("host", host)
+                .put("cookieBannerRemovalDisabled", overrides.cookieBannerRemovalDisabled)
+                .put("forceVerticalScrolling", overrides.forceVerticalScrolling)
+        }
+    }
+
+    private fun loadProfileHosts(key: String): Map<String, Set<String>> =
+        loadArray(key) { item ->
             item.optString("profileId") to item.optString("host")
         }.mapNotNull { (profileId, host) ->
             val safeProfileId = profileId.trim().takeIf(String::isNotEmpty) ?: return@mapNotNull null
@@ -206,9 +268,8 @@ class BrowserSessionStore(context: Context) {
                 hosts.distinct().take(SiteExceptionRules.MAX_PER_PROFILE).toSet()
             }
 
-    @Synchronized
-    fun savePermanentSiteExceptions(exceptions: Map<String, Set<String>>) {
-        val values = exceptions.asSequence()
+    private fun saveProfileHosts(key: String, hostsByProfile: Map<String, Set<String>>) {
+        val values = hostsByProfile.asSequence()
             .flatMap { (profileId, hosts) ->
                 val safeProfileId = profileId.trim()
                 if (safeProfileId.isEmpty()) return@flatMap emptySequence()
@@ -221,7 +282,7 @@ class BrowserSessionStore(context: Context) {
             .distinct()
             .sortedWith(compareBy<Pair<String, String>>({ it.first }, { it.second }))
             .toList()
-        saveArray(KEY_SITE_EXCEPTIONS, values) { (profileId, host) ->
+        saveArray(key, values) { (profileId, host) ->
             JSONObject()
                 .put("profileId", profileId)
                 .put("host", host)
@@ -302,6 +363,7 @@ class BrowserSessionStore(context: Context) {
         const val KEY_HIDE_CONSENT = "hide_consent"
         const val KEY_BLOCK_THIRD_PARTY_COOKIES = "block_third_party_cookies"
         const val KEY_SITE_EXCEPTIONS = "site_exceptions"
+        const val KEY_SITE_PRIVACY_OVERRIDES = "site_privacy_overrides"
         const val KEY_HISTORY = "history"
         const val KEY_FAVORITES = "favorites"
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
