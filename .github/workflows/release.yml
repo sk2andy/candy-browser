@@ -1,0 +1,207 @@
+name: Release Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without leading v (for example, 0.2 or 1.0.0)
+        required: true
+        type: string
+      prerelease:
+        description: Mark the GitHub release as a prerelease
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish v${{ inputs.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    env:
+      INPUT_VERSION: ${{ inputs.version }}
+      INPUT_PRERELEASE: ${{ inputs.prerelease }}
+
+    steps:
+      - name: Check out selected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Validate release metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          version="$INPUT_VERSION"
+          version_code="$GITHUB_RUN_NUMBER"
+          tag="v${version}"
+
+          if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,2}(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Version must look like 0.2, 1.0.0, or 1.0.0-rc.1." >&2
+            exit 1
+          fi
+
+          if [[ ! "$version_code" =~ ^[1-9][0-9]*$ ]] || (( version_code > 2100000000 )); then
+            echo "Version code must be between 1 and 2100000000." >&2
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/tags/${tag}" || gh release view "$tag" >/dev/null 2>&1; then
+            echo "Tag or release ${tag} already exists." >&2
+            exit 1
+          fi
+
+          {
+            echo "RELEASE_VERSION=${version}"
+            echo "RELEASE_VERSION_CODE=${version_code}"
+            echo "RELEASE_TAG=${tag}"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Restore release keystore
+        shell: bash
+        env:
+          CANDY_RELEASE_KEYSTORE_BASE64: ${{ secrets.CANDY_RELEASE_KEYSTORE_BASE64 }}
+          CANDY_RELEASE_STORE_PASSWORD: ${{ secrets.CANDY_RELEASE_STORE_PASSWORD }}
+          CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
+          CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
+          CANDY_RELEASE_CERTIFICATE_SHA256: ${{ vars.CANDY_RELEASE_CERTIFICATE_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          required_variables=(
+            CANDY_RELEASE_KEYSTORE_BASE64
+            CANDY_RELEASE_STORE_PASSWORD
+            CANDY_RELEASE_KEY_ALIAS
+            CANDY_RELEASE_KEY_PASSWORD
+            CANDY_RELEASE_CERTIFICATE_SHA256
+          )
+          for variable in "${required_variables[@]}"; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing release configuration: ${variable}" >&2
+              exit 1
+            fi
+          done
+
+          keystore_path="$RUNNER_TEMP/candy-release.jks"
+          printf '%s' "$CANDY_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          chmod 600 "$keystore_path"
+          keytool -list \
+            -keystore "$keystore_path" \
+            -storepass:env CANDY_RELEASE_STORE_PASSWORD \
+            -alias "$CANDY_RELEASE_KEY_ALIAS" \
+            >/dev/null
+
+          expected_certificate="${CANDY_RELEASE_CERTIFICATE_SHA256//:/}"
+          expected_certificate="${expected_certificate,,}"
+          if [[ ! "$expected_certificate" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "CANDY_RELEASE_CERTIFICATE_SHA256 must contain a SHA-256 certificate digest." >&2
+            exit 1
+          fi
+
+          actual_certificate="$(
+            keytool -exportcert \
+              -keystore "$keystore_path" \
+              -storepass:env CANDY_RELEASE_STORE_PASSWORD \
+              -alias "$CANDY_RELEASE_KEY_ALIAS" \
+              | sha256sum \
+              | cut -d ' ' -f 1
+          )"
+          if [[ "$actual_certificate" != "$expected_certificate" ]]; then
+            echo "Release keystore certificate does not match pinned repository fingerprint." >&2
+            exit 1
+          fi
+
+          echo "CANDY_RELEASE_KEYSTORE_PATH=${keystore_path}" >> "$GITHUB_ENV"
+
+      - name: Test and build signed release APK
+        shell: bash
+        env:
+          CANDY_RELEASE_STORE_PASSWORD: ${{ secrets.CANDY_RELEASE_STORE_PASSWORD }}
+          CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
+          CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon \
+            testDebugUnitTest \
+            lintRelease \
+            assembleRelease \
+            -Pcandy.versionName="$RELEASE_VERSION" \
+            -Pcandy.versionCode="$RELEASE_VERSION_CODE"
+
+      - name: Verify and checksum APK
+        shell: bash
+        env:
+          CANDY_RELEASE_CERTIFICATE_SHA256: ${{ vars.CANDY_RELEASE_CERTIFICATE_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          source_apk="app/build/outputs/apk/release/app-release.apk"
+          release_apk="CandyBrowser-${RELEASE_TAG}-release.apk"
+          cp "$source_apk" "$release_apk"
+
+          apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)"
+          verification="$("$apksigner" verify --verbose --print-certs "$release_apk")"
+          printf '%s\n' "$verification"
+
+          expected_certificate="${CANDY_RELEASE_CERTIFICATE_SHA256//:/}"
+          expected_certificate="${expected_certificate,,}"
+          actual_certificate="$(
+            printf '%s\n' "$verification" \
+              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'
+          )"
+          if [[ "$actual_certificate" != "$expected_certificate" ]]; then
+            echo "Release APK certificate does not match pinned repository fingerprint." >&2
+            exit 1
+          fi
+
+          sha256sum "$release_apk" > "${release_apk}.sha256"
+
+          {
+            echo "RELEASE_APK=${release_apk}"
+            echo "RELEASE_CHECKSUM=${release_apk}.sha256"
+          } >> "$GITHUB_ENV"
+
+      - name: Create tag and GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          release_flags=(
+            --target "$GITHUB_SHA"
+            --title "Candy Browser ${RELEASE_TAG}"
+            --generate-notes
+          )
+          if [[ "$INPUT_PRERELEASE" == 'true' ]]; then
+            release_flags+=(--prerelease)
+          fi
+
+          gh release create \
+            "$RELEASE_TAG" \
+            "$RELEASE_APK" \
+            "$RELEASE_CHECKSUM" \
+            "${release_flags[@]}"
+
+      - name: Remove release keystore
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/candy-release.jks"

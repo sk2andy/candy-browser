@@ -1,7 +1,32 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+val releaseKeystorePropertiesFile = rootProject.file("keystore.properties")
+val releaseKeystoreProperties = Properties().apply {
+    if (releaseKeystorePropertiesFile.isFile) {
+        releaseKeystorePropertiesFile.inputStream().use(::load)
+    }
+}
+
+fun releaseSigningValue(propertyName: String, environmentVariable: String): String? =
+    releaseKeystoreProperties.getProperty(propertyName)
+        ?.takeIf(String::isNotBlank)
+        ?: providers.environmentVariable(environmentVariable).orNull?.takeIf(String::isNotBlank)
+
+val releaseSigningValues = mapOf(
+    "storeFile" to releaseSigningValue("storeFile", "CANDY_RELEASE_KEYSTORE_PATH"),
+    "storePassword" to releaseSigningValue("storePassword", "CANDY_RELEASE_STORE_PASSWORD"),
+    "keyAlias" to releaseSigningValue("keyAlias", "CANDY_RELEASE_KEY_ALIAS"),
+    "keyPassword" to releaseSigningValue("keyPassword", "CANDY_RELEASE_KEY_PASSWORD"),
+)
+val missingReleaseSigningValues = releaseSigningValues.filterValues { it == null }.keys
+val hasReleaseSigning = missingReleaseSigningValues.isEmpty()
+val candyVersionCode = providers.gradleProperty("candy.versionCode").orElse("1")
+val candyVersionName = providers.gradleProperty("candy.versionName").orElse("0.1")
 
 android {
     namespace = "dev.sk2andy.materialbrowser"
@@ -11,15 +36,29 @@ android {
         applicationId = "dev.sk2andy.materialbrowser"
         minSdk = 34
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = candyVersionCode.get().toInt()
+        versionName = candyVersionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(requireNotNull(releaseSigningValues["storeFile"]))
+                storePassword = requireNotNull(releaseSigningValues["storePassword"])
+                keyAlias = requireNotNull(releaseSigningValues["keyAlias"])
+                keyPassword = requireNotNull(releaseSigningValues["keyPassword"])
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -48,6 +87,27 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+}
+
+val validateReleaseSigning by tasks.registering {
+    group = "verification"
+    description = "Checks that release signing credentials and the keystore are available."
+
+    doLast {
+        check(missingReleaseSigningValues.isEmpty()) {
+            "Missing release signing values: ${missingReleaseSigningValues.sorted().joinToString()}. " +
+                "Configure keystore.properties or the CANDY_RELEASE_* environment variables."
+        }
+
+        val keystoreFile = rootProject.file(requireNotNull(releaseSigningValues["storeFile"]))
+        check(keystoreFile.isFile) {
+            "Release keystore does not exist: ${keystoreFile.absolutePath}"
+        }
+    }
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(validateReleaseSigning)
 }
 
 dependencies {

@@ -99,13 +99,33 @@ class AddressLoadCapsuleRulesTest {
     }
 
     @Test
-    fun `indeterminate segment remains within capsule track`() {
+    fun `indeterminate band keeps constant length while wrapping outline`() {
         listOf(-1f, 0f, 0.25f, 0.5f, 0.75f, 1f, 2f).forEach { phase ->
-            val segment = AddressLoadCapsuleRules.indeterminateSegment(phase)
+            val segments = AddressLoadCapsuleRules.indeterminateSegments(phase)
 
-            assertTrue(segment.start in 0f..1f)
-            assertTrue(segment.end in 0f..1f)
-            assertTrue(segment.start <= segment.end)
+            assertTrue(segments.isNotEmpty())
+            segments.forEach { segment ->
+                assertTrue(segment.start in 0f..1f)
+                assertTrue(segment.end in 0f..1f)
+                assertTrue(segment.start < segment.end)
+            }
+            assertEquals(
+                0.32f,
+                segments.sumOf { (it.end - it.start).toDouble() }.toFloat(),
+                0.001f,
+            )
         }
+    }
+
+    @Test
+    fun `indeterminate band splits only at outline seam`() {
+        assertEquals(1, AddressLoadCapsuleRules.indeterminateSegments(0.5f).size)
+        val wrapped = AddressLoadCapsuleRules.indeterminateSegments(0.9f)
+
+        assertEquals(2, wrapped.size)
+        assertEquals(0.9f, wrapped[0].start, 0.001f)
+        assertEquals(1f, wrapped[0].end, 0.001f)
+        assertEquals(0f, wrapped[1].start, 0.001f)
+        assertEquals(0.22f, wrapped[1].end, 0.001f)
     }
 }

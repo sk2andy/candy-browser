@@ -76,6 +76,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -168,7 +169,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
@@ -205,8 +208,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -1434,6 +1439,7 @@ private fun BrowserViewport(
             tab = tab,
             preview = controller.previews[tab.id],
             favicon = controller.favicons[tab.id],
+            favorites = controller.favorites,
             dragOffset = dragOffset,
             dragDirection = dragDirection,
             travelDistance = travelDistance,
@@ -1527,6 +1533,7 @@ private fun BrowserViewport(
         TabHandoffOverlay(
             handoff = currentHandoff,
             tab = controller.activeTabs.firstOrNull { it.id == currentHandoff.tabId },
+            favorites = controller.favorites,
             alpha = if (liveFrameTabId == currentHandoff.tabId && !tabOverviewVisible) {
                 handoffAlpha
             } else {
@@ -1760,6 +1767,7 @@ private class WebViewHostState(val container: FrameLayout) {
 private fun TabHandoffOverlay(
     handoff: TabHandoff,
     tab: BrowserTab?,
+    favorites: List<FavoriteEntry>,
     alpha: Float,
     rootHeightPx: Float,
     bottomBarTopPx: Float,
@@ -1775,6 +1783,7 @@ private fun TabHandoffOverlay(
                 tab = tab,
                 preview = handoff.preview,
                 favicon = handoff.favicon,
+                favorites = favorites,
                 rootHeightPx = rootHeightPx,
                 previewTopInsetPx = handoff.previewTopInsetPx,
                 bottomBarTopPx = bottomBarTopPx,
@@ -1795,6 +1804,7 @@ private fun TabSwitchPreview(
     tab: BrowserTab,
     preview: Bitmap?,
     favicon: Bitmap?,
+    favorites: List<FavoriteEntry>,
     dragOffset: MutableFloatState,
     dragDirection: Int,
     travelDistance: Float,
@@ -1825,6 +1835,7 @@ private fun TabSwitchPreview(
             tab = tab,
             preview = preview,
             favicon = favicon,
+            favorites = favorites,
             rootHeightPx = rootHeightPx,
             previewTopInsetPx = previewTopInsetPx,
             bottomBarTopPx = bottomBarTopPx,
@@ -1840,6 +1851,7 @@ private fun FullscreenTabPreviewContent(
     rootHeightPx: Float,
     previewTopInsetPx: Int,
     bottomBarTopPx: Float,
+    favorites: List<FavoriteEntry>,
 ) {
     val density = LocalDensity.current
     val previewLayout = TabSwitchPreviewLayoutRules.resolve(
@@ -1854,28 +1866,77 @@ private fun FullscreenTabPreviewContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface),
     ) {
-        if (tab.isIncognito) {
-            IncognitoTabPlaceholder()
-        } else {
-            Box(
-                modifier = Modifier
-                    .offset(y = topInset)
-                    .fillMaxWidth()
-                    .height(visibleHeight)
-                    .clipToBounds(),
-            ) {
-                if (preview != null && !preview.isRecycled) {
-                    Image(
-                        bitmap = preview.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        alignment = Alignment.TopCenter,
-                    )
-                } else {
-                    TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
+        when {
+            tab.isIncognito -> IncognitoTabPlaceholder()
+            tab.url == BLANK_URL -> BlankTabPreview(
+                favorites = favorites,
+                showFavorites = true,
+            )
+            else -> {
+                Box(
+                    modifier = Modifier
+                        .offset(y = topInset)
+                        .fillMaxWidth()
+                        .height(visibleHeight)
+                        .clipToBounds(),
+                ) {
+                    if (preview != null && !preview.isRecycled) {
+                        Image(
+                            bitmap = preview.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            alignment = Alignment.TopCenter,
+                        )
+                    } else {
+                        TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BlankTabPreview(
+    favorites: List<FavoriteEntry>,
+    showFavorites: Boolean,
+) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .clearAndSetSemantics { },
+    ) {
+        val scale = (maxWidth.value / screenWidth.value)
+            .coerceIn(0.01f, 1f)
+        val visibleSourceHeight = maxHeight / scale
+        val cropTop = ((screenHeight - visibleSourceHeight) * PREVIEW_CROP_TOP_FRACTION)
+            .coerceAtLeast(0.dp)
+        Box(
+            modifier = Modifier
+                .wrapContentSize(align = Alignment.TopStart, unbounded = true)
+                .size(screenWidth, screenHeight)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationY = -with(density) { cropTop.toPx() } * scale
+                    transformOrigin = TransformOrigin(0f, 0f)
+                },
+        ) {
+            NewTabPage(
+                favorites = favorites,
+                incognito = false,
+                modeProgress = 0f,
+                revealOriginInRoot = Offset.Zero,
+                onSearch = {},
+                onFavorite = {},
+                interactive = false,
+                showFavorites = showFavorites,
+            )
         }
     }
 }
@@ -1888,12 +1949,15 @@ private fun NewTabPage(
     revealOriginInRoot: Offset,
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
+    interactive: Boolean = true,
+    showFavorites: Boolean = true,
 ) {
     val colors = MaterialTheme.colorScheme
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
     val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
     val incognitoIconAlpha = BlankTabModeMorphRules.incognitoIconAlpha(boundedProgress)
     val openSearchDescription = stringResource(R.string.cd_open_search)
+    val scrollState = rememberScrollState()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1911,11 +1975,12 @@ private fun NewTabPage(
                 .align(Alignment.Center)
                 .fillMaxWidth(0.86f)
                 .heightIn(max = 520.dp)
-                .verticalScroll(rememberScrollState()),
+                .then(if (interactive) Modifier.verticalScroll(scrollState) else Modifier),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Surface(
                 onClick = onSearch,
+                enabled = interactive,
                 modifier = Modifier
                     .semantics {
                         contentDescription = openSearchDescription
@@ -1956,7 +2021,7 @@ private fun NewTabPage(
                     )
                 }
             }
-            if (!incognito) {
+            if (!incognito && showFavorites) {
                 Spacer(Modifier.height(28.dp))
                 Text(
                     stringResource(R.string.favorites_title),
@@ -1988,6 +2053,7 @@ private fun NewTabPage(
                         ExpressiveFavoriteRows(
                             favorites = favorites,
                             onFavorite = onFavorite,
+                            enabled = interactive,
                         )
                     }
                 }
@@ -2000,6 +2066,37 @@ private enum class AddressBarPresentation {
     Compact,
     Expanded,
     CommandFeedback,
+}
+
+private data class AddressBarMorphShape(
+    val progress: Float,
+    val targetSizePx: Float,
+) : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val radii = AddressBarOverviewGestureRules.morphCornerRadii(
+            progress = progress,
+            sourceWidth = size.width,
+            sourceHeight = size.height,
+            targetSize = targetSizePx,
+        )
+        val cornerRadius = CornerRadius(radii.horizontal, radii.vertical)
+        return Outline.Rounded(
+            RoundRect(
+                left = 0f,
+                top = 0f,
+                right = size.width,
+                bottom = size.height,
+                topLeftCornerRadius = cornerRadius,
+                topRightCornerRadius = cornerRadius,
+                bottomRightCornerRadius = cornerRadius,
+                bottomLeftCornerRadius = cornerRadius,
+            ),
+        )
+    }
 }
 
 @Composable
@@ -2135,7 +2232,6 @@ private fun BrowserBottomBar(
                         val source = addressBarBounds
                         val target = overviewTargetBounds
                         val targetSizePx = with(density) { morphTargetSize.toPx() }
-                        alpha = AddressBarOverviewGestureRules.containerAlpha(progress)
                         scaleX = pulseScale.value *
                             AddressBarOverviewGestureRules.containerScale(
                                 progress = progress,
@@ -2161,47 +2257,58 @@ private fun BrowserBottomBar(
                             )
                         }
                     },
-                shape = RoundedCornerShape(30.dp),
-                color = barColor,
+                shape = AddressBarMorphShape(
+                    progress = overviewGestureProgress.floatValue,
+                    targetSizePx = with(density) { morphTargetSize.toPx() },
+                ),
+                color = lerp(
+                    barColor,
+                    MaterialTheme.colorScheme.primary,
+                    AddressBarOverviewGestureRules.resistedProgress(
+                        overviewGestureProgress.floatValue,
+                    ),
+                ),
                 tonalElevation = 12.dp,
                 shadowElevation = 14.dp,
             ) {
-                AnimatedContent(
-                    targetState = presentation,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = AddressBarOverviewGestureRules.contentAlpha(
-                            overviewGestureProgress.floatValue,
-                        )
-                    },
-                    transitionSpec = {
-                        ((fadeIn(tween(90)) + slideInVertically(tween(120)) { it / 3 }) togetherWith
-                            (fadeOut(tween(70)) + slideOutVertically(tween(100)) { it / 4 }))
-                            .using(SizeTransform(clip = false))
-                    },
-                    label = "Adressleisteninhalt",
-                ) { targetPresentation ->
-                    when (targetPresentation) {
-                        AddressBarPresentation.Compact -> {
-                            Surface(
-                                onClick = onExpand,
-                                modifier = Modifier
-                                    .addressBarVerticalGesture(
-                                        enabled = overviewGestureEnabled,
-                                        initialProgress = overviewGestureProgress,
-                                        onProgress = onOverviewGestureProgress,
-                                        onStarted = onOverviewGestureStarted,
-                                        onCancelled = onOverviewGestureCancelled,
-                                        onSwipeUp = onTabs,
-                                    )
-                                    .draggable(
-                                        state = tabDragState,
-                                        orientation = Orientation.Horizontal,
-                                        enabled = !editing,
-                                        onDragStopped = { velocity -> onTabDragStopped(velocity) },
-                                    ),
-                                color = Color.Transparent,
-                            ) {
-                                Box {
+                Box {
+                    AnimatedContent(
+                        targetState = presentation,
+                        modifier = Modifier.graphicsLayer {
+                            alpha = AddressBarOverviewGestureRules.contentAlpha(
+                                overviewGestureProgress.floatValue,
+                            )
+                        },
+                        transitionSpec = {
+                            ((fadeIn(tween(90)) + slideInVertically(tween(120)) { it / 3 }) togetherWith
+                                (fadeOut(tween(70)) + slideOutVertically(tween(100)) { it / 4 }))
+                                .using(SizeTransform(clip = false))
+                        },
+                        label = "Adressleisteninhalt",
+                    ) { targetPresentation ->
+                        when (targetPresentation) {
+                            AddressBarPresentation.Compact -> {
+                                Surface(
+                                    onClick = onExpand,
+                                    modifier = Modifier
+                                        .addressBarVerticalGesture(
+                                            enabled = overviewGestureEnabled,
+                                            initialProgress = overviewGestureProgress,
+                                            onProgress = onOverviewGestureProgress,
+                                            onStarted = onOverviewGestureStarted,
+                                            onCancelled = onOverviewGestureCancelled,
+                                            onSwipeUp = onTabs,
+                                        )
+                                        .draggable(
+                                            state = tabDragState,
+                                            orientation = Orientation.Horizontal,
+                                            enabled = !editing,
+                                            onDragStopped = { velocity ->
+                                                onTabDragStopped(velocity)
+                                            },
+                                        ),
+                                    color = Color.Transparent,
+                                ) {
                                     Text(
                                         text = domain,
                                         modifier = Modifier.padding(
@@ -2213,17 +2320,9 @@ private fun BrowserBottomBar(
                                         textAlign = TextAlign.Center,
                                         style = MaterialTheme.typography.labelMedium,
                                     )
-                                    AddressLoadCapsuleFeedback(
-                                        tabId = tab.id,
-                                        isLoading = tab.isLoading && commandFeedback == null,
-                                        progressPercent = tab.progress,
-                                        modifier = Modifier.matchParentSize(),
-                                    )
                                 }
                             }
-                        }
-                        AddressBarPresentation.Expanded -> {
-                            ExpandedBottomBarContent(
+                            AddressBarPresentation.Expanded -> ExpandedBottomBarContent(
                                 tab = tab,
                                 menuExpanded = menuExpanded,
                                 onMenuExpandedChange = { menuExpanded = it },
@@ -2266,24 +2365,40 @@ private fun BrowserBottomBar(
                                 onOverviewGestureStarted = onOverviewGestureStarted,
                                 onOverviewGestureCancelled = onOverviewGestureCancelled,
                             )
-                        }
-                        AddressBarPresentation.CommandFeedback -> {
-                            commandFeedback?.let { feedback ->
-                                AddressCommandFeedbackContent(
-                                    feedback = feedback,
-                                    text = feedbackText,
-                                    gesturesEnabled = feedbackGesturesEnabled,
-                                    onAddress = if (compact) onExpand else onAddress,
-                                    onTabDrag = onTabDrag,
-                                    onTabDragStopped = onTabDragStopped,
-                                    onTabs = onTabs,
-                                )
+                            AddressBarPresentation.CommandFeedback -> {
+                                commandFeedback?.let { feedback ->
+                                    AddressCommandFeedbackContent(
+                                        feedback = feedback,
+                                        text = feedbackText,
+                                        gesturesEnabled = feedbackGesturesEnabled,
+                                        onAddress = if (compact) onExpand else onAddress,
+                                        onTabDrag = onTabDrag,
+                                        onTabDragStopped = onTabDragStopped,
+                                        onTabs = onTabs,
+                                    )
+                                }
                             }
                         }
                     }
+                    if (commandFeedback == null) {
+                        AddressLoadCapsuleFeedback(
+                            tabId = tab.id,
+                            isLoading = tab.isLoading,
+                            progressPercent = tab.progress,
+                            morphProgress = overviewGestureProgress.floatValue,
+                            morphTargetSizePx = with(density) { morphTargetSize.toPx() },
+                            modifier = Modifier
+                                .matchParentSize()
+                                .graphicsLayer {
+                                    alpha = AddressBarOverviewGestureRules.contentAlpha(
+                                        overviewGestureProgress.floatValue,
+                                    )
+                                },
+                        )
+                    }
                 }
             }
-            Surface(
+            Box(
                 modifier = Modifier
                     .size(morphTargetSize)
                     .graphicsLayer {
@@ -2307,17 +2422,13 @@ private fun BrowserBottomBar(
                             )
                         }
                     },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                shadowElevation = 8.dp,
+                contentAlignment = Alignment.Center,
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                    )
-                }
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                )
             }
         }
     }
@@ -2696,12 +2807,6 @@ private fun ExpandedBottomBarContent(
                             )
                         }
                     }
-                    AddressLoadCapsuleFeedback(
-                        tabId = tab.id,
-                        isLoading = tab.isLoading,
-                        progressPercent = tab.progress,
-                        modifier = Modifier.matchParentSize(),
-                    )
                 }
             }
             if (editing && tab.url == BLANK_URL) {
@@ -4024,6 +4129,7 @@ private fun TabOverview(
                             tab = tab,
                             preview = controller.previews[tab.id],
                             favicon = controller.favicons[tab.id],
+                            favorites = controller.favorites,
                             cardWidth = tabCardWidth,
                             modifier = Modifier
                                 .graphicsLayer {
@@ -4068,6 +4174,7 @@ private fun TabOverview(
                     initialTabId = initialTabId,
                     previews = controller.previews,
                     favicons = controller.favicons,
+                    favorites = controller.favorites,
                     heroProgress = { heroProgress.value },
                     heroCompleted = heroCompleted,
                     heroVisible = heroVisible,
@@ -4213,6 +4320,7 @@ private fun TabOverview(
                         tab = initialTab,
                         preview = heroPreview,
                         favicon = heroFavicon,
+                        favorites = controller.favorites,
                         targetBounds = heroTarget,
                         rootWidthPx = rootWidthPx,
                         rootHeightPx = rootHeightPx,
@@ -4224,6 +4332,7 @@ private fun TabOverview(
                         tab = initialTab,
                         preview = heroPreview,
                         favicon = heroFavicon,
+                        favorites = controller.favorites,
                         targetBounds = heroTarget,
                         rootWidthPx = rootWidthPx,
                         rootHeightPx = rootHeightPx,
@@ -4235,6 +4344,7 @@ private fun TabOverview(
                         tab = initialTab,
                         preview = heroPreview,
                         favicon = heroFavicon,
+                        favorites = controller.favorites,
                         rootHeightPx = rootHeightPx,
                         previewTopInsetPx = initialPreviewTopInsetPx,
                         bottomBarTopPx = bottomBarTopPx,
@@ -4271,6 +4381,7 @@ private fun TabOverview(
                         tab = heroTab,
                         preview = preview,
                         favicon = controller.favicons[hero.tabId],
+                        favorites = controller.favorites,
                         targetBounds = hero.startBounds,
                         rootWidthPx = rootWidthPx,
                         rootHeightPx = rootHeightPx,
@@ -4283,6 +4394,7 @@ private fun TabOverview(
                         tab = heroTab,
                         preview = preview,
                         favicon = controller.favicons[hero.tabId],
+                        favorites = controller.favorites,
                         targetBounds = hero.startBounds,
                         rootWidthPx = rootWidthPx,
                         rootHeightPx = rootHeightPx,
@@ -4290,11 +4402,22 @@ private fun TabOverview(
                         bottomBarTopPx = bottomBarTopPx,
                         targetFraction = { 1f - exitHeroProgress.value },
                     )
+                } else if (heroTab?.url == BLANK_URL) {
+                    FullscreenTabPreviewContent(
+                        tab = heroTab,
+                        preview = null,
+                        favicon = null,
+                        favorites = controller.favorites,
+                        rootHeightPx = rootHeightPx,
+                        previewTopInsetPx = hero.previewTopInsetPx,
+                        bottomBarTopPx = bottomBarTopPx,
+                    )
                 } else if (preview != null && !preview.isRecycled && heroTab != null) {
                     FullscreenTabPreviewContent(
                         tab = heroTab,
                         preview = preview,
                         favicon = controller.favicons[hero.tabId],
+                        favorites = controller.favorites,
                         rootHeightPx = rootHeightPx,
                         previewTopInsetPx = hero.previewTopInsetPx,
                         bottomBarTopPx = bottomBarTopPx,
@@ -4304,6 +4427,7 @@ private fun TabOverview(
                         tab = heroTab,
                         preview = null,
                         favicon = null,
+                        favorites = controller.favorites,
                         rootHeightPx = rootHeightPx,
                         previewTopInsetPx = hero.previewTopInsetPx,
                         bottomBarTopPx = bottomBarTopPx,
@@ -4822,6 +4946,7 @@ private fun TabCoverflowHeroContent(
     tab: BrowserTab,
     preview: Bitmap?,
     favicon: Bitmap?,
+    favorites: List<FavoriteEntry>,
     targetBounds: Rect,
     rootWidthPx: Float,
     rootHeightPx: Float,
@@ -4851,6 +4976,7 @@ private fun TabCoverflowHeroContent(
                 tab = tab,
                 preview = preview,
                 favicon = favicon,
+                favorites = favorites,
                 rootHeightPx = rootHeightPx,
                 previewTopInsetPx = previewTopInsetPx,
                 bottomBarTopPx = bottomBarTopPx,
@@ -4866,7 +4992,12 @@ private fun TabCoverflowHeroContent(
                     alpha = TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
                 },
         ) {
-            TabPreviewContent(tab = tab, preview = preview, favicon = favicon)
+            TabPreviewContent(
+                tab = tab,
+                preview = preview,
+                favicon = favicon,
+                favorites = favorites,
+            )
         }
     }
 }
@@ -4876,6 +5007,7 @@ private fun TabListHeroContent(
     tab: BrowserTab,
     preview: Bitmap?,
     favicon: Bitmap?,
+    favorites: List<FavoriteEntry>,
     targetBounds: Rect,
     rootWidthPx: Float,
     rootHeightPx: Float,
@@ -4899,6 +5031,7 @@ private fun TabListHeroContent(
                 tab = tab,
                 preview = preview,
                 favicon = favicon,
+                favorites = favorites,
                 rootHeightPx = rootHeightPx,
                 previewTopInsetPx = previewTopInsetPx,
                 bottomBarTopPx = bottomBarTopPx,
@@ -5004,6 +5137,13 @@ private fun TabTitleRow(
                 modifier = Modifier.size(26.dp),
                 tint = contentColor,
             )
+        } else if (tab.url == BLANK_URL) {
+            Icon(
+                painter = painterResource(R.drawable.ic_launcher_foreground_art),
+                contentDescription = null,
+                modifier = Modifier.size(26.dp),
+                tint = Color.Unspecified,
+            )
         } else if (favicon != null && !favicon.isRecycled) {
             Image(
                 bitmap = favicon.asImageBitmap(),
@@ -5062,6 +5202,7 @@ private fun TabCard(
     tab: BrowserTab,
     preview: Bitmap?,
     favicon: Bitmap?,
+    favorites: List<FavoriteEntry>,
     cardWidth: Dp,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -5091,7 +5232,12 @@ private fun TabCard(
         ),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            TabPreviewContent(tab = tab, preview = preview, favicon = favicon)
+            TabPreviewContent(
+                tab = tab,
+                preview = preview,
+                favicon = favicon,
+                favorites = favorites,
+            )
         }
     }
 }
@@ -5107,6 +5253,7 @@ private fun CompactTabGrid(
     initialTabId: String,
     previews: Map<String, Bitmap>,
     favicons: Map<String, Bitmap>,
+    favorites: List<FavoriteEntry>,
     heroProgress: () -> Float,
     heroCompleted: Boolean,
     heroVisible: Boolean,
@@ -5170,6 +5317,7 @@ private fun CompactTabGrid(
                     tab = tab,
                     preview = previews[tab.id],
                     favicon = favicons[tab.id],
+                    favorites = favorites,
                     selected = tab.id == selectedTabId,
                     initial = tab.id == initialTabId,
                     heroProgress = heroProgress,
@@ -5257,6 +5405,7 @@ private fun CompactGridTabItem(
     tab: BrowserTab,
     preview: Bitmap?,
     favicon: Bitmap?,
+    favorites: List<FavoriteEntry>,
     selected: Boolean,
     initial: Boolean,
     heroProgress: () -> Float,
@@ -5533,7 +5682,12 @@ private fun CompactGridTabItem(
                         onPreviewBounds(bounds)
                     },
             ) {
-                TabPreviewContent(tab = tab, preview = preview, favicon = favicon)
+                TabPreviewContent(
+                    tab = tab,
+                    preview = preview,
+                    favicon = favicon,
+                    favorites = favorites,
+                )
             }
         }
     }
@@ -5738,6 +5892,13 @@ private fun TabFavicon(
             modifier = Modifier.size(size),
             tint = MaterialTheme.colorScheme.onSurface,
         )
+    } else if (tab.url == BLANK_URL) {
+        Icon(
+            painter = painterResource(R.drawable.ic_launcher_foreground_art),
+            contentDescription = null,
+            modifier = Modifier.size(size),
+            tint = Color.Unspecified,
+        )
     } else if (favicon != null && !favicon.isRecycled) {
         Image(
             bitmap = favicon.asImageBitmap(),
@@ -5768,9 +5929,14 @@ private fun TabPreviewContent(
     tab: BrowserTab,
     preview: Bitmap?,
     favicon: Bitmap?,
+    favorites: List<FavoriteEntry> = emptyList(),
 ) {
     when {
         tab.isIncognito -> IncognitoTabPlaceholder()
+        tab.url == BLANK_URL -> BlankTabPreview(
+            favorites = favorites,
+            showFavorites = false,
+        )
         preview != null && !preview.isRecycled -> Image(
             bitmap = preview.asImageBitmap(),
             contentDescription = null,

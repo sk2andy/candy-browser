@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
@@ -70,6 +72,30 @@ class AddressBarVerticalGestureInstrumentedTest {
         assertTrue(horizontalDrag.get() > 0)
         assertEquals(1, horizontalDragStops.get())
         assertEquals(1, taps.get())
+    }
+
+    @Test
+    fun centerToTopSwipeOpensOverview() {
+        val swipes = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                Box(
+                    modifier = Modifier
+                        .size(width = 320.dp, height = 160.dp)
+                        .addressBarVerticalGesture(onSwipeUp = swipes::incrementAndGet)
+                        .testTag(AddressBarTag),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AddressBarTag).performTouchInput {
+            swipe(
+                start = center,
+                end = Offset(center.x, 0f),
+            )
+        }
+
+        assertEquals(1, swipes.get())
     }
 
     private companion object {

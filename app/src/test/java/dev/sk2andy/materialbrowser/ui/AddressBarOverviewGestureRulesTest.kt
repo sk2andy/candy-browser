@@ -122,11 +122,9 @@ class AddressBarOverviewGestureRulesTest {
     }
 
     @Test
-    fun `morph fades address content into stable plus target`() {
+    fun `morph fades address content into stable plus icon`() {
         assertEquals(1f, AddressBarOverviewGestureRules.contentAlpha(0f), 0.001f)
         assertEquals(0f, AddressBarOverviewGestureRules.contentAlpha(1f), 0.001f)
-        assertEquals(1f, AddressBarOverviewGestureRules.containerAlpha(0.58f), 0.001f)
-        assertEquals(0f, AddressBarOverviewGestureRules.containerAlpha(0.9f), 0.001f)
         assertEquals(0f, AddressBarOverviewGestureRules.targetAlpha(0f), 0.001f)
         assertEquals(1f, AddressBarOverviewGestureRules.targetAlpha(1f), 0.001f)
         assertEquals(0.72f, AddressBarOverviewGestureRules.targetScale(0f), 0.001f)
@@ -140,6 +138,54 @@ class AddressBarOverviewGestureRulesTest {
             24f,
             AddressBarOverviewGestureRules.landingTranslation(1f, 100f, 124f),
             0.001f,
+        )
+    }
+
+    @Test
+    fun `morph keeps displayed corners circular during non uniform scaling`() {
+        val sourceWidth = 280f
+        val sourceHeight = 48f
+        val targetSize = 56f
+
+        mapOf(
+            0f to 24f,
+            0.5f to 25.7f,
+            1f to 28f,
+        ).forEach { (progress, expectedDisplayedRadius) ->
+            val radii = AddressBarOverviewGestureRules.morphCornerRadii(
+                progress = progress,
+                sourceWidth = sourceWidth,
+                sourceHeight = sourceHeight,
+                targetSize = targetSize,
+            )
+            val displayedHorizontal = radii.horizontal *
+                AddressBarOverviewGestureRules.containerScale(
+                    progress = progress,
+                    sourceSize = sourceWidth,
+                    targetSize = targetSize,
+                )
+            val displayedVertical = radii.vertical *
+                AddressBarOverviewGestureRules.containerScale(
+                    progress = progress,
+                    sourceSize = sourceHeight,
+                    targetSize = targetSize,
+                )
+
+            assertEquals(displayedHorizontal, displayedVertical, 0.001f)
+            assertEquals(expectedDisplayedRadius, displayedHorizontal, 0.001f)
+        }
+    }
+
+    @Test
+    fun `morph corner radii reject invalid geometry`() {
+        assertEquals(
+            AddressBarMorphCornerRadii(horizontal = 0f, vertical = 0f),
+            AddressBarOverviewGestureRules.morphCornerRadii(
+                progress = 0.5f,
+                sourceWidth = Float.NaN,
+                sourceHeight = 48f,
+                targetSize = 56f,
+            ),
         )
     }
 }

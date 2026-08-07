@@ -73,4 +73,67 @@ class PagePullRefreshRulesTest {
             0f,
         )
     }
+
+    @Test
+    fun `fast recent opposite vertical flick gets momentum handoff`() {
+        assertTrue(
+            PagePullRefreshRules.shouldReinforceOppositeFlick(
+                previousVelocityY = -2_000f,
+                currentVelocityX = 100f,
+                currentVelocityY = 1_800f,
+                elapsedSincePreviousFlickMs = 500L,
+                minimumFlingVelocity = 100f,
+            ),
+        )
+    }
+
+    @Test
+    fun `same direction slow stale or horizontal flick gets no momentum handoff`() {
+        assertFalse(
+            PagePullRefreshRules.shouldReinforceOppositeFlick(
+                previousVelocityY = 2_000f,
+                currentVelocityX = 100f,
+                currentVelocityY = 1_800f,
+                elapsedSincePreviousFlickMs = 500L,
+                minimumFlingVelocity = 100f,
+            ),
+        )
+        assertFalse(
+            PagePullRefreshRules.shouldReinforceOppositeFlick(
+                previousVelocityY = -80f,
+                currentVelocityX = 100f,
+                currentVelocityY = 1_800f,
+                elapsedSincePreviousFlickMs = 500L,
+                minimumFlingVelocity = 100f,
+            ),
+        )
+        assertFalse(
+            PagePullRefreshRules.shouldReinforceOppositeFlick(
+                previousVelocityY = -2_000f,
+                currentVelocityX = 100f,
+                currentVelocityY = 80f,
+                elapsedSincePreviousFlickMs = 500L,
+                minimumFlingVelocity = 100f,
+            ),
+        )
+        assertFalse(
+            PagePullRefreshRules.shouldReinforceOppositeFlick(
+                previousVelocityY = -2_000f,
+                currentVelocityX = 100f,
+                currentVelocityY = 1_800f,
+                elapsedSincePreviousFlickMs =
+                    PagePullRefreshRules.OPPOSITE_FLICK_HANDOFF_TIMEOUT_MS + 1L,
+                minimumFlingVelocity = 100f,
+            ),
+        )
+        assertFalse(
+            PagePullRefreshRules.shouldReinforceOppositeFlick(
+                previousVelocityY = -2_000f,
+                currentVelocityX = 2_000f,
+                currentVelocityY = 1_800f,
+                elapsedSincePreviousFlickMs = 500L,
+                minimumFlingVelocity = 100f,
+            ),
+        )
+    }
 }

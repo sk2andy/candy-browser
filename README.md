@@ -103,8 +103,85 @@ Requirements: Android SDK 35 and JDK 17. Point `JAVA_HOME` to your JDK 17 instal
 
 Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 
-Release builds are minified with R8. Configure your own Android signing key before distributing a
-release build; never commit a keystore or its credentials.
+### Signed release builds
+
+Release builds are minified with R8 and require a signing key. Never commit a keystore or its
+credentials. Configure signing locally with either an ignored project file or environment variables.
+
+For the first release only, create a long-lived key if no release key exists yet. Reuse that same key
+for every later release:
+
+```bash
+mkdir -p .signing
+keytool -genkeypair \
+  -keystore .signing/candy-release.keystore \
+  -storetype PKCS12 \
+  -alias candy \
+  -keyalg RSA \
+  -keysize 4096 \
+  -validity 10000
+```
+
+For an ignored project file:
+
+```bash
+cp keystore.properties.example keystore.properties
+# Replace every placeholder in keystore.properties, then:
+./gradlew assembleRelease
+```
+
+Alternatively, export the same values from `~/.zshrc.shared`:
+
+```bash
+export CANDY_RELEASE_KEYSTORE_PATH=/absolute/path/to/project/.signing/candy-release.keystore
+export CANDY_RELEASE_STORE_PASSWORD='replace-me'
+export CANDY_RELEASE_KEY_ALIAS='candy'
+export CANDY_RELEASE_KEY_PASSWORD='replace-me'
+```
+
+Signed APK: `app/build/outputs/apk/release/app-release.apk`
+
+### GitHub releases
+
+The manual `Release Android APK` workflow tests the selected source revision, builds and verifies a
+signed APK, creates a `v<version>` source tag, and publishes the APK plus its SHA-256 checksum. Add
+four repository secrets once:
+
+```bash
+base64 < "$CANDY_RELEASE_KEYSTORE_PATH" | gh secret set CANDY_RELEASE_KEYSTORE_BASE64
+printf '%s' "$CANDY_RELEASE_STORE_PASSWORD" | gh secret set CANDY_RELEASE_STORE_PASSWORD
+printf '%s' "$CANDY_RELEASE_KEY_ALIAS" | gh secret set CANDY_RELEASE_KEY_ALIAS
+printf '%s' "$CANDY_RELEASE_KEY_PASSWORD" | gh secret set CANDY_RELEASE_KEY_PASSWORD
+```
+
+Pin the public certificate fingerprint separately. This prevents an accidentally replaced keystore
+from publishing an APK that installed copies cannot update to:
+
+```bash
+keytool -exportcert \
+  -keystore "$CANDY_RELEASE_KEYSTORE_PATH" \
+  -storepass:env CANDY_RELEASE_STORE_PASSWORD \
+  -alias "$CANDY_RELEASE_KEY_ALIAS" \
+  | shasum -a 256 \
+  | awk '{print $1}' \
+  | gh variable set CANDY_RELEASE_CERTIFICATE_SHA256
+```
+
+The workflow uses the `release` GitHub environment. Configure required reviewers for that environment
+if releases should require a manual approval after dispatch.
+
+Then dispatch a release from GitHub Actions or with GitHub CLI:
+
+```bash
+gh workflow run release.yml \
+  -f version=0.2 \
+  -f prerelease=false
+```
+
+Android `versionCode` comes from the monotonically increasing GitHub workflow run number. Tags and
+releases are created only after tests, lint, APK signing, certificate pinning, and signature
+verification succeed. Back up the original keystore and credentials securely: Android updates must
+always use the same signing key.
 
 ## Privacy and limitations
 

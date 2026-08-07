@@ -168,6 +168,7 @@ internal fun FavoriteToggleFeedback(
 internal fun ExpressiveFavoriteRows(
     favorites: List<FavoriteEntry>,
     onFavorite: (String) -> Unit,
+    enabled: Boolean = true,
 ) {
     val targetFavorites = favorites.take(MAX_VISIBLE_FAVORITES)
     val initialFavorites = remember { targetFavorites }
@@ -203,6 +204,7 @@ internal fun ExpressiveFavoriteRows(
             key(row.entry.url) {
                 AnimatedFavoriteRow(
                     row = row,
+                    enabled = enabled,
                     onClick = { onFavorite(row.entry.url) },
                     onExited = { if (!row.visible) rows.remove(row) },
                 )
@@ -214,6 +216,7 @@ internal fun ExpressiveFavoriteRows(
 @Composable
 private fun AnimatedFavoriteRow(
     row: FavoriteRowState,
+    enabled: Boolean,
     onClick: () -> Unit,
     onExited: () -> Unit,
 ) {
@@ -238,7 +241,7 @@ private fun AnimatedFavoriteRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onClick)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
