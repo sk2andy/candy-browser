@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sk2andy/candy-browser/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/sk2andy/candy-browser?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/sk2andy/candy-browser/releases"><img alt="Release" src="https://img.shields.io/github/v/release/sk2andy/candy-browser?display_name=tag&sort=semver"></a>
   <img alt="Android 14+" src="https://img.shields.io/badge/Android-14%2B-3DDC84?logo=android&logoColor=white">
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-1.9.24-7F52FF?logo=kotlin&logoColor=white">
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white">
@@ -86,9 +86,9 @@
 
 ## Download
 
-Version **0.4** requires Android 14 (API 34) or newer.
+Candy Browser requires Android 14 (API 34) or newer.
 
-[Download Candy Browser v0.4](https://github.com/sk2andy/candy-browser/releases/download/v0.4/CandyBrowser-v0.4-release.apk)
+[Download Candy Browser](https://github.com/sk2andy/candy-browser/releases)
 
 Android may ask you to allow installation from your browser or file manager. Releases outside
 Google Play do not update automatically.
