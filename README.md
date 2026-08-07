@@ -42,7 +42,8 @@
 ### Browsing and gestures
 
 - Floating bottom chrome over edge-to-edge WebView content
-- Pull to refresh, direct URL navigation, QR scanning, and address autocomplete
+- Pull to refresh, direct URL navigation, QR scanning, local domain completion, and optional
+  provider-backed search suggestions (disabled in private tabs)
 - Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, and Qwant search
 - Address commands with `>` for tab, profile, cache, cookie, and navigation actions
 - Background tabs, downloads, sharing, printing, external apps, and assistant summaries
@@ -101,7 +102,9 @@ Requirements: Android SDK 35 and JDK 17. Point `JAVA_HOME` to your JDK 17 instal
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
+Debug APK: `app/build/outputs/apk/debug/app-debug.apk`. It installs as
+`dev.sk2andy.materialbrowser.debug`, uses the label `Candy Browser Debug`, and has a badged launcher
+icon, so it can stay installed beside the release app.
 
 ### Signed release builds
 

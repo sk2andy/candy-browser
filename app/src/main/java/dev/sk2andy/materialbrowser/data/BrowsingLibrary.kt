@@ -123,6 +123,46 @@ internal object BrowsingLibraryRules {
             .take(limit.coerceAtLeast(0))
     }
 
+    fun domainCompletion(
+        history: List<HistoryEntry>,
+        favorites: List<FavoriteEntry>,
+        tabs: List<BrowserTab>,
+        selectedTabId: String,
+        isIncognito: Boolean,
+        query: String,
+    ): String? {
+        val value = query.trim()
+        val prefix = value.lowercase(Locale.ROOT)
+        if (
+            prefix.isEmpty() ||
+            value != query ||
+            prefix.any(Char::isWhitespace) ||
+            prefix.any { it == '/' || it == ':' || it == '@' }
+        ) {
+            return null
+        }
+        val candidateUrls = buildList {
+            tabs.asSequence()
+                .filter { it.id != selectedTabId && it.isIncognito == isIncognito }
+                .sortedByDescending(BrowserTab::lastAccessedAt)
+                .map(BrowserTab::url)
+                .forEach(::add)
+            if (!isIncognito) {
+                favorites.asSequence().map(FavoriteEntry::url).forEach(::add)
+                history.asSequence()
+                    .sortedByDescending(HistoryEntry::lastVisitedAt)
+                    .map(HistoryEntry::url)
+                    .forEach(::add)
+            }
+        }
+        return candidateUrls.asSequence()
+            .mapNotNull(::completionHost)
+            .distinctBy { it.lowercase(Locale.ROOT) }
+            .firstOrNull { host ->
+                host.length > prefix.length && host.lowercase(Locale.ROOT).startsWith(prefix)
+            }
+    }
+
     fun toggleFavorite(
         current: List<FavoriteEntry>,
         entry: FavoriteEntry,
@@ -147,6 +187,10 @@ internal object BrowsingLibraryRules {
     private fun displayHost(url: String): String = runCatching {
         URI(url).host?.removePrefix("www.")
     }.getOrNull().orEmpty().ifEmpty { url }
+
+    private fun completionHost(url: String): String? = runCatching {
+        URI(url).host?.removePrefix("www.")?.takeIf(String::isNotBlank)
+    }.getOrNull()
 
     private data class ScoredHistory(
         val entry: HistoryEntry,

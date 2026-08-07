@@ -9,6 +9,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -241,6 +242,15 @@ class BrowserSessionStore(context: Context) {
         preferences.edit().putString(KEY_SEARCH_ENGINE, searchEngine.stableId).apply()
     }
 
+    fun loadSearchSuggestionProvider(): SearchSuggestionProvider =
+        SearchSuggestionProvider.fromStableId(
+            preferences.getString(KEY_SEARCH_SUGGESTION_PROVIDER, null),
+        )
+
+    fun saveSearchSuggestionProvider(provider: SearchSuggestionProvider) {
+        preferences.edit().putString(KEY_SEARCH_SUGGESTION_PROVIDER, provider.stableId).apply()
+    }
+
     fun loadDismissResistancePercent(): Int =
         preferences.getInt(
             KEY_DISMISS_RESISTANCE_START_PERCENT,
@@ -296,6 +306,7 @@ class BrowserSessionStore(context: Context) {
         const val KEY_FAVORITES = "favorites"
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
         const val KEY_SEARCH_ENGINE = "search_engine"
+        const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
         const val DEFAULT_DISMISS_RESISTANCE_START_PERCENT = 40

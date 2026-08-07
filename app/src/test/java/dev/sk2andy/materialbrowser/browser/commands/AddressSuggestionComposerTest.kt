@@ -48,4 +48,36 @@ class AddressSuggestionComposerTest {
         assertEquals(5, result.count { it is AddressSuggestionItem.Navigation })
         assertTrue(result.last() is AddressSuggestionItem.Command)
     }
+
+    @Test
+    fun `remote searches follow local navigation and precede command`() {
+        val result = AddressSuggestionComposer.compose(
+            query = "reload",
+            navigation = navigation,
+            commands = listOf(command),
+            searchQueries = listOf("reload page", "reload browser"),
+            limit = 6,
+        )
+
+        assertTrue(result.first() is AddressSuggestionItem.Navigation)
+        assertEquals(
+            listOf("reload page", "reload browser"),
+            result.filterIsInstance<AddressSuggestionItem.Search>().map { it.query },
+        )
+        assertTrue(result.last() is AddressSuggestionItem.Command)
+    }
+
+    @Test
+    fun `local navigation keeps one slot when remote searches fill small limit`() {
+        val result = AddressSuggestionComposer.compose(
+            query = "reload",
+            navigation = navigation,
+            commands = emptyList(),
+            searchQueries = listOf("one", "two", "three", "four"),
+            limit = 3,
+        )
+
+        assertTrue(result.first() is AddressSuggestionItem.Navigation)
+        assertEquals(2, result.count { it is AddressSuggestionItem.Search })
+    }
 }

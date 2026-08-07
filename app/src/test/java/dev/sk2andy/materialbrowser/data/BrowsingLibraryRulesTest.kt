@@ -209,6 +209,73 @@ class BrowsingLibraryRulesTest {
     }
 
     @Test
+    fun `domain completion prioritizes open tabs then favorites then history`() {
+        val completion = BrowsingLibraryRules.domainCompletion(
+            history = listOf(HistoryEntry("https://github-history.example/", "History", 30)),
+            favorites = listOf(FavoriteEntry("https://github-favorite.example/", "Favorite", 20)),
+            tabs = listOf(
+                browserTab(id = "current", url = BLANK_URL),
+                browserTab(id = "open", url = "https://www.github.com/project"),
+            ),
+            selectedTabId = "current",
+            isIncognito = false,
+            query = "git",
+        )
+
+        assertEquals("github.com", completion)
+    }
+
+    @Test
+    fun `private domain completion never reveals regular browsing library`() {
+        val completion = BrowsingLibraryRules.domainCompletion(
+            history = listOf(HistoryEntry("https://secret-history.example/", "History", 30)),
+            favorites = listOf(FavoriteEntry("https://secret-favorite.example/", "Favorite", 20)),
+            tabs = listOf(
+                browserTab(id = "current", url = BLANK_URL, isIncognito = true),
+                browserTab(
+                    id = "private",
+                    url = "https://secret-private.example/",
+                    isIncognito = true,
+                ),
+                browserTab(id = "regular", url = "https://secret-regular.example/"),
+            ),
+            selectedTabId = "current",
+            isIncognito = true,
+            query = "secret",
+        )
+
+        assertEquals("secret-private.example", completion)
+    }
+
+    @Test
+    fun `domain completion rejects path whitespace and completed hosts`() {
+        val history = listOf(HistoryEntry("https://github.com/", "GitHub", 30))
+
+        assertEquals(
+            null,
+            BrowsingLibraryRules.domainCompletion(
+                history,
+                emptyList(),
+                emptyList(),
+                "current",
+                false,
+                "git hub",
+            ),
+        )
+        assertEquals(
+            null,
+            BrowsingLibraryRules.domainCompletion(
+                history,
+                emptyList(),
+                emptyList(),
+                "current",
+                false,
+                "github.com",
+            ),
+        )
+    }
+
+    @Test
     fun `favorite toggle adds then removes canonical URL`() {
         val favorite = FavoriteEntry("https://Example.com:443/#one", "Example", 10)
         val added = BrowsingLibraryRules.toggleFavorite(emptyList(), favorite)

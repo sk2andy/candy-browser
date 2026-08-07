@@ -59,6 +59,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -179,26 +180,17 @@ internal fun GestureOnboardingScreen(
 
     BackHandler(enabled = true) { }
     LaunchedEffect(welcomeVisible, celebrationVisible, step) {
-        dragX = 0f
-        dragY = 0f
         if (!welcomeVisible) lessonScrollState.scrollTo(0)
     }
 
     fun completeStep() {
+        dragX = 0f
+        dragY = 0f
         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
         if (stepIndex == steps.lastIndex) {
             celebrationVisible = true
         } else {
             stepIndex++
-        }
-    }
-
-    fun finishGesture() {
-        if (GestureOnboardingRules.isCompleted(step, dragX, dragY, threshold)) {
-            completeStep()
-        } else {
-            dragX = 0f
-            dragY = 0f
         }
     }
 
@@ -210,6 +202,10 @@ internal fun GestureOnboardingScreen(
         GestureOnboardingStep.CloseTab,
         -> key == Key.DirectionUp
     }
+
+    val currentStep by rememberUpdatedState(step)
+    val currentThreshold by rememberUpdatedState(threshold)
+    val currentCompleteStep by rememberUpdatedState { completeStep() }
 
     val gestureModifier = Modifier
         .testTag("gesture_onboarding_${step.name}")
@@ -231,7 +227,7 @@ internal fun GestureOnboardingScreen(
             handlesEvent
         }
         .focusable()
-        .pointerInput(step, threshold) {
+        .pointerInput(Unit) {
             awaitEachGesture {
                 val down = awaitFirstDown(
                     requireUnconsumed = false,
@@ -256,7 +252,19 @@ internal fun GestureOnboardingScreen(
                     }
                 }
                 if (released) {
-                    finishGesture()
+                    if (
+                        GestureOnboardingRules.isCompleted(
+                            currentStep,
+                            dragX,
+                            dragY,
+                            currentThreshold,
+                        )
+                    ) {
+                        currentCompleteStep()
+                    } else {
+                        dragX = 0f
+                        dragY = 0f
+                    }
                 } else {
                     dragX = 0f
                     dragY = 0f
@@ -898,10 +906,9 @@ private fun GesturePracticeArea(
         when (step) {
             GestureOnboardingStep.PullToRefresh ->
                 PullToRefreshPractice(dragY, modifier)
-            GestureOnboardingStep.SwitchTabs ->
-                SwitchTabsPractice(dragX, modifier)
-            GestureOnboardingStep.OpenTabOverview ->
-                OpenTabOverviewPractice(dragY, modifier)
+            GestureOnboardingStep.SwitchTabs,
+            GestureOnboardingStep.OpenTabOverview,
+            -> AddressBarGesturePractice(step, dragX, dragY, modifier)
             GestureOnboardingStep.CloseTab ->
                 CloseTabPractice(dragY, modifier)
         }
@@ -1023,26 +1030,12 @@ private fun PullToRefreshPractice(dragY: Float, modifier: Modifier) {
 }
 
 @Composable
-private fun SwitchTabsPractice(dragX: Float, modifier: Modifier) {
-    Box(Modifier.fillMaxSize()) {
-        FakeBrowserPage(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.tertiaryContainer),
-            accent = MaterialTheme.colorScheme.tertiary,
-        )
-        FakeBrowserPage(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset { IntOffset((dragX * 0.55f).roundToInt(), 0) },
-            accent = MaterialTheme.colorScheme.primary,
-            addressBarModifier = modifier,
-        )
-    }
-}
-
-@Composable
-private fun OpenTabOverviewPractice(dragY: Float, modifier: Modifier) {
+private fun AddressBarGesturePractice(
+    step: GestureOnboardingStep,
+    dragX: Float,
+    dragY: Float,
+    modifier: Modifier,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1056,11 +1049,26 @@ private fun OpenTabOverviewPractice(dragY: Float, modifier: Modifier) {
             ),
         contentAlignment = Alignment.Center,
     ) {
-        MiniTabCard(modifier = Modifier.width(190.dp))
+        if (step == GestureOnboardingStep.SwitchTabs) {
+            FakeBrowserPage(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.tertiaryContainer),
+                accent = MaterialTheme.colorScheme.tertiary,
+            )
+        } else {
+            MiniTabCard(modifier = Modifier.width(190.dp))
+        }
         FakeBrowserPage(
             modifier = Modifier
                 .fillMaxSize()
-                .offset { IntOffset(0, (dragY.coerceAtMost(0f) * 0.58f).roundToInt()) },
+                .offset {
+                    if (step == GestureOnboardingStep.SwitchTabs) {
+                        IntOffset((dragX * 0.55f).roundToInt(), 0)
+                    } else {
+                        IntOffset(0, (dragY.coerceAtMost(0f) * 0.58f).roundToInt())
+                    }
+                },
             accent = MaterialTheme.colorScheme.primary,
             addressBarModifier = modifier,
         )

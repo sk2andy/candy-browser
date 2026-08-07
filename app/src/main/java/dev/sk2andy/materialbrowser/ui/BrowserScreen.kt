@@ -39,11 +39,14 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -231,6 +234,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionRules
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionItem
 import dev.sk2andy.materialbrowser.browser.commands.AddressSubmission
@@ -272,6 +278,11 @@ private data class TabHandoff(
     val isIncognito: Boolean,
     val previewTopInsetPx: Int,
 )
+
+internal object AddressSuggestionTestTags {
+    fun searchRow(query: String): String = "address_search_suggestion:$query"
+    fun fillSearch(query: String): String = "address_search_suggestion_fill:$query"
+}
 
 private data class TabExitHero(
     val tabId: String,
@@ -318,6 +329,8 @@ fun BrowserScreen(controller: BrowserController) {
     var editingCapsuleId by remember { mutableStateOf<String?>(null) }
     var pendingCapsuleDelete by remember { mutableStateOf<SiteCapsule?>(null) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
+    var remoteSearchSuggestions by remember { mutableStateOf(emptyList<String>()) }
+    val searchSuggestionClient = remember { SearchSuggestionClient() }
     var highlightedSuggestionIndex by remember { mutableIntStateOf(-1) }
     var addressFocusNonce by remember { mutableIntStateOf(0) }
     var pendingCommand by remember { mutableStateOf<CommandSuggestion?>(null) }
@@ -427,10 +440,47 @@ fun BrowserScreen(controller: BrowserController) {
             addressFocusNonce++
         }
     }
+    LaunchedEffect(
+        addressEditorVisible,
+        addressValue.text,
+        controller.searchSuggestionProvider,
+        selectedTab.id,
+        selectedTab.isIncognito,
+    ) {
+        remoteSearchSuggestions = emptyList()
+        if (
+            !addressEditorVisible ||
+            !SearchSuggestionRules.shouldRequest(
+                query = addressValue.text,
+                provider = controller.searchSuggestionProvider,
+                isIncognito = selectedTab.isIncognito,
+            )
+        ) {
+            return@LaunchedEffect
+        }
+        delay(SearchSuggestionRules.DEBOUNCE_MILLIS)
+        remoteSearchSuggestions = searchSuggestionClient.suggestions(
+            provider = controller.searchSuggestionProvider,
+            query = addressValue.text.trim(),
+        )
+    }
     val suggestionItems = if (addressEditorVisible) {
-        controller.addressSuggestionItems(addressValue.text, limit = 10)
+        controller.addressSuggestionItems(
+            query = addressValue.text,
+            searchQueries = remoteSearchSuggestions,
+            limit = 10,
+        )
     } else {
         emptyList()
+    }
+    val domainCompletion = if (
+        addressEditorVisible &&
+        addressValue.selection.start == addressValue.selection.end &&
+        addressValue.selection.end == addressValue.text.length
+    ) {
+        controller.addressDomainCompletion(addressValue.text)
+    } else {
+        null
     }
     val commandActions = object : CommandActions {
         override fun clearCacheAndReload(): Boolean = controller.clearCacheAndReload()
@@ -526,6 +576,7 @@ fun BrowserScreen(controller: BrowserController) {
         val target = suggestion.openTabId
             ?.let { tabId -> controller.activeTabs.firstOrNull { it.id == tabId } }
         if (target == null) {
+            rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             controller.submitAddress(suggestion.url)
         } else {
             val targetHandoff = TabHandoff(
@@ -552,7 +603,24 @@ fun BrowserScreen(controller: BrowserController) {
         when (item) {
             is AddressSuggestionItem.Navigation -> selectNavigation(item.suggestion)
             is AddressSuggestionItem.Command -> selectCommand(item.suggestion)
+            is AddressSuggestionItem.Search -> {
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                controller.submitAddress(item.query)
+                addressEditorVisible = false
+            }
         }
+    }
+
+    fun fillAddressFromSuggestion(item: AddressSuggestionItem): Unit {
+        val text = when (item) {
+            is AddressSuggestionItem.Navigation -> item.suggestion.url
+            is AddressSuggestionItem.Search -> item.query
+            is AddressSuggestionItem.Command -> return
+        }
+        addressValue = TextFieldValue(text = text, selection = TextRange(text.length))
+        highlightedSuggestionIndex = -1
+        addressFocusNonce++
+        rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
     }
 
     fun submitAddressOrCommand(input: String): Unit {
@@ -799,6 +867,7 @@ fun BrowserScreen(controller: BrowserController) {
                     highlightedIndex = highlightedSuggestionIndex,
                     onHighlight = { highlightedSuggestionIndex = it },
                     onSelect = ::selectSuggestion,
+                    onFill = ::fillAddressFromSuggestion,
                     rootHeightPx = browserHeightPx,
                     bottomBarTopPx = bottomBarTopPx,
                     modifier = Modifier.align(Alignment.BottomCenter),
@@ -817,12 +886,27 @@ fun BrowserScreen(controller: BrowserController) {
             onAddress = openAddressEditor,
             editValue = addressValue,
             onEditValueChange = { addressValue = it },
+            ghostCompletion = domainCompletion,
+            onAcceptGhostCompletion = {
+                domainCompletion?.let { completion ->
+                    addressValue = TextFieldValue(
+                        text = completion,
+                        selection = TextRange(completion.length),
+                    )
+                    rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                }
+            },
             addressFocusNonce = addressFocusNonce,
             onMoveAddressSuggestion = ::moveSuggestionHighlight,
             onActivateAddressSuggestion = {
                 val highlighted = suggestionItems.getOrNull(highlightedSuggestionIndex)
                 if (highlighted == null) {
-                    submitAddressOrCommand(addressValue.text)
+                    submitAddressOrCommand(
+                        AddressEditorCompletionRules.submissionText(
+                            input = addressValue.text,
+                            ghostCompletion = domainCompletion,
+                        ),
+                    )
                 } else {
                     selectSuggestion(highlighted)
                 }
@@ -1059,6 +1143,7 @@ fun BrowserScreen(controller: BrowserController) {
                 blockerSettings = controller.blockerSettings,
                 inactiveTabLifetime = controller.inactiveTabLifetime,
                 searchEngine = controller.searchEngine,
+                searchSuggestionProvider = controller.searchSuggestionProvider,
                 tabOverviewMode = controller.tabOverviewMode,
                 dismissResistancePercent = controller.dismissResistancePercent,
                 blockedCount = selectedTab.blockedCount,
@@ -1067,6 +1152,7 @@ fun BrowserScreen(controller: BrowserController) {
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onSearchEngineChanged = controller::updateSearchEngine,
+                onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onRequestDefaultBrowser = controller::requestDefaultBrowserRole,
@@ -2168,6 +2254,8 @@ private fun BrowserBottomBar(
     onAddress: () -> Unit,
     editValue: TextFieldValue,
     onEditValueChange: (TextFieldValue) -> Unit,
+    ghostCompletion: String?,
+    onAcceptGhostCompletion: () -> Unit,
     addressFocusNonce: Int,
     onMoveAddressSuggestion: (Int) -> Unit,
     onActivateAddressSuggestion: () -> Unit,
@@ -2387,6 +2475,8 @@ private fun BrowserBottomBar(
                                 editing = editing,
                                 editValue = editValue,
                                 onEditValueChange = onEditValueChange,
+                                ghostCompletion = ghostCompletion,
+                                onAcceptGhostCompletion = onAcceptGhostCompletion,
                                 focusRequester = focusRequester,
                                 onMoveAddressSuggestion = onMoveAddressSuggestion,
                                 onActivateAddressSuggestion = onActivateAddressSuggestion,
@@ -2696,6 +2786,8 @@ private fun ExpandedBottomBarContent(
     editing: Boolean,
     editValue: TextFieldValue,
     onEditValueChange: (TextFieldValue) -> Unit,
+    ghostCompletion: String?,
+    onAcceptGhostCompletion: () -> Unit,
     focusRequester: androidx.compose.ui.focus.FocusRequester,
     onMoveAddressSuggestion: (Int) -> Unit,
     onActivateAddressSuggestion: () -> Unit,
@@ -2794,6 +2886,19 @@ private fun ExpandedBottomBarContent(
                                             }
                                             true
                                         }
+                                        Key.DirectionRight,
+                                        Key.Tab,
+                                        -> if (
+                                            event.type == KeyEventType.KeyDown &&
+                                            ghostCompletion != null &&
+                                            editValue.selection.start == editValue.text.length &&
+                                            editValue.selection.end == editValue.text.length
+                                        ) {
+                                            onAcceptGhostCompletion()
+                                            true
+                                        } else {
+                                            false
+                                        }
                                         else -> false
                                     }
                                 }
@@ -2805,7 +2910,14 @@ private fun ExpandedBottomBarContent(
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                             keyboardActions = KeyboardActions(
-                                onGo = { onSubmitAddress(editValue.text) },
+                                onGo = {
+                                    onSubmitAddress(
+                                        AddressEditorCompletionRules.submissionText(
+                                            input = editValue.text,
+                                            ghostCompletion = ghostCompletion,
+                                        ),
+                                    )
+                                },
                             ),
                             decorationBox = { innerTextField ->
                                 Box(
@@ -2819,6 +2931,23 @@ private fun ExpandedBottomBarContent(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                         )
+                                    } else if (ghostCompletion != null) {
+                                        Row {
+                                            Text(
+                                                editValue.text,
+                                                color = Color.Transparent,
+                                                maxLines = 1,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                            )
+                                            Text(
+                                                ghostCompletion.drop(editValue.text.length),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    .copy(alpha = 0.58f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Clip,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                            )
+                                        }
                                     }
                                     innerTextField()
                                 }
@@ -3213,6 +3342,7 @@ private fun AddressSuggestions(
     highlightedIndex: Int,
     onHighlight: (Int) -> Unit,
     onSelect: (AddressSuggestionItem) -> Unit,
+    onFill: (AddressSuggestionItem) -> Unit,
     rootHeightPx: Float,
     bottomBarTopPx: Float,
     modifier: Modifier = Modifier,
@@ -3255,19 +3385,29 @@ private fun AddressSuggestions(
                 items = suggestions,
                 key = { _, suggestion -> suggestion.stableId },
             ) { index, suggestion ->
-                when (suggestion) {
-                    is AddressSuggestionItem.Navigation -> NavigationSuggestionRow(
-                        suggestion = suggestion.suggestion,
-                        highlighted = index == highlightedIndex,
-                        onHighlight = { onHighlight(index) },
-                        onClick = { onSelect(suggestion) },
-                    )
-                    is AddressSuggestionItem.Command -> CommandSuggestionRow(
-                        suggestion = suggestion.suggestion,
-                        highlighted = index == highlightedIndex,
-                        onHighlight = { onHighlight(index) },
-                        onClick = { onSelect(suggestion) },
-                    )
+                Box(Modifier.animateItem()) {
+                    when (suggestion) {
+                        is AddressSuggestionItem.Navigation -> NavigationSuggestionRow(
+                            suggestion = suggestion.suggestion,
+                            highlighted = index == highlightedIndex,
+                            onHighlight = { onHighlight(index) },
+                            onClick = { onSelect(suggestion) },
+                            onFill = { onFill(suggestion) },
+                        )
+                        is AddressSuggestionItem.Command -> CommandSuggestionRow(
+                            suggestion = suggestion.suggestion,
+                            highlighted = index == highlightedIndex,
+                            onHighlight = { onHighlight(index) },
+                            onClick = { onSelect(suggestion) },
+                        )
+                        is AddressSuggestionItem.Search -> SearchSuggestionRow(
+                            query = suggestion.query,
+                            highlighted = index == highlightedIndex,
+                            onHighlight = { onHighlight(index) },
+                            onClick = { onSelect(suggestion) },
+                            onFill = { onFill(suggestion) },
+                        )
+                    }
                 }
             }
         }
@@ -3280,7 +3420,19 @@ private fun NavigationSuggestionRow(
     highlighted: Boolean,
     onHighlight: () -> Unit,
     onClick: () -> Unit,
+    onFill: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = when {
+            pressed -> 0.985f
+            highlighted -> 1.008f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 720f),
+        label = "Navigation suggestion press",
+    )
     val switchesToOpenTab = suggestion.openTabId != null
     val containerColor = when {
         highlighted -> MaterialTheme.colorScheme.tertiaryContainer
@@ -3297,11 +3449,20 @@ private fun NavigationSuggestionRow(
             .padding(horizontal = 6.dp, vertical = 1.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .semantics(mergeDescendants = true) { selected = highlighted }
-            .clickable(role = Role.Button) {
-                onHighlight()
-                onClick()
-            },
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .semantics { selected = highlighted }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                role = Role.Button,
+                onClick = {
+                    onHighlight()
+                    onClick()
+                },
+            ),
         shape = RoundedCornerShape(16.dp),
         color = containerColor,
     ) {
@@ -3341,6 +3502,108 @@ private fun NavigationSuggestionRow(
                     color = contentColor,
                     style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
+                )
+            }
+            IconButton(onClick = onFill, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    painterResource(R.drawable.ic_north_east),
+                    contentDescription = stringResource(
+                        R.string.cd_fill_address_suggestion,
+                        suggestion.url,
+                    ),
+                    modifier = Modifier.size(20.dp),
+                    tint = contentColor,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SearchSuggestionRow(
+    query: String,
+    highlighted: Boolean,
+    onHighlight: () -> Unit,
+    onClick: () -> Unit,
+    onFill: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = when {
+            pressed -> 0.985f
+            highlighted -> 1.008f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 720f),
+        label = "Search suggestion press",
+    )
+    val containerColor = if (highlighted) {
+        MaterialTheme.colorScheme.tertiaryContainer
+    } else {
+        Color.Transparent
+    }
+    val contentColor = if (highlighted) {
+        MaterialTheme.colorScheme.onTertiaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    Surface(
+        modifier = Modifier
+            .padding(horizontal = 6.dp, vertical = 1.dp)
+            .fillMaxWidth()
+            .testTag(AddressSuggestionTestTags.searchRow(query))
+            .clip(RoundedCornerShape(16.dp))
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .semantics { selected = highlighted }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                role = Role.Button,
+                onClick = {
+                    onHighlight()
+                    onClick()
+                },
+            ),
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor,
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 10.dp, end = 2.dp, top = 5.dp, bottom = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = contentColor,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                query,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor,
+            )
+            IconButton(
+                onClick = onFill,
+                modifier = Modifier
+                    .size(40.dp)
+                    .testTag(AddressSuggestionTestTags.fillSearch(query)),
+            ) {
+                Icon(
+                    painterResource(R.drawable.ic_north_east),
+                    contentDescription = stringResource(
+                        R.string.cd_fill_address_suggestion,
+                        query,
+                    ),
+                    modifier = Modifier.size(20.dp),
+                    tint = contentColor,
                 )
             }
         }
@@ -6419,6 +6682,7 @@ private fun SettingsScreen(
     blockerSettings: BlockerSettings,
     inactiveTabLifetime: InactiveTabLifetime,
     searchEngine: SearchEngine,
+    searchSuggestionProvider: SearchSuggestionProvider,
     tabOverviewMode: TabOverviewMode,
     dismissResistancePercent: Int,
     blockedCount: Int,
@@ -6427,6 +6691,7 @@ private fun SettingsScreen(
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
+    onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onRequestDefaultBrowser: () -> Unit,
@@ -6440,6 +6705,7 @@ private fun SettingsScreen(
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
     var searchEngineMenuExpanded by remember { mutableStateOf(false) }
+    var searchSuggestionMenuExpanded by remember { mutableStateOf(false) }
     var overviewModeMenuExpanded by remember { mutableStateOf(false) }
     var resistancePercent by remember(dismissResistancePercent) {
         mutableFloatStateOf(dismissResistancePercent.toFloat())
@@ -6506,6 +6772,48 @@ private fun SettingsScreen(
                     }
                 }
             }
+            Spacer(Modifier.height(12.dp))
+            Box {
+                SettingsChoice(
+                    title = stringResource(R.string.settings_search_suggestions),
+                    value = searchSuggestionProvider.displayName(),
+                    expanded = searchSuggestionMenuExpanded,
+                    onClick = { searchSuggestionMenuExpanded = true },
+                )
+                DropdownMenu(
+                    expanded = searchSuggestionMenuExpanded,
+                    onDismissRequest = { searchSuggestionMenuExpanded = false },
+                    modifier = Modifier.clip(RoundedCornerShape(24.dp)),
+                    shape = RoundedCornerShape(24.dp),
+                ) {
+                    SearchSuggestionProvider.entries.forEach { provider ->
+                        DropdownMenuItem(
+                            text = { Text(provider.displayName()) },
+                            onClick = {
+                                searchSuggestionMenuExpanded = false
+                                onSearchSuggestionProviderChanged(provider)
+                            },
+                            trailingIcon = {
+                                if (provider == searchSuggestionProvider) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+            Text(
+                stringResource(
+                    if (searchSuggestionProvider == SearchSuggestionProvider.None) {
+                        R.string.settings_search_suggestions_none_summary
+                    } else {
+                        R.string.settings_search_suggestions_summary
+                    },
+                ),
+                modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_tabs))
@@ -6813,6 +7121,16 @@ private fun TabOverviewMode.displayName(): String = when (this) {
     TabOverviewMode.Hero -> stringResource(R.string.tab_overview_mode_hero)
     TabOverviewMode.Grid -> stringResource(R.string.tab_overview_mode_grid)
     TabOverviewMode.List -> stringResource(R.string.tab_overview_mode_list)
+}
+
+@Composable
+private fun SearchSuggestionProvider.displayName(): String = when (this) {
+    SearchSuggestionProvider.None -> stringResource(R.string.search_suggestion_provider_none)
+    SearchSuggestionProvider.DuckDuckGo -> "DuckDuckGo"
+    SearchSuggestionProvider.Brave -> "Brave Search"
+    SearchSuggestionProvider.Ecosia -> "Ecosia"
+    SearchSuggestionProvider.Qwant -> "Qwant"
+    SearchSuggestionProvider.Startpage -> "Startpage"
 }
 
 @Composable

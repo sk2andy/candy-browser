@@ -95,6 +95,40 @@ class GestureOnboardingScreenInstrumentedTest {
     }
 
     @Test
+    fun openOverviewAcceptsGestureOnFirstFrameAfterStepChange() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                GestureOnboardingScreen(onCompleted = {})
+            }
+        }
+
+        startTutorial()
+        composeRule.onNodeWithTag(tag(GestureOnboardingStep.PullToRefresh))
+            .performTouchInput { swipeDown() }
+        composeRule.onNodeWithTag(tag(GestureOnboardingStep.SwitchTabs)).assertIsDisplayed()
+
+        composeRule.mainClock.autoAdvance = false
+        try {
+            composeRule.onNodeWithTag(tag(GestureOnboardingStep.SwitchTabs))
+                .performTouchInput { swipeLeft() }
+            composeRule.mainClock.advanceTimeByFrame()
+
+            composeRule.onNodeWithTag(tag(GestureOnboardingStep.OpenTabOverview))
+                .performTouchInput {
+                    swipe(
+                        start = center,
+                        end = center + Offset(0f, -320f),
+                    )
+                }
+            composeRule.mainClock.advanceTimeByFrame()
+
+            composeRule.onNodeWithTag(tag(GestureOnboardingStep.CloseTab)).assertIsDisplayed()
+        } finally {
+            composeRule.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test
     fun skipCompletesFromTheWelcomePage() {
         val completed = AtomicBoolean(false)
         composeRule.setContent {

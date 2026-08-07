@@ -27,6 +27,7 @@
     <string name="search_or_enter_url">Pesquisar ou inserir um URL</string>
     <string name="cd_open_search">Abrir pesquisa</string>
     <string name="cd_close_address_input">Fechar introdução do endereço</string>
+    <string name="cd_fill_address_suggestion">Inserir %1$s na barra de endereço</string>
     <string name="cd_more_options">Mais opções</string>
     <string name="cd_scan_qr_code">Ler código QR</string>
     <string name="action_back">Voltar</string>
@@ -180,6 +181,10 @@
     </plurals>
     <string name="settings_section_search">Pesquisa</string>
     <string name="settings_search_engine">Motor de pesquisa</string>
+    <string name="settings_search_suggestions">Sugestões de pesquisa</string>
+    <string name="settings_search_suggestions_summary">Após três caracteres, o texto introduzido é enviado a este fornecedor. Desativado em separadores privados.</string>
+    <string name="settings_search_suggestions_none_summary">As sugestões permanecem locais. Nenhum texto introduzido é enviado a um fornecedor.</string>
+    <string name="search_suggestion_provider_none">Nenhuma</string>
     <string name="settings_section_browser">Navegador</string>
     <string name="settings_default_browser">Navegador predefinido</string>
     <string name="settings_default_browser_active">O Candy Browser é o seu navegador predefinido</string>

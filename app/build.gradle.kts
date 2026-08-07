@@ -38,6 +38,7 @@ android {
         targetSdk = 35
         versionCode = candyVersionCode.get().toInt()
         versionName = candyVersionName.get()
+        manifestPlaceholders["appLabel"] = "@string/app_name"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -54,6 +55,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            manifestPlaceholders["appLabel"] = "Candy Browser Debug"
+        }
+
         release {
             isMinifyEnabled = true
             if (hasReleaseSigning) {

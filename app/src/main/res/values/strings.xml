@@ -29,6 +29,7 @@
     <string name="search_or_enter_url">Search or enter a URL</string>
     <string name="cd_open_search">Open search</string>
     <string name="cd_close_address_input">Close address input</string>
+    <string name="cd_fill_address_suggestion">Fill address bar with %1$s</string>
     <string name="cd_more_options">More options</string>
     <string name="cd_scan_qr_code">Scan QR code</string>
     <string name="action_back">Back</string>
@@ -188,6 +189,10 @@
     </plurals>
     <string name="settings_section_search">Search</string>
     <string name="settings_search_engine">Search engine</string>
+    <string name="settings_search_suggestions">Search suggestions</string>
+    <string name="settings_search_suggestions_summary">After three characters, typed search text is sent to this provider. Disabled in private tabs.</string>
+    <string name="settings_search_suggestions_none_summary">Suggestions stay local. No typed text is sent to a suggestion provider.</string>
+    <string name="search_suggestion_provider_none">None</string>
     <string name="settings_section_browser">Browser</string>
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>

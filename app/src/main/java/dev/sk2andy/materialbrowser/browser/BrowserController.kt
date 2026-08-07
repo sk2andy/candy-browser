@@ -112,6 +112,7 @@ import dev.sk2andy.materialbrowser.browser.integration.DefaultBrowserRole
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.browser.integration.ExternalLaunchResult
 import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.integration.PageShareRequest
 import dev.sk2andy.materialbrowser.browser.integration.PageShareResult
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
@@ -166,6 +167,8 @@ class BrowserController(private val activity: Activity) {
     var inactiveTabLifetime by mutableStateOf(InactiveTabLifetime.Never)
         private set
     var searchEngine by mutableStateOf(SearchEngine.Google)
+        private set
+    var searchSuggestionProvider by mutableStateOf(SearchSuggestionProvider.DuckDuckGo)
         private set
     var dismissResistancePercent by mutableIntStateOf(40)
         private set
@@ -570,6 +573,7 @@ class BrowserController(private val activity: Activity) {
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
         searchEngine = store.loadSearchEngine()
+        searchSuggestionProvider = store.loadSearchSuggestionProvider()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
@@ -1707,7 +1711,11 @@ class BrowserController(private val activity: Activity) {
             }
         }
 
-    fun addressSuggestionItems(query: String, limit: Int = 10): List<AddressSuggestionItem> {
+    fun addressSuggestionItems(
+        query: String,
+        searchQueries: List<String> = emptyList(),
+        limit: Int = 10,
+    ): List<AddressSuggestionItem> {
         val duplicateTabIds = TabDuplicateRules.tabIdsToClose(activeTabs, selectedTabId)
         val expiredTabCount = TabRetentionRules.expiredTabIds(
             tabs = tabs,
@@ -1742,10 +1750,11 @@ class BrowserController(private val activity: Activity) {
             addressSuggestions(query, limit)
         }
         return AddressSuggestionComposer.compose(
-            query,
-            navigationMatches,
-            commandMatches,
-            if (CommandMatcher.isExplicitCommandQuery(query)) definitions.size else limit,
+            query = query,
+            navigation = navigationMatches,
+            commands = commandMatches,
+            searchQueries = searchQueries,
+            limit = if (CommandMatcher.isExplicitCommandQuery(query)) definitions.size else limit,
         )
     }
 
@@ -1771,6 +1780,15 @@ class BrowserController(private val activity: Activity) {
             query = query,
             limit = limit,
         )
+
+    fun addressDomainCompletion(query: String): String? = BrowsingLibraryRules.domainCompletion(
+        history = history,
+        favorites = favorites,
+        tabs = activeTabs,
+        selectedTabId = selectedTabId,
+        isIncognito = selectedTab.isIncognito,
+        query = query,
+    )
 
     val isSelectedTabFavorite: Boolean
         get() = !selectedTab.isIncognito && BrowsingLibraryRules.isFavorite(favorites, selectedTab.url)
@@ -1955,6 +1973,11 @@ class BrowserController(private val activity: Activity) {
     fun updateSearchEngine(engine: SearchEngine) {
         searchEngine = engine
         store.saveSearchEngine(engine)
+    }
+
+    fun updateSearchSuggestionProvider(provider: SearchSuggestionProvider) {
+        searchSuggestionProvider = provider
+        store.saveSearchSuggestionProvider(provider)
     }
 
     fun updateDismissResistancePercent(percent: Int) {
