@@ -269,4 +269,49 @@ object CandyCosmeticScript {
             "s.dataset.candyFilter='1';s.textContent='$escaped{display:none!important}';" +
             "(document.head||document.documentElement).appendChild(s)})()"
     }
+
+    fun createScoped(
+        rules: Collection<CandyRule>,
+        pausedHosts: Collection<String> = emptyList(),
+    ): String {
+        val encodedRules = CandyRuleValidator.normalizeAll(rules).asSequence()
+            .filter { rule ->
+                rule.active && rule.action == CandyRuleAction.Cosmetic &&
+                    rule.kind == CandyRuleKind.CosmeticCss
+            }
+            .mapNotNull { rule ->
+                val host = rule.firstPartyHost ?: return@mapNotNull null
+                val selector = rule.cosmeticSelector ?: return@mapNotNull null
+                val encodedSelector = Base64.getEncoder()
+                    .encodeToString(selector.toByteArray(Charsets.UTF_8))
+                "{host:'$host',selector:'$encodedSelector'}"
+            }
+            .joinToString(prefix = "[", postfix = "]")
+        if (encodedRules == "[]") return ""
+        val pauses = pausedHosts.asSequence()
+            .mapNotNull(CandyHostCanonicalizer::canonicalHost)
+            .distinct()
+            .take(64)
+            .joinToString(",") { "'$it'" }
+        return """
+            (function(){
+              if(top!==self)return;
+              var h=location.hostname.toLowerCase().replace(/\.$/,'');
+              if([$pauses].some(function(x){return h===x||h.endsWith('.'+x)}))return;
+              var decode=function(value){
+                var binary=atob(value);
+                var bytes=Uint8Array.from(binary,function(character){return character.charCodeAt(0)});
+                return new TextDecoder('utf-8').decode(bytes);
+              };
+              var selectors=$encodedRules
+                .filter(function(rule){return h===rule.host||h.endsWith('.'+rule.host)})
+                .map(function(rule){return decode(rule.selector)});
+              if(!selectors.length)return;
+              var s=document.createElement('style');
+              s.dataset.candyFilter='1';
+              s.textContent=selectors.join(',')+'{display:none!important}';
+              (document.head||document.documentElement).appendChild(s);
+            })()
+        """.trimIndent()
+    }
 }

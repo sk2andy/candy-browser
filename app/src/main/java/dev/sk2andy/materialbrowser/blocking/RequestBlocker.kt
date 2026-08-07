@@ -2,10 +2,12 @@ package dev.sk2andy.materialbrowser.blocking
 
 import java.net.URI
 
-class RequestBlocker(
+internal class RequestBlocker(
     hostRules: Sequence<String>,
     blockedHostPairs: Sequence<String> = emptySequence(),
     allowedHostPairs: Sequence<String> = emptySequence(),
+    private val candyRules: CandyMatcherSnapshot = CandyMatcherSnapshot.Empty,
+    private val bundledRequestRules: BundledRequestRules = BundledRequestRules.Empty,
 ) {
     private val blockedHosts = hostRules
         .map(String::trim)
@@ -44,8 +46,25 @@ class RequestBlocker(
         // Keep the current site functional when a list contains its own host. This mirrors the
         // first-party escape used by DuckDuckGo's Android tracker detector:
         // https://github.com/duckduckgo/Android/blob/4472de82e610b12689dcd2fc1b8421439020af62/app/src/main/java/com/duckduckgo/app/trackerdetection/TrackerDetectorImpl.kt
-        if (pageHost != null && isSameHostOrSubdomain(requestHost, pageHost)) return false
         if (isAllowedByFilterException(requestHost, pageHost)) return false
+        when (bundledRequestRules.decide(request, pageHost)) {
+            BundledRequestAction.Allow -> return false
+            BundledRequestAction.Block -> return true
+            null -> Unit
+        }
+        if (pageHost != null && isSameHostOrSubdomain(requestHost, pageHost)) return false
+        when (
+            candyRules.decide(
+                requestUrl = requestUrl,
+                pageUrl = pageUrl,
+                profileId = "",
+                isForMainFrame = false,
+            )?.action
+        ) {
+            CandyDecisionAction.Allow -> return false
+            CandyDecisionAction.Block -> return true
+            null -> Unit
+        }
         if (isBlockedByFilterPair(requestHost, pageHost)) return true
 
         var candidate = requestHost

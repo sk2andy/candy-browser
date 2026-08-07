@@ -5,6 +5,15 @@ import java.io.ByteArrayOutputStream
 
 class ContentBlocker(context: Context) {
     private val appContext = context.applicationContext
+    private val candyDefaultRules by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        BundledCandyRules.parseOrEmpty(readAssetOrEmpty("candy_default_rules.txt"))
+    }
+    private val consentActions by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        BundledConsentActions.parseOrEmpty(readAssetOrEmpty("candy_consent_actions.txt"))
+    }
+    private val bundledRequestRules by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        BundledRequestRules.parseOrEmpty(readAssetOrEmpty("candy_request_rules.txt"))
+    }
     private val requestBlocker by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         // Privacy Browser parses allow rules before block rules for the same WebView limitation:
         // https://www.stoutner.com/privacy-browser-android/filter-lists/
@@ -19,6 +28,8 @@ class ContentBlocker(context: Context) {
                 "easylist_allowed_host_pairs.txt",
                 "uassets_allowed_host_pairs.txt",
             ),
+            candyRules = candyDefaultRules.matcher,
+            bundledRequestRules = bundledRequestRules,
         )
     }
     private val consentCss by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
@@ -26,7 +37,11 @@ class ContentBlocker(context: Context) {
     }
     private val consentScripts = linkedMapOf<List<String>, String>()
     val consentScript: String by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        ConsentBlockerScript.create(consentCss)
+        ConsentBlockerScript.create(
+            cssBytes = consentCss,
+            siteRules = candyDefaultRules.cookieCosmeticRules,
+            actionRules = consentActions,
+        )
     }
     val consentCleanupScript: String = ConsentBlockerScript.cleanupScript
     val consentRemovalScript: String = ConsentBlockerScript.removalScript
@@ -42,13 +57,24 @@ class ContentBlocker(context: Context) {
             .sorted()
             .toList()
         consentScripts[key]?.let { return it }
-        return ConsentBlockerScript.create(consentCss, key).also { script ->
+        return ConsentBlockerScript.create(
+            cssBytes = consentCss,
+            pausedHosts = key,
+            siteRules = candyDefaultRules.cookieCosmeticRules,
+            actionRules = consentActions,
+        ).also { script ->
             if (consentScripts.size >= MAX_CONSENT_SCRIPT_VARIANTS) {
                 consentScripts.remove(consentScripts.keys.first())
             }
             consentScripts[key] = script
         }
     }
+
+    fun adCosmeticSelectors(pageUrl: String?): List<String> =
+        candyDefaultRules.adCosmeticSelectors(pageUrl)
+
+    val adCosmeticRules: List<CandyRule>
+        get() = candyDefaultRules.adCosmeticRules
 
     private fun loadLines(vararg assetNames: String): Sequence<String> = buildList {
         assetNames.forEach { assetName ->
@@ -57,6 +83,10 @@ class ContentBlocker(context: Context) {
             }
         }
     }.asSequence()
+
+    private fun readAssetOrEmpty(assetName: String): String = runCatching {
+        appContext.assets.open(assetName).bufferedReader().use { it.readText() }
+    }.getOrDefault("")
 
     private fun loadConsentCss(context: Context): ByteArray = ByteArrayOutputStream().use { output ->
         listOf("easylist_cookie_banner.css", "cookie_banner_overrides.css").forEach { assetName ->

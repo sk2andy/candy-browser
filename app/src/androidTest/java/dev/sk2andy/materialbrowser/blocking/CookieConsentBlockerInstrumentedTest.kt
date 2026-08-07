@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.blocking
 
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.webkit.WebViewCompat
@@ -9,6 +11,7 @@ import androidx.webkit.WebViewFeature
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import java.io.ByteArrayInputStream
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -213,6 +216,92 @@ class CookieConsentBlockerInstrumentedTest {
                 ].join('|');
             """.trimIndent(),
         ))
+    }
+
+    @Test
+    fun preservesClassBasedScrollLockWhenHiddenCmpExists() {
+        val view = loadPage(
+            """
+                <!doctype html>
+                <html><head><style>.unrelated-modal-open { overflow-y: hidden }</style></head>
+                <body class="unrelated-modal-open">
+                  <div id="CybotCookiebotDialog">Cookie banner</div>
+                  <div id="normal-modal">Unrelated modal</div>
+                </body></html>
+            """.trimIndent(),
+        )
+        evaluate(view, ContentBlocker(instrumentation.targetContext).consentScript)
+
+        assertEquals(
+            "\"hidden|cleared|none|block\"",
+            evaluate(
+                view,
+                """
+                    [
+                      getComputedStyle(document.body).overflowY,
+                      document.body.style.overflowY || 'cleared',
+                      getComputedStyle(document.getElementById('CybotCookiebotDialog')).display,
+                      getComputedStyle(document.getElementById('normal-modal')).display
+                    ].join('|');
+                """.trimIndent(),
+            ),
+        )
+    }
+
+    @Test
+    fun knownRejectActionRunsInsideCrossOriginFrame() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val frameNavigated = CountDownLatch(1)
+        val mainLoaded = CountDownLatch(1)
+        val createdView = AtomicReference<WebView>()
+        val script = ConsentBlockerScript.create(
+            cssBytes = ByteArray(0),
+            actionRules = listOf(
+                BundledConsentAction("cmp-reject", "cmp.test", "#reject-all"),
+            ),
+        )
+        instrumentation.runOnMainSync {
+            createdView.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    WebViewCompat.addDocumentStartJavaScript(this, script, setOf("*"))
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest,
+                        ): WebResourceResponse? {
+                            val html = when (request.url.toString()) {
+                                "https://top.test/" ->
+                                    "<html><body><iframe src='https://cmp.test/frame'></iframe></body></html>"
+                                "https://cmp.test/frame" ->
+                                    "<html><body><button id='reject-all' " +
+                                        "onclick=\"location.href='https://cmp.test/done'\">Reject</button></body></html>"
+                                "https://cmp.test/done" -> {
+                                    frameNavigated.countDown()
+                                    "<html><body>Done</body></html>"
+                                }
+                                else -> return null
+                            }
+                            return WebResourceResponse(
+                                "text/html",
+                                "utf-8",
+                                ByteArrayInputStream(html.toByteArray()),
+                            )
+                        }
+
+                        override fun onPageFinished(view: WebView, url: String) {
+                            if (url == "https://top.test/") mainLoaded.countDown()
+                        }
+                    }
+                    loadUrl("https://top.test/")
+                },
+            )
+        }
+        val view = createdView.get().also(webView::set)
+
+        assertTrue(mainLoaded.await(10, TimeUnit.SECONDS))
+        assertTrue(frameNavigated.await(10, TimeUnit.SECONDS))
+        assertEquals("\"https://top.test/\"", evaluate(view, "location.href"))
     }
 
     private fun loadPage(html: String): WebView {

@@ -1,0 +1,47 @@
+candy-rules:1
+# Candy Browser built-in defaults observed in the Tranco PYG5J emulator audit.
+# Audit date: 2026-08-07
+# Ranking: https://tranco-list.eu/list/PYG5J/1000000
+# Methodology: docs/audits/top-300-blocking.md
+# Live evidence: 300 isolated Android WebView profiles plus targeted web.de/gmx.net/nytimes.com probes.
+# Upstream corroboration: EasyList/uAssets selectors, pinned source revisions in bundled assets.
+# Rule count: 39
+rule	css	origin	nytimes.com	I2ZpZGVzLWJhbm5lci1jb250YWluZXI	nytimes-fides-banner	*	Candy Cookies	1
+rule	css	origin	nytimes.com	I2ZpZGVzLW92ZXJsYXk	nytimes-fides-overlay	*	Candy Cookies	1
+rule	css	origin	nytimes.com	LmZpZGVzLW1vZGFsLW92ZXJsYXk	nytimes-fides-modal-overlay	*	Candy Cookies	1
+rule	css	origin	web.de	ZGl2W2RhdGEtc2VydmljZS1zbG90LWluaXRpYWxpemVkXQ	web-de-service-ad-slot	*	Candy Ads	1
+rule	css	origin	web.de	LmFkdmVydG9yaWFsLmFkdi5hZC5jby1jb250YWluZXIuYWQtY29udGFpbg	web-de-advertorial-slot	*	Candy Ads	1
+rule	css	origin	web.de	LnJlZ2Jhbm5lcg	web-de-registration-promo	*	Candy Ads	1
+rule	css	origin	web.de	LmNvYy10b3A	web-de-empty-top-ad-wrapper	*	Candy Ads	1
+rule	css	origin	gmx.net	aWZyYW1lW2RhdGEtc2VydmljZS1zbG90XQ	gmx-service-ad-frame	*	Candy Ads	1
+rule	css	origin	gmx.net	LnJlZ2Jhbm5lcg	gmx-registration-promo	*	Candy Ads	1
+rule	css	origin	gmx.net	W2RhdGEtY29tcG9uZW50LXBhdGg9ImNvbnRlbnQudG9vbF9sb3R0b18xIl0	gmx-lotto-promo	*	Candy Ads	1
+rule	css	origin	gmx.net	LmFkLWJhbm5lcg	gmx-empty-top-ad-wrapper	*	Candy Ads	1
+rule	css	origin	nytimes.com	W2RhdGEtYWQtZWxlbWVudD0ib3V0ZXJfYWRfY29udGFpbmVyIl0	nytimes-outer-ad-container	*	Candy Ads	1
+rule	css	origin	nytimes.com	W2RhdGEtdGVzdGlkPSJTdGFuZGFyZEFkIl0	nytimes-standard-ad	*	Candy Ads	1
+rule	css	origin	bing.com	I2JucF9jb250YWluZXI	bing-cookie-banner	*	Candy Cookies	1
+rule	css	origin	roblox.com	LmNvb2tpZS1iYW5uZXI	roblox-cookie-banner	*	Candy Cookies	1
+rule	css	origin	yahoo.com	LmNvbnNlbnQtb3ZlcmxheQ	yahoo-consent-overlay	*	Candy Cookies	1
+rule	css	origin	msn.com	I2NtcC1iYW5uZXItc2Rr	msn-cmp-banner	*	Candy Cookies	1
+rule	css	origin	opera.com	I2Nvb2tpZS1jb25zZW50	opera-cookie-consent	*	Candy Cookies	1
+rule	css	origin	wordpress.com	LmE4Yy1jb29raWUtYmFubmVy	wordpress-cookie-banner	*	Candy Cookies	1
+rule	css	origin	gravatar.com	LmE4Yy1jb29raWUtYmFubmVy	gravatar-cookie-banner	*	Candy Cookies	1
+rule	css	origin	europa.eu	Lnd0LWNjay0tY29udGFpbmVy	europa-cookie-container	*	Candy Cookies	1
+rule	css	origin	shopify.com	I2R1eC1wcml2YWN5	shopify-privacy-banner	*	Candy Cookies	1
+rule	css	origin	forbes.com	I2tldGNoLWJhbm5lcg	forbes-ketch-banner	*	Candy Cookies	1
+rule	css	origin	ubuntu.com	ZGlhbG9nLmNvb2tpZS1wb2xpY3k	ubuntu-cookie-dialog	*	Candy Cookies	1
+rule	css	origin	roku.com	LnJva3UtY29va2llLWNvbnNlbnQ	roku-cookie-consent	*	Candy Cookies	1
+rule	css	origin	tinyurl.com	LmNvb2tpZS1jb25zZW50LXdyYXBwZXItLW92ZXJsYXk	tinyurl-cookie-overlay	*	Candy Cookies	1
+rule	css	origin	mail.ru	W2NsYXNzKj0iQWRzX2Fkc19fIl0	mail-ru-ad-containers	*	Candy Ads	1
+rule	css	origin	dzen.ru	LmR6ZW4tbW9iaWxlLS1jYXJkLXJ0Yl9fYWQteXA	dzen-rtb-ad-card	*	Candy Ads	1
+rule	css	origin	yandex.ru	I2FkLWJhbm5lcg	yandex-ad-banner	*	Candy Ads	1
+rule	css	origin	yandex.ru	LmR6ZW4tbW9iaWxlLS1jYXJkLXJ0Yl9fYWQteXA	yandex-dzen-rtb-ad-card	*	Candy Ads	1
+rule	css	origin	reddit.com	LmFkLWxpbmstYmFy	reddit-ad-link-bar	*	Candy Ads	1
+rule	css	origin	flickr.com	LnNlY3Rpb25fbW9kZS1hZA	flickr-ad-section	*	Candy Ads	1
+rule	css	origin	theguardian.com	LmFkLXNsb3QtY29udGFpbmVy	guardian-ad-slot-container	*	Candy Ads	1
+rule	css	origin	theguardian.com	W2lkXj0iZGZwLWFkLSJd	guardian-dfp-ad	*	Candy Ads	1
+rule	css	origin	nature.com	LmMtYWQ	nature-ad-container	*	Candy Ads	1
+rule	css	origin	nature.com	W2lkXj0iZGl2LWdwdC1hZC0iXQ	nature-gpt-ad	*	Candy Ads	1
+rule	css	origin	x.com	W3JvbGU9InJlZ2lvbiJdW2FyaWEtbGFiZWw9IkNvb2tpZSBjb25zZW50Il0	x-cookie-consent-en	*	Candy Cookies	1
+rule	css	origin	x.com	W3JvbGU9InJlZ2lvbiJdW2FyaWEtbGFiZWw9IkNvb2tpZS1FaW53aWxsaWd1bmciXQ	x-cookie-consent-de	*	Candy Cookies	1
+rule	css	origin	chatgpt.com	W2NsYXNzKj0iX2Nvb2tpZU92ZXJsYXkiXQ	chatgpt-cookie-overlay	*	Candy Cookies	1

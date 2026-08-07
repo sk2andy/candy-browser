@@ -189,8 +189,10 @@ same signing key.
 
 ## Privacy and limitations
 
-Candy uses Android System WebView as its browser engine. WebView does not expose Chromium's
-extension API, so filtering uses local request interception and bounded cosmetic rules. WebSockets,
+Candy uses Android System WebView as its only browser engine and renderer. It does not bundle a
+Chromium fork, extension runtime, proxy, VPN, or second rendering engine. Filtering stays inside
+each WebView through local request interception, document-start CSS/DOM rules, and service-worker
+interception. WebSockets,
 CNAME cloaking, some redirects, and content inside closed cross-origin or Shadow DOM contexts may
 get through.
 
@@ -205,6 +207,12 @@ Candy Rules v1 supports exact host block/allow rules, positive site-to-host pair
 and origin-scoped standard CSS selectors. It deliberately rejects JavaScript, regular expressions,
 redirects, response-header filters, scriptlets, and advanced cosmetic operators rather than
 approximating them.
+
+Bundled defaults may additionally use audited, declarative WebView rules: a site-scoped literal
+request-path prefix or a known Reject/Remind-later consent control. These rules cannot run imported
+JavaScript, never click Accept, and never intercept a main-frame navigation. An exact bundled path
+rule may override the general same-party escape only for its audited page-host, request-host, and
+literal non-root path prefix.
 
 Imports are bounded and validated atomically. HTTPS subscriptions update only after a user-requested
 fetch, show a diff, and require confirmation. Private-profile imports remain in memory.

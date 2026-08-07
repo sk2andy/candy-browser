@@ -31,6 +31,7 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -194,6 +195,9 @@ class BrowserController(private val activity: Activity) {
 
     val isBottomBarCompact: Boolean
         get() = bottomBarCompactStates[selectedTabId] == true
+
+    @VisibleForTesting
+    fun selectedWebViewForTesting(): WebView = webViewFor(selectedTabId)
 
     private val webViews = mutableMapOf<String, WebView>()
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
@@ -1903,7 +1907,14 @@ class BrowserController(private val activity: Activity) {
                 }
             }
         }
-        reload()
+        if (cookieConsentSettingChanged && !settings.hideCookieConsent) {
+            webViews.forEach { (tabId, webView) ->
+                updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
+                webView.reload()
+            }
+        } else {
+            reload()
+        }
     }
 
     fun pauseSiteProtection(tabId: String, persistently: Boolean): Boolean {
@@ -2490,7 +2501,7 @@ class BrowserController(private val activity: Activity) {
     private fun injectCandyCosmeticFallback(tabId: String, view: WebView, pageUrl: String?) {
         if (!workerSettings.blockAdsAndTrackers || isSiteProtectionPaused(tabId, pageUrl)) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val selectors = matcherFor(tab.isIncognito)
+        val selectors = contentBlocker.adCosmeticSelectors(pageUrl) + matcherFor(tab.isIncognito)
             .cosmeticRules(pageUrl ?: return, tab.profileId)
             .mapNotNull(CandyRule::cosmeticSelector)
         val script = CandyCosmeticScript.create(selectors)
@@ -2503,33 +2514,50 @@ class BrowserController(private val activity: Activity) {
             !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         ) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val handlers = matcherFor(tab.isIncognito).rules.asSequence()
-            .filter { rule ->
-                rule.active && rule.kind == CandyRuleKind.CosmeticCss &&
-                    (rule.profileId == null || rule.profileId == tab.profileId)
-            }
-            .sortedBy(CandyRule::id)
-            .take(MAX_COSMETIC_DOCUMENT_START_RULES)
-            .mapNotNull { rule ->
-                val host = rule.firstPartyHost ?: return@mapNotNull null
-                val selector = rule.cosmeticSelector ?: return@mapNotNull null
+        val handlers = buildList {
+            val bundledScript = CandyCosmeticScript.createScoped(
+                rules = contentBlocker.adCosmeticRules,
+                pausedHosts = siteExceptionHostsForTab(tabId),
+            )
+            if (bundledScript.isNotEmpty()) {
                 runCatching {
                     WebViewCompat.addDocumentStartJavaScript(
                         view,
-                        CandyCosmeticScript.create(
-                            listOf(selector),
-                            siteExceptionHostsForTab(tabId),
-                        ),
-                        setOf(
-                            "https://$host",
-                            "https://*.$host",
-                            "http://$host",
-                            "http://*.$host",
-                        ),
+                        bundledScript,
+                        ALL_WEB_ORIGINS,
                     )
-                }.getOrNull()
+                }.getOrNull()?.let(::add)
             }
-            .toList()
+            addAll(
+                matcherFor(tab.isIncognito).rules.asSequence()
+                    .filter { rule ->
+                        rule.active && rule.kind == CandyRuleKind.CosmeticCss &&
+                            (rule.profileId == null || rule.profileId == tab.profileId)
+                    }
+                    .sortedBy(CandyRule::id)
+                    .take(MAX_COSMETIC_DOCUMENT_START_RULES)
+                    .mapNotNull { rule ->
+                        val host = rule.firstPartyHost ?: return@mapNotNull null
+                        val selector = rule.cosmeticSelector ?: return@mapNotNull null
+                        runCatching {
+                            WebViewCompat.addDocumentStartJavaScript(
+                                view,
+                                CandyCosmeticScript.create(
+                                    listOf(selector),
+                                    siteExceptionHostsForTab(tabId),
+                                ),
+                                setOf(
+                                    "https://$host",
+                                    "https://*.$host",
+                                    "http://$host",
+                                    "http://*.$host",
+                                ),
+                            )
+                        }.getOrNull()
+                    }
+                    .toList(),
+            )
+        }
         if (handlers.isNotEmpty()) cosmeticScriptHandlers[view] = handlers
     }
 
@@ -2549,8 +2577,10 @@ class BrowserController(private val activity: Activity) {
             !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         ) return
 
-        // Document-start injection runs before page JavaScript. The script itself exits subframes;
-        // keep the onPageCommitVisible fallback for WebView providers lacking this feature.
+        // Document-start injection runs before page JavaScript. Its compact, site-scoped consent
+        // actions run in matching subframes; large generic CSS is still installed only in top frames.
+        // The onPageCommitVisible fallback still handles the top frame on older providers; framed
+        // consent actions require DOCUMENT_START_SCRIPT support from the installed System WebView.
         // https://developer.android.com/reference/androidx/webkit/WebViewCompat#addDocumentStartJavaScript(android.webkit.WebView,java.lang.String,java.util.Set)
         runCatching {
             WebViewCompat.addDocumentStartJavaScript(

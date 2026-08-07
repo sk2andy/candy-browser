@@ -1,0 +1,8 @@
+candy-consent-actions:1
+# Declarative privacy-preserving actions for full-page or framed consent gates.
+# Format: reject<TAB>frame-host<TAB>base64url-selector<TAB>stable-id
+# Actions are site-scoped and may only click a known reject/remind-later control.
+reject	plus.web.de	I3JlbWluZGVy	web-de-remind-later
+reject	plus.gmx.net	I3JlbWluZGVy	gmx-remind-later
+reject	www.nytimes.com	I2ZpZGVzLXJlamVjdC1hbGwtYnV0dG9u	nytimes-fides-reject-all
+reject	www.google.com	I1cwd2x0Yw	google-reject-all
