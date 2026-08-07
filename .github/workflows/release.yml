@@ -164,7 +164,10 @@ jobs:
           expected_certificate="${expected_certificate,,}"
           actual_certificate="$(
             printf '%s\n' "$verification" \
-              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'
+              | sed -nE 's/^.*certificate SHA-256 digest: ([[:xdigit:]:]+)$/\1/p' \
+              | tr '[:upper:]' '[:lower:]' \
+              | tr -d ':' \
+              | sort -u
           )"
           if [[ "$actual_certificate" != "$expected_certificate" ]]; then
             echo "Release APK certificate does not match pinned repository fingerprint." >&2

@@ -39,6 +39,16 @@ internal object TabOverviewHeroRules {
         ((targetFraction - COVERFLOW_PREVIEW_START) / (1f - COVERFLOW_PREVIEW_START))
             .coerceIn(0f, 1f)
 
+    fun blankFavoritesAlpha(targetFraction: Float): Float =
+        (1f - (targetFraction - BLANK_FAVORITES_FADE_START) /
+            (BLANK_FAVORITES_FADE_END - BLANK_FAVORITES_FADE_START))
+            .coerceIn(0f, 1f)
+
+    fun blankPreviewSourceExtentPx(
+        rootViewExtentPx: Int,
+        configurationExtentPx: Float,
+    ): Float = rootViewExtentPx.takeIf { it > 0 }?.toFloat() ?: configurationExtentPx
+
     fun incognitoVeilAlpha(entryProgress: Float): Float =
         (entryProgress.coerceIn(0f, 1f) / INCOGNITO_VEIL_END).coerceIn(0f, 1f)
 
@@ -62,5 +72,7 @@ internal object TabOverviewHeroRules {
     private const val NEIGHBOR_ENTRY_START = 0.55f
     private const val COMPACT_CHROME_START = 0.62f
     private const val COVERFLOW_PREVIEW_START = 0.82f
+    private const val BLANK_FAVORITES_FADE_START = 0.35f
+    private const val BLANK_FAVORITES_FADE_END = 0.78f
     private const val INCOGNITO_VEIL_END = 0.24f
 }

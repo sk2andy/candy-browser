@@ -187,6 +187,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.testTag
@@ -217,6 +218,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
@@ -1852,6 +1855,7 @@ private fun FullscreenTabPreviewContent(
     previewTopInsetPx: Int,
     bottomBarTopPx: Float,
     favorites: List<FavoriteEntry>,
+    blankFavoritesAlpha: () -> Float = { 1f },
 ) {
     val density = LocalDensity.current
     val previewLayout = TabSwitchPreviewLayoutRules.resolve(
@@ -1870,7 +1874,7 @@ private fun FullscreenTabPreviewContent(
             tab.isIncognito -> IncognitoTabPlaceholder()
             tab.url == BLANK_URL -> BlankTabPreview(
                 favorites = favorites,
-                showFavorites = true,
+                favoritesAlpha = blankFavoritesAlpha,
             )
             else -> {
                 Box(
@@ -1898,32 +1902,66 @@ private fun FullscreenTabPreviewContent(
 }
 
 @Composable
+private fun rootSafeDrawingPadding(rootView: View): PaddingValues {
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val insets = ViewCompat.getRootWindowInsets(rootView)?.getInsets(
+        WindowInsetsCompat.Type.systemBars() or
+            WindowInsetsCompat.Type.ime() or
+            WindowInsetsCompat.Type.displayCutout(),
+    ) ?: return PaddingValues(0.dp)
+    val startPx = if (layoutDirection == LayoutDirection.Ltr) insets.left else insets.right
+    val endPx = if (layoutDirection == LayoutDirection.Ltr) insets.right else insets.left
+    return PaddingValues(
+        start = with(density) { startPx.toDp() },
+        top = with(density) { insets.top.toDp() },
+        end = with(density) { endPx.toDp() },
+        bottom = with(density) { insets.bottom.toDp() },
+    )
+}
+
+@Composable
 private fun BlankTabPreview(
     favorites: List<FavoriteEntry>,
-    showFavorites: Boolean,
+    favoritesAlpha: () -> Float,
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    val screenWidth = configuration.screenWidthDp.dp
-    val screenHeight = configuration.screenHeightDp.dp
+    val rootView = LocalView.current
+    val rootSafeDrawingPadding = rootSafeDrawingPadding(rootView)
+    val sourceWidthPx = TabOverviewHeroRules.blankPreviewSourceExtentPx(
+        rootViewExtentPx = rootView.width,
+        configurationExtentPx = with(density) { configuration.screenWidthDp.dp.toPx() },
+    )
+    val sourceHeightPx = TabOverviewHeroRules.blankPreviewSourceExtentPx(
+        rootViewExtentPx = rootView.height,
+        configurationExtentPx = with(density) { configuration.screenHeightDp.dp.toPx() },
+    )
+    val sourceWidth = with(density) { sourceWidthPx.toDp() }
+    val sourceHeight = with(density) { sourceHeightPx.toDp() }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .clearAndSetSemantics { },
     ) {
-        val scale = (maxWidth.value / screenWidth.value)
-            .coerceIn(0.01f, 1f)
-        val visibleSourceHeight = maxHeight / scale
-        val cropTop = ((screenHeight - visibleSourceHeight) * PREVIEW_CROP_TOP_FRACTION)
-            .coerceAtLeast(0.dp)
+        val targetWidthPx = with(density) { maxWidth.toPx() }
+        val targetHeightPx = with(density) { maxHeight.toPx() }
+        val scale = (targetWidthPx / sourceWidthPx).coerceIn(0.01f, 1f)
+        val previewLayout = TabOverviewHeroRules.coverflowPreviewLayout(
+            rootWidthPx = sourceWidthPx,
+            rootHeightPx = sourceHeightPx,
+            targetWidthPx = targetWidthPx,
+            targetHeightPx = targetHeightPx,
+            cropTopFraction = PREVIEW_CROP_TOP_FRACTION,
+        )
         Box(
             modifier = Modifier
                 .wrapContentSize(align = Alignment.TopStart, unbounded = true)
-                .size(screenWidth, screenHeight)
+                .size(sourceWidth, sourceHeight)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                    translationY = -with(density) { cropTop.toPx() } * scale
+                    translationY = -previewLayout.sourceTopPx * scale
                     transformOrigin = TransformOrigin(0f, 0f)
                 },
         ) {
@@ -1935,7 +1973,8 @@ private fun BlankTabPreview(
                 onSearch = {},
                 onFavorite = {},
                 interactive = false,
-                showFavorites = showFavorites,
+                favoritesAlpha = favoritesAlpha,
+                explicitSafeDrawingPadding = rootSafeDrawingPadding,
             )
         }
     }
@@ -1950,7 +1989,8 @@ private fun NewTabPage(
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
     interactive: Boolean = true,
-    showFavorites: Boolean = true,
+    favoritesAlpha: () -> Float = { 1f },
+    explicitSafeDrawingPadding: PaddingValues? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
@@ -1968,7 +2008,13 @@ private fun NewTabPage(
                 incognitoCenterColor = colors.inverseSurface,
                 edgeColor = colors.surface,
             )
-            .safeDrawingPadding(),
+            .then(
+                if (explicitSafeDrawingPadding != null) {
+                    Modifier.padding(explicitSafeDrawingPadding)
+                } else {
+                    Modifier.safeDrawingPadding()
+                },
+            ),
     ) {
         Column(
             modifier = Modifier
@@ -2021,40 +2067,51 @@ private fun NewTabPage(
                     )
                 }
             }
-            if (!incognito && showFavorites) {
-                Spacer(Modifier.height(28.dp))
-                Text(
-                    stringResource(R.string.favorites_title),
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    color = colors.surfaceContainerHigh.copy(alpha = 0.9f),
-                    tonalElevation = 8.dp,
+            if (!incognito) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            alpha = favoritesAlpha().coerceIn(0f, 1f)
+                        },
                 ) {
-                    Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                        AnimatedVisibility(
-                            visible = favorites.isEmpty(),
-                            enter = fadeIn(tween(150)),
-                            exit = fadeOut(tween(100)),
-                        ) {
-                            Text(
-                                stringResource(R.string.favorites_empty),
-                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.onSurfaceVariant,
+                    Spacer(Modifier.height(28.dp))
+                    Text(
+                        stringResource(R.string.favorites_title),
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colors.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        color = colors.surfaceContainerHigh.copy(alpha = 0.9f),
+                        tonalElevation = 8.dp,
+                    ) {
+                        Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                            AnimatedVisibility(
+                                visible = favorites.isEmpty(),
+                                enter = fadeIn(tween(150)),
+                                exit = fadeOut(tween(100)),
+                            ) {
+                                Text(
+                                    stringResource(R.string.favorites_empty),
+                                    modifier = Modifier.padding(
+                                        horizontal = 18.dp,
+                                        vertical = 14.dp,
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colors.onSurfaceVariant,
+                                )
+                            }
+                            ExpressiveFavoriteRows(
+                                favorites = favorites,
+                                onFavorite = onFavorite,
+                                enabled = interactive,
                             )
                         }
-                        ExpressiveFavoriteRows(
-                            favorites = favorites,
-                            onFavorite = onFavorite,
-                            enabled = interactive,
-                        )
                     }
                 }
             }
@@ -4309,7 +4366,9 @@ private fun TabOverview(
                 targetFraction = { heroProgress.value },
                 modifier = if (initialTab.isIncognito) {
                     Modifier.graphicsLayer {
-                        alpha = TabOverviewHeroRules.incognitoVeilAlpha(heroProgress.value)
+                        alpha = TabOverviewHeroRules.incognitoVeilAlpha(
+                            heroProgress.value,
+                        )
                     }
                 } else {
                     Modifier
@@ -4964,14 +5023,7 @@ private fun TabCoverflowHeroContent(
     )
     val targetHeight = with(density) { previewLayout.sourceHeightPx.toDp() }
     Box(Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.ModulateAlpha
-                    alpha = 1f - TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
-                },
-        ) {
+        if (tab.url == BLANK_URL && !tab.isIncognito) {
             FullscreenTabPreviewContent(
                 tab = tab,
                 preview = preview,
@@ -4980,24 +5032,46 @@ private fun TabCoverflowHeroContent(
                 rootHeightPx = rootHeightPx,
                 previewTopInsetPx = previewTopInsetPx,
                 bottomBarTopPx = bottomBarTopPx,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(0, previewLayout.sourceTopPx.roundToInt()) }
-                .fillMaxWidth()
-                .height(targetHeight)
-                .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.ModulateAlpha
-                    alpha = TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
+                blankFavoritesAlpha = {
+                    TabOverviewHeroRules.blankFavoritesAlpha(targetFraction())
                 },
-        ) {
-            TabPreviewContent(
-                tab = tab,
-                preview = preview,
-                favicon = favicon,
-                favorites = favorites,
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.ModulateAlpha
+                        alpha = 1f - TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
+                    },
+            ) {
+                FullscreenTabPreviewContent(
+                    tab = tab,
+                    preview = preview,
+                    favicon = favicon,
+                    favorites = favorites,
+                    rootHeightPx = rootHeightPx,
+                    previewTopInsetPx = previewTopInsetPx,
+                    bottomBarTopPx = bottomBarTopPx,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(0, previewLayout.sourceTopPx.roundToInt()) }
+                    .fillMaxWidth()
+                    .height(targetHeight)
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.ModulateAlpha
+                        alpha = TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
+                    },
+            ) {
+                TabPreviewContent(
+                    tab = tab,
+                    preview = preview,
+                    favicon = favicon,
+                    favorites = favorites,
+                )
+            }
         }
     }
 }
@@ -5935,7 +6009,7 @@ private fun TabPreviewContent(
         tab.isIncognito -> IncognitoTabPlaceholder()
         tab.url == BLANK_URL -> BlankTabPreview(
             favorites = favorites,
-            showFavorites = false,
+            favoritesAlpha = { 0f },
         )
         preview != null && !preview.isRecycled -> Image(
             bitmap = preview.asImageBitmap(),

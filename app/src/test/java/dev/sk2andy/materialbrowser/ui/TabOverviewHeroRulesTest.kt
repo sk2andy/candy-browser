@@ -111,6 +111,34 @@ class TabOverviewHeroRulesTest {
     }
 
     @Test
+    fun `blank tab favorites fade before hero card handoff`() {
+        assertEquals(1f, TabOverviewHeroRules.blankFavoritesAlpha(0.35f), 0f)
+        assertEquals(0.5f, TabOverviewHeroRules.blankFavoritesAlpha(0.565f), 0.001f)
+        assertEquals(0f, TabOverviewHeroRules.blankFavoritesAlpha(0.78f), 0f)
+        assertEquals(0f, TabOverviewHeroRules.blankFavoritesAlpha(1f), 0f)
+    }
+
+    @Test
+    fun `blank preview uses full root height instead of inset configuration height`() {
+        assertEquals(
+            2400f,
+            TabOverviewHeroRules.blankPreviewSourceExtentPx(
+                rootViewExtentPx = 2400,
+                configurationExtentPx = 2268f,
+            ),
+            0f,
+        )
+        assertEquals(
+            2268f,
+            TabOverviewHeroRules.blankPreviewSourceExtentPx(
+                rootViewExtentPx = 0,
+                configurationExtentPx = 2268f,
+            ),
+            0f,
+        )
+    }
+
+    @Test
     fun `coverflow endpoint preview maps exactly onto target card`() {
         val rootWidth = 1080f
         val rootHeight = 2400f
