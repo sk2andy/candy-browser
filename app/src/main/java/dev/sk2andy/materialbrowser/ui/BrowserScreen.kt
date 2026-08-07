@@ -67,6 +67,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -2258,7 +2259,13 @@ private fun BrowserBottomBar(
     )
     BoxWithConstraints(
         modifier = modifier
-            .then(if (keyboardVisible) Modifier else Modifier.navigationBarsPadding())
+            .then(
+                if (keyboardVisible) {
+                    Modifier.imePadding()
+                } else {
+                    Modifier.navigationBarsPadding()
+                },
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .fillMaxWidth(),
         contentAlignment = Alignment.Center,

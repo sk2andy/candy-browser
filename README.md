@@ -86,9 +86,9 @@
 
 ## Download
 
-Version **0.1** requires Android 14 (API 34) or newer.
+Version **0.3** requires Android 14 (API 34) or newer.
 
-[Download Candy Browser v0.1](https://github.com/sk2andy/candy-browser/releases/download/v0.1/CandyBrowser-v0.1-release.apk)
+[Download Candy Browser v0.3](https://github.com/sk2andy/candy-browser/releases/download/v0.3/CandyBrowser-v0.3-release.apk)
 
 Android may ask you to allow installation from your browser or file manager. Releases outside
 Google Play do not update automatically.
