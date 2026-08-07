@@ -2219,9 +2219,13 @@ private fun BrowserBottomBar(
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val imeBottom = WindowInsets.ime.getBottom(density)
-    val navigationBottom = WindowInsets.navigationBars.getBottom(density)
-    val keyboardVisible = editing && imeBottom > navigationBottom
+    val keyboardVisible = editing &&
+        WindowInsets.ime.getBottom(density) > WindowInsets.navigationBars.getBottom(density)
+    val bottomPadding by animateDpAsState(
+        targetValue = if (keyboardVisible) 24.dp else 12.dp,
+        animationSpec = tween(160),
+        label = "Address bar keyboard gap",
+    )
     LaunchedEffect(addressBarPulseNonce) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
         pulseScale.snapTo(1f)
@@ -2259,14 +2263,14 @@ private fun BrowserBottomBar(
     )
     BoxWithConstraints(
         modifier = modifier
-            .then(
-                if (keyboardVisible) {
-                    Modifier.imePadding()
-                } else {
-                    Modifier.navigationBarsPadding()
-                },
+            .padding(
+                start = 16.dp,
+                top = 12.dp,
+                end = 16.dp,
+                bottom = bottomPadding,
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .navigationBarsPadding()
+            .imePadding()
             .fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
