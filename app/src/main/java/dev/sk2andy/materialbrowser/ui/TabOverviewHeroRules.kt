@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
 internal object TabOverviewHeroRules {
+    const val ENTRY_DURATION_MILLIS = 160
+
     data class CoverflowPreviewLayout(
         val sourceTopPx: Float,
         val sourceHeightPx: Float,

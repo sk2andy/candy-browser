@@ -22,8 +22,6 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -35,18 +33,16 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -136,6 +132,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -335,7 +332,10 @@ fun BrowserScreen(controller: BrowserController) {
     var addressFocusNonce by remember { mutableIntStateOf(0) }
     var pendingCommand by remember { mutableStateOf<CommandSuggestion?>(null) }
     val overviewGestureProgress = remember { mutableFloatStateOf(0f) }
+    val overviewMorphProgress = remember { mutableFloatStateOf(0f) }
     var overviewGestureSettleJob by remember { mutableStateOf<Job?>(null) }
+    var overviewMorphJob by remember { mutableStateOf<Job?>(null) }
+    var overviewEntryHeroCompleted by remember { mutableStateOf(false) }
     val overviewGestureScope = rememberCoroutineScope()
     var favoriteFeedbackId by remember { mutableIntStateOf(0) }
     var favoriteFeedbackEvent by remember { mutableStateOf<FavoriteFeedbackEvent?>(null) }
@@ -346,7 +346,7 @@ fun BrowserScreen(controller: BrowserController) {
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
     var browserHeightPx by remember { mutableFloatStateOf(1f) }
-    var bottomBarTopPx by remember { mutableFloatStateOf(Float.NaN) }
+    val bottomBarTopPx = remember { mutableFloatStateOf(Float.NaN) }
     var overviewNewTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
     var tabOverviewOpening by remember { mutableStateOf(false) }
     var tabHandoff by remember { mutableStateOf<TabHandoff?>(null) }
@@ -360,6 +360,16 @@ fun BrowserScreen(controller: BrowserController) {
     var settingsBackEdgeSign by remember { mutableIntStateOf(1) }
     var candyTrailBackEdgeSign by remember { mutableIntStateOf(1) }
     var qrScanInProgress by remember { mutableStateOf(false) }
+    val overviewDestinationButtonVisible by remember {
+        derivedStateOf {
+            overviewEntryHeroCompleted &&
+                AddressBarOverviewGestureRules.isDestinationButtonVisible(
+                    overviewMorphProgress.floatValue,
+                )
+        }
+    }
+    val addressBarMorphInFront =
+        tabOverviewVisible && !overviewDestinationButtonVisible
     val selectedTab = controller.selectedTab
     val blankTabModeProgress = rememberBlankTabModeProgress(
         tabId = selectedTab.id,
@@ -401,6 +411,9 @@ fun BrowserScreen(controller: BrowserController) {
     }
     val openTabOverview = {
         if (!tabOverviewVisible && !tabOverviewOpening) {
+            overviewMorphJob?.cancel()
+            overviewMorphProgress.floatValue = 0f
+            overviewEntryHeroCompleted = false
             tabOverviewOpening = true
             controller.prepareTabOverview {
                 tabOverviewOpening = false
@@ -410,7 +423,10 @@ fun BrowserScreen(controller: BrowserController) {
     }
     val closeTabOverview = {
         overviewGestureSettleJob?.cancel()
+        overviewMorphJob?.cancel()
         overviewGestureProgress.floatValue = 0f
+        overviewMorphProgress.floatValue = 0f
+        overviewEntryHeroCompleted = false
         tabOverviewVisible = false
     }
     val openAddressEditor: () -> Unit = {
@@ -464,14 +480,18 @@ fun BrowserScreen(controller: BrowserController) {
             query = addressValue.text.trim(),
         )
     }
-    val suggestionItems = if (addressEditorVisible) {
-        controller.addressSuggestionItems(
-            query = addressValue.text,
-            searchQueries = remoteSearchSuggestions,
-            limit = 10,
-        )
-    } else {
-        emptyList()
+    val suggestionItems by remember {
+        derivedStateOf {
+            if (addressEditorVisible) {
+                controller.addressSuggestionItems(
+                    query = addressValue.text,
+                    searchQueries = remoteSearchSuggestions,
+                    limit = 10,
+                )
+            } else {
+                emptyList()
+            }
+        }
     }
     val domainCompletion = if (
         addressEditorVisible &&
@@ -813,6 +833,13 @@ fun BrowserScreen(controller: BrowserController) {
         }
     }
 
+    SideEffect {
+        controller.setBrowserChromeOwnsIme(addressEditorVisible)
+    }
+    DisposableEffect(controller) {
+        onDispose { controller.setBrowserChromeOwnsIme(false) }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1013,6 +1040,8 @@ fun BrowserScreen(controller: BrowserController) {
             },
             overviewGestureEnabled = !tabOverviewOpening && !tabOverviewVisible,
             overviewGestureProgress = overviewGestureProgress,
+            overviewMorphProgress = overviewMorphProgress,
+            visualOnly = addressBarMorphInFront,
             overviewTargetBounds = overviewNewTabButtonBounds,
             onOverviewGestureProgress = { progress ->
                 overviewGestureSettleJob?.cancel()
@@ -1083,9 +1112,15 @@ fun BrowserScreen(controller: BrowserController) {
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .zIndex(if (commandFeedback != null) 30f else 0f)
+                .zIndex(
+                    when {
+                        commandFeedback != null -> 30f
+                        addressBarMorphInFront -> 20f
+                        else -> 0f
+                    },
+                )
                 .onGloballyPositioned { coordinates ->
-                    bottomBarTopPx = coordinates.boundsInRoot().top
+                    bottomBarTopPx.floatValue = coordinates.boundsInRoot().top
                     controller.setPreviewContentBottomInWindowPx(
                         coordinates.boundsInWindow().top.roundToInt(),
                     )
@@ -1120,6 +1155,27 @@ fun BrowserScreen(controller: BrowserController) {
                 if (controller.selectedTabId != previousTabId) closeTabOverview()
             },
             onNewTabButtonBounds = { overviewNewTabButtonBounds = it },
+            destinationButtonVisible = overviewDestinationButtonVisible,
+            onEntryHeroStarted = { animated ->
+                overviewMorphJob?.cancel()
+                overviewMorphProgress.floatValue = 0f
+                overviewEntryHeroCompleted = false
+                if (animated) {
+                    overviewMorphJob = overviewGestureScope.launch {
+                        val progress = Animatable(0f)
+                        progress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = TabOverviewHeroRules.ENTRY_DURATION_MILLIS,
+                                easing = FastOutSlowInEasing,
+                            ),
+                        ) { overviewMorphProgress.floatValue = value }
+                    }
+                } else {
+                    overviewMorphProgress.floatValue = 1f
+                }
+            },
+            onEntryHeroCompleted = { overviewEntryHeroCompleted = true },
             candyTrailTabId = candyTrailTabId,
             candyTrailSourceBounds = candyTrailSourceBounds,
             candyTrailBackProgress = candyTrailBackProgress.value,
@@ -1451,7 +1507,7 @@ private fun BrowserViewport(
     dragOffset: MutableFloatState,
     travelDistance: Float,
     rootHeightPx: Float,
-    bottomBarTopPx: Float,
+    bottomBarTopPx: FloatState,
     handoff: TabHandoff?,
     handoffAlpha: Float,
     liveFrameTabId: String?,
@@ -1859,7 +1915,7 @@ private fun TabHandoffOverlay(
     favorites: List<FavoriteEntry>,
     alpha: Float,
     rootHeightPx: Float,
-    bottomBarTopPx: Float,
+    bottomBarTopPx: FloatState,
 ) {
     Box(
         modifier = Modifier
@@ -1899,7 +1955,7 @@ private fun TabSwitchPreview(
     travelDistance: Float,
     rootHeightPx: Float,
     previewTopInsetPx: Int,
-    bottomBarTopPx: Float,
+    bottomBarTopPx: FloatState,
 ) {
     val density = LocalDensity.current
     val startOffset = if (dragDirection < 0) travelDistance else -travelDistance
@@ -1939,7 +1995,7 @@ private fun FullscreenTabPreviewContent(
     favicon: Bitmap?,
     rootHeightPx: Float,
     previewTopInsetPx: Int,
-    bottomBarTopPx: Float,
+    bottomBarTopPx: FloatState,
     favorites: List<FavoriteEntry>,
     blankFavoritesAlpha: () -> Float = { 1f },
 ) {
@@ -1947,7 +2003,7 @@ private fun FullscreenTabPreviewContent(
     val previewLayout = TabSwitchPreviewLayoutRules.resolve(
         rootHeightPx = rootHeightPx,
         previewTopInsetPx = previewTopInsetPx,
-        bottomBarTopPx = bottomBarTopPx,
+        bottomBarTopPx = bottomBarTopPx.floatValue,
     )
     val topInset = with(density) { previewLayout.topInsetPx.toDp() }
     val visibleHeight = with(density) { previewLayout.visibleHeightPx.toDp() }
@@ -2286,6 +2342,8 @@ private fun BrowserBottomBar(
     onAddSiteCapsule: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
+    overviewMorphProgress: FloatState,
+    visualOnly: Boolean,
     overviewTargetBounds: Rect?,
     onOverviewGestureProgress: (Float) -> Unit,
     onOverviewGestureStarted: () -> Unit,
@@ -2346,7 +2404,8 @@ private fun BrowserBottomBar(
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .navigationBarsPadding()
             .imePadding()
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .then(if (visualOnly) Modifier.clearAndSetSemantics { } else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         val targetWidth = when (presentation) {
@@ -2356,22 +2415,17 @@ private fun BrowserBottomBar(
                 .coerceAtLeast(160.dp)
                 .coerceAtMost(maxWidth)
         }
-        val animatedWidth by animateDpAsState(
-            targetValue = targetWidth,
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
-            label = "Adressleistenbreite",
-        )
         var addressBarBounds by remember { mutableStateOf<Rect?>(null) }
         val morphTargetSize = 56.dp
         Box(contentAlignment = Alignment.Center) {
             Surface(
                 modifier = Modifier
-                    .width(animatedWidth)
+                    .width(targetWidth)
                     .onGloballyPositioned { coordinates ->
                         addressBarBounds = coordinates.boundsInRoot()
                     }
                     .graphicsLayer {
-                        val progress = overviewGestureProgress.floatValue
+                        val progress = overviewMorphProgress.floatValue
                         val source = addressBarBounds
                         val target = overviewTargetBounds
                         val targetSizePx = with(density) { morphTargetSize.toPx() }
@@ -2401,14 +2455,14 @@ private fun BrowserBottomBar(
                         }
                     },
                 shape = AddressBarMorphShape(
-                    progress = overviewGestureProgress.floatValue,
+                    progress = overviewMorphProgress.floatValue,
                     targetSizePx = with(density) { morphTargetSize.toPx() },
                 ),
                 color = lerp(
                     barColor,
                     MaterialTheme.colorScheme.primary,
                     AddressBarOverviewGestureRules.resistedProgress(
-                        overviewGestureProgress.floatValue,
+                        overviewMorphProgress.floatValue,
                     ),
                 ),
                 tonalElevation = 12.dp,
@@ -2419,13 +2473,17 @@ private fun BrowserBottomBar(
                         targetState = presentation,
                         modifier = Modifier.graphicsLayer {
                             alpha = AddressBarOverviewGestureRules.contentAlpha(
-                                overviewGestureProgress.floatValue,
+                                overviewMorphProgress.floatValue,
                             )
                         },
                         transitionSpec = {
-                            ((fadeIn(tween(90)) + slideInVertically(tween(120)) { it / 3 }) togetherWith
-                                (fadeOut(tween(70)) + slideOutVertically(tween(100)) { it / 4 }))
-                                .using(SizeTransform(clip = false))
+                            (fadeIn(tween(70)) togetherWith fadeOut(tween(50)))
+                                .using(
+                                    SizeTransform(
+                                        clip = false,
+                                        sizeAnimationSpec = { _, _ -> snap() },
+                                    ),
+                                )
                         },
                         label = "Adressleisteninhalt",
                     ) { targetPresentation ->
@@ -2530,13 +2588,13 @@ private fun BrowserBottomBar(
                             tabId = tab.id,
                             isLoading = tab.isLoading,
                             progressPercent = tab.progress,
-                            morphProgress = overviewGestureProgress.floatValue,
+                            morphProgress = overviewMorphProgress.floatValue,
                             morphTargetSizePx = with(density) { morphTargetSize.toPx() },
                             modifier = Modifier
                                 .matchParentSize()
                                 .graphicsLayer {
                                     alpha = AddressBarOverviewGestureRules.contentAlpha(
-                                        overviewGestureProgress.floatValue,
+                                        overviewMorphProgress.floatValue,
                                     )
                                 },
                         )
@@ -2547,7 +2605,7 @@ private fun BrowserBottomBar(
                 modifier = Modifier
                     .size(morphTargetSize)
                     .graphicsLayer {
-                        val progress = overviewGestureProgress.floatValue
+                        val progress = overviewMorphProgress.floatValue
                         val source = addressBarBounds
                         val target = overviewTargetBounds
                         alpha = AddressBarOverviewGestureRules.targetAlpha(progress)
@@ -2576,10 +2634,30 @@ private fun BrowserBottomBar(
                 )
             }
         }
+        if (visualOnly) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(
+                                requireUnconsumed = false,
+                                pass = PointerEventPass.Initial,
+                            )
+                            down.consume()
+                            while (true) {
+                                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                event.changes.forEach { it.consume() }
+                                if (event.changes.none { it.pressed }) break
+                            }
+                        }
+                    },
+            )
+        }
     }
     LaunchedEffect(editing, tab.id, addressFocusNonce, commandFeedback) {
         if (editing && commandFeedback == null) {
-            delay(40)
+            withFrameNanos { }
             focusRequester.requestFocus()
             keyboard?.show()
         }
@@ -3344,24 +3422,25 @@ private fun AddressSuggestions(
     onSelect: (AddressSuggestionItem) -> Unit,
     onFill: (AddressSuggestionItem) -> Unit,
     rootHeightPx: Float,
-    bottomBarTopPx: Float,
+    bottomBarTopPx: FloatState,
     modifier: Modifier = Modifier,
 ) {
     if (suggestions.isEmpty()) return
     val listState = rememberLazyListState()
     LaunchedEffect(highlightedIndex, suggestions.map(AddressSuggestionItem::stableId)) {
         if (highlightedIndex in suggestions.indices) {
-            listState.animateScrollToItem(highlightedIndex)
+            listState.scrollToItem(highlightedIndex)
         }
     }
     val density = LocalDensity.current
+    val currentBottomBarTopPx = bottomBarTopPx.floatValue
     val bottomPadding = AddressEditorLayoutRules.suggestionBottomPaddingDp(
         rootHeightPx = rootHeightPx,
-        bottomBarTopPx = bottomBarTopPx,
+        bottomBarTopPx = currentBottomBarTopPx,
         density = density.density,
     ).dp
     val maxHeight = AddressEditorLayoutRules.suggestionMaxHeightDp(
-        bottomBarTopPx = bottomBarTopPx,
+        bottomBarTopPx = currentBottomBarTopPx,
         topInsetPx = WindowInsets.statusBars.getTop(density).toFloat(),
         density = density.density,
     ).dp
@@ -3385,29 +3464,27 @@ private fun AddressSuggestions(
                 items = suggestions,
                 key = { _, suggestion -> suggestion.stableId },
             ) { index, suggestion ->
-                Box(Modifier.animateItem()) {
-                    when (suggestion) {
-                        is AddressSuggestionItem.Navigation -> NavigationSuggestionRow(
-                            suggestion = suggestion.suggestion,
-                            highlighted = index == highlightedIndex,
-                            onHighlight = { onHighlight(index) },
-                            onClick = { onSelect(suggestion) },
-                            onFill = { onFill(suggestion) },
-                        )
-                        is AddressSuggestionItem.Command -> CommandSuggestionRow(
-                            suggestion = suggestion.suggestion,
-                            highlighted = index == highlightedIndex,
-                            onHighlight = { onHighlight(index) },
-                            onClick = { onSelect(suggestion) },
-                        )
-                        is AddressSuggestionItem.Search -> SearchSuggestionRow(
-                            query = suggestion.query,
-                            highlighted = index == highlightedIndex,
-                            onHighlight = { onHighlight(index) },
-                            onClick = { onSelect(suggestion) },
-                            onFill = { onFill(suggestion) },
-                        )
-                    }
+                when (suggestion) {
+                    is AddressSuggestionItem.Navigation -> NavigationSuggestionRow(
+                        suggestion = suggestion.suggestion,
+                        highlighted = index == highlightedIndex,
+                        onHighlight = { onHighlight(index) },
+                        onClick = { onSelect(suggestion) },
+                        onFill = { onFill(suggestion) },
+                    )
+                    is AddressSuggestionItem.Command -> CommandSuggestionRow(
+                        suggestion = suggestion.suggestion,
+                        highlighted = index == highlightedIndex,
+                        onHighlight = { onHighlight(index) },
+                        onClick = { onSelect(suggestion) },
+                    )
+                    is AddressSuggestionItem.Search -> SearchSuggestionRow(
+                        query = suggestion.query,
+                        highlighted = index == highlightedIndex,
+                        onHighlight = { onHighlight(index) },
+                        onClick = { onSelect(suggestion) },
+                        onFill = { onFill(suggestion) },
+                    )
                 }
             }
         }
@@ -3422,17 +3499,6 @@ private fun NavigationSuggestionRow(
     onClick: () -> Unit,
     onFill: () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = when {
-            pressed -> 0.985f
-            highlighted -> 1.008f
-            else -> 1f
-        },
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 720f),
-        label = "Navigation suggestion press",
-    )
     val switchesToOpenTab = suggestion.openTabId != null
     val containerColor = when {
         highlighted -> MaterialTheme.colorScheme.tertiaryContainer
@@ -3449,14 +3515,8 @@ private fun NavigationSuggestionRow(
             .padding(horizontal = 6.dp, vertical = 1.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
             .semantics { selected = highlighted }
             .clickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
                 role = Role.Button,
                 onClick = {
                     onHighlight()
@@ -3527,17 +3587,6 @@ internal fun SearchSuggestionRow(
     onClick: () -> Unit,
     onFill: () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = when {
-            pressed -> 0.985f
-            highlighted -> 1.008f
-            else -> 1f
-        },
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 720f),
-        label = "Search suggestion press",
-    )
     val containerColor = if (highlighted) {
         MaterialTheme.colorScheme.tertiaryContainer
     } else {
@@ -3554,14 +3603,8 @@ internal fun SearchSuggestionRow(
             .fillMaxWidth()
             .testTag(AddressSuggestionTestTags.searchRow(query))
             .clip(RoundedCornerShape(16.dp))
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
             .semantics { selected = highlighted }
             .clickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
                 role = Role.Button,
                 onClick = {
                     onHighlight()
@@ -3617,11 +3660,6 @@ private fun CommandSuggestionRow(
     onHighlight: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val scale by animateFloatAsState(
-        targetValue = if (highlighted) 1.01f else 1f,
-        animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f),
-        label = "Command focus",
-    )
     val containerColor = if (highlighted) {
         MaterialTheme.colorScheme.tertiaryContainer
     } else {
@@ -3636,10 +3674,6 @@ private fun CommandSuggestionRow(
         modifier = Modifier
             .padding(horizontal = 6.dp, vertical = 2.dp)
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
             .semantics(mergeDescendants = true) { selected = highlighted }
             .clickable(role = Role.Button) {
                 onHighlight()
@@ -3756,11 +3790,14 @@ private fun CommandIcon(kind: BrowserCommandKind, tint: Color) {
 private fun TabOverview(
     controller: BrowserController,
     visible: Boolean,
-    bottomBarTopPx: Float,
+    bottomBarTopPx: FloatState,
     onClose: () -> Unit,
     onSelect: (String) -> Unit,
     onNewTab: () -> Unit,
     onNewTabButtonBounds: (Rect) -> Unit,
+    destinationButtonVisible: Boolean,
+    onEntryHeroStarted: (Boolean) -> Unit,
+    onEntryHeroCompleted: () -> Unit,
     candyTrailTabId: String?,
     candyTrailSourceBounds: Rect?,
     candyTrailBackProgress: Float,
@@ -3807,6 +3844,7 @@ private fun TabOverview(
     var heroStarted by remember { mutableStateOf(false) }
     var heroCompleted by remember { mutableStateOf(false) }
     var heroVisible by remember { mutableStateOf(true) }
+    var newTabButtonBoundsReady by remember { mutableStateOf(false) }
     var dismissingTabId by remember { mutableStateOf<String?>(null) }
     var exitHero by remember { mutableStateOf<TabExitHero?>(null) }
     var userPagerGestureActive by remember { mutableStateOf(false) }
@@ -3835,7 +3873,6 @@ private fun TabOverview(
         primaryContainer = MaterialTheme.colorScheme.primaryContainer,
         tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer,
     )
-
     fun startExitHero(
         tab: BrowserTab,
         bounds: Rect,
@@ -4038,7 +4075,8 @@ private fun TabOverview(
             while (
                 waitMillis < 250L &&
                 !TabOverviewHeroRules.canStart(
-                    heroTargetBounds != null &&
+                    newTabButtonBoundsReady &&
+                        heroTargetBounds != null &&
                         heroTargetMode == controller.tabOverviewMode &&
                         heroTargetTabId == initialTabId,
                 )
@@ -4048,17 +4086,26 @@ private fun TabOverview(
             }
 
             val hasStableTarget = TabOverviewHeroRules.canStart(
-                heroTargetBounds != null &&
+                newTabButtonBoundsReady &&
+                    heroTargetBounds != null &&
                     heroTargetMode == controller.tabOverviewMode &&
                     heroTargetTabId == initialTabId,
             )
             heroStarted = true
+            onEntryHeroStarted(hasStableTarget)
             if (hasStableTarget) {
-                heroProgress.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
+                heroProgress.animateTo(
+                    1f,
+                    tween(
+                        durationMillis = TabOverviewHeroRules.ENTRY_DURATION_MILLIS,
+                        easing = FastOutSlowInEasing,
+                    ),
+                )
             } else {
                 heroProgress.snapTo(1f)
             }
             heroCompleted = true
+            onEntryHeroCompleted()
             withFrameNanos { }
             heroVisible = false
         }
@@ -4606,9 +4653,20 @@ private fun TabOverview(
                     modifier = Modifier
                         .size(56.dp)
                         .onGloballyPositioned { coordinates ->
+                            newTabButtonBoundsReady = true
                             onNewTabButtonBounds(coordinates.boundsInRoot())
-                        },
-                    enabled = dismissingTabId == null &&
+                        }
+                        .graphicsLayer {
+                            alpha = if (destinationButtonVisible) 1f else 0f
+                        }
+                        .then(
+                            if (destinationButtonVisible) {
+                                Modifier
+                            } else {
+                                Modifier.clearAndSetSemantics { }
+                            },
+                        ),
+                    enabled = destinationButtonVisible && dismissingTabId == null &&
                         movingTabId == null &&
                         exitHero == null &&
                         reorderAnimation == null &&
@@ -5276,7 +5334,7 @@ private fun TabCoverflowHeroContent(
     rootWidthPx: Float,
     rootHeightPx: Float,
     previewTopInsetPx: Int,
-    bottomBarTopPx: Float,
+    bottomBarTopPx: FloatState,
     targetFraction: () -> Float,
 ) {
     val density = LocalDensity.current
@@ -5352,7 +5410,7 @@ private fun TabListHeroContent(
     rootWidthPx: Float,
     rootHeightPx: Float,
     previewTopInsetPx: Int,
-    bottomBarTopPx: Float,
+    bottomBarTopPx: FloatState,
     targetFraction: () -> Float,
 ) {
     val density = LocalDensity.current

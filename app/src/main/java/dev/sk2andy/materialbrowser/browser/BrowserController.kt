@@ -227,6 +227,7 @@ class BrowserController(private val activity: Activity) {
     private var previewCaptureEnabled = true
     private var previewContentBottomInWindowPx: Int? = null
     private var lastWindowInsets: WindowInsetsCompat? = null
+    private var browserChromeOwnsIme = false
     private var previewEpoch = 0
     private var faviconEpoch = 0
     private val faviconGenerations = mutableMapOf<String, Int>()
@@ -647,13 +648,30 @@ class BrowserController(private val activity: Activity) {
     }
 
     fun onWindowInsetsChanged(insets: WindowInsetsCompat) {
+        val previousInsets = lastWindowInsets
         lastWindowInsets = insets
+        if (
+            browserChromeOwnsIme &&
+            previousInsets != null &&
+            hasSameNonImeInsets(previousInsets, insets)
+        ) {
+            return
+        }
         // Compose owns the root inset listener. AndroidView children do not receive that
         // callback, so forward every change to Chromium's WebView inset controller.
+        dispatchWindowInsetsToAttachedWebViews(insets)
+    }
+
+    fun setBrowserChromeOwnsIme(ownsIme: Boolean) {
+        if (browserChromeOwnsIme == ownsIme) return
+        browserChromeOwnsIme = ownsIme
+        val insets = lastWindowInsets ?: return
+        dispatchWindowInsetsToAttachedWebViews(insets)
+    }
+
+    private fun dispatchWindowInsetsToAttachedWebViews(insets: WindowInsetsCompat) {
         webViews.forEach { (tabId, webView) ->
-            if (webView.isAttachedToWindow) {
-                applyWindowInsets(tabId, webView, insets)
-            }
+            if (webView.isAttachedToWindow) applyWindowInsets(tabId, webView, insets)
         }
     }
 
@@ -675,10 +693,18 @@ class BrowserController(private val activity: Activity) {
         webView: WebView,
         insets: WindowInsetsCompat,
     ) {
+        val effectiveInsets = if (browserChromeOwnsIme) {
+            WindowInsetsCompat.Builder(insets)
+                .setInsets(WindowInsetsCompat.Type.ime(), Insets.NONE)
+                .setVisible(WindowInsetsCompat.Type.ime(), false)
+                .build()
+        } else {
+            insets
+        }
         val drawsEdgeToEdge = edgeToEdgePages[tabId] == true
-        val safeArea = insets.getInsets(SAFE_AREA_INSET_TYPES)
-        val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-        val tappableElements = insets.getInsets(WindowInsetsCompat.Type.tappableElement())
+        val safeArea = effectiveInsets.getInsets(SAFE_AREA_INSET_TYPES)
+        val navigationBars = effectiveInsets.getInsets(WindowInsetsCompat.Type.navigationBars())
+        val tappableElements = effectiveInsets.getInsets(WindowInsetsCompat.Type.tappableElement())
         val hasTappableNavigation =
             (navigationBars.left > 0 && tappableElements.left > 0) ||
                 (navigationBars.top > 0 && tappableElements.top > 0) ||
@@ -708,9 +734,9 @@ class BrowserController(private val activity: Activity) {
             }
         }
         val rendererInsets = if (drawsEdgeToEdge) {
-            insets
+            effectiveInsets
         } else {
-            WindowInsetsCompat.Builder(insets)
+            WindowInsetsCompat.Builder(effectiveInsets)
                 .setInsets(
                     SAFE_AREA_INSET_TYPES,
                     Insets.of(
@@ -723,6 +749,14 @@ class BrowserController(private val activity: Activity) {
                 .build()
         }
         ViewCompat.dispatchApplyWindowInsets(webView, rendererInsets)
+    }
+
+    private fun hasSameNonImeInsets(
+        previous: WindowInsetsCompat,
+        current: WindowInsetsCompat,
+    ): Boolean = NON_IME_INSET_TYPES.all { type ->
+        previous.getInsets(type) == current.getInsets(type) &&
+            previous.isVisible(type) == current.isVisible(type)
     }
 
     private fun updateScrollAwareInsets(
@@ -3747,6 +3781,15 @@ class BrowserController(private val activity: Activity) {
         val ALL_WEB_ORIGINS = setOf("*")
         val SAFE_AREA_INSET_TYPES =
             WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        val NON_IME_INSET_TYPES = intArrayOf(
+            WindowInsetsCompat.Type.statusBars(),
+            WindowInsetsCompat.Type.navigationBars(),
+            WindowInsetsCompat.Type.captionBar(),
+            WindowInsetsCompat.Type.systemGestures(),
+            WindowInsetsCompat.Type.mandatorySystemGestures(),
+            WindowInsetsCompat.Type.tappableElement(),
+            WindowInsetsCompat.Type.displayCutout(),
+        )
         const val PREVIEW_CAPTURE_IDLE_DELAY_MS = 220L
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
         const val MAX_COSMETIC_DOCUMENT_START_RULES = 64

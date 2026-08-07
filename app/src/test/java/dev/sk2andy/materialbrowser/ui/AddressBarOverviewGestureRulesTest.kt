@@ -142,6 +142,14 @@ class AddressBarOverviewGestureRulesTest {
     }
 
     @Test
+    fun `destination button replaces morph only at completion`() {
+        assertFalse(AddressBarOverviewGestureRules.isDestinationButtonVisible(0f))
+        assertFalse(AddressBarOverviewGestureRules.isDestinationButtonVisible(0.995f))
+        assertFalse(AddressBarOverviewGestureRules.isDestinationButtonVisible(0.999f))
+        assertTrue(AddressBarOverviewGestureRules.isDestinationButtonVisible(1f))
+    }
+
+    @Test
     fun `morph keeps displayed corners circular during non uniform scaling`() {
         val sourceWidth = 280f
         val sourceHeight = 48f

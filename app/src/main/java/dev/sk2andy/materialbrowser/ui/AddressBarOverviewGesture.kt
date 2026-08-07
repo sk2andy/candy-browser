@@ -97,6 +97,9 @@ internal object AddressBarOverviewGestureRules {
     fun targetScale(progress: Float): Float =
         TARGET_START_SCALE + (1f - TARGET_START_SCALE) * targetAlpha(progress)
 
+    fun isDestinationButtonVisible(progress: Float): Boolean =
+        progress >= MORPH_COMPLETION_THRESHOLD
+
     fun containerScale(progress: Float, sourceSize: Float, targetSize: Float): Float {
         if (sourceSize <= 0f || targetSize <= 0f) return 1f
         val boundedProgress = resistedProgress(progress)
@@ -142,4 +145,5 @@ internal object AddressBarOverviewGestureRules {
     private const val TARGET_FADE_START = 0.28f
     private const val TARGET_FADE_END = 0.78f
     private const val TARGET_START_SCALE = 0.72f
+    private const val MORPH_COMPLETION_THRESHOLD = 1f
 }

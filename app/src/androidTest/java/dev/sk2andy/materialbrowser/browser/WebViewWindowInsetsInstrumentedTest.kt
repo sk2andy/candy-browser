@@ -4,6 +4,7 @@ import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
+import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
@@ -148,6 +149,52 @@ class WebViewWindowInsetsInstrumentedTest {
             awaitWebViewTop(webView, expectedTopPixels.get())
         }
     }
+
+    @Test
+    fun browserChromeOwnedImeFramesAreDeduplicatedAndRestored() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().submitAddress("https://example.test/")
+            }
+            val webView = awaitWebView(scenario)
+            val dispatchCount = AtomicInteger()
+            val lastImeBottom = AtomicInteger(-1)
+
+            scenario.onActivity { activity ->
+                ViewCompat.setOnApplyWindowInsetsListener(webView) { _, insets ->
+                    dispatchCount.incrementAndGet()
+                    lastImeBottom.set(
+                        insets.getInsets(WindowInsetsCompat.Type.ime()).bottom,
+                    )
+                    insets
+                }
+                val controller = activity.browserControllerForTesting()
+                controller.onWindowInsetsChanged(imeInsets(bottom = 0, visible = false))
+                controller.setBrowserChromeOwnsIme(true)
+                val countAfterOwnership = dispatchCount.get()
+
+                controller.onWindowInsetsChanged(imeInsets(bottom = 400, visible = true))
+                controller.onWindowInsetsChanged(imeInsets(bottom = 700, visible = true))
+
+                assertEquals(countAfterOwnership, dispatchCount.get())
+                assertEquals(0, lastImeBottom.get())
+
+                controller.setBrowserChromeOwnsIme(false)
+                assertEquals(countAfterOwnership + 1, dispatchCount.get())
+                assertEquals(700, lastImeBottom.get())
+
+                controller.onWindowInsetsChanged(imeInsets(bottom = 0, visible = false))
+                assertEquals(countAfterOwnership + 2, dispatchCount.get())
+                assertEquals(0, lastImeBottom.get())
+            }
+        }
+    }
+
+    private fun imeInsets(bottom: Int, visible: Boolean): WindowInsetsCompat =
+        WindowInsetsCompat.Builder()
+            .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, bottom))
+            .setVisible(WindowInsetsCompat.Type.ime(), visible)
+            .build()
 
     private fun awaitWebView(scenario: ActivityScenario<MainActivity>): WebView {
         val result = AtomicReference<WebView>()
