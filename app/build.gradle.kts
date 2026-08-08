@@ -57,9 +57,9 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = ".readerstudio"
             versionNameSuffix = "-debug"
-            manifestPlaceholders["appLabel"] = "Candy Browser Debug"
+            manifestPlaceholders["appLabel"] = "Candy Reader Studio"
         }
 
         release {

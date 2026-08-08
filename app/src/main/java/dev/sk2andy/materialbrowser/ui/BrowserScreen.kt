@@ -256,6 +256,10 @@ import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.data.TabPinningRules
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
+import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
+import dev.sk2andy.materialbrowser.reader.ReaderStudioSession
+import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
@@ -300,6 +304,7 @@ private data class TabReorderAnimation(
 )
 
 private enum class BrowserBackTarget {
+    ReaderStudio,
     FilterStudio,
     Settings,
     AddressEditor,
@@ -323,6 +328,9 @@ fun BrowserScreen(controller: BrowserController) {
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
     var filterStudioVisible by rememberSaveable { mutableStateOf(false) }
     var filterStudioSelectedRuleId by rememberSaveable { mutableStateOf<String?>(null) }
+    var readerStudioSession by remember { mutableStateOf<ReaderStudioSession?>(null) }
+    var readerStudioResult by remember { mutableStateOf<ReaderExtractionResult?>(null) }
+    var readerStudioRequestId by remember { mutableIntStateOf(0) }
     var clearDialogVisible by remember { mutableStateOf(false) }
     var capsuleEditorVisible by remember { mutableStateOf(false) }
     var editingCapsuleId by remember { mutableStateOf<String?>(null) }
@@ -381,6 +389,7 @@ fun BrowserScreen(controller: BrowserController) {
         mutableStateOf(Offset.Unspecified)
     }
     val context = LocalContext.current
+    val readerLibraryRepository = remember(context) { ReaderLibraryRepository.get(context) }
     val accessibilityManager = remember(context) {
         context.getSystemService(AccessibilityManager::class.java)
     }
@@ -727,6 +736,13 @@ fun BrowserScreen(controller: BrowserController) {
         }
     }
 
+    LaunchedEffect(selectedTab.id, readerStudioSession) {
+        if (ReaderStudioSessionRules.shouldClose(readerStudioSession, selectedTab.id)) {
+            readerStudioSession = null
+            readerStudioRequestId++
+        }
+    }
+
     LaunchedEffect(controller.tabs.size, privacyXRayTabId) {
         val xRayTabId = privacyXRayTabId ?: return@LaunchedEffect
         if (controller.tabs.none { it.id == xRayTabId }) privacyXRayTabId = null
@@ -738,10 +754,11 @@ fun BrowserScreen(controller: BrowserController) {
         settingsVisible,
         filterStudioVisible,
         candyTrailTabId,
+        readerStudioSession,
     ) {
         if (
             tabOverviewVisible || addressEditorVisible || settingsVisible ||
-            filterStudioVisible || candyTrailTabId != null
+            filterStudioVisible || candyTrailTabId != null || readerStudioSession != null
         ) {
             controller.setPreviewCaptureEnabled(false)
         } else {
@@ -752,6 +769,7 @@ fun BrowserScreen(controller: BrowserController) {
 
     val currentBackTarget by rememberUpdatedState(
         when {
+            readerStudioSession != null -> BrowserBackTarget.ReaderStudio
             filterStudioVisible -> BrowserBackTarget.FilterStudio
             settingsVisible -> BrowserBackTarget.Settings
             addressEditorVisible -> BrowserBackTarget.AddressEditor
@@ -778,6 +796,7 @@ fun BrowserScreen(controller: BrowserController) {
                 }
             }
             when (target) {
+                BrowserBackTarget.ReaderStudio -> readerStudioSession = null
                 BrowserBackTarget.FilterStudio -> filterStudioVisible = false
                 BrowserBackTarget.Settings -> {
                     if (receivedProgress) settingsBackProgress.snapTo(1f)
@@ -1108,6 +1127,21 @@ fun BrowserScreen(controller: BrowserController) {
             onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
             onShare = controller::shareSelectedPage,
             onPrint = controller::printSelectedPage,
+            onReaderStudio = {
+                readerStudioResult = null
+                val requestId = ++readerStudioRequestId
+                readerStudioSession = ReaderStudioSession(
+                    tabId = selectedTab.id,
+                    sourceUrl = selectedTab.url,
+                    isPrivate = selectedTab.isIncognito,
+                    requestId = requestId,
+                )
+                controller.extractSelectedPageForReader { result ->
+                    if (ReaderStudioSessionRules.acceptsResult(readerStudioSession, requestId)) {
+                        readerStudioResult = result
+                    }
+                }
+            },
             onOpenCandyTrail = {
                 candyTrailSourceBounds = null
                 candyTrailTabId = selectedTab.id
@@ -1143,6 +1177,38 @@ fun BrowserScreen(controller: BrowserController) {
                     }
                 },
         )
+
+        readerStudioSession?.let { session ->
+            ReaderStudioScreen(
+                result = readerStudioResult,
+                sourceUrl = session.sourceUrl,
+                isPrivate = session.isPrivate,
+                repository = readerLibraryRepository,
+                onRetry = {
+                    readerStudioResult = null
+                    val requestId = ++readerStudioRequestId
+                    readerStudioSession = session.copy(requestId = requestId)
+                    controller.extractSelectedPageForReader { result ->
+                        if (ReaderStudioSessionRules.acceptsResult(
+                                readerStudioSession,
+                                requestId,
+                            )
+                        ) {
+                            readerStudioResult = result
+                        }
+                    }
+                },
+                onDismiss = { readerStudioSession = null },
+                onOpenOriginal = { url ->
+                    readerStudioSession = null
+                    if (url != selectedTab.url) controller.openUrl(url)
+                },
+                onOpenLink = { url ->
+                    readerStudioSession = null
+                    controller.openUrl(url)
+                },
+            )
+        }
 
         TabOverview(
             controller = controller,
@@ -2364,6 +2430,7 @@ private fun BrowserBottomBar(
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
     onPrint: () -> Unit,
+    onReaderStudio: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     overviewGestureEnabled: Boolean,
@@ -2388,6 +2455,8 @@ private fun BrowserBottomBar(
     val tabDragState = rememberDraggableState(onTabDrag)
     val pulseScale = remember { Animatable(1f) }
     val domain = AddressResolver.displayText(tab.url)
+    val readerSupported = ReaderStudioSessionRules.isSupportedSource(tab.url)
+    val readerOpenLabel = stringResource(R.string.reader_open_action)
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -2558,7 +2627,6 @@ private fun BrowserBottomBar(
                             )
                             AddressBarPresentation.Compact -> {
                                 Surface(
-                                    onClick = onExpand,
                                     modifier = Modifier
                                         .addressBarVerticalGesture(
                                             enabled = overviewGestureEnabled,
@@ -2575,6 +2643,12 @@ private fun BrowserBottomBar(
                                             onDragStopped = { velocity ->
                                                 onTabDragStopped(velocity)
                                             },
+                                        )
+                                        .addressBarReaderActions(
+                                            readerEnabled = readerSupported,
+                                            onClick = onExpand,
+                                            onReaderStudio = onReaderStudio,
+                                            readerLabel = readerOpenLabel,
                                         ),
                                     color = Color.Transparent,
                                 ) {
@@ -2641,6 +2715,7 @@ private fun BrowserBottomBar(
                                 onSummarizeWithAssistant = onSummarizeWithAssistant,
                                 onShare = onShare,
                                 onPrint = onPrint,
+                                onReaderStudio = onReaderStudio,
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onAddSiteCapsule = onAddSiteCapsule,
                                 onDock = onDock,
@@ -2889,6 +2964,18 @@ private fun AddressCommandFeedback.localizedText(): String = when (message) {
         stringResource(R.string.command_feedback_rejected)
 }
 
+internal fun Modifier.addressBarReaderActions(
+    readerEnabled: Boolean,
+    onClick: () -> Unit,
+    onReaderStudio: () -> Unit,
+    readerLabel: String,
+): Modifier = combinedClickable(
+    role = Role.Button,
+    onClick = onClick,
+    onLongClick = onReaderStudio.takeIf { readerEnabled },
+    onLongClickLabel = readerLabel.takeIf { readerEnabled },
+)
+
 @Composable
 internal fun Modifier.addressBarVerticalGesture(
     enabled: Boolean = true,
@@ -3019,6 +3106,7 @@ private fun ExpandedBottomBarContent(
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
     onPrint: () -> Unit,
+    onReaderStudio: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     onDock: () -> Unit,
@@ -3178,7 +3266,13 @@ private fun ExpandedBottomBarContent(
                                 },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clickable(onClick = onAddress)
+                                    .addressBarReaderActions(
+                                        readerEnabled = ReaderStudioSessionRules
+                                            .isSupportedSource(tab.url),
+                                        onClick = onAddress,
+                                        onReaderStudio = onReaderStudio,
+                                        readerLabel = stringResource(R.string.reader_open_action),
+                                    )
                                     .padding(
                                         start = 13.dp,
                                         end = 6.dp,
@@ -3287,6 +3381,21 @@ private fun ExpandedBottomBarContent(
                         enabled = canToggleDomainMute,
                         muted = isDomainMuted,
                         onMutedChange = onDomainMutedChange,
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.reader_open_action)) },
+                        enabled = ReaderStudioSessionRules.isSupportedSource(tab.url),
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onReaderStudio()
+                        },
+                        leadingIcon = {
+                            Text(
+                                "Aa",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_open_candy_trail)) },

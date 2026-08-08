@@ -140,6 +140,10 @@ import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -1418,6 +1422,30 @@ class BrowserController(private val activity: Activity) {
                 activity.getString(R.string.toast_assistant_unavailable),
                 Toast.LENGTH_SHORT,
             ).show()
+        }
+    }
+
+    fun extractSelectedPageForReader(onResult: (ReaderExtractionResult) -> Unit) {
+        val tab = selectedTab
+        if (
+            !tab.url.startsWith("https://", ignoreCase = true) &&
+            !tab.url.startsWith("http://", ignoreCase = true)
+        ) {
+            onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.UnsupportedPage))
+            return
+        }
+        val webView = webViews[tab.id]
+        if (webView == null) {
+            onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+            return
+        }
+        val expectedUrl = tab.url
+        webView.evaluateJavascript(ReaderExtractionScript.javascript) { result ->
+            if (destroyed || selectedTab.id != tab.id || selectedTab.url != expectedUrl) {
+                onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+            } else {
+                onResult(ReaderExtractionParser.parse(result))
+            }
         }
     }
 
