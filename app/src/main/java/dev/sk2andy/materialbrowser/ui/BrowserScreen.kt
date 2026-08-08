@@ -16,9 +16,8 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -33,7 +32,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -2378,7 +2376,6 @@ private fun BrowserBottomBar(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
     val presentation = AddressBarPresentationRules.resolve(
         docked = docked,
         compact = compact,
@@ -2436,42 +2433,18 @@ private fun BrowserBottomBar(
         contentAlignment = Alignment.Center,
     ) {
         val edgeTabWidth = 52.dp
-        val widthTarget = when (presentation) {
-            AddressBarPresentation.Docked -> edgeTabWidth
-            AddressBarPresentation.Compact -> compactWidth.coerceIn(96.dp, maxWidth)
-            AddressBarPresentation.Expanded -> maxWidth
-            AddressBarPresentation.CommandFeedback -> feedbackWidth
-                .coerceAtLeast(160.dp)
-                .coerceAtMost(maxWidth)
-        }
-        val animatedBarWidth by animateDpAsState(
-            targetValue = widthTarget,
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
-            label = "Adressleistenbreite beim Scrollen und Parken",
-        )
-        val heightTarget = when (presentation) {
-            AddressBarPresentation.Docked -> 48.dp
-            AddressBarPresentation.Compact -> 48.dp
-            AddressBarPresentation.Expanded -> 56.dp
-            AddressBarPresentation.CommandFeedback -> 46.dp
-        }
-        val animatedBarHeight by animateDpAsState(
-            targetValue = heightTarget,
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
-            label = "Adressleistenhöhe beim Parken",
-        )
         val layoutDirection = LocalLayoutDirection.current
-        val dockOffsetTarget = if (presentation == AddressBarPresentation.Docked) {
-            val distance = ((maxWidth - edgeTabWidth) / 2f + 12.dp).coerceAtLeast(0.dp)
-            if (layoutDirection == LayoutDirection.Ltr) distance else -distance
-        } else {
-            0.dp
-        }
-        val dockOffset by animateDpAsState(
-            targetValue = dockOffsetTarget,
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
-            label = "Adressleiste am Bildschirmrand",
+        val motion = rememberAddressBarMotionState(
+            presentation = presentation,
+            compactWidth = compactWidth,
+            maxWidth = maxWidth,
+            feedbackWidth = feedbackWidth,
+            edgeTabWidth = edgeTabWidth,
+            layoutDirection = layoutDirection,
         )
+        val animatedBarWidth = motion.width
+        val animatedBarHeight = motion.height
+        val dockOffset = motion.dockOffset
         var addressBarBounds by remember { mutableStateOf<Rect?>(null) }
         val morphTargetSize = 56.dp
         Box(contentAlignment = Alignment.Center) {
@@ -2528,23 +2501,13 @@ private fun BrowserBottomBar(
                 shadowElevation = 14.dp,
             ) {
                 Box {
-                    AnimatedContent(
-                        targetState = presentation,
+                    AddressBarPresentationTransition(
+                        presentation = presentation,
                         modifier = Modifier.graphicsLayer {
                             alpha = AddressBarOverviewGestureRules.contentAlpha(
                                 overviewMorphProgress.floatValue,
                             )
                         },
-                        transitionSpec = {
-                            (fadeIn(tween(70)) togetherWith fadeOut(tween(50)))
-                                .using(
-                                    SizeTransform(
-                                        clip = false,
-                                        sizeAnimationSpec = { _, _ -> snap() },
-                                    ),
-                                )
-                        },
-                        label = "Adressleisteninhalt",
                     ) { targetPresentation ->
                         when (targetPresentation) {
                             AddressBarPresentation.Docked -> AddressBarEdgeTab(
@@ -2614,6 +2577,8 @@ private fun BrowserBottomBar(
                                 ghostCompletion = ghostCompletion,
                                 onAcceptGhostCompletion = onAcceptGhostCompletion,
                                 focusRequester = focusRequester,
+                                addressFocusNonce = addressFocusNonce,
+                                requestAddressFocus = editing && commandFeedback == null,
                                 onMoveAddressSuggestion = onMoveAddressSuggestion,
                                 onActivateAddressSuggestion = onActivateAddressSuggestion,
                                 onDismissEditor = onDismissEditor,
@@ -2736,13 +2701,6 @@ private fun BrowserBottomBar(
                         }
                     },
             )
-        }
-    }
-    LaunchedEffect(editing, tab.id, addressFocusNonce, commandFeedback) {
-        if (editing && commandFeedback == null) {
-            withFrameNanos { }
-            focusRequester.requestFocus()
-            keyboard?.show()
         }
     }
 }
@@ -2993,6 +2951,8 @@ private fun ExpandedBottomBarContent(
     ghostCompletion: String?,
     onAcceptGhostCompletion: () -> Unit,
     focusRequester: androidx.compose.ui.focus.FocusRequester,
+    addressFocusNonce: Int,
+    requestAddressFocus: Boolean,
     onMoveAddressSuggestion: (Int) -> Unit,
     onActivateAddressSuggestion: () -> Unit,
     onDismissEditor: () -> Unit,
@@ -3029,6 +2989,14 @@ private fun ExpandedBottomBarContent(
     onOverviewGestureCancelled: () -> Unit,
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(requestAddressFocus, tab.id, addressFocusNonce) {
+        if (requestAddressFocus) {
+            withFrameNanos { }
+            focusRequester.requestFocus()
+            keyboard?.show()
+        }
+    }
     Column {
             Row(
                 modifier = Modifier.padding(4.dp),
