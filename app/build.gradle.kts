@@ -28,8 +28,8 @@ val hasReleaseSigning = missingReleaseSigningValues.isEmpty()
 val candyVersionCode = providers.gradleProperty("candy.versionCode").orElse("1")
 val candyVersionName = providers.gradleProperty("candy.versionName").orElse("0.1")
 val debugApplicationIdSuffix =
-    providers.gradleProperty("candy.debugApplicationIdSuffix").orElse(".permissionradar")
-val debugAppLabel = providers.gradleProperty("candy.debugAppLabel").orElse("Permission Radar")
+    providers.gradleProperty("candy.debugApplicationIdSuffix").orElse(".readerstudio")
+val debugAppLabel = providers.gradleProperty("candy.debugAppLabel").orElse("Candy Reader Studio")
 
 android {
     namespace = "dev.sk2andy.materialbrowser"
