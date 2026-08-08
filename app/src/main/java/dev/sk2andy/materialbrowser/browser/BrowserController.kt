@@ -156,6 +156,15 @@ import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
 import dev.sk2andy.materialbrowser.data.SiteCapsuleIconStore
 import dev.sk2andy.materialbrowser.data.SiteCapsuleStore
+import dev.sk2andy.materialbrowser.data.SnoozeRestoreRules
+import dev.sk2andy.materialbrowser.data.SnoozeRules
+import dev.sk2andy.materialbrowser.data.SnoozeMutationRules
+import dev.sk2andy.materialbrowser.data.SnoozeRuntimeRegistry
+import dev.sk2andy.materialbrowser.data.SnoozeScheduler
+import dev.sk2andy.materialbrowser.data.SnoozeUndoRules
+import dev.sk2andy.materialbrowser.data.SnoozeUndoToken
+import dev.sk2andy.materialbrowser.data.SnoozedTab
+import dev.sk2andy.materialbrowser.data.SnoozedTabStore
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
@@ -191,6 +200,7 @@ class BrowserController(
     val filterRules = mutableStateListOf<CandyRule>()
     private val incognitoRuleHits = mutableStateMapOf<String, Int>()
     val candyTrails = mutableStateMapOf<String, CandyTrail>()
+    val snoozedTabs = mutableStateListOf<SnoozedTab>()
     val siteCapsules = mutableStateListOf<SiteCapsule>()
     val contentActions = WebContentActionState()
 
@@ -293,6 +303,13 @@ class BrowserController(
     private val suppressedCandyTrailTabIds = mutableSetOf<String>()
     private var candyTrailEpoch = 0
     private val store = BrowserSessionStore(activity)
+    private val snoozedTabStore = SnoozedTabStore(activity)
+    private val snoozeScheduler = SnoozeScheduler(activity)
+    private val snoozeRestoreCallback: (Long) -> Unit = { nowMillis ->
+        mainHandler.post {
+            if (!destroyed) restoreDueSnoozedTabs(nowMillis)
+        }
+    }
     private val permanentMutedDomains = mutableStateMapOf<String, Set<String>>().apply {
         putAll(store.loadMutedDomains())
     }
@@ -333,10 +350,22 @@ class BrowserController(
         get() = tabs.filter { it.profileId == activeProfileId }
 
     val canToggleSelectedDomainMute: Boolean
-        get() = isDomainMuteSupported && DomainMuteRules.domainForUrl(selectedTab.url) != null
+        get() = canToggleDomainMute(selectedTabId)
 
     val isSelectedDomainMuted: Boolean
-        get() = isDomainMuted(selectedTab, selectedTab.url)
+        get() = isDomainMuted(selectedTabId)
+
+    fun canToggleDomainMute(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        return isDomainMuteSupported && DomainMuteRules.domainForUrl(pageUrl) != null
+    }
+
+    fun isDomainMuted(tabId: String): Boolean {
+        siteExceptionRevision
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return isDomainMuted(tab, pageUrls[tabId] ?: tab.url)
+    }
 
     fun permissionRadarSnapshot(
         tabId: String = selectedTabId,
@@ -833,6 +862,7 @@ class BrowserController(
         filterRules += candyRuleRepository.load()
         rebuildCandyMatcher()
         val nowMillis = System.currentTimeMillis()
+        snoozedTabs += snoozedTabStore.load()
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
         searchEngine = store.loadSearchEngine()
@@ -873,6 +903,25 @@ class BrowserController(
         tabs += restoredTabs.take(MAX_TABS).map { tab ->
             if (tab.profileId in profileIds) tab else tab.copy(profileId = profiles.first().id)
         }
+        val tabsBeforeInitialSnoozeRestore = tabs.toList()
+        val snoozedBeforeInitialRestore = snoozedTabs.toList()
+        val initialSnoozeRestore = SnoozeRestoreRules.restoreDue(
+            tabs = tabs,
+            snoozedTabs = snoozedTabs,
+            profiles = profiles,
+            activeProfileId = activeProfileId,
+            nowMillis = nowMillis,
+            maxTabs = MAX_TABS,
+        )
+        if (initialSnoozeRestore.completedTabIds.isNotEmpty()) {
+            tabs.clear()
+            tabs += initialSnoozeRestore.tabs
+            val remaining = snoozedTabs.filterNot {
+                it.tab.id in initialSnoozeRestore.completedTabIds
+            }
+            snoozedTabs.clear()
+            snoozedTabs += remaining
+        }
         if (activeTabs.isEmpty()) tabs += newTabState(nowMillis = nowMillis)
         val rememberedSelection = profiles.first { it.id == activeProfileId }.selectedTabId
         selectedTabId = rememberedSelection
@@ -882,6 +931,33 @@ class BrowserController(
         rememberSelectedTab(activeProfileId, selectedTabId)
         pruneStaleTabs(nowMillis, persistChanges = false)
         touchTab(selectedTabId, nowMillis)
+        if (initialSnoozeRestore.completedTabIds.isNotEmpty()) {
+            val snapshotPersisted = store.saveTabsAndSnoozedImmediately(
+                tabs = tabs.toList(),
+                selectedTabId = selectedTabId,
+                snoozedTabs = snoozedTabs,
+            )
+            val startupSnapshot = SnoozeRestoreRules.settleStartupRestore(
+                originalTabs = tabsBeforeInitialSnoozeRestore,
+                originalSnoozedTabs = snoozedBeforeInitialRestore,
+                restoredTabs = tabs.toList(),
+                remainingSnoozedTabs = snoozedTabs.toList(),
+                snapshotPersisted = snapshotPersisted,
+            )
+            if (!snapshotPersisted) {
+                tabs.clear()
+                tabs += startupSnapshot.tabs
+                snoozedTabs.clear()
+                snoozedTabs += startupSnapshot.snoozedTabs
+                if (activeTabs.isEmpty()) tabs += newTabState(nowMillis = nowMillis)
+                selectedTabId = rememberedSelection
+                    ?.takeIf { id -> activeTabs.any { it.id == id } }
+                    ?: restoredSelection?.takeIf { id -> activeTabs.any { it.id == id } }
+                    ?: activeTabs.first().id
+                rememberSelectedTab(activeProfileId, selectedTabId)
+                touchTab(selectedTabId, nowMillis)
+            }
+        }
         persist()
         // Incognito tabs are never restored. Remove data left by process death before
         // any private WebView can reuse the old profile.
@@ -892,6 +968,8 @@ class BrowserController(
         WebView.setWebContentsDebuggingEnabled(false)
         configureServiceWorkerBlocking()
         mainHandler.post(contentBlocker::prepareConsentScript)
+        SnoozeRuntimeRegistry.register(snoozeRestoreCallback)
+        snoozeScheduler.schedule(snoozedTabs, nowMillis)
     }
 
     fun attachSelectedWebView(container: FrameLayout) {
@@ -1520,6 +1598,17 @@ class BrowserController(
         deleteOrScheduleWebViewProfile(webViewProfileName)
         tabs.clear()
         tabs += movedTabs
+        val reassignedSnoozed = snoozedTabs.map { snoozed ->
+            if (snoozed.tab.profileId == profileId) {
+                snoozed.copy(tab = snoozed.tab.copy(profileId = fallbackProfile.id))
+            } else {
+                snoozed
+            }
+        }
+        if (snoozedTabStore.save(reassignedSnoozed)) {
+            snoozedTabs.clear()
+            snoozedTabs += reassignedSnoozed
+        }
         movedTabIds.forEach { tabId ->
             updateProtectionRequestContext(tabId, pageUrls[tabId])
             webViews[tabId]?.let { webView ->
@@ -1616,8 +1705,10 @@ class BrowserController(
         }
     }
 
-    fun openSelectedPageExternally() {
-        val url = selectedTab.url
+    fun openSelectedPageExternally() = openPageExternally(selectedTabId)
+
+    fun openPageExternally(tabId: String) {
+        val url = tabs.firstOrNull { it.id == tabId }?.url ?: return
         if (url == BLANK_URL) return
         when (externalApps.openWebUrlExternally(url)) {
             ExternalLaunchResult.Launched -> Unit
@@ -1631,8 +1722,10 @@ class BrowserController(
         }
     }
 
-    fun summarizeSelectedPageWithAssistant() {
-        val tab = selectedTab
+    fun summarizeSelectedPageWithAssistant() = summarizePageWithAssistant(selectedTabId)
+
+    fun summarizePageWithAssistant(tabId: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
         val request = AssistantSummaryRequest.create(
             url = tab.url,
             title = tab.title,
@@ -1647,8 +1740,10 @@ class BrowserController(
         }
     }
 
-    fun shareSelectedPage() {
-        val tab = selectedTab
+    fun shareSelectedPage() = sharePage(selectedTabId)
+
+    fun sharePage(tabId: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
         val request = PageShareRequest.create(
             url = tab.url,
             title = tab.title,
@@ -1662,8 +1757,10 @@ class BrowserController(
         }
     }
 
-    fun printSelectedPage() {
-        val tab = selectedTab
+    fun printSelectedPage() = printPage(selectedTabId)
+
+    fun printPage(tabId: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (tab.url == BLANK_URL) return
         val webView = webViews[tab.id]
         val printManager = activity.getSystemService(PrintManager::class.java)
@@ -1784,6 +1881,182 @@ class BrowserController(
         }
         reconcileCandyTrailForks(nowMillis)
         persist()
+    }
+
+    fun snoozeTab(
+        tabId: String,
+        wakeAtMillis: Long,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): SnoozeUndoToken? {
+        val index = tabs.indexOfFirst { it.id == tabId }
+        if (index < 0) return null
+        val tab = tabs[index]
+        if (!SnoozeRules.canSnooze(tab, wakeAtMillis, nowMillis)) return null
+        val updatedSnoozed = (snoozedTabs.filterNot { it.tab.id == tabId } +
+            SnoozedTab(tab, wakeAtMillis, nowMillis))
+            .sortedWith(compareBy<SnoozedTab>({ it.wakeAtMillis }, { it.tab.id }))
+        val profileIndex = activeTabs.indexOfFirst { it.id == tabId }
+        val popupOpenerId = popupOpeners[tabId]
+        val updatedTabs = tabs.toMutableList().apply { removeAt(index) }
+        val originalSelection = selectedTabId
+        var updatedSelection = selectedTabId
+        var replacementTabId: String? = null
+        var touchedTabBefore: BrowserTab? = null
+        var touchedTabAfter: BrowserTab? = null
+        if (selectedTabId == tabId) {
+            val activeRemaining = updatedTabs.filter { it.profileId == activeProfileId }
+            updatedSelection = popupOpenerId
+                ?.takeIf { openerId -> activeRemaining.any { it.id == openerId } }
+                ?: activeRemaining.getOrNull(
+                    profileIndex.coerceAtMost(activeRemaining.lastIndex),
+                )?.id
+                ?: newTabState(nowMillis = nowMillis).also { replacement ->
+                    replacementTabId = replacement.id
+                    updatedTabs += replacement
+                }.id
+            val selectedIndex = updatedTabs.indexOfFirst { it.id == updatedSelection }
+            if (selectedIndex >= 0) {
+                touchedTabBefore = updatedTabs[selectedIndex]
+                touchedTabAfter = updatedTabs[selectedIndex].copy(
+                    lastAccessedAt = nowMillis,
+                )
+                updatedTabs[selectedIndex] = touchedTabAfter
+            }
+        }
+        if (!store.saveTabsAndSnoozedImmediately(
+                tabs = updatedTabs,
+                selectedTabId = updatedSelection,
+                snoozedTabs = updatedSnoozed,
+            )
+        ) return null
+
+        if (activeCapsuleTabId == tabId) leaveSiteCapsule()
+        if (selectedTabId == tabId) webViews[tabId]?.let(::pauseWebView)
+        removeTabRuntimeForSnooze(tab)
+        tabs.clear()
+        tabs += updatedTabs
+        snoozedTabs.clear()
+        snoozedTabs += updatedSnoozed
+        if (selectedTabId == tabId) {
+            selectedTabId = updatedSelection
+            rememberSelectedTab(activeProfileId, selectedTabId)
+        }
+        reconcileCandyTrailForks(nowMillis)
+        persist()
+        snoozeScheduler.schedule(snoozedTabs, nowMillis)
+        return SnoozeUndoToken(
+            tabId = tabId,
+            appliedSnoozedTab = updatedSnoozed.first { it.tab.id == tabId },
+            originalIndex = index,
+            originalSelectedTabId = originalSelection,
+            selectedTabIdAfterSnooze = updatedSelection,
+            replacementTabId = replacementTabId,
+            touchedTabBefore = touchedTabBefore,
+            touchedTabAfter = touchedTabAfter,
+        )
+    }
+
+    fun undoSnooze(
+        token: SnoozeUndoToken,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): Boolean {
+        val result = SnoozeUndoRules.undo(
+            tabs = tabs,
+            selectedTabId = selectedTabId,
+            snoozedTabs = snoozedTabs,
+            token = token,
+            maxTabs = MAX_TABS,
+        ) ?: return false
+        if (!store.saveTabsAndSnoozedImmediately(
+                tabs = result.tabs,
+                selectedTabId = result.selectedTabId,
+                snoozedTabs = result.snoozedTabs,
+            )
+        ) return false
+
+        if (result.selectedTabId != selectedTabId) webViews[selectedTabId]?.let(::pauseWebView)
+        result.removedReplacementTabId?.let(::removeTabResources)
+        tabs.clear()
+        tabs += result.tabs
+        snoozedTabs.clear()
+        snoozedTabs += result.snoozedTabs
+        selectedTabId = result.selectedTabId
+        if (selectedTabId == result.restoredTab.id) activeProfileId = result.restoredTab.profileId
+        rememberSelectedTab(activeProfileId, selectedTabId)
+        reconcileCandyTrailForks(nowMillis)
+        restoreSnoozedCandyTrail(result.restoredTab)
+        persist()
+        snoozeScheduler.schedule(result.snoozedTabs, nowMillis)
+        return true
+    }
+
+    fun rescheduleSnoozedTab(
+        tabId: String,
+        wakeAtMillis: Long,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): Boolean {
+        val updated = SnoozeMutationRules.rescheduled(
+            tabs = snoozedTabs,
+            tabId = tabId,
+            wakeAtMillis = wakeAtMillis,
+            nowMillis = nowMillis,
+        ) ?: return false
+        if (!snoozedTabStore.save(updated)) return false
+        snoozedTabs.clear()
+        snoozedTabs += updated
+        snoozeScheduler.schedule(updated, nowMillis)
+        return true
+    }
+
+    fun openSnoozedTabNow(
+        tabId: String,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): Boolean {
+        val snoozed = snoozedTabs.firstOrNull { it.tab.id == tabId } ?: return false
+        val result = SnoozeRestoreRules.restoreDue(
+            tabs = tabs,
+            snoozedTabs = listOf(snoozed.copy(wakeAtMillis = nowMillis)),
+            profiles = profiles,
+            activeProfileId = activeProfileId,
+            nowMillis = nowMillis,
+            maxTabs = MAX_TABS,
+        )
+        if (tabId !in result.completedTabIds || result.tabs.none { it.id == tabId }) return false
+        val restoredTab = result.tabs.first { it.id == tabId }
+        val previousWebView = webViews[selectedTabId]
+        val remaining = SnoozeMutationRules.deleted(snoozedTabs, tabId) ?: return false
+        if (!store.saveTabsAndSnoozedImmediately(
+                tabs = result.tabs,
+                selectedTabId = tabId,
+                snoozedTabs = remaining,
+            )
+        ) return false
+        previousWebView?.let(::pauseWebView)
+        tabs.clear()
+        tabs += result.tabs
+        activeProfileId = restoredTab.profileId
+        selectedTabId = tabId
+        rememberSelectedTab(activeProfileId, tabId)
+        snoozedTabs.clear()
+        snoozedTabs += remaining
+        reconcileCandyTrailForks(nowMillis)
+        restoreSnoozedCandyTrail(restoredTab)
+        persist()
+        snoozeScheduler.schedule(remaining, nowMillis)
+        return true
+    }
+
+    fun deleteSnoozedTab(tabId: String): Boolean {
+        val remaining = SnoozeMutationRules.deleted(snoozedTabs, tabId) ?: return false
+        if (!snoozedTabStore.save(remaining)) return false
+        snoozedTabs.clear()
+        snoozedTabs += remaining
+        candyTrails.remove(tabId)
+        candyTrailGenerations.remove(tabId)
+        candyTrailRepository.delete(tabId)
+        reconcileCandyTrailForks(System.currentTimeMillis())
+        snoozeScheduler.schedule(remaining)
+        return true
     }
 
     fun setTabPinned(tabId: String, isPinned: Boolean): Boolean {
@@ -2363,11 +2636,14 @@ class BrowserController(
         store.saveTabOverviewMode(mode)
     }
 
-    fun setSelectedDomainMuted(muted: Boolean): Boolean {
+    fun setSelectedDomainMuted(muted: Boolean): Boolean = setDomainMuted(selectedTabId, muted)
+
+    fun setDomainMuted(tabId: String, muted: Boolean): Boolean {
         if (!isDomainMuteSupported) return false
-        val tab = selectedTab
-        val domain = DomainMuteRules.domainForUrl(tab.url) ?: return false
-        if (isDomainMuted(tab, tab.url) == muted) return false
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        val domain = DomainMuteRules.domainForUrl(pageUrl) ?: return false
+        if (isDomainMuted(tab, pageUrl) == muted) return false
         val domainsByProfile = if (tab.isIncognito) {
             temporaryMutedDomains
         } else {
@@ -2453,6 +2729,9 @@ class BrowserController(
         tabs.indices.forEach { index -> tabs[index] = tabs[index].copy(blockedCount = 0) }
         history.clear()
         store.saveHistory(emptyList())
+        snoozedTabs.clear()
+        snoozedTabStore.save(emptyList())
+        snoozeScheduler.schedule(emptyList())
         previewEpoch++
         previews.clear()
         previewRepository.clear()
@@ -2497,6 +2776,7 @@ class BrowserController(
         isActivityResumed = true
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val nowMillis = System.currentTimeMillis()
+        restoreDueSnoozedTabs(nowMillis)
         pruneStaleTabs(nowMillis, persistChanges = false)
         touchTab(selectedTabId, nowMillis)
         persist()
@@ -2515,6 +2795,7 @@ class BrowserController(
     }
 
     fun destroy() {
+        SnoozeRuntimeRegistry.unregister(snoozeRestoreCallback)
         destroyed = true
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
@@ -3960,6 +4241,7 @@ class BrowserController(
         }
         candyTrailRepository.restore(
             tabs = tabs.toList(),
+            retainedTabIds = snoozedTabs.mapTo(linkedSetOf()) { it.tab.id },
             onLoaded = { tabId, restoredTrail -> mainHandler.post {
                 val tab = tabs.firstOrNull { it.id == tabId && !it.isIncognito }
                 val runtimeTrail = candyTrails[tabId]
@@ -4210,8 +4492,94 @@ class BrowserController(
         if (!preserveFaviconGeneration) faviconGenerations.remove(tabId)
     }
 
+    private fun removeTabRuntimeForSnooze(tab: BrowserTab) {
+        candyTrails[tab.id]?.let { trail -> candyTrailRepository.save(tab, trail) }
+        clearPrivacyDataForTab(tab.id)
+        popupOpenerIdCleanup(tab.id)
+        webViews.remove(tab.id)?.let(::destroyWebView)
+        webViewProfileKeys.remove(tab.id)
+        edgeToEdgePages.remove(tab.id)
+        navigationGenerations.remove(tab.id)
+        pageUrls.remove(tab.id)
+        bottomBarCompactStates.remove(tab.id)
+        candyTrailHistoryBindings.remove(tab.id)
+        pendingCandyTrailTargets.remove(tab.id)
+        pendingCandyTrailRestoreIds.remove(tab.id)
+        suppressedCandyTrailTabIds.remove(tab.id)
+        previews.remove(tab.id)
+        previewRepository.delete(tab.id)
+        invalidateFavicon(tab.id)
+        faviconGenerations.remove(tab.id)
+    }
+
+    private fun popupOpenerIdCleanup(tabId: String) {
+        popupOpeners.remove(tabId)
+        popupOpeners.entries.removeAll { (_, openerId) -> openerId == tabId }
+    }
+
+    private fun restoreDueSnoozedTabs(nowMillis: Long): Int {
+        val result = SnoozeRestoreRules.restoreDue(
+            tabs = tabs,
+            snoozedTabs = snoozedTabs,
+            profiles = profiles,
+            activeProfileId = activeProfileId,
+            nowMillis = nowMillis,
+            maxTabs = MAX_TABS,
+        )
+        if (result.completedTabIds.isEmpty()) {
+            snoozeScheduler.schedule(snoozedTabs, nowMillis)
+            return 0
+        }
+        val oldIds = tabs.mapTo(hashSetOf(), BrowserTab::id)
+        val validSelection = selectedTabId.takeIf { selected ->
+            result.tabs.any { it.id == selected }
+        } ?: result.tabs.firstOrNull { it.profileId == activeProfileId }?.id
+            ?: result.tabs.first().id
+        val remaining = snoozedTabs.filterNot { it.tab.id in result.completedTabIds }
+        if (!store.saveTabsAndSnoozedImmediately(
+                tabs = result.tabs,
+                selectedTabId = validSelection,
+                snoozedTabs = remaining,
+            )
+        ) return 0
+        tabs.clear()
+        tabs += result.tabs
+        selectedTabId = validSelection
+        snoozedTabs.clear()
+        snoozedTabs += remaining
+        reconcileCandyTrailForks(nowMillis)
+        result.tabs.asSequence()
+            .filter { it.id !in oldIds }
+            .forEach(::restoreSnoozedCandyTrail)
+        persist()
+        snoozeScheduler.schedule(remaining, nowMillis)
+        return result.tabs.count { it.id !in oldIds }
+    }
+
+    private fun restoreSnoozedCandyTrail(tab: BrowserTab) {
+        if (tab.isIncognito || candyTrails.containsKey(tab.id)) return
+        val restoreEpoch = candyTrailEpoch
+        candyTrailRepository.restoreTab(tab.id) { trail ->
+            mainHandler.post {
+                val activeTab = tabs.firstOrNull { it.id == tab.id && !it.isIncognito }
+                if (!destroyed && candyTrailEpoch == restoreEpoch && activeTab != null &&
+                    !candyTrails.containsKey(tab.id)
+                ) {
+                    candyTrails[tab.id] = CandyTrailForkRules.reconcile(
+                        trail = trail,
+                        originTab = activeTab.toCandyTrailForkTab(),
+                        openTabs = (tabs + snoozedTabs.map(SnoozedTab::tab))
+                            .map(BrowserTab::toCandyTrailForkTab),
+                        reconciledAt = System.currentTimeMillis(),
+                    )
+                }
+            }
+        }
+    }
+
     private fun reconcileCandyTrailForks(reconciledAt: Long) {
-        val openTabs = tabs.map(BrowserTab::toCandyTrailForkTab)
+        val openTabs = (tabs + snoozedTabs.map(SnoozedTab::tab))
+            .map(BrowserTab::toCandyTrailForkTab)
         candyTrails.toMap().forEach { (originTabId, trail) ->
             val originTab = tabs.firstOrNull { it.id == originTabId }
             if (originTab == null) return@forEach

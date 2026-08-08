@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
@@ -15,8 +16,12 @@ import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import org.json.JSONArray
 import org.json.JSONObject
 
-class BrowserSessionStore(context: Context) {
-    private val preferences = context.getSharedPreferences("browser_session", Context.MODE_PRIVATE)
+class BrowserSessionStore internal constructor(
+    private val preferences: SharedPreferences,
+) {
+    constructor(context: Context) : this(
+        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE),
+    )
 
     fun loadTabs(nowMillis: Long = System.currentTimeMillis()): Pair<List<BrowserTab>, String?> {
         val raw = preferences.getString(KEY_TABS, null) ?: return emptyList<BrowserTab>() to null
@@ -51,27 +56,61 @@ class BrowserSessionStore(context: Context) {
     }
 
     fun saveTabs(tabs: List<BrowserTab>, selectedTabId: String) {
-        val persistentTabs = TabPersistenceRules.persistentTabs(tabs)
-        val persistentSelection = TabPersistenceRules.persistentSelection(tabs, selectedTabId)
-        val array = JSONArray()
-        persistentTabs.forEach { tab ->
-            array.put(
-                JSONObject()
-                    .put("id", tab.id)
-                    .put("lastAccessedAt", tab.lastAccessedAt)
-                    .put("profileId", tab.profileId)
-                    .put("isIncognito", false)
-                    .put("isPinned", tab.isPinned)
-                    .put("title", tab.title)
-                    .put("url", tab.url),
-            )
-        }
-        val editor = preferences.edit()
-            .putString(KEY_TABS, array.toString())
-        if (persistentSelection == null) editor.remove(KEY_SELECTED_TAB)
-        else editor.putString(KEY_SELECTED_TAB, persistentSelection)
-        editor.apply()
+        tabsEditor(tabs, selectedTabId).apply()
     }
+
+    fun saveTabsImmediately(tabs: List<BrowserTab>, selectedTabId: String): Boolean =
+        tabsEditor(tabs, selectedTabId).commit()
+
+    @Synchronized
+    fun saveTabsAndSnoozedImmediately(
+        tabs: List<BrowserTab>,
+        selectedTabId: String,
+        snoozedTabs: List<SnoozedTab>,
+    ): Boolean {
+        val originalTabs = preferences.getString(KEY_TABS, null)
+        val originalSelection = preferences.getString(KEY_SELECTED_TAB, null)
+        val originalSnoozedTabs = preferences.getString(SnoozedTabStore.KEY_TABS, null)
+        val committed = SnoozedTabStore.putTabs(
+            tabsEditor(tabs, selectedTabId),
+            snoozedTabs,
+        ).commit()
+        if (committed) return true
+
+        preferences.edit()
+            .restoreString(KEY_TABS, originalTabs)
+            .restoreString(KEY_SELECTED_TAB, originalSelection)
+            .restoreString(SnoozedTabStore.KEY_TABS, originalSnoozedTabs)
+            .commit()
+        return false
+    }
+
+    private fun SharedPreferences.Editor.restoreString(
+        key: String,
+        value: String?,
+    ): SharedPreferences.Editor = if (value == null) remove(key) else putString(key, value)
+
+    private fun tabsEditor(tabs: List<BrowserTab>, selectedTabId: String) =
+        preferences.edit().also { editor ->
+            val persistentTabs = TabPersistenceRules.persistentTabs(tabs)
+            val persistentSelection = TabPersistenceRules.persistentSelection(tabs, selectedTabId)
+            val array = JSONArray()
+            persistentTabs.forEach { tab ->
+                array.put(
+                    JSONObject()
+                        .put("id", tab.id)
+                        .put("lastAccessedAt", tab.lastAccessedAt)
+                        .put("profileId", tab.profileId)
+                        .put("isIncognito", false)
+                        .put("isPinned", tab.isPinned)
+                        .put("title", tab.title)
+                        .put("url", tab.url),
+                )
+            }
+            editor.putString(KEY_TABS, array.toString())
+            if (persistentSelection == null) editor.remove(KEY_SELECTED_TAB)
+            else editor.putString(KEY_SELECTED_TAB, persistentSelection)
+        }
 
     fun saveSelectedTab(selectedTabId: String) {
         preferences.edit().putString(KEY_SELECTED_TAB, selectedTabId).apply()
@@ -394,7 +433,8 @@ class BrowserSessionStore(context: Context) {
         preferences.edit().putString(key, array.toString()).apply()
     }
 
-    private companion object {
+    internal companion object {
+        const val PREFERENCES_NAME = "browser_session"
         const val KEY_TABS = "tabs"
         const val KEY_SELECTED_TAB = "selected_tab"
         const val KEY_PROFILES = "profiles"

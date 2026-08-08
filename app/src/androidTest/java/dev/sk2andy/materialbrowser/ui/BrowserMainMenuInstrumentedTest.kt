@@ -54,6 +54,7 @@ class BrowserMainMenuInstrumentedTest {
                         canToggleDomainMute = true,
                         isDomainMuted = false,
                         canAddSiteCapsule = true,
+                        canSnooze = true,
                         onBack = {},
                         onForward = {},
                         onReloadOrStop = {},
@@ -65,6 +66,7 @@ class BrowserMainMenuInstrumentedTest {
                         onOpenCandyTrail = trailOpens::incrementAndGet,
                         onAddSiteCapsule = {},
                         onSummarize = {},
+                        onSnooze = {},
                         onSettings = {},
                     )
                 }
@@ -86,11 +88,12 @@ class BrowserMainMenuInstrumentedTest {
             candyGroup and
                 hasAnyDescendant(hasText(context.getString(R.string.action_open_candy_trail))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_add_site_capsule))) and
-                hasAnyDescendant(hasText(context.getString(R.string.action_summarize))),
+                hasAnyDescendant(hasText(context.getString(R.string.action_summarize))) and
+                hasAnyDescendant(hasText(context.getString(R.string.action_snooze_tab))),
         ).assertExists()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CandyGroup)
             .onChildren()
-            .assertCountEquals(3)
+            .assertCountEquals(4)
         composeRule.onNodeWithText(
             context.getString(R.string.browser_menu_browser_group),
         ).assertExists()

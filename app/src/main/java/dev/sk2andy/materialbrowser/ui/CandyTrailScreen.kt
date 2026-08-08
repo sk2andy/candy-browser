@@ -233,19 +233,7 @@ internal fun CandyTrailScreen(
         modifier = modifier
             .fillMaxSize()
             .zIndex(30f)
-            .graphicsLayer {
-                val progress = predictiveBackProgress.coerceIn(0f, 1f)
-                val transform = PredictiveBackMotion.transform(
-                    progress = progress,
-                    width = size.width,
-                    swipeEdgeSign = predictiveBackEdgeSign,
-                )
-                translationX = transform.translationX
-                scaleX = transform.scale
-                scaleY = transform.scale
-                shape = RoundedCornerShape((28f * progress).dp)
-                clip = progress > 0f
-            }
+            .predictiveBackSurface(predictiveBackProgress, predictiveBackEdgeSign)
             .background(
                 Brush.radialGradient(
                     colors = listOf(

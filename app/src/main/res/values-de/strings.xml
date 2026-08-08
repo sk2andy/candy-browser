@@ -512,4 +512,27 @@
     <string name="permission_decision_ask">Fragen</string>
     <string name="permission_decision_allow">Erlauben</string>
     <string name="permission_decision_block">Blockieren</string>
+    <!-- Tab Snooze -->
+    <string name="action_snooze_tab">Tab zurückstellen</string>
+    <string name="snooze_unavailable_private">Im Inkognitomodus nicht verfügbar, da zurückgestellte Tabs gespeichert werden</string>
+    <string name="snooze_sheet_title">Diesen Tab zurückstellen</string>
+    <string name="snooze_later_today">Später heute</string>
+    <string name="snooze_tomorrow">Morgen früh</string>
+    <string name="snooze_next_week">Nächste Woche</string>
+    <string name="snooze_custom">Datum und Uhrzeit wählen</string>
+    <string name="snooze_select_date">Datum wählen</string>
+    <string name="snooze_select_time">Uhrzeit wählen</string>
+    <string name="snoozed_tabs_title">Zurückgestellte Tabs</string>
+    <string name="snoozed_tabs_settings_summary">Tabs verwalten, die später zurückkehren</string>
+    <string name="snoozed_tabs_empty_title">Keine zurückgestellten Tabs</string>
+    <string name="snoozed_tabs_empty_body">Tab im Umschalter lange drücken oder über sein ⋮-Menü zurückstellen.</string>
+    <string name="snoozed_until">Kehrt zurück: %1$s</string>
+    <string name="action_reschedule">Zeitpunkt ändern</string>
+    <string name="action_open_now">Jetzt öffnen</string>
+    <string name="snooze_invalid_time">Datum und Uhrzeit in der Zukunft wählen</string>
+    <string name="snooze_confirmation">Tab zurückgestellt</string>
+    <plurals name="snoozed_tabs_settings_count">
+        <item quantity="one">%1$d zurückgestellter Tab</item>
+        <item quantity="other">%1$d zurückgestellte Tabs</item>
+    </plurals>
 </resources>

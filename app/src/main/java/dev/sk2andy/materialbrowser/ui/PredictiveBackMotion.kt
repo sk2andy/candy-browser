@@ -1,5 +1,9 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
 internal data class PredictiveBackTransform(
@@ -17,8 +21,8 @@ internal object PredictiveBackMotion {
         val direction = swipeEdgeSign.coerceIn(-1, 1)
 
         return PredictiveBackTransform(
-            scale = 1f,
-            translationX = width * clampedProgress * direction,
+            scale = 1f - (1f - MIN_SCALE) * clampedProgress,
+            translationX = width * MAX_TRANSLATION_FRACTION * clampedProgress * direction,
         )
     }
 
@@ -30,4 +34,23 @@ internal object PredictiveBackMotion {
 
     const val ENTRY_DURATION_MILLIS = 300
     const val EXIT_DURATION_MILLIS = 220
+    const val MIN_SCALE = 0.9f
+    const val MAX_TRANSLATION_FRACTION = 0.05f
+}
+
+internal fun Modifier.predictiveBackSurface(
+    progress: Float,
+    swipeEdgeSign: Int,
+): Modifier = graphicsLayer {
+    val clampedProgress = progress.coerceIn(0f, 1f)
+    val transform = PredictiveBackMotion.transform(
+        progress = clampedProgress,
+        width = size.width,
+        swipeEdgeSign = swipeEdgeSign,
+    )
+    translationX = transform.translationX
+    scaleX = transform.scale
+    scaleY = transform.scale
+    shape = RoundedCornerShape((28f * clampedProgress).dp)
+    clip = clampedProgress > 0f
 }

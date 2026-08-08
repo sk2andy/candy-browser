@@ -14,12 +14,13 @@ class CandyTrailRepository private constructor(context: Context) {
 
     fun restore(
         tabs: List<BrowserTab>,
+        retainedTabIds: Set<String> = emptySet(),
         onLoaded: (String, CandyTrail) -> Unit,
         onComplete: () -> Unit,
     ) {
         val persistentTabIds = CandyTrailPersistenceRules.persistentTabIds(tabs)
         executor.execute {
-            store.prune(persistentTabIds)
+            store.prune(persistentTabIds + retainedTabIds)
             persistentTabIds.forEach { tabId ->
                 store.load(tabId)?.let { trail -> onLoaded(tabId, trail) }
             }
@@ -34,6 +35,12 @@ class CandyTrailRepository private constructor(context: Context) {
             } else {
                 store.delete(tab.id)
             }
+        }
+    }
+
+    fun restoreTab(tabId: String, onLoaded: (CandyTrail) -> Unit) {
+        executor.execute {
+            store.load(tabId)?.let(onLoaded)
         }
     }
 

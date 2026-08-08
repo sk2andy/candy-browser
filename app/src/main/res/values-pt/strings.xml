@@ -516,4 +516,27 @@
     <string name="permission_decision_ask">Perguntar</string>
     <string name="permission_decision_allow">Permitir</string>
     <string name="permission_decision_block">Bloquear</string>
+    <!-- Adiar separadores -->
+    <string name="action_snooze_tab">Adiar separador</string>
+    <string name="snooze_unavailable_private">Indisponível no modo incógnito porque os separadores adiados são guardados</string>
+    <string name="snooze_sheet_title">Adiar este separador</string>
+    <string name="snooze_later_today">Mais tarde hoje</string>
+    <string name="snooze_tomorrow">Amanhã de manhã</string>
+    <string name="snooze_next_week">Na próxima semana</string>
+    <string name="snooze_custom">Escolher data e hora</string>
+    <string name="snooze_select_date">Escolher data</string>
+    <string name="snooze_select_time">Escolher hora</string>
+    <string name="snoozed_tabs_title">Separadores adiados</string>
+    <string name="snoozed_tabs_settings_summary">Gerir separadores que voltarão mais tarde</string>
+    <string name="snoozed_tabs_empty_title">Sem separadores adiados</string>
+    <string name="snoozed_tabs_empty_body">Mantenha premido um separador ou use o menu ⋮ para o adiar.</string>
+    <string name="snoozed_until">Volta em %1$s</string>
+    <string name="action_reschedule">Alterar hora</string>
+    <string name="action_open_now">Abrir agora</string>
+    <string name="snooze_invalid_time">Escolha uma data e hora futuras</string>
+    <string name="snooze_confirmation">Separador adiado</string>
+    <plurals name="snoozed_tabs_settings_count">
+        <item quantity="one">%1$d separador adiado</item>
+        <item quantity="other">%1$d separadores adiados</item>
+    </plurals>
 </resources>

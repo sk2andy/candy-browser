@@ -525,4 +525,27 @@
     <string name="permission_decision_ask">Ask</string>
     <string name="permission_decision_allow">Allow</string>
     <string name="permission_decision_block">Block</string>
+    <!-- Tab snooze -->
+    <string name="action_snooze_tab">Snooze tab</string>
+    <string name="snooze_unavailable_private">Unavailable in Incognito because snoozed tabs persist</string>
+    <string name="snooze_sheet_title">Snooze this tab</string>
+    <string name="snooze_later_today">Later today</string>
+    <string name="snooze_tomorrow">Tomorrow morning</string>
+    <string name="snooze_next_week">Next week</string>
+    <string name="snooze_custom">Choose date and time</string>
+    <string name="snooze_select_date">Choose date</string>
+    <string name="snooze_select_time">Choose time</string>
+    <string name="snoozed_tabs_title">Snoozed Tabs</string>
+    <string name="snoozed_tabs_settings_summary">Manage tabs that will return later</string>
+    <string name="snoozed_tabs_empty_title">No snoozed tabs</string>
+    <string name="snoozed_tabs_empty_body">Long-press a tab in the switcher or use its ⋮ menu to snooze it.</string>
+    <string name="snoozed_until">Returns %1$s</string>
+    <string name="action_reschedule">Change time</string>
+    <string name="action_open_now">Open now</string>
+    <string name="snooze_invalid_time">Choose a future date and time</string>
+    <string name="snooze_confirmation">Tab snoozed</string>
+    <plurals name="snoozed_tabs_settings_count">
+        <item quantity="one">%1$d snoozed tab</item>
+        <item quantity="other">%1$d snoozed tabs</item>
+    </plurals>
 </resources>

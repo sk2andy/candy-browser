@@ -516,4 +516,27 @@
     <string name="permission_decision_ask">Demander</string>
     <string name="permission_decision_allow">Autoriser</string>
     <string name="permission_decision_block">Bloquer</string>
+    <!-- Veille des onglets -->
+    <string name="action_snooze_tab">Mettre l’onglet en veille</string>
+    <string name="snooze_unavailable_private">Indisponible en navigation privée, car les onglets en veille sont enregistrés</string>
+    <string name="snooze_sheet_title">Mettre cet onglet en veille</string>
+    <string name="snooze_later_today">Plus tard aujourd’hui</string>
+    <string name="snooze_tomorrow">Demain matin</string>
+    <string name="snooze_next_week">La semaine prochaine</string>
+    <string name="snooze_custom">Choisir la date et l’heure</string>
+    <string name="snooze_select_date">Choisir la date</string>
+    <string name="snooze_select_time">Choisir l’heure</string>
+    <string name="snoozed_tabs_title">Onglets en veille</string>
+    <string name="snoozed_tabs_settings_summary">Gérer les onglets qui reviendront plus tard</string>
+    <string name="snoozed_tabs_empty_title">Aucun onglet en veille</string>
+    <string name="snoozed_tabs_empty_body">Appuyez longuement sur un onglet ou utilisez son menu ⋮ pour le mettre en veille.</string>
+    <string name="snoozed_until">Revient le %1$s</string>
+    <string name="action_reschedule">Modifier l’heure</string>
+    <string name="action_open_now">Ouvrir maintenant</string>
+    <string name="snooze_invalid_time">Choisissez une date et une heure futures</string>
+    <string name="snooze_confirmation">Onglet mis en veille</string>
+    <plurals name="snoozed_tabs_settings_count">
+        <item quantity="one">%1$d onglet mis en veille</item>
+        <item quantity="other">%1$d onglets mis en veille</item>
+    </plurals>
 </resources>

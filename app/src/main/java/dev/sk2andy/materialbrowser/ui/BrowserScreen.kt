@@ -308,6 +308,7 @@ private data class TabReorderAnimation(
 
 private enum class BrowserBackTarget {
     FilterStudio,
+    SnoozedTabs,
     Settings,
     AddressEditor,
     CandyTrail,
@@ -327,6 +328,8 @@ fun BrowserScreen(controller: BrowserController) {
     var candyTrailSourceBounds by remember { mutableStateOf<Rect?>(null) }
     var addressEditorVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
+    var snoozedTabsVisible by rememberSaveable { mutableStateOf(false) }
+    var snoozeTabId by remember { mutableStateOf<String?>(null) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
     var permissionRadarTabId by remember { mutableStateOf<String?>(null) }
     var permissionRadarOrigin by remember { mutableStateOf<String?>(null) }
@@ -335,6 +338,7 @@ fun BrowserScreen(controller: BrowserController) {
     var clearDialogVisible by remember { mutableStateOf(false) }
     var capsuleEditorVisible by remember { mutableStateOf(false) }
     var editingCapsuleId by remember { mutableStateOf<String?>(null) }
+    var capsuleEditorSourceTabId by remember { mutableStateOf<String?>(null) }
     var pendingCapsuleDelete by remember { mutableStateOf<SiteCapsule?>(null) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
     var remoteSearchSuggestions by remember { mutableStateOf(emptyList<String>()) }
@@ -350,8 +354,8 @@ fun BrowserScreen(controller: BrowserController) {
     val overviewGestureScope = rememberCoroutineScope()
     var favoriteFeedbackId by remember { mutableIntStateOf(0) }
     var favoriteFeedbackEvent by remember { mutableStateOf<FavoriteFeedbackEvent?>(null) }
-    var favoriteSnackbarJob by remember { mutableStateOf<Job?>(null) }
-    val favoriteSnackbarHostState = remember { SnackbarHostState() }
+    var feedbackSnackbarJob by remember { mutableStateOf<Job?>(null) }
+    val feedbackSnackbarHostState = remember { SnackbarHostState() }
     var activeCommandExecutionId by remember { mutableStateOf<String?>(null) }
     var commandFeedback by remember { mutableStateOf<AddressCommandFeedback?>(null) }
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
@@ -409,7 +413,34 @@ fun BrowserScreen(controller: BrowserController) {
     val keyboard = LocalSoftwareKeyboardController.current
     val favoriteAddedMessage = stringResource(R.string.favorite_added_confirmation)
     val favoriteRemovedMessage = stringResource(R.string.favorite_removed_confirmation)
+    val snoozeConfirmationMessage = stringResource(R.string.snooze_confirmation)
     val undoLabel = stringResource(R.string.action_undo)
+    val toggleFavoriteWithFeedback: (String) -> Unit = { tabId ->
+        controller.toggleFavorite(tabId)?.let { mutation ->
+            rootView.performConfirmHaptic()
+            favoriteFeedbackId++
+            favoriteFeedbackEvent = FavoriteFeedbackEvent(
+                id = favoriteFeedbackId,
+                added = mutation.added,
+            )
+            feedbackSnackbarJob?.cancel()
+            feedbackSnackbarJob = backAnimationScope.launch {
+                val result = feedbackSnackbarHostState.showSnackbar(
+                    message = if (mutation.added) {
+                        favoriteAddedMessage
+                    } else {
+                        favoriteRemovedMessage
+                    },
+                    actionLabel = undoLabel,
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Short,
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    controller.undoFavorite(mutation)
+                }
+            }
+        }
+    }
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
     val tabSwitchTravelPx = browserWidthPx + tabSwitchGapPx
     val settleOverviewGesture: () -> Unit = {
@@ -755,11 +786,12 @@ fun BrowserScreen(controller: BrowserController) {
         tabOverviewVisible,
         addressEditorVisible,
         settingsVisible,
+        snoozedTabsVisible,
         filterStudioVisible,
         candyTrailTabId,
     ) {
         if (
-            tabOverviewVisible || addressEditorVisible || settingsVisible ||
+            tabOverviewVisible || addressEditorVisible || settingsVisible || snoozedTabsVisible ||
             filterStudioVisible || candyTrailTabId != null
         ) {
             controller.setPreviewCaptureEnabled(false)
@@ -772,6 +804,7 @@ fun BrowserScreen(controller: BrowserController) {
     val currentBackTarget by rememberUpdatedState(
         when {
             filterStudioVisible -> BrowserBackTarget.FilterStudio
+            snoozedTabsVisible -> BrowserBackTarget.SnoozedTabs
             settingsVisible -> BrowserBackTarget.Settings
             addressEditorVisible -> BrowserBackTarget.AddressEditor
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
@@ -798,6 +831,7 @@ fun BrowserScreen(controller: BrowserController) {
             }
             when (target) {
                 BrowserBackTarget.FilterStudio -> filterStudioVisible = false
+                BrowserBackTarget.SnoozedTabs -> snoozedTabsVisible = false
                 BrowserBackTarget.Settings -> {
                     settingsPredictiveBackCommitted = receivedProgress
                     if (receivedProgress) {
@@ -1123,32 +1157,7 @@ fun BrowserScreen(controller: BrowserController) {
             blankTabModeProgress = blankTabModeProgress,
             onIncognitoControlCenterChanged = { blankTabModeRevealOrigin = it },
             isFavorite = controller.isSelectedTabFavorite,
-            onToggleFavorite = {
-                controller.toggleFavorite()?.let { mutation ->
-                    rootView.performConfirmHaptic()
-                    favoriteFeedbackId++
-                    favoriteFeedbackEvent = FavoriteFeedbackEvent(
-                        id = favoriteFeedbackId,
-                        added = mutation.added,
-                    )
-                    favoriteSnackbarJob?.cancel()
-                    favoriteSnackbarJob = backAnimationScope.launch {
-                        val result = favoriteSnackbarHostState.showSnackbar(
-                            message = if (mutation.added) {
-                                favoriteAddedMessage
-                            } else {
-                                favoriteRemovedMessage
-                            },
-                            actionLabel = undoLabel,
-                            withDismissAction = true,
-                            duration = SnackbarDuration.Short,
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            controller.undoFavorite(mutation)
-                        }
-                    }
-                }
-            },
+            onToggleFavorite = { toggleFavoriteWithFeedback(selectedTab.id) },
             canToggleDomainMute = controller.canToggleSelectedDomainMute,
             isDomainMuted = controller.isSelectedDomainMuted,
             onDomainMutedChange = controller::setSelectedDomainMuted,
@@ -1176,8 +1185,10 @@ fun BrowserScreen(controller: BrowserController) {
                 candyTrailTabId = selectedTab.id
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             },
+            onSnooze = { snoozeTabId = selectedTab.id },
             onAddSiteCapsule = {
                 editingCapsuleId = null
+                capsuleEditorSourceTabId = selectedTab.id
                 capsuleEditorVisible = true
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             },
@@ -1269,6 +1280,36 @@ fun BrowserScreen(controller: BrowserController) {
                 candyTrailTabId = null
                 candyTrailSourceBounds = null
             },
+            onToggleFavoriteTab = toggleFavoriteWithFeedback,
+            onAddSiteCapsule = { tabId ->
+                editingCapsuleId = null
+                capsuleEditorSourceTabId = tabId
+                capsuleEditorVisible = true
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            },
+            onSnoozeTab = { tabId -> snoozeTabId = tabId },
+        )
+
+        SnoozeTabSheet(
+            tab = snoozeTabId?.let { id -> controller.tabs.firstOrNull { it.id == id } },
+            onSnooze = { wakeAtMillis ->
+                val tabId = snoozeTabId ?: return@SnoozeTabSheet false
+                val undoToken = controller.snoozeTab(tabId, wakeAtMillis)
+                if (undoToken != null) {
+                    feedbackSnackbarJob?.cancel()
+                    feedbackSnackbarJob = backAnimationScope.launch {
+                        showSnoozeUndoFeedback(
+                            hostState = feedbackSnackbarHostState,
+                            message = snoozeConfirmationMessage,
+                            undoLabel = undoLabel,
+                        ) {
+                            controller.undoSnooze(undoToken)
+                        }
+                    }
+                }
+                undoToken != null
+            },
+            onDismiss = { snoozeTabId = null },
         )
 
         AnimatedVisibility(
@@ -1308,6 +1349,7 @@ fun BrowserScreen(controller: BrowserController) {
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
                 siteCapsules = controller.siteCapsules,
+                snoozedTabCount = controller.snoozedTabs.size,
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onSearchEngineChanged = controller::updateSearchEngine,
@@ -1335,24 +1377,18 @@ fun BrowserScreen(controller: BrowserController) {
                     filterStudioVisible = true
                 },
                 onClearData = { clearDialogVisible = true },
+                onSnoozedTabs = {
+                    snoozedTabsVisible = true
+                },
                 onOpenLegalUrl = { url ->
                     settingsVisible = false
                     controller.openUrl(url, inNewTab = true)
                 },
                 onDismiss = { settingsVisible = false },
-                modifier = Modifier.graphicsLayer {
-                    val progress = settingsBackProgress.value
-                    val transform = PredictiveBackMotion.transform(
-                        progress = progress,
-                        width = size.width,
-                        swipeEdgeSign = settingsBackEdgeSign,
-                    )
-                    translationX = transform.translationX
-                    scaleX = transform.scale
-                    scaleY = transform.scale
-                    shape = RoundedCornerShape((28f * progress).dp)
-                    clip = progress > 0f
-                },
+                modifier = Modifier.predictiveBackSurface(
+                    settingsBackProgress.value,
+                    settingsBackEdgeSign,
+                ),
             )
         }
 
@@ -1483,13 +1519,32 @@ fun BrowserScreen(controller: BrowserController) {
         }
 
         SnackbarHost(
-            hostState = favoriteSnackbarHostState,
+            hostState = feedbackSnackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 84.dp)
-                .zIndex(6f),
+                .zIndex(30f),
         )
+
+        AnimatedVisibility(
+            visible = snoozedTabsVisible,
+            enter = fadeIn(tween(120)),
+            exit = fadeOut(tween(90)),
+        ) {
+            SnoozedTabsScreen(
+                snoozedTabs = controller.snoozedTabs,
+                profiles = controller.profiles,
+                onBack = { snoozedTabsVisible = false },
+                onReschedule = controller::rescheduleSnoozedTab,
+                onOpenNow = { tabId ->
+                    controller.openSnoozedTabNow(tabId).also { opened ->
+                        if (opened) settingsVisible = false
+                    }
+                },
+                onDelete = controller::deleteSnoozedTab,
+            )
+        }
 
     }
 
@@ -1595,15 +1650,27 @@ fun BrowserScreen(controller: BrowserController) {
     }
 
     if (capsuleEditorVisible) {
+        val capsuleSourceTab = capsuleEditorSourceTabId
+            ?.let { sourceId -> controller.tabs.firstOrNull { it.id == sourceId } }
+            ?: selectedTab
         SiteCapsuleEditorSheet(
             controller = controller,
             existing = editingCapsuleId?.let { id ->
                 controller.siteCapsules.firstOrNull { it.id == id }
             },
-            sourceTitle = selectedTab.title.ifBlank { AddressResolver.displayText(selectedTab.url) },
-            sourceUrl = selectedTab.url,
-            sourceFavicon = if (editingCapsuleId == null) controller.selectedFavicon else null,
-            onDismiss = { capsuleEditorVisible = false },
+            sourceTitle = capsuleSourceTab.title.ifBlank {
+                AddressResolver.displayText(capsuleSourceTab.url)
+            },
+            sourceUrl = capsuleSourceTab.url,
+            sourceFavicon = if (editingCapsuleId == null) {
+                controller.favicons[capsuleSourceTab.id]
+            } else {
+                null
+            },
+            onDismiss = {
+                capsuleEditorVisible = false
+                capsuleEditorSourceTabId = null
+            },
         )
     }
 
@@ -2501,6 +2568,7 @@ private fun BrowserBottomBar(
     onShare: () -> Unit,
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
+    onSnooze: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
@@ -2746,6 +2814,7 @@ private fun BrowserBottomBar(
                                 onShare = onShare,
                                 onPrint = onPrint,
                                 onOpenCandyTrail = onOpenCandyTrail,
+                                onSnooze = onSnooze,
                                 onAddSiteCapsule = onAddSiteCapsule,
                                 overviewGestureEnabled = overviewGestureEnabled,
                                 overviewGestureProgress = overviewGestureProgress,
@@ -3119,6 +3188,7 @@ private fun ExpandedBottomBarContent(
     onShare: () -> Unit,
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
+    onSnooze: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
@@ -3356,6 +3426,7 @@ private fun ExpandedBottomBarContent(
                     canAddSiteCapsule = tab.url != BLANK_URL &&
                         !tab.isIncognito &&
                         (tab.url.startsWith("https://") || tab.url.startsWith("http://")),
+                    canSnooze = !tab.isIncognito,
                     onBack = onBack,
                     onForward = onForward,
                     onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
@@ -3367,6 +3438,7 @@ private fun ExpandedBottomBarContent(
                     onOpenCandyTrail = onOpenCandyTrail,
                     onAddSiteCapsule = onAddSiteCapsule,
                     onSummarize = onSummarizeWithAssistant,
+                    onSnooze = onSnooze,
                     onSettings = onSettings,
                 )
                 }
@@ -3867,7 +3939,7 @@ private fun CommandIcon(kind: BrowserCommandKind, tint: Color) {
 }
 
 @Composable
-private fun TabOverview(
+internal fun TabOverview(
     controller: BrowserController,
     visible: Boolean,
     bottomBarTopPx: FloatState,
@@ -3885,6 +3957,9 @@ private fun TabOverview(
     candyTrailPredictiveBackCommitted: Boolean,
     onOpenCandyTrail: (String, Rect?) -> Unit,
     onCloseCandyTrail: () -> Unit,
+    onToggleFavoriteTab: (String) -> Unit,
+    onAddSiteCapsule: (String) -> Unit,
+    onSnoozeTab: (String) -> Unit,
 ) {
     val rootView = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -4605,6 +4680,7 @@ private fun TabOverview(
                             favorites = controller.favorites,
                             cardWidth = tabCardWidth,
                             modifier = Modifier
+                                .testTag(SnoozeTestTags.overviewTab(tab.id))
                                 .graphicsLayer {
                                     alpha = if (realCardVisible) 1f else 0f
                                 }
@@ -4634,7 +4710,8 @@ private fun TabOverview(
                                     exitHero == null &&
                                     reorderAnimation == null
                                 ) {
-                                    onOpenCandyTrail(tab.id, cardBounds)
+                                    rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                    tabActionsTabId = tab.id
                                 }
                             },
                         )
@@ -4692,7 +4769,8 @@ private fun TabOverview(
                     },
                     onLongClick = { tab, bounds ->
                         tabCardBounds[tab.id] = bounds
-                        onOpenCandyTrail(tab.id, bounds)
+                        rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        tabActionsTabId = tab.id
                     },
                     modifier = Modifier
                         .weight(1f)
@@ -4732,7 +4810,8 @@ private fun TabOverview(
                     },
                     onLongClick = { tab, bounds ->
                         tabCardBounds[tab.id] = bounds
-                        onOpenCandyTrail(tab.id, bounds)
+                        rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        tabActionsTabId = tab.id
                     },
                     modifier = Modifier
                         .weight(1f)
@@ -5052,21 +5131,23 @@ private fun TabOverview(
         TabActionsSheet(
             tab = actionTab,
             profiles = controller.profiles,
-            canFork = actionTab?.let { tab ->
-                tab.url != BLANK_URL && controller.candyTrail(tab.id).currentNodeId != null
+            isFavorite = actionTab?.let { tab -> controller.isFavorite(tab.url) } == true,
+            canToggleDomainMute = actionTab?.let { tab ->
+                controller.canToggleDomainMute(tab.id)
             } == true,
-            onFork = {
+            isDomainMuted = actionTab?.let { tab ->
+                controller.isDomainMuted(tab.id)
+            } == true,
+            onToggleFavorite = {
                 val target = actionTab ?: return@TabActionsSheet
-                val currentNodeId = controller.candyTrail(target.id).currentNodeId
-                    ?: return@TabActionsSheet
                 tabActionsTabId = null
-                val destinationId = controller.forkCandyTrailNode(target.id, currentNodeId)
-                if (destinationId != null) {
-                    rootView.performConfirmHaptic()
-                    onCloseCandyTrail()
-                    onSelect(destinationId)
-                    onClose()
-                }
+                onToggleFavoriteTab(target.id)
+            },
+            onOpenCandyTrail = {
+                val target = actionTab ?: return@TabActionsSheet
+                val bounds = tabCardBounds[target.id]
+                tabActionsTabId = null
+                onOpenCandyTrail(target.id, bounds)
             },
             onTogglePinned = {
                 val target = actionTab ?: return@TabActionsSheet
@@ -5147,6 +5228,42 @@ private fun TabOverview(
                         movingTabId = null
                     }
                 }
+            },
+            onShare = {
+                val target = actionTab ?: return@TabActionsSheet
+                tabActionsTabId = null
+                controller.sharePage(target.id)
+            },
+            onOpenExternal = {
+                val target = actionTab ?: return@TabActionsSheet
+                tabActionsTabId = null
+                controller.openPageExternally(target.id)
+            },
+            onPrint = {
+                val target = actionTab ?: return@TabActionsSheet
+                tabActionsTabId = null
+                controller.printPage(target.id)
+            },
+            onDomainMutedChange = { muted ->
+                val target = actionTab ?: return@TabActionsSheet
+                if (controller.setDomainMuted(target.id, muted)) {
+                    rootView.performConfirmHaptic()
+                }
+            },
+            onAddSiteCapsule = {
+                val target = actionTab ?: return@TabActionsSheet
+                tabActionsTabId = null
+                onAddSiteCapsule(target.id)
+            },
+            onSummarize = {
+                val target = actionTab ?: return@TabActionsSheet
+                tabActionsTabId = null
+                controller.summarizePageWithAssistant(target.id)
+            },
+            onSnooze = {
+                val target = actionTab ?: return@TabActionsSheet
+                tabActionsTabId = null
+                onSnoozeTab(target.id)
             },
             onDismiss = { tabActionsTabId = null },
         )
@@ -5817,7 +5934,7 @@ private fun TabCard(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
-                onLongClickLabel = stringResource(R.string.action_open_candy_trail),
+                onLongClickLabel = stringResource(R.string.tab_actions_title),
                 role = Role.Button,
             ),
         shape = RoundedCornerShape(28.dp),
@@ -5935,7 +6052,9 @@ private fun CompactTabGrid(
                     onSwipeDismissEnd = { onSwipeDismissEnd(tab) },
                     onSwipeDismiss = { onSwipeDismiss(tab) },
                     onLongClick = { bounds -> onLongClick(tab, bounds) },
-                    modifier = Modifier.animateItem(),
+                    modifier = Modifier
+                        .animateItem()
+                        .testTag(SnoozeTestTags.overviewTab(tab.id)),
                 )
             }
         }
@@ -6214,7 +6333,7 @@ private fun CompactGridTabItem(
                 role = Role.Button,
                 onClick = { boundsHolder.bounds?.let(onSelect) },
                 onLongClick = { boundsHolder.bounds?.let(onLongClick) },
-                onLongClickLabel = stringResource(R.string.action_open_candy_trail),
+                onLongClickLabel = stringResource(R.string.tab_actions_title),
             ),
         shape = shape,
         colors = CardDefaults.cardColors(
@@ -6345,7 +6464,9 @@ private fun CompactTabList(
                 onSelect = { bounds -> onSelect(tab, bounds) },
                 onClose = { onCloseTab(tab) },
                 onLongClick = { bounds -> onLongClick(tab, bounds) },
-                modifier = Modifier.animateItem(),
+                modifier = Modifier
+                    .animateItem()
+                    .testTag(SnoozeTestTags.overviewTab(tab.id)),
             )
         }
     }
@@ -6399,7 +6520,7 @@ private fun CompactListTabItem(
                 role = Role.Button,
                 onClick = { boundsHolder.bounds?.let(onSelect) },
                 onLongClick = { boundsHolder.bounds?.let(onLongClick) },
-                onLongClickLabel = stringResource(R.string.action_open_candy_trail),
+                onLongClickLabel = stringResource(R.string.tab_actions_title),
             )
             .semantics { this.selected = selected },
         shape = shape,
@@ -6553,88 +6674,101 @@ private fun TabPreviewContent(
 }
 
 @Composable
-private fun TabActionsSheet(
+internal fun TabActionsSheet(
     tab: BrowserTab?,
     profiles: List<BrowserProfile>,
-    canFork: Boolean,
-    onFork: () -> Unit,
+    isFavorite: Boolean,
+    canToggleDomainMute: Boolean,
+    isDomainMuted: Boolean,
+    onToggleFavorite: () -> Unit,
+    onOpenCandyTrail: () -> Unit,
     onTogglePinned: () -> Unit,
     onMoveToProfile: (String) -> Unit,
+    onShare: () -> Unit,
+    onOpenExternal: () -> Unit,
+    onPrint: () -> Unit,
+    onDomainMutedChange: (Boolean) -> Unit,
+    onAddSiteCapsule: () -> Unit,
+    onSummarize: () -> Unit,
+    onSnooze: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (tab == null) return
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testTag(SnoozeTestTags.TabActions),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
         ) {
-            Text(
-                stringResource(R.string.tab_actions_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(12.dp))
-            TextButton(
-                onClick = onFork,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = canFork,
-            ) {
-                Text(stringResource(R.string.action_fork_tab))
-            }
-            if (canFork) {
-                Text(
-                    stringResource(R.string.fork_url_only_disclaimer),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            TextButton(
-                onClick = onTogglePinned,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    stringResource(
-                        if (tab.isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
-                    ),
-                )
-            }
-            val targetProfiles = profiles.filter { it.id != tab.profileId }
-            if (targetProfiles.isNotEmpty()) {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                Text(
-                    stringResource(R.string.action_move_tab_to_profile),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    targetProfiles.forEach { profile ->
-                        Surface(
+            TabActionsMenuContent(
+                pageSubtitle = if (tab.url == BLANK_URL) {
+                    stringResource(R.string.new_tab_title)
+                } else {
+                    AddressResolver.displayText(tab.url)
+                },
+                canToggleFavorite = tab.url != BLANK_URL && !tab.isIncognito,
+                isFavorite = isFavorite,
+                isPinned = tab.isPinned,
+                canUsePageActions = tab.url != BLANK_URL,
+                canToggleDomainMute = canToggleDomainMute,
+                isDomainMuted = isDomainMuted,
+                canAddSiteCapsule = tab.url != BLANK_URL &&
+                    !tab.isIncognito &&
+                    (tab.url.startsWith("https://") || tab.url.startsWith("http://")),
+                canSnooze = !tab.isIncognito,
+                onToggleFavorite = onToggleFavorite,
+                onTogglePinned = onTogglePinned,
+                onShare = onShare,
+                onOpenExternal = onOpenExternal,
+                onPrint = onPrint,
+                onDomainMutedChange = onDomainMutedChange,
+                onOpenCandyTrail = onOpenCandyTrail,
+                onAddSiteCapsule = onAddSiteCapsule,
+                onSummarize = onSummarize,
+                onSnooze = onSnooze,
+                profileContent = {
+                    val targetProfiles = profiles.filter { it.id != tab.profileId }
+                    if (targetProfiles.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            stringResource(R.string.action_move_tab_to_profile),
+                            modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Row(
                             modifier = Modifier
-                                .size(52.dp)
-                                .clickable(
-                                    role = Role.Button,
-                                    onClick = { onMoveToProfile(profile.id) },
-                                ),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(profile.emoji, fontSize = 24.sp)
+                            targetProfiles.forEach { profile ->
+                                Surface(
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clickable(
+                                            role = Role.Button,
+                                            onClick = { onMoveToProfile(profile.id) },
+                                        ),
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(profile.emoji, fontSize = 24.sp)
+                                    }
+                                }
                             }
                         }
                     }
-                }
-            }
+                },
+            )
         }
     }
 }
@@ -6950,6 +7084,7 @@ private fun SettingsScreen(
     blockedCount: Int,
     isDefaultBrowser: Boolean,
     siteCapsules: List<SiteCapsule>,
+    snoozedTabCount: Int,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
@@ -6964,6 +7099,7 @@ private fun SettingsScreen(
     onDeleteCapsule: (SiteCapsule) -> Unit,
     onFilterStudio: () -> Unit,
     onClearData: () -> Unit,
+    onSnoozedTabs: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -7142,6 +7278,27 @@ private fun SettingsScreen(
                     }
                 }
             }
+            Spacer(Modifier.height(12.dp))
+            SettingsLink(
+                title = stringResource(R.string.snoozed_tabs_title),
+                subtitle = if (snoozedTabCount == 0) {
+                    stringResource(R.string.snoozed_tabs_settings_summary)
+                } else {
+                    pluralStringResource(
+                        R.plurals.snoozed_tabs_settings_count,
+                        snoozedTabCount,
+                        snoozedTabCount,
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_snooze),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                },
+                onClick = onSnoozedTabs,
+            )
 
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
@@ -7511,6 +7668,51 @@ private fun SettingsChoice(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SettingsLink(
+    title: String,
+    subtitle: String,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (leadingIcon != null) {
+                Surface(
+                    modifier = Modifier.size(42.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                ) {
+                    Box(contentAlignment = Alignment.Center) { leadingIcon() }
+                }
+                Spacer(Modifier.width(14.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

@@ -516,4 +516,27 @@
     <string name="permission_decision_ask">Preguntar</string>
     <string name="permission_decision_allow">Permitir</string>
     <string name="permission_decision_block">Bloquear</string>
+    <!-- Posponer pestañas -->
+    <string name="action_snooze_tab">Posponer pestaña</string>
+    <string name="snooze_unavailable_private">No disponible en incógnito porque las pestañas pospuestas se guardan</string>
+    <string name="snooze_sheet_title">Posponer esta pestaña</string>
+    <string name="snooze_later_today">Más tarde hoy</string>
+    <string name="snooze_tomorrow">Mañana por la mañana</string>
+    <string name="snooze_next_week">La próxima semana</string>
+    <string name="snooze_custom">Elegir fecha y hora</string>
+    <string name="snooze_select_date">Elegir fecha</string>
+    <string name="snooze_select_time">Elegir hora</string>
+    <string name="snoozed_tabs_title">Pestañas pospuestas</string>
+    <string name="snoozed_tabs_settings_summary">Gestiona las pestañas que volverán más tarde</string>
+    <string name="snoozed_tabs_empty_title">No hay pestañas pospuestas</string>
+    <string name="snoozed_tabs_empty_body">Mantén pulsada una pestaña o usa su menú ⋮ para posponerla.</string>
+    <string name="snoozed_until">Vuelve el %1$s</string>
+    <string name="action_reschedule">Cambiar hora</string>
+    <string name="action_open_now">Abrir ahora</string>
+    <string name="snooze_invalid_time">Elige una fecha y hora futuras</string>
+    <string name="snooze_confirmation">Pestaña pospuesta</string>
+    <plurals name="snoozed_tabs_settings_count">
+        <item quantity="one">%1$d pestaña pospuesta</item>
+        <item quantity="other">%1$d pestañas pospuestas</item>
+    </plurals>
 </resources>

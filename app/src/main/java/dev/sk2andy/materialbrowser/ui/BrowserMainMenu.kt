@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.ui
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,6 +56,7 @@ internal fun BrowserMainMenu(
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     canAddSiteCapsule: Boolean,
+    canSnooze: Boolean,
     onBack: () -> Unit,
     onForward: () -> Unit,
     onReloadOrStop: () -> Unit,
@@ -66,6 +68,7 @@ internal fun BrowserMainMenu(
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     onSummarize: () -> Unit,
+    onSnooze: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -214,7 +217,7 @@ internal fun BrowserMainMenu(
                 )
             }
 
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(8.dp))
             Column(
                 modifier = Modifier.testTag(BrowserMainMenuTestTags.CandyGroup),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -241,10 +244,25 @@ internal fun BrowserMainMenu(
                     label = stringResource(R.string.action_summarize),
                     iconRes = R.drawable.ic_symbol_auto_awesome,
                     enabled = canUsePageActions,
-                    shape = lastItemShape,
+                    shape = innerCorners,
                     containerColor = colors.tertiaryContainer,
                     contentColor = colors.onTertiaryContainer,
                     onClick = { dismissThen(onSummarize) },
+                )
+                MenuRow(
+                    label = stringResource(R.string.action_snooze_tab),
+                    iconRes = R.drawable.ic_snooze,
+                    enabled = canSnooze,
+                    shape = lastItemShape,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.Snooze),
+                    containerColor = colors.tertiaryContainer,
+                    contentColor = colors.onTertiaryContainer,
+                    supportingText = if (canSnooze) {
+                        null
+                    } else {
+                        stringResource(R.string.snooze_unavailable_private)
+                    },
+                    onClick = { dismissThen(onSnooze) },
                 )
             }
 
@@ -275,7 +293,197 @@ internal fun BrowserMainMenu(
 }
 
 @Composable
-private fun MenuToolbarAction(
+internal fun TabActionsMenuContent(
+    pageSubtitle: String,
+    canToggleFavorite: Boolean,
+    isFavorite: Boolean,
+    isPinned: Boolean,
+    canUsePageActions: Boolean,
+    canToggleDomainMute: Boolean,
+    isDomainMuted: Boolean,
+    canAddSiteCapsule: Boolean,
+    canSnooze: Boolean,
+    onToggleFavorite: () -> Unit,
+    onTogglePinned: () -> Unit,
+    onShare: () -> Unit,
+    onOpenExternal: () -> Unit,
+    onPrint: () -> Unit,
+    onDomainMutedChange: (Boolean) -> Unit,
+    onOpenCandyTrail: () -> Unit,
+    onAddSiteCapsule: () -> Unit,
+    onSummarize: () -> Unit,
+    onSnooze: () -> Unit,
+    modifier: Modifier = Modifier,
+    profileContent: @Composable ColumnScope.() -> Unit = {},
+) {
+    val colors = MaterialTheme.colorScheme
+    val outerCorners = MaterialTheme.shapes.medium
+    val innerCorners = MaterialTheme.shapes.extraSmall
+    val firstItemShape = RoundedCornerShape(
+        topStart = outerCorners.topStart,
+        topEnd = outerCorners.topEnd,
+        bottomEnd = innerCorners.bottomEnd,
+        bottomStart = innerCorners.bottomStart,
+    )
+    val lastItemShape = RoundedCornerShape(
+        topStart = innerCorners.topStart,
+        topEnd = innerCorners.topEnd,
+        bottomEnd = outerCorners.bottomEnd,
+        bottomStart = outerCorners.bottomStart,
+    )
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.tab_actions_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = pageSubtitle,
+            modifier = Modifier.padding(top = 2.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(TabActionsMenuTestTags.Toolbar),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            MenuToolbarAction(
+                label = stringResource(R.string.action_favorite),
+                iconRes = if (isFavorite) {
+                    R.drawable.ic_symbol_favorite_filled
+                } else {
+                    R.drawable.ic_symbol_favorite
+                },
+                accessibilityLabel = stringResource(
+                    if (isFavorite) R.string.action_remove_favorite
+                    else R.string.action_add_favorite,
+                ),
+                enabled = canToggleFavorite,
+                selected = isFavorite,
+                horizontalContent = true,
+                onClick = onToggleFavorite,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(TabActionsMenuTestTags.Favorite),
+            )
+            MenuToolbarAction(
+                label = stringResource(
+                    if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
+                ),
+                iconRes = R.drawable.ic_push_pin,
+                accessibilityLabel = stringResource(
+                    if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
+                ),
+                selected = isPinned,
+                horizontalContent = true,
+                onClick = onTogglePinned,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(TabActionsMenuTestTags.Pin),
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = stringResource(R.string.browser_menu_page_group),
+            modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = colors.primary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Column(
+            modifier = Modifier.testTag(TabActionsMenuTestTags.PageGroup),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            MenuRow(
+                label = stringResource(R.string.action_share),
+                iconRes = R.drawable.ic_symbol_share,
+                enabled = canUsePageActions,
+                shape = firstItemShape,
+                onClick = onShare,
+            )
+            MenuRow(
+                label = stringResource(R.string.action_open_in_app),
+                iconRes = R.drawable.ic_symbol_open_in_new,
+                enabled = canUsePageActions,
+                shape = innerCorners,
+                onClick = onOpenExternal,
+            )
+            MenuRow(
+                label = stringResource(R.string.action_print),
+                iconRes = R.drawable.ic_symbol_print,
+                enabled = canUsePageActions,
+                shape = innerCorners,
+                onClick = onPrint,
+            )
+            DomainMuteMenuItem(
+                enabled = canToggleDomainMute,
+                muted = isDomainMuted,
+                onMutedChange = onDomainMutedChange,
+                shape = lastItemShape,
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Column(
+            modifier = Modifier.testTag(TabActionsMenuTestTags.CandyGroup),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            MenuRow(
+                label = stringResource(R.string.action_open_candy_trail),
+                iconRes = R.drawable.ic_symbol_route,
+                enabled = canUsePageActions,
+                shape = firstItemShape,
+                modifier = Modifier.testTag(TabActionsMenuTestTags.Trail),
+                containerColor = colors.tertiaryContainer,
+                contentColor = colors.onTertiaryContainer,
+                onClick = onOpenCandyTrail,
+            )
+            MenuRow(
+                label = stringResource(R.string.action_add_site_capsule),
+                iconRes = R.drawable.ic_symbol_add_to_home_screen,
+                enabled = canAddSiteCapsule,
+                shape = innerCorners,
+                containerColor = colors.tertiaryContainer,
+                contentColor = colors.onTertiaryContainer,
+                onClick = onAddSiteCapsule,
+            )
+            MenuRow(
+                label = stringResource(R.string.action_summarize),
+                iconRes = R.drawable.ic_symbol_auto_awesome,
+                enabled = canUsePageActions,
+                shape = innerCorners,
+                containerColor = colors.tertiaryContainer,
+                contentColor = colors.onTertiaryContainer,
+                onClick = onSummarize,
+            )
+            MenuRow(
+                label = stringResource(R.string.action_snooze_tab),
+                iconRes = R.drawable.ic_snooze,
+                enabled = canSnooze,
+                shape = lastItemShape,
+                modifier = Modifier.testTag(SnoozeTestTags.TabActionsSnooze),
+                containerColor = colors.tertiaryContainer,
+                contentColor = colors.onTertiaryContainer,
+                supportingText = if (canSnooze) {
+                    null
+                } else {
+                    stringResource(R.string.snooze_unavailable_private)
+                },
+                onClick = onSnooze,
+            )
+        }
+        profileContent()
+    }
+}
+
+@Composable
+internal fun MenuToolbarAction(
     label: String,
     @DrawableRes iconRes: Int,
     onClick: () -> Unit,
@@ -283,6 +491,7 @@ private fun MenuToolbarAction(
     enabled: Boolean = true,
     selected: Boolean = false,
     accessibilityLabel: String? = null,
+    horizontalContent: Boolean = false,
 ) {
     val colors = MaterialTheme.colorScheme
     val containerColor = if (selected) colors.primaryContainer else colors.surfaceContainerHighest
@@ -309,30 +518,52 @@ private fun MenuToolbarAction(
         color = containerColor,
         contentColor = contentColor,
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = label,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 11.sp,
-            )
+        if (horizontalContent) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = label,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = label,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 11.sp,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun MenuRow(
+internal fun MenuRow(
     label: String,
     @DrawableRes iconRes: Int,
     shape: Shape,
@@ -341,6 +572,7 @@ private fun MenuRow(
     enabled: Boolean = true,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    supportingText: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
     Surface(
@@ -363,13 +595,23 @@ private fun MenuRow(
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(12.dp))
-            Text(
-                text = label,
-                modifier = Modifier.weight(1f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (supportingText != null) {
+                    Text(
+                        text = supportingText,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.72f),
+                    )
+                }
+            }
             if (trailingContent != null) {
                 Spacer(Modifier.width(12.dp))
                 trailingContent()
@@ -434,6 +676,16 @@ internal object BrowserMainMenuTestTags {
     const val PageGroup = "browser_main_menu_page_group"
     const val CandyGroup = "browser_main_menu_candy_group"
     const val Settings = "browser_main_menu_settings"
+    const val Snooze = "browser_main_menu_snooze"
+}
+
+internal object TabActionsMenuTestTags {
+    const val Toolbar = "tab_actions_menu_toolbar"
+    const val Favorite = "tab_actions_menu_favorite"
+    const val Pin = "tab_actions_menu_pin"
+    const val PageGroup = "tab_actions_menu_page_group"
+    const val CandyGroup = "tab_actions_menu_candy_group"
+    const val Trail = "tab_actions_menu_trail"
 }
 
 internal object DomainMuteMenuTestTags {

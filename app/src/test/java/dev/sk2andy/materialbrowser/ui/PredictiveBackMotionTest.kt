@@ -15,7 +15,7 @@ class PredictiveBackMotionTest {
             ),
         )
         assertEquals(
-            PredictiveBackTransform(scale = 1f, translationX = 1_000f),
+            PredictiveBackTransform(scale = 0.9f, translationX = 50f),
             PredictiveBackMotion.transform(
                 progress = 1.5f,
                 width = 1_000f,
@@ -27,7 +27,7 @@ class PredictiveBackMotionTest {
     @Test
     fun `motion scales and translates with progress`() {
         assertEquals(
-            PredictiveBackTransform(scale = 1f, translationX = 500f),
+            PredictiveBackTransform(scale = 0.95f, translationX = 25f),
             PredictiveBackMotion.transform(
                 progress = 0.5f,
                 width = 1_000f,
@@ -39,7 +39,7 @@ class PredictiveBackMotionTest {
     @Test
     fun `swipe edge controls horizontal direction`() {
         assertEquals(
-            1_000f,
+            50f,
             PredictiveBackMotion.transform(
                 progress = 1f,
                 width = 1_000f,
@@ -47,7 +47,7 @@ class PredictiveBackMotionTest {
             ).translationX,
         )
         assertEquals(
-            -1_000f,
+            -50f,
             PredictiveBackMotion.transform(
                 progress = 1f,
                 width = 1_000f,
