@@ -39,6 +39,7 @@ android {
         versionCode = candyVersionCode.get().toInt()
         versionName = candyVersionName.get()
         manifestPlaceholders["appLabel"] = "@string/app_name"
+        buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,6 +64,7 @@ android {
 
         release {
             isMinifyEnabled = true
+            buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "true")
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -70,6 +72,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+
+        create("localRelease") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".local"
+            versionNameSuffix = "-local"
+            manifestPlaceholders["appLabel"] = "Candy Browser Local"
+            buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
+            matchingFallbacks += listOf("release")
         }
     }
 
@@ -113,7 +124,7 @@ val validateReleaseSigning by tasks.registering {
     }
 }
 
-tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+tasks.matching { it.name == "preReleaseBuild" || it.name == "preLocalReleaseBuild" }.configureEach {
     dependsOn(validateReleaseSigning)
 }
 

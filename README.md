@@ -91,8 +91,8 @@ Candy Browser requires Android 14 (API 34) or newer.
 
 [Download Candy Browser](https://github.com/sk2andy/candy-browser/releases)
 
-Android may ask you to allow installation from your browser or file manager. Releases outside
-Google Play do not update automatically.
+Production builds check GitHub for updates at startup and offer the signed APK for download. Android
+still requires you to open the downloaded file and approve installation.
 
 ## Build from source
 
@@ -130,7 +130,7 @@ For an ignored project file:
 ```bash
 cp keystore.properties.example keystore.properties
 # Replace every placeholder in keystore.properties, then:
-./gradlew assembleRelease
+./gradlew assembleLocalRelease
 ```
 
 Alternatively, export the same values from `~/.zshrc.shared`:
@@ -142,7 +142,12 @@ export CANDY_RELEASE_KEY_ALIAS='candy'
 export CANDY_RELEASE_KEY_PASSWORD='replace-me'
 ```
 
-Signed APK: `app/build/outputs/apk/release/app-release.apk`
+Signed local APK: `app/build/outputs/apk/localRelease/app-localRelease.apk`
+
+`localRelease` installs beside the GitHub build as `dev.sk2andy.materialbrowser.local` and uses a
+separate launcher icon and the label `Candy Browser Local`. GitHub update prompts are disabled for
+this side-by-side build because production APKs cannot update its package. The GitHub workflow
+continues to use `assembleRelease`, preserving the production application ID and icon.
 
 ### GitHub releases
 

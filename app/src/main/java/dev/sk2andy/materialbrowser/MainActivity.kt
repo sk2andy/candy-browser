@@ -2,31 +2,43 @@ package dev.sk2andy.materialbrowser
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.core.view.ViewCompat
-import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
+import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
+import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import dev.sk2andy.materialbrowser.update.AvailableAppUpdate
+import dev.sk2andy.materialbrowser.update.GitHubAppUpdateChecker
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -61,11 +73,34 @@ class MainActivity : ComponentActivity() {
                         savedInstanceState == null && intent.action == Intent.ACTION_MAIN,
                     )
                 }
+                var updateCheckCompleted by rememberSaveable { mutableStateOf(false) }
+                var availableUpdateVersion by rememberSaveable { mutableStateOf<String?>(null) }
+                var availableUpdateUrl by rememberSaveable { mutableStateOf<String?>(null) }
+                var availableUpdateFileName by rememberSaveable { mutableStateOf<String?>(null) }
+                var updateDialogDismissed by rememberSaveable { mutableStateOf(false) }
+                val updateChecker = remember { GitHubAppUpdateChecker() }
+                val updateDownloadManager = remember { BrowserDownloadManager(this) }
+                val availableUpdate = availableUpdateVersion?.let { version ->
+                    val url = availableUpdateUrl ?: return@let null
+                    val fileName = availableUpdateFileName ?: return@let null
+                    AvailableAppUpdate(version, url, fileName)
+                }
                 LaunchedEffect(Unit) {
                     if (splashVisible) {
                         delay(SPLASH_DURATION_MILLIS)
                         splashVisible = false
                     }
+                }
+                LaunchedEffect(updateCheckCompleted) {
+                    if (updateCheckCompleted) return@LaunchedEffect
+                    if (BuildConfig.ENABLE_GITHUB_UPDATES) {
+                        updateChecker.findAvailableUpdate(BuildConfig.VERSION_NAME)?.let { update ->
+                            availableUpdateVersion = update.versionName
+                            availableUpdateUrl = update.downloadUrl
+                            availableUpdateFileName = update.fileName
+                        }
+                    }
+                    updateCheckCompleted = true
                 }
                 Box {
                     BrowserScreen(browserController)
@@ -83,6 +118,38 @@ class MainActivity : ComponentActivity() {
                     ) {
                         CandySplashScreen()
                     }
+                }
+                if (
+                    availableUpdate != null &&
+                    !updateDialogDismissed &&
+                    !onboardingVisible &&
+                    !splashVisible
+                ) {
+                    AppUpdateDialog(
+                        update = availableUpdate,
+                        onDismiss = { updateDialogDismissed = true },
+                        onDownload = {
+                            val result = updateDownloadManager.enqueue(
+                                BrowserDownloadRequest(
+                                    url = availableUpdate.downloadUrl,
+                                    fileName = availableUpdate.fileName,
+                                    mimeType = AvailableAppUpdate.APK_MIME_TYPE,
+                                ),
+                            )
+                            Toast.makeText(
+                                this,
+                                when (result) {
+                                    is DownloadActionResult.Enqueued ->
+                                        getString(R.string.toast_download_started, result.fileName)
+                                    is DownloadActionResult.Failed -> result.message
+                                },
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                            if (result is DownloadActionResult.Enqueued) {
+                                updateDialogDismissed = true
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -148,4 +215,34 @@ class MainActivity : ComponentActivity() {
         const val STATE_CAPSULE_ID = "active_site_capsule_id"
         const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
     }
+}
+
+@Composable
+private fun AppUpdateDialog(
+    update: AvailableAppUpdate,
+    onDismiss: () -> Unit,
+    onDownload: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.update_available_title)) },
+        text = {
+            Text(
+                stringResource(
+                    R.string.update_available_message,
+                    update.versionName,
+                ),
+            )
+        },
+        confirmButton = {
+            Button(onClick = onDownload) {
+                Text(stringResource(R.string.action_download_update))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_later))
+            }
+        },
+    )
 }

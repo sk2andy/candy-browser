@@ -102,6 +102,10 @@
     <string name="clear_data_message">Cookies, Website-Speicher, Cache und Verlauf dieser Sitzung werden gelöscht.</string>
     <string name="action_delete">Löschen</string>
     <string name="action_cancel">Abbrechen</string>
+    <string name="update_available_title">Update verfügbar</string>
+    <string name="update_available_message">Candy Browser %1$s ist verfügbar. Signierte APK von GitHub herunterladen? Öffne sie nach dem Download, damit Android das Update prüfen und installieren kann.</string>
+    <string name="action_download_update">Update herunterladen</string>
+    <string name="action_later">Später</string>
 
     <!-- Adress-Commands -->
     <string name="command_clear_cache_reload_name">Cache leeren &amp; neu laden</string>

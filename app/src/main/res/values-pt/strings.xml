@@ -102,6 +102,10 @@
     <string name="clear_data_message">Os cookies, o armazenamento dos sites, a cache e o histórico desta sessão serão eliminados.</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="update_available_title">Atualização disponível</string>
+    <string name="update_available_message">O Candy Browser %1$s está disponível. Transferir o APK assinado do GitHub? Quando a transferência terminar, abra-o para o Android verificar e instalar a atualização.</string>
+    <string name="action_download_update">Transferir atualização</string>
+    <string name="action_later">Mais tarde</string>
 
     <!-- Comandos de endereço -->
     <string name="command_clear_cache_reload_name">Limpar cache e recarregar</string>
