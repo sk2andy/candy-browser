@@ -39,6 +39,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -129,6 +130,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
@@ -5287,8 +5289,15 @@ private fun TabOverview(
 
 }
 
+internal object ProfileSwitcherTestTags {
+    const val Switcher = "profile_switcher"
+    const val Add = "profile_switcher_add"
+
+    fun profile(profileId: String): String = "profile_switcher_profile:$profileId"
+}
+
 @Composable
-private fun ProfileSwitcher(
+internal fun ProfileSwitcher(
     profiles: List<BrowserProfile>,
     activeProfileId: String,
     enabled: Boolean,
@@ -5312,10 +5321,10 @@ private fun ProfileSwitcher(
         contentAlignment = Alignment.Center,
     ) {
         val profileContentWidth = (profiles.size * PROFILE_SLOT_WIDTH).dp
-        val barWidth = (profileContentWidth + 60.dp)
+        val barWidth = (profileContentWidth + PROFILE_ACTION_SECTION_WIDTH.dp)
             .coerceAtMost(maxWidth - 24.dp)
-            .coerceAtLeast(116.dp)
-        val profileViewportWidth = barWidth - 60.dp
+            .coerceAtLeast(PROFILE_SWITCHER_MIN_WIDTH.dp)
+        val profileViewportWidth = barWidth - PROFILE_ACTION_SECTION_WIDTH.dp
         val density = LocalDensity.current
         LaunchedEffect(activeIndex, profiles.size, profileViewportWidth) {
             withFrameNanos { }
@@ -5333,11 +5342,13 @@ private fun ProfileSwitcher(
         }
         Surface(
             modifier = Modifier
+                .testTag(ProfileSwitcherTestTags.Switcher)
                 .width(barWidth)
                 .height(60.dp),
-            shape = RoundedCornerShape(32.dp),
-            color = Color(0xFF20222C),
-            shadowElevation = 8.dp,
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+            tonalElevation = 6.dp,
+            shadowElevation = 4.dp,
         ) {
             Row(
                 modifier = Modifier.padding(4.dp),
@@ -5355,37 +5366,35 @@ private fun ProfileSwitcher(
                             .width(profileContentWidth)
                             .fillMaxHeight(),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .offset {
-                                    IntOffset(
-                                        x = (indicatorSlotOffset + 2.dp).roundToPx(),
-                                        y = 0,
-                                    )
-                                }
-                                .size(52.dp)
-                                .background(Color.White.copy(alpha = 0.12f), CircleShape),
-                        )
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .offset {
-                                    IntOffset(
-                                        x = (indicatorSlotOffset + 4.dp).roundToPx(),
-                                        y = 0,
-                                    )
-                                }
-                                .size(48.dp),
-                            shape = CircleShape,
-                            color = Color(0xFF5E6572),
-                            shadowElevation = 9.dp,
-                        ) {}
                         Row(modifier = Modifier.fillMaxHeight()) {
                             profiles.forEach { profile ->
                                 val isSelected = profile.id == activeProfileId
+                                val profileContainerColor by animateColorAsState(
+                                    targetValue = when {
+                                        !enabled -> MaterialTheme.colorScheme
+                                            .surfaceContainerHighest
+                                            .copy(alpha = 0.38f)
+                                        isSelected -> MaterialTheme.colorScheme.primaryContainer
+                                        else -> MaterialTheme.colorScheme.surfaceContainerHighest
+                                    },
+                                    animationSpec = tween(durationMillis = 180),
+                                    label = "profile-container-color",
+                                )
+                                val profileElevation by animateDpAsState(
+                                    targetValue = if (isSelected) 2.dp else 0.dp,
+                                    animationSpec = tween(durationMillis = 180),
+                                    label = "profile-container-elevation",
+                                )
+                                val profileContainerSize by animateDpAsState(
+                                    targetValue = if (isSelected) 48.dp else 44.dp,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.72f,
+                                        stiffness = 430f,
+                                    ),
+                                    label = "profile-container-size",
+                                )
                                 val scale by animateFloatAsState(
-                                    targetValue = if (isSelected) 1.06f else 0.92f,
+                                    targetValue = if (isSelected) 1.02f else 0.92f,
                                     animationSpec = spring(
                                         dampingRatio = 0.68f,
                                         stiffness = 540f,
@@ -5396,11 +5405,15 @@ private fun ProfileSwitcher(
                                     modifier = Modifier
                                         .width(PROFILE_SLOT_WIDTH.dp)
                                         .fillMaxHeight()
+                                        .testTag(
+                                            ProfileSwitcherTestTags.profile(profile.id),
+                                        )
                                         .semantics {
                                             contentDescription =
                                                 "$profileDescription ${profile.emoji}"
                                             selected = isSelected
                                         }
+                                        .clip(CircleShape)
                                         .combinedClickable(
                                             enabled = enabled,
                                             role = Role.Tab,
@@ -5409,9 +5422,16 @@ private fun ProfileSwitcher(
                                             onLongClickLabel = stringResource(
                                                 R.string.action_edit_profile,
                                             ),
-                                        ),
+                                    ),
                                     contentAlignment = Alignment.Center,
                                 ) {
+                                    Surface(
+                                        modifier = Modifier.size(profileContainerSize),
+                                        shape = CircleShape,
+                                        color = profileContainerColor,
+                                        tonalElevation = profileElevation,
+                                        shadowElevation = profileElevation,
+                                    ) {}
                                     AnimatedContent(
                                         targetState = profile.emoji,
                                         transitionSpec = {
@@ -5424,6 +5444,7 @@ private fun ProfileSwitcher(
                                             modifier = Modifier.graphicsLayer {
                                                 scaleX = scale
                                                 scaleY = scale
+                                                alpha = if (enabled) 1f else 0.38f
                                             },
                                             fontSize = 25.sp,
                                             textAlign = TextAlign.Center,
@@ -5432,25 +5453,76 @@ private fun ProfileSwitcher(
                                 }
                             }
                         }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .offset {
+                                    IntOffset(
+                                        x = (indicatorSlotOffset + 2.dp).roundToPx(),
+                                        y = 0,
+                                    )
+                                }
+                                .size(48.dp)
+                                .border(
+                                    width = 2.dp,
+                                    color = if (enabled) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                    },
+                                    shape = CircleShape,
+                                ),
+                        )
                     }
                 }
-                IconButton(
-                    onClick = onAdd,
-                    enabled = enabled,
+                Spacer(Modifier.width(5.dp))
+                VerticalDivider(
+                    modifier = Modifier.height(32.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(
+                        alpha = if (enabled) 0.62f else 0.22f,
+                    ),
+                )
+                Spacer(Modifier.width(4.dp))
+                Box(
                     modifier = Modifier.size(52.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = stringResource(R.string.cd_add_profile),
-                        tint = Color.White,
-                    )
+                    Surface(
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = if (enabled) {
+                            MaterialTheme.colorScheme.surfaceContainerHighest
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.38f)
+                        },
+                        tonalElevation = 1.dp,
+                    ) {}
+                    IconButton(
+                        onClick = onAdd,
+                        enabled = enabled,
+                        modifier = Modifier
+                            .size(52.dp)
+                            .testTag(ProfileSwitcherTestTags.Add),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_person_add_outline),
+                            contentDescription = stringResource(R.string.cd_add_profile),
+                            tint = if (enabled) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            },
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-private const val PROFILE_SLOT_WIDTH = 56
+private const val PROFILE_SLOT_WIDTH = 52
+private const val PROFILE_ACTION_SECTION_WIDTH = 70
+private const val PROFILE_SWITCHER_MIN_WIDTH = 122
 
 @Composable
 private fun TabHeroLayer(
