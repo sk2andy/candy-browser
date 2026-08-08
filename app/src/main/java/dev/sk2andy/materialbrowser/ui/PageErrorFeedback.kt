@@ -59,7 +59,6 @@ internal object PageErrorFeedbackRules {
     ): PageErrorFeedbackState = when {
         error != null -> PageErrorFeedbackState.Error(error)
         isLoading -> PageErrorFeedbackState.Hidden(current.message)
-        current is PageErrorFeedbackState.Retrying -> current
         else -> PageErrorFeedbackState.Hidden(current.message)
     }
 

@@ -5,6 +5,7 @@ import kotlin.math.sign
 
 internal object TabDismissPhysics {
     const val DEFAULT_RESISTANCE_FRACTION = 0.4f
+    const val CARD_DISMISS_THRESHOLD_FRACTION = 0.53f
     private const val RESISTANCE_MULTIPLIER = 0.55f
     private const val MAX_RELEASE_PROGRESS = 1.1f
 
@@ -45,6 +46,24 @@ internal object TabDismissPhysics {
         return rawDistance > 0f &&
             !hasClearedResistance(rawDistance, dismissThreshold, resistanceFraction)
     }
+
+    fun rawThresholdForCardWidth(
+        cardWidth: Float,
+        resistanceFraction: Float = DEFAULT_RESISTANCE_FRACTION,
+    ): Float = resistanceEnd(
+        dismissThreshold = cardWidth.coerceAtLeast(0f) * CARD_DISMISS_THRESHOLD_FRACTION,
+        resistanceFraction = resistanceFraction,
+    )
+
+    fun compactGridCardWidth(
+        viewportWidth: Float,
+        totalHorizontalPadding: Float,
+        horizontalGap: Float,
+    ): Float = (
+        viewportWidth.coerceAtLeast(0f) -
+            totalHorizontalPadding.coerceAtLeast(0f) -
+            horizontalGap.coerceAtLeast(0f)
+        ).coerceAtLeast(0f) / 2f
 
     private fun resistanceEnd(
         dismissThreshold: Float,

@@ -173,6 +173,10 @@
     <string name="favorites_empty">Aucun favori pour le moment — ajoutez-en via le menu ⋮.</string>
     <string name="content_actions_title">Contenu de la page</string>
     <string name="action_open_link_background_tab">Ouvrir le lien dans un nouvel onglet en arrière-plan</string>
+    <string name="link_peek_title">Aperçu du lien</string>
+    <string name="action_open_in_new_tab">Ouvrir dans un nouvel onglet</string>
+    <string name="link_peek_pull_down_instruction">Faites glisser vers le bas</string>
+    <string name="link_peek_accessibility_description">Aperçu du lien. Faites glisser jusqu’à la cible puis relâchez pour ouvrir dans un nouvel onglet. Relâchez avant, remontez ou revenez en arrière pour annuler.</string>
     <string name="action_download_image">Télécharger l’image</string>
     <string name="download_notification_description">Téléchargement</string>
     <string name="settings_title">Paramètres</string>

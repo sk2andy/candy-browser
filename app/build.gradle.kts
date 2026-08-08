@@ -28,8 +28,8 @@ val hasReleaseSigning = missingReleaseSigningValues.isEmpty()
 val candyVersionCode = providers.gradleProperty("candy.versionCode").orElse("1")
 val candyVersionName = providers.gradleProperty("candy.versionName").orElse("0.1")
 val debugApplicationIdSuffix =
-    providers.gradleProperty("candy.debugApplicationIdSuffix").orElse(".tabsnooze")
-val debugAppLabel = providers.gradleProperty("candy.debugAppLabel").orElse("Candy Tab Snooze")
+    providers.gradleProperty("candy.debugApplicationIdSuffix").orElse(".linkpeek")
+val debugAppLabel = providers.gradleProperty("candy.debugAppLabel").orElse("Candy Link Peek")
 
 android {
     namespace = "dev.sk2andy.materialbrowser"

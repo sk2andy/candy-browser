@@ -52,6 +52,28 @@ class WebViewHitTestResolverTest {
                 extra = "javascript:alert(1)",
             ),
         )
+        assertNull(
+            WebViewHitTestResolver.resolve(
+                hitType = WebView.HitTestResult.SRC_ANCHOR_TYPE,
+                extra = "https://user:secret@example.com/private",
+            ),
+        )
+        assertNull(
+            WebViewHitTestResolver.resolve(
+                hitType = WebView.HitTestResult.SRC_ANCHOR_TYPE,
+                extra = "mailto:hello@example.com",
+            ),
+        )
+    }
+
+    @Test
+    fun `supported link is trimmed through shared browser URI policy`() {
+        val target = WebViewHitTestResolver.resolve(
+            hitType = WebView.HitTestResult.SRC_ANCHOR_TYPE,
+            extra = "  HTTPS://example.com/article  ",
+        )
+
+        assertEquals("HTTPS://example.com/article", target?.linkUrl)
     }
 
     @Test

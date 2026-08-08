@@ -45,23 +45,29 @@ class PageErrorFeedbackRulesTest {
     }
 
     @Test
-    fun `retry remains visible until navigation starts`() {
+    fun `retry hides when navigation starts`() {
         val retrying = PageErrorFeedbackState.Retrying("Network unavailable")
 
-        assertEquals(
-            retrying,
-            PageErrorFeedbackRules.observe(
-                current = retrying,
-                error = null,
-                isLoading = false,
-            ),
-        )
         assertEquals(
             PageErrorFeedbackState.Hidden("Network unavailable"),
             PageErrorFeedbackRules.observe(
                 current = retrying,
                 error = null,
                 isLoading = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `retry hides when successful finish arrives without observable loading frame`() {
+        val retrying = PageErrorFeedbackState.Retrying("Network unavailable")
+
+        assertEquals(
+            PageErrorFeedbackState.Hidden("Network unavailable"),
+            PageErrorFeedbackRules.observe(
+                current = retrying,
+                error = null,
+                isLoading = false,
             ),
         )
     }

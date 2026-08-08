@@ -371,6 +371,8 @@ fun BrowserScreen(controller: BrowserController) {
     var browserHeightPx by remember { mutableFloatStateOf(1f) }
     val bottomBarTopPx = remember { mutableFloatStateOf(Float.NaN) }
     var overviewNewTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
+    var addressNewTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
+    var keepLinkPeekAddressBarExpanded by remember { mutableStateOf(false) }
     var tabOverviewOpening by remember { mutableStateOf(false) }
     var tabHandoff by remember { mutableStateOf<TabHandoff?>(null) }
     val liveFrameTabIdState = remember { mutableStateOf<String?>(null) }
@@ -397,6 +399,19 @@ fun BrowserScreen(controller: BrowserController) {
         tabOverviewVisible && !overviewDestinationButtonVisible
     val selectedTab = controller.selectedTab
     val permissionActivityVisible = controller.hasPermissionActivity(selectedTab.id)
+    LaunchedEffect(
+        controller.contentActions.isLinkPeekVisible,
+        controller.contentActions.linkPeekNewTabPulseNonce,
+    ) {
+        if (controller.contentActions.isLinkPeekVisible) {
+            keepLinkPeekAddressBarExpanded = true
+        } else if (keepLinkPeekAddressBarExpanded) {
+            delay(620)
+            keepLinkPeekAddressBarExpanded = false
+        }
+    }
+    val linkPeekAddressBarExpanded = controller.contentActions.isLinkPeekVisible ||
+        keepLinkPeekAddressBarExpanded
     val blankTabModeProgress = rememberBlankTabModeProgress(
         tabId = selectedTab.id,
         incognito = selectedTab.isIncognito,
@@ -1017,8 +1032,8 @@ fun BrowserScreen(controller: BrowserController) {
 
         BrowserBottomBar(
             tab = selectedTab,
-            compact = controller.isBottomBarCompact,
-            docked = controller.isAddressBarDocked,
+            compact = controller.isBottomBarCompact && !linkPeekAddressBarExpanded,
+            docked = controller.isAddressBarDocked && !linkPeekAddressBarExpanded,
             editing = addressEditorVisible,
             commandFeedback = commandFeedback,
             feedbackGesturesEnabled = !addressEditorVisible && !settingsVisible,
@@ -1195,6 +1210,8 @@ fun BrowserScreen(controller: BrowserController) {
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             },
             addressBarPulseNonce = controller.contentActions.addressBarPulseNonce,
+            newTabPulseNonce = controller.contentActions.linkPeekNewTabPulseNonce,
+            onNewTabButtonBounds = { addressNewTabButtonBounds = it },
             onOpenExternal = controller::openSelectedPageExternally,
             onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
             onShare = controller::shareSelectedPage,
@@ -1706,7 +1723,33 @@ fun BrowserScreen(controller: BrowserController) {
         )
     }
 
-    if (controller.contentActions.isVisible) {
+    if (controller.contentActions.isLinkPeekVisible) {
+        val linkTarget = controller.contentActions.target
+        LinkPeekOverlay(
+            url = requireNotNull(linkTarget?.linkUrl),
+            progress = controller.contentActions.linkPeekProgress,
+            armed = controller.contentActions.isLinkPeekArmed,
+            committing = controller.contentActions.isLinkPeekCommitting,
+            newTabTargetBounds = addressNewTabButtonBounds,
+            createPreviewWebView = { onProgressChanged, onCommittedUrlChanged ->
+                controller.createLinkPeekPreviewWebView(
+                    url = requireNotNull(linkTarget?.linkUrl),
+                    onProgressChanged = onProgressChanged,
+                    onCommittedUrlChanged = onCommittedUrlChanged,
+                )
+            },
+            releasePreviewWebView = controller::releaseLinkPeekPreviewWebView,
+            onCommitRequested = controller.contentActions::startLinkPeekCommit,
+            onOpen = {
+                rootView.performConfirmHaptic()
+                controller.openContextLinkInBackground()
+            },
+            onDownloadImage = linkTarget.takeIf { it?.canDownloadImage == true }?.let {
+                controller::downloadContextImage
+            },
+            onDismiss = controller.contentActions::dismiss,
+        )
+    } else if (controller.contentActions.isVisible) {
         WebContentContextSheet(
             target = controller.contentActions.target,
             onOpenLinkInBackground = controller::openContextLinkInBackground,
@@ -1856,6 +1899,36 @@ private fun BrowserViewport(
             onRefresh = { currentPullRefresh.value() },
         )
     }
+    val webViewTouchListener = remember(
+        selectedTab.id,
+        density.density,
+        touchSlop,
+        pullRefreshTouchListener,
+    ) {
+        LinkPeekTouchListener(
+            threshold = { view ->
+                TabDismissPhysics.rawThresholdForCardWidth(
+                    cardWidth = TabDismissPhysics.compactGridCardWidth(
+                        viewportWidth = view.width.toFloat(),
+                        totalHorizontalPadding = 32.dp.value * density.density,
+                        horizontalGap = 12.dp.value * density.density,
+                    ),
+                    resistanceFraction = controller.dismissResistancePercent / 100f,
+                )
+            },
+            touchSlop = touchSlop,
+            delegate = pullRefreshTouchListener,
+            isVisible = { controller.contentActions.isLinkPeekVisible },
+            onProgress = controller.contentActions::updateLinkPeek,
+            onOpen = controller.contentActions::startLinkPeekCommit,
+            onDismiss = controller.contentActions::dismiss,
+            onThresholdHaptic = { view ->
+                view.performHapticFeedback(HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE)
+            },
+            onPointerDown = controller.contentActions::beginPointerStream,
+            onPointerEnd = controller.contentActions::endPointerStream,
+        )
+    }
     LaunchedEffect(selectedTab.id, selectedTab.isLoading, pullRefreshActive) {
         if (pullRefreshActive && !selectedTab.isLoading) {
             pullRefreshActive = false
@@ -1911,7 +1984,7 @@ private fun BrowserViewport(
                 controller = controller,
                 visible = !tabOverviewVisible || selectedTab.isIncognito,
                 onLiveFrame = onLiveFrame,
-                pullRefreshTouchListener = pullRefreshTouchListener,
+                pullRefreshTouchListener = webViewTouchListener,
             )
         }
 
@@ -2629,6 +2702,8 @@ private fun BrowserBottomBar(
     permissionActivityVisible: Boolean,
     onPermissionRadar: () -> Unit,
     addressBarPulseNonce: Int,
+    newTabPulseNonce: Int,
+    onNewTabButtonBounds: (Rect) -> Unit,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
@@ -2657,6 +2732,7 @@ private fun BrowserBottomBar(
     )
     val tabDragState = rememberDraggableState(onTabDrag)
     val pulseScale = remember { Animatable(1f) }
+    val newTabPulseScale = remember { Animatable(1f) }
     val domain = AddressResolver.displayText(tab.url)
     val readerSupported = ReaderStudioSessionRules.isSupportedSource(tab.url)
     val readerOpenLabel = stringResource(R.string.reader_open_action)
@@ -2673,6 +2749,18 @@ private fun BrowserBottomBar(
         pulseScale.animateTo(
             targetValue = 1f,
             animationSpec = spring(dampingRatio = 0.42f, stiffness = 520f),
+        )
+    }
+    LaunchedEffect(newTabPulseNonce) {
+        if (newTabPulseNonce == 0) return@LaunchedEffect
+        newTabPulseScale.snapTo(1f)
+        newTabPulseScale.animateTo(
+            targetValue = 1.11f,
+            animationSpec = spring(dampingRatio = 0.6f, stiffness = 720f),
+        )
+        newTabPulseScale.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.72f, stiffness = 620f),
         )
     }
     val compactWidth = with(density) {
@@ -2870,6 +2958,8 @@ private fun BrowserBottomBar(
                                 onReload = onReload,
                                 onStop = onStop,
                                 onNewTab = onNewTab,
+                                newTabPulseScale = newTabPulseScale.value,
+                                onNewTabButtonBounds = onNewTabButtonBounds,
                                 onToggleIncognito = onToggleIncognito,
                                 blankTabModeProgress = blankTabModeProgress,
                                 onIncognitoControlCenterChanged =
@@ -3258,6 +3348,8 @@ private fun ExpandedBottomBarContent(
     onReload: () -> Unit,
     onStop: () -> Unit,
     onNewTab: () -> Unit,
+    newTabPulseScale: Float,
+    onNewTabButtonBounds: (Rect) -> Unit,
     onToggleIncognito: () -> Unit,
     blankTabModeProgress: Float,
     onIncognitoControlCenterChanged: (Offset) -> Unit,
@@ -3485,7 +3577,18 @@ private fun ExpandedBottomBarContent(
                     onClick = onToggleIncognito,
                 )
             } else {
-                IconButton(onClick = onNewTab) {
+                IconButton(
+                    onClick = onNewTab,
+                    modifier = Modifier
+                        .onGloballyPositioned { coordinates ->
+                            onNewTabButtonBounds(coordinates.boundsInRoot())
+                        }
+                        .graphicsLayer {
+                            scaleX = newTabPulseScale
+                            scaleY = newTabPulseScale
+                        }
+                        .testTag("address_bar_new_tab_button"),
+                ) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_new_tab))
                 }
             }
@@ -6287,7 +6390,7 @@ private fun CompactGridTabItem(
         progress = if (heroCompleted) 1f else 0f,
         isExitTarget = exitTarget,
     )
-    val dismissThreshold = cardWidthPx * 0.53f
+    val dismissThreshold = cardWidthPx * TabDismissPhysics.CARD_DISMISS_THRESHOLD_FRACTION
     val dragState = rememberDraggableState { delta ->
         rawDismissOffset += delta
         val rawDistance = rawDismissOffset.absoluteValue
