@@ -15,7 +15,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,10 +28,18 @@ class WebViewWindowInsetsInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     @Test
-    fun chromiumReceivesSystemBarsAsCssSafeAreaWithoutPageMutation() {
+    fun coverPageOnlyDrawsEdgeToEdgeAfterExplicitOptIn() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            val webView = awaitWebView(scenario)
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().run {
+                    updateWebContentEdgeToEdgeEnabled(false)
+                    submitAddress("https://example.test/")
+                }
+            }
+            val webView = awaitSelectedWebView(scenario)
             val expectedTopCssPixels = AtomicReference<Float>()
+            val expectedTopPixels = AtomicInteger()
+            val density = AtomicReference<Float>()
             scenario.onActivity { activity ->
                 val topPixels = ViewCompat.getRootWindowInsets(webView)
                     ?.getInsets(
@@ -38,7 +48,9 @@ class WebViewWindowInsetsInstrumentedTest {
                     )
                     ?.top
                     ?: 0
+                expectedTopPixels.set(topPixels)
                 expectedTopCssPixels.set(topPixels / activity.resources.displayMetrics.density)
+                density.set(activity.resources.displayMetrics.density)
                 webView.stopLoading()
                 webView.loadDataWithBaseURL(
                     "https://example.test/",
@@ -48,7 +60,12 @@ class WebViewWindowInsetsInstrumentedTest {
                           <head>
                             <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
                           </head>
-                          <body><div id="probe" style="padding-top:env(safe-area-inset-top)"></div></body>
+                          <body>
+                            <div id="probe" style="padding-top:env(safe-area-inset-top)"></div>
+                            <button id="open-app" style="position:fixed;top:12px;right:12px">
+                              App öffnen
+                            </button>
+                          </body>
                         </html>
                     """.trimIndent(),
                     "text/html",
@@ -58,10 +75,14 @@ class WebViewWindowInsetsInstrumentedTest {
             }
 
             awaitProbe(webView)
-            awaitWebViewTop(webView, 0)
+            awaitWebViewTop(webView, expectedTopPixels.get())
             val topInset = evaluate(
                 webView,
                 "parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop)",
+            ).toFloat()
+            val controlTopCssPixels = evaluate(
+                webView,
+                "document.getElementById('open-app').getBoundingClientRect().top",
             ).toFloat()
             val pageWasMutated = evaluate(
                 webView,
@@ -70,14 +91,67 @@ class WebViewWindowInsetsInstrumentedTest {
             )
 
             assertTrue(expectedTopCssPixels.get() > 0f)
-            assertEquals(expectedTopCssPixels.get(), topInset, 0.5f)
+            assertEquals(0f, topInset, 0.1f)
+            assertTrue(
+                expectedTopPixels.get() +
+                    (controlTopCssPixels * density.get()).roundToInt() >= expectedTopPixels.get(),
+            )
             assertEquals("false", pageWasMutated)
+
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting()
+                    .updateWebContentEdgeToEdgeEnabled(true)
+            }
+            awaitWebViewTop(webView, 0)
+            assertEquals(0, previewTopInset(scenario))
+            assertEquals(
+                expectedTopCssPixels.get(),
+                evaluate(
+                    webView,
+                    "parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop)",
+                ).toFloat(),
+                0.5f,
+            )
+
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting()
+                    .updateWebContentEdgeToEdgeEnabled(true)
+            }
+            awaitWebViewTop(webView, 0)
+
+            val coverTabId = AtomicReference<String>()
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().run {
+                    coverTabId.set(selectedTabId)
+                    createTab(isIncognito = false)
+                    submitAddress("https://foreground.test/")
+                }
+            }
+            awaitSelectedWebView(scenario)
+            assertFalse(webView.isAttachedToWindow)
+
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                controller.updateWebContentEdgeToEdgeEnabled(false)
+                assertEquals(
+                    expectedTopPixels.get(),
+                    controller.previewTopInsetPx(coverTabId.get()),
+                )
+                controller.updateWebContentEdgeToEdgeEnabled(true)
+                assertEquals(0, controller.previewTopInsetPx(coverTabId.get()))
+            }
         }
     }
 
     @Test
     fun pageWithoutCoverStaysBelowSystemBarsAndReceivesZeroCssSafeArea() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().run {
+                    updateWebContentEdgeToEdgeEnabled(true)
+                    submitAddress("https://example.test/")
+                }
+            }
             val webView = awaitWebView(scenario)
             val expectedTopPixels = AtomicInteger()
             scenario.onActivity {
@@ -98,6 +172,7 @@ class WebViewWindowInsetsInstrumentedTest {
                         <html>
                           <head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
                           <body style="min-height:4000px">
+                            <div id="sticky" style="position:fixed;top:0">Sticky action</div>
                             <div id="probe" style="padding-top:env(safe-area-inset-top)"></div>
                           </body>
                         </html>
@@ -121,8 +196,14 @@ class WebViewWindowInsetsInstrumentedTest {
             assertEquals(expectedTopPixels.get(), previewTopInset(scenario))
 
             evaluate(webView, "window.scrollTo(0, 1000)")
-            awaitWebViewTop(webView, 0)
-            assertEquals(0, previewTopInset(scenario))
+            awaitWebViewTop(webView, expectedTopPixels.get())
+            assertEquals(expectedTopPixels.get(), previewTopInset(scenario))
+            assertEquals(
+                0f,
+                evaluate(webView, "document.getElementById('sticky').getBoundingClientRect().top")
+                    .toFloat(),
+                0.1f,
+            )
 
             evaluate(webView, "window.scrollTo(0, 0)")
             awaitWebViewTop(webView, expectedTopPixels.get())
@@ -146,6 +227,15 @@ class WebViewWindowInsetsInstrumentedTest {
                 "document.querySelector('meta[name=viewport]').content = " +
                     "'viewport-fit=cover; width=device-width'",
             )
+            awaitWebViewTop(webView, expectedTopPixels.get())
+
+            evaluate(
+                webView,
+                "document.querySelector('meta[name=viewport]').content = 'viewport-fit=cover'",
+            )
+            awaitWebViewTop(webView, 0)
+
+            evaluate(webView, "document.querySelector('meta[name=viewport]').remove()")
             awaitWebViewTop(webView, expectedTopPixels.get())
         }
     }
@@ -198,7 +288,7 @@ class WebViewWindowInsetsInstrumentedTest {
 
     private fun awaitWebView(scenario: ActivityScenario<MainActivity>): WebView {
         val result = AtomicReference<WebView>()
-        repeat(100) {
+        repeat(200) {
             scenario.onActivity { activity ->
                 result.compareAndSet(null, findWebView(activity.window.decorView))
             }
@@ -207,6 +297,22 @@ class WebViewWindowInsetsInstrumentedTest {
         }
         assertNotNull("WebView was not attached", result.get())
         return result.get()
+    }
+
+    private fun awaitSelectedWebView(scenario: ActivityScenario<MainActivity>): WebView {
+        val result = AtomicReference<WebView>()
+        repeat(200) {
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().selectedWebViewForTesting()
+                    .takeIf { webView ->
+                        webView.isAttachedToWindow && webView.width > 0 && webView.height > 0
+                    }
+                    ?.let { webView -> result.compareAndSet(null, webView) }
+            }
+            result.get()?.let { return it }
+            SystemClock.sleep(50)
+        }
+        return checkNotNull(result.get()) { "Selected WebView was not attached" }
     }
 
     private fun findWebView(view: View): WebView? {

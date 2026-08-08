@@ -1304,6 +1304,7 @@ fun BrowserScreen(controller: BrowserController) {
                 searchSuggestionProvider = controller.searchSuggestionProvider,
                 tabOverviewMode = controller.tabOverviewMode,
                 dismissResistancePercent = controller.dismissResistancePercent,
+                isWebContentEdgeToEdgeEnabled = controller.isWebContentEdgeToEdgeEnabled,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
                 siteCapsules = controller.siteCapsules,
@@ -1313,6 +1314,7 @@ fun BrowserScreen(controller: BrowserController) {
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
+                onWebContentEdgeToEdgeChanged = controller::updateWebContentEdgeToEdgeEnabled,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
                     privacyXRayTabId = selectedTab.id
@@ -6944,6 +6946,7 @@ private fun SettingsScreen(
     searchSuggestionProvider: SearchSuggestionProvider,
     tabOverviewMode: TabOverviewMode,
     dismissResistancePercent: Int,
+    isWebContentEdgeToEdgeEnabled: Boolean,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
     siteCapsules: List<SiteCapsule>,
@@ -6953,6 +6956,7 @@ private fun SettingsScreen(
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
+    onWebContentEdgeToEdgeChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
@@ -7203,6 +7207,13 @@ private fun SettingsScreen(
                     )
                 }
             }
+            Spacer(Modifier.height(12.dp))
+            SettingsSwitch(
+                title = stringResource(R.string.settings_edge_to_edge_title),
+                subtitle = stringResource(R.string.settings_edge_to_edge_subtitle),
+                checked = isWebContentEdgeToEdgeEnabled,
+                onCheckedChange = onWebContentEdgeToEdgeChanged,
+            )
 
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.capsule_settings_title))

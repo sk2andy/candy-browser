@@ -371,6 +371,13 @@ class BrowserSessionStore(context: Context) {
         preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKED, docked).apply()
     }
 
+    fun loadWebContentEdgeToEdgeEnabled(): Boolean =
+        preferences.getBoolean(KEY_WEB_CONTENT_EDGE_TO_EDGE, false)
+
+    fun saveWebContentEdgeToEdgeEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_WEB_CONTENT_EDGE_TO_EDGE, enabled).apply()
+    }
+
     private fun <T> loadArray(key: String, read: (JSONObject) -> T): List<T> {
         val raw = preferences.getString(key, null) ?: return emptyList()
         return runCatching {
@@ -407,6 +414,7 @@ class BrowserSessionStore(context: Context) {
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
+        const val KEY_WEB_CONTENT_EDGE_TO_EDGE = "web_content_edge_to_edge"
         const val DEFAULT_DISMISS_RESISTANCE_START_PERCENT = 40
         const val MIN_DISMISS_RESISTANCE_START_PERCENT = 10
         const val MAX_DISMISS_RESISTANCE_START_PERCENT = 90

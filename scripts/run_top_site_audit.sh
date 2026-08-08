@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -lt 2 || $# -gt 4 ]]; then
-    echo "Usage: $0 <emulator-serial> <baseline|current|candidate> [start-rank] [site-count]" >&2
+    echo "Usage: $0 <emulator-serial> <baseline|current|candidate|safe-area> [start-rank] [site-count]" >&2
     exit 2
 fi
 
@@ -11,10 +11,19 @@ audit_pass="$2"
 start_rank="${3:-1}"
 site_count="${4:-25}"
 app_id="dev.sk2andy.materialbrowser.debug"
+gradle_args=()
+
+if [[ "$audit_pass" == "safe-area" ]]; then
+    app_id="dev.sk2andy.materialbrowser.edgeaudit"
+    gradle_args+=(
+        -Pcandy.debugApplicationIdSuffix=.edgeaudit
+        '-Pcandy.debugAppLabel=Candy Edge Audit'
+    )
+fi
 test_app_id="${app_id}.test"
 
 case "$audit_pass" in
-    baseline|current|candidate) ;;
+    baseline|current|candidate|safe-area) ;;
     *)
         echo "Invalid pass: $audit_pass" >&2
         exit 2
@@ -26,7 +35,11 @@ if [[ "$(adb -s "$serial" shell getprop ro.kernel.qemu | tr -d '\r')" != "1" ]];
     exit 1
 fi
 
-./gradlew assembleDebug assembleDebugAndroidTest
+adb -s "$serial" shell input keyevent KEYCODE_WAKEUP
+adb -s "$serial" shell wm dismiss-keyguard
+adb -s "$serial" shell settings put global stay_on_while_plugged_in 3
+
+./gradlew assembleDebug assembleDebugAndroidTest "${gradle_args[@]}"
 app_apk="app/build/outputs/apk/debug/app-debug.apk"
 test_apk="app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
 build_id="$(shasum -a 256 "$app_apk" | awk '{print $1}')"

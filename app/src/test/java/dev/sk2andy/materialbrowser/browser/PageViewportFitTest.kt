@@ -15,6 +15,8 @@ class PageViewportFitTest {
         assertTrue(script.contains("cover"))
         assertTrue(script.contains("MutationObserver"))
         assertTrue(script.contains("attributeFilter: ['name', 'content']"))
+        assertTrue(script.contains("record.removedNodes"))
+        assertTrue(script.contains("readCurrent()"))
         assertTrue(script.contains("window.${PageViewportFit.bridgeName}.update"))
         assertFalse(script.contains("appendChild"))
         assertFalse(script.contains("setAttribute"))

@@ -203,6 +203,8 @@
     <string name="settings_default_browser">Navegador predefinido</string>
     <string name="settings_default_browser_active">O Candy Browser é o seu navegador predefinido</string>
     <string name="settings_make_default_browser">Definir o Candy Browser como navegador predefinido</string>
+    <string name="settings_edge_to_edge_title">Sites de margem a margem</string>
+    <string name="settings_edge_to_edge_subtitle">Permite conteúdo de sites compatíveis sob as barras do sistema. Desative se os controlos se sobrepuserem à barra de estado ou ao recorte da câmara.</string>
     <string name="settings_section_gestures">Gestos</string>
     <string name="settings_tab_dismiss_resistance">Resistência ao fechar separadores</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistência: %1$d%% do percurso de fecho</string>

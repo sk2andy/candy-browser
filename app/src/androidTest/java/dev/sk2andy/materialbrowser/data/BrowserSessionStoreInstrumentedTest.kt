@@ -239,6 +239,18 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun webContentEdgeToEdgeDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadWebContentEdgeToEdgeEnabled())
+
+        store.saveWebContentEdgeToEdgeEnabled(true)
+        assertEquals(true, store.loadWebContentEdgeToEdgeEnabled())
+
+        store.saveWebContentEdgeToEdgeEnabled(false)
+        assertFalse(store.loadWebContentEdgeToEdgeEnabled())
+    }
+
+    @Test
     fun permanentSiteExceptionsRoundTripByProfileWithoutUnsafeHosts() {
         val store = BrowserSessionStore(context)
         store.savePermanentSiteExceptions(
