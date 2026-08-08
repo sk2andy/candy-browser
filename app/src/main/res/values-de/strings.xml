@@ -194,6 +194,8 @@
     <string name="settings_default_browser">Standardbrowser</string>
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>
+    <string name="settings_edge_to_edge_title">Randlose Webseiten</string>
+    <string name="settings_edge_to_edge_subtitle">Zeigt kompatible Webseiten hinter Systemleisten. Ausschalten, wenn Bedienelemente mit Statusleiste oder Kameraausschnitt überlappen.</string>
     <string name="settings_section_gestures">Gesten</string>
     <string name="settings_tab_dismiss_resistance">Widerstand beim Schließen von Tabs</string>
     <string name="settings_tab_dismiss_resistance_summary">Widerstandsphase: %1$d%% des Schließwegs</string>

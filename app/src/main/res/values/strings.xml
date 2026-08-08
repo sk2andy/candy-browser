@@ -204,6 +204,8 @@
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>
+    <string name="settings_edge_to_edge_title">Edge-to-edge websites</string>
+    <string name="settings_edge_to_edge_subtitle">Draw compatible websites behind system bars. Turn off if page controls overlap the status bar or camera cutout.</string>
     <string name="settings_section_gestures">Gestures</string>
     <string name="settings_tab_dismiss_resistance">Tab dismissal resistance</string>
     <string name="settings_tab_dismiss_resistance_summary">Resistance phase: %1$d%% of the closing distance</string>

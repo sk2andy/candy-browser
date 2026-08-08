@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Bundle
 import android.os.LocaleList
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -93,14 +95,49 @@ class TopSiteBlockingAuditInstrumentedTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             configurePass(scenario, pass)
             var previousAuditTabId: String? = null
+            val safeAreaAuditTabId = if (pass == AuditPass.SafeArea) {
+                prepareSafeAreaAuditTab(scenario)
+            } else {
+                null
+            }
+            var unsafeLayoutCount = 0
+            var unmeasuredLayoutCount = 0
             outputFile.bufferedWriter().use { writer ->
                 targets.forEach { target ->
-                    previousAuditTabId = prepareFreshAuditTab(scenario, previousAuditTabId)
+                    if (safeAreaAuditTabId != null) {
+                        resetSafeAreaAuditTab(scenario, safeAreaAuditTabId)
+                    } else {
+                        previousAuditTabId = prepareFreshAuditTab(scenario, previousAuditTabId)
+                    }
                     val startedAt = System.currentTimeMillis()
                     navigate(scenario, target)
-                    val page = awaitPage(scenario, target, PAGE_TIMEOUT_MILLIS)
+                    val page = awaitPage(
+                        scenario,
+                        target,
+                        PAGE_TIMEOUT_MILLIS,
+                        safeAreaAuditTabId,
+                    )
+                    safeAreaAuditTabId?.let { auditTabId ->
+                        selectSafeAreaAuditTab(scenario, auditTabId, stopLoading = false)
+                    }
                     Thread.sleep(SETTLE_MILLIS)
                     val probe = evaluateProbe(scenario)
+                    val safeAreaLayout = if (pass == AuditPass.SafeArea) {
+                        auditSafeAreaLayout(
+                            scenario,
+                            scrollApplicable = probe?.optBoolean("html") == true,
+                        ).also { layout ->
+                            if (
+                                layout.optBoolean("applicable") &&
+                                !layout.optBoolean("passed")
+                            ) {
+                                unsafeLayoutCount++
+                            }
+                            if (!layout.optBoolean("applicable")) unmeasuredLayoutCount++
+                        }
+                    } else {
+                        null
+                    }
                     val snapshot = scenario.readActivity { activity ->
                         val controller = activity.browserControllerForTesting()
                         controller.privacySnapshot(controller.selectedTabId)
@@ -124,6 +161,7 @@ class TopSiteBlockingAuditInstrumentedTest {
                         .put("blockedTotal", snapshot.totalBlocked)
                         .put("blockedDomains", snapshot.domains.toJson())
                         .put("probe", probe ?: JSONObject.NULL)
+                        .put("safeAreaLayout", safeAreaLayout ?: JSONObject.NULL)
                         .put("screenshot", screenshot ?: JSONObject.NULL)
                     writer.append(record.toString()).append('\n')
                     writer.flush()
@@ -137,6 +175,8 @@ class TopSiteBlockingAuditInstrumentedTest {
                     )
                 }
             }
+            assertEquals("Unsafe WebView layouts", 0, unsafeLayoutCount)
+            assertEquals("Unmeasured WebView layouts", 0, unmeasuredLayoutCount)
         }
 
         assertTrue("Audit output was not written", outputFile.isFile && outputFile.length() > 0L)
@@ -147,7 +187,10 @@ class TopSiteBlockingAuditInstrumentedTest {
         pass: AuditPass,
     ) {
         scenario.onActivity { activity ->
-            activity.browserControllerForTesting().updateBlockerSettings(pass.settings)
+            activity.browserControllerForTesting().apply {
+                updateBlockerSettings(pass.settings)
+                if (pass == AuditPass.SafeArea) updateWebContentEdgeToEdgeEnabled(false)
+            }
         }
         Thread.sleep(PASS_SETUP_MILLIS)
     }
@@ -169,6 +212,56 @@ class TopSiteBlockingAuditInstrumentedTest {
         Thread.sleep(NEW_PROFILE_SETTLE_MILLIS)
     }
 
+    private fun prepareSafeAreaAuditTab(
+        scenario: ActivityScenario<MainActivity>,
+    ): String {
+        return scenario.readActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            controller.selectedTabId.also {
+                WebViewCompat.addDocumentStartJavaScript(
+                    controller.selectedWebViewForTesting(),
+                    FRAME_PROBE_SCRIPT,
+                    setOf("*"),
+                )
+            }
+        }
+    }
+
+    private fun resetSafeAreaAuditTab(
+        scenario: ActivityScenario<MainActivity>,
+        auditTabId: String,
+    ) = selectSafeAreaAuditTab(scenario, auditTabId, stopLoading = true)
+
+    private fun selectSafeAreaAuditTab(
+        scenario: ActivityScenario<MainActivity>,
+        auditTabId: String,
+        stopLoading: Boolean,
+    ) {
+        scenario.onActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            controller.selectTab(auditTabId)
+            controller.activeTabs
+                .filter { tab -> tab.id != auditTabId }
+                .map(BrowserTab::id)
+                .forEach(controller::closeTab)
+            if (stopLoading) controller.selectedWebViewForTesting().stopLoading()
+        }
+        if (!stopLoading) check(awaitAttachedWebView(scenario)) { "Audit WebView was not attached" }
+    }
+
+    private fun awaitAttachedWebView(scenario: ActivityScenario<MainActivity>): Boolean {
+        repeat(ATTACH_POLL_ATTEMPTS) {
+            val attached = scenario.readActivity { activity ->
+                activity.browserControllerForTesting().selectedWebViewForTesting().let { webView ->
+                    webView.isAttachedToWindow && webView.width > 0 && webView.height > 0
+                }
+            }
+            if (attached) return true
+            Thread.sleep(POLL_MILLIS)
+        }
+        return false
+    }
+
     private fun navigate(
         scenario: ActivityScenario<MainActivity>,
         target: AuditTarget,
@@ -182,11 +275,12 @@ class TopSiteBlockingAuditInstrumentedTest {
         scenario: ActivityScenario<MainActivity>,
         target: AuditTarget,
         timeoutMillis: Long,
+        auditTabId: String?,
     ): PageResult {
         val deadline = System.currentTimeMillis() + timeoutMillis
         var state: PageState
         while (System.currentTimeMillis() < deadline) {
-            state = scenario.pageState()
+            state = scenario.pageState(auditTabId)
             val leftBlankPage = state.url != BLANK_URL && state.url.isNotBlank()
             if (leftBlankPage && (!state.isLoading || state.error != null)) {
                 return PageResult.from(state, loadingTimedOut = false)
@@ -194,9 +288,11 @@ class TopSiteBlockingAuditInstrumentedTest {
             Thread.sleep(POLL_MILLIS)
         }
         scenario.onActivity { activity ->
-            activity.browserControllerForTesting().selectedWebViewForTesting().stopLoading()
+            val controller = activity.browserControllerForTesting()
+            auditTabId?.let(controller::selectTab)
+            controller.selectedWebViewForTesting().stopLoading()
         }
-        state = scenario.pageState()
+        state = scenario.pageState(auditTabId)
         return PageResult.from(
             state.copy(error = state.error ?: "timeout:${target.domain}"),
             loadingTimedOut = true,
@@ -249,6 +345,116 @@ class TopSiteBlockingAuditInstrumentedTest {
         }.getOrNull().also { captured.recycle() }
     }
 
+    private fun auditSafeAreaLayout(
+        scenario: ActivityScenario<MainActivity>,
+        scrollApplicable: Boolean,
+    ): JSONObject {
+        if (!awaitAttachedWebView(scenario)) {
+            return JSONObject()
+                .put("applicable", false)
+                .put("reason", "webview-not-attached")
+                .put("passed", JSONObject.NULL)
+        }
+        scenario.onActivity { activity ->
+            activity.browserControllerForTesting().selectedWebViewForTesting().scrollTo(0, 0)
+        }
+        Thread.sleep(SAFE_AREA_SCROLL_RESET_SETTLE_MILLIS)
+        val before = scenario.webViewGeometry()
+        if (!scrollApplicable) {
+            return JSONObject()
+                .put("applicable", true)
+                .put("safeTopPx", before.safeTopPx)
+                .put("beforeWebViewTopPx", before.webViewTopPx)
+                .put("afterWebViewTopPx", before.webViewTopPx)
+                .put("scrollApplicable", false)
+                .put("scroll", JSONObject.NULL)
+                .put(
+                    "passed",
+                    before.webViewTopPx == before.safeTopPx && before.safeTopPx > 0,
+                )
+        }
+        val scrollResult = AtomicReference<String>()
+        val evaluated = CountDownLatch(1)
+        scenario.onActivity { activity ->
+            activity.browserControllerForTesting().selectedWebViewForTesting()
+                .evaluateJavascript(
+                    """
+                        (() => {
+                          document.documentElement.style.setProperty(
+                            'scroll-behavior', 'auto', 'important'
+                          );
+                          document.documentElement.style.setProperty(
+                            'overflow-y', 'visible', 'important'
+                          );
+                          document.body?.style.setProperty('overflow-y', 'visible', 'important');
+                          if (document.body && !document.getElementById('__candy_safe_area_probe')) {
+                            const spacer = document.createElement('div');
+                            spacer.id = '__candy_safe_area_probe';
+                            spacer.style.cssText =
+                              'display:block!important;height:2000px!important;pointer-events:none!important';
+                            document.body.appendChild(spacer);
+                          }
+                          const before = scrollY;
+                          const maximum = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+                          scrollTo({top: Math.min(maximum, before + 1000), behavior: 'instant'});
+                          return {before, after: scrollY, maximum};
+                        })()
+                    """.trimIndent(),
+                ) { value ->
+                    scrollResult.set(value)
+                    evaluated.countDown()
+                }
+        }
+        if (!evaluated.await(JS_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            return JSONObject()
+                .put("applicable", false)
+                .put("reason", "scroll-probe-timeout")
+                .put("passed", JSONObject.NULL)
+        }
+        scenario.onActivity { activity ->
+            activity.browserControllerForTesting().selectedWebViewForTesting()
+                .scrollTo(0, SAFE_AREA_NATIVE_SCROLL_PX)
+        }
+        Thread.sleep(SAFE_AREA_SCROLL_SETTLE_MILLIS)
+        val after = scenario.webViewGeometry()
+        val scroll = runCatching { JSONObject(checkNotNull(scrollResult.get())) }.getOrNull()
+        val javascriptScrolled = scroll?.let {
+            it.optDouble("after", 0.0) > it.optDouble("before", 0.0) + 0.5
+        } ?: false
+        val nativeWebViewScrolled = after.webViewScrollYPx > before.webViewScrollYPx
+        val passed =
+            before.webViewTopPx == before.safeTopPx &&
+                after.webViewTopPx == after.safeTopPx &&
+                before.safeTopPx > 0 &&
+                (javascriptScrolled || nativeWebViewScrolled)
+        return JSONObject()
+            .put("applicable", true)
+            .put("safeTopPx", before.safeTopPx)
+            .put("beforeWebViewTopPx", before.webViewTopPx)
+            .put("afterWebViewTopPx", after.webViewTopPx)
+            .put("beforeWebViewScrollYPx", before.webViewScrollYPx)
+            .put("afterWebViewScrollYPx", after.webViewScrollYPx)
+            .put("scrollApplicable", true)
+            .put("scroll", scroll ?: JSONObject.NULL)
+            .put("passed", passed)
+    }
+
+    private fun ActivityScenario<MainActivity>.webViewGeometry(): WebViewGeometry =
+        readActivity { activity ->
+            val webView = activity.browserControllerForTesting().selectedWebViewForTesting()
+            val location = IntArray(2)
+            webView.getLocationInWindow(location)
+            val safeTop = ViewCompat.getRootWindowInsets(webView)
+                ?.getInsets(SAFE_AREA_INSET_TYPES)
+                ?.top
+                ?: 0
+            WebViewGeometry(
+                safeTopPx = safeTop,
+                webViewTopPx = location[1],
+                webViewScrollYPx = webView.scrollY,
+            )
+        }
+
     private fun loadTargets(startRank: Int, siteCount: Int): List<AuditTarget> =
         instrumentation.context.assets.open(TRANCO_ASSET).bufferedReader().useLines { lines ->
             lines.map(String::trim)
@@ -271,10 +477,14 @@ class TopSiteBlockingAuditInstrumentedTest {
             android.os.Build.MODEL.contains("sdk_gphone", ignoreCase = true) ||
             android.os.Build.HARDWARE.contains("ranchu", ignoreCase = true)
 
-    private fun ActivityScenario<MainActivity>.pageState(): PageState = readActivity { activity ->
-        val tab = activity.browserControllerForTesting().selectedTab
-        PageState.from(tab)
-    }
+    private fun ActivityScenario<MainActivity>.pageState(tabId: String?): PageState =
+        readActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            val tab = tabId
+                ?.let { requestedId -> controller.activeTabs.firstOrNull { it.id == requestedId } }
+                ?: controller.selectedTab
+            PageState.from(tab)
+        }
 
     private fun <T : Any> ActivityScenario<MainActivity>.readActivity(
         block: (MainActivity) -> T,
@@ -317,6 +527,12 @@ class TopSiteBlockingAuditInstrumentedTest {
     }
 
     private data class AuditTarget(val rank: Int, val domain: String)
+
+    private data class WebViewGeometry(
+        val safeTopPx: Int,
+        val webViewTopPx: Int,
+        val webViewScrollYPx: Int,
+    )
 
     private data class PageState(
         val url: String,
@@ -369,11 +585,15 @@ class TopSiteBlockingAuditInstrumentedTest {
         Candidate(
             argument = "candidate",
             settings = BlockerSettings(),
+        ),
+        SafeArea(
+            argument = "safe-area",
+            settings = BlockerSettings(),
         );
 
         companion object {
             fun parse(value: String?): AuditPass = entries.firstOrNull { it.argument == value }
-                ?: error("auditPass must be baseline, current, or candidate")
+                ?: error("auditPass must be baseline, current, candidate, or safe-area")
         }
     }
 
@@ -388,6 +608,12 @@ class TopSiteBlockingAuditInstrumentedTest {
         const val TRANCO_ASSET = "tranco_PYG5J_top_1000.csv"
         const val BLANK_URL = "about:blank"
         const val DEFAULT_SITE_COUNT = 25
+        const val ATTACH_POLL_ATTEMPTS = 100
+        const val SAFE_AREA_SCROLL_SETTLE_MILLIS = 250L
+        const val SAFE_AREA_SCROLL_RESET_SETTLE_MILLIS = 100L
+        const val SAFE_AREA_NATIVE_SCROLL_PX = 1_000
+        val SAFE_AREA_INSET_TYPES =
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
         const val MAX_SITES_PER_RUN = 1_000
         const val MAX_TITLE_LENGTH = 200
         const val MAX_FILE_COMPONENT_LENGTH = 120

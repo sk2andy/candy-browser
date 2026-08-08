@@ -27,6 +27,9 @@ val missingReleaseSigningValues = releaseSigningValues.filterValues { it == null
 val hasReleaseSigning = missingReleaseSigningValues.isEmpty()
 val candyVersionCode = providers.gradleProperty("candy.versionCode").orElse("1")
 val candyVersionName = providers.gradleProperty("candy.versionName").orElse("0.1")
+val debugApplicationIdSuffix =
+    providers.gradleProperty("candy.debugApplicationIdSuffix").orElse(".debug")
+val debugAppLabel = providers.gradleProperty("candy.debugAppLabel").orElse("Candy Browser Debug")
 
 android {
     namespace = "dev.sk2andy.materialbrowser"
@@ -57,9 +60,9 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = debugApplicationIdSuffix.get()
             versionNameSuffix = "-debug"
-            manifestPlaceholders["appLabel"] = "Candy Browser Debug"
+            manifestPlaceholders["appLabel"] = debugAppLabel.get()
         }
 
         release {

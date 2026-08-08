@@ -33,33 +33,31 @@ internal object PageViewportFit {
                 }
                 return viewportFit === 'cover';
               };
-              const report = (enabled) => window.$bridgeName.update(generation, enabled);
-              const processMeta = (meta) => {
-                if ((meta.getAttribute('name') || '').toLowerCase() !== 'viewport') return false;
-                if (!meta.hasAttribute('content')) return false;
-                report(parse(meta.getAttribute('content')));
-                return true;
+              const isViewportMeta = (meta) =>
+                meta.tagName === 'META' &&
+                (meta.getAttribute('name') || '').toLowerCase() === 'viewport';
+              const containsMeta = (node) =>
+                node instanceof Element &&
+                (node.tagName === 'META' || Boolean(node.querySelector('meta')));
+              const readCurrent = () => {
+                let enabled = false;
+                document.querySelectorAll('meta').forEach((meta) => {
+                  if (isViewportMeta(meta) && meta.hasAttribute('content')) {
+                    enabled = parse(meta.getAttribute('content'));
+                  }
+                });
+                return enabled;
               };
-              const processAddedNode = (node) => {
-                if (!(node instanceof Element)) return;
-                if (node.tagName === 'META') processMeta(node);
-                node.querySelectorAll('meta').forEach(processMeta);
-              };
-
-              let enabled = false;
-              document.querySelectorAll('meta').forEach((meta) => {
-                if ((meta.getAttribute('name') || '').toLowerCase() === 'viewport' &&
-                    meta.hasAttribute('content')) {
-                  enabled = parse(meta.getAttribute('content'));
-                }
-              });
+              const reportCurrent = () =>
+                window.$bridgeName.update(generation, readCurrent());
 
               window.__candyViewportFitObserver?.disconnect();
               window.__candyViewportFitObserver = new MutationObserver((records) => {
-                records.forEach((record) => {
-                  if (record.type === 'attributes') processMeta(record.target);
-                  record.addedNodes?.forEach(processAddedNode);
-                });
+                const viewportMayHaveChanged = records.some((record) =>
+                  (record.type === 'attributes' && record.target.tagName === 'META') ||
+                  Array.from(record.addedNodes || []).some(containsMeta) ||
+                  Array.from(record.removedNodes || []).some(containsMeta));
+                if (viewportMayHaveChanged) reportCurrent();
               });
               window.__candyViewportFitObserver.observe(document.documentElement, {
                 attributes: true,
@@ -67,7 +65,7 @@ internal object PageViewportFit {
                 childList: true,
                 subtree: true,
               });
-              return enabled;
+              return readCurrent();
             })();
         """.trimIndent()
 

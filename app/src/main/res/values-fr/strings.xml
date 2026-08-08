@@ -196,6 +196,8 @@
     <string name="settings_default_browser">Navigateur par défaut</string>
     <string name="settings_default_browser_active">Candy Browser est votre navigateur par défaut</string>
     <string name="settings_make_default_browser">Définir Candy Browser comme navigateur par défaut</string>
+    <string name="settings_edge_to_edge_title">Sites web bord à bord</string>
+    <string name="settings_edge_to_edge_subtitle">Autorise le contenu des sites compatibles sous les barres système. Désactivez cette option si des commandes chevauchent la barre d’état ou la découpe de l’appareil photo.</string>
     <string name="settings_section_gestures">Gestes</string>
     <string name="settings_tab_dismiss_resistance">Résistance à la fermeture des onglets</string>
     <string name="settings_tab_dismiss_resistance_summary">Phase de résistance : %1$d%% de la distance de fermeture</string>

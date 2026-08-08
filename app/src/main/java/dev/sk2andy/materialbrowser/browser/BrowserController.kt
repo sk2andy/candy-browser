@@ -179,6 +179,8 @@ class BrowserController(private val activity: Activity) {
         private set
     var isAddressBarDocked by mutableStateOf(false)
         private set
+    var isWebContentEdgeToEdgeEnabled by mutableStateOf(false)
+        private set
     var isDefaultBrowser by mutableStateOf(false)
         private set
     var activeCapsuleId by mutableStateOf<String?>(null)
@@ -602,6 +604,7 @@ class BrowserController(private val activity: Activity) {
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
         isAddressBarDocked = store.loadAddressBarDocked()
+        isWebContentEdgeToEdgeEnabled = store.loadWebContentEdgeToEdgeEnabled()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
         profiles += restoredProfiles.take(MAX_PROFILES)
@@ -728,7 +731,7 @@ class BrowserController(private val activity: Activity) {
         } else {
             insets
         }
-        val drawsEdgeToEdge = edgeToEdgePages[tabId] == true
+        val drawsEdgeToEdge = drawsEdgeToEdge(tabId)
         val safeArea = effectiveInsets.getInsets(SAFE_AREA_INSET_TYPES)
         val navigationBars = effectiveInsets.getInsets(WindowInsetsCompat.Type.navigationBars())
         val tappableElements = effectiveInsets.getInsets(WindowInsetsCompat.Type.tappableElement())
@@ -738,12 +741,12 @@ class BrowserController(private val activity: Activity) {
                 (navigationBars.right > 0 && tappableElements.right > 0) ||
                 (navigationBars.bottom > 0 && tappableElements.bottom > 0)
         val usesGestureNavigation = navigationBars != Insets.NONE && !hasTappableNavigation
-        val topMargin = if (drawsEdgeToEdge) {
-            0
-        } else {
-            (safeArea.top - webView.scrollY).coerceAtLeast(0)
+        val topMargin = if (drawsEdgeToEdge) 0 else safeArea.top
+        val bottomMargin = when {
+            drawsEdgeToEdge -> 0
+            isWebContentEdgeToEdgeEnabled && usesGestureNavigation -> 0
+            else -> safeArea.bottom
         }
-        val bottomMargin = if (drawsEdgeToEdge || usesGestureNavigation) 0 else safeArea.bottom
         val margins = if (drawsEdgeToEdge) {
             Insets.NONE
         } else {
@@ -786,19 +789,8 @@ class BrowserController(private val activity: Activity) {
             previous.isVisible(type) == current.isVisible(type)
     }
 
-    private fun updateScrollAwareInsets(
-        tabId: String,
-        webView: WebView,
-        scrollY: Int,
-        oldScrollY: Int,
-    ) {
-        if (edgeToEdgePages[tabId] == true) return
-        val insets = ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets ?: return
-        val safeTop = insets.getInsets(SAFE_AREA_INSET_TYPES).top
-        val topMargin = (safeTop - scrollY).coerceAtLeast(0)
-        val oldTopMargin = (safeTop - oldScrollY).coerceAtLeast(0)
-        if (topMargin != oldTopMargin) applyWindowInsets(tabId, webView, insets)
-    }
+    private fun drawsEdgeToEdge(tabId: String): Boolean =
+        isWebContentEdgeToEdgeEnabled && edgeToEdgePages[tabId] == true
 
     private fun detectPageEdgeToEdge(tabId: String, webView: WebView) {
         val navigationGeneration = navigationGenerations[tabId] ?: return
@@ -1909,6 +1901,13 @@ class BrowserController(private val activity: Activity) {
         store.saveAddressBarDocked(docked)
     }
 
+    fun updateWebContentEdgeToEdgeEnabled(enabled: Boolean) {
+        if (isWebContentEdgeToEdgeEnabled == enabled) return
+        isWebContentEdgeToEdgeEnabled = enabled
+        store.saveWebContentEdgeToEdgeEnabled(enabled)
+        lastWindowInsets?.let(::dispatchWindowInsetsToAttachedWebViews)
+    }
+
     fun prepareTabOverview(onReady: () -> Unit) {
         pruneStaleTabs()
         // Opening the switcher must not wait for a GPU readback. Page commits and
@@ -1925,14 +1924,14 @@ class BrowserController(private val activity: Activity) {
     }
 
     fun previewTopInsetPx(tabId: String): Int {
-        val webView = webViews[tabId]
-        val currentMargin = (webView?.layoutParams as? FrameLayout.LayoutParams)?.topMargin
-        if (currentMargin != null) return currentMargin.coerceAtLeast(0)
-        if (edgeToEdgePages[tabId] == true) return 0
+        if (drawsEdgeToEdge(tabId)) return 0
         return lastWindowInsets
             ?.getInsets(SAFE_AREA_INSET_TYPES)
             ?.top
             ?.coerceAtLeast(0)
+            ?: (webViews[tabId]?.layoutParams as? FrameLayout.LayoutParams)
+                ?.topMargin
+                ?.coerceAtLeast(0)
             ?: 0
     }
 
@@ -2398,7 +2397,6 @@ class BrowserController(private val activity: Activity) {
         var previousDirection = 0
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
             if (tabId != selectedTabId) return@setOnScrollChangeListener
-            updateScrollAwareInsets(tabId, this, scrollY, oldScrollY)
             schedulePreviewCapture(tabId)
             if (scrollY <= 0) {
                 accumulatedDistance = 0f

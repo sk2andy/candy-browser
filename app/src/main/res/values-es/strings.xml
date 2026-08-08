@@ -196,6 +196,8 @@
     <string name="settings_default_browser">Navegador predeterminado</string>
     <string name="settings_default_browser_active">Candy Browser es tu navegador predeterminado</string>
     <string name="settings_make_default_browser">Establecer Candy Browser como navegador predeterminado</string>
+    <string name="settings_edge_to_edge_title">Sitios web de borde a borde</string>
+    <string name="settings_edge_to_edge_subtitle">Permite contenido de sitios compatibles bajo las barras del sistema. Desactívalo si los controles se superponen con la barra de estado o el recorte de la cámara.</string>
     <string name="settings_section_gestures">Gestos</string>
     <string name="settings_tab_dismiss_resistance">Resistencia al cerrar pestañas</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistencia: %1$d%% del recorrido de cierre</string>
