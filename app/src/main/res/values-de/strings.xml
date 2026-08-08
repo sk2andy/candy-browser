@@ -166,6 +166,10 @@
     <string name="favorites_empty">Noch keine Favoriten – über das ⋮-Menü hinzufügen.</string>
     <string name="content_actions_title">Seiteninhalt</string>
     <string name="action_open_link_background_tab">Link in neuem Hintergrund-Tab öffnen</string>
+    <string name="link_peek_title">Link-Vorschau</string>
+    <string name="action_open_in_new_tab">In neuem Tab öffnen</string>
+    <string name="link_peek_pull_down_instruction">Nach unten ziehen</string>
+    <string name="link_peek_accessibility_description">Link-Vorschau. Bis zum Ziel nach unten ziehen und zum Öffnen in einem neuen Tab loslassen. Vor dem Ziel loslassen, nach oben ziehen oder zurückgehen, um abzubrechen.</string>
     <string name="action_download_image">Bild herunterladen</string>
     <string name="download_notification_description">Download</string>
     <string name="settings_title">Einstellungen</string>

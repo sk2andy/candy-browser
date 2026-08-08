@@ -3,9 +3,11 @@ package dev.sk2andy.materialbrowser.browser.actions
 import android.webkit.WebView
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import java.net.URI
@@ -87,22 +89,26 @@ object WebViewHitTestResolver {
         return target?.takeIf { it.linkUrl != null || it.imageUrl != null }
     }
 
-    private fun safeHttpUrl(value: String?): String? {
-        if (value.isNullOrBlank()) return null
-        return runCatching {
-            val uri = URI(value.trim())
-            value.trim().takeIf {
-                (uri.scheme.equals("http", ignoreCase = true) ||
-                    uri.scheme.equals("https", ignoreCase = true)) &&
-                    !uri.host.isNullOrBlank() &&
-                    uri.userInfo == null
-            }
-        }.getOrNull()
-    }
+    private fun safeHttpUrl(value: String?): String? = BrowserUriPolicy.normalizeHttpUrl(value)
+}
+
+internal object LinkPeekTargetSessionRules {
+    fun canApply(
+        capturedPointerSessionId: Long?,
+        activePointerSessionId: Long?,
+        sourceTabId: String,
+        selectedTabId: String,
+        sourceWebViewAttached: Boolean,
+    ): Boolean = sourceWebViewAttached &&
+        sourceTabId == selectedTabId &&
+        capturedPointerSessionId == activePointerSessionId
 }
 
 @Stable
 class WebContentActionState {
+    private var pointerSessionId = 0L
+    private var pointerDown = false
+
     var target by mutableStateOf<WebContentTarget?>(null)
         private set
 
@@ -112,15 +118,66 @@ class WebContentActionState {
     var addressBarPulseNonce by mutableIntStateOf(0)
         private set
 
+    var linkPeekProgress by mutableFloatStateOf(0f)
+        private set
+
+    var isLinkPeekArmed by mutableStateOf(false)
+        private set
+
+    var isLinkPeekCommitting by mutableStateOf(false)
+        private set
+
+    var linkPeekNewTabPulseNonce by mutableIntStateOf(0)
+        private set
+
     val isVisible: Boolean
         get() = target != null
 
+    val isLinkPeekVisible: Boolean
+        get() = target?.linkUrl != null
+
+    val activePointerSessionId: Long?
+        get() = pointerSessionId.takeIf { pointerDown }
+
+    fun beginPointerStream() {
+        pointerSessionId++
+        pointerDown = true
+    }
+
+    fun endPointerStream() {
+        pointerDown = false
+    }
+
     fun show(target: WebContentTarget) {
+        val sameLink = this.target?.linkUrl != null && this.target?.linkUrl == target.linkUrl
         this.target = target
+        if (!sameLink) {
+            isLinkPeekCommitting = false
+            updateLinkPeek(progress = 0f, armed = false)
+        }
     }
 
     fun dismiss() {
         target = null
+        isLinkPeekCommitting = false
+        updateLinkPeek(progress = 0f, armed = false)
+    }
+
+    fun updateLinkPeek(progress: Float, armed: Boolean) {
+        if (isLinkPeekCommitting) return
+        linkPeekProgress = progress.coerceIn(0f, 1f)
+        isLinkPeekArmed = armed
+    }
+
+    fun startLinkPeekCommit() {
+        if (target?.linkUrl == null || isLinkPeekCommitting) return
+        isLinkPeekCommitting = true
+        linkPeekProgress = 1f
+        isLinkPeekArmed = true
+    }
+
+    fun requestLinkPeekNewTabPulse() {
+        linkPeekNewTabPulseNonce++
     }
 
     fun reportDownload(result: DownloadActionResult) {

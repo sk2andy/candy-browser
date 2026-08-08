@@ -166,6 +166,10 @@
     <string name="favorites_empty">Aún no hay favoritos — añádelos desde el menú ⋮.</string>
     <string name="content_actions_title">Contenido de la página</string>
     <string name="action_open_link_background_tab">Abrir enlace en una nueva pestaña en segundo plano</string>
+    <string name="link_peek_title">Vista previa del enlace</string>
+    <string name="action_open_in_new_tab">Abrir en una nueva pestaña</string>
+    <string name="link_peek_pull_down_instruction">Desliza hacia abajo</string>
+    <string name="link_peek_accessibility_description">Vista previa del enlace. Desliza hacia abajo hasta el objetivo y suelta para abrir en una pestaña nueva. Suelta antes, desliza hacia arriba o vuelve atrás para cancelar.</string>
     <string name="action_download_image">Descargar imagen</string>
     <string name="download_notification_description">Descarga</string>
     <string name="settings_title">Ajustes</string>

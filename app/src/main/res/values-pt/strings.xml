@@ -166,6 +166,10 @@
     <string name="favorites_empty">Ainda não há favoritos — adicione-os através do menu ⋮.</string>
     <string name="content_actions_title">Conteúdo da página</string>
     <string name="action_open_link_background_tab">Abrir ligação num novo separador em segundo plano</string>
+    <string name="link_peek_title">Pré-visualização da ligação</string>
+    <string name="action_open_in_new_tab">Abrir num novo separador</string>
+    <string name="link_peek_pull_down_instruction">Deslize para baixo</string>
+    <string name="link_peek_accessibility_description">Pré-visualização da ligação. Deslize para baixo até ao alvo e solte para abrir num novo separador. Solte antes, deslize para cima ou volte atrás para cancelar.</string>
     <string name="action_download_image">Transferir imagem</string>
     <string name="download_notification_description">Transferência</string>
     <string name="settings_title">Definições</string>

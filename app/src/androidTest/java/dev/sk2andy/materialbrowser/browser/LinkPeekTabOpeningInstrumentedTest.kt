@@ -1,0 +1,49 @@
+package dev.sk2andy.materialbrowser.browser
+
+import androidx.test.core.app.ActivityScenario
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class LinkPeekTabOpeningInstrumentedTest {
+    @Test
+    fun acceptedPeekOpensOneBackgroundTabAndKeepsCurrentNavigationSemantics() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                val source = controller.selectedTab
+                val sourceTabId = source.id
+                val sourceUrl = source.url
+                val originalIds = controller.tabs.mapTo(mutableSetOf(), BrowserTab::id)
+
+                controller.contentActions.show(
+                    WebContentTarget(linkUrl = "https://example.com/link-peek-target"),
+                )
+                controller.openContextLinkInBackground()
+
+                val createdIds = controller.tabs.map(BrowserTab::id).toSet() - originalIds
+                assertEquals(1, createdIds.size)
+                val created = controller.tabs.single { it.id in createdIds }
+                assertEquals(sourceTabId, controller.selectedTabId)
+                assertEquals(sourceUrl, controller.selectedTab.url)
+                assertEquals("https://example.com/link-peek-target", created.url)
+                assertEquals(source.profileId, created.profileId)
+                assertEquals(source.isIncognito, created.isIncognito)
+                assertFalse(controller.contentActions.isVisible)
+
+                controller.openContextLinkInBackground()
+
+                assertEquals(createdIds, controller.tabs.map(BrowserTab::id).toSet() - originalIds)
+                assertTrue(controller.tabs.any { it.id == sourceTabId })
+                controller.closeTab(created.id)
+            }
+        }
+    }
+}
+

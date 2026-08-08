@@ -57,9 +57,9 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = ".linkpeek"
             versionNameSuffix = "-debug"
-            manifestPlaceholders["appLabel"] = "Candy Browser Debug"
+            manifestPlaceholders["appLabel"] = "Candy Link Peek"
         }
 
         release {

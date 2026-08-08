@@ -97,6 +97,7 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
+import dev.sk2andy.materialbrowser.browser.actions.LinkPeekTargetSessionRules
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionComposer
@@ -112,9 +113,11 @@ import dev.sk2andy.materialbrowser.browser.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryRequest
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryResult
+import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.integration.DefaultBrowserRole
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.browser.integration.ExternalLaunchResult
+import dev.sk2andy.materialbrowser.browser.integration.LinkPeekPreviewNavigationPolicy
 import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.integration.PageShareRequest
@@ -203,7 +206,12 @@ class BrowserController(private val activity: Activity) {
     @VisibleForTesting
     fun selectedWebViewForTesting(): WebView = webViewFor(selectedTabId)
 
+    @VisibleForTesting
+    val activeLinkPeekPreviewCountForTesting: Int
+        get() = linkPeekPreviewAssignments.size
+
     private val webViews = mutableMapOf<String, WebView>()
+    private val linkPeekPreviewAssignments = mutableMapOf<WebView, WebViewProfileAssignment>()
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val popupOpeners = mutableMapOf<String, String>()
@@ -704,6 +712,117 @@ class BrowserController(private val activity: Activity) {
 
     fun detachWebView(container: FrameLayout) {
         container.removeAllViews()
+    }
+
+    /**
+     * Builds an ephemeral, read-only WebView for Link Peek without registering a tab or writing
+     * browser history. It deliberately shares the source tab's WebView profile so regular,
+     * isolated, and incognito cookie boundaries remain unchanged while the preview is visible.
+     */
+    fun createLinkPeekPreviewWebView(
+        url: String,
+        onProgressChanged: (Int) -> Unit,
+        onCommittedUrlChanged: (String) -> Unit,
+    ): WebView {
+        val safeUrl = requireNotNull(BrowserUriPolicy.normalizeHttpUrl(url))
+        val sourceTab = tabs.first { it.id == selectedTabId }
+        val sourceTabId = sourceTab.id
+        val profileAssignment = profileAssignmentFor(sourceTab)
+        val requestContext = ProtectionRequestContext(
+            profileId = sourceTab.profileId,
+            isIncognito = sourceTab.isIncognito,
+            storageKey = profileAssignment.storageKey,
+            pageHost = PrivacyRequestSanitizer.webHost(safeUrl),
+        )
+        val currentPreviewUrl = AtomicReference(safeUrl)
+        return WebView(activity).apply {
+            when (profileAssignment) {
+                WebViewProfileAssignment.Default -> Unit
+                is WebViewProfileAssignment.Incognito,
+                is WebViewProfileAssignment.Isolated,
+                -> WebViewCompat.setProfile(this, profileAssignment.storageKey)
+            }
+            configureProfileServiceWorkerBlocking(profileAssignment, this)
+            val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+            setBackgroundColor(if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE)
+            with(settings) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                allowFileAccess = false
+                allowContentAccess = false
+                @Suppress("DEPRECATION")
+                allowFileAccessFromFileURLs = false
+                @Suppress("DEPRECATION")
+                allowUniversalAccessFromFileURLs = false
+                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                javaScriptCanOpenWindowsAutomatically = false
+                setSupportMultipleWindows(false)
+                safeBrowsingEnabled = true
+                requireMediaPlaybackGesture()
+            }
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
+            }
+            cookieManagerFor(this).setAcceptCookie(true)
+            applyCookiePolicy(sourceTabId, this, safeUrl)
+            webViewClient = linkPeekPreviewWebViewClient(
+                sourceTabId = sourceTabId,
+                requestContext = requestContext,
+                currentUrl = currentPreviewUrl,
+                onCommittedUrlChanged = onCommittedUrlChanged,
+            )
+            webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView, newProgress: Int) {
+                    onProgressChanged(newProgress.coerceIn(0, 100))
+                }
+            }
+            isFocusable = false
+            isFocusableInTouchMode = false
+            isLongClickable = false
+            importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            setOnTouchListener { _, _ -> true }
+            loadUrl(safeUrl)
+        }.also { webView ->
+            linkPeekPreviewAssignments[webView] = profileAssignment
+            if (!isActivityResumed) pauseWebView(webView)
+        }
+    }
+
+    fun releaseLinkPeekPreviewWebView(webView: WebView) {
+        if (linkPeekPreviewAssignments.remove(webView) != null) destroyWebView(webView)
+    }
+
+    private fun linkPeekPreviewWebViewClient(
+        sourceTabId: String,
+        requestContext: ProtectionRequestContext,
+        currentUrl: AtomicReference<String>,
+        onCommittedUrlChanged: (String) -> Unit,
+    ) = object : WebViewClient() {
+        override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+            BrowserUriPolicy.normalizeHttpUrl(url)?.let(currentUrl::set)
+        }
+
+        override fun onPageCommitVisible(view: WebView, url: String) {
+            BrowserUriPolicy.normalizeHttpUrl(url)?.let(onCommittedUrlChanged)
+        }
+
+        override fun shouldInterceptRequest(
+            view: WebView,
+            request: WebResourceRequest,
+        ): WebResourceResponse? = interceptProtectedSubresourceRequest(
+            tabId = sourceTabId,
+            request = request,
+            requestContext = requestContext.copy(
+                pageHost = PrivacyRequestSanitizer.webHost(currentUrl.get()),
+            ),
+            pageUrl = currentUrl.get(),
+            recordDecision = false,
+        )
+
+        override fun shouldOverrideUrlLoading(
+            view: WebView,
+            request: WebResourceRequest,
+        ): Boolean = LinkPeekPreviewNavigationPolicy.shouldBlock(request.url.toString())
     }
 
     private fun dispatchCurrentWindowInsets(tabId: String, webView: WebView) {
@@ -1367,7 +1486,8 @@ class BrowserController(private val activity: Activity) {
 
     fun openContextLinkInBackground() {
         val url = contentActions.target?.openLinkInBackgroundAction()?.url ?: return
-        createBackgroundTab(url)
+        contentActions.dismiss()
+        if (createBackgroundTab(url) != null) contentActions.requestLinkPeekNewTabPulse()
     }
 
     fun requestDefaultBrowserRole() {
@@ -1714,6 +1834,7 @@ class BrowserController(private val activity: Activity) {
         val tabId = selectedTabId
         if (selectedTab.error == null || selectedTab.isLoading) return false
         val webView = webViews[tabId]
+        updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
         if (webView == null) {
             webViewFor(tabId)
         } else {
@@ -2247,8 +2368,9 @@ class BrowserController(private val activity: Activity) {
         touchTab(selectedTabId, System.currentTimeMillis())
         cancelPendingPreviewCapture()
         webViews.values.forEach(::pauseWebView)
+        linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
         CookieManager.getInstance().flush()
-        webViews.values.forEach { webView ->
+        (webViews.values + linkPeekPreviewAssignments.keys).forEach { webView ->
             if (isProfileIsolationSupported) cookieManagerFor(webView).flush()
         }
         persist()
@@ -2262,6 +2384,7 @@ class BrowserController(private val activity: Activity) {
         touchTab(selectedTabId, nowMillis)
         persist()
         webViews[selectedTabId]?.let { resumeWebView(selectedTabId, it) }
+        linkPeekPreviewAssignments.keys.forEach(WebView::onResume)
     }
 
     fun destroy() {
@@ -2280,6 +2403,7 @@ class BrowserController(private val activity: Activity) {
         temporaryMutedDomains.clear()
         savePersistentFilterRules()
         persist()
+        destroyLinkPeekPreviewWebViews()
         if (tabs.any(BrowserTab::isIncognito)) prepareIncognitoProfileForRemoval()
         configuredServiceWorkerProfiles.toList().forEach(::clearProfileServiceWorkerClient)
         webViews.values.forEach(::destroyWebView)
@@ -2379,13 +2503,34 @@ class BrowserController(private val activity: Activity) {
             if (!WebViewHitTestResolver.supports(hit.type)) {
                 return@setOnLongClickListener false
             }
-            val handler = Handler(Looper.getMainLooper()) { message ->
-                WebViewHitTestResolver.resolve(
+            if (hit.type == WebView.HitTestResult.SRC_ANCHOR_TYPE) {
+                val immediateTarget = WebViewHitTestResolver.resolve(
                     hitType = hit.type,
                     extra = hit.extra,
-                    focusedLinkUrl = message.data.getString("url"),
-                    focusedImageUrl = message.data.getString("src"),
-                )?.let(contentActions::show)
+                )
+                if (immediateTarget != null) {
+                    contentActions.show(immediateTarget)
+                    return@setOnLongClickListener true
+                }
+            }
+            val pointerSessionId = contentActions.activePointerSessionId
+            val handler = Handler(Looper.getMainLooper()) { message ->
+                if (
+                    LinkPeekTargetSessionRules.canApply(
+                        capturedPointerSessionId = pointerSessionId,
+                        activePointerSessionId = contentActions.activePointerSessionId,
+                        sourceTabId = tabId,
+                        selectedTabId = selectedTabId,
+                        sourceWebViewAttached = webViews[tabId] === webView,
+                    )
+                ) {
+                    WebViewHitTestResolver.resolve(
+                        hitType = hit.type,
+                        extra = hit.extra,
+                        focusedLinkUrl = message.data.getString("url"),
+                        focusedImageUrl = message.data.getString("src"),
+                    )?.let(contentActions::show)
+                }
                 true
             }
             webView.requestFocusNodeHref(handler.obtainMessage())
@@ -2516,59 +2661,14 @@ class BrowserController(private val activity: Activity) {
             view: WebView,
             request: WebResourceRequest,
         ): WebResourceResponse? {
-            if (request.isForMainFrame || !workerSettings.blockAdsAndTrackers) return null
-            if (request.url.scheme?.lowercase() !in WEB_SCHEMES) return null
             val requestContext = protectionRequestContexts[tabId] ?: return null
-            val pageUrl by lazy(LazyThreadSafetyMode.NONE) {
-                requestContext.pageHost?.let { host -> "https://$host" }
-            }
-            val sitePaused = isSiteProtectionPaused(tabId, null)
-            if (sitePaused) return null
-            val matcher = matcherFor(requestContext.isIncognito)
-            val requestUrl by lazy(LazyThreadSafetyMode.NONE) { request.url.toString() }
-            val candyDecision = if (matcher.hasRequestRules) {
-                matcher.decideHosts(
-                    requestHost = request.url.host,
-                    pageHost = requestContext.pageHost,
-                    profileId = requestContext.profileId,
-                    isForMainFrame = false,
-                )
-            } else {
-                null
-            }
-            if (candyDecision != null) {
-                queueCandyRuleDecision(tabId, requestUrl, pageUrl, requestContext, candyDecision)
-                return if (candyDecision.action == CandyDecisionAction.Block) {
-                    blockedResponse()
-                } else {
-                    null
-                }
-            }
-            val listedRequest = contentBlocker.shouldBlockHosts(
-                requestHost = request.url.host,
-                pageHost = requestContext.pageHost,
+            return interceptProtectedSubresourceRequest(
+                tabId = tabId,
+                request = request,
+                requestContext = requestContext,
+                pageUrl = requestContext.pageHost?.let { host -> "https://$host" },
+                recordDecision = true,
             )
-            if (RequestProtectionRules.shouldBlock(
-                    isForMainFrame = false,
-                    blockerEnabled = true,
-                    sitePaused = false,
-                    isListedRequest = listedRequest,
-                )
-            ) {
-                queueBlockedRequest(
-                    tabId,
-                    requestUrl,
-                    pageUrl,
-                    requestContext,
-                    PrivacyRuleDecisionSummary(
-                        ruleId = null,
-                        label = activity.getString(R.string.filter_rule_builtin),
-                        action = PrivacyRuleDecisionAction.Block,
-                    ),
-                )
-                return blockedResponse()
-            }
-            return null
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -2668,6 +2768,67 @@ class BrowserController(private val activity: Activity) {
             }
             return true
         }
+    }
+
+    private fun interceptProtectedSubresourceRequest(
+        tabId: String,
+        request: WebResourceRequest,
+        requestContext: ProtectionRequestContext,
+        pageUrl: String?,
+        recordDecision: Boolean,
+    ): WebResourceResponse? {
+        if (request.isForMainFrame || !workerSettings.blockAdsAndTrackers) return null
+        if (request.url.scheme?.lowercase() !in WEB_SCHEMES) return null
+        if (isSiteProtectionPaused(tabId, requestContext, pageUrl)) return null
+        val matcher = matcherFor(requestContext.isIncognito)
+        val requestUrl by lazy(LazyThreadSafetyMode.NONE) { request.url.toString() }
+        val candyDecision = if (matcher.hasRequestRules) {
+            matcher.decideHosts(
+                requestHost = request.url.host,
+                pageHost = requestContext.pageHost,
+                profileId = requestContext.profileId,
+                isForMainFrame = false,
+            )
+        } else {
+            null
+        }
+        if (candyDecision != null) {
+            if (recordDecision) {
+                queueCandyRuleDecision(tabId, requestUrl, pageUrl, requestContext, candyDecision)
+            }
+            return if (candyDecision.action == CandyDecisionAction.Block) {
+                blockedResponse()
+            } else {
+                null
+            }
+        }
+        val listedRequest = contentBlocker.shouldBlockHosts(
+            requestHost = request.url.host,
+            pageHost = requestContext.pageHost,
+        )
+        if (!RequestProtectionRules.shouldBlock(
+                isForMainFrame = false,
+                blockerEnabled = true,
+                sitePaused = false,
+                isListedRequest = listedRequest,
+            )
+        ) {
+            return null
+        }
+        if (recordDecision) {
+            queueBlockedRequest(
+                tabId,
+                requestUrl,
+                pageUrl,
+                requestContext,
+                PrivacyRuleDecisionSummary(
+                    ruleId = null,
+                    label = activity.getString(R.string.filter_rule_builtin),
+                    action = PrivacyRuleDecisionAction.Block,
+                ),
+            )
+        }
+        return blockedResponse()
     }
 
     private fun injectCookieConsentCss(tabId: String, view: WebView, committedUrl: String? = null) {
@@ -3642,6 +3803,14 @@ class BrowserController(private val activity: Activity) {
 
     private fun isSiteProtectionPaused(tabId: String, pageUrl: String?): Boolean {
         val context = protectionRequestContexts[tabId] ?: return false
+        return isSiteProtectionPaused(tabId, context, pageUrl)
+    }
+
+    private fun isSiteProtectionPaused(
+        tabId: String,
+        context: ProtectionRequestContext,
+        pageUrl: String?,
+    ): Boolean {
         val pageHost = pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: context.pageHost ?: return false
         if (SiteExceptionRules.isPaused(pageHost, temporarySiteExceptions[tabId].orEmpty())) {
             return true
@@ -3824,6 +3993,7 @@ class BrowserController(private val activity: Activity) {
     }
 
     private fun prepareIncognitoProfileForRemoval() {
+        destroyLinkPeekPreviewWebViews(incognitoWebViewProfileName)
         clearExistingWebViewProfileData(incognitoWebViewProfileName)
         clearProfileServiceWorkerClient(incognitoWebViewProfileName)
     }
@@ -3842,6 +4012,7 @@ class BrowserController(private val activity: Activity) {
     }
 
     private fun clearAllWebViewProfileData() {
+        destroyLinkPeekPreviewWebViews()
         clearProfileData(
             webStorage = WebStorage.getInstance(),
             cookieManager = CookieManager.getInstance(),
@@ -3917,6 +4088,17 @@ class BrowserController(private val activity: Activity) {
         webView.clearHistory()
         webView.removeAllViews()
         webView.destroy()
+    }
+
+    private fun destroyLinkPeekPreviewWebViews(storageKey: String? = null) {
+        val targets = linkPeekPreviewAssignments
+            .filterValues { assignment -> storageKey == null || assignment.storageKey == storageKey }
+            .keys
+            .toList()
+        targets.forEach { webView ->
+            linkPeekPreviewAssignments.remove(webView)
+            destroyWebView(webView)
+        }
     }
 
     private fun newIncognitoWebViewProfileName(): String =
