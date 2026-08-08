@@ -249,6 +249,7 @@ import dev.sk2andy.materialbrowser.browser.commands.CommandDispatchOutcome
 import dev.sk2andy.materialbrowser.browser.commands.CommandDispatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandSuggestion
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
@@ -321,6 +322,8 @@ fun BrowserScreen(controller: BrowserController) {
     var addressEditorVisible by remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
+    var permissionRadarTabId by remember { mutableStateOf<String?>(null) }
+    var permissionRadarOrigin by remember { mutableStateOf<String?>(null) }
     var filterStudioVisible by rememberSaveable { mutableStateOf(false) }
     var filterStudioSelectedRuleId by rememberSaveable { mutableStateOf<String?>(null) }
     var clearDialogVisible by remember { mutableStateOf(false) }
@@ -373,6 +376,7 @@ fun BrowserScreen(controller: BrowserController) {
     val addressBarMorphInFront =
         tabOverviewVisible && !overviewDestinationButtonVisible
     val selectedTab = controller.selectedTab
+    val permissionActivityVisible = controller.hasPermissionActivity(selectedTab.id)
     val blankTabModeProgress = rememberBlankTabModeProgress(
         tabId = selectedTab.id,
         incognito = selectedTab.isIncognito,
@@ -730,6 +734,13 @@ fun BrowserScreen(controller: BrowserController) {
     LaunchedEffect(controller.tabs.size, privacyXRayTabId) {
         val xRayTabId = privacyXRayTabId ?: return@LaunchedEffect
         if (controller.tabs.none { it.id == xRayTabId }) privacyXRayTabId = null
+    }
+    LaunchedEffect(controller.tabs.size, permissionRadarTabId) {
+        val radarTabId = permissionRadarTabId ?: return@LaunchedEffect
+        if (controller.tabs.none { it.id == radarTabId }) {
+            permissionRadarTabId = null
+            permissionRadarOrigin = null
+        }
     }
 
     LaunchedEffect(
@@ -1103,6 +1114,12 @@ fun BrowserScreen(controller: BrowserController) {
                 privacyXRayTabId = selectedTab.id
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             },
+            permissionActivityVisible = permissionActivityVisible,
+            onPermissionRadar = {
+                permissionRadarTabId = selectedTab.id
+                permissionRadarOrigin = null
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            },
             addressBarPulseNonce = controller.contentActions.addressBarPulseNonce,
             onOpenExternal = controller::openSelectedPageExternally,
             onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
@@ -1233,6 +1250,11 @@ fun BrowserScreen(controller: BrowserController) {
                     privacyXRayTabId = selectedTab.id
                     rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 },
+                onPermissionRadar = {
+                    permissionRadarTabId = selectedTab.id
+                    permissionRadarOrigin = null
+                    rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                },
                 onEditCapsule = { capsule ->
                     editingCapsuleId = capsule.id
                     capsuleEditorVisible = true
@@ -1302,6 +1324,48 @@ fun BrowserScreen(controller: BrowserController) {
                     onDismiss = { privacyXRayTabId = null },
                 )
             }
+        }
+
+        permissionRadarTabId?.let { tabId ->
+            val radarTab = controller.tabs.firstOrNull { it.id == tabId }
+            if (radarTab != null) {
+                val snapshot = controller.permissionRadarSnapshot(tabId, permissionRadarOrigin)
+                val profileEmoji = controller.profiles
+                    .firstOrNull { it.id == radarTab.profileId }
+                    ?.emoji
+                    .orEmpty()
+                PermissionRadarSheet(
+                    snapshot = snapshot,
+                    profileEmoji = profileEmoji,
+                    onOriginSelected = { permissionRadarOrigin = it },
+                    onDecisionChanged = { permission, decision ->
+                        snapshot.site?.let { site ->
+                            controller.setSitePermissionDecision(
+                                tabId = tabId,
+                                origin = site.origin,
+                                permission = permission,
+                                decision = decision,
+                            )
+                        }
+                    },
+                    onResetSite = {
+                        snapshot.site?.let { site ->
+                            controller.resetSitePermissions(tabId, site.origin)
+                        }
+                    },
+                    onDismiss = {
+                        permissionRadarTabId = null
+                        permissionRadarOrigin = null
+                    },
+                )
+            }
+        }
+
+        controller.permissionPrompt?.let { prompt ->
+            PermissionPromptDialog(
+                prompt = prompt,
+                onChoice = { choice -> controller.respondToPermissionPrompt(prompt.id, choice) },
+            )
         }
 
         if (filterStudioVisible) {
@@ -2359,6 +2423,8 @@ private fun BrowserBottomBar(
     onSettings: () -> Unit,
     onClearData: () -> Unit,
     onPrivacyXRay: () -> Unit,
+    permissionActivityVisible: Boolean,
+    onPermissionRadar: () -> Unit,
     addressBarPulseNonce: Int,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
@@ -2637,6 +2703,8 @@ private fun BrowserBottomBar(
                                 onSettings = onSettings,
                                 onClearData = onClearData,
                                 onPrivacyXRay = onPrivacyXRay,
+                                permissionActivityVisible = permissionActivityVisible,
+                                onPermissionRadar = onPermissionRadar,
                                 onOpenExternal = onOpenExternal,
                                 onSummarizeWithAssistant = onSummarizeWithAssistant,
                                 onShare = onShare,
@@ -3015,6 +3083,8 @@ private fun ExpandedBottomBarContent(
     onSettings: () -> Unit,
     onClearData: () -> Unit,
     onPrivacyXRay: () -> Unit,
+    permissionActivityVisible: Boolean,
+    onPermissionRadar: () -> Unit,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
@@ -3197,6 +3267,11 @@ private fun ExpandedBottomBarContent(
                                     .padding(end = 2.dp),
                                 tabId = tab.id,
                             )
+                            PermissionRadarBadge(
+                                visible = permissionActivityVisible,
+                                onClick = onPermissionRadar,
+                                modifier = Modifier.padding(end = 2.dp),
+                            )
                         }
                     }
                 }
@@ -3287,6 +3362,22 @@ private fun ExpandedBottomBarContent(
                         enabled = canToggleDomainMute,
                         muted = isDomainMuted,
                         onMutedChange = onDomainMutedChange,
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.permission_radar_site_action)) },
+                        enabled = PermissionOrigin.normalize(tab.url)
+                            ?.let(PermissionOrigin::isPotentiallyTrustworthy) == true,
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onPermissionRadar()
+                        },
+                        leadingIcon = {
+                            Text(
+                                "◉",
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontSize = 20.sp,
+                            )
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_open_candy_trail)) },
@@ -6937,6 +7028,7 @@ private fun SettingsScreen(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onRequestDefaultBrowser: () -> Unit,
     onPrivacyXRay: () -> Unit,
+    onPermissionRadar: () -> Unit,
     onEditCapsule: (SiteCapsule) -> Unit,
     onDeleteCapsule: (SiteCapsule) -> Unit,
     onFilterStudio: () -> Unit,
@@ -7244,6 +7336,38 @@ private fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_protection))
             Spacer(Modifier.height(6.dp))
+            Surface(
+                onClick = onPermissionRadar,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .sizeIn(minHeight = 48.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.permission_radar_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            stringResource(R.string.permission_radar_settings_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                    Text(
+                        "◉",
+                        color = MaterialTheme.colorScheme.tertiary,
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
             PrivacyXRaySettingsCounter(
                 blockedCount = blockedCount,
                 onClick = onPrivacyXRay,

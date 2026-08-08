@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.VisibleForTesting
@@ -43,13 +44,31 @@ import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private lateinit var browserController: BrowserController
+    private val webPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { results ->
+        if (::browserController.isInitialized) browserController.onRuntimePermissionResult(results)
+    }
+    private val fileChooserLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (::browserController.isInitialized) {
+            browserController.onFileChooserResult(result.resultCode, result.data)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
-        browserController = BrowserController(this)
+        browserController = BrowserController(
+            activity = this,
+            requestRuntimePermissions = { permissions ->
+                webPermissionLauncher.launch(permissions.toTypedArray())
+            },
+            launchFileChooser = fileChooserLauncher::launch,
+        )
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             browserController.onWindowInsetsChanged(insets)
             insets
@@ -164,6 +183,16 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         browserController.onPause()
         super.onPause()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (::browserController.isInitialized) browserController.onStart()
+    }
+
+    override fun onStop() {
+        if (::browserController.isInitialized) browserController.onStop()
+        super.onStop()
     }
 
     override fun onResume() {

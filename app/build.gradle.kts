@@ -57,9 +57,9 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = ".permissionradar"
             versionNameSuffix = "-debug"
-            manifestPlaceholders["appLabel"] = "Candy Browser Debug"
+            manifestPlaceholders["appLabel"] = "Permission Radar"
         }
 
         release {
@@ -131,6 +131,7 @@ tasks.matching { it.name == "preReleaseBuild" || it.name == "preLocalReleaseBuil
 dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.webkit:webkit:1.13.0")
     implementation("com.google.guava:guava:33.2.1-android")
