@@ -1614,24 +1614,14 @@ class BrowserController(
         createBackgroundTab(url)
     }
 
-    fun requestDefaultBrowserRole() {
-        val intent = DefaultBrowserRole.createRequestIntent(activity)
-        if (intent == null) {
-            isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
+    fun openDefaultBrowserSettings() {
+        if (!DefaultBrowserRole.openSettings(activity)) {
             Toast.makeText(
                 activity,
-                activity.getString(
-                    if (isDefaultBrowser) {
-                        R.string.toast_already_default_browser
-                    } else {
-                        R.string.toast_default_browser_selection_unavailable
-                    },
-                ),
+                activity.getString(R.string.toast_default_browser_selection_unavailable),
                 Toast.LENGTH_SHORT,
             ).show()
-            return
         }
-        activity.startActivity(intent)
     }
 
     fun openSelectedPageExternally() {

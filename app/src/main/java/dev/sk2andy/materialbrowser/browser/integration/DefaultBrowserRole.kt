@@ -1,8 +1,10 @@
 package dev.sk2andy.materialbrowser.browser.integration
 
 import android.app.role.RoleManager
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 
 object DefaultBrowserRole {
     fun isHeld(context: Context): Boolean {
@@ -11,11 +13,15 @@ object DefaultBrowserRole {
             roleManager.isRoleHeld(RoleManager.ROLE_BROWSER)
     }
 
-    /** Returns null when the role is unavailable or already held. */
-    fun createRequestIntent(context: Context): Intent? {
-        val roleManager = context.getSystemService(RoleManager::class.java) ?: return null
-        if (!roleManager.isRoleAvailable(RoleManager.ROLE_BROWSER)) return null
-        if (roleManager.isRoleHeld(RoleManager.ROLE_BROWSER)) return null
-        return roleManager.createRequestRoleIntent(RoleManager.ROLE_BROWSER)
+    fun openSettings(context: Context): Boolean {
+        val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+        return try {
+            context.startActivity(intent)
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        } catch (_: SecurityException) {
+            false
+        }
     }
 }

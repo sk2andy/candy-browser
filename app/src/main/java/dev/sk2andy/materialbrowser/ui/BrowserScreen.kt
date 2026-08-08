@@ -1247,7 +1247,7 @@ fun BrowserScreen(controller: BrowserController) {
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
-                onRequestDefaultBrowser = controller::requestDefaultBrowserRole,
+                onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
                     privacyXRayTabId = selectedTab.id
                     rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -7098,7 +7098,7 @@ private fun SettingsScreen(
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
-    onRequestDefaultBrowser: () -> Unit,
+    onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
     onEditCapsule: (SiteCapsule) -> Unit,
@@ -7320,7 +7320,7 @@ private fun SettingsScreen(
             SettingsSectionTitle(stringResource(R.string.settings_section_browser))
             Spacer(Modifier.height(8.dp))
             Surface(
-                onClick = { if (!isDefaultBrowser) onRequestDefaultBrowser() },
+                onClick = onOpenDefaultBrowserSettings,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
