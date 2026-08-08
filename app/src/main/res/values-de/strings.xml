@@ -535,4 +535,34 @@
         <item quantity="one">%1$d zurückgestellter Tab</item>
         <item quantity="other">%1$d zurückgestellte Tabs</item>
     </plurals>
+    <string name="reader_open_action">Reader Studio öffnen</string>
+    <string name="reader_close">Reader Studio schließen</string>
+    <string name="reader_studio_title">Reader Studio</string>
+    <string name="reader_article">Artikel</string>
+    <string name="reader_original">Original</string>
+    <string name="reader_offline_count">Offline (%1$d)</string>
+    <string name="reader_extracting">Artikel wird auf diesem Gerät vorbereitet…</string>
+    <string name="reader_extraction_failed_title">Artikel konnte nicht vorbereitet werden</string>
+    <string name="reader_extraction_unsupported">Reader Studio funktioniert mit HTTP- und HTTPS-Seiten.</string>
+    <string name="reader_extraction_empty">Kein ausreichend lesbarer Artikeltext gefunden. Die Originalseite bleibt unverändert.</string>
+    <string name="reader_extraction_invalid">Die Seite hat sich geändert oder ungültige Inhalte geliefert. Erneut versuchen oder zum Original zurückkehren.</string>
+    <string name="reader_retry">Erneut versuchen</string>
+    <string name="reader_save_offline">Offline speichern</string>
+    <string name="reader_offline_short">Offline</string>
+    <string name="reader_theme_system">System</string>
+    <string name="reader_theme_paper">Papier</string>
+    <string name="reader_theme_night">Nacht</string>
+    <string name="reader_font_decrease">Schrift verkleinern</string>
+    <string name="reader_font_increase">Schrift vergrößern</string>
+    <string name="reader_alignment_start">Flattersatz</string>
+    <string name="reader_alignment_justified">Blocksatz</string>
+    <string name="reader_speech_start">Vorlesen</string>
+    <string name="reader_speech_resume">Fortsetzen</string>
+    <string name="reader_speech_pause">Pause</string>
+    <string name="reader_speech_stop">Stopp</string>
+    <string name="reader_private_notice">Privates Lesen bleibt im Speicher. Fortschritt, Einstellungen und Offline-Kopien werden nicht gespeichert.</string>
+    <string name="reader_offline_library">Offline-Artikel</string>
+    <string name="reader_offline_empty">Noch keine Offline-Artikel gespeichert.</string>
+    <string name="reader_progress_percent">%1$d%% gelesen</string>
+    <string name="reader_delete_snapshot">Offline-Artikel löschen</string>
 </resources>

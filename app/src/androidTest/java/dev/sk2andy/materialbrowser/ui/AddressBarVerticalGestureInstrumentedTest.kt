@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -11,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
@@ -38,6 +38,7 @@ class AddressBarVerticalGestureInstrumentedTest {
         val horizontalDrag = AtomicInteger()
         val horizontalDragStops = AtomicInteger()
         val taps = AtomicInteger()
+        val readerOpens = AtomicInteger()
         composeRule.setContent {
             MaterialBrowserTheme {
                 Box(
@@ -56,7 +57,12 @@ class AddressBarVerticalGestureInstrumentedTest {
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag(AddressBarTag)
-                            .clickable(onClick = taps::incrementAndGet),
+                            .addressBarReaderActions(
+                                readerEnabled = true,
+                                onClick = taps::incrementAndGet,
+                                onReaderStudio = readerOpens::incrementAndGet,
+                                readerLabel = "Open Reader Studio",
+                            ),
                     )
                 }
             }
@@ -67,11 +73,13 @@ class AddressBarVerticalGestureInstrumentedTest {
         composeRule.onNodeWithTag(AddressBarTag).performTouchInput { swipeRight() }
         assertEquals(1, swipes.get())
         composeRule.onNodeWithTag(AddressBarTag).performTouchInput { click() }
+        composeRule.onNodeWithTag(AddressBarTag).performTouchInput { longClick() }
 
         assertEquals(1, swipes.get())
         assertTrue(horizontalDrag.get() > 0)
         assertEquals(1, horizontalDragStops.get())
         assertEquals(1, taps.get())
+        assertEquals(1, readerOpens.get())
     }
 
     @Test

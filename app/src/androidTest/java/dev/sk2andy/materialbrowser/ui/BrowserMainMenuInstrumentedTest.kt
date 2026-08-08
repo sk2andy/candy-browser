@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -32,7 +33,7 @@ class BrowserMainMenuInstrumentedTest {
     @Test
     fun usesApprovedGroupsAndDismissesAfterAction() {
         val dismissals = AtomicInteger()
-        val trailOpens = AtomicInteger()
+        val readerOpens = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         composeRule.setContent {
             MaterialBrowserTheme {
@@ -51,6 +52,7 @@ class BrowserMainMenuInstrumentedTest {
                         canToggleFavorite = true,
                         isFavorite = false,
                         canUsePageActions = true,
+                        canOpenReader = true,
                         canToggleDomainMute = true,
                         isDomainMuted = false,
                         canAddSiteCapsule = true,
@@ -62,8 +64,9 @@ class BrowserMainMenuInstrumentedTest {
                         onShare = {},
                         onOpenExternal = {},
                         onPrint = {},
+                        onOpenReader = readerOpens::incrementAndGet,
                         onDomainMutedChange = {},
-                        onOpenCandyTrail = trailOpens::incrementAndGet,
+                        onOpenCandyTrail = {},
                         onAddSiteCapsule = {},
                         onSummarize = {},
                         onSnooze = {},
@@ -77,6 +80,7 @@ class BrowserMainMenuInstrumentedTest {
         val pageGroup = hasTestTag(BrowserMainMenuTestTags.PageGroup)
         composeRule.onNode(
             pageGroup and
+                hasAnyDescendant(hasText(context.getString(R.string.reader_open_action))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_share))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_open_in_app))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_print))) and
@@ -98,10 +102,53 @@ class BrowserMainMenuInstrumentedTest {
             context.getString(R.string.browser_menu_browser_group),
         ).assertExists()
         composeRule.onNodeWithText(
-            context.getString(R.string.action_open_candy_trail),
+            context.getString(R.string.reader_open_action),
         ).performClick()
 
         assertEquals(1, dismissals.get())
-        assertEquals(1, trailOpens.get())
+        assertEquals(1, readerOpens.get())
+    }
+
+    @Test
+    fun disablesReaderForUnsupportedPage() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserMainMenu(
+                    expanded = true,
+                    onDismissRequest = {},
+                    pageSubtitle = "New tab",
+                    canGoBack = false,
+                    canGoForward = false,
+                    isLoading = false,
+                    canToggleFavorite = false,
+                    isFavorite = false,
+                    canUsePageActions = false,
+                    canOpenReader = false,
+                    canToggleDomainMute = false,
+                    isDomainMuted = false,
+                    canAddSiteCapsule = false,
+                    canSnooze = false,
+                    onBack = {},
+                    onForward = {},
+                    onReloadOrStop = {},
+                    onToggleFavorite = {},
+                    onShare = {},
+                    onOpenExternal = {},
+                    onPrint = {},
+                    onOpenReader = {},
+                    onDomainMutedChange = {},
+                    onOpenCandyTrail = {},
+                    onAddSiteCapsule = {},
+                    onSummarize = {},
+                    onSnooze = {},
+                    onSettings = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.reader_open_action),
+        ).assertIsNotEnabled()
     }
 }

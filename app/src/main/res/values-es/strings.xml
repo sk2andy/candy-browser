@@ -539,4 +539,34 @@
         <item quantity="one">%1$d pestaña pospuesta</item>
         <item quantity="other">%1$d pestañas pospuestas</item>
     </plurals>
+    <string name="reader_open_action">Abrir Reader Studio</string>
+    <string name="reader_close">Cerrar Reader Studio</string>
+    <string name="reader_studio_title">Reader Studio</string>
+    <string name="reader_article">Artículo</string>
+    <string name="reader_original">Original</string>
+    <string name="reader_offline_count">Sin conexión (%1$d)</string>
+    <string name="reader_extracting">Preparando el artículo en este dispositivo…</string>
+    <string name="reader_extraction_failed_title">No se pudo preparar el artículo</string>
+    <string name="reader_extraction_unsupported">Reader Studio funciona con páginas HTTP y HTTPS.</string>
+    <string name="reader_extraction_empty">No se encontró texto de artículo suficientemente legible. La página original no cambia.</string>
+    <string name="reader_extraction_invalid">La página cambió o devolvió contenido no válido. Inténtalo de nuevo o vuelve al original.</string>
+    <string name="reader_retry">Reintentar</string>
+    <string name="reader_save_offline">Guardar sin conexión</string>
+    <string name="reader_offline_short">Offline</string>
+    <string name="reader_theme_system">Sistema</string>
+    <string name="reader_theme_paper">Papel</string>
+    <string name="reader_theme_night">Noche</string>
+    <string name="reader_font_decrease">Reducir tamaño del texto</string>
+    <string name="reader_font_increase">Aumentar tamaño del texto</string>
+    <string name="reader_alignment_start">Bandera</string>
+    <string name="reader_alignment_justified">Justificado</string>
+    <string name="reader_speech_start">Leer en voz alta</string>
+    <string name="reader_speech_resume">Continuar</string>
+    <string name="reader_speech_pause">Pausa</string>
+    <string name="reader_speech_stop">Detener</string>
+    <string name="reader_private_notice">La lectura privada queda en memoria. El progreso, los ajustes y las copias sin conexión no se guardan.</string>
+    <string name="reader_offline_library">Artículos sin conexión</string>
+    <string name="reader_offline_empty">Aún no hay artículos sin conexión guardados.</string>
+    <string name="reader_progress_percent">%1$d%% leído</string>
+    <string name="reader_delete_snapshot">Eliminar artículo sin conexión</string>
 </resources>

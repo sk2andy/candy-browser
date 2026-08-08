@@ -53,6 +53,7 @@ internal fun BrowserMainMenu(
     canToggleFavorite: Boolean,
     isFavorite: Boolean,
     canUsePageActions: Boolean,
+    canOpenReader: Boolean,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     canAddSiteCapsule: Boolean,
@@ -64,6 +65,7 @@ internal fun BrowserMainMenu(
     onShare: () -> Unit,
     onOpenExternal: () -> Unit,
     onPrint: () -> Unit,
+    onOpenReader: () -> Unit,
     onDomainMutedChange: (Boolean) -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
@@ -189,10 +191,17 @@ internal fun BrowserMainMenu(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 MenuRow(
+                    label = stringResource(R.string.reader_open_action),
+                    iconRes = R.drawable.ic_reader_align_start,
+                    enabled = canOpenReader,
+                    shape = firstItemShape,
+                    onClick = { dismissThen(onOpenReader) },
+                )
+                MenuRow(
                     label = stringResource(R.string.action_share),
                     iconRes = R.drawable.ic_symbol_share,
                     enabled = canUsePageActions,
-                    shape = firstItemShape,
+                    shape = innerCorners,
                     onClick = { dismissThen(onShare) },
                 )
                 MenuRow(
