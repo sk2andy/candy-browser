@@ -1086,6 +1086,9 @@ fun BrowserScreen(controller: BrowserController) {
                     }
                 }
             },
+            canToggleDomainMute = controller.canToggleSelectedDomainMute,
+            isDomainMuted = controller.isSelectedDomainMuted,
+            onDomainMutedChange = controller::setSelectedDomainMuted,
             onSettings = {
                 addressEditorVisible = false
                 settingsVisible = true
@@ -2336,6 +2339,9 @@ private fun BrowserBottomBar(
     onIncognitoControlCenterChanged: (Offset) -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
+    canToggleDomainMute: Boolean,
+    isDomainMuted: Boolean,
+    onDomainMutedChange: (Boolean) -> Unit,
     onSettings: () -> Unit,
     onClearData: () -> Unit,
     onPrivacyXRay: () -> Unit,
@@ -2559,6 +2565,9 @@ private fun BrowserBottomBar(
                                     onIncognitoControlCenterChanged,
                                 isFavorite = isFavorite,
                                 onToggleFavorite = onToggleFavorite,
+                                canToggleDomainMute = canToggleDomainMute,
+                                isDomainMuted = isDomainMuted,
+                                onDomainMutedChange = onDomainMutedChange,
                                 onSettings = onSettings,
                                 onClearData = onClearData,
                                 onPrivacyXRay = onPrivacyXRay,
@@ -2889,6 +2898,9 @@ private fun ExpandedBottomBarContent(
     onIncognitoControlCenterChanged: (Offset) -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
+    canToggleDomainMute: Boolean,
+    isDomainMuted: Boolean,
+    onDomainMutedChange: (Boolean) -> Unit,
     onSettings: () -> Unit,
     onClearData: () -> Unit,
     onPrivacyXRay: () -> Unit,
@@ -3145,6 +3157,11 @@ private fun ExpandedBottomBarContent(
                         },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
                     )
+                    DomainMuteMenuItem(
+                        enabled = canToggleDomainMute,
+                        muted = isDomainMuted,
+                        onMutedChange = onDomainMutedChange,
+                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_open_candy_trail)) },
                         enabled = tab.url != BLANK_URL,
@@ -3299,6 +3316,40 @@ private fun ExpandedBottomBarContent(
             }
             }
     }
+}
+
+@Composable
+internal fun DomainMuteMenuItem(
+    enabled: Boolean,
+    muted: Boolean,
+    onMutedChange: (Boolean) -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(stringResource(R.string.action_mute_domain)) },
+        enabled = enabled,
+        onClick = { onMutedChange(!muted) },
+        modifier = Modifier.testTag(DomainMuteMenuTestTags.Item),
+        leadingIcon = {
+            Text(
+                "♪",
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 20.sp,
+            )
+        },
+        trailingIcon = {
+            Switch(
+                checked = muted,
+                onCheckedChange = onMutedChange,
+                modifier = Modifier.testTag(DomainMuteMenuTestTags.Switch),
+                enabled = enabled,
+            )
+        },
+    )
+}
+
+internal object DomainMuteMenuTestTags {
+    const val Item = "domain_mute_menu_item"
+    const val Switch = "domain_mute_menu_switch"
 }
 
 @Composable

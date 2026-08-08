@@ -83,6 +83,7 @@
     <string name="cd_make_blank_tab_regular">Convertir la pestaña vacía en una pestaña normal</string>
     <string name="action_stop_loading">Detener carga</string>
     <string name="action_reload">Volver a cargar</string>
+    <string name="action_mute_domain">Silenciar dominio</string>
     <string name="action_add_favorite">Añadir a favoritos</string>
     <string name="action_remove_favorite">Quitar de favoritos</string>
     <string name="favorite_added_confirmation">Añadido a favoritos</string>

@@ -83,6 +83,7 @@
     <string name="cd_make_blank_tab_regular">Tornar o separador vazio normal</string>
     <string name="action_stop_loading">Parar carregamento</string>
     <string name="action_reload">Recarregar</string>
+    <string name="action_mute_domain">Silenciar domínio</string>
     <string name="action_add_favorite">Adicionar aos favoritos</string>
     <string name="action_remove_favorite">Remover dos favoritos</string>
     <string name="favorite_added_confirmation">Adicionado aos favoritos</string>

@@ -3,8 +3,11 @@ package dev.sk2andy.materialbrowser.browser
 import android.webkit.WebView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -39,6 +42,23 @@ class WebViewSettingsInstrumentedTest {
 
                 settings.requireMediaPlaybackGesture()
                 assertTrue(settings.mediaPlaybackRequiresUserGesture)
+
+                destroy()
+            }
+        }
+    }
+
+    @Test
+    fun togglesWebViewAudioMuteWhenProviderSupportsIt() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.MUTE_AUDIO))
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            WebView(instrumentation.targetContext).apply {
+                WebViewCompat.setAudioMuted(this, true)
+                assertTrue(WebViewCompat.isAudioMuted(this))
+
+                WebViewCompat.setAudioMuted(this, false)
+                assertFalse(WebViewCompat.isAudioMuted(this))
 
                 destroy()
             }

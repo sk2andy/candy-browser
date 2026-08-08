@@ -83,6 +83,7 @@
     <string name="cd_make_blank_tab_regular">Passer l’onglet vide en navigation normale</string>
     <string name="action_stop_loading">Arrêter le chargement</string>
     <string name="action_reload">Actualiser</string>
+    <string name="action_mute_domain">Couper le son du domaine</string>
     <string name="action_add_favorite">Ajouter aux favoris</string>
     <string name="action_remove_favorite">Retirer des favoris</string>
     <string name="favorite_added_confirmation">Ajouté aux favoris</string>

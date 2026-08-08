@@ -9,6 +9,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import org.json.JSONArray
@@ -204,6 +205,24 @@ class BrowserSessionStore(context: Context) {
     }
 
     @Synchronized
+    fun loadMutedDomains(): Map<String, Set<String>> =
+        loadProfileHosts(
+            key = KEY_MUTED_DOMAINS,
+            normalizeHost = DomainMuteRules::normalizedDomain,
+            limit = DomainMuteRules.MAX_PER_PROFILE,
+        )
+
+    @Synchronized
+    fun saveMutedDomains(domainsByProfile: Map<String, Set<String>>) {
+        saveProfileHosts(
+            key = KEY_MUTED_DOMAINS,
+            hostsByProfile = domainsByProfile,
+            normalizeHost = DomainMuteRules::normalizedDomain,
+            limit = DomainMuteRules.MAX_PER_PROFILE,
+        )
+    }
+
+    @Synchronized
     fun loadSitePrivacyOverrides(): Map<String, Map<String, SitePrivacyOverrides>> =
         loadArray(KEY_SITE_PRIVACY_OVERRIDES) { item ->
             Triple(
@@ -256,27 +275,36 @@ class BrowserSessionStore(context: Context) {
         }
     }
 
-    private fun loadProfileHosts(key: String): Map<String, Set<String>> =
+    private fun loadProfileHosts(
+        key: String,
+        normalizeHost: (String?) -> String? = SiteExceptionRules::normalizedException,
+        limit: Int = SiteExceptionRules.MAX_PER_PROFILE,
+    ): Map<String, Set<String>> =
         loadArray(key) { item ->
             item.optString("profileId") to item.optString("host")
         }.mapNotNull { (profileId, host) ->
             val safeProfileId = profileId.trim().takeIf(String::isNotEmpty) ?: return@mapNotNull null
-            val safeHost = SiteExceptionRules.normalizedException(host) ?: return@mapNotNull null
+            val safeHost = normalizeHost(host) ?: return@mapNotNull null
             safeProfileId to safeHost
         }.groupBy({ it.first }, { it.second })
             .mapValues { (_, hosts) ->
-                hosts.distinct().take(SiteExceptionRules.MAX_PER_PROFILE).toSet()
+                hosts.distinct().take(limit).toSet()
             }
 
-    private fun saveProfileHosts(key: String, hostsByProfile: Map<String, Set<String>>) {
+    private fun saveProfileHosts(
+        key: String,
+        hostsByProfile: Map<String, Set<String>>,
+        normalizeHost: (String?) -> String? = SiteExceptionRules::normalizedException,
+        limit: Int = SiteExceptionRules.MAX_PER_PROFILE,
+    ) {
         val values = hostsByProfile.asSequence()
             .flatMap { (profileId, hosts) ->
                 val safeProfileId = profileId.trim()
                 if (safeProfileId.isEmpty()) return@flatMap emptySequence()
                 hosts.asSequence()
-                    .mapNotNull(SiteExceptionRules::normalizedException)
+                    .mapNotNull(normalizeHost)
                     .distinct()
-                    .take(SiteExceptionRules.MAX_PER_PROFILE)
+                    .take(limit)
                     .map { host -> safeProfileId to host }
             }
             .distinct()
@@ -363,6 +391,7 @@ class BrowserSessionStore(context: Context) {
         const val KEY_HIDE_CONSENT = "hide_consent"
         const val KEY_BLOCK_THIRD_PARTY_COOKIES = "block_third_party_cookies"
         const val KEY_SITE_EXCEPTIONS = "site_exceptions"
+        const val KEY_MUTED_DOMAINS = "muted_domains"
         const val KEY_SITE_PRIVACY_OVERRIDES = "site_privacy_overrides"
         const val KEY_HISTORY = "history"
         const val KEY_FAVORITES = "favorites"

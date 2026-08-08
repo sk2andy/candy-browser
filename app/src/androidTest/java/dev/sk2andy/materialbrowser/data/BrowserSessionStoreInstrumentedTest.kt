@@ -250,6 +250,29 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun mutedDomainsRoundTripByProfileAsRegistrableDomains() {
+        val store = BrowserSessionStore(context)
+        store.saveMutedDomains(
+            mapOf(
+                "candy" to setOf("Music.News.Example.co.uk", "unsafe host"),
+                "work" to setOf("video.example"),
+                "" to setOf("ignored.example"),
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "candy" to setOf("example.co.uk"),
+                "work" to setOf("video.example"),
+            ),
+            store.loadMutedDomains(),
+        )
+
+        preferences.edit().putString("muted_domains", "not-json").commit()
+        assertEquals(emptyMap<String, Set<String>>(), store.loadMutedDomains())
+    }
+
+    @Test
     fun sitePrivacyOverridesRoundTripAtomicallyWithoutDefaultOrUnsafeEntries() {
         val store = BrowserSessionStore(context)
         store.saveSitePrivacyOverrides(

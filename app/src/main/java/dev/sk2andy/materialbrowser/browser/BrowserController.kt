@@ -246,6 +246,10 @@ class BrowserController(private val activity: Activity) {
     private val suppressedCandyTrailTabIds = mutableSetOf<String>()
     private var candyTrailEpoch = 0
     private val store = BrowserSessionStore(activity)
+    private val permanentMutedDomains = mutableStateMapOf<String, Set<String>>().apply {
+        putAll(store.loadMutedDomains())
+    }
+    private val temporaryMutedDomains = mutableStateMapOf<String, Set<String>>()
     private val profileDeletionCoordinator =
         WebViewProfileDeletionCoordinator(store, ::tryDeleteNamedWebViewProfile)
     private val previewRepository = TabPreviewRepository.get(activity)
@@ -280,6 +284,12 @@ class BrowserController(private val activity: Activity) {
 
     val activeTabs: List<BrowserTab>
         get() = tabs.filter { it.profileId == activeProfileId }
+
+    val canToggleSelectedDomainMute: Boolean
+        get() = isDomainMuteSupported && DomainMuteRules.domainForUrl(selectedTab.url) != null
+
+    val isSelectedDomainMuted: Boolean
+        get() = isDomainMuted(selectedTab, selectedTab.url)
 
     fun privacySnapshot(tabId: String): PrivacyXRaySnapshot =
         privacySnapshots[tabId] ?: PrivacyXRaySnapshot.Empty
@@ -609,6 +619,8 @@ class BrowserController(private val activity: Activity) {
         permanentSitePrivacyOverrides = permanentSitePrivacyOverrides
             .filterKeys(restoredProfileIds::contains)
         store.saveSitePrivacyOverrides(permanentSitePrivacyOverrides)
+        permanentMutedDomains.keys.retainAll(restoredProfileIds)
+        store.saveMutedDomains(permanentMutedDomains.toMap())
         activeProfileId = restoredActiveProfileId
             .takeIf { id -> profiles.any { it.id == id } }
             ?: profiles.first().id
@@ -1248,6 +1260,10 @@ class BrowserController(private val activity: Activity) {
             store.saveSitePrivacyOverrides(permanentSitePrivacyOverrides)
             siteExceptionRevision++
         }
+        if (permanentMutedDomains.remove(profileId) != null) {
+            store.saveMutedDomains(permanentMutedDomains.toMap())
+        }
+        temporaryMutedDomains.remove(profileId)
         val webViewProfileName = WebViewProfileRules.isolatedProfileName(profileId)
         clearExistingWebViewProfileData(webViewProfileName)
         clearProfileServiceWorkerClient(webViewProfileName)
@@ -2100,6 +2116,28 @@ class BrowserController(private val activity: Activity) {
         store.saveTabOverviewMode(mode)
     }
 
+    fun setSelectedDomainMuted(muted: Boolean): Boolean {
+        if (!isDomainMuteSupported) return false
+        val tab = selectedTab
+        val domain = DomainMuteRules.domainForUrl(tab.url) ?: return false
+        if (isDomainMuted(tab, tab.url) == muted) return false
+        val domainsByProfile = if (tab.isIncognito) {
+            temporaryMutedDomains
+        } else {
+            permanentMutedDomains
+        }
+        val updated = DomainMuteRules.withMutedState(
+            current = domainsByProfile[tab.profileId].orEmpty(),
+            domain = domain,
+            muted = muted,
+        )
+        if (updated.isEmpty()) domainsByProfile.remove(tab.profileId)
+        else domainsByProfile[tab.profileId] = updated
+        if (!tab.isIncognito) store.saveMutedDomains(permanentMutedDomains.toMap())
+        refreshDomainMuteForProfile(tab.profileId, tab.isIncognito)
+        return true
+    }
+
     fun clearBrowsingData() {
         val regularForcedScrollTabIds = tabs.asSequence()
             .filterNot(BrowserTab::isIncognito)
@@ -2137,12 +2175,16 @@ class BrowserController(private val activity: Activity) {
         temporarySitePrivacyOverrides.clear()
         permanentSitePrivacyOverrides = emptyMap()
         store.saveSitePrivacyOverrides(emptyMap())
+        temporaryMutedDomains.clear()
+        permanentMutedDomains.clear()
+        store.saveMutedDomains(emptyMap())
         siteExceptionRevision++
         webViews.forEach { (tabId, webView) ->
             val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
                 ?: BLANK_URL
             installForcedVerticalScrollDocumentStartScript(tabId, webView)
             applySiteProtectionForNavigation(tabId, webView, pageUrl)
+            applyDomainMutePolicy(tabId, webView, pageUrl)
         }
         val incognitoTabIds = tabs.asSequence()
             .filter(BrowserTab::isIncognito)
@@ -2222,6 +2264,7 @@ class BrowserController(private val activity: Activity) {
         }
         temporarySiteExceptions.clear()
         temporarySitePrivacyOverrides.clear()
+        temporaryMutedDomains.clear()
         savePersistentFilterRules()
         persist()
         if (tabs.any(BrowserTab::isIncognito)) prepareIncognitoProfileForRemoval()
@@ -2304,6 +2347,7 @@ class BrowserController(private val activity: Activity) {
             safeBrowsingEnabled = true
         }
         applyMediaPlaybackPolicy(tabId, this)
+        applyDomainMutePolicy(tabId, this, tab.url)
         SystemWebViewCredentials.configure(this)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
             WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
@@ -2392,6 +2436,7 @@ class BrowserController(private val activity: Activity) {
                 return
             }
             pageUrls[tabId] = url
+            applyDomainMutePolicy(tabId, view, url)
             updateProtectionRequestContext(tabId, url)
             applySiteProtectionForNavigation(tabId, view, url)
             navigationGenerations[tabId] = (navigationGenerations[tabId] ?: 0) + 1
@@ -3772,6 +3817,7 @@ class BrowserController(private val activity: Activity) {
 
     private fun clearIncognitoProfile() {
         incognitoRuleHits.clear()
+        temporaryMutedDomains.clear()
         if (ephemeralRuleIds.isNotEmpty()) {
             filterRules.removeAll { it.id in ephemeralRuleIds }
             ephemeralRuleIds.clear()
@@ -3870,6 +3916,11 @@ class BrowserController(private val activity: Activity) {
 
     private fun resumeWebView(tabId: String, webView: WebView) {
         applyMediaPlaybackPolicy(tabId, webView)
+        applyDomainMutePolicy(
+            tabId = tabId,
+            webView = webView,
+            pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url,
+        )
         webView.onResume()
     }
 
@@ -3881,7 +3932,33 @@ class BrowserController(private val activity: Activity) {
         }
     }
 
+    private fun isDomainMuted(tab: BrowserTab, pageUrl: String?): Boolean {
+        val mutedDomains = if (tab.isIncognito) {
+            temporaryMutedDomains[tab.profileId]
+        } else {
+            permanentMutedDomains[tab.profileId]
+        }
+        return DomainMuteRules.isMuted(pageUrl, mutedDomains.orEmpty())
+    }
+
+    private fun refreshDomainMuteForProfile(profileId: String, isIncognito: Boolean) {
+        tabs.asSequence()
+            .filter { tab -> tab.profileId == profileId && tab.isIncognito == isIncognito }
+            .forEach { tab ->
+                val webView = webViews[tab.id] ?: return@forEach
+                applyDomainMutePolicy(tab.id, webView, pageUrls[tab.id] ?: tab.url)
+            }
+    }
+
+    private fun applyDomainMutePolicy(tabId: String, webView: WebView, pageUrl: String?) {
+        if (!isDomainMuteSupported) return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        WebViewCompat.setAudioMuted(webView, isDomainMuted(tab, pageUrl))
+    }
+
     private companion object {
+        val isDomainMuteSupported: Boolean =
+            WebViewFeature.isFeatureSupported(WebViewFeature.MUTE_AUDIO)
         val ALL_WEB_ORIGINS = setOf("*")
         val WEB_SCHEMES = setOf("http", "https")
         val SAFE_AREA_INSET_TYPES =

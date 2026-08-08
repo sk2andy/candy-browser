@@ -83,6 +83,7 @@
     <string name="cd_make_blank_tab_regular">Leeren Tab als normalen Tab verwenden</string>
     <string name="action_stop_loading">Laden stoppen</string>
     <string name="action_reload">Neu laden</string>
+    <string name="action_mute_domain">Domain stummschalten</string>
     <string name="action_add_favorite">Zu Favoriten hinzufügen</string>
     <string name="action_remove_favorite">Aus Favoriten entfernen</string>
     <string name="favorite_added_confirmation">Zu Favoriten hinzugefügt</string>

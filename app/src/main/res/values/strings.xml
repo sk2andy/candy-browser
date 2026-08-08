@@ -89,6 +89,7 @@
     <!-- Menus and dialogs -->
     <string name="action_stop_loading">Stop loading</string>
     <string name="action_reload">Reload</string>
+    <string name="action_mute_domain">Mute domain</string>
     <string name="action_add_favorite">Add to favorites</string>
     <string name="action_remove_favorite">Remove from favorites</string>
     <string name="favorite_added_confirmation">Added to favorites</string>
