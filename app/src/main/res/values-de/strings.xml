@@ -85,7 +85,14 @@
     <string name="action_stop_loading">Laden stoppen</string>
     <string name="action_reload">Neu laden</string>
     <string name="action_dock_address_bar">Adressleiste am Rand parken</string>
-    <string name="action_mute_domain">Domain stummschalten</string>
+    <string name="action_mute_domain">Diese Website stummschalten</string>
+    <string name="browser_menu_title">Menü</string>
+    <string name="browser_menu_page_group">Seite</string>
+    <string name="browser_menu_browser_group">Browser</string>
+    <string name="action_favorite">Favorit</string>
+    <string name="action_open_in_app">In App öffnen</string>
+    <string name="action_add_site_capsule">Site Capsule hinzufügen</string>
+    <string name="action_summarize">Zusammenfassen</string>
     <string name="action_add_favorite">Zu Favoriten hinzufügen</string>
     <string name="action_remove_favorite">Aus Favoriten entfernen</string>
     <string name="favorite_added_confirmation">Zu Favoriten hinzugefügt</string>

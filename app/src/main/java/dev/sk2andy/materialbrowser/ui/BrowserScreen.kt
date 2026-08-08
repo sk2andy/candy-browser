@@ -19,9 +19,13 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -36,6 +40,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -358,6 +363,8 @@ fun BrowserScreen(controller: BrowserController) {
     val tabHandoffAlpha = remember { Animatable(1f) }
     val settingsBackProgress = remember { Animatable(0f) }
     val candyTrailBackProgress = remember { Animatable(0f) }
+    var settingsPredictiveBackCommitted by remember { mutableStateOf(false) }
+    var candyTrailPredictiveBackCommitted by remember { mutableStateOf(false) }
     val backAnimationScope = rememberCoroutineScope()
     var settingsBackEdgeSign by remember { mutableIntStateOf(1) }
     var candyTrailBackEdgeSign by remember { mutableIntStateOf(1) }
@@ -780,12 +787,34 @@ fun BrowserScreen(controller: BrowserController) {
             when (target) {
                 BrowserBackTarget.FilterStudio -> filterStudioVisible = false
                 BrowserBackTarget.Settings -> {
-                    if (receivedProgress) settingsBackProgress.snapTo(1f)
+                    settingsPredictiveBackCommitted = receivedProgress
+                    if (receivedProgress) {
+                        settingsBackProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = PredictiveBackMotion.remainingDurationMillis(
+                                    settingsBackProgress.value,
+                                ),
+                                easing = FastOutSlowInEasing,
+                            ),
+                        )
+                    }
                     settingsVisible = false
                 }
                 BrowserBackTarget.AddressEditor -> addressEditorVisible = false
                 BrowserBackTarget.CandyTrail -> {
-                    if (receivedProgress) candyTrailBackProgress.snapTo(1f)
+                    candyTrailPredictiveBackCommitted = receivedProgress
+                    if (receivedProgress) {
+                        candyTrailBackProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = PredictiveBackMotion.remainingDurationMillis(
+                                    candyTrailBackProgress.value,
+                                ),
+                                easing = FastOutSlowInEasing,
+                            ),
+                        )
+                    }
                     candyTrailTabId = null
                     candyTrailSourceBounds = null
                 }
@@ -795,6 +824,7 @@ fun BrowserScreen(controller: BrowserController) {
             }
         } catch (cancellation: CancellationException) {
             if (target == BrowserBackTarget.Settings) {
+                settingsPredictiveBackCommitted = false
                 backAnimationScope.launch {
                     settingsBackProgress.animateTo(
                         targetValue = 0f,
@@ -802,6 +832,7 @@ fun BrowserScreen(controller: BrowserController) {
                     )
                 }
             } else if (target == BrowserBackTarget.CandyTrail) {
+                candyTrailPredictiveBackCommitted = false
                 backAnimationScope.launch {
                     candyTrailBackProgress.animateTo(
                         targetValue = 0f,
@@ -813,9 +844,15 @@ fun BrowserScreen(controller: BrowserController) {
         }
     }
     LaunchedEffect(settingsVisible) {
-        if (!settingsVisible && settingsBackProgress.value > 0f) {
-            delay(110)
+        if (settingsVisible) {
+            settingsPredictiveBackCommitted = false
+            if (settingsBackProgress.value > 0f) {
+                settingsBackProgress.snapTo(0f)
+            }
+        } else if (!settingsVisible && settingsBackProgress.value > 0f) {
+            delay(PredictiveBackMotion.EXIT_DURATION_MILLIS.toLong())
             settingsBackProgress.snapTo(0f)
+            settingsPredictiveBackCommitted = false
         }
     }
     LaunchedEffect(candyTrailTabId, controller.activeTabs) {
@@ -824,9 +861,18 @@ fun BrowserScreen(controller: BrowserController) {
             candyTrailTabId = null
             candyTrailSourceBounds = null
         }
-        if (trailTabId == null && candyTrailBackProgress.value > 0f) {
-            delay(110)
+    }
+    LaunchedEffect(candyTrailTabId) {
+        val trailTabId = candyTrailTabId
+        if (trailTabId != null) {
+            candyTrailPredictiveBackCommitted = false
+            if (candyTrailBackProgress.value > 0f) {
+                candyTrailBackProgress.snapTo(0f)
+            }
+        } else if (candyTrailBackProgress.value > 0f) {
+            delay(PredictiveBackMotion.EXIT_DURATION_MILLIS.toLong())
             candyTrailBackProgress.snapTo(0f)
+            candyTrailPredictiveBackCommitted = false
         }
     }
     LaunchedEffect(tabOverviewVisible) {
@@ -1098,7 +1144,6 @@ fun BrowserScreen(controller: BrowserController) {
                 addressEditorVisible = false
                 settingsVisible = true
             },
-            onClearData = { clearDialogVisible = true },
             onPrivacyXRay = {
                 privacyXRayTabId = selectedTab.id
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -1197,6 +1242,7 @@ fun BrowserScreen(controller: BrowserController) {
             candyTrailSourceBounds = candyTrailSourceBounds,
             candyTrailBackProgress = candyTrailBackProgress.value,
             candyTrailBackEdgeSign = candyTrailBackEdgeSign,
+            candyTrailPredictiveBackCommitted = candyTrailPredictiveBackCommitted,
             onOpenCandyTrail = { tabId, bounds ->
                 candyTrailSourceBounds = bounds
                 candyTrailTabId = tabId
@@ -1209,8 +1255,29 @@ fun BrowserScreen(controller: BrowserController) {
 
         AnimatedVisibility(
             visible = settingsVisible,
-            enter = fadeIn(tween(120)),
-            exit = fadeOut(tween(90)),
+            enter = slideInHorizontally(
+                initialOffsetX = { width ->
+                    PredictiveBackMotion.entryTranslation(
+                        progress = 0f,
+                        width = width.toFloat(),
+                    ).roundToInt()
+                },
+                animationSpec = tween(
+                    durationMillis = PredictiveBackMotion.ENTRY_DURATION_MILLIS,
+                    easing = FastOutSlowInEasing,
+                ),
+            ),
+            exit = if (settingsPredictiveBackCommitted) {
+                ExitTransition.None
+            } else {
+                slideOutHorizontally(
+                    targetOffsetX = { width -> width },
+                    animationSpec = tween(
+                        durationMillis = PredictiveBackMotion.EXIT_DURATION_MILLIS,
+                        easing = FastOutSlowInEasing,
+                    ),
+                )
+            },
         ) {
             SettingsScreen(
                 blockerSettings = controller.blockerSettings,
@@ -1242,6 +1309,7 @@ fun BrowserScreen(controller: BrowserController) {
                     filterStudioSelectedRuleId = null
                     filterStudioVisible = true
                 },
+                onClearData = { clearDialogVisible = true },
                 onOpenLegalUrl = { url ->
                     settingsVisible = false
                     controller.openUrl(url, inNewTab = true)
@@ -2357,7 +2425,6 @@ private fun BrowserBottomBar(
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
     onSettings: () -> Unit,
-    onClearData: () -> Unit,
     onPrivacyXRay: () -> Unit,
     addressBarPulseNonce: Int,
     onOpenExternal: () -> Unit,
@@ -2635,7 +2702,6 @@ private fun BrowserBottomBar(
                                 isDomainMuted = isDomainMuted,
                                 onDomainMutedChange = onDomainMutedChange,
                                 onSettings = onSettings,
-                                onClearData = onClearData,
                                 onPrivacyXRay = onPrivacyXRay,
                                 onOpenExternal = onOpenExternal,
                                 onSummarizeWithAssistant = onSummarizeWithAssistant,
@@ -2643,7 +2709,6 @@ private fun BrowserBottomBar(
                                 onPrint = onPrint,
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onAddSiteCapsule = onAddSiteCapsule,
-                                onDock = onDock,
                                 overviewGestureEnabled = overviewGestureEnabled,
                                 overviewGestureProgress = overviewGestureProgress,
                                 onOverviewGestureProgress = onOverviewGestureProgress,
@@ -3013,7 +3078,6 @@ private fun ExpandedBottomBarContent(
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
     onSettings: () -> Unit,
-    onClearData: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
@@ -3021,7 +3085,6 @@ private fun ExpandedBottomBarContent(
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
-    onDock: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
     onOverviewGestureProgress: (Float) -> Unit,
@@ -3226,256 +3289,42 @@ private fun ExpandedBottomBarContent(
                 IconButton(onClick = { onMenuExpandedChange(true) }) {
                     Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
                 }
-                DropdownMenu(
+                BrowserMainMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { onMenuExpandedChange(false) },
-                    modifier = Modifier.clip(RoundedCornerShape(24.dp)),
-                    shape = RoundedCornerShape(24.dp),
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_dock_address_bar)) },
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onDock()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_back)) },
-                        enabled = tab.canGoBack,
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onBack()
-                        },
-                        leadingIcon = {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_forward)) },
-                        enabled = tab.canGoForward,
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onForward()
-                        },
-                        leadingIcon = {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
-                        },
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (tab.isLoading) R.string.action_stop_loading else R.string.action_reload,
-                                ),
-                            )
-                        },
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            if (tab.isLoading) onStop() else onReload()
-                        },
-                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
-                    )
-                    DomainMuteMenuItem(
-                        enabled = canToggleDomainMute,
-                        muted = isDomainMuted,
-                        onMutedChange = onDomainMutedChange,
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_open_candy_trail)) },
-                        enabled = tab.url != BLANK_URL,
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onOpenCandyTrail()
-                        },
-                        leadingIcon = {
-                            Text(
-                                "⌘",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 20.sp,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(stringResource(R.string.capsule_add_action))
-                                if (tab.isIncognito) {
-                                    Text(
-                                        stringResource(R.string.capsule_unavailable_private),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                } else if (tab.url == BLANK_URL ||
-                                    (!tab.url.startsWith("https://") &&
-                                        !tab.url.startsWith("http://"))
-                                ) {
-                                    Text(
-                                        stringResource(R.string.capsule_unavailable_web_only),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        },
-                        enabled = tab.url != BLANK_URL &&
-                            !tab.isIncognito &&
-                            (tab.url.startsWith("https://") || tab.url.startsWith("http://")),
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onAddSiteCapsule()
-                        },
-                        leadingIcon = {
-                            Text("◉", color = MaterialTheme.colorScheme.primary, fontSize = 20.sp)
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.new_tab_title)) },
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onNewTab()
-                        },
-                        leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (isFavorite) {
-                                        R.string.action_remove_favorite
-                                    } else {
-                                        R.string.action_add_favorite
-                                    },
-                                ),
-                            )
-                        },
-                        enabled = tab.url != BLANK_URL && !tab.isIncognito,
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onToggleFavorite()
-                        },
-                        leadingIcon = {
-                            ExpressiveFavoriteStar(
-                                filled = isFavorite,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_open_external_app)) },
-                        enabled = tab.url != BLANK_URL,
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onOpenExternal()
-                        },
-                        leadingIcon = { Text("↗", fontSize = 20.sp) },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_summarize_with_assistant)) },
-                        enabled = tab.url != BLANK_URL,
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onSummarizeWithAssistant()
-                        },
-                        leadingIcon = {
-                            Text(
-                                "✦",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 20.sp,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_share)) },
-                        enabled = tab.url != BLANK_URL,
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onShare()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                painterResource(R.drawable.ic_share),
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_print)) },
-                        enabled = tab.url != BLANK_URL,
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onPrint()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                painterResource(R.drawable.ic_print),
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_settings)) },
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onSettings()
-                        },
-                        leadingIcon = { Text("⚙", fontSize = 20.sp) },
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_clear_browsing_data)) },
-                        onClick = {
-                            onMenuExpandedChange(false)
-                            onClearData()
-                        },
-                    )
-                }
+                    pageSubtitle = if (tab.url == BLANK_URL) {
+                        stringResource(R.string.new_tab_title)
+                    } else {
+                        AddressResolver.displayText(tab.url)
+                    },
+                    canGoBack = tab.canGoBack,
+                    canGoForward = tab.canGoForward,
+                    isLoading = tab.isLoading,
+                    canToggleFavorite = tab.url != BLANK_URL && !tab.isIncognito,
+                    isFavorite = isFavorite,
+                    canUsePageActions = tab.url != BLANK_URL,
+                    canToggleDomainMute = canToggleDomainMute,
+                    isDomainMuted = isDomainMuted,
+                    canAddSiteCapsule = tab.url != BLANK_URL &&
+                        !tab.isIncognito &&
+                        (tab.url.startsWith("https://") || tab.url.startsWith("http://")),
+                    onBack = onBack,
+                    onForward = onForward,
+                    onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
+                    onToggleFavorite = onToggleFavorite,
+                    onShare = onShare,
+                    onOpenExternal = onOpenExternal,
+                    onPrint = onPrint,
+                    onDomainMutedChange = onDomainMutedChange,
+                    onOpenCandyTrail = onOpenCandyTrail,
+                    onAddSiteCapsule = onAddSiteCapsule,
+                    onSummarize = onSummarizeWithAssistant,
+                    onSettings = onSettings,
+                )
                 }
             }
             }
     }
-}
-
-@Composable
-internal fun DomainMuteMenuItem(
-    enabled: Boolean,
-    muted: Boolean,
-    onMutedChange: (Boolean) -> Unit,
-) {
-    DropdownMenuItem(
-        text = { Text(stringResource(R.string.action_mute_domain)) },
-        enabled = enabled,
-        onClick = { onMutedChange(!muted) },
-        modifier = Modifier.testTag(DomainMuteMenuTestTags.Item),
-        leadingIcon = {
-            Text(
-                "♪",
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 20.sp,
-            )
-        },
-        trailingIcon = {
-            Switch(
-                checked = muted,
-                onCheckedChange = onMutedChange,
-                modifier = Modifier.testTag(DomainMuteMenuTestTags.Switch),
-                enabled = enabled,
-            )
-        },
-    )
-}
-
-internal object DomainMuteMenuTestTags {
-    const val Item = "domain_mute_menu_item"
-    const val Switch = "domain_mute_menu_switch"
 }
 
 @Composable
@@ -3985,6 +3834,7 @@ private fun TabOverview(
     candyTrailSourceBounds: Rect?,
     candyTrailBackProgress: Float,
     candyTrailBackEdgeSign: Int,
+    candyTrailPredictiveBackCommitted: Boolean,
     onOpenCandyTrail: (String, Rect?) -> Unit,
     onCloseCandyTrail: () -> Unit,
 ) {
@@ -4219,7 +4069,15 @@ private fun TabOverview(
         )
     }
 
-    val layerVisible = CandyTrailLayerRules.isVisible(visible, candyTrailTabId)
+    val candyTrailTransition = updateTransition(
+        targetState = candyTrailTabId,
+        label = "Candy-Trail-Navigation",
+    )
+    val layerVisible = CandyTrailLayerRules.isVisible(
+        tabOverviewVisible = visible,
+        currentCandyTrailTabId = candyTrailTransition.currentState,
+        targetCandyTrailTabId = candyTrailTransition.targetState,
+    )
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -4297,10 +4155,14 @@ private fun TabOverview(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    alpha = TabOverviewHeroRules.backgroundAlpha(
-                        entryProgress = heroProgress.value,
-                        isExiting = isExiting,
-                    )
+                    alpha = if (visible) {
+                        TabOverviewHeroRules.backgroundAlpha(
+                            entryProgress = heroProgress.value,
+                            isExiting = isExiting,
+                        )
+                    } else {
+                        0f
+                    }
                 }
                 .background(
                     Brush.linearGradient(
@@ -4317,16 +4179,26 @@ private fun TabOverview(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    alpha = TabOverviewHeroRules.contentAlpha(
-                        exitProgress = exitHeroProgress.value,
-                        isExiting = isExiting,
-                    )
+                    alpha = if (visible) {
+                        TabOverviewHeroRules.contentAlpha(
+                            exitProgress = exitHeroProgress.value,
+                            isExiting = isExiting,
+                        )
+                    } else {
+                        0f
+                    }
                 }
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .then(
-                    if (candyTrailTabId != null) Modifier.clearAndSetSemantics { }
-                    else Modifier,
+                    if (
+                        candyTrailTransition.currentState != null ||
+                        candyTrailTransition.targetState != null
+                    ) {
+                        Modifier.clearAndSetSemantics { }
+                    } else {
+                        Modifier
+                    },
                 ),
         ) {
             Spacer(Modifier.height(12.dp))
@@ -5024,76 +4896,106 @@ private fun TabOverview(
             }
         }
 
-        val candyTrailTab = candyTrailTabId?.let { tabId ->
-            controller.activeTabs.firstOrNull { it.id == tabId }
-        }
-        if (candyTrailTab != null) {
-            val candyTrail = controller.candyTrail(candyTrailTab.id)
-            CandyTrailScreen(
-                tab = candyTrailTab,
-                trail = candyTrail,
-                favicon = controller.favicons[candyTrailTab.id],
-                forkFavicons = candyTrail.forks.mapNotNull { fork ->
-                    val destinationId = fork.destinationTabId ?: return@mapNotNull null
-                    controller.favicons[destinationId]?.let { destinationId to it }
-                }.toMap(),
-                sourceBounds = candyTrailSourceBounds,
-                predictiveBackProgress = candyTrailBackProgress,
-                predictiveBackEdgeSign = candyTrailBackEdgeSign,
-                onOpenTabActions = { tabActionsTabId = candyTrailTab.id },
-                onSelectNode = { nodeId ->
-                    controller.navigateToCandyTrailNode(candyTrailTab.id, nodeId)
-                },
-                onNodeSelectionFinished = {
-                    onCloseCandyTrail()
-                    val bounds = tabCardBounds[candyTrailTab.id] ?: candyTrailSourceBounds
-                    if (bounds == null) {
-                        onSelect(candyTrailTab.id)
-                        onClose()
-                    } else {
-                        val preview = controller.previews[candyTrailTab.id]
-                            ?.takeIf { !candyTrailTab.isIncognito && !it.isRecycled }
-                        exitHero = TabExitHero(
-                            candyTrailTab.id,
-                            preview,
-                            bounds,
-                            candyTrailTab.isIncognito,
-                            previewTopInsetPx = controller.previewTopInsetPx(candyTrailTab.id),
-                            mode = controller.tabOverviewMode,
-                        )
-                        overviewScope.launch {
-                            exitHeroProgress.snapTo(0f)
-                            withFrameNanos { }
-                            exitHeroProgress.animateTo(
-                                targetValue = 1f,
-                                animationSpec = tween(
-                                    durationMillis = 200,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                            )
+        candyTrailTransition.AnimatedContent(
+            transitionSpec = {
+                val transform = if (targetState != null) {
+                    slideInHorizontally(
+                        initialOffsetX = { width ->
+                            PredictiveBackMotion.entryTranslation(
+                                progress = 0f,
+                                width = width.toFloat(),
+                            ).roundToInt()
+                        },
+                        animationSpec = tween(
+                            durationMillis = PredictiveBackMotion.ENTRY_DURATION_MILLIS,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    ) togetherWith ExitTransition.None
+                } else if (candyTrailPredictiveBackCommitted) {
+                    EnterTransition.None togetherWith ExitTransition.None
+                } else {
+                    EnterTransition.None togetherWith slideOutHorizontally(
+                        targetOffsetX = { width -> width },
+                        animationSpec = tween(
+                            durationMillis = PredictiveBackMotion.EXIT_DURATION_MILLIS,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                }
+                transform.using(SizeTransform(clip = false))
+            },
+            contentKey = { it ?: "closed" },
+        ) { presentedTabId ->
+            val candyTrailTab = presentedTabId?.let { tabId ->
+                controller.activeTabs.firstOrNull { it.id == tabId }
+            }
+            if (candyTrailTab != null) {
+                val candyTrail = controller.candyTrail(candyTrailTab.id)
+                CandyTrailScreen(
+                    tab = candyTrailTab,
+                    trail = candyTrail,
+                    favicon = controller.favicons[candyTrailTab.id],
+                    forkFavicons = candyTrail.forks.mapNotNull { fork ->
+                        val destinationId = fork.destinationTabId ?: return@mapNotNull null
+                        controller.favicons[destinationId]?.let { destinationId to it }
+                    }.toMap(),
+                    predictiveBackProgress = candyTrailBackProgress,
+                    predictiveBackEdgeSign = candyTrailBackEdgeSign,
+                    onOpenTabActions = { tabActionsTabId = candyTrailTab.id },
+                    onSelectNode = { nodeId ->
+                        controller.navigateToCandyTrailNode(candyTrailTab.id, nodeId)
+                    },
+                    onNodeSelectionFinished = {
+                        onCloseCandyTrail()
+                        val bounds = tabCardBounds[candyTrailTab.id] ?: candyTrailSourceBounds
+                        if (bounds == null) {
                             onSelect(candyTrailTab.id)
                             onClose()
+                        } else {
+                            val preview = controller.previews[candyTrailTab.id]
+                                ?.takeIf { !candyTrailTab.isIncognito && !it.isRecycled }
+                            exitHero = TabExitHero(
+                                candyTrailTab.id,
+                                preview,
+                                bounds,
+                                candyTrailTab.isIncognito,
+                                previewTopInsetPx = controller.previewTopInsetPx(candyTrailTab.id),
+                                mode = controller.tabOverviewMode,
+                            )
+                            overviewScope.launch {
+                                exitHeroProgress.snapTo(0f)
+                                withFrameNanos { }
+                                exitHeroProgress.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = tween(
+                                        durationMillis = 200,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                )
+                                onSelect(candyTrailTab.id)
+                                onClose()
+                            }
                         }
-                    }
-                },
-                onForkNode = { nodeId ->
-                    controller.forkCandyTrailNode(candyTrailTab.id, nodeId)
-                },
-                onForkCreationFinished = { destinationId ->
-                    onCloseCandyTrail()
-                    onSelect(destinationId)
-                    onClose()
-                },
-                onSelectFork = { forkId ->
-                    controller.activateCandyTrailFork(candyTrailTab.id, forkId)
-                },
-                onForkSelectionFinished = { destinationId ->
-                    onCloseCandyTrail()
-                    onSelect(destinationId)
-                    onClose()
-                },
-                onDismiss = onCloseCandyTrail,
-            )
+                    },
+                    onForkNode = { nodeId ->
+                        controller.forkCandyTrailNode(candyTrailTab.id, nodeId)
+                    },
+                    onForkCreationFinished = { destinationId ->
+                        onCloseCandyTrail()
+                        onSelect(destinationId)
+                        onClose()
+                    },
+                    onSelectFork = { forkId ->
+                        controller.activateCandyTrailFork(candyTrailTab.id, forkId)
+                    },
+                    onForkSelectionFinished = { destinationId ->
+                        onCloseCandyTrail()
+                        onSelect(destinationId)
+                        onClose()
+                    },
+                    onDismiss = onCloseCandyTrail,
+                )
+            }
         }
 
         val actionTab = tabActionsTabId?.let { tabId ->
@@ -6940,6 +6842,7 @@ private fun SettingsScreen(
     onEditCapsule: (SiteCapsule) -> Unit,
     onDeleteCapsule: (SiteCapsule) -> Unit,
     onFilterStudio: () -> Unit,
+    onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -7301,6 +7204,23 @@ private fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                onClick = onClearData,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .sizeIn(minHeight = 48.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            ) {
+                Text(
+                    stringResource(R.string.action_clear_browsing_data),
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             Spacer(Modifier.height(24.dp))
             AboutLegalSection(onOpenUrl = onOpenLegalUrl)
         }
