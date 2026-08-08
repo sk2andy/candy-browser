@@ -29,6 +29,7 @@
     <string name="cd_close_address_input">Cerrar campo de dirección</string>
     <string name="cd_fill_address_suggestion">Introducir %1$s en la barra de direcciones</string>
     <string name="cd_more_options">Más opciones</string>
+    <string name="cd_restore_address_bar">Volver a centrar la barra de direcciones</string>
     <string name="cd_scan_qr_code">Escanear código QR</string>
     <string name="action_back">Atrás</string>
     <string name="action_forward">Adelante</string>
@@ -83,6 +84,7 @@
     <string name="cd_make_blank_tab_regular">Convertir la pestaña vacía en una pestaña normal</string>
     <string name="action_stop_loading">Detener carga</string>
     <string name="action_reload">Volver a cargar</string>
+    <string name="action_dock_address_bar">Aparcar la barra de direcciones en el borde</string>
     <string name="action_mute_domain">Silenciar dominio</string>
     <string name="action_add_favorite">Añadir a favoritos</string>
     <string name="action_remove_favorite">Quitar de favoritos</string>

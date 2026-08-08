@@ -177,6 +177,8 @@ class BrowserController(private val activity: Activity) {
         private set
     var tabOverviewMode by mutableStateOf(TabOverviewMode.Hero)
         private set
+    var isAddressBarDocked by mutableStateOf(false)
+        private set
     var isDefaultBrowser by mutableStateOf(false)
         private set
     var activeCapsuleId by mutableStateOf<String?>(null)
@@ -599,6 +601,7 @@ class BrowserController(private val activity: Activity) {
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
+        isAddressBarDocked = store.loadAddressBarDocked()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
         profiles += restoredProfiles.take(MAX_PROFILES)
@@ -1894,6 +1897,16 @@ class BrowserController(private val activity: Activity) {
 
     fun expandBottomBar() {
         bottomBarCompactStates[selectedTabId] = false
+    }
+
+    private fun collapseBottomBar() {
+        bottomBarCompactStates[selectedTabId] = true
+    }
+
+    fun updateAddressBarDocked(docked: Boolean) {
+        collapseBottomBar()
+        isAddressBarDocked = docked
+        store.saveAddressBarDocked(docked)
     }
 
     fun prepareTabOverview(onReady: () -> Unit) {

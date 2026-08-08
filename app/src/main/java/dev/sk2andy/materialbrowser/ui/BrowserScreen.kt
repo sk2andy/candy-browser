@@ -96,6 +96,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Check
@@ -905,6 +907,7 @@ fun BrowserScreen(controller: BrowserController) {
         BrowserBottomBar(
             tab = selectedTab,
             compact = controller.isBottomBarCompact,
+            docked = controller.isAddressBarDocked,
             editing = addressEditorVisible,
             commandFeedback = commandFeedback,
             feedbackGesturesEnabled = !addressEditorVisible && !settingsVisible,
@@ -970,6 +973,8 @@ fun BrowserScreen(controller: BrowserController) {
                 }
             },
             onExpand = controller::expandBottomBar,
+            onDock = { controller.updateAddressBarDocked(true) },
+            onRestoreDock = { controller.updateAddressBarDocked(false) },
             onTabDrag = { delta ->
                 if (!addressEditorVisible && !tabOverviewVisible) {
                     val proposed = browserDragOffset.floatValue + delta
@@ -1123,10 +1128,19 @@ fun BrowserScreen(controller: BrowserController) {
                     },
                 )
                 .onGloballyPositioned { coordinates ->
-                    bottomBarTopPx.floatValue = coordinates.boundsInRoot().top
-                    controller.setPreviewContentBottomInWindowPx(
-                        coordinates.boundsInWindow().top.roundToInt(),
-                    )
+                    if (
+                        controller.isAddressBarDocked &&
+                        !addressEditorVisible &&
+                        commandFeedback == null
+                    ) {
+                        bottomBarTopPx.floatValue = Float.NaN
+                        controller.setPreviewContentBottomInWindowPx(0)
+                    } else {
+                        bottomBarTopPx.floatValue = coordinates.boundsInRoot().top
+                        controller.setPreviewContentBottomInWindowPx(
+                            coordinates.boundsInWindow().top.roundToInt(),
+                        )
+                    }
                 },
         )
 
@@ -1793,7 +1807,10 @@ private fun ExpressivePullRefreshIndicator(
         tonalElevation = 8.dp,
         shadowElevation = 6.dp,
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
             Box(
                 modifier = Modifier
                     .size(26.dp)
@@ -2270,12 +2287,6 @@ private fun NewTabPage(
     }
 }
 
-private enum class AddressBarPresentation {
-    Compact,
-    Expanded,
-    CommandFeedback,
-}
-
 private data class AddressBarMorphShape(
     val progress: Float,
     val targetSizePx: Float,
@@ -2311,6 +2322,7 @@ private data class AddressBarMorphShape(
 private fun BrowserBottomBar(
     tab: BrowserTab,
     compact: Boolean,
+    docked: Boolean,
     editing: Boolean,
     commandFeedback: AddressCommandFeedback?,
     feedbackGesturesEnabled: Boolean,
@@ -2328,6 +2340,8 @@ private fun BrowserBottomBar(
     onSubmitAddress: (String) -> Unit,
     onScanQrCode: () -> Unit,
     onExpand: () -> Unit,
+    onDock: () -> Unit,
+    onRestoreDock: () -> Unit,
     onTabDrag: (Float) -> Unit,
     onTabDragStopped: suspend (Float) -> Unit,
     onTabs: () -> Unit,
@@ -2365,11 +2379,12 @@ private fun BrowserBottomBar(
     var menuExpanded by remember { mutableStateOf(false) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    val presentation = when {
-        commandFeedback != null -> AddressBarPresentation.CommandFeedback
-        compact && !editing -> AddressBarPresentation.Compact
-        else -> AddressBarPresentation.Expanded
-    }
+    val presentation = AddressBarPresentationRules.resolve(
+        docked = docked,
+        compact = compact,
+        editing = editing,
+        showingCommandFeedback = commandFeedback != null,
+    )
     val tabDragState = rememberDraggableState(onTabDrag)
     val pulseScale = remember { Animatable(1f) }
     val domain = AddressResolver.displayText(tab.url)
@@ -2393,7 +2408,7 @@ private fun BrowserBottomBar(
             text = domain,
             style = MaterialTheme.typography.labelMedium,
             maxLines = 1,
-        ).size.width.toDp() + 36.dp
+        ).size.width.toDp() + 84.dp
     }
     val feedbackWidth = with(density) {
         textMeasurer.measure(
@@ -2420,19 +2435,51 @@ private fun BrowserBottomBar(
             .then(if (visualOnly) Modifier.clearAndSetSemantics { } else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        val targetWidth = when (presentation) {
+        val edgeTabWidth = 52.dp
+        val widthTarget = when (presentation) {
+            AddressBarPresentation.Docked -> edgeTabWidth
             AddressBarPresentation.Compact -> compactWidth.coerceIn(96.dp, maxWidth)
             AddressBarPresentation.Expanded -> maxWidth
             AddressBarPresentation.CommandFeedback -> feedbackWidth
                 .coerceAtLeast(160.dp)
                 .coerceAtMost(maxWidth)
         }
+        val animatedBarWidth by animateDpAsState(
+            targetValue = widthTarget,
+            animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
+            label = "Adressleistenbreite beim Scrollen und Parken",
+        )
+        val heightTarget = when (presentation) {
+            AddressBarPresentation.Docked -> 48.dp
+            AddressBarPresentation.Compact -> 48.dp
+            AddressBarPresentation.Expanded -> 56.dp
+            AddressBarPresentation.CommandFeedback -> 46.dp
+        }
+        val animatedBarHeight by animateDpAsState(
+            targetValue = heightTarget,
+            animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
+            label = "Adressleistenhöhe beim Parken",
+        )
+        val layoutDirection = LocalLayoutDirection.current
+        val dockOffsetTarget = if (presentation == AddressBarPresentation.Docked) {
+            val distance = ((maxWidth - edgeTabWidth) / 2f + 12.dp).coerceAtLeast(0.dp)
+            if (layoutDirection == LayoutDirection.Ltr) distance else -distance
+        } else {
+            0.dp
+        }
+        val dockOffset by animateDpAsState(
+            targetValue = dockOffsetTarget,
+            animationSpec = spring(dampingRatio = 0.9f, stiffness = 820f),
+            label = "Adressleiste am Bildschirmrand",
+        )
         var addressBarBounds by remember { mutableStateOf<Rect?>(null) }
         val morphTargetSize = 56.dp
         Box(contentAlignment = Alignment.Center) {
             Surface(
                 modifier = Modifier
-                    .width(targetWidth)
+                    .offset(x = dockOffset)
+                    .width(animatedBarWidth)
+                    .height(animatedBarHeight)
                     .onGloballyPositioned { coordinates ->
                         addressBarBounds = coordinates.boundsInRoot()
                     }
@@ -2500,6 +2547,15 @@ private fun BrowserBottomBar(
                         label = "Adressleisteninhalt",
                     ) { targetPresentation ->
                         when (targetPresentation) {
+                            AddressBarPresentation.Docked -> AddressBarEdgeTab(
+                                onRestore = onRestoreDock,
+                                onTabs = onTabs,
+                                overviewGestureEnabled = overviewGestureEnabled,
+                                overviewGestureProgress = overviewGestureProgress,
+                                onOverviewGestureProgress = onOverviewGestureProgress,
+                                onOverviewGestureStarted = onOverviewGestureStarted,
+                                onOverviewGestureCancelled = onOverviewGestureCancelled,
+                            )
                             AddressBarPresentation.Compact -> {
                                 Surface(
                                     onClick = onExpand,
@@ -2522,17 +2578,27 @@ private fun BrowserBottomBar(
                                         ),
                                     color = Color.Transparent,
                                 ) {
-                                    Text(
-                                        text = domain,
-                                        modifier = Modifier.padding(
-                                            horizontal = 18.dp,
-                                            vertical = 11.dp,
-                                        ),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Center,
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = domain,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(start = 18.dp, end = 4.dp),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Center,
+                                            style = MaterialTheme.typography.labelMedium,
+                                        )
+                                        IconButton(onClick = onDock) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled
+                                                    .KeyboardArrowRight,
+                                                contentDescription = stringResource(
+                                                    R.string.action_dock_address_bar,
+                                                ),
+                                            )
+                                        }
+                                    }
                                 }
                             }
                             AddressBarPresentation.Expanded -> ExpandedBottomBarContent(
@@ -2577,6 +2643,7 @@ private fun BrowserBottomBar(
                                 onPrint = onPrint,
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onAddSiteCapsule = onAddSiteCapsule,
+                                onDock = onDock,
                                 overviewGestureEnabled = overviewGestureEnabled,
                                 overviewGestureProgress = overviewGestureProgress,
                                 onOverviewGestureProgress = onOverviewGestureProgress,
@@ -2618,6 +2685,7 @@ private fun BrowserBottomBar(
             }
             Box(
                 modifier = Modifier
+                    .offset(x = dockOffset)
                     .size(morphTargetSize)
                     .graphicsLayer {
                         val progress = overviewMorphProgress.floatValue
@@ -2675,6 +2743,49 @@ private fun BrowserBottomBar(
             withFrameNanos { }
             focusRequester.requestFocus()
             keyboard?.show()
+        }
+    }
+}
+
+internal object AddressBarDockTestTags {
+    const val EdgeTab = "address_bar_edge_tab"
+}
+
+@Composable
+internal fun AddressBarEdgeTab(
+    onRestore: () -> Unit,
+    onTabs: () -> Unit,
+    overviewGestureEnabled: Boolean,
+    overviewGestureProgress: FloatState,
+    onOverviewGestureProgress: (Float) -> Unit,
+    onOverviewGestureStarted: () -> Unit,
+    onOverviewGestureCancelled: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val restoreDescription = stringResource(R.string.cd_restore_address_bar)
+    Surface(
+        onClick = onRestore,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .testTag(AddressBarDockTestTags.EdgeTab)
+            .semantics { contentDescription = restoreDescription }
+            .addressBarVerticalGesture(
+                enabled = overviewGestureEnabled,
+                initialProgress = overviewGestureProgress,
+                onProgress = onOverviewGestureProgress,
+                onStarted = onOverviewGestureStarted,
+                onCancelled = onOverviewGestureCancelled,
+                onSwipeUp = onTabs,
+            ),
+        color = Color.Transparent,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
         }
     }
 }
@@ -2910,6 +3021,7 @@ private fun ExpandedBottomBarContent(
     onPrint: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
+    onDock: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
     onOverviewGestureProgress: (Float) -> Unit,
@@ -3120,6 +3232,20 @@ private fun ExpandedBottomBarContent(
                     modifier = Modifier.clip(RoundedCornerShape(24.dp)),
                     shape = RoundedCornerShape(24.dp),
                 ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_dock_address_bar)) },
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            onDock()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_back)) },
                         enabled = tab.canGoBack,

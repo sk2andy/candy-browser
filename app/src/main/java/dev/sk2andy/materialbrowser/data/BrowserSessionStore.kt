@@ -365,6 +365,12 @@ class BrowserSessionStore(context: Context) {
         preferences.edit().putString(KEY_TAB_OVERVIEW_MODE, mode.wireValue).apply()
     }
 
+    fun loadAddressBarDocked(): Boolean = preferences.getBoolean(KEY_ADDRESS_BAR_DOCKED, false)
+
+    fun saveAddressBarDocked(docked: Boolean) {
+        preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKED, docked).apply()
+    }
+
     private fun <T> loadArray(key: String, read: (JSONObject) -> T): List<T> {
         val raw = preferences.getString(key, null) ?: return emptyList()
         return runCatching {
@@ -400,6 +406,7 @@ class BrowserSessionStore(context: Context) {
         const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
+        const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
         const val DEFAULT_DISMISS_RESISTANCE_START_PERCENT = 40
         const val MIN_DISMISS_RESISTANCE_START_PERCENT = 10
         const val MAX_DISMISS_RESISTANCE_START_PERCENT = 90

@@ -29,6 +29,7 @@
     <string name="cd_close_address_input">Fermer la saisie d’adresse</string>
     <string name="cd_fill_address_suggestion">Insérer %1$s dans la barre d’adresse</string>
     <string name="cd_more_options">Plus d’options</string>
+    <string name="cd_restore_address_bar">Recentrer la barre d’adresse</string>
     <string name="cd_scan_qr_code">Scanner un code QR</string>
     <string name="action_back">Retour</string>
     <string name="action_forward">Suivant</string>
@@ -83,6 +84,7 @@
     <string name="cd_make_blank_tab_regular">Passer l’onglet vide en navigation normale</string>
     <string name="action_stop_loading">Arrêter le chargement</string>
     <string name="action_reload">Actualiser</string>
+    <string name="action_dock_address_bar">Placer la barre d’adresse sur le bord</string>
     <string name="action_mute_domain">Couper le son du domaine</string>
     <string name="action_add_favorite">Ajouter aux favoris</string>
     <string name="action_remove_favorite">Retirer des favoris</string>

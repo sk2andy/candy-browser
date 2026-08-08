@@ -227,6 +227,18 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun addressBarDockPreferenceDefaultsToCenterAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadAddressBarDocked())
+
+        store.saveAddressBarDocked(true)
+        assertEquals(true, store.loadAddressBarDocked())
+
+        store.saveAddressBarDocked(false)
+        assertFalse(store.loadAddressBarDocked())
+    }
+
+    @Test
     fun permanentSiteExceptionsRoundTripByProfileWithoutUnsafeHosts() {
         val store = BrowserSessionStore(context)
         store.savePermanentSiteExceptions(

@@ -31,6 +31,7 @@
     <string name="cd_close_address_input">Close address input</string>
     <string name="cd_fill_address_suggestion">Fill address bar with %1$s</string>
     <string name="cd_more_options">More options</string>
+    <string name="cd_restore_address_bar">Restore address bar to center</string>
     <string name="cd_scan_qr_code">Scan QR code</string>
     <string name="action_back">Back</string>
     <string name="action_forward">Forward</string>
@@ -89,6 +90,7 @@
     <!-- Menus and dialogs -->
     <string name="action_stop_loading">Stop loading</string>
     <string name="action_reload">Reload</string>
+    <string name="action_dock_address_bar">Park address bar at edge</string>
     <string name="action_mute_domain">Mute domain</string>
     <string name="action_add_favorite">Add to favorites</string>
     <string name="action_remove_favorite">Remove from favorites</string>

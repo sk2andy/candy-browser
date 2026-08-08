@@ -29,6 +29,7 @@
     <string name="cd_close_address_input">Eingabe schließen</string>
     <string name="cd_fill_address_suggestion">%1$s in die Adresszeile übernehmen</string>
     <string name="cd_more_options">Weitere Optionen</string>
+    <string name="cd_restore_address_bar">Adressleiste wieder zentrieren</string>
     <string name="cd_scan_qr_code">QR-Code scannen</string>
     <string name="action_back">Zurück</string>
     <string name="action_forward">Vor</string>
@@ -83,6 +84,7 @@
     <string name="cd_make_blank_tab_regular">Leeren Tab als normalen Tab verwenden</string>
     <string name="action_stop_loading">Laden stoppen</string>
     <string name="action_reload">Neu laden</string>
+    <string name="action_dock_address_bar">Adressleiste am Rand parken</string>
     <string name="action_mute_domain">Domain stummschalten</string>
     <string name="action_add_favorite">Zu Favoriten hinzufügen</string>
     <string name="action_remove_favorite">Aus Favoriten entfernen</string>
