@@ -82,4 +82,31 @@ class PageErrorFeedbackInstrumentedTest {
 
         assertEquals(0, retries.get())
     }
+
+    @Test
+    fun successfulFinishWithoutObservableLoadingFrameDismissesRetryFeedback() {
+        val state = mutableStateOf<PageErrorFeedbackState>(
+            PageErrorFeedbackState.Error("Connection refused"),
+        )
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PageErrorFeedback(
+                    state = state.value,
+                    onRetry = {
+                        state.value = PageErrorFeedbackRules.requestRetry(state.value).state
+                        state.value = PageErrorFeedbackRules.observe(
+                            current = state.value,
+                            error = null,
+                            isLoading = false,
+                        )
+                    },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Card).assertDoesNotExist()
+    }
 }
