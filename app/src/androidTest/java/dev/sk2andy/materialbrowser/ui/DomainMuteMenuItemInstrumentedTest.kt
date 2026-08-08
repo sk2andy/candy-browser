@@ -39,12 +39,12 @@ class DomainMuteMenuItemInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Switch).assertIsOff()
+        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Item).assertIsOff()
         composeRule.onNodeWithTag(DomainMuteMenuTestTags.Item).performClick()
-        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Switch).assertIsOn()
+        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Item).assertIsOn()
 
-        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Switch).performClick()
-        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Switch).assertIsOff()
+        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Item).performClick()
+        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Item).assertIsOff()
         assertEquals(2, changes.get())
     }
 }

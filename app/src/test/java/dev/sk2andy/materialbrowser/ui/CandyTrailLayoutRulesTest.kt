@@ -14,6 +14,13 @@ class CandyTrailLayoutRulesTest {
         assertTrue(CandyTrailLayerRules.isVisible(false, "tab"))
         assertTrue(CandyTrailLayerRules.isVisible(true, null))
         assertTrue(!CandyTrailLayerRules.isVisible(false, null))
+        assertTrue(
+            CandyTrailLayerRules.isVisible(
+                tabOverviewVisible = false,
+                currentCandyTrailTabId = "tab",
+                targetCandyTrailTabId = null,
+            ),
+        )
     }
 
     @Test

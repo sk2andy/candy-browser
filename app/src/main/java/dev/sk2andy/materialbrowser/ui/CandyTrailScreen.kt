@@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -99,7 +98,6 @@ internal fun CandyTrailScreen(
     trail: CandyTrail,
     favicon: Bitmap?,
     forkFavicons: Map<String, Bitmap>,
-    sourceBounds: Rect?,
     predictiveBackProgress: Float,
     predictiveBackEdgeSign: Int,
     onOpenTabActions: () -> Unit,
@@ -113,7 +111,7 @@ internal fun CandyTrailScreen(
     modifier: Modifier = Modifier,
 ) {
     val layout = remember(trail.nodes, trail.forks) { CandyTrailLayoutRules.layout(trail) }
-    val entryProgress = remember(tab.id) { Animatable(if (sourceBounds == null) 1f else 0f) }
+    val entryProgress = remember(tab.id) { Animatable(0f) }
     val edgeRevealProgress = remember(tab.id) {
         Animatable(1f).apply { updateBounds(lowerBound = 0f, upperBound = 1f) }
     }
@@ -215,10 +213,8 @@ internal fun CandyTrailScreen(
         entryProgress.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
     }
 
-    LaunchedEffect(tab.id, sourceBounds) {
-        if (sourceBounds != null) {
-            entryProgress.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
-        }
+    LaunchedEffect(tab.id) {
+        entryProgress.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
         val currentNodeId = trail.currentNodeId ?: return@LaunchedEffect
         val activeRoute = CandyTrailGraphMotionRules.pathTargets(
             trail = trail,
@@ -238,24 +234,17 @@ internal fun CandyTrailScreen(
             .fillMaxSize()
             .zIndex(30f)
             .graphicsLayer {
-                val hero = entryProgress.value
-                val source = sourceBounds
-                val heroScaleX = if (source == null || size.width <= 0f) 1f else
-                    (source.width / size.width).coerceIn(0.01f, 0.99f)
-                val heroScaleY = if (source == null || size.height <= 0f) 1f else
-                    (source.height / size.height).coerceIn(0.01f, 0.99f)
-                val backScale = 1f - 0.04f * predictiveBackProgress.coerceIn(0f, 1f)
-                scaleX = (heroScaleX + (1f - heroScaleX) * hero) * backScale
-                scaleY = (heroScaleY + (1f - heroScaleY) * hero) * backScale
-                alpha = hero
-                if (source != null) {
-                    translationX = (source.center.x - size.width / 2f) * (1f - hero)
-                    translationY = (source.center.y - size.height / 2f) * (1f - hero)
-                }
-                translationX += size.width * 0.04f * predictiveBackProgress *
-                    predictiveBackEdgeSign.coerceIn(-1, 1)
-                shape = RoundedCornerShape((28f * (1f - hero) + 28f * predictiveBackProgress).dp)
-                clip = hero < 1f || predictiveBackProgress > 0f
+                val progress = predictiveBackProgress.coerceIn(0f, 1f)
+                val transform = PredictiveBackMotion.transform(
+                    progress = progress,
+                    width = size.width,
+                    swipeEdgeSign = predictiveBackEdgeSign,
+                )
+                translationX = transform.translationX
+                scaleX = transform.scale
+                scaleY = transform.scale
+                shape = RoundedCornerShape((28f * progress).dp)
+                clip = progress > 0f
             }
             .background(
                 Brush.radialGradient(
@@ -529,12 +518,7 @@ internal fun CandyTrailScreen(
 
         CandyTrailTopBar(
             tab = tab,
-            onBack = {
-                scope.launch {
-                    entryProgress.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
-                    onDismiss()
-                }
-            },
+            onBack = onDismiss,
             onMore = onOpenTabActions,
             modifier = Modifier.align(Alignment.TopCenter),
         )

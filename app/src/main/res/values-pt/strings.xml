@@ -85,7 +85,14 @@
     <string name="action_stop_loading">Parar carregamento</string>
     <string name="action_reload">Recarregar</string>
     <string name="action_dock_address_bar">Fixar a barra de endereço na margem</string>
-    <string name="action_mute_domain">Silenciar domínio</string>
+    <string name="action_mute_domain">Silenciar este site</string>
+    <string name="browser_menu_title">Menu</string>
+    <string name="browser_menu_page_group">Página</string>
+    <string name="browser_menu_browser_group">Navegador</string>
+    <string name="action_favorite">Favorito</string>
+    <string name="action_open_in_app">Abrir na aplicação</string>
+    <string name="action_add_site_capsule">Adicionar cápsula do site</string>
+    <string name="action_summarize">Resumir</string>
     <string name="action_add_favorite">Adicionar aos favoritos</string>
     <string name="action_remove_favorite">Remover dos favoritos</string>
     <string name="favorite_added_confirmation">Adicionado aos favoritos</string>

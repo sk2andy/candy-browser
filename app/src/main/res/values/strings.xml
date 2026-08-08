@@ -91,7 +91,14 @@
     <string name="action_stop_loading">Stop loading</string>
     <string name="action_reload">Reload</string>
     <string name="action_dock_address_bar">Park address bar at edge</string>
-    <string name="action_mute_domain">Mute domain</string>
+    <string name="action_mute_domain">Mute this site</string>
+    <string name="browser_menu_title">Menu</string>
+    <string name="browser_menu_page_group">Page</string>
+    <string name="browser_menu_browser_group">Browser</string>
+    <string name="action_favorite">Favorite</string>
+    <string name="action_open_in_app">Open in app</string>
+    <string name="action_add_site_capsule">Add Site Capsule</string>
+    <string name="action_summarize">Summarize</string>
     <string name="action_add_favorite">Add to favorites</string>
     <string name="action_remove_favorite">Remove from favorites</string>
     <string name="favorite_added_confirmation">Added to favorites</string>

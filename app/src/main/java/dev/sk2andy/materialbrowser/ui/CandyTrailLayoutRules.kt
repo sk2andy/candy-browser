@@ -196,6 +196,11 @@ internal object CandyTrailMotionRules {
 }
 
 internal object CandyTrailLayerRules {
-    fun isVisible(tabOverviewVisible: Boolean, candyTrailTabId: String?): Boolean =
-        tabOverviewVisible || candyTrailTabId != null
+    fun isVisible(
+        tabOverviewVisible: Boolean,
+        currentCandyTrailTabId: String?,
+        targetCandyTrailTabId: String? = currentCandyTrailTabId,
+    ): Boolean = tabOverviewVisible ||
+        currentCandyTrailTabId != null ||
+        targetCandyTrailTabId != null
 }
