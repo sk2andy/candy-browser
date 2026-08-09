@@ -139,6 +139,10 @@ jobs:
           CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
           CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
         run: |
+          python3 scripts/test_compile_easylist_cosmetic.py
+          python3 scripts/test_compile_uassets_cosmetic.py
+          scripts/update_easylist_cosmetic.sh
+          git diff --exit-code -- app/src/main/assets/easylist_cosmetic_rules.txt
           ./gradlew --no-daemon \
             testDebugUnitTest \
             assembleRelease \

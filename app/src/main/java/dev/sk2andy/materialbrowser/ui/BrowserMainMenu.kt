@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,6 +92,7 @@ internal fun BrowserMainMenu(
     isDomainMuted: Boolean,
     canAddSiteCapsule: Boolean,
     canSnooze: Boolean,
+    snoozedTabCount: Int,
     onBack: () -> Unit,
     onForward: () -> Unit,
     onReloadOrStop: () -> Unit,
@@ -104,6 +106,7 @@ internal fun BrowserMainMenu(
     onAddSiteCapsule: () -> Unit,
     onSummarize: () -> Unit,
     onSnooze: () -> Unit,
+    onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -383,20 +386,48 @@ internal fun BrowserMainMenu(
                 color = colors.primary,
                 fontWeight = FontWeight.SemiBold,
             )
-            MenuRow(
-                label = stringResource(R.string.action_settings),
-                iconRes = R.drawable.ic_symbol_settings,
-                shape = outerCorners,
-                modifier = Modifier.testTag(BrowserMainMenuTestTags.Settings),
-                onClick = { dismissThen(onSettings) },
-                trailingContent = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_symbol_chevron_right),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                },
-            )
+            Column(
+                modifier = Modifier.testTag(BrowserMainMenuTestTags.BrowserGroup),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                MenuRow(
+                    label = stringResource(R.string.snoozed_tabs_title),
+                    iconRes = R.drawable.ic_snooze,
+                    shape = firstItemShape,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.SnoozedTabs),
+                    supportingText = if (snoozedTabCount == 0) {
+                        stringResource(R.string.snoozed_tabs_settings_summary)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.snoozed_tabs_settings_count,
+                            snoozedTabCount,
+                            snoozedTabCount,
+                        )
+                    },
+                    onClick = { dismissThen(onSnoozedTabs) },
+                    trailingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_symbol_chevron_right),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                )
+                MenuRow(
+                    label = stringResource(R.string.action_settings),
+                    iconRes = R.drawable.ic_symbol_settings,
+                    shape = lastItemShape,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.Settings),
+                    onClick = { dismissThen(onSettings) },
+                    trailingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_symbol_chevron_right),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                )
+            }
         }
     }
 }
@@ -784,8 +815,10 @@ internal object BrowserMainMenuTestTags {
     const val Toolbar = "browser_main_menu_toolbar"
     const val PageGroup = "browser_main_menu_page_group"
     const val CandyGroup = "browser_main_menu_candy_group"
+    const val BrowserGroup = "browser_main_menu_browser_group"
     const val Settings = "browser_main_menu_settings"
     const val Snooze = "browser_main_menu_snooze"
+    const val SnoozedTabs = "browser_main_menu_snoozed_tabs"
 }
 
 internal object TabActionsMenuTestTags {

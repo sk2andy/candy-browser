@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
@@ -59,6 +60,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.CandyCosmeticScript
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
+import dev.sk2andy.materialbrowser.blocking.CandyDocumentStartOrigin
 import dev.sk2andy.materialbrowser.blocking.CandyFilterPresets
 import dev.sk2andy.materialbrowser.blocking.CandyHostCanonicalizer
 import dev.sk2andy.materialbrowser.blocking.CandyImportScope
@@ -166,6 +168,7 @@ import dev.sk2andy.materialbrowser.data.SnoozeRuntimeRegistry
 import dev.sk2andy.materialbrowser.data.SnoozeScheduler
 import dev.sk2andy.materialbrowser.data.SnoozeUndoRules
 import dev.sk2andy.materialbrowser.data.SnoozeUndoToken
+import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
 import dev.sk2andy.materialbrowser.data.SnoozedTab
 import dev.sk2andy.materialbrowser.data.SnoozedTabStore
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
@@ -175,6 +178,7 @@ import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.data.TabWebViewStateRepository
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
@@ -195,6 +199,7 @@ class BrowserController(
         @Suppress("DEPRECATION")
         activity.startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
     },
+    private val requestSnoozeNotificationPermission: () -> Unit = {},
 ) {
     val tabs = mutableStateListOf<BrowserTab>()
     val profiles = mutableStateListOf<BrowserProfile>()
@@ -331,6 +336,7 @@ class BrowserController(
     private val previewRepository = TabPreviewRepository.get(activity)
     private val faviconRepository = FaviconRepository.get(activity)
     private val candyTrailRepository = CandyTrailRepository.get(activity)
+    private val webViewStateRepository = TabWebViewStateRepository.get(activity)
     private val siteCapsuleStore = SiteCapsuleStore(activity)
     private val siteCapsuleIconStore = SiteCapsuleIconStore(activity)
     private val capsuleShortcuts = CapsuleShortcutPublisher(activity)
@@ -956,7 +962,11 @@ class BrowserController(
                 remainingSnoozedTabs = snoozedTabs.toList(),
                 snapshotPersisted = snapshotPersisted,
             )
-            if (!snapshotPersisted) {
+            if (snapshotPersisted) {
+                SnoozeWakeNotifier(activity).notifyRestored(
+                    tabs.filter { it.id in initialSnoozeRestore.restoredTabIds },
+                )
+            } else {
                 tabs.clear()
                 tabs += startupSnapshot.tabs
                 snoozedTabs.clear()
@@ -971,6 +981,11 @@ class BrowserController(
             }
         }
         persist()
+        webViewStateRepository.prune(
+            (tabs.asSequence() + snoozedTabs.asSequence().map(SnoozedTab::tab))
+                .filterNot(BrowserTab::isIncognito)
+                .mapTo(linkedSetOf(), BrowserTab::id),
+        )
         // Incognito tabs are never restored. Remove data left by process death before
         // any private WebView can reuse the old profile.
         clearIncognitoProfile()
@@ -979,7 +994,19 @@ class BrowserController(
         restorePersistedCandyTrails()
         WebView.setWebContentsDebuggingEnabled(false)
         configureServiceWorkerBlocking()
-        mainHandler.post(contentBlocker::prepareConsentScript)
+        mainHandler.post {
+            contentBlocker.prepareConsentScript()
+            contentBlocker.prepareCosmeticRules()
+            contentBlocker.onCosmeticRulesReady {
+                mainHandler.post {
+                    webViews.forEach { (tabId, webView) ->
+                        val pageUrl = pageUrls[tabId] ?: webView.url
+                        installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
+                        injectCandyCosmeticFallback(tabId, webView, pageUrl)
+                    }
+                }
+            }
+        }
         SnoozeRuntimeRegistry.register(snoozeRestoreCallback)
         snoozeScheduler.schedule(snoozedTabs, nowMillis)
     }
@@ -1292,7 +1319,7 @@ class BrowserController(
         if (target == BLANK_URL) {
             webView.loadUrl(BLANK_URL)
         } else {
-            webView.loadUrl(target)
+            loadUrlWithProtection(selectedTabId, webView, target)
         }
     }
 
@@ -1956,6 +1983,13 @@ class BrowserController(
         persist()
     }
 
+    fun openSnoozedWakeTab(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId && !it.isIncognito } ?: return false
+        if (tab.profileId != activeProfileId && !selectProfile(tab.profileId)) return false
+        selectTab(tabId)
+        return selectedTabId == tabId
+    }
+
     fun switchToOpenTab(tabId: String): Boolean {
         if (tabId == selectedTabId || activeTabs.none { it.id == tabId }) return false
         val blankSourceTabId = selectedTab.takeIf(BrowserTab::isFreshBlankTab)?.id
@@ -2092,6 +2126,7 @@ class BrowserController(
         reconcileCandyTrailForks(nowMillis)
         persist()
         snoozeScheduler.schedule(snoozedTabs, nowMillis)
+        runCatching(requestSnoozeNotificationPermission)
         return SnoozeUndoToken(
             tabId = tabId,
             appliedSnoozedTab = updatedSnoozed.first { it.tab.id == tabId },
@@ -2202,6 +2237,7 @@ class BrowserController(
         candyTrails.remove(tabId)
         candyTrailGenerations.remove(tabId)
         candyTrailRepository.delete(tabId)
+        webViewStateRepository.delete(tabId)
         reconcileCandyTrailForks(System.currentTimeMillis())
         snoozeScheduler.schedule(remaining)
         return true
@@ -2322,10 +2358,11 @@ class BrowserController(
         val targetIndex = CandyTrailHistoryReconciler.indexOfNode(binding, nodeId)
         val delta = targetIndex?.minus(binding.currentIndex)
         if (delta != null && delta != 0) {
+            applySiteProtectionForNavigation(tabId, existingWebView, node.url)
             existingWebView.goBackOrForward(delta)
         } else if (delta == null || existingWebView.url != node.url) {
             applyMediaPlaybackPolicy(tabId, existingWebView)
-            existingWebView.loadUrl(node.url)
+            loadUrlWithProtection(tabId, existingWebView, node.url)
         } else {
             pendingCandyTrailTargets.remove(tabId)
         }
@@ -2343,6 +2380,7 @@ class BrowserController(
         ) {
             leaveSiteCapsule()
         }
+        targetUrl?.let { applySiteProtectionForNavigation(selectedTabId, webView, it) }
         webView.goBack()
     }
     fun goForward() {
@@ -2350,6 +2388,10 @@ class BrowserController(
         val binding = candyTrailHistoryBindings[selectedTabId]
         binding?.entries?.getOrNull(binding.currentIndex + 1)?.nodeId?.let { targetNodeId ->
             pendingCandyTrailTargets[selectedTabId] = targetNodeId
+        }
+        val history = webView.copyBackForwardList()
+        history.getItemAtIndex(history.currentIndex + 1)?.url?.let { targetUrl ->
+            applySiteProtectionForNavigation(selectedTabId, webView, targetUrl)
         }
         webView.goForward()
     }
@@ -2896,6 +2938,8 @@ class BrowserController(
         suppressedCandyTrailTabIds += tabs.map(BrowserTab::id)
         candyTrails.clear()
         candyTrailRepository.clear()
+        webViewStateRepository.clear()
+        webViewStateRepository.flush()
         regularForcedScrollTabIds.forEach { tabId ->
             webViews[tabId]?.let { webView ->
                 webView.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
@@ -2913,6 +2957,7 @@ class BrowserController(
         isActivityResumed = false
         touchTab(selectedTabId, System.currentTimeMillis())
         cancelPendingPreviewCapture()
+        persistWebViewStates()
         webViews.values.forEach(::pauseWebView)
         linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
         CookieManager.getInstance().flush()
@@ -2943,6 +2988,8 @@ class BrowserController(
         if (pendingPermissionAccess?.awaitingRuntime != true) cancelPendingPermissionAccess()
         activePermissions.clear()
         permissionRevision++
+        persistWebViewStates()
+        webViewStateRepository.flush()
     }
 
     fun destroy() {
@@ -3007,9 +3054,10 @@ class BrowserController(
         val tab = tabs.first { it.id == tabId }
         createWebView(tabId).also { webView ->
             val initialUrl = initialUrlOverride ?: tab.url
-            if (initialUrl != BLANK_URL) {
+            val restored = initialUrlOverride == null && restoreWebViewState(tab, webView)
+            if (!restored && initialUrl != BLANK_URL) {
                 updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                webView.loadUrl(initialUrl)
+                loadUrlWithProtection(tabId, webView, initialUrl)
             }
         }
     }
@@ -3061,7 +3109,7 @@ class BrowserController(
         webChromeClient = browserChromeClient(tabId)
         setDownloadListener(downloadListener(tabId))
         installForcedVerticalScrollDocumentStartScript(tabId, this)
-        installCosmeticDocumentStartScripts(tabId, this)
+        installCosmeticDocumentStartScripts(tabId, this, tab.url)
         setOnLongClickListener { clickedView ->
             val webView = clickedView as? WebView ?: return@setOnLongClickListener false
             val hit = webView.hitTestResult
@@ -3142,7 +3190,7 @@ class BrowserController(
         val previousTabId = selectedTabId
         if (createTab(targetUrl, isIncognito = false) == previousTabId) {
             applyMediaPlaybackPolicy(tabId, view)
-            view.loadUrl(targetUrl)
+            loadUrlWithProtection(tabId, view, targetUrl)
         }
     }
 
@@ -3220,6 +3268,7 @@ class BrowserController(
             }
             updateNavigationState(tabId, view)
             reconcileCandyTrailHistory(tabId, view, isReload)
+            persistWebViewState(tabId, view)
         }
 
         override fun shouldInterceptRequest(
@@ -3241,9 +3290,17 @@ class BrowserController(
             if (scheme == "http" || scheme == "https") {
                 val capsule = activeCapsuleForTab(tabId)
                     ?.takeIf { request.isForMainFrame }
-                if (capsule == null) return false
+                if (capsule == null) {
+                    if (request.isForMainFrame) {
+                        applySiteProtectionForNavigation(tabId, view, request.url.toString())
+                    }
+                    return false
+                }
                 return when (CapsuleNavigationRules.decide(capsule, request.url.toString())) {
-                    CapsuleNavigationDecision.StayInCapsule -> false
+                    CapsuleNavigationDecision.StayInCapsule -> {
+                        applySiteProtectionForNavigation(tabId, view, request.url.toString())
+                        false
+                    }
                     CapsuleNavigationDecision.OpenInFullCandy -> {
                         mainHandler.post {
                             openCapsuleTargetInFullCandy(tabId, view, request.url.toString())
@@ -3258,7 +3315,7 @@ class BrowserController(
                 ExternalLaunchResult.Launched -> true
                 is ExternalLaunchResult.OpenInBrowser -> {
                     applyMediaPlaybackPolicy(tabId, view)
-                    view.loadUrl(result.url)
+                    loadUrlWithProtection(tabId, view, result.url)
                     true
                 }
                 ExternalLaunchResult.Unsupported -> {
@@ -3446,15 +3503,22 @@ class BrowserController(
         if (script.isNotEmpty()) view.evaluateJavascript(script, null)
     }
 
-    private fun installCosmeticDocumentStartScripts(tabId: String, view: WebView) {
+    private fun installCosmeticDocumentStartScripts(
+        tabId: String,
+        view: WebView,
+        pageUrl: String? = null,
+    ) {
         removeCosmeticDocumentStartScripts(view)
         if (!workerSettings.blockAdsAndTrackers ||
             !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         ) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val targetUrl = pageUrl ?: pageUrls[tabId] ?: tab.url
+        val targetOrigin = CandyDocumentStartOrigin.fromUrl(targetUrl) ?: return
+        if (isSiteProtectionPaused(tabId, targetUrl)) return
         val handlers = buildList {
-            val bundledScript = CandyCosmeticScript.createScoped(
-                rules = contentBlocker.adCosmeticRules,
+            val bundledScript = contentBlocker.adCosmeticDocumentStartScript(
+                pageUrl = targetUrl,
                 pausedHosts = siteExceptionHostsForTab(tabId),
             )
             if (bundledScript.isNotEmpty()) {
@@ -3462,7 +3526,7 @@ class BrowserController(
                     WebViewCompat.addDocumentStartJavaScript(
                         view,
                         bundledScript,
-                        ALL_WEB_ORIGINS,
+                        setOf(targetOrigin),
                     )
                 }.getOrNull()?.let(::add)
             }
@@ -4062,6 +4126,43 @@ class BrowserController(
         updateTab(tabId) {
             it.copy(canGoBack = view.canGoBack(), canGoForward = view.canGoForward())
         }
+    }
+
+    private fun restoreWebViewState(tab: BrowserTab, webView: WebView): Boolean {
+        if (tab.isIncognito || tab.url == BLANK_URL) return false
+        val state = webViewStateRepository.load(tab.id) ?: return false
+        val history = runCatching { webView.restoreState(state) }.getOrNull()
+        val currentItem = history?.currentItem
+        if (history == null || history.size == 0 || currentItem?.url != tab.url) {
+            webViewStateRepository.delete(tab.id)
+            return false
+        }
+        pageUrls[tab.id] = currentItem.url
+        updateTab(tab.id) {
+            it.copy(
+                title = currentItem.title.orEmpty().ifBlank { it.title },
+                canGoBack = webView.canGoBack(),
+                canGoForward = webView.canGoForward(),
+                error = null,
+            )
+        }
+        return true
+    }
+
+    private fun persistWebViewStates() {
+        webViews.forEach(::persistWebViewState)
+    }
+
+    private fun persistWebViewState(tabId: String, webView: WebView) {
+        val tab = tabs.firstOrNull { it.id == tabId }
+        if (tab == null || tab.isIncognito || tab.url == BLANK_URL) {
+            webViewStateRepository.delete(tabId)
+            return
+        }
+        val state = Bundle()
+        val history = runCatching { webView.saveState(state) }.getOrNull()
+        if (history == null || history.size == 0) return
+        webViewStateRepository.save(tabId, state)
     }
 
     private fun queueBlockedRequest(
@@ -4675,6 +4776,7 @@ class BrowserController(
         candyTrails.remove(tabId)
         candyTrailGenerations.remove(tabId)
         candyTrailRepository.delete(tabId)
+        webViewStateRepository.delete(tabId)
         previews.remove(tabId)
         previewRepository.delete(tabId)
         invalidateFavicon(tabId)
@@ -4683,6 +4785,7 @@ class BrowserController(
 
     private fun removeTabRuntimeForSnooze(tab: BrowserTab) {
         candyTrails[tab.id]?.let { trail -> candyTrailRepository.save(tab, trail) }
+        webViews[tab.id]?.let { webView -> persistWebViewState(tab.id, webView) }
         clearPrivacyDataForTab(tab.id)
         popupOpenerIdCleanup(tab.id)
         webViews.remove(tab.id)?.let(::destroyWebView)
@@ -4742,7 +4845,9 @@ class BrowserController(
             .forEach(::restoreSnoozedCandyTrail)
         persist()
         snoozeScheduler.schedule(remaining, nowMillis)
-        return result.tabs.count { it.id !in oldIds }
+        val restoredTabs = result.tabs.filter { it.id in result.restoredTabIds }
+        SnoozeWakeNotifier(activity).notifyRestored(restoredTabs)
+        return restoredTabs.size
     }
 
     private fun restoreSnoozedCandyTrail(tab: BrowserTab) {
@@ -4903,12 +5008,17 @@ class BrowserController(
         pageUrl: String,
     ) {
         applyCookiePolicy(tabId, webView, pageUrl)
-        installCosmeticDocumentStartScripts(tabId, webView)
+        installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
         if (!workerSettings.hideCookieConsent) {
             webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
         } else if (!isCookieBannerRemovalEnabled(tabId, pageUrl)) {
             webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
         }
+    }
+
+    private fun loadUrlWithProtection(tabId: String, webView: WebView, pageUrl: String) {
+        applySiteProtectionForNavigation(tabId, webView, pageUrl)
+        webView.loadUrl(pageUrl)
     }
 
     private fun reloadTabWithProtection(tabId: String) {
@@ -4962,6 +5072,7 @@ class BrowserController(
             clearPrivacyDataForTab(tabId)
             candyTrailHistoryBindings.remove(tabId)
             pendingCandyTrailTargets.remove(tabId)
+            webViews[tabId]?.let { webView -> persistWebViewState(tabId, webView) }
             webViews.remove(tabId)?.let(::destroyWebView)
             webViewProfileKeys.remove(tabId)
             edgeToEdgePages.remove(tabId)

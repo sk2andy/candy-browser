@@ -33,7 +33,7 @@ class BrowserMainMenuInstrumentedTest {
     @Test
     fun usesApprovedGroupsAndDismissesAfterAction() {
         val dismissals = AtomicInteger()
-        val readerOpens = AtomicInteger()
+        val snoozedTabOpens = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
@@ -58,6 +58,7 @@ class BrowserMainMenuInstrumentedTest {
                         isDomainMuted = false,
                         canAddSiteCapsule = true,
                         canSnooze = true,
+                        snoozedTabCount = 2,
                         onBack = {},
                         onForward = {},
                         onReloadOrStop = {},
@@ -65,12 +66,13 @@ class BrowserMainMenuInstrumentedTest {
                         onShare = {},
                         onOpenExternal = {},
                         onPrint = {},
-                        onOpenReader = readerOpens::incrementAndGet,
+                        onOpenReader = {},
                         onDomainMutedChange = {},
                         onOpenCandyTrail = {},
                         onAddSiteCapsule = {},
                         onSummarize = {},
                         onSnooze = {},
+                        onSnoozedTabs = snoozedTabOpens::incrementAndGet,
                         onSettings = {},
                     )
                 }
@@ -103,23 +105,31 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.browser_menu_browser_group),
         ).assertExists()
+        composeRule.onNode(
+            hasTestTag(BrowserMainMenuTestTags.BrowserGroup) and
+                hasAnyDescendant(hasText(context.getString(R.string.snoozed_tabs_title))) and
+                hasAnyDescendant(hasText(context.getString(R.string.action_settings))),
+        ).assertExists()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.BrowserGroup)
+            .onChildren()
+            .assertCountEquals(2)
         composeRule.onNodeWithText(
-            context.getString(R.string.reader_open_action),
+            context.getString(R.string.snoozed_tabs_title),
         ).performClick()
 
         assertEquals(1, dismissals.get())
-        assertEquals(1, readerOpens.get())
+        assertEquals(1, snoozedTabOpens.get())
         composeRule.mainClock.advanceTimeBy(
             BrowserMainMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L,
         )
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
-        assertEquals(1, readerOpens.get())
+        assertEquals(1, snoozedTabOpens.get())
         composeRule.mainClock.advanceTimeBy(
             BrowserMainMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L + 32L,
         )
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
-        assertEquals(1, readerOpens.get())
+        assertEquals(1, snoozedTabOpens.get())
     }
 
     @Test
@@ -142,6 +152,7 @@ class BrowserMainMenuInstrumentedTest {
                     isDomainMuted = false,
                     canAddSiteCapsule = false,
                     canSnooze = false,
+                    snoozedTabCount = 0,
                     onBack = {},
                     onForward = {},
                     onReloadOrStop = {},
@@ -155,6 +166,7 @@ class BrowserMainMenuInstrumentedTest {
                     onAddSiteCapsule = {},
                     onSummarize = {},
                     onSnooze = {},
+                    onSnoozedTabs = {},
                     onSettings = {},
                 )
             }

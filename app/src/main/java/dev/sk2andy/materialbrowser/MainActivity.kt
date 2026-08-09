@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser
 
+import android.Manifest
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -34,6 +35,7 @@ import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
+import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
@@ -49,6 +51,9 @@ class MainActivity : ComponentActivity() {
     ) { results ->
         if (::browserController.isInitialized) browserController.onRuntimePermissionResult(results)
     }
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {}
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -62,12 +67,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
+        val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
         browserController = BrowserController(
             activity = this,
             requestRuntimePermissions = { permissions ->
                 webPermissionLauncher.launch(permissions.toTypedArray())
             },
             launchFileChooser = fileChooserLauncher::launch,
+            requestSnoozeNotificationPermission = {
+                if (!snoozeWakeNotifier.hasPostNotificationPermission()) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            },
         )
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             browserController.onWindowInsetsChanged(insets)
@@ -212,6 +223,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openIntent(intent: Intent) {
+        if (intent.action == SnoozeWakeNotifier.ACTION_OPEN_RESTORED_TAB) {
+            intent.getStringExtra(SnoozeWakeNotifier.EXTRA_TAB_ID)?.let { tabId ->
+                browserController.openSnoozedWakeTab(tabId)
+            }
+            return
+        }
         when (
             val resolution = browserController.resolveCapsuleLaunch(
                 action = intent.action,

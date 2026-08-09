@@ -539,6 +539,14 @@
     <string name="action_open_now">Ouvrir maintenant</string>
     <string name="snooze_invalid_time">Choisissez une date et une heure futures</string>
     <string name="snooze_confirmation">Onglet mis en veille</string>
+    <string name="snooze_notification_channel_name">Onglets en veille</string>
+    <string name="snooze_notification_channel_description">Alertes lorsque les onglets en veille sont prêts</string>
+    <string name="snooze_notification_title">L’onglet en veille est prêt</string>
+    <string name="snooze_notification_open_app">Appuyez pour ouvrir Candy Browser</string>
+    <plurals name="snooze_notification_title_count">
+        <item quantity="one">%1$d onglet en veille est prêt</item>
+        <item quantity="other">%1$d onglets en veille sont prêts</item>
+    </plurals>
     <plurals name="snoozed_tabs_settings_count">
         <item quantity="one">%1$d onglet mis en veille</item>
         <item quantity="other">%1$d onglets mis en veille</item>

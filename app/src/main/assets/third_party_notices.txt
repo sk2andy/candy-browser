@@ -31,8 +31,8 @@ Filter data
 EasyList, EasyPrivacy, and EasyList Cookie attribution and CC BY-SA 3.0 terms are
 documented in content_filter.LICENSE.txt.
 
-uBlock Origin uAssets attribution, modification notice, pinned source, and the complete
-GPL-3.0 license are provided in uassets.LICENSE.txt.
+uBlock Origin uAssets network/cosmetic attribution, modification notice, pinned source, and the
+complete GPL-3.0 license are provided in uassets.LICENSE.txt.
 
 
                                  Apache License

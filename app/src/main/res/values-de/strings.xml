@@ -535,6 +535,14 @@
     <string name="action_open_now">Jetzt öffnen</string>
     <string name="snooze_invalid_time">Datum und Uhrzeit in der Zukunft wählen</string>
     <string name="snooze_confirmation">Tab zurückgestellt</string>
+    <string name="snooze_notification_channel_name">Zurückgestellte Tabs</string>
+    <string name="snooze_notification_channel_description">Benachrichtigungen, wenn zurückgestellte Tabs bereit sind</string>
+    <string name="snooze_notification_title">Zurückgestellter Tab ist bereit</string>
+    <string name="snooze_notification_open_app">Tippen, um Candy Browser zu öffnen</string>
+    <plurals name="snooze_notification_title_count">
+        <item quantity="one">%1$d zurückgestellter Tab ist bereit</item>
+        <item quantity="other">%1$d zurückgestellte Tabs sind bereit</item>
+    </plurals>
     <plurals name="snoozed_tabs_settings_count">
         <item quantity="one">%1$d zurückgestellter Tab</item>
         <item quantity="other">%1$d zurückgestellte Tabs</item>
