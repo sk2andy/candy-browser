@@ -235,6 +235,8 @@ class BrowserController(
         private set
     var activeProfileId by mutableStateOf(DEFAULT_PROFILE_ID)
         private set
+    var profilesEnabled by mutableStateOf(true)
+        private set
     var blockerSettings by mutableStateOf(BlockerSettings())
         private set
     var inactiveTabLifetime by mutableStateOf(InactiveTabLifetime.Never)
@@ -910,6 +912,7 @@ class BrowserController(
         isAddressBarDocked = store.loadAddressBarDocked()
         isTabButtonVisible = store.loadTabButtonVisible()
         store.clearLegacyWebContentEdgeToEdgePreference()
+        profilesEnabled = store.loadProfilesEnabled()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
         profiles += restoredProfiles.take(MAX_PROFILES)
@@ -932,9 +935,11 @@ class BrowserController(
         store.saveSitePrivacyOverrides(permanentSitePrivacyOverrides)
         permanentMutedDomains.keys.retainAll(restoredProfileIds)
         store.saveMutedDomains(permanentMutedDomains.toMap())
-        activeProfileId = restoredActiveProfileId
-            .takeIf { id -> profiles.any { it.id == id } }
-            ?: profiles.first().id
+        activeProfileId = if (profilesEnabled) {
+            restoredActiveProfileId.takeIf { id -> profiles.any { it.id == id } }
+        } else {
+            null
+        } ?: profiles.first().id
         val (restoredTabs, restoredSelection) = store.loadTabs(nowMillis)
         history += store.loadHistory()
         favorites += store.loadFavorites()
@@ -985,7 +990,10 @@ class BrowserController(
             )
             if (snapshotPersisted) {
                 SnoozeWakeNotifier(activity).notifyRestored(
-                    tabs.filter { it.id in initialSnoozeRestore.restoredTabIds },
+                    tabs.filter {
+                        it.id in initialSnoozeRestore.restoredTabIds &&
+                            (profilesEnabled || it.profileId == profiles.first().id)
+                    },
                 )
             } else {
                 tabs.clear()
@@ -1377,7 +1385,7 @@ class BrowserController(
     fun openSiteCapsule(capsuleId: String, navigateToStart: Boolean = true): Boolean {
         val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return false
         if (profiles.none { it.id == capsule.profileId }) return false
-        if (activeProfileId != capsule.profileId) selectProfile(capsule.profileId)
+        if (activeProfileId != capsule.profileId && !selectProfile(capsule.profileId)) return false
         val rememberedTab = capsuleTabIds[capsule.id]
             ?.let { tabId -> activeTabs.firstOrNull { it.id == tabId && !it.isIncognito } }
         val matchingSelectedTab = selectedTab.takeIf { tab ->
@@ -1411,7 +1419,7 @@ class BrowserController(
         ) {
             return false
         }
-        if (activeProfileId != capsule.profileId) selectProfile(capsule.profileId)
+        if (activeProfileId != capsule.profileId && !selectProfile(capsule.profileId)) return false
         if (selectedTabId != targetTab.id) selectTab(targetTab.id)
         activeCapsuleId = capsule.id
         activeCapsuleTabId = targetTab.id
@@ -1647,6 +1655,7 @@ class BrowserController(
     }
 
     fun createProfile(emoji: String, isolationEnabled: Boolean = false): String? {
+        if (!profilesEnabled) return null
         if (profiles.size >= MAX_PROFILES) {
             Toast.makeText(
                 activity,
@@ -1691,6 +1700,7 @@ class BrowserController(
     }
 
     fun selectProfile(profileId: String): Boolean {
+        if (!profilesEnabled) return false
         if (profileId == activeProfileId || profiles.none { it.id == profileId }) return false
         val previousTabId = selectedTabId
         clearPermissionActivity(previousTabId)
@@ -1821,6 +1831,7 @@ class BrowserController(
     }
 
     fun moveTabToProfile(tabId: String, profileId: String): Boolean {
+        if (!profilesEnabled) return false
         val sourceTab = tabs.firstOrNull { it.id == tabId } ?: return false
         if (sourceTab.profileId == profileId || profiles.none { it.id == profileId }) return false
         if (sourceTab.profileId == activeProfileId && activeTabs.size == 1 && tabs.size >= MAX_TABS) {
@@ -2184,6 +2195,7 @@ class BrowserController(
             token = token,
             maxTabs = MAX_TABS,
         ) ?: return false
+        if (!profilesEnabled && result.restoredTab.profileId != profiles.first().id) return false
         if (!store.saveTabsAndSnoozedImmediately(
                 tabs = result.tabs,
                 selectedTabId = result.selectedTabId,
@@ -2230,6 +2242,7 @@ class BrowserController(
         nowMillis: Long = System.currentTimeMillis(),
     ): Boolean {
         val snoozed = snoozedTabs.firstOrNull { it.tab.id == tabId } ?: return false
+        if (!profilesEnabled && snoozed.tab.profileId != profiles.first().id) return false
         val result = SnoozeRestoreRules.restoreDue(
             tabs = tabs,
             snoozedTabs = listOf(snoozed.copy(wakeAtMillis = nowMillis)),
@@ -2515,6 +2528,7 @@ class BrowserController(
                 selectedTab = selectedTab,
                 profiles = profiles,
                 activeProfileId = activeProfileId,
+                profilesEnabled = profilesEnabled,
                 duplicateTabIds = duplicateTabIds,
                 canCreateTab = canCreateTab,
                 canCreateIncognitoTab = canCreateTab && isProfileIsolationSupported,
@@ -2636,6 +2650,16 @@ class BrowserController(
         if (isTabButtonVisible == visible) return
         isTabButtonVisible = visible
         store.saveTabButtonVisible(visible)
+    }
+
+    fun updateProfilesEnabled(enabled: Boolean) {
+        if (profilesEnabled == enabled) return
+        if (!enabled) {
+            val firstProfileId = profiles.first().id
+            if (activeProfileId != firstProfileId) selectProfile(firstProfileId)
+        }
+        profilesEnabled = enabled
+        store.saveProfilesEnabled(enabled)
     }
 
     fun updateWebContentEdgeToEdgeEnabled(enabled: Boolean) {
@@ -4937,7 +4961,9 @@ class BrowserController(
         persist()
         snoozeScheduler.schedule(remaining, nowMillis)
         val restoredTabs = result.tabs.filter { it.id in result.restoredTabIds }
-        SnoozeWakeNotifier(activity).notifyRestored(restoredTabs)
+        SnoozeWakeNotifier(activity).notifyRestored(
+            restoredTabs.filter { profilesEnabled || it.profileId == profiles.first().id },
+        )
         return restoredTabs.size
     }
 

@@ -172,7 +172,6 @@
         <item quantity="other">Fechar %1$d separadores duplicados? Os separadores fixados e o atual permanecem abertos.</item>
     </plurals>
     <string name="favorites_title">Favoritos</string>
-    <string name="favorites_empty">Ainda não há favoritos — adicione-os através do menu ⋮.</string>
     <string name="content_actions_title">Conteúdo da página</string>
     <string name="action_open_link_background_tab">Abrir ligação num novo separador em segundo plano</string>
     <string name="link_peek_title">Pré-visualização da ligação</string>
@@ -186,6 +185,8 @@
     <string name="tab_overview_mode_grid">Grelha compacta</string>
     <string name="tab_overview_mode_list">Lista sem pré-visualizações</string>
     <string name="settings_auto_close_tabs">Fechar separadores automaticamente</string>
+    <string name="settings_profiles_title">Ativar perfis</string>
+    <string name="settings_profiles_subtitle">Manter grupos de separadores distintos e mostrar os controlos de mudança de perfil.</string>
     <string name="tab_lifetime_never">Nunca</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Após %1$d hora</item>

@@ -417,6 +417,15 @@ fun BrowserScreen(controller: BrowserController) {
     val canToggleSelectedCookieBannerRemoval = selectedSiteHasHost &&
         controller.blockerSettings.hideCookieConsent &&
         !selectedSiteState.isPaused
+    val visibleProfiles = if (controller.profilesEnabled) {
+        controller.profiles.toList()
+    } else {
+        controller.profiles.take(1)
+    }
+    val visibleProfileIds = visibleProfiles.mapTo(hashSetOf(), BrowserProfile::id)
+    val visibleSnoozedTabs = controller.snoozedTabs.filter {
+        it.tab.profileId in visibleProfileIds
+    }
     val permissionActivityVisible = controller.hasPermissionActivity(selectedTab.id)
     LaunchedEffect(
         controller.contentActions.isLinkPeekVisible,
@@ -527,12 +536,13 @@ fun BrowserScreen(controller: BrowserController) {
                 sourceTabId = sourceTab?.id,
                 sourceTitle = sourceTitle,
                 sourceUrl = sourceUrl,
-                profiles = controller.profiles.toList(),
+                profiles = visibleProfiles,
                 activeProfileId = controller.activeProfileId,
                 profileIsolationSupported = controller.isProfileIsolationSupported,
                 pinningSupported = controller.isCapsulePinningSupported,
                 canCreate = controller.canCreateSiteCapsule,
-                canCreateDedicatedProfile = controller.profiles.size < MAX_PROFILES &&
+                canCreateDedicatedProfile = controller.profilesEnabled &&
+                    controller.profiles.size < MAX_PROFILES &&
                     controller.tabs.size < MAX_TABS,
                 previewIcon = if (existing?.iconMode == CapsuleIconMode.Favicon) {
                     controller.siteCapsuleIcon(existing.id)
@@ -1310,7 +1320,7 @@ fun BrowserScreen(controller: BrowserController) {
                     rootView.performConfirmHaptic()
                 }
             },
-            snoozedTabCount = controller.snoozedTabs.size,
+            snoozedTabCount = visibleSnoozedTabs.size,
             onSnoozedTabs = {
                 addressEditorVisible = false
                 snoozedTabsVisible = true
@@ -1544,16 +1554,20 @@ fun BrowserScreen(controller: BrowserController) {
                 searchSuggestionProvider = controller.searchSuggestionProvider,
                 tabOverviewMode = controller.tabOverviewMode,
                 dismissResistancePercent = controller.dismissResistancePercent,
+                profilesEnabled = controller.profilesEnabled,
                 isTabButtonVisible = controller.isTabButtonVisible,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
-                siteCapsules = controller.siteCapsules,
+                siteCapsules = controller.siteCapsules.filter {
+                    it.profileId in visibleProfileIds
+                },
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onSearchEngineChanged = controller::updateSearchEngine,
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
+                onProfilesEnabledChanged = controller::updateProfilesEnabled,
                 onTabButtonVisibleChanged = controller::updateTabButtonVisible,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
@@ -1670,7 +1684,7 @@ fun BrowserScreen(controller: BrowserController) {
                     controller.selectedTabId,
                 ),
                 isIncognito = controller.selectedTab.isIncognito,
-                profiles = controller.profiles,
+                profiles = visibleProfiles,
                 currentProfileId = controller.selectedTab.profileId,
                 currentUrl = controller.filterStudioTestUrl(controller.selectedTabId),
                 recentDomain = controller.privacySnapshot(controller.selectedTabId)
@@ -1721,8 +1735,8 @@ fun BrowserScreen(controller: BrowserController) {
             exit = fadeOut(tween(90)),
         ) {
             SnoozedTabsScreen(
-                snoozedTabs = controller.snoozedTabs,
-                profiles = controller.profiles,
+                snoozedTabs = visibleSnoozedTabs,
+                profiles = visibleProfiles,
                 onBack = { snoozedTabsVisible = false },
                 onReschedule = controller::rescheduleSnoozedTab,
                 onOpenNow = { tabId ->
@@ -2495,7 +2509,7 @@ private fun NewTabPage(
                     )
                 }
             }
-            if (!incognito) {
+            if (!incognito && favorites.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2519,21 +2533,6 @@ private fun NewTabPage(
                         tonalElevation = 8.dp,
                     ) {
                         Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                            AnimatedVisibility(
-                                visible = favorites.isEmpty(),
-                                enter = fadeIn(tween(150)),
-                                exit = fadeOut(tween(100)),
-                            ) {
-                                Text(
-                                    stringResource(R.string.favorites_empty),
-                                    modifier = Modifier.padding(
-                                        horizontal = 18.dp,
-                                        vertical = 14.dp,
-                                    ),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colors.onSurfaceVariant,
-                                )
-                            }
                             ExpressiveFavoriteRows(
                                 favorites = favorites,
                                 onFavorite = onFavorite,
@@ -4499,80 +4498,82 @@ internal fun TabOverview(
                 ),
         ) {
             Spacer(Modifier.height(12.dp))
-            ProfileSwitcher(
-                profiles = controller.profiles,
-                activeProfileId = controller.activeProfileId,
-                enabled = dismissingTabId == null &&
-                    movingTabId == null &&
-                    !profileSwitching &&
-                    exitHero == null &&
-                    reorderAnimation == null &&
-                    tabActionsTabId == null &&
-                    profileActionsProfileId == null &&
-                    profileIsolationChange == null &&
-                    emojiPickerTargetId == null,
-                onSelect = { profileId ->
-                    if (profileId == controller.activeProfileId) return@ProfileSwitcher
-                    overviewScope.launch {
-                        profileSwitching = true
-                        try {
-                            profileSwitchProgress.animateTo(
-                                targetValue = 0f,
-                                animationSpec = tween(
-                                    durationMillis = 120,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                            )
-                            if (
-                                controller.tabOverviewMode == TabOverviewMode.Hero &&
-                                pagerState.currentPage != 0
-                            ) {
-                                pagerState.scrollToPage(0)
-                            }
-                            if (controller.selectProfile(profileId)) {
-                                val selectedIndex = controller.activeTabs
-                                    .indexOfFirst { it.id == controller.selectedTabId }
-                                    .coerceAtLeast(0)
+            if (controller.profilesEnabled) {
+                ProfileSwitcher(
+                    profiles = controller.profiles,
+                    activeProfileId = controller.activeProfileId,
+                    enabled = dismissingTabId == null &&
+                        movingTabId == null &&
+                        !profileSwitching &&
+                        exitHero == null &&
+                        reorderAnimation == null &&
+                        tabActionsTabId == null &&
+                        profileActionsProfileId == null &&
+                        profileIsolationChange == null &&
+                        emojiPickerTargetId == null,
+                    onSelect = { profileId ->
+                        if (profileId == controller.activeProfileId) return@ProfileSwitcher
+                        overviewScope.launch {
+                            profileSwitching = true
+                            try {
+                                profileSwitchProgress.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = tween(
+                                        durationMillis = 120,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                )
                                 if (
                                     controller.tabOverviewMode == TabOverviewMode.Hero &&
-                                    pagerState.currentPage != selectedIndex
+                                    pagerState.currentPage != 0
                                 ) {
-                                    pagerState.scrollToPage(selectedIndex)
+                                    pagerState.scrollToPage(0)
                                 }
-                                withFrameNanos { }
-                                rootView.performConfirmHaptic()
-                            }
-                            profileSwitchProgress.animateTo(
-                                targetValue = 1f,
-                                animationSpec = spring(
-                                    dampingRatio = 0.78f,
-                                    stiffness = 460f,
-                                ),
-                            )
-                        } finally {
-                            withContext(NonCancellable) {
-                                profileSwitchProgress.snapTo(1f)
-                                profileSwitching = false
+                                if (controller.selectProfile(profileId)) {
+                                    val selectedIndex = controller.activeTabs
+                                        .indexOfFirst { it.id == controller.selectedTabId }
+                                        .coerceAtLeast(0)
+                                    if (
+                                        controller.tabOverviewMode == TabOverviewMode.Hero &&
+                                        pagerState.currentPage != selectedIndex
+                                    ) {
+                                        pagerState.scrollToPage(selectedIndex)
+                                    }
+                                    withFrameNanos { }
+                                    rootView.performConfirmHaptic()
+                                }
+                                profileSwitchProgress.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.78f,
+                                        stiffness = 460f,
+                                    ),
+                                )
+                            } finally {
+                                withContext(NonCancellable) {
+                                    profileSwitchProgress.snapTo(1f)
+                                    profileSwitching = false
+                                }
                             }
                         }
-                    }
-                },
-                onLongClick = { profileId ->
-                    rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                    profileActionsProfileId = profileId
-                },
-                onAdd = {
-                    rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                    emojiPickerTargetId = NEW_PROFILE_TARGET
-                },
-                modifier = Modifier.graphicsLayer {
-                    val chromeProgress =
-                        ((heroProgress.value - 0.34f) / 0.66f).coerceIn(0f, 1f)
-                    alpha = chromeProgress
-                    translationY = (1f - chromeProgress) * -18f
-                },
-            )
-            Spacer(Modifier.height(4.dp))
+                    },
+                    onLongClick = { profileId ->
+                        rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        profileActionsProfileId = profileId
+                    },
+                    onAdd = {
+                        rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        emojiPickerTargetId = NEW_PROFILE_TARGET
+                    },
+                    modifier = Modifier.graphicsLayer {
+                        val chromeProgress =
+                            ((heroProgress.value - 0.34f) / 0.66f).coerceIn(0f, 1f)
+                        alpha = chromeProgress
+                        translationY = (1f - chromeProgress) * -18f
+                    },
+                )
+                Spacer(Modifier.height(4.dp))
+            }
             when (controller.tabOverviewMode) {
                 TabOverviewMode.Hero -> HorizontalPager(
                 state = pagerState,
@@ -5297,7 +5298,11 @@ internal fun TabOverview(
         }
         TabActionsFloatingMenu(
             tab = actionTab,
-            profiles = controller.profiles,
+            profiles = if (controller.profilesEnabled) {
+                controller.profiles
+            } else {
+                controller.profiles.take(1)
+            },
             isFavorite = actionTab?.let { tab -> controller.isFavorite(tab.url) } == true,
             canToggleDomainMute = actionTab?.let { tab ->
                 controller.canToggleDomainMute(tab.id)
@@ -7335,6 +7340,7 @@ private fun SettingsScreen(
     searchSuggestionProvider: SearchSuggestionProvider,
     tabOverviewMode: TabOverviewMode,
     dismissResistancePercent: Int,
+    profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
@@ -7345,6 +7351,7 @@ private fun SettingsScreen(
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
+    onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
@@ -7531,6 +7538,13 @@ private fun SettingsScreen(
                     }
                 }
             }
+            Spacer(Modifier.height(12.dp))
+            SettingsSwitch(
+                title = stringResource(R.string.settings_profiles_title),
+                subtitle = stringResource(R.string.settings_profiles_subtitle),
+                checked = profilesEnabled,
+                onCheckedChange = onProfilesEnabledChanged,
+            )
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
             Spacer(Modifier.height(8.dp))

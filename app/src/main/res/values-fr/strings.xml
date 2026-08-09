@@ -172,7 +172,6 @@
         <item quantity="other">Fermer %1$d onglets en double ? Les onglets épinglés et l’onglet actuel restent ouverts.</item>
     </plurals>
     <string name="favorites_title">Favoris</string>
-    <string name="favorites_empty">Aucun favori pour le moment — ajoutez-en via le menu ⋮.</string>
     <string name="content_actions_title">Contenu de la page</string>
     <string name="action_open_link_background_tab">Ouvrir le lien dans un nouvel onglet en arrière-plan</string>
     <string name="link_peek_title">Aperçu du lien</string>
@@ -186,6 +185,8 @@
     <string name="tab_overview_mode_grid">Grille compacte</string>
     <string name="tab_overview_mode_list">Liste sans aperçus</string>
     <string name="settings_auto_close_tabs">Fermer automatiquement les onglets</string>
+    <string name="settings_profiles_title">Activer les profils</string>
+    <string name="settings_profiles_subtitle">Conserver des groupes d’onglets séparés et afficher les commandes de changement de profil.</string>
     <string name="tab_lifetime_never">Jamais</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Après %1$d heure</item>

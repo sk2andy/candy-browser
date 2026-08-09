@@ -14,7 +14,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -332,45 +330,6 @@ internal fun LinkPeekOverlay(
                     }
                 }
             }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 64.dp)
-                    .clickable(
-                        enabled = !committing,
-                        role = Role.Button,
-                        onClick = {
-                            if (!commitRequested) {
-                                commitRequested = true
-                                onCommitRequested()
-                            }
-                        },
-                    )
-                    .graphicsLayer {
-                        alpha = 1f - flyProgress
-                        translationY = motionProgress * 4.dp.toPx()
-                        val responsiveScale = 1f + motionProgress * 0.015f
-                        scaleX = responsiveScale
-                        scaleY = responsiveScale
-                    }
-                    .testTag(LinkPeekTestTags.OpenTarget),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        openLabel,
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
             Spacer(Modifier.height(64.dp))
         }
         newTabTargetBounds?.let { targetBounds ->
@@ -450,10 +409,26 @@ internal fun LinkPeekOverlay(
                     },
                     shadowElevation = if (armed) 8.dp else 3.dp,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                enabled = !committing,
+                                onClickLabel = openLabel,
+                                role = Role.Button,
+                                onClick = {
+                                    if (!commitRequested) {
+                                        commitRequested = true
+                                        onCommitRequested()
+                                    }
+                                },
+                            )
+                            .testTag(LinkPeekTestTags.OpenTarget),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = null,
+                            contentDescription = openLabel,
                             modifier = Modifier.size(26.dp),
                             tint = if (armed) {
                                 MaterialTheme.colorScheme.onPrimaryContainer

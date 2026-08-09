@@ -180,7 +180,6 @@
 
     <!-- Favorites and page content -->
     <string name="favorites_title">Favorites</string>
-    <string name="favorites_empty">No favorites yet — add them from the ⋮ menu.</string>
     <string name="content_actions_title">Page content</string>
     <string name="action_open_link_background_tab">Open link in new background tab</string>
     <string name="link_peek_title">Link Peek</string>
@@ -196,6 +195,8 @@
     <string name="tab_overview_mode_grid">Compact grid</string>
     <string name="tab_overview_mode_list">List without previews</string>
     <string name="settings_auto_close_tabs">Automatically close tabs</string>
+    <string name="settings_profiles_title">Enable profiles</string>
+    <string name="settings_profiles_subtitle">Keep separate tab groups and show profile switching controls.</string>
     <string name="tab_lifetime_never">Never</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">After %1$d hour</item>

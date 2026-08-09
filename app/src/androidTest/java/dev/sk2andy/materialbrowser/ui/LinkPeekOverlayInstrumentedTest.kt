@@ -5,8 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
@@ -14,9 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -34,7 +34,7 @@ class LinkPeekOverlayInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun openTargetIsVisibleLocalizedAccessibleAndSingleUse() {
+    fun plusTargetOwnsOpenActionAndLabelIsHidden() {
         val opens = AtomicInteger()
         composeRule.setContent {
             MaterialBrowserTheme {
@@ -62,24 +62,22 @@ class LinkPeekOverlayInstrumentedTest {
         composeRule.onNodeWithTag(LinkPeekTestTags.Preview).assertIsDisplayed()
         composeRule.onNodeWithTag(LinkPeekTestTags.NewTabTargetOverlay).assertIsDisplayed()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.action_open_in_new_tab))
+            .assertDoesNotExist()
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget)
             .assertIsDisplayed()
             .assertHasClickAction()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(composeRule.activity.getString(R.string.action_open_in_new_tab)),
+                ),
+            )
             .performClick()
             .performClick()
 
-        val density = composeRule.density
-        val rootBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Root)
-            .fetchSemanticsNode().boundsInRoot
-        val cardBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Card)
-            .fetchSemanticsNode().boundsInRoot
-        val targetBounds = composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget)
-            .fetchSemanticsNode().boundsInRoot
         val overlayTargetBounds = composeRule
             .onNodeWithTag(LinkPeekTestTags.NewTabTargetOverlay)
             .fetchSemanticsNode().boundsInRoot
-        assertTrue(targetBounds.top >= cardBounds.bottom)
-        assertTrue(targetBounds.height + 1f >= with(density) { 64.dp.toPx() })
-        assertTrue(rootBounds.bottom - targetBounds.bottom >= with(density) { 64.dp.toPx() })
         assertEquals(100f, overlayTargetBounds.left, 1f)
         assertEquals(100f, overlayTargetBounds.top, 1f)
         assertEquals(220f, overlayTargetBounds.right, 1f)
@@ -191,41 +189,6 @@ class LinkPeekOverlayInstrumentedTest {
         } finally {
             composeRule.mainClock.autoAdvance = true
         }
-    }
-
-    @Test
-    fun largeFontOpenActionDoesNotClip() {
-        val platformDensity = composeRule.density
-        composeRule.setContent {
-            CompositionLocalProvider(
-                LocalDensity provides Density(platformDensity.density, fontScale = 2f),
-            ) {
-                MaterialBrowserTheme {
-                    LinkPeekOverlay(
-                        url = "https://example.com/large-font",
-                        progress = 0f,
-                        armed = false,
-                        createPreviewWebView = ::previewWebView,
-                        releasePreviewWebView = WebView::destroy,
-                        onOpen = {},
-                        onDismiss = {},
-                    )
-                }
-            }
-        }
-
-        val targetBounds = composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget)
-            .fetchSemanticsNode().boundsInRoot
-        val openTextBounds = composeRule
-            .onNodeWithText(
-                composeRule.activity.getString(R.string.action_open_in_new_tab),
-                useUnmergedTree = true,
-            )
-            .fetchSemanticsNode().boundsInRoot
-
-        assertTrue(targetBounds.height + 1f >= with(platformDensity) { 64.dp.toPx() })
-        assertTrue(openTextBounds.top >= targetBounds.top)
-        assertTrue(openTextBounds.bottom <= targetBounds.bottom)
     }
 
     @Test

@@ -172,7 +172,6 @@
         <item quantity="other">¿Cerrar %1$d pestañas duplicadas? Las pestañas fijadas y la actual permanecerán abiertas.</item>
     </plurals>
     <string name="favorites_title">Favoritos</string>
-    <string name="favorites_empty">Aún no hay favoritos — añádelos desde el menú ⋮.</string>
     <string name="content_actions_title">Contenido de la página</string>
     <string name="action_open_link_background_tab">Abrir enlace en una nueva pestaña en segundo plano</string>
     <string name="link_peek_title">Vista previa del enlace</string>
@@ -186,6 +185,8 @@
     <string name="tab_overview_mode_grid">Cuadrícula compacta</string>
     <string name="tab_overview_mode_list">Lista sin vistas previas</string>
     <string name="settings_auto_close_tabs">Cerrar pestañas automáticamente</string>
+    <string name="settings_profiles_title">Activar perfiles</string>
+    <string name="settings_profiles_subtitle">Mantén grupos de pestañas separados y muestra los controles para cambiar de perfil.</string>
     <string name="tab_lifetime_never">Nunca</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Después de %1$d hora</item>

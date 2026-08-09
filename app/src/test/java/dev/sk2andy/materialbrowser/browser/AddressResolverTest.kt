@@ -59,4 +59,19 @@ class AddressResolverTest {
     fun `empty input resolves to blank tab`() {
         assertEquals(BLANK_URL, AddressResolver.resolve("  "))
     }
+
+    @Test
+    fun `displays host when tracking query contains uri-invalid characters`() {
+        assertEquals(
+            "centerparcs.de",
+            AddressResolver.displayText(
+                "https://www.centerparcs.de/?gclsrc=aw.ds&adlgid=mlg|center%20parcs|793940555",
+            ),
+        )
+    }
+
+    @Test
+    fun `display text keeps invalid values unchanged`() {
+        assertEquals("not a url", AddressResolver.displayText("not a url"))
+    }
 }
