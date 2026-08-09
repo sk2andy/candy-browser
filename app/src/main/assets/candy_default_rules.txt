@@ -5,7 +5,7 @@ candy-rules:1
 # Methodology: docs/audits/top-300-blocking.md
 # Live evidence: 300 isolated Android WebView profiles plus targeted web.de/gmx.net/nytimes.com probes.
 # Upstream corroboration: EasyList/uAssets selectors, pinned source revisions in bundled assets.
-# Rule count: 41
+# Rule count: 48
 rule	css	origin	nytimes.com	I2ZpZGVzLWJhbm5lci1jb250YWluZXI	nytimes-fides-banner	*	Candy Cookies	1
 rule	css	origin	nytimes.com	I2ZpZGVzLW92ZXJsYXk	nytimes-fides-overlay	*	Candy Cookies	1
 rule	css	origin	nytimes.com	LmZpZGVzLW1vZGFsLW92ZXJsYXk	nytimes-fides-modal-overlay	*	Candy Cookies	1
@@ -39,6 +39,13 @@ rule	css	origin	dzen.ru	LmR6ZW4tbW9iaWxlLS1jYXJkLXJ0Yl9fYWQteXA	dzen-rtb-ad-card
 rule	css	origin	yandex.ru	I2FkLWJhbm5lcg	yandex-ad-banner	*	Candy Ads	1
 rule	css	origin	yandex.ru	LmR6ZW4tbW9iaWxlLS1jYXJkLXJ0Yl9fYWQteXA	yandex-dzen-rtb-ad-card	*	Candy Ads	1
 rule	css	origin	reddit.com	LmFkLWxpbmstYmFy	reddit-ad-link-bar	*	Candy Ads	1
+rule	css	origin	interia.pl	LmNvbW1vbi1hZA	interia-common-ad-slots	*	Candy Ads	1
+rule	css	origin	interia.pl	Lm5ld3MtbGk6aGFzKC5zcGFuLXNwb25zb3JlZCk	interia-sponsored-news-card	*	Candy Ads	1
+rule	css	origin	corriere.it	LmNhcmQtLWFkdg	corriere-ad-card	*	Candy Ads	1
+rule	css	origin	corriere.it	LmNvbnRlbnV0by1zcG9uc29yaXp6YXRv	corriere-sponsored-content	*	Candy Ads	1
+rule	css	origin	naver.com	aWZyYW1lW3RpdGxlPSJBRCJd	naver-labelled-ad-frame	*	Candy Ads	1
+rule	css	origin	coupang.com	LnBlcnNvbmFsaXplZF9hZHM	coupang-personalized-ads	*	Candy Ads	1
+rule	css	origin	uol.com.br	LmNhcmRBZA	uol-card-ad	*	Candy Ads	1
 rule	css	origin	flickr.com	LnNlY3Rpb25fbW9kZS1hZA	flickr-ad-section	*	Candy Ads	1
 rule	css	origin	theguardian.com	LmFkLXNsb3QtY29udGFpbmVy	guardian-ad-slot-container	*	Candy Ads	1
 rule	css	origin	theguardian.com	W2lkXj0iZGZwLWFkLSJd	guardian-dfp-ad	*	Candy Ads	1

@@ -47,7 +47,251 @@ class CandyCosmeticRuleInstrumentedTest {
         assertEquals("\"block|false\"", paused)
     }
 
-    private fun loadAndRead(baseUrl: String, pausedHosts: Set<String>): String? {
+    @Test
+    fun malformedSelectorDoesNotDisableFollowingValidSelector() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val rules = listOf(
+            CandyRule.new(
+                action = CandyRuleAction.Cosmetic,
+                kind = CandyRuleKind.CosmeticCss,
+                firstPartyHost = "news.example",
+                cosmeticSelector = ".invalid[",
+            ),
+            CandyRule.new(
+                action = CandyRuleAction.Cosmetic,
+                kind = CandyRuleKind.CosmeticCss,
+                firstPartyHost = "news.example",
+                cosmeticSelector = ".sponsor",
+            ),
+        )
+        val result = loadAndRead(
+            baseUrl = "https://news.example/",
+            pausedHosts = emptySet(),
+            script = CandyCosmeticScript.createScoped(rules),
+        )
+
+        assertEquals("\"none|true\"", result)
+    }
+
+    @Test
+    fun bundledGoogleRulesHideWholeStaticAndDynamicAdContainers() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://www.google.com/search?q=hotel",
+            html = """
+                <html><body>
+                  <main id="organic">organic result</main>
+                  <section id="tads" aria-label="Ads"><a>paid result</a></section>
+                  <section id="google-s-ad">paid hotel</section>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                (() => {
+                  const dynamic = document.createElement('div');
+                  dynamic.id = 'dynamic-ad';
+                  dynamic.dataset.isAd = '1';
+                  document.body.appendChild(dynamic);
+                  return [
+                    getComputedStyle(document.getElementById('tads')).display,
+                    getComputedStyle(document.getElementById('google-s-ad')).display,
+                    getComputedStyle(dynamic).display,
+                    getComputedStyle(document.getElementById('organic')).display
+                  ].join('|');
+                })()
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|none|none|block\"", result)
+    }
+
+    @Test
+    fun bundledRedditRulesHidePromotedCardsAndKeepOrganicPosts() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://www.reddit.com/r/popular/",
+            html = """
+                <html><body>
+                  <shreddit-post id="organic">organic post</shreddit-post>
+                  <shreddit-ad-post id="promoted">promoted post</shreddit-ad-post>
+                  <div id="tracked" data-faceplate-tracking-context='{"promoted":true}'>ad</div>
+                  <div id="advertisement" data-before-content="advertisement">ad</div>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                [
+                  getComputedStyle(document.getElementById('promoted')).display,
+                  getComputedStyle(document.getElementById('tracked')).display,
+                  getComputedStyle(document.getElementById('advertisement')).display,
+                  getComputedStyle(document.getElementById('organic')).display
+                ].join('|')
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|none|none|inline\"", result)
+    }
+
+    @Test
+    fun bundledAmazonWildcardRulesHideStaticAndDynamicSponsoredResults() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://www.amazon.de/s?k=laptop",
+            html = """
+                <html><body>
+                  <div id="organic" class="s-result-item">organic product</div>
+                  <div id="sponsored" class="s-result-item">
+                    <span class="puis-sponsored-label-text">Sponsored</span>
+                  </div>
+                  <div id="featured" cel_widget_id="MAIN-FEATURED_ASINS_LIST-8">Sponsored</div>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                (() => {
+                  const dynamic = document.createElement('div');
+                  dynamic.id = 'dynamic-sponsored';
+                  dynamic.className = 's-result-item';
+                  dynamic.innerHTML = '<span class="puis-sponsored-label-text">Sponsored</span>';
+                  document.body.appendChild(dynamic);
+                  return [
+                    getComputedStyle(document.getElementById('sponsored')).display,
+                    getComputedStyle(document.getElementById('featured')).display,
+                    getComputedStyle(dynamic).display,
+                    getComputedStyle(document.getElementById('organic')).display
+                  ].join('|');
+                })()
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|none|none|block\"", result)
+    }
+
+    @Test
+    fun bundledInteriaRulesHideAdSlotsAndSponsoredCards() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://www.interia.pl/",
+            html = """
+                <html><body>
+                  <li id="organic" class="news-li tile wide">
+                    <a class="tile-a"><span class="tile-label">organic story</span></a>
+                  </li>
+                  <div id="slot" class="ad common-ad">REKLAMA</div>
+                  <li id="sponsored" class="news-li tile wide">
+                    <a class="tile-a"><span class="tile-label span-sponsored">ARTYKUŁ SPONSOROWANY</span></a>
+                  </li>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                [
+                  getComputedStyle(document.getElementById('slot')).display,
+                  getComputedStyle(document.getElementById('sponsored')).display,
+                  getComputedStyle(document.getElementById('organic')).display
+                ].join('|')
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|none|list-item\"", result)
+    }
+
+    @Test
+    fun bundledCorriereRulesHideAdAndSponsoredContentCards() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://www.corriere.it/",
+            html = """
+                <html><body>
+                  <article id="organic">organic story</article>
+                  <div id="slot" class="card card--adv">PUBBLICITÀ</div>
+                  <section id="sponsored" class="contenuto-sponsorizzato">CONTENUTO SPONSORIZZATO</section>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                [
+                  getComputedStyle(document.getElementById('slot')).display,
+                  getComputedStyle(document.getElementById('sponsored')).display,
+                  getComputedStyle(document.getElementById('organic')).display
+                ].join('|')
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|none|block\"", result)
+    }
+
+    @Test
+    fun bundledNaverRuleHidesLabelledAdFrames() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://m.naver.com/",
+            html = """
+                <html><body>
+                  <article id="organic">organic story</article>
+                  <iframe id="ad" title="AD"></iframe>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                [
+                  getComputedStyle(document.getElementById('ad')).display,
+                  getComputedStyle(document.getElementById('organic')).display
+                ].join('|')
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|block\"", result)
+    }
+
+    @Test
+    fun bundledCoupangRuleHidesPersonalizedAdsAndKeepsOrganicCarousel() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://www.coupang.com/",
+            html = """
+                <html><body>
+                  <div id="organic" class="carousel-widget-container organic_products">
+                    organic product
+                  </div>
+                  <div id="personalized" class="carousel-widget-container personalized_ads">
+                    광고
+                  </div>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                [
+                  getComputedStyle(document.getElementById('personalized')).display,
+                  getComputedStyle(document.getElementById('organic')).display
+                ].join('|')
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|block\"", result)
+    }
+
+    @Test
+    fun bundledUolRuleHidesPublicidadeCards() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://www.uol.com.br/",
+            html = """
+                <html><body>
+                  <article id="organic">organic story</article>
+                  <div id="ad" class="section__item cardAd cardAd--showLabel--true"
+                       aria-label="Publicidade"></div>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                [
+                  getComputedStyle(document.getElementById('ad')).display,
+                  getComputedStyle(document.getElementById('organic')).display
+                ].join('|')
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|block\"", result)
+    }
+
+    private fun loadAndRead(
+        baseUrl: String,
+        pausedHosts: Set<String>,
+        script: String = CandyCosmeticScript.create(listOf(".sponsor"), pausedHosts),
+    ): String? {
         val loaded = CountDownLatch(1)
         val created = AtomicReference<WebView>()
         instrumentation.runOnMainSync {
@@ -56,7 +300,7 @@ class CandyCosmeticRuleInstrumentedTest {
                     settings.javaScriptEnabled = true
                     WebViewCompat.addDocumentStartJavaScript(
                         this,
-                        CandyCosmeticScript.create(listOf(".sponsor"), pausedHosts),
+                        script,
                         setOf("https://news.example", "https://*.news.example"),
                     )
                     webViewClient = object : WebViewClient() {
@@ -81,6 +325,38 @@ class CandyCosmeticRuleInstrumentedTest {
                 "[getComputedStyle(document.querySelector('.sponsor')).display," +
                     "document.querySelector('style[data-candy-filter]')!==null].join('|')",
             ) {
+                result.set(it)
+                evaluated.countDown()
+            }
+        }
+        assertTrue(evaluated.await(10, TimeUnit.SECONDS))
+        return result.get()
+    }
+
+    private fun loadFixtureAndEvaluate(baseUrl: String, html: String, probe: String): String? {
+        val loaded = CountDownLatch(1)
+        val created = AtomicReference<WebView>()
+        val blocker = ContentBlocker(instrumentation.targetContext)
+        blocker.awaitCosmeticRulesForTesting()
+        val script = blocker.adCosmeticDocumentStartScript(baseUrl)
+        instrumentation.runOnMainSync {
+            created.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    WebViewCompat.addDocumentStartJavaScript(this, script, setOf("*"))
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) = loaded.countDown()
+                    }
+                    loadDataWithBaseURL(baseUrl, html, "text/html", "utf-8", null)
+                },
+            )
+        }
+        assertTrue(loaded.await(10, TimeUnit.SECONDS))
+        val view = created.get().also(webView::set)
+        val result = AtomicReference<String?>()
+        val evaluated = CountDownLatch(1)
+        instrumentation.runOnMainSync {
+            view.evaluateJavascript(probe) {
                 result.set(it)
                 evaluated.countDown()
             }

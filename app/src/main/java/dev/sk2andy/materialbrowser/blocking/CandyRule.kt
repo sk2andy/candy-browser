@@ -237,11 +237,11 @@ object CandyRuleValidator {
             CandyHostCanonicalizer.canonicalHost(uri.host) != null
     }
 
-    private fun isSafeSelector(selector: String?): Boolean {
+    internal fun isSafeSelector(selector: String?): Boolean {
         if (selector == null || selector.length > MAX_SELECTOR_LENGTH) return false
         if (selector.any(Char::isISOControl)) return false
         val lower = selector.lowercase(Locale.ROOT)
-        return listOf("{", "}", "<", ">", "@import", "javascript:", "url(", "expression(")
+        return listOf("{", "}", "<", "@import", "javascript:", "url(", "expression(")
             .none(lower::contains)
     }
 }

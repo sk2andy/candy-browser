@@ -96,5 +96,26 @@ class BundledCandyRulesTest {
         assertTrue(script.contains("h===rule.host||h.endsWith('.'+rule.host)"))
         assertTrue(script.contains("'paused.example'"))
         assertTrue(script.contains("new TextDecoder('utf-8')"))
+        assertTrue(script.contains("s.sheet.insertRule("))
+        assertTrue(script.contains("catch (ignored) {}"))
+    }
+
+    @Test
+    fun `cosmetic script isolates selector failures`() {
+        val script = CandyCosmeticScript.create(listOf(".valid", ".invalid["))
+
+        assertTrue(script.contains("'LnZhbGlk'"))
+        assertTrue(script.contains("'LmludmFsaWRb'"))
+        assertTrue(script.contains("s.sheet.insertRule("))
+        assertTrue(script.contains("catch(e){}"))
+    }
+
+    @Test
+    fun `document start origin preserves non default port`() {
+        assertEquals(
+            "https://news.example:8443",
+            CandyDocumentStartOrigin.fromUrl("https://news.example:8443/story"),
+        )
+        assertEquals("https://news.example", CandyDocumentStartOrigin.fromUrl("https://news.example"))
     }
 }

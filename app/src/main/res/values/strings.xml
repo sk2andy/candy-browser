@@ -256,7 +256,7 @@
     <string name="about_bundled_notices_action">Read bundled notices offline</string>
     <string name="about_bundled_notices_title">Bundled third-party notices</string>
     <string name="about_notices_unavailable">Bundled notices could not be opened.</string>
-    <string name="about_uassets_body">Candy bundles a compiled subset of uAssets revision %1$s. Only exact request hosts and site-to-host pairs supported by Candy are included. Scriptlets, JavaScript, redirects, and advanced uBO syntax are excluded. This is not full uBlock Origin compatibility or endorsement.</string>
+    <string name="about_uassets_body">Candy bundles compiled network and domain-specific standard-CSS subsets of uAssets revision %1$s. Exact request hosts, site-to-host pairs, CSS rules, and CSS exceptions supported by Candy are included. Scriptlets, JavaScript, redirects, generic CSS, conditional capability blocks, and advanced uBO syntax are excluded. This is not full uBlock Origin compatibility or endorsement.</string>
 
     <!-- Toasts and errors -->
     <string name="toast_tab_limit_reached">Maximum of %1$d tabs</string>
@@ -403,7 +403,7 @@
     <string name="filter_test_explanation">Enter a host or URL. Candy shows which active rule would decide it without loading the address.</string>
     <string name="filter_tools_section">Import and filter lists</string>
     <string name="filter_builtin_title">Built-in protection is active</string>
-    <string name="filter_builtin_body">All profiles use EasyList/EasyPrivacy plus a pinned, compatible uBlock Origin Ads network subset. EasyList Cookie and curated CMP selectors hide common cookie banners. Built-in protection stays separate from editable rules and can be disabled in Settings.</string>
+    <string name="filter_builtin_body">All profiles use EasyList/EasyPrivacy plus pinned, compatible uBlock Origin Ads network and cosmetic subsets. EasyList Cookie and curated CMP selectors hide common cookie banners. Built-in protection stays separate from editable rules and can be disabled in Settings.</string>
     <string name="filter_transfer_title">Back up or restore Candy rules</string>
     <string name="filter_transfer_body">Import Candy Rules v1 or the supported subset of Adblock Plus and uBlock lists. Export always uses Candy Rules v1.</string>
     <string name="filter_search">Search rules</string>

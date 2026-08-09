@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.blocking
 
 import java.net.URI
 import java.util.Base64
+import java.util.Locale
 
 data class CandyRuleLineError(val line: Int, val message: String)
 
@@ -255,9 +256,13 @@ object CandyCosmeticScript {
         "document.querySelectorAll('style[data-candy-filter]').forEach(function(s){s.remove()})"
 
     fun create(selectors: List<String>, pausedHosts: Collection<String> = emptyList()): String {
-        val css = selectors.distinct().take(64).joinToString(",")
-        if (css.isEmpty()) return ""
-        val escaped = css.replace("\\", "\\\\").replace("'", "\\'")
+        val encodedSelectors = selectors.asSequence()
+            .distinct()
+            .map { selector ->
+                Base64.getEncoder().encodeToString(selector.toByteArray(Charsets.UTF_8))
+            }
+            .joinToString(",") { encoded -> "'$encoded'" }
+        if (encodedSelectors.isEmpty()) return ""
         val pauses = pausedHosts.asSequence()
             .mapNotNull(CandyHostCanonicalizer::canonicalHost)
             .distinct()
@@ -265,9 +270,13 @@ object CandyCosmeticScript {
             .joinToString(",") { "'$it'" }
         return "(function(){if(top!==self)return;var h=location.hostname.toLowerCase();" +
             "if([$pauses].some(function(x){return h===x||h.endsWith('.'+x)}))return;" +
+            "var d=function(v){var b=atob(v);var a=Uint8Array.from(b,function(c){" +
+            "return c.charCodeAt(0)});return new TextDecoder('utf-8').decode(a)};" +
             "var s=document.createElement('style');" +
-            "s.dataset.candyFilter='1';s.textContent='$escaped{display:none!important}';" +
-            "(document.head||document.documentElement).appendChild(s)})()"
+            "s.dataset.candyFilter='1';(document.head||document.documentElement).appendChild(s);" +
+            "[$encodedSelectors].forEach(function(v){try{s.sheet.insertRule(" +
+            "d(v)+'{display:none!important}',s.sheet.cssRules.length)}catch(e){}});" +
+            "if(!s.sheet.cssRules.length)s.remove()})()"
     }
 
     fun createScoped(
@@ -309,9 +318,28 @@ object CandyCosmeticScript {
               if(!selectors.length)return;
               var s=document.createElement('style');
               s.dataset.candyFilter='1';
-              s.textContent=selectors.join(',')+'{display:none!important}';
               (document.head||document.documentElement).appendChild(s);
+              selectors.forEach(function(selector){
+                try {
+                  s.sheet.insertRule(
+                    selector+'{display:none!important}',
+                    s.sheet.cssRules.length
+                  );
+                } catch (ignored) {}
+              });
+              if(!s.sheet.cssRules.length)s.remove();
             })()
         """.trimIndent()
+    }
+}
+
+internal object CandyDocumentStartOrigin {
+    fun fromUrl(pageUrl: String?): String? {
+        val uri = runCatching { URI(pageUrl ?: return null) }.getOrNull() ?: return null
+        val scheme = uri.scheme?.lowercase(Locale.ROOT)?.takeIf { it == "http" || it == "https" }
+            ?: return null
+        val host = CandyHostCanonicalizer.canonicalHost(uri.host) ?: return null
+        val port = uri.port.takeIf { it >= 0 }?.let { value -> ":$value" }.orEmpty()
+        return "$scheme://$host$port"
     }
 }

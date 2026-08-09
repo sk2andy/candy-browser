@@ -79,7 +79,8 @@
 
 ### Local protection
 
-- EasyList/EasyPrivacy hosts plus a pinned, safely representable uAssets subset
+- EasyList/EasyPrivacy hosts and domain-scoped cosmetic CSS plus a pinned, safely representable
+  uAssets subset
 - Third-party-cookie blocking and cosmetic cookie-banner hiding
 - **Privacy X-Ray:** live per-tab block counts, categories, domains, and exceptions
 - **Filter Studio:** global or profile rules, import/export, and confirmed HTTPS subscriptions
@@ -199,7 +200,9 @@ Chromium fork, extension runtime, proxy, VPN, or second rendering engine. Filter
 each WebView through local request interception, document-start CSS/DOM rules, and service-worker
 interception. WebSockets,
 CNAME cloaking, some redirects, and content inside closed cross-origin or Shadow DOM contexts may
-get through.
+get through. Candy pre-registers cosmetic CSS for known GET navigations. Android WebView does not
+expose cross-origin form POST targets early enough for origin-scoped document-start registration;
+those navigations receive the existing page-commit fallback and can show a brief cosmetic flash.
 
 Privacy X-Ray includes only blocked requests that WebView can reliably attribute to one tab.
 Service-worker requests are filtered but excluded from per-tab telemetry when no reliable tab ID
@@ -213,6 +216,14 @@ and origin-scoped standard CSS selectors. It deliberately rejects JavaScript, re
 redirects, response-header filters, scriptlets, and advanced cosmetic operators rather than
 approximating them.
 
+Bundled EasyList/EasyPrivacy and uAssets cosmetics are compiled separately from user rules and
+merged in memory so exceptions work across sources. Only domain-specific standard `##selector`
+rules, their domain exclusions, and matching `#@#` exceptions are retained. Generic selectors,
+conditional capability blocks, and procedural operators are skipped. Runtime lookup resolves
+selectors for the current host before registering a bounded, exact-origin document-start script;
+invalid browser-specific selectors fail independently through `insertRule`. Mail, Maps, and
+Accounts Google hosts intentionally receive no bundled cosmetic CSS.
+
 Bundled defaults may additionally use audited, declarative WebView rules: a site-scoped literal
 request-path prefix or a known Reject/Remind-later consent control. These rules cannot run imported
 JavaScript, never click Accept, and never intercept a main-frame navigation. An exact bundled path
@@ -223,9 +234,9 @@ Imports are bounded and validated atomically. HTTPS subscriptions update only af
 fetch, show a diff, and require confirmation. Private-profile imports remain in memory.
 
 EasyList, EasyPrivacy, and EasyList Cookie data are distributed under CC BY-SA 3.0 or later. The
-uAssets-derived network subset is generated from a pinned revision of the official uBlock Origin Ads
-source and distributed under GPL-3.0. Exact sources, revisions, transformations, and notices ship in
-`app/src/main/assets/`.
+uAssets-derived network and cosmetic subsets are generated from one pinned revision of the official
+uBlock Origin Ads source and distributed under GPL-3.0. Exact sources, revisions, transformations,
+and notices ship in `app/src/main/assets/`; maintenance entry points live in `scripts/update_*.sh`.
 
 </details>
 

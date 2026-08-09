@@ -1,7 +1,7 @@
 uBlock Origin uAssets attribution and license
 ============================================
 
-Candy Browser contains a modified, compiled subset of network rules from uAssets.
+Candy Browser contains modified, compiled network and cosmetic subsets from uAssets.
 Source: https://raw.githubusercontent.com/uBlockOrigin/uAssets/05bc031ad40c2270223f068f052970201ca1bf14/filters/filters.txt
 Source revision: 05bc031ad40c2270223f068f052970201ca1bf14
 Upstream project: https://github.com/uBlockOrigin/uAssets
@@ -9,7 +9,8 @@ License: GNU General Public License version 3
 
 Modification notice:
 - Exact host and positive site-to-host rules supported by Candy are compiled into plain lists.
-- Paths, resource modifiers, regexes, redirects, scriptlets, JavaScript, and cosmetic rules are excluded.
+- Domain-specific standard CSS rules and their exceptions are compiled separately.
+- Generic/procedural CSS, paths, modifiers, regexes, redirects, scriptlets, and JavaScript are excluded.
 - The complete pinned input is shipped as uassets_filters_source.txt.
 - scripts/update_uassets_filters.sh is the corresponding transformation source.
 
