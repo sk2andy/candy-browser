@@ -63,6 +63,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -77,6 +78,7 @@ import kotlin.math.roundToInt
 internal object LinkPeekTestTags {
     const val Root = "link_peek"
     const val OpenTarget = "link_peek_open_target"
+    const val Instruction = "link_peek_instruction"
     const val Card = "link_peek_card"
     const val Preview = "link_peek_preview"
     const val Url = "link_peek_url"
@@ -346,16 +348,6 @@ internal fun LinkPeekOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 64.dp)
-                    .clickable(
-                        enabled = !committing,
-                        role = Role.Button,
-                        onClick = {
-                            if (!commitRequested) {
-                                commitRequested = true
-                                onCommitRequested()
-                            }
-                        },
-                    )
                     .graphicsLayer {
                         alpha = 1f - flyProgress
                         translationY = motionProgress * 4.dp.toPx()
@@ -363,29 +355,20 @@ internal fun LinkPeekOverlay(
                         scaleX = responsiveScale
                         scaleY = responsiveScale
                     }
-                    .testTag(LinkPeekTestTags.OpenTarget),
+                    .testTag(LinkPeekTestTags.Instruction),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(
+                Text(
+                    pullDownLabel,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        pullDownLabel,
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        openLabel,
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
             }
             Spacer(Modifier.height(64.dp))
         }
@@ -466,7 +449,24 @@ internal fun LinkPeekOverlay(
                     },
                     shadowElevation = if (armed) 8.dp else 3.dp,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                enabled = !committing,
+                                onClickLabel = openLabel,
+                                role = Role.Button,
+                                onClick = {
+                                    if (!commitRequested) {
+                                        commitRequested = true
+                                        onCommitRequested()
+                                    }
+                                },
+                            )
+                            .semantics { contentDescription = openLabel }
+                            .testTag(LinkPeekTestTags.OpenTarget),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,

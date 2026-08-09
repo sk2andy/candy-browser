@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
@@ -38,7 +39,7 @@ class LinkPeekOverlayInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun openTargetIsVisibleLocalizedAccessibleAndSingleUse() {
+    fun plusTargetOwnsOpenActionAndFooterOnlyShowsInstruction() {
         val opens = AtomicInteger()
         composeRule.setContent {
             MaterialBrowserTheme {
@@ -82,28 +83,37 @@ class LinkPeekOverlayInstrumentedTest {
         composeRule.onNodeWithTag(LinkPeekTestTags.Preview).assertIsDisplayed()
         composeRule.onNodeWithTag(LinkPeekTestTags.NewTabTargetOverlay).assertIsDisplayed()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.action_open_in_new_tab))
+            .assertDoesNotExist()
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget)
             .assertIsDisplayed()
             .assertHasClickAction()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(composeRule.activity.getString(R.string.action_open_in_new_tab)),
+                ),
+            )
             .performClick()
             .performClick()
         composeRule.onNodeWithText(
             composeRule.activity.getString(R.string.link_peek_pull_down_instruction),
         )
             .assertIsDisplayed()
+            .assertHasNoClickAction()
 
         val density = composeRule.density
         val rootBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Root)
             .fetchSemanticsNode().boundsInRoot
         val cardBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Card)
             .fetchSemanticsNode().boundsInRoot
-        val targetBounds = composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget)
+        val instructionBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Instruction)
             .fetchSemanticsNode().boundsInRoot
         val overlayTargetBounds = composeRule
             .onNodeWithTag(LinkPeekTestTags.NewTabTargetOverlay)
             .fetchSemanticsNode().boundsInRoot
-        assertTrue(targetBounds.top >= cardBounds.bottom)
-        assertTrue(targetBounds.height + 1f >= with(density) { 64.dp.toPx() })
-        assertTrue(rootBounds.bottom - targetBounds.bottom >= with(density) { 64.dp.toPx() })
+        assertTrue(instructionBounds.top >= cardBounds.bottom)
+        assertTrue(instructionBounds.height + 1f >= with(density) { 64.dp.toPx() })
+        assertTrue(rootBounds.bottom - instructionBounds.bottom >= with(density) { 64.dp.toPx() })
         assertEquals(100f, overlayTargetBounds.left, 1f)
         assertEquals(100f, overlayTargetBounds.top, 1f)
         assertEquals(220f, overlayTargetBounds.right, 1f)
@@ -218,7 +228,7 @@ class LinkPeekOverlayInstrumentedTest {
     }
 
     @Test
-    fun largeFontInstructionCanGrowWithoutClipping() {
+    fun largeFontInstructionFitsWithoutClipping() {
         val platformDensity = composeRule.density
         composeRule.setContent {
             CompositionLocalProvider(
@@ -238,7 +248,7 @@ class LinkPeekOverlayInstrumentedTest {
             }
         }
 
-        val targetBounds = composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget)
+        val instructionBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Instruction)
             .fetchSemanticsNode().boundsInRoot
         val pullTextBounds = composeRule
             .onNodeWithText(
@@ -246,16 +256,9 @@ class LinkPeekOverlayInstrumentedTest {
                 useUnmergedTree = true,
             )
             .fetchSemanticsNode().boundsInRoot
-        val openTextBounds = composeRule
-            .onNodeWithText(
-                composeRule.activity.getString(R.string.action_open_in_new_tab),
-                useUnmergedTree = true,
-            )
-            .fetchSemanticsNode().boundsInRoot
-
-        assertTrue(targetBounds.height > with(platformDensity) { 64.dp.toPx() })
-        assertTrue(pullTextBounds.top >= targetBounds.top)
-        assertTrue(openTextBounds.bottom <= targetBounds.bottom)
+        assertTrue(instructionBounds.height + 1f >= with(platformDensity) { 64.dp.toPx() })
+        assertTrue(pullTextBounds.top >= instructionBounds.top)
+        assertTrue(pullTextBounds.bottom <= instructionBounds.bottom)
     }
 
     @Test
