@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.blocking
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.CompletableFuture
 
@@ -8,6 +9,17 @@ class ContentBlocker(context: Context) {
     private val appContext = context.applicationContext
     private val candyDefaultRules by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         BundledCandyRules.parseOrEmpty(readAssetOrEmpty("candy_default_rules.txt"))
+    }
+    private val compiledCosmeticRulesFuture by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        CompletableFuture.supplyAsync {
+            EasyListCosmeticRules.merge(
+                EasyListCosmeticRules.parse(readAssetOrEmpty("easylist_cosmetic_rules.txt")),
+                EasyListCosmeticRules.parse(
+                    readAssetOrEmpty("uassets_cosmetic_rules.txt"),
+                    EasyListCosmeticRules.UASSETS_HEADER,
+                ),
+            )
+        }
     }
     private val requestBlocker =
         // Privacy Browser parses allow rules before block rules for the same WebView limitation:
@@ -45,6 +57,10 @@ class ContentBlocker(context: Context) {
         consentScriptFuture
     }
 
+    fun prepareCosmeticRules() {
+        compiledCosmeticRulesFuture
+    }
+
     fun consentScriptIfReady(): String? = if (consentScriptFuture.isDone) {
         runCatching { consentScriptFuture.getNow("") }.getOrNull()?.takeIf(String::isNotEmpty)
     } else {
@@ -57,17 +73,39 @@ class ContentBlocker(context: Context) {
         }
     }
 
+    fun onCosmeticRulesReady(action: () -> Unit) {
+        compiledCosmeticRulesFuture.thenRun(action)
+    }
+
+    @VisibleForTesting
+    internal fun awaitCosmeticRulesForTesting() {
+        compiledCosmeticRulesFuture.join()
+    }
+
     fun shouldBlock(requestUrl: String, pageUrl: String?): Boolean =
         requestBlocker.shouldBlock(requestUrl, pageUrl)
 
     fun shouldBlockHosts(requestHost: String?, pageHost: String?): Boolean =
         requestBlocker.shouldBlockHosts(requestHost, pageHost)
 
-    fun adCosmeticSelectors(pageUrl: String?): List<String> =
-        candyDefaultRules.adCosmeticSelectors(pageUrl)
+    fun adCosmeticSelectors(pageUrl: String?): List<String> {
+        val compiled = compiledCosmeticRulesIfReady()?.selectors(pageUrl).orEmpty()
+        return (candyDefaultRules.adCosmeticSelectors(pageUrl) + compiled).distinct()
+    }
 
-    val adCosmeticRules: List<CandyRule>
-        get() = candyDefaultRules.adCosmeticRules
+    fun adCosmeticDocumentStartScript(
+        pageUrl: String?,
+        pausedHosts: Collection<String> = emptyList(),
+    ): String = CandyCosmeticScript.create(
+        selectors = adCosmeticSelectors(pageUrl),
+        pausedHosts = pausedHosts,
+    )
+
+    private fun compiledCosmeticRulesIfReady(): EasyListCosmeticRules? {
+        val future = compiledCosmeticRulesFuture
+        if (!future.isDone) return null
+        return runCatching { future.getNow(null) }.getOrNull()
+    }
 
     private fun loadLines(vararg assetNames: String): Sequence<String> = sequence {
         assetNames.forEach { assetName ->

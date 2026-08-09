@@ -1,15 +1,18 @@
 EasyList content-filter attribution
 ===================================
 
-This application contains compiled copies of host-anchored network rules from
-EasyList and EasyPrivacy and general element-hiding rules from the EasyList Cookie List.
+This application contains compiled copies of host-anchored network rules and domain-specific
+cosmetic rules from EasyList and EasyPrivacy, plus general element-hiding rules from the EasyList
+Cookie List.
 
 Source: https://github.com/easylist/easylist
 Authors: The EasyList authors (https://easylist.to/)
 License: Creative Commons Attribution-ShareAlike 3.0 Unported or later
 License text: https://creativecommons.org/licenses/by-sa/3.0/legalcode
 
-The generic Adblock Plus element-hiding rules are modified by compiling them
-into CSS. Host-anchored network rules are modified by compiling them into a sorted
-plain-host list. The generated files are produced by scripts/update_cookie_banner_css.sh
-and scripts/update_content_filter_hosts.sh.
+Generic cookie-banner element-hiding rules are modified by compiling them into CSS.
+Domain-specific standard cosmetic rules, exclusions, and exceptions are compiled into Candy's
+indexed cosmetic asset; unsupported operators are omitted. Host-anchored network rules are
+modified into a sorted plain-host list. Generated files are produced by
+scripts/update_cookie_banner_css.sh, scripts/update_content_filter_hosts.sh, and
+scripts/update_easylist_cosmetic.sh.

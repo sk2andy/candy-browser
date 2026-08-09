@@ -75,6 +75,16 @@ class CandyRuleTest {
                     .copy(sourceUrl = "https://lists.example/" + "界".repeat(800)),
             ),
         )
+        assertTrue(
+            CandyRuleValidator.validate(
+                rule(
+                    CandyRuleAction.Cosmetic,
+                    CandyRuleKind.CosmeticCss,
+                    firstParty = "news.example",
+                    selector = ".ad > span",
+                ),
+            ) is CandyRuleValidation.Valid,
+        )
     }
 
     @Test

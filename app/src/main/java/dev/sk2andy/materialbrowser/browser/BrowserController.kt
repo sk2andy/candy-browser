@@ -59,6 +59,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.CandyCosmeticScript
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
+import dev.sk2andy.materialbrowser.blocking.CandyDocumentStartOrigin
 import dev.sk2andy.materialbrowser.blocking.CandyFilterPresets
 import dev.sk2andy.materialbrowser.blocking.CandyHostCanonicalizer
 import dev.sk2andy.materialbrowser.blocking.CandyImportScope
@@ -979,7 +980,19 @@ class BrowserController(
         restorePersistedCandyTrails()
         WebView.setWebContentsDebuggingEnabled(false)
         configureServiceWorkerBlocking()
-        mainHandler.post(contentBlocker::prepareConsentScript)
+        mainHandler.post {
+            contentBlocker.prepareConsentScript()
+            contentBlocker.prepareCosmeticRules()
+            contentBlocker.onCosmeticRulesReady {
+                mainHandler.post {
+                    webViews.forEach { (tabId, webView) ->
+                        val pageUrl = pageUrls[tabId] ?: webView.url
+                        installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
+                        injectCandyCosmeticFallback(tabId, webView, pageUrl)
+                    }
+                }
+            }
+        }
         SnoozeRuntimeRegistry.register(snoozeRestoreCallback)
         snoozeScheduler.schedule(snoozedTabs, nowMillis)
     }
@@ -1292,7 +1305,7 @@ class BrowserController(
         if (target == BLANK_URL) {
             webView.loadUrl(BLANK_URL)
         } else {
-            webView.loadUrl(target)
+            loadUrlWithProtection(selectedTabId, webView, target)
         }
     }
 
@@ -2322,10 +2335,11 @@ class BrowserController(
         val targetIndex = CandyTrailHistoryReconciler.indexOfNode(binding, nodeId)
         val delta = targetIndex?.minus(binding.currentIndex)
         if (delta != null && delta != 0) {
+            applySiteProtectionForNavigation(tabId, existingWebView, node.url)
             existingWebView.goBackOrForward(delta)
         } else if (delta == null || existingWebView.url != node.url) {
             applyMediaPlaybackPolicy(tabId, existingWebView)
-            existingWebView.loadUrl(node.url)
+            loadUrlWithProtection(tabId, existingWebView, node.url)
         } else {
             pendingCandyTrailTargets.remove(tabId)
         }
@@ -2343,6 +2357,7 @@ class BrowserController(
         ) {
             leaveSiteCapsule()
         }
+        targetUrl?.let { applySiteProtectionForNavigation(selectedTabId, webView, it) }
         webView.goBack()
     }
     fun goForward() {
@@ -2350,6 +2365,10 @@ class BrowserController(
         val binding = candyTrailHistoryBindings[selectedTabId]
         binding?.entries?.getOrNull(binding.currentIndex + 1)?.nodeId?.let { targetNodeId ->
             pendingCandyTrailTargets[selectedTabId] = targetNodeId
+        }
+        val history = webView.copyBackForwardList()
+        history.getItemAtIndex(history.currentIndex + 1)?.url?.let { targetUrl ->
+            applySiteProtectionForNavigation(selectedTabId, webView, targetUrl)
         }
         webView.goForward()
     }
@@ -3009,7 +3028,7 @@ class BrowserController(
             val initialUrl = initialUrlOverride ?: tab.url
             if (initialUrl != BLANK_URL) {
                 updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                webView.loadUrl(initialUrl)
+                loadUrlWithProtection(tabId, webView, initialUrl)
             }
         }
     }
@@ -3061,7 +3080,7 @@ class BrowserController(
         webChromeClient = browserChromeClient(tabId)
         setDownloadListener(downloadListener(tabId))
         installForcedVerticalScrollDocumentStartScript(tabId, this)
-        installCosmeticDocumentStartScripts(tabId, this)
+        installCosmeticDocumentStartScripts(tabId, this, tab.url)
         setOnLongClickListener { clickedView ->
             val webView = clickedView as? WebView ?: return@setOnLongClickListener false
             val hit = webView.hitTestResult
@@ -3142,7 +3161,7 @@ class BrowserController(
         val previousTabId = selectedTabId
         if (createTab(targetUrl, isIncognito = false) == previousTabId) {
             applyMediaPlaybackPolicy(tabId, view)
-            view.loadUrl(targetUrl)
+            loadUrlWithProtection(tabId, view, targetUrl)
         }
     }
 
@@ -3241,9 +3260,17 @@ class BrowserController(
             if (scheme == "http" || scheme == "https") {
                 val capsule = activeCapsuleForTab(tabId)
                     ?.takeIf { request.isForMainFrame }
-                if (capsule == null) return false
+                if (capsule == null) {
+                    if (request.isForMainFrame) {
+                        applySiteProtectionForNavigation(tabId, view, request.url.toString())
+                    }
+                    return false
+                }
                 return when (CapsuleNavigationRules.decide(capsule, request.url.toString())) {
-                    CapsuleNavigationDecision.StayInCapsule -> false
+                    CapsuleNavigationDecision.StayInCapsule -> {
+                        applySiteProtectionForNavigation(tabId, view, request.url.toString())
+                        false
+                    }
                     CapsuleNavigationDecision.OpenInFullCandy -> {
                         mainHandler.post {
                             openCapsuleTargetInFullCandy(tabId, view, request.url.toString())
@@ -3258,7 +3285,7 @@ class BrowserController(
                 ExternalLaunchResult.Launched -> true
                 is ExternalLaunchResult.OpenInBrowser -> {
                     applyMediaPlaybackPolicy(tabId, view)
-                    view.loadUrl(result.url)
+                    loadUrlWithProtection(tabId, view, result.url)
                     true
                 }
                 ExternalLaunchResult.Unsupported -> {
@@ -3446,15 +3473,22 @@ class BrowserController(
         if (script.isNotEmpty()) view.evaluateJavascript(script, null)
     }
 
-    private fun installCosmeticDocumentStartScripts(tabId: String, view: WebView) {
+    private fun installCosmeticDocumentStartScripts(
+        tabId: String,
+        view: WebView,
+        pageUrl: String? = null,
+    ) {
         removeCosmeticDocumentStartScripts(view)
         if (!workerSettings.blockAdsAndTrackers ||
             !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         ) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val targetUrl = pageUrl ?: pageUrls[tabId] ?: tab.url
+        val targetOrigin = CandyDocumentStartOrigin.fromUrl(targetUrl) ?: return
+        if (isSiteProtectionPaused(tabId, targetUrl)) return
         val handlers = buildList {
-            val bundledScript = CandyCosmeticScript.createScoped(
-                rules = contentBlocker.adCosmeticRules,
+            val bundledScript = contentBlocker.adCosmeticDocumentStartScript(
+                pageUrl = targetUrl,
                 pausedHosts = siteExceptionHostsForTab(tabId),
             )
             if (bundledScript.isNotEmpty()) {
@@ -3462,7 +3496,7 @@ class BrowserController(
                     WebViewCompat.addDocumentStartJavaScript(
                         view,
                         bundledScript,
-                        ALL_WEB_ORIGINS,
+                        setOf(targetOrigin),
                     )
                 }.getOrNull()?.let(::add)
             }
@@ -4903,12 +4937,17 @@ class BrowserController(
         pageUrl: String,
     ) {
         applyCookiePolicy(tabId, webView, pageUrl)
-        installCosmeticDocumentStartScripts(tabId, webView)
+        installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
         if (!workerSettings.hideCookieConsent) {
             webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
         } else if (!isCookieBannerRemovalEnabled(tabId, pageUrl)) {
             webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
         }
+    }
+
+    private fun loadUrlWithProtection(tabId: String, webView: WebView, pageUrl: String) {
+        applySiteProtectionForNavigation(tabId, webView, pageUrl)
+        webView.loadUrl(pageUrl)
     }
 
     private fun reloadTabWithProtection(tabId: String) {

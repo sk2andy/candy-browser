@@ -16,6 +16,13 @@ trap 'rm -rf "$TEMP_DIR"' EXIT HUP INT TERM
 curl --fail --location --silent --show-error "$SOURCE_URL" > "$TEMP_DIR/source.txt"
 curl --fail --location --silent --show-error "$LICENSE_URL" > "$TEMP_DIR/license.txt"
 
+python3 "$PROJECT_DIR/scripts/compile_easylist_cosmetic.py" \
+    --source-file "$TEMP_DIR/source.txt" \
+    --asset-kind uassets \
+    --revision "$SOURCE_REVISION" \
+    --output "$TEMP_DIR/uassets_cosmetic_rules.txt" \
+    --min-hide-rules 1500
+
 # Match Candy's deliberately small ABP/uBlock network subset:
 #   ||request-host^
 #   ||request-host^$domain=page-host|other-page-host[,3p]
@@ -126,7 +133,7 @@ write_header() {
     printf '%s\n' 'uBlock Origin uAssets attribution and license'
     printf '%s\n' '============================================'
     printf '%s\n' ''
-    printf '%s\n' 'Candy Browser contains a modified, compiled subset of network rules from uAssets.'
+    printf '%s\n' 'Candy Browser contains modified, compiled network and cosmetic subsets from uAssets.'
     printf 'Source: %s\n' "$SOURCE_URL"
     printf 'Source revision: %s\n' "$SOURCE_REVISION"
     printf '%s\n' 'Upstream project: https://github.com/uBlockOrigin/uAssets'
@@ -134,7 +141,8 @@ write_header() {
     printf '%s\n' ''
     printf '%s\n' 'Modification notice:'
     printf '%s\n' '- Exact host and positive site-to-host rules supported by Candy are compiled into plain lists.'
-    printf '%s\n' '- Paths, resource modifiers, regexes, redirects, scriptlets, JavaScript, and cosmetic rules are excluded.'
+    printf '%s\n' '- Domain-specific standard CSS rules and their exceptions are compiled separately.'
+    printf '%s\n' '- Generic/procedural CSS, paths, modifiers, regexes, redirects, scriptlets, and JavaScript are excluded.'
     printf '%s\n' '- The complete pinned input is shipped as uassets_filters_source.txt.'
     printf '%s\n' '- scripts/update_uassets_filters.sh is the corresponding transformation source.'
     printf '%s\n' ''
@@ -145,6 +153,7 @@ chmod 644 "$TEMP_DIR"/uassets_*.txt "$TEMP_DIR/uassets.LICENSE.txt"
 mv "$TEMP_DIR/uassets_blocked_hosts.txt" "$ASSET_DIR/uassets_blocked_hosts.txt"
 mv "$TEMP_DIR/uassets_blocked_host_pairs.txt" "$ASSET_DIR/uassets_blocked_host_pairs.txt"
 mv "$TEMP_DIR/uassets_allowed_host_pairs.txt" "$ASSET_DIR/uassets_allowed_host_pairs.txt"
+mv "$TEMP_DIR/uassets_cosmetic_rules.txt" "$ASSET_DIR/uassets_cosmetic_rules.txt"
 mv "$TEMP_DIR/uassets.LICENSE.txt" "$ASSET_DIR/uassets.LICENSE.txt"
 mv "$TEMP_DIR/source.txt" "$ASSET_DIR/uassets_filters_source.txt"
 

@@ -17,6 +17,20 @@ fun releaseSigningValue(propertyName: String, environmentVariable: String): Stri
         ?.takeIf(String::isNotBlank)
         ?: providers.environmentVariable(environmentVariable).orNull?.takeIf(String::isNotBlank)
 
+fun validatedApplicationIdSuffix(value: String): String {
+    require(value.matches(Regex("""\.[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*"""))) {
+        "candy.localReleaseApplicationIdSuffix must start with '.' and contain valid ID segments."
+    }
+    return value
+}
+
+fun validatedAppLabel(value: String): String {
+    require(value.isNotBlank() && value.none(Char::isISOControl)) {
+        "candy.localReleaseAppLabel must contain visible text without control characters."
+    }
+    return value
+}
+
 val releaseSigningValues = mapOf(
     "storeFile" to releaseSigningValue("storeFile", "CANDY_RELEASE_KEYSTORE_PATH"),
     "storePassword" to releaseSigningValue("storePassword", "CANDY_RELEASE_STORE_PASSWORD"),
@@ -30,6 +44,14 @@ val candyVersionName = providers.gradleProperty("candy.versionName").orElse("0.1
 val debugApplicationIdSuffix =
     providers.gradleProperty("candy.debugApplicationIdSuffix").orElse(".linkpeek")
 val debugAppLabel = providers.gradleProperty("candy.debugAppLabel").orElse("Candy Link Peek")
+val localReleaseApplicationIdSuffix =
+    providers.gradleProperty("candy.localReleaseApplicationIdSuffix")
+        .orElse(".local")
+        .map(::validatedApplicationIdSuffix)
+val localReleaseAppLabel =
+    providers.gradleProperty("candy.localReleaseAppLabel")
+        .orElse("Candy Browser Local")
+        .map(::validatedAppLabel)
 
 android {
     namespace = "dev.sk2andy.materialbrowser"
@@ -79,9 +101,9 @@ android {
 
         create("localRelease") {
             initWith(getByName("release"))
-            applicationIdSuffix = ".local"
+            applicationIdSuffix = localReleaseApplicationIdSuffix.get()
             versionNameSuffix = "-local"
-            manifestPlaceholders["appLabel"] = "Candy Browser Local"
+            manifestPlaceholders["appLabel"] = localReleaseAppLabel.get()
             buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
             matchingFallbacks += listOf("release")
         }
