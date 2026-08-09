@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
@@ -175,6 +176,7 @@ import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.data.TabWebViewStateRepository
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
@@ -331,6 +333,7 @@ class BrowserController(
     private val previewRepository = TabPreviewRepository.get(activity)
     private val faviconRepository = FaviconRepository.get(activity)
     private val candyTrailRepository = CandyTrailRepository.get(activity)
+    private val webViewStateRepository = TabWebViewStateRepository.get(activity)
     private val siteCapsuleStore = SiteCapsuleStore(activity)
     private val siteCapsuleIconStore = SiteCapsuleIconStore(activity)
     private val capsuleShortcuts = CapsuleShortcutPublisher(activity)
@@ -971,6 +974,11 @@ class BrowserController(
             }
         }
         persist()
+        webViewStateRepository.prune(
+            (tabs.asSequence() + snoozedTabs.asSequence().map(SnoozedTab::tab))
+                .filterNot(BrowserTab::isIncognito)
+                .mapTo(linkedSetOf(), BrowserTab::id),
+        )
         // Incognito tabs are never restored. Remove data left by process death before
         // any private WebView can reuse the old profile.
         clearIncognitoProfile()
@@ -2202,6 +2210,7 @@ class BrowserController(
         candyTrails.remove(tabId)
         candyTrailGenerations.remove(tabId)
         candyTrailRepository.delete(tabId)
+        webViewStateRepository.delete(tabId)
         reconcileCandyTrailForks(System.currentTimeMillis())
         snoozeScheduler.schedule(remaining)
         return true
@@ -2896,6 +2905,8 @@ class BrowserController(
         suppressedCandyTrailTabIds += tabs.map(BrowserTab::id)
         candyTrails.clear()
         candyTrailRepository.clear()
+        webViewStateRepository.clear()
+        webViewStateRepository.flush()
         regularForcedScrollTabIds.forEach { tabId ->
             webViews[tabId]?.let { webView ->
                 webView.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
@@ -2913,6 +2924,7 @@ class BrowserController(
         isActivityResumed = false
         touchTab(selectedTabId, System.currentTimeMillis())
         cancelPendingPreviewCapture()
+        persistWebViewStates()
         webViews.values.forEach(::pauseWebView)
         linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
         CookieManager.getInstance().flush()
@@ -2943,6 +2955,8 @@ class BrowserController(
         if (pendingPermissionAccess?.awaitingRuntime != true) cancelPendingPermissionAccess()
         activePermissions.clear()
         permissionRevision++
+        persistWebViewStates()
+        webViewStateRepository.flush()
     }
 
     fun destroy() {
@@ -3007,7 +3021,8 @@ class BrowserController(
         val tab = tabs.first { it.id == tabId }
         createWebView(tabId).also { webView ->
             val initialUrl = initialUrlOverride ?: tab.url
-            if (initialUrl != BLANK_URL) {
+            val restored = initialUrlOverride == null && restoreWebViewState(tab, webView)
+            if (!restored && initialUrl != BLANK_URL) {
                 updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
                 webView.loadUrl(initialUrl)
             }
@@ -3220,6 +3235,7 @@ class BrowserController(
             }
             updateNavigationState(tabId, view)
             reconcileCandyTrailHistory(tabId, view, isReload)
+            persistWebViewState(tabId, view)
         }
 
         override fun shouldInterceptRequest(
@@ -4064,6 +4080,43 @@ class BrowserController(
         }
     }
 
+    private fun restoreWebViewState(tab: BrowserTab, webView: WebView): Boolean {
+        if (tab.isIncognito || tab.url == BLANK_URL) return false
+        val state = webViewStateRepository.load(tab.id) ?: return false
+        val history = runCatching { webView.restoreState(state) }.getOrNull()
+        val currentItem = history?.currentItem
+        if (history == null || history.size == 0 || currentItem?.url != tab.url) {
+            webViewStateRepository.delete(tab.id)
+            return false
+        }
+        pageUrls[tab.id] = currentItem.url
+        updateTab(tab.id) {
+            it.copy(
+                title = currentItem.title.orEmpty().ifBlank { it.title },
+                canGoBack = webView.canGoBack(),
+                canGoForward = webView.canGoForward(),
+                error = null,
+            )
+        }
+        return true
+    }
+
+    private fun persistWebViewStates() {
+        webViews.forEach(::persistWebViewState)
+    }
+
+    private fun persistWebViewState(tabId: String, webView: WebView) {
+        val tab = tabs.firstOrNull { it.id == tabId }
+        if (tab == null || tab.isIncognito || tab.url == BLANK_URL) {
+            webViewStateRepository.delete(tabId)
+            return
+        }
+        val state = Bundle()
+        val history = runCatching { webView.saveState(state) }.getOrNull()
+        if (history == null || history.size == 0) return
+        webViewStateRepository.save(tabId, state)
+    }
+
     private fun queueBlockedRequest(
         tabId: String,
         requestUrl: String,
@@ -4675,6 +4728,7 @@ class BrowserController(
         candyTrails.remove(tabId)
         candyTrailGenerations.remove(tabId)
         candyTrailRepository.delete(tabId)
+        webViewStateRepository.delete(tabId)
         previews.remove(tabId)
         previewRepository.delete(tabId)
         invalidateFavicon(tabId)
@@ -4683,6 +4737,7 @@ class BrowserController(
 
     private fun removeTabRuntimeForSnooze(tab: BrowserTab) {
         candyTrails[tab.id]?.let { trail -> candyTrailRepository.save(tab, trail) }
+        webViews[tab.id]?.let { webView -> persistWebViewState(tab.id, webView) }
         clearPrivacyDataForTab(tab.id)
         popupOpenerIdCleanup(tab.id)
         webViews.remove(tab.id)?.let(::destroyWebView)
@@ -4962,6 +5017,7 @@ class BrowserController(
             clearPrivacyDataForTab(tabId)
             candyTrailHistoryBindings.remove(tabId)
             pendingCandyTrailTargets.remove(tabId)
+            webViews[tabId]?.let { webView -> persistWebViewState(tabId, webView) }
             webViews.remove(tabId)?.let(::destroyWebView)
             webViewProfileKeys.remove(tabId)
             edgeToEdgePages.remove(tabId)
