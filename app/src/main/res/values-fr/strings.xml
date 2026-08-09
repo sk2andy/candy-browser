@@ -174,7 +174,6 @@
         <item quantity="other">Fermer %1$d onglets en double ? Les onglets épinglés et l’onglet actuel restent ouverts.</item>
     </plurals>
     <string name="favorites_title">Favoris</string>
-    <string name="favorites_empty">Aucun favori pour le moment — ajoutez-en via le menu ⋮.</string>
     <string name="content_actions_title">Contenu de la page</string>
     <string name="action_open_link_background_tab">Ouvrir le lien dans un nouvel onglet en arrière-plan</string>
     <string name="link_peek_title">Aperçu du lien</string>

@@ -2655,7 +2655,7 @@ private fun NewTabPage(
                     )
                 }
             }
-            if (!incognito) {
+            if (!incognito && favorites.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2679,21 +2679,6 @@ private fun NewTabPage(
                         tonalElevation = 8.dp,
                     ) {
                         Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                            AnimatedVisibility(
-                                visible = favorites.isEmpty(),
-                                enter = fadeIn(tween(150)),
-                                exit = fadeOut(tween(100)),
-                            ) {
-                                Text(
-                                    stringResource(R.string.favorites_empty),
-                                    modifier = Modifier.padding(
-                                        horizontal = 18.dp,
-                                        vertical = 14.dp,
-                                    ),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colors.onSurfaceVariant,
-                                )
-                            }
                             ExpressiveFavoriteRows(
                                 favorites = favorites,
                                 onFavorite = onFavorite,
