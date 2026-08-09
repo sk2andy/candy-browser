@@ -2,7 +2,7 @@
     <string name="app_name">Candy Browser</string>
     <string name="onboarding_welcome_title">Conoce Candy Browser</string>
     <string name="onboarding_welcome_body">Un navegador basado en gestos que mantiene pestañas, recorridos y privacidad al alcance de la mano.</string>
-    <string name="onboarding_welcome_card_title">Cuatro gestos. Un flujo natural.</string>
+    <string name="onboarding_welcome_card_title">Tres gestos. Un flujo natural.</string>
     <string name="onboarding_welcome_start">Aprender los gestos</string>
     <string name="onboarding_skip">Omitir</string>
     <string name="onboarding_completion_title">¡Todo listo!</string>
@@ -12,10 +12,8 @@
     <string name="onboarding_title">Aprende los gestos de Candy</string>
     <string name="onboarding_progress">%1$d de %2$d</string>
     <string name="onboarding_try_here">Prueba el gesto en la tarjeta</string>
-    <string name="onboarding_required_hint">Debes completar los cuatro gestos para continuar.</string>
+    <string name="onboarding_required_hint">Debes completar los tres gestos para continuar.</string>
     <string name="onboarding_accessibility_complete_action">Marcar este gesto como completado</string>
-    <string name="onboarding_refresh_title">Desliza para actualizar</string>
-    <string name="onboarding_refresh_description">Arrastra la página hacia abajo hasta que se actualice.</string>
     <string name="onboarding_switch_tabs_title">Cambia de pestaña</string>
     <string name="onboarding_switch_tabs_description">Desliza la barra de direcciones a la izquierda o derecha.</string>
     <string name="onboarding_open_tabs_title">Abre la vista de pestañas</string>
@@ -175,8 +173,6 @@
     <string name="action_open_link_background_tab">Abrir enlace en una nueva pestaña en segundo plano</string>
     <string name="link_peek_title">Vista previa del enlace</string>
     <string name="action_open_in_new_tab">Abrir en una nueva pestaña</string>
-    <string name="link_peek_pull_down_instruction">Desliza hacia abajo</string>
-    <string name="link_peek_accessibility_description">Vista previa del enlace. Desliza hacia abajo hasta el objetivo y suelta para abrir en una pestaña nueva. Suelta antes, desliza hacia arriba o vuelve atrás para cancelar.</string>
     <string name="action_download_image">Descargar imagen</string>
     <string name="download_notification_description">Descarga</string>
     <string name="settings_title">Ajustes</string>

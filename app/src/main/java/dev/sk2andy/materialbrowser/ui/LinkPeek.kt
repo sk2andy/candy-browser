@@ -57,11 +57,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.progressBarRangeInfo
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -167,9 +163,7 @@ internal fun LinkPeekOverlay(
     val host = remember(committedUrl) { BrowserUriPolicy.displayHttpHost(committedUrl) }
     val isSecure = committedUri?.scheme.equals("https", ignoreCase = true)
     val openLabel = stringResource(R.string.action_open_in_new_tab)
-    val pullDownLabel = stringResource(R.string.link_peek_pull_down_instruction)
     val cancelLabel = stringResource(R.string.action_cancel)
-    val accessibilityDescription = stringResource(R.string.link_peek_accessibility_description)
 
     LaunchedEffect(committing) {
         if (!committing) {
@@ -196,10 +190,6 @@ internal fun LinkPeekOverlay(
                     alpha = scrimAlpha * (1f - flyProgress),
                 ),
             )
-            .semantics {
-                contentDescription = accessibilityDescription
-                progressBarRangeInfo = ProgressBarRangeInfo(motionProgress, 0f..1f)
-            }
             .testTag(LinkPeekTestTags.Root),
     ) {
         Box(
@@ -373,12 +363,6 @@ internal fun LinkPeekOverlay(
                         .padding(horizontal = 24.dp, vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(
-                        pullDownLabel,
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
                     Text(
                         openLabel,
                         color = Color.White,

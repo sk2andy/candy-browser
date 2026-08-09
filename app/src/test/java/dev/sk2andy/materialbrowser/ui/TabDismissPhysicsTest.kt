@@ -64,31 +64,4 @@ class TabDismissPhysicsTest {
         assertTrue(TabDismissPhysics.hasClearedResistance(90f, 100f, 1f))
     }
 
-    @Test
-    fun `link peek can share exact compact card close threshold`() {
-        assertEquals(
-            212f,
-            TabDismissPhysics.rawThresholdForCardWidth(
-                cardWidth = 1000f,
-                resistanceFraction = 0.4f,
-            ),
-            0.001f,
-        )
-    }
-
-    @Test
-    fun `link peek derives the real two-column tab card width from viewport wiring`() {
-        val cardWidth = TabDismissPhysics.compactGridCardWidth(
-            viewportWidth = 1080f,
-            totalHorizontalPadding = 84f,
-            horizontalGap = 31.5f,
-        )
-
-        assertEquals(482.25f, cardWidth, 0.001f)
-        assertEquals(
-            102.237f,
-            TabDismissPhysics.rawThresholdForCardWidth(cardWidth, resistanceFraction = 0.4f),
-            0.001f,
-        )
-    }
 }

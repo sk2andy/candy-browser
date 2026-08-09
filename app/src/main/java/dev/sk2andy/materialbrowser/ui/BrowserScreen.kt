@@ -2,7 +2,6 @@
 
 package dev.sk2andy.materialbrowser.ui
 
-import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.VibrationEffect
@@ -29,14 +28,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.exponentialDecay
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
@@ -48,7 +43,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.Orientation
@@ -484,10 +478,9 @@ fun BrowserScreen(controller: BrowserController) {
             overviewMorphProgress.floatValue = 0f
             overviewEntryHeroCompleted = false
             tabOverviewOpening = true
-            controller.prepareTabOverview {
-                tabOverviewOpening = false
-                tabOverviewVisible = true
-            }
+            controller.prepareTabOverview()
+            tabOverviewOpening = false
+            tabOverviewVisible = true
         }
     }
     val closeTabOverview = {
@@ -813,25 +806,6 @@ fun BrowserScreen(controller: BrowserController) {
         }
     }
 
-    LaunchedEffect(
-        tabOverviewVisible,
-        addressEditorVisible,
-        settingsVisible,
-        snoozedTabsVisible,
-        filterStudioVisible,
-        candyTrailTabId,
-        readerStudioSession,
-    ) {
-        if (
-            tabOverviewVisible || addressEditorVisible || settingsVisible || snoozedTabsVisible ||
-            filterStudioVisible || candyTrailTabId != null || readerStudioSession != null
-        ) {
-            controller.setPreviewCaptureEnabled(false)
-        } else {
-            delay(120)
-            controller.setPreviewCaptureEnabled(true)
-        }
-    }
 
     val currentBackTarget by rememberUpdatedState(
         when {
@@ -1003,7 +977,6 @@ fun BrowserScreen(controller: BrowserController) {
             tabOverviewVisible = tabOverviewVisible,
             onLiveFrame = reportLiveFrame,
             onSearch = openAddressEditor,
-            onReload = controller::reload,
             blankTabModeProgress = blankTabModeProgress,
             blankTabModeRevealOrigin = blankTabModeRevealOrigin,
             onRetry = controller::retryFailedPage,
@@ -1166,8 +1139,16 @@ fun BrowserScreen(controller: BrowserController) {
                 }
             },
             onTabs = {
-                addressEditorVisible = false
-                openTabOverview()
+                if (addressEditorVisible) {
+                    addressEditorVisible = false
+                    overviewGestureScope.launch {
+                        withFrameNanos { }
+                        withFrameNanos { }
+                        openTabOverview()
+                    }
+                } else {
+                    openTabOverview()
+                }
             },
             overviewGestureEnabled = !tabOverviewOpening && !tabOverviewVisible,
             overviewGestureProgress = overviewGestureProgress,
@@ -1847,14 +1828,12 @@ private fun BrowserViewport(
     tabOverviewVisible: Boolean,
     onLiveFrame: (String) -> Unit,
     onSearch: () -> Unit,
-    onReload: () -> Unit,
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
     onRetry: () -> Boolean,
 ) {
     val density = LocalDensity.current
     val hapticView = LocalView.current
-    val touchSlop = LocalViewConfiguration.current.touchSlop
     val dragDirection by remember(dragOffset) {
         derivedStateOf { dragOffset.floatValue.compareTo(0f) }
     }
@@ -1865,8 +1844,6 @@ private fun BrowserViewport(
         dragDirection > 0 -> tabs.getOrNull(selectedTabIndex - 1)
         else -> null
     }
-    var pullProgress by remember(selectedTab.id) { mutableFloatStateOf(0f) }
-    var pullRefreshActive by remember(selectedTab.id) { mutableStateOf(false) }
     var pageErrorFeedback by remember(selectedTab.id) {
         mutableStateOf(
             PageErrorFeedbackRules.observe(
@@ -1875,64 +1852,6 @@ private fun BrowserViewport(
                 isLoading = selectedTab.isLoading,
             ),
         )
-    }
-    val pullRefreshEnabled = selectedTab.url != BLANK_URL &&
-        !selectedTab.isLoading &&
-        !tabOverviewVisible
-    val currentPullRefreshEnabled = rememberUpdatedState(pullRefreshEnabled)
-    val currentPullProgress = rememberUpdatedState<(Float) -> Unit> { pullProgress = it }
-    val currentPullRefresh = rememberUpdatedState {
-        if (!pullRefreshActive) {
-            pullRefreshActive = true
-            pullProgress = 0f
-            onReload()
-        }
-    }
-    val pullRefreshTouchListener = remember(selectedTab.id, density.density, touchSlop) {
-        PagePullRefreshTouchListener(
-            maxStartScroll = PagePullRefreshRules.MAX_START_SCROLL_DP * density.density,
-            triggerDistance = PagePullRefreshRules.TRIGGER_DISTANCE_DP * density.density,
-            touchSlop = touchSlop,
-            isEnabled = { currentPullRefreshEnabled.value },
-            onProgress = { currentPullProgress.value(it) },
-            onRefresh = { currentPullRefresh.value() },
-        )
-    }
-    val webViewTouchListener = remember(
-        selectedTab.id,
-        density.density,
-        touchSlop,
-        pullRefreshTouchListener,
-    ) {
-        LinkPeekTouchListener(
-            threshold = { view ->
-                TabDismissPhysics.rawThresholdForCardWidth(
-                    cardWidth = TabDismissPhysics.compactGridCardWidth(
-                        viewportWidth = view.width.toFloat(),
-                        totalHorizontalPadding = 32.dp.value * density.density,
-                        horizontalGap = 12.dp.value * density.density,
-                    ),
-                    resistanceFraction = controller.dismissResistancePercent / 100f,
-                )
-            },
-            touchSlop = touchSlop,
-            delegate = pullRefreshTouchListener,
-            isVisible = { controller.contentActions.isLinkPeekVisible },
-            onProgress = controller.contentActions::updateLinkPeek,
-            onOpen = controller.contentActions::startLinkPeekCommit,
-            onDismiss = controller.contentActions::dismiss,
-            onThresholdHaptic = { view ->
-                view.performHapticFeedback(HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE)
-            },
-            onPointerDown = controller.contentActions::beginPointerStream,
-            onPointerEnd = controller.contentActions::endPointerStream,
-        )
-    }
-    LaunchedEffect(selectedTab.id, selectedTab.isLoading, pullRefreshActive) {
-        if (pullRefreshActive && !selectedTab.isLoading) {
-            pullRefreshActive = false
-            pullProgress = 0f
-        }
     }
     LaunchedEffect(selectedTab.id, selectedTab.error, selectedTab.isLoading) {
         pageErrorFeedback = PageErrorFeedbackRules.observe(
@@ -1983,7 +1902,6 @@ private fun BrowserViewport(
                 controller = controller,
                 visible = !tabOverviewVisible || selectedTab.isIncognito,
                 onLiveFrame = onLiveFrame,
-                pullRefreshTouchListener = webViewTouchListener,
             )
         }
 
@@ -2021,20 +1939,6 @@ private fun BrowserViewport(
             modifier = Modifier.align(Alignment.Center),
         )
 
-        AnimatedVisibility(
-            visible = pullProgress > 0f || pullRefreshActive,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 16.dp),
-            enter = fadeIn(tween(120)),
-            exit = fadeOut(tween(160)),
-        ) {
-            ExpressivePullRefreshIndicator(
-                progress = pullProgress,
-                refreshing = pullRefreshActive,
-            )
-        }
     }
 
     handoff?.let { currentHandoff ->
@@ -2053,13 +1957,11 @@ private fun BrowserViewport(
     }
 }
 
-@SuppressLint("ClickableViewAccessibility")
 @Composable
 private fun ActiveWebView(
     controller: BrowserController,
     visible: Boolean,
     onLiveFrame: (String) -> Unit,
-    pullRefreshTouchListener: View.OnTouchListener,
 ) {
     val selectedTabId = controller.selectedTabId
     val webViewRevision = controller.webViewRevision
@@ -2074,7 +1976,6 @@ private fun ActiveWebView(
             controller.attachSelectedWebView(hostState.container)
             val attachedWebView = hostState.container.getChildAt(0) as? WebView
             if (attachedWebView != null) {
-                hostState.bindTouchListener(attachedWebView, pullRefreshTouchListener)
                 hostState.bind(
                     tabId = selectedTabId,
                     revision = webViewRevision,
@@ -2094,84 +1995,10 @@ private fun ActiveWebView(
     )
 }
 
-@Composable
-private fun ExpressivePullRefreshIndicator(
-    progress: Float,
-    refreshing: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val effectiveProgress by animateFloatAsState(
-        targetValue = if (refreshing) 1f else progress.coerceIn(0f, 1f),
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 700f),
-        label = "Pull-to-refresh progress",
-    )
-    val motion = rememberInfiniteTransition(label = "Expressive loading motion")
-    val rotation by motion.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
-        ),
-        label = "Expressive loading rotation",
-    )
-    val morph by motion.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 450, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "Expressive loading morph",
-    )
-    val shapeProgress = if (refreshing) morph else effectiveProgress
-
-    Surface(
-        modifier = modifier
-            .size(52.dp)
-            .then(
-                if (refreshing) {
-                    Modifier.progressSemantics()
-                } else {
-                    Modifier.progressSemantics(effectiveProgress)
-                },
-            )
-            .graphicsLayer {
-                val entrance = effectiveProgress.coerceIn(0f, 1f)
-                alpha = entrance
-                scaleX = 0.72f + 0.28f * entrance
-                scaleY = scaleX
-                translationY = (1f - entrance) * -size.height * 0.35f
-            },
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
-        tonalElevation = 8.dp,
-        shadowElevation = 6.dp,
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(26.dp)
-                    .graphicsLayer {
-                        rotationZ = if (refreshing) rotation else 120f * effectiveProgress
-                        scaleX = 0.88f + 0.20f * shapeProgress
-                        scaleY = 1.08f - 0.20f * shapeProgress
-                        shape = RoundedCornerShape((5f + 8f * shapeProgress).dp)
-                        clip = true
-                    }
-                    .background(MaterialTheme.colorScheme.primary),
-            )
-        }
-    }
-}
-
 private class WebViewHostState(val container: FrameLayout) {
     private var boundTabId: String? = null
     private var boundRevision = -1
     private var boundWebView: WebView? = null
-    private var touchWebView: WebView? = null
     private var generation = 0
     private var drawObserver: android.view.ViewTreeObserver? = null
     private var drawListener: android.view.ViewTreeObserver.OnDrawListener? = null
@@ -2242,20 +2069,9 @@ private class WebViewHostState(val container: FrameLayout) {
         drawFallback = Runnable(::awaitNextDraw).also { container.postDelayed(it, 500L) }
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    fun bindTouchListener(webView: WebView, listener: View.OnTouchListener) {
-        if (touchWebView !== webView) {
-            touchWebView?.setOnTouchListener(null)
-            touchWebView = webView
-        }
-        webView.setOnTouchListener(listener)
-    }
-
     fun release() {
         generation++
         clearCallbacks()
-        touchWebView?.setOnTouchListener(null)
-        touchWebView = null
         boundTabId = null
         boundRevision = -1
         boundWebView = null

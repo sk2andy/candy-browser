@@ -2,7 +2,7 @@
     <string name="app_name">Candy Browser</string>
     <string name="onboarding_welcome_title">Conheça o Candy Browser</string>
     <string name="onboarding_welcome_body">Um navegador feito para gestos, com abas, percursos e privacidade sempre ao alcance.</string>
-    <string name="onboarding_welcome_card_title">Quatro gestos. Um fluxo natural.</string>
+    <string name="onboarding_welcome_card_title">Três gestos. Um fluxo natural.</string>
     <string name="onboarding_welcome_start">Aprender os gestos</string>
     <string name="onboarding_skip">Ignorar</string>
     <string name="onboarding_completion_title">Tudo pronto!</string>
@@ -12,10 +12,8 @@
     <string name="onboarding_title">Aprenda os gestos do Candy</string>
     <string name="onboarding_progress">%1$d de %2$d</string>
     <string name="onboarding_try_here">Experimente o gesto no cartão</string>
-    <string name="onboarding_required_hint">É necessário concluir os quatro gestos para continuar.</string>
+    <string name="onboarding_required_hint">É necessário concluir os três gestos para continuar.</string>
     <string name="onboarding_accessibility_complete_action">Marcar este gesto como concluído</string>
-    <string name="onboarding_refresh_title">Puxe para atualizar</string>
-    <string name="onboarding_refresh_description">Arraste a página para baixo até ela ser atualizada.</string>
     <string name="onboarding_switch_tabs_title">Alterne entre abas</string>
     <string name="onboarding_switch_tabs_description">Deslize a barra de endereço para a esquerda ou direita.</string>
     <string name="onboarding_open_tabs_title">Abra a visão geral de abas</string>
@@ -175,8 +173,6 @@
     <string name="action_open_link_background_tab">Abrir ligação num novo separador em segundo plano</string>
     <string name="link_peek_title">Pré-visualização da ligação</string>
     <string name="action_open_in_new_tab">Abrir num novo separador</string>
-    <string name="link_peek_pull_down_instruction">Deslize para baixo</string>
-    <string name="link_peek_accessibility_description">Pré-visualização da ligação. Deslize para baixo até ao alvo e solte para abrir num novo separador. Solte antes, deslize para cima ou volte atrás para cancelar.</string>
     <string name="action_download_image">Transferir imagem</string>
     <string name="download_notification_description">Transferência</string>
     <string name="settings_title">Definições</string>

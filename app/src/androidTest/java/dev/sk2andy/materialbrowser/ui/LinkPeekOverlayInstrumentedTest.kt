@@ -7,10 +7,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
@@ -62,22 +58,6 @@ class LinkPeekOverlayInstrumentedTest {
 
         composeRule.onNodeWithTag(LinkPeekTestTags.Root)
             .assertIsDisplayed()
-            .assert(
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.ProgressBarRangeInfo,
-                    ProgressBarRangeInfo(0f, 0f..1f),
-                ),
-            )
-            .assert(
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.ContentDescription,
-                    listOf(
-                        composeRule.activity.getString(
-                            R.string.link_peek_accessibility_description,
-                        ),
-                    ),
-                ),
-            )
         composeRule.onNodeWithTag(LinkPeekTestTags.Url, useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithTag(LinkPeekTestTags.Preview).assertIsDisplayed()
         composeRule.onNodeWithTag(LinkPeekTestTags.NewTabTargetOverlay).assertIsDisplayed()
@@ -86,10 +66,6 @@ class LinkPeekOverlayInstrumentedTest {
             .assertHasClickAction()
             .performClick()
             .performClick()
-        composeRule.onNodeWithText(
-            composeRule.activity.getString(R.string.link_peek_pull_down_instruction),
-        )
-            .assertIsDisplayed()
 
         val density = composeRule.density
         val rootBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Root)
@@ -218,7 +194,7 @@ class LinkPeekOverlayInstrumentedTest {
     }
 
     @Test
-    fun largeFontInstructionCanGrowWithoutClipping() {
+    fun largeFontOpenActionDoesNotClip() {
         val platformDensity = composeRule.density
         composeRule.setContent {
             CompositionLocalProvider(
@@ -240,12 +216,6 @@ class LinkPeekOverlayInstrumentedTest {
 
         val targetBounds = composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget)
             .fetchSemanticsNode().boundsInRoot
-        val pullTextBounds = composeRule
-            .onNodeWithText(
-                composeRule.activity.getString(R.string.link_peek_pull_down_instruction),
-                useUnmergedTree = true,
-            )
-            .fetchSemanticsNode().boundsInRoot
         val openTextBounds = composeRule
             .onNodeWithText(
                 composeRule.activity.getString(R.string.action_open_in_new_tab),
@@ -253,8 +223,8 @@ class LinkPeekOverlayInstrumentedTest {
             )
             .fetchSemanticsNode().boundsInRoot
 
-        assertTrue(targetBounds.height > with(platformDensity) { 64.dp.toPx() })
-        assertTrue(pullTextBounds.top >= targetBounds.top)
+        assertTrue(targetBounds.height + 1f >= with(platformDensity) { 64.dp.toPx() })
+        assertTrue(openTextBounds.top >= targetBounds.top)
         assertTrue(openTextBounds.bottom <= targetBounds.bottom)
     }
 

@@ -41,12 +41,10 @@ class GestureOnboardingScreenInstrumentedTest {
 
         startTutorial()
 
-        composeRule.onNodeWithTag(tag(GestureOnboardingStep.PullToRefresh))
-            .performTouchInput { swipeLeft() }
-        composeRule.onNodeWithTag(tag(GestureOnboardingStep.PullToRefresh)).assertIsDisplayed()
-
-        composeRule.onNodeWithTag(tag(GestureOnboardingStep.PullToRefresh))
+        composeRule.onNodeWithTag(tag(GestureOnboardingStep.SwitchTabs))
             .performTouchInput { swipeDown() }
+        composeRule.onNodeWithTag(tag(GestureOnboardingStep.SwitchTabs)).assertIsDisplayed()
+
         composeRule.onNodeWithTag(tag(GestureOnboardingStep.SwitchTabs))
             .performTouchInput { swipeLeft() }
         composeRule.onNodeWithTag(tag(GestureOnboardingStep.OpenTabOverview))
@@ -90,7 +88,7 @@ class GestureOnboardingScreenInstrumentedTest {
 
         startTutorial()
 
-        composeRule.onNodeWithTag(tag(GestureOnboardingStep.PullToRefresh))
+        composeRule.onNodeWithTag(tag(GestureOnboardingStep.SwitchTabs))
             .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
     }
 
@@ -103,8 +101,6 @@ class GestureOnboardingScreenInstrumentedTest {
         }
 
         startTutorial()
-        composeRule.onNodeWithTag(tag(GestureOnboardingStep.PullToRefresh))
-            .performTouchInput { swipeDown() }
         composeRule.onNodeWithTag(tag(GestureOnboardingStep.SwitchTabs)).assertIsDisplayed()
 
         composeRule.mainClock.autoAdvance = false
@@ -145,13 +141,13 @@ class GestureOnboardingScreenInstrumentedTest {
 
     private fun startTutorial() {
         composeRule.onNodeWithTag("gesture_onboarding_welcome").assertIsDisplayed()
-        composeRule.onAllNodesWithTag(tag(GestureOnboardingStep.PullToRefresh))
+        composeRule.onAllNodesWithTag(tag(GestureOnboardingStep.SwitchTabs))
             .assertCountEquals(0)
         composeRule.onNodeWithTag("gesture_onboarding_start").performClick()
-        composeRule.onNodeWithTag(tag(GestureOnboardingStep.PullToRefresh))
+        composeRule.onNodeWithTag(tag(GestureOnboardingStep.SwitchTabs))
             .performScrollTo()
             .assertIsDisplayed()
-        composeRule.onAllNodesWithTag(pointerTag(GestureOnboardingStep.PullToRefresh))
+        composeRule.onAllNodesWithTag(pointerTag(GestureOnboardingStep.SwitchTabs))
             .assertCountEquals(1)
     }
 

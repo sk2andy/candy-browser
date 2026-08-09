@@ -5,8 +5,8 @@ import android.content.pm.PackageManager
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -14,7 +14,6 @@ import android.os.Looper
 import android.os.Message
 import android.net.Uri
 import android.print.PrintManager
-import android.view.PixelCopy
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
 import android.webkit.GeolocationPermissions
@@ -104,7 +103,6 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
-import dev.sk2andy.materialbrowser.browser.actions.LinkPeekTargetSessionRules
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionComposer
@@ -270,6 +268,7 @@ class BrowserController(
     private val linkPeekPreviewAssignments = mutableMapOf<WebView, WebViewProfileAssignment>()
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private var webContentRequestGeneration = 0L
     private val popupOpeners = mutableMapOf<String, String>()
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
@@ -280,7 +279,6 @@ class BrowserController(
     private var incognitoWebViewProfileName = newIncognitoWebViewProfileName()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val fileChooserValidationExecutor = Executors.newSingleThreadExecutor()
-    private var pendingPreviewCapture: Runnable? = null
     private val pendingBlockedCounts = ConcurrentHashMap<String, AtomicInteger>()
     private val pendingPrivacyTabs = ConcurrentHashMap.newKeySet<String>()
     private val reportedAllowedDecisions = ConcurrentHashMap<String, MutableSet<String>>()
@@ -301,9 +299,6 @@ class BrowserController(
     private var isActivityStarted = false
     @Volatile
     private var destroyed = false
-    private var previewCaptureInFlight = false
-    private var dirtyPreviewTabId: String? = null
-    private var previewCaptureEnabled = true
     private var previewContentBottomInWindowPx: Int? = null
     private var lastWindowInsets: WindowInsetsCompat? = null
     private var browserChromeOwnsIme = false
@@ -1126,9 +1121,9 @@ class BrowserController(
             }
             isFocusable = false
             isFocusableInTouchMode = false
+            isEnabled = false
             isLongClickable = false
             importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-            setOnTouchListener { _, _ -> true }
             loadUrl(safeUrl)
         }.also { webView ->
             linkPeekPreviewAssignments[webView] = profileAssignment
@@ -1205,10 +1200,14 @@ class BrowserController(
                 (navigationBars.right > 0 && tappableElements.right > 0) ||
                 (navigationBars.bottom > 0 && tappableElements.bottom > 0)
         val usesGestureNavigation = navigationBars != Insets.NONE && !hasTappableNavigation
-        val topMargin = if (drawsEdgeToEdge) 0 else safeArea.top
+        val topMargin = if (drawsEdgeToEdge) {
+            0
+        } else {
+            (safeArea.top - webView.scrollY).coerceAtLeast(0)
+        }
         val bottomMargin = when {
             drawsEdgeToEdge -> 0
-            isWebContentEdgeToEdgeEnabled && usesGestureNavigation -> 0
+            usesGestureNavigation -> 0
             else -> safeArea.bottom
         }
         val margins = if (drawsEdgeToEdge) {
@@ -1255,6 +1254,20 @@ class BrowserController(
 
     private fun drawsEdgeToEdge(tabId: String): Boolean =
         isWebContentEdgeToEdgeEnabled && edgeToEdgePages[tabId] == true
+
+    private fun updateScrollAwareInsets(
+        tabId: String,
+        webView: WebView,
+        scrollY: Int,
+        oldScrollY: Int,
+    ) {
+        if (drawsEdgeToEdge(tabId)) return
+        val insets = ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets ?: return
+        val safeTop = insets.getInsets(SAFE_AREA_INSET_TYPES).top
+        val topMargin = (safeTop - scrollY).coerceAtLeast(0)
+        val oldTopMargin = (safeTop - oldScrollY).coerceAtLeast(0)
+        if (topMargin != oldTopMargin) applyWindowInsets(tabId, webView, insets)
+    }
 
     private fun detectPageEdgeToEdge(tabId: String, webView: WebView) {
         val navigationGeneration = navigationGenerations[tabId] ?: return
@@ -1579,7 +1592,6 @@ class BrowserController(
         tabs += tab
         selectedTabId = tab.id
         rememberSelectedTab(activeProfileId, tab.id)
-        bottomBarCompactStates[tab.id] = false
         persist()
         return tab.id
     }
@@ -1601,7 +1613,6 @@ class BrowserController(
             isIncognito = selectedTab.isIncognito,
         )
         tabs += tab
-        bottomBarCompactStates[tab.id] = false
         persist()
         pauseWebView(webViewFor(tab.id))
         contentActions.requestAddressBarPulse()
@@ -1649,7 +1660,6 @@ class BrowserController(
         tabs += tab
         selectedTabId = tab.id
         rememberSelectedTab(profile.id, tab.id)
-        bottomBarCompactStates[tab.id] = false
         persist()
         return profile.id
     }
@@ -2010,8 +2020,6 @@ class BrowserController(
             return false
         }
         val wasLastIncognitoTab = tab.isIncognito && tabs.count(BrowserTab::isIncognito) == 1
-        cancelPendingPreviewCapture()
-        if (dirtyPreviewTabId == tab.id) dirtyPreviewTabId = null
         if (wasLastIncognitoTab) prepareIncognitoProfileForRemoval()
         removeTabResources(tab.id, preserveFaviconGeneration = true)
         updateTab(tab.id) {
@@ -2287,7 +2295,6 @@ class BrowserController(
         setCandyTrail(originTab, forkedTrail)
         selectedTabId = destinationTab.id
         rememberSelectedTab(activeProfileId, destinationTab.id)
-        bottomBarCompactStates[destinationTab.id] = false
         persist()
         return destinationTab.id
     }
@@ -2333,7 +2340,6 @@ class BrowserController(
         setCandyTrail(originTab, reopenedTrail)
         selectedTabId = destinationTab.id
         rememberSelectedTab(activeProfileId, destinationTab.id)
-        bottomBarCompactStates[destinationTab.id] = false
         persist()
         return destinationTab.id
     }
@@ -2607,15 +2613,9 @@ class BrowserController(
         lastWindowInsets?.let(::dispatchWindowInsetsToAttachedWebViews)
     }
 
-    fun prepareTabOverview(onReady: () -> Unit) {
+    fun prepareTabOverview(onReady: () -> Unit = {}) {
         pruneStaleTabs()
-        // Opening the switcher must not wait for a GPU readback. Page commits and
-        // scroll-idle capture keep this cache warm before the gesture starts.
-        onReady()
-    }
-
-    fun setPreviewCaptureEnabled(enabled: Boolean) {
-        previewCaptureEnabled = enabled
+        captureVisiblePreview(selectedTabId, onComplete = onReady)
     }
 
     fun setPreviewContentBottomInWindowPx(bottomPx: Int) {
@@ -2624,13 +2624,13 @@ class BrowserController(
 
     fun previewTopInsetPx(tabId: String): Int {
         if (drawsEdgeToEdge(tabId)) return 0
+        val webView = webViews[tabId]
+        val currentMargin = (webView?.layoutParams as? FrameLayout.LayoutParams)?.topMargin
+        if (currentMargin != null) return currentMargin.coerceAtLeast(0)
         return lastWindowInsets
             ?.getInsets(SAFE_AREA_INSET_TYPES)
             ?.top
             ?.coerceAtLeast(0)
-            ?: (webViews[tabId]?.layoutParams as? FrameLayout.LayoutParams)
-                ?.topMargin
-                ?.coerceAtLeast(0)
             ?: 0
     }
 
@@ -2866,8 +2866,6 @@ class BrowserController(
             }
             .map(BrowserTab::id)
             .toSet()
-        cancelPendingPreviewCapture()
-        dirtyPreviewTabId = null
         tabs.forEach { tab ->
             updateProtectionRequestContext(tab.id, pageUrls[tab.id] ?: tab.url)
         }
@@ -2956,7 +2954,6 @@ class BrowserController(
     fun onPause() {
         isActivityResumed = false
         touchTab(selectedTabId, System.currentTimeMillis())
-        cancelPendingPreviewCapture()
         persistWebViewStates()
         webViews.values.forEach(::pauseWebView)
         linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
@@ -3000,7 +2997,6 @@ class BrowserController(
         fileChooserValidationExecutor.shutdownNow()
         activePermissions.clear()
         permissionRepository.clearPrivateSession()
-        cancelPendingPreviewCapture()
         mainHandler.removeCallbacks(blockerCountFlush)
         synchronized(privacyEventLock) {
             pendingBlockedCounts.clear()
@@ -3116,30 +3112,33 @@ class BrowserController(
             if (!WebViewHitTestResolver.supports(hit.type)) {
                 return@setOnLongClickListener false
             }
-            if (hit.type == WebView.HitTestResult.SRC_ANCHOR_TYPE) {
-                val immediateTarget = WebViewHitTestResolver.resolve(
-                    hitType = hit.type,
-                    extra = hit.extra,
-                )
-                if (immediateTarget != null) {
-                    contentActions.show(immediateTarget)
-                    return@setOnLongClickListener true
-                }
+            val hitType = hit.type
+            val hitExtra = hit.extra
+            val requestGeneration = ++webContentRequestGeneration
+            if (hitType != WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
+                val target = WebViewHitTestResolver.resolve(
+                    hitType = hitType,
+                    extra = hitExtra,
+                ) ?: return@setOnLongClickListener false
+                contentActions.show(target)
+                return@setOnLongClickListener true
             }
-            val pointerSessionId = contentActions.activePointerSessionId
+
+            val contentRevision = contentActions.revision
+            val navigationGeneration = navigationGenerations[tabId]
             val handler = Handler(Looper.getMainLooper()) { message ->
                 if (
-                    LinkPeekTargetSessionRules.canApply(
-                        capturedPointerSessionId = pointerSessionId,
-                        activePointerSessionId = contentActions.activePointerSessionId,
-                        sourceTabId = tabId,
-                        selectedTabId = selectedTabId,
-                        sourceWebViewAttached = webViews[tabId] === webView,
-                    )
+                    !destroyed &&
+                    webContentRequestGeneration == requestGeneration &&
+                    contentActions.revision == contentRevision &&
+                    selectedTabId == tabId &&
+                    webViews[tabId] === webView &&
+                    webView.isAttachedToWindow &&
+                    navigationGenerations[tabId] == navigationGeneration
                 ) {
                     WebViewHitTestResolver.resolve(
-                        hitType = hit.type,
-                        extra = hit.extra,
+                        hitType = hitType,
+                        extra = hitExtra,
                         focusedLinkUrl = message.data.getString("url"),
                         focusedImageUrl = message.data.getString("src"),
                     )?.let(contentActions::show)
@@ -3156,11 +3155,13 @@ class BrowserController(
         var previousDirection = 0
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
             if (tabId != selectedTabId) return@setOnScrollChangeListener
-            schedulePreviewCapture(tabId)
+            updateScrollAwareInsets(tabId, this, scrollY, oldScrollY)
             if (scrollY <= 0) {
                 accumulatedDistance = 0f
                 previousDirection = 0
-                bottomBarCompactStates[tabId] = false
+                if (bottomBarCompactStates[tabId] == true) {
+                    bottomBarCompactStates[tabId] = false
+                }
                 return@setOnScrollChangeListener
             }
 
@@ -3248,14 +3249,6 @@ class BrowserController(
                 updateCandyTrailPage(tabId, url, title)
             }
             detectPageEdgeToEdge(tabId, view)
-            view.postVisualStateCallback(
-                System.nanoTime(),
-                object : WebView.VisualStateCallback() {
-                    override fun onComplete(requestId: Long) {
-                        captureVisiblePreview(tabId)
-                    }
-                },
-            )
             persist()
         }
 
@@ -4350,7 +4343,6 @@ class BrowserController(
             tab.isIncognito ||
             tabId != selectedTabId ||
             !isActivityResumed ||
-            !previewCaptureEnabled ||
             view == null ||
             !view.isAttachedToWindow ||
             !view.isShown ||
@@ -4361,65 +4353,40 @@ class BrowserController(
             onComplete()
             return
         }
-        if (previewCaptureInFlight) {
-            dirtyPreviewTabId = tabId
-            onComplete()
-            return
-        }
-        val capturedUrl = view.url
         val location = IntArray(2)
         view.getLocationInWindow(location)
         val decorView = activity.window.decorView
         val contentBottom = previewContentBottomInWindowPx ?: decorView.height
-        val source = Rect(
-            location[0].coerceAtLeast(0),
-            location[1].coerceAtLeast(0),
-            (location[0] + view.width).coerceAtMost(decorView.width),
-            TabPreviewCaptureRules.sourceBottomPx(
-                viewTopPx = location[1],
-                viewHeightPx = view.height,
-                decorHeightPx = decorView.height,
-                contentBottomPx = contentBottom,
-            ),
+        val sourceBottomPx = TabPreviewCaptureRules.sourceBottomPx(
+            viewTopPx = location[1],
+            viewHeightPx = view.height,
+            decorHeightPx = decorView.height,
+            contentBottomPx = contentBottom,
         )
-        if (source.width() <= 0 || source.height() <= 0) {
+        val captureHeightPx = (sourceBottomPx - location[1]).coerceIn(0, view.height)
+        if (captureHeightPx <= 0) {
             onComplete()
             return
         }
-        val height = (source.height() * (width.toFloat() / source.width()))
+        val scale = width.toFloat() / view.width
+        val height = (captureHeightPx * scale)
             .toInt()
-            .coerceIn(width, width * 3)
+            .coerceIn(1, width * 3)
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val captureEpoch = previewEpoch
         try {
-            previewCaptureInFlight = true
-            PixelCopy.request(
-                activity.window,
-                source,
-                bitmap,
-                { result ->
-                    val stillSamePage =
-                        tabId == selectedTabId &&
-                            isActivityResumed &&
-                            previewEpoch == captureEpoch &&
-                            webViews[tabId] === view &&
-                            previewCaptureEnabled &&
-                            view.isAttachedToWindow &&
-                            view.url == capturedUrl
-                    if (result == PixelCopy.SUCCESS && stillSamePage && bitmap.hasVisualVariation()) {
-                        previews[tabId] = bitmap
-                        previewRepository.save(tabId, bitmap)
-                    } else {
-                        bitmap.recycle()
-                    }
-                    finishPreviewCapture()
-                    onComplete()
-                },
-                Handler(Looper.getMainLooper()),
-            )
-        } catch (_: IllegalArgumentException) {
+            val canvas = Canvas(bitmap)
+            canvas.scale(scale, scale)
+            canvas.translate(-location[0].toFloat(), -location[1].toFloat())
+            decorView.draw(canvas)
+            if (bitmap.hasVisualVariation()) {
+                previews[tabId] = bitmap
+                previewRepository.save(tabId, bitmap)
+            } else {
+                bitmap.recycle()
+            }
+        } catch (_: RuntimeException) {
             bitmap.recycle()
-            finishPreviewCapture()
+        } finally {
             onComplete()
         }
     }
@@ -4455,24 +4422,6 @@ class BrowserController(
             maximumGreen - minimumGreen,
             maximumBlue - minimumBlue,
         ) >= 12
-    }
-
-    private fun schedulePreviewCapture(tabId: String) {
-        if (
-            !isActivityResumed ||
-            !previewCaptureEnabled ||
-            tabs.firstOrNull { it.id == tabId }?.isIncognito != false
-        ) return
-        pendingPreviewCapture?.let(mainHandler::removeCallbacks)
-        pendingPreviewCapture = Runnable {
-            pendingPreviewCapture = null
-            if (tabId == selectedTabId) captureVisiblePreview(tabId)
-        }.also { mainHandler.postDelayed(it, PREVIEW_CAPTURE_IDLE_DELAY_MS) }
-    }
-
-    private fun cancelPendingPreviewCapture() {
-        pendingPreviewCapture?.let(mainHandler::removeCallbacks)
-        pendingPreviewCapture = null
     }
 
     private fun restorePersistedPreviews() {
@@ -4593,13 +4542,6 @@ class BrowserController(
         faviconGenerations[tabId] = faviconGenerations.getOrDefault(tabId, 0) + 1
         favicons.remove(tabId)
         faviconRepository.delete(tabId)
-    }
-
-    private fun finishPreviewCapture() {
-        previewCaptureInFlight = false
-        val dirtyTabId = dirtyPreviewTabId
-        dirtyPreviewTabId = null
-        if (dirtyTabId != null && dirtyTabId == selectedTabId) schedulePreviewCapture(dirtyTabId)
     }
 
     private val blockerCountFlush = object : Runnable {
@@ -5064,8 +5006,6 @@ class BrowserController(
 
     private fun recreateWebViews(tabIds: Set<String>) {
         if (tabIds.isEmpty()) return
-        if (selectedTabId in tabIds) cancelPendingPreviewCapture()
-        if (dirtyPreviewTabId in tabIds) dirtyPreviewTabId = null
         clearServiceWorkerClientsLosingLastWebView(tabIds)
         tabIds.forEach { tabId ->
             clearPermissionActivity(tabId)
@@ -5213,8 +5153,8 @@ class BrowserController(
     private fun destroyWebView(webView: WebView) {
         removeForcedVerticalScrollDocumentStartScript(webView)
         removeCosmeticDocumentStartScripts(webView)
-        (webView.parent as? FrameLayout)?.removeView(webView)
         webView.setOnScrollChangeListener(null)
+        (webView.parent as? FrameLayout)?.removeView(webView)
         webView.stopLoading()
         webView.clearHistory()
         webView.removeAllViews()
@@ -5298,7 +5238,6 @@ class BrowserController(
             WindowInsetsCompat.Type.tappableElement(),
             WindowInsetsCompat.Type.displayCutout(),
         )
-        const val PREVIEW_CAPTURE_IDLE_DELAY_MS = 220L
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
         const val MAX_COSMETIC_DOCUMENT_START_RULES = 64
         const val MAX_REPORTED_ALLOW_DECISIONS = 64

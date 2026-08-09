@@ -6,26 +6,6 @@ import org.junit.Test
 
 class GestureOnboardingRulesTest {
     @Test
-    fun `pull to refresh requires a dominant downward drag`() {
-        assertTrue(
-            GestureOnboardingRules.isCompleted(
-                GestureOnboardingStep.PullToRefresh,
-                dragX = 12f,
-                dragY = 72f,
-                threshold = 72f,
-            ),
-        )
-        assertFalse(
-            GestureOnboardingRules.isCompleted(
-                GestureOnboardingStep.PullToRefresh,
-                dragX = 0f,
-                dragY = -72f,
-                threshold = 72f,
-            ),
-        )
-    }
-
-    @Test
     fun `tab switch accepts either horizontal direction`() {
         assertTrue(
             GestureOnboardingRules.isCompleted(

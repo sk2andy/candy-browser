@@ -71,17 +71,16 @@ class WebContentActionStateTest {
     }
 
     @Test
-    fun `pointer sessions invalidate on release and never reuse generation`() {
+    fun `show and dismiss invalidate pending content replies`() {
         val state = WebContentActionState()
+        val initialRevision = state.revision
 
-        state.beginPointerStream()
-        val first = requireNotNull(state.activePointerSessionId)
-        state.endPointerStream()
-        assertEquals(null, state.activePointerSessionId)
+        state.show(WebContentTarget(linkUrl = "https://example.com"))
+        val shownRevision = state.revision
+        state.dismiss()
 
-        state.beginPointerStream()
-        val second = requireNotNull(state.activePointerSessionId)
-
-        assertTrue(second > first)
+        assertTrue(shownRevision > initialRevision)
+        assertTrue(state.revision > shownRevision)
     }
+
 }

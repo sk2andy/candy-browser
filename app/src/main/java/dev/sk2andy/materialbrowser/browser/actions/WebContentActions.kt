@@ -92,22 +92,10 @@ object WebViewHitTestResolver {
     private fun safeHttpUrl(value: String?): String? = BrowserUriPolicy.normalizeHttpUrl(value)
 }
 
-internal object LinkPeekTargetSessionRules {
-    fun canApply(
-        capturedPointerSessionId: Long?,
-        activePointerSessionId: Long?,
-        sourceTabId: String,
-        selectedTabId: String,
-        sourceWebViewAttached: Boolean,
-    ): Boolean = sourceWebViewAttached &&
-        sourceTabId == selectedTabId &&
-        capturedPointerSessionId == activePointerSessionId
-}
-
 @Stable
 class WebContentActionState {
-    private var pointerSessionId = 0L
-    private var pointerDown = false
+    internal var revision = 0L
+        private set
 
     var target by mutableStateOf<WebContentTarget?>(null)
         private set
@@ -136,19 +124,8 @@ class WebContentActionState {
     val isLinkPeekVisible: Boolean
         get() = target?.linkUrl != null
 
-    val activePointerSessionId: Long?
-        get() = pointerSessionId.takeIf { pointerDown }
-
-    fun beginPointerStream() {
-        pointerSessionId++
-        pointerDown = true
-    }
-
-    fun endPointerStream() {
-        pointerDown = false
-    }
-
     fun show(target: WebContentTarget) {
+        revision++
         val sameLink = this.target?.linkUrl != null && this.target?.linkUrl == target.linkUrl
         this.target = target
         if (!sameLink) {
@@ -158,6 +135,7 @@ class WebContentActionState {
     }
 
     fun dismiss() {
+        revision++
         target = null
         isLinkPeekCommitting = false
         updateLinkPeek(progress = 0f, armed = false)

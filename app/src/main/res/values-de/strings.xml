@@ -2,7 +2,7 @@
     <string name="app_name">Candy Browser</string>
     <string name="onboarding_welcome_title">Lernen Sie Candy Browser kennen</string>
     <string name="onboarding_welcome_body">Ein Browser für Gesten, der Tabs, Verläufe und Datenschutz direkt in Reichweite hält.</string>
-    <string name="onboarding_welcome_card_title">Vier Gesten. Ein flüssiger Ablauf.</string>
+    <string name="onboarding_welcome_card_title">Drei Gesten. Ein flüssiger Ablauf.</string>
     <string name="onboarding_welcome_start">Gesten kennenlernen</string>
     <string name="onboarding_skip">Überspringen</string>
     <string name="onboarding_completion_title">Sie sind startklar!</string>
@@ -12,10 +12,8 @@
     <string name="onboarding_title">Candy-Gesten lernen</string>
     <string name="onboarding_progress">%1$d von %2$d</string>
     <string name="onboarding_try_here">Probiere die Geste in der Karte aus</string>
-    <string name="onboarding_required_hint">Zum Fortfahren sind alle vier Gesten erforderlich.</string>
+    <string name="onboarding_required_hint">Zum Fortfahren sind alle drei Gesten erforderlich.</string>
     <string name="onboarding_accessibility_complete_action">Diese Geste als erledigt markieren</string>
-    <string name="onboarding_refresh_title">Zum Aktualisieren ziehen</string>
-    <string name="onboarding_refresh_description">Ziehe die Seite nach unten, bis sie aktualisiert wird.</string>
     <string name="onboarding_switch_tabs_title">Tabs wechseln</string>
     <string name="onboarding_switch_tabs_description">Wische auf der Adressleiste nach links oder rechts.</string>
     <string name="onboarding_open_tabs_title">Tab-Übersicht öffnen</string>
@@ -175,8 +173,6 @@
     <string name="action_open_link_background_tab">Link in neuem Hintergrund-Tab öffnen</string>
     <string name="link_peek_title">Link-Vorschau</string>
     <string name="action_open_in_new_tab">In neuem Tab öffnen</string>
-    <string name="link_peek_pull_down_instruction">Nach unten ziehen</string>
-    <string name="link_peek_accessibility_description">Link-Vorschau. Bis zum Ziel nach unten ziehen und zum Öffnen in einem neuen Tab loslassen. Vor dem Ziel loslassen, nach oben ziehen oder zurückgehen, um abzubrechen.</string>
     <string name="action_download_image">Bild herunterladen</string>
     <string name="download_notification_description">Download</string>
     <string name="settings_title">Einstellungen</string>

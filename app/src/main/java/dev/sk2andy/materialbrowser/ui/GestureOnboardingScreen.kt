@@ -40,7 +40,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
@@ -111,7 +110,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 internal enum class GestureOnboardingStep {
-    PullToRefresh,
     SwitchTabs,
     OpenTabOverview,
     CloseTab,
@@ -126,8 +124,6 @@ internal object GestureOnboardingRules {
     ): Boolean {
         if (threshold <= 0f) return false
         return when (step) {
-            GestureOnboardingStep.PullToRefresh ->
-                dragY >= threshold && dragY.absoluteValue > dragX.absoluteValue
             GestureOnboardingStep.SwitchTabs ->
                 dragX.absoluteValue >= threshold && dragX.absoluteValue > dragY.absoluteValue
             GestureOnboardingStep.OpenTabOverview,
@@ -155,8 +151,6 @@ internal fun GestureOnboardingScreen(
     val density = LocalDensity.current
     val threshold = with(density) {
         when (step) {
-            GestureOnboardingStep.PullToRefresh ->
-                PagePullRefreshRules.TRIGGER_DISTANCE_DP.dp.toPx()
             GestureOnboardingStep.SwitchTabs ->
                 if (rootWidthPx > 0f) {
                     rootWidthPx * AddressBarTabSwitchRules.DISTANCE_FRACTION
@@ -195,7 +189,6 @@ internal fun GestureOnboardingScreen(
     }
 
     fun isCompletionKey(key: Key): Boolean = when (step) {
-        GestureOnboardingStep.PullToRefresh -> key == Key.DirectionDown
         GestureOnboardingStep.SwitchTabs ->
             key == Key.DirectionLeft || key == Key.DirectionRight
         GestureOnboardingStep.OpenTabOverview,
@@ -474,11 +467,6 @@ private fun GestureOnboardingWelcome(
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.height(14.dp))
-                WelcomeGestureRow(
-                    symbol = "↓",
-                    title = stepTitle(GestureOnboardingStep.PullToRefresh),
-                    color = CandyPink,
-                )
                 WelcomeGestureRow(
                     symbol = "↔",
                     title = stepTitle(GestureOnboardingStep.SwitchTabs),
@@ -904,8 +892,6 @@ private fun GesturePracticeArea(
         contentAlignment = Alignment.Center,
     ) {
         when (step) {
-            GestureOnboardingStep.PullToRefresh ->
-                PullToRefreshPractice(dragY, modifier)
             GestureOnboardingStep.SwitchTabs,
             GestureOnboardingStep.OpenTabOverview,
             -> AddressBarGesturePractice(step, dragX, dragY, modifier)
@@ -942,9 +928,6 @@ private fun GesturePointerGuide(
             .testTag("gesture_onboarding_pointer_${step.name}"),
     ) {
         val (start, end) = when (step) {
-            GestureOnboardingStep.PullToRefresh ->
-                Offset(size.width * 0.72f, size.height * 0.24f) to
-                    Offset(size.width * 0.72f, size.height * 0.58f)
             GestureOnboardingStep.SwitchTabs ->
                 Offset(size.width * 0.74f, size.height * 0.84f) to
                     Offset(size.width * 0.28f, size.height * 0.84f)
@@ -997,34 +980,6 @@ private fun GesturePointerGuide(
             color = primary.copy(alpha = guideAlpha),
             radius = 4.dp.toPx(),
             center = pointer,
-        )
-    }
-}
-
-@Composable
-private fun PullToRefreshPractice(dragY: Float, modifier: Modifier) {
-    val distance = dragY.coerceAtLeast(0f)
-    Box(Modifier.fillMaxSize()) {
-        Icon(
-            imageVector = Icons.Default.Refresh,
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 18.dp)
-                .size(32.dp)
-                .graphicsLayer {
-                    alpha = (distance / 120f).coerceIn(0.25f, 1f)
-                    rotationZ = distance * 0.45f
-                },
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        FakeBrowserPage(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(modifier)
-                .offset { IntOffset(0, (distance * 0.42f).roundToInt()) },
-            accent = MaterialTheme.colorScheme.primary,
-            showAddressBar = false,
         )
     }
 }
@@ -1198,7 +1153,6 @@ private fun GestureDirectionBadge(
     modifier: Modifier = Modifier,
 ) {
     val direction = when (step) {
-        GestureOnboardingStep.PullToRefresh -> "↓"
         GestureOnboardingStep.SwitchTabs -> "↔"
         GestureOnboardingStep.OpenTabOverview,
         GestureOnboardingStep.CloseTab,
@@ -1221,9 +1175,7 @@ private fun GestureDirectionBadge(
 }
 
 private fun gestureAccent(step: GestureOnboardingStep): Color = when (step) {
-    GestureOnboardingStep.PullToRefresh,
-    GestureOnboardingStep.OpenTabOverview,
-    -> CandyPink
+    GestureOnboardingStep.OpenTabOverview -> CandyPink
     GestureOnboardingStep.SwitchTabs,
     GestureOnboardingStep.CloseTab,
     -> CandyPurple
@@ -1232,7 +1184,6 @@ private fun gestureAccent(step: GestureOnboardingStep): Color = when (step) {
 @Composable
 private fun stepTitle(step: GestureOnboardingStep): String = stringResource(
     when (step) {
-        GestureOnboardingStep.PullToRefresh -> R.string.onboarding_refresh_title
         GestureOnboardingStep.SwitchTabs -> R.string.onboarding_switch_tabs_title
         GestureOnboardingStep.OpenTabOverview -> R.string.onboarding_open_tabs_title
         GestureOnboardingStep.CloseTab -> R.string.onboarding_close_tab_title
@@ -1242,7 +1193,6 @@ private fun stepTitle(step: GestureOnboardingStep): String = stringResource(
 @Composable
 private fun stepDescription(step: GestureOnboardingStep): String = stringResource(
     when (step) {
-        GestureOnboardingStep.PullToRefresh -> R.string.onboarding_refresh_description
         GestureOnboardingStep.SwitchTabs -> R.string.onboarding_switch_tabs_description
         GestureOnboardingStep.OpenTabOverview -> R.string.onboarding_open_tabs_description
         GestureOnboardingStep.CloseTab -> R.string.onboarding_close_tab_description

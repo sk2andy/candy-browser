@@ -2,7 +2,7 @@
     <string name="app_name">Candy Browser</string>
     <string name="onboarding_welcome_title">Meet Candy Browser</string>
     <string name="onboarding_welcome_body">A gesture-first browser that keeps tabs, journeys and privacy controls close at hand.</string>
-    <string name="onboarding_welcome_card_title">Four gestures. One fluid workflow.</string>
+    <string name="onboarding_welcome_card_title">Three gestures. One fluid workflow.</string>
     <string name="onboarding_welcome_start">Learn the gestures</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_completion_title">You’re ready to go!</string>
@@ -12,10 +12,8 @@
     <string name="onboarding_title">Learn Candy gestures</string>
     <string name="onboarding_progress">%1$d of %2$d</string>
     <string name="onboarding_try_here">Try the gesture in the card</string>
-    <string name="onboarding_required_hint">All four gestures are required to continue.</string>
+    <string name="onboarding_required_hint">All three gestures are required to continue.</string>
     <string name="onboarding_accessibility_complete_action">Mark this gesture as completed</string>
-    <string name="onboarding_refresh_title">Pull to refresh</string>
-    <string name="onboarding_refresh_description">Drag the page downward until refresh triggers.</string>
     <string name="onboarding_switch_tabs_title">Switch tabs</string>
     <string name="onboarding_switch_tabs_description">Swipe the address bar left or right.</string>
     <string name="onboarding_open_tabs_title">Open the tab overview</string>
@@ -183,8 +181,6 @@
     <string name="action_open_link_background_tab">Open link in new background tab</string>
     <string name="link_peek_title">Link Peek</string>
     <string name="action_open_in_new_tab">Open in New Tab</string>
-    <string name="link_peek_pull_down_instruction">Pull down</string>
-    <string name="link_peek_accessibility_description">Link preview. Pull down to the target and release to open in a new tab. Release before the target, move up, or go back to cancel.</string>
     <string name="action_download_image">Download image</string>
     <string name="download_notification_description">Download</string>
 

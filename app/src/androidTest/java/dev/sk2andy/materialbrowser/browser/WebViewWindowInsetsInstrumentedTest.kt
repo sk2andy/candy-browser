@@ -144,7 +144,7 @@ class WebViewWindowInsetsInstrumentedTest {
     }
 
     @Test
-    fun pageWithoutCoverStaysBelowSystemBarsAndReceivesZeroCssSafeArea() {
+    fun pageWithoutCoverStartsSafeThenScrollsEdgeToEdge() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.browserControllerForTesting().run {
@@ -196,8 +196,8 @@ class WebViewWindowInsetsInstrumentedTest {
             assertEquals(expectedTopPixels.get(), previewTopInset(scenario))
 
             evaluate(webView, "window.scrollTo(0, 1000)")
-            awaitWebViewTop(webView, expectedTopPixels.get())
-            assertEquals(expectedTopPixels.get(), previewTopInset(scenario))
+            awaitWebViewTop(webView, 0)
+            assertEquals(0, previewTopInset(scenario))
             assertEquals(
                 0f,
                 evaluate(webView, "document.getElementById('sticky').getBoundingClientRect().top")
