@@ -23,6 +23,14 @@ internal object TabPreviewCaptureRules {
         isSamePage: Boolean,
     ): Boolean {
         if (candidate.visualRange < MINIMUM_VISUAL_RANGE) return false
+        return shouldStoreDepartureCapture(candidate, previous, isSamePage)
+    }
+
+    fun shouldStoreDepartureCapture(
+        candidate: TabPreviewQuality,
+        previous: TabPreviewQuality?,
+        isSamePage: Boolean,
+    ): Boolean {
         if (!isSamePage || previous == null) return true
         val addedBlackFraction = candidate.nearBlackFraction - previous.nearBlackFraction
         return candidate.nearBlackFraction < LIKELY_BLACK_SURFACE_FRACTION ||

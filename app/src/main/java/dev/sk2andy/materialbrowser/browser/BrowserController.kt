@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
 import android.os.Build
@@ -3009,6 +3010,7 @@ class BrowserController(
     }
 
     fun onPause() {
+        captureSelectedPreviewBeforeLeaving()
         isActivityResumed = false
         touchTab(selectedTabId, System.currentTimeMillis())
         persistWebViewStates()
@@ -4519,6 +4521,74 @@ class BrowserController(
         request.onComplete()
     }
 
+    private fun captureSelectedPreviewBeforeLeaving(width: Int = 480) {
+        val tabId = selectedTabId
+        val tab = tabs.firstOrNull { it.id == tabId }
+        val view = webViews[tabId]
+        if (
+            !isActivityResumed ||
+            tab == null ||
+            tab.isIncognito ||
+            view == null ||
+            !view.isAttachedToWindow ||
+            view.width <= 0 ||
+            view.height <= 0 ||
+            tab.url == BLANK_URL
+        ) return
+        val source = previewWebViewSource(view) ?: return
+        val height = (source.height() * (width.toFloat() / source.width()))
+            .toInt()
+            .coerceIn(1, width * 3)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val scale = width.toFloat() / source.width()
+        val captured = runCatching {
+            Canvas(bitmap).run {
+                scale(scale, scale)
+                translate(-source.left.toFloat(), -source.top.toFloat())
+                view.draw(this)
+            }
+        }.isSuccess
+        val pageUrl = pageUrls[tabId] ?: view.url
+        val candidateQuality = bitmap.previewQuality()
+        val previousQuality = previewQualities[tabId]
+            ?.takeIf { previewPageUrls[tabId] == pageUrl }
+        if (
+            captured &&
+            candidateQuality != null &&
+            TabPreviewCaptureRules.shouldStoreDepartureCapture(
+                candidate = candidateQuality,
+                previous = previousQuality,
+                isSamePage = previousQuality != null,
+            )
+        ) {
+            previews[tabId] = bitmap
+            previewPageUrls[tabId] = pageUrl
+            previewQualities[tabId] = candidateQuality
+            previewRepository.save(tabId, bitmap)
+        } else {
+            bitmap.recycle()
+        }
+    }
+
+    private fun previewWebViewSource(view: WebView): Rect? {
+        val location = IntArray(2)
+        view.getLocationInWindow(location)
+        val decorHeight = activity.window.decorView.height
+        val sourceBottomInWindow = TabPreviewCaptureRules.sourceBottomPx(
+            viewTopPx = location[1],
+            viewHeightPx = view.height,
+            decorHeightPx = decorHeight,
+            contentBottomPx = previewContentBottomInWindowPx,
+        )
+        val source = Rect(
+            0,
+            (-location[1]).coerceIn(0, view.height),
+            view.width,
+            (sourceBottomInWindow - location[1]).coerceIn(0, view.height),
+        )
+        return source.takeIf { it.width() > 0 && it.height() > 0 }
+    }
+
     private fun isCurrentPreviewCapture(request: PendingPreviewCapture): Boolean =
         !destroyed &&
             isActivityResumed &&
@@ -5351,6 +5421,7 @@ class BrowserController(
         INCOGNITO_WEBVIEW_PROFILE_PREFIX + UUID.randomUUID().toString()
 
     private fun pauseWebView(webView: WebView) {
+        if (webViews[selectedTabId] === webView) captureSelectedPreviewBeforeLeaving()
         webView.onPause()
         webView.settings.requireMediaPlaybackGesture()
     }

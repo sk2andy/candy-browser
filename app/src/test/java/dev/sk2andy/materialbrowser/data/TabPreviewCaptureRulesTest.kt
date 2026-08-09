@@ -65,4 +65,34 @@ class TabPreviewCaptureRulesTest {
             ),
         )
     }
+
+    @Test
+    fun `departure capture accepts a uniform light page`() {
+        val previous = TabPreviewQuality(visualRange = 210, nearBlackFraction = 0.08f)
+        val uniformLightPage = TabPreviewQuality(visualRange = 0, nearBlackFraction = 0f)
+
+        assertEquals(
+            true,
+            TabPreviewCaptureRules.shouldStoreDepartureCapture(
+                candidate = uniformLightPage,
+                previous = previous,
+                isSamePage = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `departure capture rejects a newly black protected surface`() {
+        val previous = TabPreviewQuality(visualRange = 210, nearBlackFraction = 0.08f)
+        val protectedSurface = TabPreviewQuality(visualRange = 0, nearBlackFraction = 1f)
+
+        assertEquals(
+            false,
+            TabPreviewCaptureRules.shouldStoreDepartureCapture(
+                candidate = protectedSurface,
+                previous = previous,
+                isSamePage = true,
+            ),
+        )
+    }
 }
