@@ -548,6 +548,14 @@
     <string name="action_open_now">Open now</string>
     <string name="snooze_invalid_time">Choose a future date and time</string>
     <string name="snooze_confirmation">Tab snoozed</string>
+    <string name="snooze_notification_channel_name">Snoozed tabs</string>
+    <string name="snooze_notification_channel_description">Alerts when snoozed tabs are ready</string>
+    <string name="snooze_notification_title">Snoozed tab is ready</string>
+    <string name="snooze_notification_open_app">Tap to open Candy Browser</string>
+    <plurals name="snooze_notification_title_count">
+        <item quantity="one">%1$d snoozed tab is ready</item>
+        <item quantity="other">%1$d snoozed tabs are ready</item>
+    </plurals>
     <plurals name="snoozed_tabs_settings_count">
         <item quantity="one">%1$d snoozed tab</item>
         <item quantity="other">%1$d snoozed tabs</item>

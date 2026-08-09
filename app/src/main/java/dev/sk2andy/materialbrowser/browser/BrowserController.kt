@@ -168,6 +168,7 @@ import dev.sk2andy.materialbrowser.data.SnoozeRuntimeRegistry
 import dev.sk2andy.materialbrowser.data.SnoozeScheduler
 import dev.sk2andy.materialbrowser.data.SnoozeUndoRules
 import dev.sk2andy.materialbrowser.data.SnoozeUndoToken
+import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
 import dev.sk2andy.materialbrowser.data.SnoozedTab
 import dev.sk2andy.materialbrowser.data.SnoozedTabStore
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
@@ -198,6 +199,7 @@ class BrowserController(
         @Suppress("DEPRECATION")
         activity.startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
     },
+    private val requestSnoozeNotificationPermission: () -> Unit = {},
 ) {
     val tabs = mutableStateListOf<BrowserTab>()
     val profiles = mutableStateListOf<BrowserProfile>()
@@ -960,7 +962,11 @@ class BrowserController(
                 remainingSnoozedTabs = snoozedTabs.toList(),
                 snapshotPersisted = snapshotPersisted,
             )
-            if (!snapshotPersisted) {
+            if (snapshotPersisted) {
+                SnoozeWakeNotifier(activity).notifyRestored(
+                    tabs.filter { it.id in initialSnoozeRestore.restoredTabIds },
+                )
+            } else {
                 tabs.clear()
                 tabs += startupSnapshot.tabs
                 snoozedTabs.clear()
@@ -1977,6 +1983,13 @@ class BrowserController(
         persist()
     }
 
+    fun openSnoozedWakeTab(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId && !it.isIncognito } ?: return false
+        if (tab.profileId != activeProfileId && !selectProfile(tab.profileId)) return false
+        selectTab(tabId)
+        return selectedTabId == tabId
+    }
+
     fun switchToOpenTab(tabId: String): Boolean {
         if (tabId == selectedTabId || activeTabs.none { it.id == tabId }) return false
         val blankSourceTabId = selectedTab.takeIf(BrowserTab::isFreshBlankTab)?.id
@@ -2113,6 +2126,7 @@ class BrowserController(
         reconcileCandyTrailForks(nowMillis)
         persist()
         snoozeScheduler.schedule(snoozedTabs, nowMillis)
+        runCatching(requestSnoozeNotificationPermission)
         return SnoozeUndoToken(
             tabId = tabId,
             appliedSnoozedTab = updatedSnoozed.first { it.tab.id == tabId },
@@ -4831,7 +4845,9 @@ class BrowserController(
             .forEach(::restoreSnoozedCandyTrail)
         persist()
         snoozeScheduler.schedule(remaining, nowMillis)
-        return result.tabs.count { it.id !in oldIds }
+        val restoredTabs = result.tabs.filter { it.id in result.restoredTabIds }
+        SnoozeWakeNotifier(activity).notifyRestored(restoredTabs)
+        return restoredTabs.size
     }
 
     private fun restoreSnoozedCandyTrail(tab: BrowserTab) {

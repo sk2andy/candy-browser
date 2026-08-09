@@ -155,6 +155,7 @@ internal object SnoozeUndoRules {
 internal data class SnoozeRestoreResult(
     val tabs: List<BrowserTab>,
     val completedTabIds: Set<String>,
+    val restoredTabIds: Set<String>,
 )
 
 internal data class SnoozeStartupSnapshot(
@@ -185,10 +186,11 @@ internal object SnoozeRestoreRules {
     ): SnoozeRestoreResult {
         val restored = tabs.toMutableList()
         val completedIds = linkedSetOf<String>()
+        val restoredIds = linkedSetOf<String>()
         val profileIds = profiles.mapTo(linkedSetOf(), BrowserProfile::id)
         val fallbackProfileId = activeProfileId.takeIf(profileIds::contains)
             ?: profiles.firstOrNull()?.id
-            ?: return SnoozeRestoreResult(tabs, emptySet())
+            ?: return SnoozeRestoreResult(tabs, emptySet(), emptySet())
 
         snoozedTabs.asSequence()
             .filter { it.wakeAtMillis <= nowMillis }
@@ -213,6 +215,7 @@ internal object SnoozeRestoreRules {
                             error = null,
                         )
                         completedIds += tab.id
+                        restoredIds += tab.id
                     }
                 }
             }
@@ -220,6 +223,7 @@ internal object SnoozeRestoreRules {
         return SnoozeRestoreResult(
             tabs = TabPinningRules.orderedTabs(restored),
             completedTabIds = completedIds,
+            restoredTabIds = restoredIds,
         )
     }
 }

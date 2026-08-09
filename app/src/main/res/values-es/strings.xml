@@ -539,6 +539,14 @@
     <string name="action_open_now">Abrir ahora</string>
     <string name="snooze_invalid_time">Elige una fecha y hora futuras</string>
     <string name="snooze_confirmation">Pestaña pospuesta</string>
+    <string name="snooze_notification_channel_name">Pestañas pospuestas</string>
+    <string name="snooze_notification_channel_description">Avisos cuando las pestañas pospuestas están listas</string>
+    <string name="snooze_notification_title">La pestaña pospuesta está lista</string>
+    <string name="snooze_notification_open_app">Toca para abrir Candy Browser</string>
+    <plurals name="snooze_notification_title_count">
+        <item quantity="one">%1$d pestaña pospuesta está lista</item>
+        <item quantity="other">%1$d pestañas pospuestas están listas</item>
+    </plurals>
     <plurals name="snoozed_tabs_settings_count">
         <item quantity="one">%1$d pestaña pospuesta</item>
         <item quantity="other">%1$d pestañas pospuestas</item>

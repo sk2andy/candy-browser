@@ -539,6 +539,14 @@
     <string name="action_open_now">Abrir agora</string>
     <string name="snooze_invalid_time">Escolha uma data e hora futuras</string>
     <string name="snooze_confirmation">Separador adiado</string>
+    <string name="snooze_notification_channel_name">Separadores adiados</string>
+    <string name="snooze_notification_channel_description">Avisos quando os separadores adiados estão prontos</string>
+    <string name="snooze_notification_title">O separador adiado está pronto</string>
+    <string name="snooze_notification_open_app">Toque para abrir o Candy Browser</string>
+    <plurals name="snooze_notification_title_count">
+        <item quantity="one">%1$d separador adiado está pronto</item>
+        <item quantity="other">%1$d separadores adiados estão prontos</item>
+    </plurals>
     <plurals name="snoozed_tabs_settings_count">
         <item quantity="one">%1$d separador adiado</item>
         <item quantity="other">%1$d separadores adiados</item>

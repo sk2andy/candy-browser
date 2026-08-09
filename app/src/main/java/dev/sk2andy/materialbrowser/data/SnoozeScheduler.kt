@@ -109,6 +109,9 @@ internal object SnoozeRestoreCoordinator {
             ?: return
         val remaining = snoozed.filterNot { it.tab.id in result.completedTabIds }
         if (sessionStore.saveTabsAndSnoozedImmediately(result.tabs, selection, remaining)) {
+            SnoozeWakeNotifier(context).notifyRestored(
+                result.tabs.filter { it.id in result.restoredTabIds },
+            )
             Log.i(
                 SnoozeScheduler.LOG_TAG,
                 "Background restore completed=${result.completedTabIds.size}",

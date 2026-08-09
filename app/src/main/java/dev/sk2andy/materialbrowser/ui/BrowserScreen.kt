@@ -1195,6 +1195,11 @@ fun BrowserScreen(controller: BrowserController) {
             canToggleDomainMute = controller.canToggleSelectedDomainMute,
             isDomainMuted = controller.isSelectedDomainMuted,
             onDomainMutedChange = controller::setSelectedDomainMuted,
+            snoozedTabCount = controller.snoozedTabs.size,
+            onSnoozedTabs = {
+                addressEditorVisible = false
+                snoozedTabsVisible = true
+            },
             onSettings = {
                 addressEditorVisible = false
                 settingsVisible = true
@@ -1432,7 +1437,6 @@ fun BrowserScreen(controller: BrowserController) {
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
                 siteCapsules = controller.siteCapsules,
-                snoozedTabCount = controller.snoozedTabs.size,
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onSearchEngineChanged = controller::updateSearchEngine,
@@ -1460,9 +1464,6 @@ fun BrowserScreen(controller: BrowserController) {
                     filterStudioVisible = true
                 },
                 onClearData = { clearDialogVisible = true },
-                onSnoozedTabs = {
-                    snoozedTabsVisible = true
-                },
                 onOpenLegalUrl = { url ->
                     settingsVisible = false
                     controller.openUrl(url, inNewTab = true)
@@ -1621,9 +1622,7 @@ fun BrowserScreen(controller: BrowserController) {
                 onBack = { snoozedTabsVisible = false },
                 onReschedule = controller::rescheduleSnoozedTab,
                 onOpenNow = { tabId ->
-                    controller.openSnoozedTabNow(tabId).also { opened ->
-                        if (opened) settingsVisible = false
-                    }
+                    controller.openSnoozedTabNow(tabId)
                 },
                 onDelete = controller::deleteSnoozedTab,
             )
@@ -2697,6 +2696,8 @@ private fun BrowserBottomBar(
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
+    snoozedTabCount: Int,
+    onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     permissionActivityVisible: Boolean,
@@ -2969,6 +2970,8 @@ private fun BrowserBottomBar(
                                 canToggleDomainMute = canToggleDomainMute,
                                 isDomainMuted = isDomainMuted,
                                 onDomainMutedChange = onDomainMutedChange,
+                                snoozedTabCount = snoozedTabCount,
+                                onSnoozedTabs = onSnoozedTabs,
                                 onSettings = onSettings,
                                 onPrivacyXRay = onPrivacyXRay,
                                 permissionActivityVisible = permissionActivityVisible,
@@ -3358,6 +3361,8 @@ private fun ExpandedBottomBarContent(
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
+    snoozedTabCount: Int,
+    onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     permissionActivityVisible: Boolean,
@@ -3628,6 +3633,7 @@ private fun ExpandedBottomBarContent(
                             !tab.isIncognito &&
                             (tab.url.startsWith("https://") || tab.url.startsWith("http://")),
                         canSnooze = !tab.isIncognito,
+                        snoozedTabCount = snoozedTabCount,
                         onBack = onBack,
                         onForward = onForward,
                         onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
@@ -3641,6 +3647,7 @@ private fun ExpandedBottomBarContent(
                         onAddSiteCapsule = onAddSiteCapsule,
                         onSummarize = onSummarizeWithAssistant,
                         onSnooze = onSnooze,
+                        onSnoozedTabs = onSnoozedTabs,
                         onSettings = onSettings,
                     )
                 }
@@ -7286,7 +7293,6 @@ private fun SettingsScreen(
     blockedCount: Int,
     isDefaultBrowser: Boolean,
     siteCapsules: List<SiteCapsule>,
-    snoozedTabCount: Int,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
@@ -7301,7 +7307,6 @@ private fun SettingsScreen(
     onDeleteCapsule: (SiteCapsule) -> Unit,
     onFilterStudio: () -> Unit,
     onClearData: () -> Unit,
-    onSnoozedTabs: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -7480,28 +7485,6 @@ private fun SettingsScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            SettingsLink(
-                title = stringResource(R.string.snoozed_tabs_title),
-                subtitle = if (snoozedTabCount == 0) {
-                    stringResource(R.string.snoozed_tabs_settings_summary)
-                } else {
-                    pluralStringResource(
-                        R.plurals.snoozed_tabs_settings_count,
-                        snoozedTabCount,
-                        snoozedTabCount,
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_snooze),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                },
-                onClick = onSnoozedTabs,
-            )
-
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
             Spacer(Modifier.height(8.dp))

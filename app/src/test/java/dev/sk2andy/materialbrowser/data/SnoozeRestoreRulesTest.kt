@@ -25,8 +25,10 @@ class SnoozeRestoreRulesTest {
         assertEquals(100L, first.tabs.single().lastAccessedAt)
         assertTrue(first.tabs.single().isPinned)
         assertEquals(setOf("due"), first.completedTabIds)
+        assertEquals(setOf("due"), first.restoredTabIds)
         assertEquals(listOf("due"), second.tabs.map { it.id })
         assertEquals(setOf("due"), second.completedTabIds)
+        assertTrue(second.restoredTabIds.isEmpty())
     }
 
     @Test
@@ -61,6 +63,7 @@ class SnoozeRestoreRulesTest {
 
         assertEquals(listOf("open"), result.tabs.map { it.id })
         assertTrue(result.completedTabIds.isEmpty())
+        assertTrue(result.restoredTabIds.isEmpty())
     }
 
     @Test
@@ -73,6 +76,7 @@ class SnoozeRestoreRulesTest {
         val result = restore(emptyList(), listOf(privateTab), now = 100L)
         assertTrue(result.tabs.isEmpty())
         assertEquals(setOf("private"), result.completedTabIds)
+        assertTrue(result.restoredTabIds.isEmpty())
     }
 
     @Test
