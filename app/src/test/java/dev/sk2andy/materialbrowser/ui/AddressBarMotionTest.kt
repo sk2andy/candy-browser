@@ -52,7 +52,31 @@ class AddressBarMotionTest {
     }
 
     @Test
-    fun `only scroll chrome transitions use non-overlapping fade through`() {
+    fun `overview chrome has two-button width and centers docked chrome`() {
+        assertEquals(
+            AddressBarMotion.OVERVIEW_WIDTH,
+            AddressBarMotion.widthTarget(
+                presentation = AddressBarPresentation.Overview,
+                compactWidth = 184.dp,
+                maxWidth = 328.dp,
+                feedbackWidth = 220.dp,
+                edgeTabWidth = 52.dp,
+            ),
+        )
+        assertEquals(56.dp, AddressBarMotion.heightTarget(AddressBarPresentation.Overview))
+        assertEquals(
+            0.dp,
+            AddressBarMotion.dockOffsetTarget(
+                presentation = AddressBarPresentation.Overview,
+                maxWidth = 328.dp,
+                edgeTabWidth = 52.dp,
+                layoutDirection = LayoutDirection.Ltr,
+            ),
+        )
+    }
+
+    @Test
+    fun `scroll and overview transitions use non-overlapping fade through`() {
         assertTrue(
             AddressBarMotion.usesFadeThrough(
                 AddressBarPresentation.Compact,
@@ -68,6 +92,18 @@ class AddressBarMotionTest {
         assertFalse(
             AddressBarMotion.usesFadeThrough(
                 AddressBarPresentation.Docked,
+                AddressBarPresentation.Expanded,
+            ),
+        )
+        assertTrue(
+            AddressBarMotion.usesFadeThrough(
+                AddressBarPresentation.Docked,
+                AddressBarPresentation.Overview,
+            ),
+        )
+        assertTrue(
+            AddressBarMotion.usesFadeThrough(
+                AddressBarPresentation.Overview,
                 AddressBarPresentation.Expanded,
             ),
         )

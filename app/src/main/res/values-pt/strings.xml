@@ -33,6 +33,10 @@
     <string name="action_forward">Avançar</string>
     <string name="new_tab_title">Novo separador</string>
     <string name="cd_new_tab">Novo separador</string>
+    <plurals name="cd_open_tab_overview_count">
+        <item quantity="one">Abrir visão geral, %1$d separador</item>
+        <item quantity="other">Abrir visão geral, %1$d separadores</item>
+    </plurals>
     <string name="cd_close_tab_overview">Fechar visão geral dos separadores</string>
     <string name="cd_close_tab">Fechar separador</string>
     <string name="cd_close_named_tab">Fechar %1$s</string>
@@ -206,6 +210,8 @@
     <string name="settings_edge_to_edge_title">Sites de margem a margem</string>
     <string name="settings_edge_to_edge_subtitle">Permite conteúdo de sites compatíveis sob as barras do sistema. Desative se os controlos se sobrepuserem à barra de estado ou ao recorte da câmara.</string>
     <string name="settings_section_gestures">Gestos</string>
+    <string name="settings_tab_button_title">Mostrar botão de separadores</string>
+    <string name="settings_tab_button_subtitle">Mostra o contador além do gesto de deslizar para cima.</string>
     <string name="settings_tab_dismiss_resistance">Resistência ao fechar separadores</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistência: %1$d%% do percurso de fecho</string>
     <string name="settings_section_protection">Proteção e cookies</string>

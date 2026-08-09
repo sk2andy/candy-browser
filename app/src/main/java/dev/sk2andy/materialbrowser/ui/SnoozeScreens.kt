@@ -2,6 +2,8 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +30,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -48,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
@@ -80,7 +82,7 @@ internal suspend fun showSnoozeUndoFeedback(
 }
 
 @Composable
-internal fun SnoozeTabSheet(
+internal fun SnoozeTabDialog(
     tab: BrowserTab?,
     onSnooze: (Long) -> Boolean,
     onDismiss: () -> Unit,
@@ -88,73 +90,94 @@ internal fun SnoozeTabSheet(
     if (tab == null) return
     val zoneId = remember { ZoneId.systemDefault() }
     var customEditorVisible by remember(tab.id) { mutableStateOf(false) }
+    val customInitialMillis = remember(tab.id) {
+        System.currentTimeMillis() + 24 * 60 * 60 * 1_000L
+    }
     val enabled = !tab.isIncognito
     val applyPreset: (SnoozePreset) -> Unit = { preset ->
         val nowMillis = System.currentTimeMillis()
         if (onSnooze(SnoozeTimeRules.wakeAtMillis(preset, nowMillis, zoneId))) onDismiss()
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.testTag(SnoozeTestTags.Sheet),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
-        ) {
-            Text(
-                stringResource(R.string.snooze_sheet_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                snoozeDisplayTitle(tab),
-                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (!enabled) {
-                Text(
-                    stringResource(R.string.snooze_unavailable_private),
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            SnoozeChoice(
-                text = stringResource(R.string.snooze_later_today),
-                enabled = enabled,
-                tag = SnoozeTestTags.LaterToday,
-                onClick = { applyPreset(SnoozePreset.LaterToday) },
-            )
-            SnoozeChoice(
-                text = stringResource(R.string.snooze_tomorrow),
-                enabled = enabled,
-                tag = SnoozeTestTags.Tomorrow,
-                onClick = { applyPreset(SnoozePreset.Tomorrow) },
-            )
-            SnoozeChoice(
-                text = stringResource(R.string.snooze_next_week),
-                enabled = enabled,
-                tag = SnoozeTestTags.NextWeek,
-                onClick = { applyPreset(SnoozePreset.NextWeek) },
-            )
-            HorizontalDivider(Modifier.padding(vertical = 6.dp))
-            SnoozeChoice(
-                text = stringResource(R.string.snooze_custom),
-                enabled = enabled,
-                tag = SnoozeTestTags.Custom,
-                onClick = { customEditorVisible = true },
-            )
-        }
+    if (!customEditorVisible) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            modifier = Modifier.testTag(SnoozeTestTags.Dialog),
+            title = {
+                Column {
+                    Text(
+                        stringResource(R.string.snooze_sheet_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        snoozeDisplayTitle(tab),
+                        modifier = Modifier.padding(top = 4.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    if (!enabled) {
+                        Text(
+                            stringResource(R.string.snooze_unavailable_private),
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(SnoozeTestTags.PresetGroup),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        SnoozePresetButton(
+                            text = stringResource(R.string.snooze_later_today),
+                            enabled = enabled,
+                            tag = SnoozeTestTags.LaterToday,
+                            onClick = { applyPreset(SnoozePreset.LaterToday) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        SnoozePresetButton(
+                            text = stringResource(R.string.snooze_tomorrow),
+                            enabled = enabled,
+                            tag = SnoozeTestTags.Tomorrow,
+                            onClick = { applyPreset(SnoozePreset.Tomorrow) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        SnoozePresetButton(
+                            text = stringResource(R.string.snooze_next_week),
+                            enabled = enabled,
+                            tag = SnoozeTestTags.NextWeek,
+                            onClick = { applyPreset(SnoozePreset.NextWeek) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                    SnoozeChoice(
+                        text = stringResource(R.string.snooze_custom),
+                        enabled = enabled,
+                        tag = SnoozeTestTags.Custom,
+                        onClick = { customEditorVisible = true },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 
     SnoozeDateTimeDialogs(
         visible = customEditorVisible,
-        initialMillis = System.currentTimeMillis() + 24 * 60 * 60 * 1_000L,
+        initialMillis = customInitialMillis,
         onDismiss = { customEditorVisible = false },
         onConfirm = { wakeAtMillis ->
             onSnooze(wakeAtMillis).also { accepted ->
@@ -165,6 +188,41 @@ internal fun SnoozeTabSheet(
             }
         },
     )
+}
+
+@Composable
+private fun SnoozePresetButton(
+    text: String,
+    enabled: Boolean,
+    tag: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .height(64.dp)
+            .testTag(tag),
+        enabled = enabled,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = if (enabled) contentColor else contentColor.copy(alpha = 0.38f),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = text,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+    }
 }
 
 @Composable
@@ -470,7 +528,8 @@ private fun snoozeDisplayTitle(tab: BrowserTab): String =
     }
 
 internal object SnoozeTestTags {
-    const val Sheet = "snooze_sheet"
+    const val Dialog = "snooze_dialog"
+    const val PresetGroup = "snooze_preset_group"
     const val LaterToday = "snooze_later_today"
     const val Tomorrow = "snooze_tomorrow"
     const val NextWeek = "snooze_next_week"

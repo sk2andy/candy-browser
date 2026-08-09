@@ -33,6 +33,10 @@
     <string name="action_forward">Adelante</string>
     <string name="new_tab_title">Nueva pestaña</string>
     <string name="cd_new_tab">Nueva pestaña</string>
+    <plurals name="cd_open_tab_overview_count">
+        <item quantity="one">Abrir vista de pestañas, %1$d pestaña</item>
+        <item quantity="other">Abrir vista de pestañas, %1$d pestañas</item>
+    </plurals>
     <string name="cd_close_tab_overview">Cerrar vista de pestañas</string>
     <string name="cd_close_tab">Cerrar pestaña</string>
     <string name="cd_close_named_tab">Cerrar %1$s</string>
@@ -206,6 +210,8 @@
     <string name="settings_edge_to_edge_title">Sitios web de borde a borde</string>
     <string name="settings_edge_to_edge_subtitle">Permite contenido de sitios compatibles bajo las barras del sistema. Desactívalo si los controles se superponen con la barra de estado o el recorte de la cámara.</string>
     <string name="settings_section_gestures">Gestos</string>
+    <string name="settings_tab_button_title">Mostrar botón de pestañas</string>
+    <string name="settings_tab_button_subtitle">Muestra el contador además del gesto de deslizar hacia arriba.</string>
     <string name="settings_tab_dismiss_resistance">Resistencia al cerrar pestañas</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistencia: %1$d%% del recorrido de cierre</string>
     <string name="settings_section_protection">Protección y cookies</string>

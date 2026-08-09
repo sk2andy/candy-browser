@@ -5,10 +5,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.capsule.CapsuleChromeMode
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorRequest
+import java.util.concurrent.atomic.AtomicReference
+import org.junit.Assert.assertEquals
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -77,5 +83,41 @@ class SiteCapsuleScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(SiteCapsuleTestTags.WebView).assertIsDisplayed()
         composeRule.onNodeWithTag(SiteCapsuleTestTags.Chrome).assertDoesNotExist()
+    }
+
+    @Test
+    fun editorScreenReturnsSubmissionForActivityResult() {
+        val submission = AtomicReference<dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorSubmission?>()
+        composeRule.setContent {
+            MaterialTheme {
+                SiteCapsuleEditorScreen(
+                    request = SiteCapsuleEditorRequest(
+                        existing = null,
+                        sourceTabId = "source-tab",
+                        sourceTitle = "Example Capsule",
+                        sourceUrl = "https://example.com",
+                        profiles = listOf(BrowserProfile("candy", "🍬")),
+                        activeProfileId = "candy",
+                        profileIsolationSupported = true,
+                        pinningSupported = true,
+                        canCreate = true,
+                        canCreateDedicatedProfile = true,
+                        previewIcon = null,
+                    ),
+                    onSubmit = submission::set,
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.Editor).assertIsDisplayed()
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.Save)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+
+        assertEquals("source-tab", submission.get()?.sourceTabId)
+        assertEquals("Example Capsule", submission.get()?.name)
+        assertEquals("https://example.com", submission.get()?.startUrl)
     }
 }

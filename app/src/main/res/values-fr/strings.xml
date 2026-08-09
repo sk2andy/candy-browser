@@ -33,6 +33,10 @@
     <string name="action_forward">Suivant</string>
     <string name="new_tab_title">Nouvel onglet</string>
     <string name="cd_new_tab">Nouvel onglet</string>
+    <plurals name="cd_open_tab_overview_count">
+        <item quantity="one">Ouvrir l’aperçu des onglets, %1$d onglet</item>
+        <item quantity="other">Ouvrir l’aperçu des onglets, %1$d onglets</item>
+    </plurals>
     <string name="cd_close_tab_overview">Fermer l’aperçu des onglets</string>
     <string name="cd_close_tab">Fermer l’onglet</string>
     <string name="cd_close_named_tab">Fermer %1$s</string>
@@ -206,6 +210,8 @@
     <string name="settings_edge_to_edge_title">Sites web bord à bord</string>
     <string name="settings_edge_to_edge_subtitle">Autorise le contenu des sites compatibles sous les barres système. Désactivez cette option si des commandes chevauchent la barre d’état ou la découpe de l’appareil photo.</string>
     <string name="settings_section_gestures">Gestes</string>
+    <string name="settings_tab_button_title">Afficher le bouton des onglets</string>
+    <string name="settings_tab_button_subtitle">Affiche le compteur en plus du balayage vers le haut.</string>
     <string name="settings_tab_dismiss_resistance">Résistance à la fermeture des onglets</string>
     <string name="settings_tab_dismiss_resistance_summary">Phase de résistance : %1$d%% de la distance de fermeture</string>
     <string name="settings_section_protection">Protection et cookies</string>
