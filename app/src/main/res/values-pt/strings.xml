@@ -185,6 +185,8 @@
     <string name="tab_overview_mode_grid">Grelha compacta</string>
     <string name="tab_overview_mode_list">Lista sem pré-visualizações</string>
     <string name="settings_auto_close_tabs">Fechar separadores automaticamente</string>
+    <string name="settings_profiles_title">Ativar perfis</string>
+    <string name="settings_profiles_subtitle">Manter grupos de separadores distintos e mostrar os controlos de mudança de perfil.</string>
     <string name="tab_lifetime_never">Nunca</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Após %1$d hora</item>

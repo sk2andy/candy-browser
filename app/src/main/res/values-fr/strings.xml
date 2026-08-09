@@ -185,6 +185,8 @@
     <string name="tab_overview_mode_grid">Grille compacte</string>
     <string name="tab_overview_mode_list">Liste sans aperçus</string>
     <string name="settings_auto_close_tabs">Fermer automatiquement les onglets</string>
+    <string name="settings_profiles_title">Activer les profils</string>
+    <string name="settings_profiles_subtitle">Conserver des groupes d’onglets séparés et afficher les commandes de changement de profil.</string>
     <string name="tab_lifetime_never">Jamais</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Après %1$d heure</item>

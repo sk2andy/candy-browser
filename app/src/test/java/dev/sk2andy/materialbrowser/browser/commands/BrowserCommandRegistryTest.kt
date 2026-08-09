@@ -52,6 +52,14 @@ class BrowserCommandRegistryTest {
     }
 
     @Test
+    fun `registry excludes profile commands when profiles are disabled`() {
+        val commands = BrowserCommandRegistry.commands(context(profilesEnabled = false))
+
+        assertFalse(commands.any { it.kind == BrowserCommandKind.MoveTabToProfile })
+        assertFalse(commands.any { it.kind == BrowserCommandKind.SwitchProfile })
+    }
+
+    @Test
     fun `duplicate confirmation appears only when multiple tabs close`() {
         val one = BrowserCommandRegistry.commands(context(duplicateTabIds = listOf("one")))
             .single { it.kind == BrowserCommandKind.CloseDuplicateTabs }
@@ -112,10 +120,12 @@ class BrowserCommandRegistryTest {
         canMoveSelectedTab: Boolean = true,
         hasLoadedPage: Boolean = true,
         canClearCookies: Boolean = true,
+        profilesEnabled: Boolean = true,
     ) = CommandContext(
         selectedTab = selectedTab,
         profiles = profiles,
         activeProfileId = "home",
+        profilesEnabled = profilesEnabled,
         duplicateTabIds = duplicateTabIds,
         canCreateTab = canCreateTab,
         canCreateIncognitoTab = canCreateIncognitoTab,

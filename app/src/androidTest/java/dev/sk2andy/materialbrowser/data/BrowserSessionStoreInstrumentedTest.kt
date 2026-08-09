@@ -105,6 +105,17 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun profilesDefaultToEnabledAndRoundTripDisabledState() {
+        val store = BrowserSessionStore(context)
+
+        assertTrue(store.loadProfilesEnabled())
+
+        store.saveProfilesEnabled(false)
+
+        assertFalse(store.loadProfilesEnabled())
+    }
+
+    @Test
     fun missingOrInvalidProfilesFallBackToCandy() {
         val store = BrowserSessionStore(context)
         assertEquals(listOf("candy"), store.loadProfiles().first.map(BrowserProfile::id))

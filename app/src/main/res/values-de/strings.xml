@@ -185,6 +185,8 @@
     <string name="tab_overview_mode_grid">Kompaktes Raster</string>
     <string name="tab_overview_mode_list">Liste ohne Vorschauen</string>
     <string name="settings_auto_close_tabs">Tabs automatisch schließen</string>
+    <string name="settings_profiles_title">Profile aktivieren</string>
+    <string name="settings_profiles_subtitle">Separate Tab-Gruppen beibehalten und Steuerelemente zum Profilwechsel anzeigen.</string>
     <string name="tab_lifetime_never">Nie</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Nach %1$d Stunde</item>

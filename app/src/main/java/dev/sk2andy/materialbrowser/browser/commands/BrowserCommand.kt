@@ -38,6 +38,7 @@ data class CommandContext(
     val selectedTab: BrowserTab,
     val profiles: List<BrowserProfile>,
     val activeProfileId: String,
+    val profilesEnabled: Boolean,
     val duplicateTabIds: List<String>,
     val canCreateTab: Boolean,
     val canCreateIncognitoTab: Boolean,
@@ -106,30 +107,32 @@ object BrowserCommandRegistry {
                 ),
             )
         }
-        context.profiles
-            .mapIndexed { index, profile -> index to profile }
-            .filter { (_, profile) -> profile.id != context.activeProfileId }
-            .forEach { (index, profile) ->
-                val targetLabel = "${index + 1} · ${profile.emoji}"
-                if (context.canMoveSelectedTab) {
+        if (context.profilesEnabled) {
+            context.profiles
+                .mapIndexed { index, profile -> index to profile }
+                .filter { (_, profile) -> profile.id != context.activeProfileId }
+                .forEach { (index, profile) ->
+                    val targetLabel = "${index + 1} · ${profile.emoji}"
+                    if (context.canMoveSelectedTab) {
+                        add(
+                            BrowserCommand(
+                                executionId = CommandExecutionIds.moveTabToProfile(profile.id),
+                                kind = BrowserCommandKind.MoveTabToProfile,
+                                targetProfileId = profile.id,
+                                targetProfileLabel = targetLabel,
+                            ),
+                        )
+                    }
                     add(
                         BrowserCommand(
-                            executionId = CommandExecutionIds.moveTabToProfile(profile.id),
-                            kind = BrowserCommandKind.MoveTabToProfile,
+                            executionId = CommandExecutionIds.switchProfile(profile.id),
+                            kind = BrowserCommandKind.SwitchProfile,
                             targetProfileId = profile.id,
                             targetProfileLabel = targetLabel,
                         ),
                     )
                 }
-                add(
-                    BrowserCommand(
-                        executionId = CommandExecutionIds.switchProfile(profile.id),
-                        kind = BrowserCommandKind.SwitchProfile,
-                        targetProfileId = profile.id,
-                        targetProfileLabel = targetLabel,
-                    ),
-                )
-            }
+        }
         if (context.canCreateTab) {
             add(fixed(BrowserCommandKind.NewRegularTab))
         }

@@ -171,6 +171,12 @@ class BrowserSessionStore internal constructor(
             .apply()
     }
 
+    fun loadProfilesEnabled(): Boolean = preferences.getBoolean(KEY_PROFILES_ENABLED, true)
+
+    fun saveProfilesEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_PROFILES_ENABLED, enabled).apply()
+    }
+
     fun loadPendingWebViewProfileDeletions(): Set<String> =
         preferences.getStringSet(KEY_PENDING_WEBVIEW_PROFILE_DELETIONS, emptySet())
             ?.toSet()
@@ -442,6 +448,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_SELECTED_TAB = "selected_tab"
         const val KEY_PROFILES = "profiles"
         const val KEY_ACTIVE_PROFILE = "active_profile"
+        const val KEY_PROFILES_ENABLED = "profiles_enabled"
         const val KEY_PENDING_WEBVIEW_PROFILE_DELETIONS = "pending_webview_profile_deletions"
         const val KEY_BLOCK_ADS = "block_ads"
         const val KEY_HIDE_CONSENT = "hide_consent"

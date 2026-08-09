@@ -185,6 +185,8 @@
     <string name="tab_overview_mode_grid">Cuadrícula compacta</string>
     <string name="tab_overview_mode_list">Lista sin vistas previas</string>
     <string name="settings_auto_close_tabs">Cerrar pestañas automáticamente</string>
+    <string name="settings_profiles_title">Activar perfiles</string>
+    <string name="settings_profiles_subtitle">Mantén grupos de pestañas separados y muestra los controles para cambiar de perfil.</string>
     <string name="tab_lifetime_never">Nunca</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Después de %1$d hora</item>
