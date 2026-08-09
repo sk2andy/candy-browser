@@ -1,6 +1,10 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -21,26 +25,55 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sk2andy.materialbrowser.R
+
+internal object BrowserMainMenuMotion {
+    const val EXIT_DURATION_MILLIS = 160
+    const val EXIT_SCALE = 0.9f
+}
+
+private data class BrowserMainMenuPresentation(
+    val pageSubtitle: String,
+    val canGoBack: Boolean,
+    val canGoForward: Boolean,
+    val isLoading: Boolean,
+    val canToggleFavorite: Boolean,
+    val isFavorite: Boolean,
+    val canUsePageActions: Boolean,
+    val canOpenReader: Boolean,
+    val canToggleDomainMute: Boolean,
+    val isDomainMuted: Boolean,
+    val canAddSiteCapsule: Boolean,
+    val canSnooze: Boolean,
+)
 
 @Composable
 internal fun BrowserMainMenu(
@@ -91,16 +124,79 @@ internal fun BrowserMainMenu(
     )
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val menuWidth = minOf(360.dp, screenWidth - 32.dp)
+    val requestedPresentation = BrowserMainMenuPresentation(
+        pageSubtitle = pageSubtitle,
+        canGoBack = canGoBack,
+        canGoForward = canGoForward,
+        isLoading = isLoading,
+        canToggleFavorite = canToggleFavorite,
+        isFavorite = isFavorite,
+        canUsePageActions = canUsePageActions,
+        canOpenReader = canOpenReader,
+        canToggleDomainMute = canToggleDomainMute,
+        isDomainMuted = isDomainMuted,
+        canAddSiteCapsule = canAddSiteCapsule,
+        canSnooze = canSnooze,
+    )
+    var presentation by remember { mutableStateOf(requestedPresentation) }
+    if (expanded && requestedPresentation != presentation) {
+        presentation = requestedPresentation
+    }
+    var popupVisible by remember { mutableStateOf(expanded) }
+    var actionCommitted by remember { mutableStateOf(false) }
+    val exitProgress = remember { Animatable(if (expanded) 1f else 0f) }
+    val menuTransformOrigin = if (LocalLayoutDirection.current == LayoutDirection.Ltr) {
+        TransformOrigin(1f, 1f)
+    } else {
+        TransformOrigin(0f, 1f)
+    }
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            actionCommitted = false
+            val reversingExit = popupVisible
+            popupVisible = true
+            if (reversingExit) {
+                exitProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
+                        easing = LinearOutSlowInEasing,
+                    ),
+                )
+            } else {
+                exitProgress.snapTo(1f)
+            }
+        } else if (popupVisible) {
+            exitProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(
+                    durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
+                    easing = FastOutLinearInEasing,
+                ),
+            )
+            popupVisible = false
+        }
+    }
     fun dismissThen(action: () -> Unit) {
+        if (!expanded || actionCommitted) return
+        actionCommitted = true
         onDismissRequest()
         action()
     }
 
-    DropdownMenu(
-        expanded = expanded,
+    if (popupVisible) DropdownMenu(
+        expanded = true,
         onDismissRequest = onDismissRequest,
         modifier = Modifier
             .width(menuWidth)
+            .graphicsLayer {
+                alpha = exitProgress.value
+                val scale = BrowserMainMenuMotion.EXIT_SCALE +
+                    (1f - BrowserMainMenuMotion.EXIT_SCALE) * exitProgress.value
+                scaleX = scale
+                scaleY = scale
+                transformOrigin = menuTransformOrigin
+            }
             .clip(menuShape)
             .testTag(BrowserMainMenuTestTags.Menu),
         offset = DpOffset(x = 0.dp, y = (-10).dp),
@@ -116,7 +212,7 @@ internal fun BrowserMainMenu(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = pageSubtitle,
+                text = presentation.pageSubtitle,
                 modifier = Modifier.padding(top = 2.dp),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -134,22 +230,26 @@ internal fun BrowserMainMenu(
                 MenuToolbarAction(
                     label = stringResource(R.string.action_back),
                     iconRes = R.drawable.ic_symbol_arrow_back,
-                    enabled = canGoBack,
+                    enabled = presentation.canGoBack,
                     onClick = { dismissThen(onBack) },
                     modifier = Modifier.weight(1f),
                 )
                 MenuToolbarAction(
                     label = stringResource(R.string.action_forward),
                     iconRes = R.drawable.ic_symbol_arrow_forward,
-                    enabled = canGoForward,
+                    enabled = presentation.canGoForward,
                     onClick = { dismissThen(onForward) },
                     modifier = Modifier.weight(1f),
                 )
                 MenuToolbarAction(
                     label = stringResource(
-                        if (isLoading) R.string.action_stop_loading else R.string.action_reload,
+                        if (presentation.isLoading) {
+                            R.string.action_stop_loading
+                        } else {
+                            R.string.action_reload
+                        },
                     ),
-                    iconRes = if (isLoading) {
+                    iconRes = if (presentation.isLoading) {
                         R.drawable.ic_symbol_close
                     } else {
                         R.drawable.ic_symbol_refresh
@@ -159,20 +259,20 @@ internal fun BrowserMainMenu(
                 )
                 MenuToolbarAction(
                     label = stringResource(R.string.action_favorite),
-                    iconRes = if (isFavorite) {
+                    iconRes = if (presentation.isFavorite) {
                         R.drawable.ic_symbol_favorite_filled
                     } else {
                         R.drawable.ic_symbol_favorite
                     },
                     accessibilityLabel = stringResource(
-                        if (isFavorite) {
+                        if (presentation.isFavorite) {
                             R.string.action_remove_favorite
                         } else {
                             R.string.action_add_favorite
                         },
                     ),
-                    enabled = canToggleFavorite,
-                    selected = isFavorite,
+                    enabled = presentation.canToggleFavorite,
+                    selected = presentation.isFavorite,
                     onClick = { dismissThen(onToggleFavorite) },
                     modifier = Modifier.weight(1f),
                 )
@@ -193,34 +293,34 @@ internal fun BrowserMainMenu(
                 MenuRow(
                     label = stringResource(R.string.reader_open_action),
                     iconRes = R.drawable.ic_reader_align_start,
-                    enabled = canOpenReader,
+                    enabled = presentation.canOpenReader,
                     shape = firstItemShape,
                     onClick = { dismissThen(onOpenReader) },
                 )
                 MenuRow(
                     label = stringResource(R.string.action_share),
                     iconRes = R.drawable.ic_symbol_share,
-                    enabled = canUsePageActions,
+                    enabled = presentation.canUsePageActions,
                     shape = innerCorners,
                     onClick = { dismissThen(onShare) },
                 )
                 MenuRow(
                     label = stringResource(R.string.action_open_in_app),
                     iconRes = R.drawable.ic_symbol_open_in_new,
-                    enabled = canUsePageActions,
+                    enabled = presentation.canUsePageActions,
                     shape = innerCorners,
                     onClick = { dismissThen(onOpenExternal) },
                 )
                 MenuRow(
                     label = stringResource(R.string.action_print),
                     iconRes = R.drawable.ic_symbol_print,
-                    enabled = canUsePageActions,
+                    enabled = presentation.canUsePageActions,
                     shape = innerCorners,
                     onClick = { dismissThen(onPrint) },
                 )
                 DomainMuteMenuItem(
-                    enabled = canToggleDomainMute,
-                    muted = isDomainMuted,
+                    enabled = presentation.canToggleDomainMute,
+                    muted = presentation.isDomainMuted,
                     onMutedChange = onDomainMutedChange,
                     shape = lastItemShape,
                 )
@@ -234,7 +334,7 @@ internal fun BrowserMainMenu(
                 MenuRow(
                     label = stringResource(R.string.action_open_candy_trail),
                     iconRes = R.drawable.ic_symbol_route,
-                    enabled = canUsePageActions,
+                    enabled = presentation.canUsePageActions,
                     shape = firstItemShape,
                     containerColor = colors.tertiaryContainer,
                     contentColor = colors.onTertiaryContainer,
@@ -243,7 +343,7 @@ internal fun BrowserMainMenu(
                 MenuRow(
                     label = stringResource(R.string.action_add_site_capsule),
                     iconRes = R.drawable.ic_symbol_add_to_home_screen,
-                    enabled = canAddSiteCapsule,
+                    enabled = presentation.canAddSiteCapsule,
                     shape = innerCorners,
                     containerColor = colors.tertiaryContainer,
                     contentColor = colors.onTertiaryContainer,
@@ -252,7 +352,7 @@ internal fun BrowserMainMenu(
                 MenuRow(
                     label = stringResource(R.string.action_summarize),
                     iconRes = R.drawable.ic_symbol_auto_awesome,
-                    enabled = canUsePageActions,
+                    enabled = presentation.canUsePageActions,
                     shape = innerCorners,
                     containerColor = colors.tertiaryContainer,
                     contentColor = colors.onTertiaryContainer,
@@ -261,12 +361,12 @@ internal fun BrowserMainMenu(
                 MenuRow(
                     label = stringResource(R.string.action_snooze_tab),
                     iconRes = R.drawable.ic_snooze,
-                    enabled = canSnooze,
+                    enabled = presentation.canSnooze,
                     shape = lastItemShape,
                     modifier = Modifier.testTag(BrowserMainMenuTestTags.Snooze),
                     containerColor = colors.tertiaryContainer,
                     contentColor = colors.onTertiaryContainer,
-                    supportingText = if (canSnooze) {
+                    supportingText = if (presentation.canSnooze) {
                         null
                     } else {
                         stringResource(R.string.snooze_unavailable_private)

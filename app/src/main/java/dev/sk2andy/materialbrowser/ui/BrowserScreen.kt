@@ -15,7 +15,9 @@ import android.webkit.WebView
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.BackEventCompat
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -24,12 +26,17 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
@@ -118,7 +125,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -177,7 +183,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
@@ -207,6 +212,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -217,7 +223,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -238,6 +243,9 @@ import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
+import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
+import dev.sk2andy.materialbrowser.browser.MAX_TABS
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
@@ -257,6 +265,10 @@ import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandSuggestion
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorContract
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorRequest
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
@@ -344,9 +356,6 @@ fun BrowserScreen(controller: BrowserController) {
     var readerStudioResult by remember { mutableStateOf<ReaderExtractionResult?>(null) }
     var readerStudioRequestId by remember { mutableIntStateOf(0) }
     var clearDialogVisible by remember { mutableStateOf(false) }
-    var capsuleEditorVisible by remember { mutableStateOf(false) }
-    var editingCapsuleId by remember { mutableStateOf<String?>(null) }
-    var capsuleEditorSourceTabId by remember { mutableStateOf<String?>(null) }
     var pendingCapsuleDelete by remember { mutableStateOf<SiteCapsule?>(null) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
     var remoteSearchSuggestions by remember { mutableStateOf(emptyList<String>()) }
@@ -370,7 +379,6 @@ fun BrowserScreen(controller: BrowserController) {
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
     var browserHeightPx by remember { mutableFloatStateOf(1f) }
     val bottomBarTopPx = remember { mutableFloatStateOf(Float.NaN) }
-    var overviewNewTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
     var addressNewTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
     var keepLinkPeekAddressBarExpanded by remember { mutableStateOf(false) }
     var tabOverviewOpening by remember { mutableStateOf(false) }
@@ -387,7 +395,7 @@ fun BrowserScreen(controller: BrowserController) {
     var settingsBackEdgeSign by remember { mutableIntStateOf(1) }
     var candyTrailBackEdgeSign by remember { mutableIntStateOf(1) }
     var qrScanInProgress by remember { mutableStateOf(false) }
-    val overviewDestinationButtonVisible by remember {
+    val overviewDestinationChromeVisible by remember {
         derivedStateOf {
             overviewEntryHeroCompleted &&
                 AddressBarOverviewGestureRules.isDestinationButtonVisible(
@@ -396,7 +404,7 @@ fun BrowserScreen(controller: BrowserController) {
         }
     }
     val addressBarMorphInFront =
-        tabOverviewVisible && !overviewDestinationButtonVisible
+        tabOverviewVisible && !overviewDestinationChromeVisible
     val selectedTab = controller.selectedTab
     val permissionActivityVisible = controller.hasPermissionActivity(selectedTab.id)
     LaunchedEffect(
@@ -434,6 +442,96 @@ fun BrowserScreen(controller: BrowserController) {
     }
     val density = LocalDensity.current
     val rootView = LocalView.current
+    val siteCapsuleEditorLauncher = rememberLauncherForActivityResult(
+        contract = SiteCapsuleEditorContract(),
+    ) { submission ->
+        submission ?: return@rememberLauncherForActivityResult
+        val existing = submission.existingId?.let { id ->
+            controller.siteCapsules.firstOrNull { it.id == id }
+        }
+        if (submission.existingId != null && existing == null) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.capsule_invalid_configuration),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return@rememberLauncherForActivityResult
+        }
+        var profileId = submission.selectedProfileId
+        var ownsDedicated = existing?.ownsDedicatedProfile == true &&
+            existing.profileId == profileId
+        val previousProfileId = controller.activeProfileId
+        if (existing == null && submission.createDedicatedProfile) {
+            profileId = controller.createProfile(
+                emoji = submission.dedicatedEmoji,
+                isolationEnabled = submission.isolatedStorageRequested,
+            ) ?: return@rememberLauncherForActivityResult
+            ownsDedicated = true
+        }
+        val result = controller.upsertSiteCapsule(
+            draft = SiteCapsuleDraft(
+                id = existing?.id,
+                name = submission.name,
+                startUrl = submission.startUrl,
+                profileId = profileId,
+                ownsDedicatedProfile = ownsDedicated,
+                isolatedStorageRequested = submission.isolatedStorageRequested,
+                navigationMode = submission.navigationMode,
+                chromeMode = submission.chromeMode,
+                iconMode = submission.iconMode,
+            ),
+            sourceFavicon = if (existing == null) {
+                submission.sourceTabId?.let { controller.favicons[it] }
+                    ?: submission.sourceFavicon
+            } else {
+                null
+            },
+        )
+        if (controller.activeProfileId != previousProfileId) {
+            controller.selectProfile(previousProfileId)
+        }
+        val message = when (result) {
+            CapsuleSaveResult.PinRequested -> R.string.capsule_pin_requested
+            CapsuleSaveResult.PinningUnsupported -> R.string.capsule_pinning_unsupported
+            CapsuleSaveResult.PinRequestFailed -> R.string.capsule_pin_failed
+            CapsuleSaveResult.Updated -> R.string.capsule_updated
+            CapsuleSaveResult.UpdateFailed -> R.string.capsule_update_failed
+            CapsuleSaveResult.LimitReached -> R.string.capsule_limit_reached
+            CapsuleSaveResult.Invalid -> R.string.capsule_invalid_configuration
+        }
+        Toast.makeText(context, context.getString(message), Toast.LENGTH_SHORT).show()
+        if (result == CapsuleSaveResult.PinRequested || result == CapsuleSaveResult.Updated) {
+            rootView.performConfirmHaptic()
+        }
+    }
+    fun openSiteCapsuleEditor(existing: SiteCapsule?, sourceTab: BrowserTab?) {
+        if (existing == null && sourceTab == null) return
+        val sourceTitle = existing?.name ?: sourceTab?.title.orEmpty().ifBlank {
+            sourceTab?.url?.let(AddressResolver::displayText).orEmpty()
+        }
+        val sourceUrl = existing?.startUrl ?: sourceTab?.url.orEmpty()
+        siteCapsuleEditorLauncher.launch(
+            SiteCapsuleEditorRequest(
+                existing = existing,
+                sourceTabId = sourceTab?.id,
+                sourceTitle = sourceTitle,
+                sourceUrl = sourceUrl,
+                profiles = controller.profiles.toList(),
+                activeProfileId = controller.activeProfileId,
+                profileIsolationSupported = controller.isProfileIsolationSupported,
+                pinningSupported = controller.isCapsulePinningSupported,
+                canCreate = controller.canCreateSiteCapsule,
+                canCreateDedicatedProfile = controller.profiles.size < MAX_PROFILES &&
+                    controller.tabs.size < MAX_TABS,
+                previewIcon = if (existing?.iconMode == CapsuleIconMode.Favicon) {
+                    controller.siteCapsuleIcon(existing.id)
+                } else {
+                    sourceTab?.let { controller.favicons[it.id] }
+                },
+            ),
+        )
+        rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+    }
     val keyboard = LocalSoftwareKeyboardController.current
     val favoriteAddedMessage = stringResource(R.string.favorite_added_confirmation)
     val favoriteRemovedMessage = stringResource(R.string.favorite_removed_confirmation)
@@ -1171,9 +1269,8 @@ fun BrowserScreen(controller: BrowserController) {
             },
             overviewGestureEnabled = !tabOverviewOpening && !tabOverviewVisible,
             overviewGestureProgress = overviewGestureProgress,
-            overviewMorphProgress = overviewMorphProgress,
+            showingTabOverview = tabOverviewVisible,
             visualOnly = addressBarMorphInFront,
-            overviewTargetBounds = overviewNewTabButtonBounds,
             onOverviewGestureProgress = { progress ->
                 overviewGestureSettleJob?.cancel()
                 overviewGestureProgress.floatValue = progress.coerceIn(0f, 1f)
@@ -1238,16 +1335,13 @@ fun BrowserScreen(controller: BrowserController) {
             },
             onSnooze = { snoozeTabId = selectedTab.id },
             onAddSiteCapsule = {
-                editingCapsuleId = null
-                capsuleEditorSourceTabId = selectedTab.id
-                capsuleEditorVisible = true
-                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                openSiteCapsuleEditor(existing = null, sourceTab = selectedTab)
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .zIndex(
                     when {
-                        commandFeedback != null -> 30f
+                        commandFeedback != null && !tabOverviewVisible -> 30f
                         addressBarMorphInFront -> 20f
                         else -> 0f
                     },
@@ -1328,8 +1422,7 @@ fun BrowserScreen(controller: BrowserController) {
                 openNewTabAndEdit()
                 if (controller.selectedTabId != previousTabId) closeTabOverview()
             },
-            onNewTabButtonBounds = { overviewNewTabButtonBounds = it },
-            destinationButtonVisible = overviewDestinationButtonVisible,
+            destinationChromeVisible = overviewDestinationChromeVisible,
             onEntryHeroStarted = { animated ->
                 overviewMorphJob?.cancel()
                 overviewMorphProgress.floatValue = 0f
@@ -1365,18 +1458,18 @@ fun BrowserScreen(controller: BrowserController) {
             },
             onToggleFavoriteTab = toggleFavoriteWithFeedback,
             onAddSiteCapsule = { tabId ->
-                editingCapsuleId = null
-                capsuleEditorSourceTabId = tabId
-                capsuleEditorVisible = true
-                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                openSiteCapsuleEditor(
+                    existing = null,
+                    sourceTab = controller.tabs.firstOrNull { it.id == tabId },
+                )
             },
             onSnoozeTab = { tabId -> snoozeTabId = tabId },
         )
 
-        SnoozeTabSheet(
+        SnoozeTabDialog(
             tab = snoozeTabId?.let { id -> controller.tabs.firstOrNull { it.id == id } },
             onSnooze = { wakeAtMillis ->
-                val tabId = snoozeTabId ?: return@SnoozeTabSheet false
+                val tabId = snoozeTabId ?: return@SnoozeTabDialog false
                 val undoToken = controller.snoozeTab(tabId, wakeAtMillis)
                 if (undoToken != null) {
                     feedbackSnackbarJob?.cancel()
@@ -1451,8 +1544,7 @@ fun BrowserScreen(controller: BrowserController) {
                     rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 },
                 onEditCapsule = { capsule ->
-                    editingCapsuleId = capsule.id
-                    capsuleEditorVisible = true
+                    openSiteCapsuleEditor(existing = capsule, sourceTab = null)
                 },
                 onDeleteCapsule = { capsule -> pendingCapsuleDelete = capsule },
                 onFilterStudio = {
@@ -1755,31 +1847,6 @@ fun BrowserScreen(controller: BrowserController) {
             onOpenLinkInBackground = controller::openContextLinkInBackground,
             onDownloadImage = controller::downloadContextImage,
             onDismiss = controller.contentActions::dismiss,
-        )
-    }
-
-    if (capsuleEditorVisible) {
-        val capsuleSourceTab = capsuleEditorSourceTabId
-            ?.let { sourceId -> controller.tabs.firstOrNull { it.id == sourceId } }
-            ?: selectedTab
-        SiteCapsuleEditorSheet(
-            controller = controller,
-            existing = editingCapsuleId?.let { id ->
-                controller.siteCapsules.firstOrNull { it.id == id }
-            },
-            sourceTitle = capsuleSourceTab.title.ifBlank {
-                AddressResolver.displayText(capsuleSourceTab.url)
-            },
-            sourceUrl = capsuleSourceTab.url,
-            sourceFavicon = if (editingCapsuleId == null) {
-                controller.favicons[capsuleSourceTab.id]
-            } else {
-                null
-            },
-            onDismiss = {
-                capsuleEditorVisible = false
-                capsuleEditorSourceTabId = null
-            },
         )
     }
 
@@ -2628,37 +2695,6 @@ private fun NewTabPage(
     }
 }
 
-private data class AddressBarMorphShape(
-    val progress: Float,
-    val targetSizePx: Float,
-) : Shape {
-    override fun createOutline(
-        size: androidx.compose.ui.geometry.Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline {
-        val radii = AddressBarOverviewGestureRules.morphCornerRadii(
-            progress = progress,
-            sourceWidth = size.width,
-            sourceHeight = size.height,
-            targetSize = targetSizePx,
-        )
-        val cornerRadius = CornerRadius(radii.horizontal, radii.vertical)
-        return Outline.Rounded(
-            RoundRect(
-                left = 0f,
-                top = 0f,
-                right = size.width,
-                bottom = size.height,
-                topLeftCornerRadius = cornerRadius,
-                topRightCornerRadius = cornerRadius,
-                bottomRightCornerRadius = cornerRadius,
-                bottomLeftCornerRadius = cornerRadius,
-            ),
-        )
-    }
-}
-
 @Composable
 private fun BrowserBottomBar(
     tab: BrowserTab,
@@ -2714,9 +2750,8 @@ private fun BrowserBottomBar(
     onAddSiteCapsule: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
-    overviewMorphProgress: FloatState,
+    showingTabOverview: Boolean,
     visualOnly: Boolean,
-    overviewTargetBounds: Rect?,
     onOverviewGestureProgress: (Float) -> Unit,
     onOverviewGestureStarted: () -> Unit,
     onOverviewGestureCancelled: () -> Unit,
@@ -2729,6 +2764,7 @@ private fun BrowserBottomBar(
         compact = compact,
         editing = editing,
         showingCommandFeedback = commandFeedback != null,
+        showingTabOverview = showingTabOverview,
     )
     val tabDragState = rememberDraggableState(onTabDrag)
     val pulseScale = remember { Animatable(1f) }
@@ -2808,69 +2844,24 @@ private fun BrowserBottomBar(
         val animatedBarWidth = motion.width
         val animatedBarHeight = motion.height
         val dockOffset = motion.dockOffset
-        var addressBarBounds by remember { mutableStateOf<Rect?>(null) }
-        val morphTargetSize = 56.dp
         Box(contentAlignment = Alignment.Center) {
             Surface(
                 modifier = Modifier
                     .offset(x = dockOffset)
                     .width(animatedBarWidth)
                     .height(animatedBarHeight)
-                    .onGloballyPositioned { coordinates ->
-                        addressBarBounds = coordinates.boundsInRoot()
-                    }
                     .graphicsLayer {
-                        val progress = overviewMorphProgress.floatValue
-                        val source = addressBarBounds
-                        val target = overviewTargetBounds
-                        val targetSizePx = with(density) { morphTargetSize.toPx() }
-                        scaleX = pulseScale.value *
-                            AddressBarOverviewGestureRules.containerScale(
-                                progress = progress,
-                                sourceSize = size.width,
-                                targetSize = targetSizePx,
-                            )
-                        scaleY = pulseScale.value *
-                            AddressBarOverviewGestureRules.containerScale(
-                                progress = progress,
-                                sourceSize = size.height,
-                                targetSize = targetSizePx,
-                            )
-                        if (source != null && target != null) {
-                            translationX = AddressBarOverviewGestureRules.landingTranslation(
-                                progress = progress,
-                                sourceCenter = source.center.x,
-                                targetCenter = target.center.x,
-                            )
-                            translationY = AddressBarOverviewGestureRules.landingTranslation(
-                                progress = progress,
-                                sourceCenter = source.center.y,
-                                targetCenter = target.center.y,
-                            )
-                        }
+                        scaleX = pulseScale.value
+                        scaleY = pulseScale.value
                     },
-                shape = AddressBarMorphShape(
-                    progress = overviewMorphProgress.floatValue,
-                    targetSizePx = with(density) { morphTargetSize.toPx() },
-                ),
-                color = lerp(
-                    barColor,
-                    MaterialTheme.colorScheme.primary,
-                    AddressBarOverviewGestureRules.resistedProgress(
-                        overviewMorphProgress.floatValue,
-                    ),
-                ),
+                shape = CircleShape,
+                color = barColor,
                 tonalElevation = 12.dp,
                 shadowElevation = 14.dp,
             ) {
                 Box {
                     AddressBarPresentationTransition(
                         presentation = presentation,
-                        modifier = Modifier.graphicsLayer {
-                            alpha = AddressBarOverviewGestureRules.contentAlpha(
-                                overviewMorphProgress.floatValue,
-                            )
-                        },
                     ) { targetPresentation ->
                         when (targetPresentation) {
                             AddressBarPresentation.Docked -> AddressBarEdgeTab(
@@ -2987,6 +2978,10 @@ private fun BrowserBottomBar(
                                 onOverviewGestureStarted = onOverviewGestureStarted,
                                 onOverviewGestureCancelled = onOverviewGestureCancelled,
                             )
+                            AddressBarPresentation.Overview -> OverviewAddressBarContent(
+                                onNewTab = onNewTab,
+                                onMore = {},
+                            )
                             AddressBarPresentation.CommandFeedback -> {
                                 commandFeedback?.let { feedback ->
                                     AddressCommandFeedbackContent(
@@ -3002,56 +2997,17 @@ private fun BrowserBottomBar(
                             }
                         }
                     }
-                    if (commandFeedback == null) {
+                    if (commandFeedback == null && !showingTabOverview) {
                         AddressLoadCapsuleFeedback(
                             tabId = tab.id,
                             isLoading = tab.isLoading,
                             progressPercent = tab.progress,
-                            morphProgress = overviewMorphProgress.floatValue,
-                            morphTargetSizePx = with(density) { morphTargetSize.toPx() },
-                            modifier = Modifier
-                                .matchParentSize()
-                                .graphicsLayer {
-                                    alpha = AddressBarOverviewGestureRules.contentAlpha(
-                                        overviewMorphProgress.floatValue,
-                                    )
-                                },
+                            morphProgress = 0f,
+                            morphTargetSizePx = with(density) { 56.dp.toPx() },
+                            modifier = Modifier.matchParentSize(),
                         )
                     }
                 }
-            }
-            Box(
-                modifier = Modifier
-                    .offset(x = dockOffset)
-                    .size(morphTargetSize)
-                    .graphicsLayer {
-                        val progress = overviewMorphProgress.floatValue
-                        val source = addressBarBounds
-                        val target = overviewTargetBounds
-                        alpha = AddressBarOverviewGestureRules.targetAlpha(progress)
-                        val targetScale = AddressBarOverviewGestureRules.targetScale(progress)
-                        scaleX = targetScale
-                        scaleY = targetScale
-                        if (source != null && target != null) {
-                            translationX = AddressBarOverviewGestureRules.landingTranslation(
-                                progress = progress,
-                                sourceCenter = source.center.x,
-                                targetCenter = target.center.x,
-                            )
-                            translationY = AddressBarOverviewGestureRules.landingTranslation(
-                                progress = progress,
-                                sourceCenter = source.center.y,
-                                targetCenter = target.center.y,
-                            )
-                        }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
             }
         }
         if (visualOnly) {
@@ -3079,6 +3035,45 @@ private fun BrowserBottomBar(
 
 internal object AddressBarDockTestTags {
     const val EdgeTab = "address_bar_edge_tab"
+}
+
+internal object TabOverviewChromeTestTags {
+    const val Bar = "tab_overview_address_bar"
+    const val NewTab = "tab_overview_new_tab"
+    const val More = "tab_overview_more"
+}
+
+@Composable
+private fun OverviewAddressBarContent(
+    onNewTab: () -> Unit,
+    onMore: () -> Unit,
+    enabled: Boolean = true,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            onClick = onNewTab,
+            enabled = enabled,
+            modifier = Modifier.testTag(TabOverviewChromeTestTags.NewTab),
+        ) {
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_new_tab))
+        }
+        IconButton(
+            onClick = onMore,
+            enabled = enabled,
+            modifier = Modifier.testTag(TabOverviewChromeTestTags.More),
+        ) {
+            Icon(
+                Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.cd_more_options),
+            )
+        }
+    }
 }
 
 @Composable
@@ -4148,8 +4143,7 @@ internal fun TabOverview(
     onClose: () -> Unit,
     onSelect: (String) -> Unit,
     onNewTab: () -> Unit,
-    onNewTabButtonBounds: (Rect) -> Unit,
-    destinationButtonVisible: Boolean,
+    destinationChromeVisible: Boolean,
     onEntryHeroStarted: (Boolean) -> Unit,
     onEntryHeroCompleted: () -> Unit,
     candyTrailTabId: String?,
@@ -4202,7 +4196,6 @@ internal fun TabOverview(
     var heroStarted by remember { mutableStateOf(false) }
     var heroCompleted by remember { mutableStateOf(false) }
     var heroVisible by remember { mutableStateOf(true) }
-    var newTabButtonBoundsReady by remember { mutableStateOf(false) }
     var dismissingTabId by remember { mutableStateOf<String?>(null) }
     var exitHero by remember { mutableStateOf<TabExitHero?>(null) }
     var userPagerGestureActive by remember { mutableStateOf(false) }
@@ -4441,8 +4434,7 @@ internal fun TabOverview(
             while (
                 waitMillis < 250L &&
                 !TabOverviewHeroRules.canStart(
-                    newTabButtonBoundsReady &&
-                        heroTargetBounds != null &&
+                    heroTargetBounds != null &&
                         heroTargetMode == controller.tabOverviewMode &&
                         heroTargetTabId == initialTabId,
                 )
@@ -4452,8 +4444,7 @@ internal fun TabOverview(
             }
 
             val hasStableTarget = TabOverviewHeroRules.canStart(
-                newTabButtonBoundsReady &&
-                    heroTargetBounds != null &&
+                heroTargetBounds != null &&
                     heroTargetMode == controller.tabOverviewMode &&
                     heroTargetTabId == initialTabId,
             )
@@ -4518,7 +4509,8 @@ internal fun TabOverview(
                 .then(
                     if (
                         candyTrailTransition.currentState != null ||
-                        candyTrailTransition.targetState != null
+                        candyTrailTransition.targetState != null ||
+                        tabActionsTabId != null
                     ) {
                         Modifier.clearAndSetSemantics { }
                     } else {
@@ -4905,17 +4897,6 @@ internal fun TabOverview(
                                 }
                                 startExitHero(tab, bounds)
                             },
-                            onLongClick = {
-                                if (
-                                    dismissingTabId == null &&
-                                    movingTabId == null &&
-                                    exitHero == null &&
-                                    reorderAnimation == null
-                                ) {
-                                    rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                                    tabActionsTabId = tab.id
-                                }
-                            },
                         )
                     }
                 }
@@ -4969,11 +4950,6 @@ internal fun TabOverview(
                             controller.closeTab(tab.id)
                         }
                     },
-                    onLongClick = { tab, bounds ->
-                        tabCardBounds[tab.id] = bounds
-                        rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        tabActionsTabId = tab.id
-                    },
                     modifier = Modifier
                         .weight(1f)
                         .graphicsLayer {
@@ -5010,11 +4986,6 @@ internal fun TabOverview(
                             controller.closeTab(tab.id)
                         }
                     },
-                    onLongClick = { tab, bounds ->
-                        tabCardBounds[tab.id] = bounds
-                        rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        tabActionsTabId = tab.id
-                    },
                     modifier = Modifier
                         .weight(1f)
                         .graphicsLayer {
@@ -5024,39 +4995,54 @@ internal fun TabOverview(
                         },
                 )
             }
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(70.dp)
+                    .height(80.dp)
                     .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
+                contentAlignment = Alignment.Center,
             ) {
-                FilledIconButton(
-                    onClick = onNewTab,
+                val actionTargetId = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
+                    controller.activeTabs.getOrNull(pagerState.currentPage)?.id
+                } else {
+                    controller.selectedTabId
+                }
+                val chromeEnabled = destinationChromeVisible &&
+                    dismissingTabId == null &&
+                    movingTabId == null &&
+                    exitHero == null &&
+                    reorderAnimation == null &&
+                    tabActionsTabId == null
+                Surface(
                     modifier = Modifier
-                        .size(56.dp)
-                        .onGloballyPositioned { coordinates ->
-                            newTabButtonBoundsReady = true
-                            onNewTabButtonBounds(coordinates.boundsInRoot())
-                        }
+                        .width(AddressBarMotion.OVERVIEW_WIDTH)
+                        .height(56.dp)
+                        .testTag(TabOverviewChromeTestTags.Bar)
                         .graphicsLayer {
-                            alpha = if (destinationButtonVisible) 1f else 0f
+                            alpha = if (destinationChromeVisible) 1f else 0f
                         }
                         .then(
-                            if (destinationButtonVisible) {
+                            if (destinationChromeVisible) {
                                 Modifier
                             } else {
                                 Modifier.clearAndSetSemantics { }
                             },
                         ),
-                    enabled = destinationButtonVisible && dismissingTabId == null &&
-                        movingTabId == null &&
-                        exitHero == null &&
-                        reorderAnimation == null &&
-                        tabActionsTabId == null,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+                    tonalElevation = 12.dp,
+                    shadowElevation = 14.dp,
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_new_tab))
+                    OverviewAddressBarContent(
+                        onNewTab = onNewTab,
+                        onMore = {
+                            actionTargetId?.let { tabId ->
+                                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                                tabActionsTabId = tabId
+                            }
+                        },
+                        enabled = chromeEnabled,
+                    )
                 }
             }
         }
@@ -5270,7 +5256,6 @@ internal fun TabOverview(
                     }.toMap(),
                     predictiveBackProgress = candyTrailBackProgress,
                     predictiveBackEdgeSign = candyTrailBackEdgeSign,
-                    onOpenTabActions = { tabActionsTabId = candyTrailTab.id },
                     onSelectNode = { nodeId ->
                         controller.navigateToCandyTrailNode(candyTrailTab.id, nodeId)
                     },
@@ -5330,7 +5315,7 @@ internal fun TabOverview(
         val actionTab = tabActionsTabId?.let { tabId ->
             controller.activeTabs.firstOrNull { it.id == tabId }
         }
-        TabActionsSheet(
+        TabActionsFloatingMenu(
             tab = actionTab,
             profiles = controller.profiles,
             isFavorite = actionTab?.let { tab -> controller.isFavorite(tab.url) } == true,
@@ -5341,18 +5326,18 @@ internal fun TabOverview(
                 controller.isDomainMuted(tab.id)
             } == true,
             onToggleFavorite = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 onToggleFavoriteTab(target.id)
             },
             onOpenCandyTrail = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 val bounds = tabCardBounds[target.id]
                 tabActionsTabId = null
                 onOpenCandyTrail(target.id, bounds)
             },
             onTogglePinned = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 overviewScope.launch {
                     val oldOrder = controller.activeTabs.map(BrowserTab::id)
@@ -5412,7 +5397,7 @@ internal fun TabOverview(
                 }
             },
             onMoveToProfile = { profileId ->
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 overviewScope.launch {
                     try {
@@ -5432,38 +5417,38 @@ internal fun TabOverview(
                 }
             },
             onShare = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 controller.sharePage(target.id)
             },
             onOpenExternal = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 controller.openPageExternally(target.id)
             },
             onPrint = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 controller.printPage(target.id)
             },
             onDomainMutedChange = { muted ->
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 if (controller.setDomainMuted(target.id, muted)) {
                     rootView.performConfirmHaptic()
                 }
             },
             onAddSiteCapsule = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 onAddSiteCapsule(target.id)
             },
             onSummarize = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 controller.summarizePageWithAssistant(target.id)
             },
             onSnooze = {
-                val target = actionTab ?: return@TabActionsSheet
+                val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 onSnoozeTab(target.id)
             },
@@ -6126,17 +6111,14 @@ private fun TabCard(
     cardWidth: Dp,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier
             .width(cardWidth)
             .aspectRatio(0.53f)
             .then(modifier)
-            .combinedClickable(
+            .clickable(
                 onClick = onClick,
-                onLongClick = onLongClick,
-                onLongClickLabel = stringResource(R.string.tab_actions_title),
                 role = Role.Button,
             ),
         shape = RoundedCornerShape(28.dp),
@@ -6186,7 +6168,6 @@ private fun CompactTabGrid(
     onSwipeDismissStart: (BrowserTab) -> Boolean,
     onSwipeDismissEnd: (BrowserTab) -> Unit,
     onSwipeDismiss: (BrowserTab) -> Unit,
-    onLongClick: (BrowserTab, Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
@@ -6253,7 +6234,6 @@ private fun CompactTabGrid(
                     onSwipeDismissStart = { onSwipeDismissStart(tab) },
                     onSwipeDismissEnd = { onSwipeDismissEnd(tab) },
                     onSwipeDismiss = { onSwipeDismiss(tab) },
-                    onLongClick = { bounds -> onLongClick(tab, bounds) },
                     modifier = Modifier
                         .animateItem()
                         .testTag(SnoozeTestTags.overviewTab(tab.id)),
@@ -6343,7 +6323,6 @@ private fun CompactGridTabItem(
     onSwipeDismissStart: () -> Boolean,
     onSwipeDismissEnd: () -> Unit,
     onSwipeDismiss: () -> Unit,
-    onLongClick: (Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rootView = LocalView.current
@@ -6530,12 +6509,10 @@ private fun CompactGridTabItem(
                 },
             )
             .semantics { this.selected = selected }
-            .combinedClickable(
+            .clickable(
                 enabled = interactionsEnabled,
                 role = Role.Button,
                 onClick = { boundsHolder.bounds?.let(onSelect) },
-                onLongClick = { boundsHolder.bounds?.let(onLongClick) },
-                onLongClickLabel = stringResource(R.string.tab_actions_title),
             ),
         shape = shape,
         colors = CardDefaults.cardColors(
@@ -6629,7 +6606,6 @@ private fun CompactTabList(
     onRowBounds: (BrowserTab, Rect) -> Unit,
     onSelect: (BrowserTab, Rect) -> Unit,
     onCloseTab: (BrowserTab) -> Unit,
-    onLongClick: (BrowserTab, Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
@@ -6665,7 +6641,6 @@ private fun CompactTabList(
                 onBounds = { bounds -> onRowBounds(tab, bounds) },
                 onSelect = { bounds -> onSelect(tab, bounds) },
                 onClose = { onCloseTab(tab) },
-                onLongClick = { bounds -> onLongClick(tab, bounds) },
                 modifier = Modifier
                     .animateItem()
                     .testTag(SnoozeTestTags.overviewTab(tab.id)),
@@ -6688,7 +6663,6 @@ private fun CompactListTabItem(
     onBounds: (Rect) -> Unit,
     onSelect: (Rect) -> Unit,
     onClose: () -> Unit,
-    onLongClick: (Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val boundsHolder = remember(tab.id) { TabBoundsHolder() }
@@ -6717,12 +6691,10 @@ private fun CompactListTabItem(
                 boundsHolder.bounds = bounds
                 onBounds(bounds)
             }
-            .combinedClickable(
+            .clickable(
                 enabled = interactionsEnabled,
                 role = Role.Button,
                 onClick = { boundsHolder.bounds?.let(onSelect) },
-                onLongClick = { boundsHolder.bounds?.let(onLongClick) },
-                onLongClickLabel = stringResource(R.string.tab_actions_title),
             )
             .semantics { this.selected = selected },
         shape = shape,
@@ -6875,8 +6847,23 @@ private fun TabPreviewContent(
     }
 }
 
+internal object TabActionsMenuMotion {
+    const val ENTER_DURATION_MILLIS = 120
+    const val FADE_IN_DURATION_MILLIS = 30
+    const val EXIT_DURATION_MILLIS = 160
+    const val CLOSED_SCALE = 0.8f
+    const val EXIT_SCALE = 0.9f
+}
+
+private data class TabActionsMenuPresentation(
+    val tab: BrowserTab,
+    val isFavorite: Boolean,
+    val canToggleDomainMute: Boolean,
+    val isDomainMuted: Boolean,
+)
+
 @Composable
-internal fun TabActionsSheet(
+internal fun TabActionsFloatingMenu(
     tab: BrowserTab?,
     profiles: List<BrowserProfile>,
     isFavorite: Boolean,
@@ -6895,82 +6882,172 @@ internal fun TabActionsSheet(
     onSnooze: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    if (tab == null) return
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.testTag(SnoozeTestTags.TabActions),
-    ) {
-        Column(
+    BackHandler(enabled = tab != null, onBack = onDismiss)
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val menuWidth = minOf(360.dp, screenWidth - 32.dp)
+    val menuPaneTitle = stringResource(R.string.tab_actions_title)
+    val menuTransformOrigin = if (LocalLayoutDirection.current == LayoutDirection.Ltr) {
+        TransformOrigin(1f, 1f)
+    } else {
+        TransformOrigin(0f, 1f)
+    }
+    val requestedPresentation = tab?.let { presentedTab ->
+        TabActionsMenuPresentation(
+            tab = presentedTab,
+            isFavorite = isFavorite,
+            canToggleDomainMute = canToggleDomainMute,
+            isDomainMuted = isDomainMuted,
+        )
+    }
+    var presentation by remember { mutableStateOf(requestedPresentation) }
+    if (requestedPresentation != null && requestedPresentation != presentation) {
+        presentation = requestedPresentation
+    }
+    val visibilityState = remember { MutableTransitionState(tab != null) }
+    visibilityState.targetState = tab != null
+    LaunchedEffect(visibilityState.isIdle, visibilityState.currentState, tab) {
+        if (visibilityState.isIdle && !visibilityState.currentState && tab == null) {
+            presentation = null
+        }
+    }
+    val presented = presentation
+    if (presented != null && (visibilityState.currentState || visibilityState.targetState)) {
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                .zIndex(40f),
         ) {
-            TabActionsMenuContent(
-                pageSubtitle = if (tab.url == BLANK_URL) {
-                    stringResource(R.string.new_tab_title)
-                } else {
-                    AddressResolver.displayText(tab.url)
-                },
-                canToggleFavorite = tab.url != BLANK_URL && !tab.isIncognito,
-                isFavorite = isFavorite,
-                isPinned = tab.isPinned,
-                canUsePageActions = tab.url != BLANK_URL,
-                canToggleDomainMute = canToggleDomainMute,
-                isDomainMuted = isDomainMuted,
-                canAddSiteCapsule = tab.url != BLANK_URL &&
-                    !tab.isIncognito &&
-                    (tab.url.startsWith("https://") || tab.url.startsWith("http://")),
-                canSnooze = !tab.isIncognito,
-                onToggleFavorite = onToggleFavorite,
-                onTogglePinned = onTogglePinned,
-                onShare = onShare,
-                onOpenExternal = onOpenExternal,
-                onPrint = onPrint,
-                onDomainMutedChange = onDomainMutedChange,
-                onOpenCandyTrail = onOpenCandyTrail,
-                onAddSiteCapsule = onAddSiteCapsule,
-                onSummarize = onSummarize,
-                onSnooze = onSnooze,
-                profileContent = {
-                    val targetProfiles = profiles.filter { it.id != tab.profileId }
-                    if (targetProfiles.isNotEmpty()) {
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            stringResource(R.string.action_move_tab_to_profile),
-                            modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            targetProfiles.forEach { profile ->
-                                Surface(
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .clickable(
-                                            role = Role.Button,
-                                            onClick = { onMoveToProfile(profile.id) },
-                                        ),
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(profile.emoji, fontSize = 24.sp)
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable(
+                        role = Role.Button,
+                        onClick = onDismiss,
+                    )
+                    .clearAndSetSemantics { },
+            )
+            AnimatedVisibility(
+                visibleState = visibilityState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 82.dp),
+                enter = fadeIn(
+                    animationSpec = tween(
+                        durationMillis = TabActionsMenuMotion.FADE_IN_DURATION_MILLIS,
+                    ),
+                ) + scaleIn(
+                    initialScale = TabActionsMenuMotion.CLOSED_SCALE,
+                    transformOrigin = menuTransformOrigin,
+                    animationSpec = tween(
+                        durationMillis = TabActionsMenuMotion.ENTER_DURATION_MILLIS,
+                        easing = LinearOutSlowInEasing,
+                    ),
+                ),
+                exit = fadeOut(
+                    animationSpec = tween(
+                        durationMillis = TabActionsMenuMotion.EXIT_DURATION_MILLIS,
+                        easing = FastOutLinearInEasing,
+                    ),
+                ) + scaleOut(
+                    targetScale = TabActionsMenuMotion.EXIT_SCALE,
+                    transformOrigin = menuTransformOrigin,
+                    animationSpec = tween(
+                        durationMillis = TabActionsMenuMotion.EXIT_DURATION_MILLIS,
+                        easing = FastOutLinearInEasing,
+                    ),
+                ),
+                label = "Tab actions menu visibility",
+            ) {
+                val presentedTab = presented.tab
+                Surface(
+                    modifier = Modifier
+                        .width(menuWidth)
+                        .heightIn(max = screenHeight * 0.68f)
+                        .testTag(SnoozeTestTags.TabActions)
+                        .semantics { paneTitle = menuPaneTitle },
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 6.dp,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        TabActionsMenuContent(
+                            pageSubtitle = if (presentedTab.url == BLANK_URL) {
+                                stringResource(R.string.new_tab_title)
+                            } else {
+                                AddressResolver.displayText(presentedTab.url)
+                            },
+                            canToggleFavorite = presentedTab.url != BLANK_URL &&
+                                !presentedTab.isIncognito,
+                            isFavorite = presented.isFavorite,
+                            isPinned = presentedTab.isPinned,
+                            canUsePageActions = presentedTab.url != BLANK_URL,
+                            canToggleDomainMute = presented.canToggleDomainMute,
+                            isDomainMuted = presented.isDomainMuted,
+                            canAddSiteCapsule = presentedTab.url != BLANK_URL &&
+                                !presentedTab.isIncognito &&
+                                (presentedTab.url.startsWith("https://") ||
+                                    presentedTab.url.startsWith("http://")),
+                            canSnooze = !presentedTab.isIncognito,
+                            onToggleFavorite = onToggleFavorite,
+                            onTogglePinned = onTogglePinned,
+                            onShare = onShare,
+                            onOpenExternal = onOpenExternal,
+                            onPrint = onPrint,
+                            onDomainMutedChange = onDomainMutedChange,
+                            onOpenCandyTrail = onOpenCandyTrail,
+                            onAddSiteCapsule = onAddSiteCapsule,
+                            onSummarize = onSummarize,
+                            onSnooze = onSnooze,
+                            profileContent = {
+                                val targetProfiles = profiles.filter {
+                                    it.id != presentedTab.profileId
+                                }
+                                if (targetProfiles.isNotEmpty()) {
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        stringResource(R.string.action_move_tab_to_profile),
+                                        modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState())
+                                            .padding(horizontal = 4.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        targetProfiles.forEach { profile ->
+                                            Surface(
+                                                modifier = Modifier
+                                                    .size(52.dp)
+                                                    .clickable(
+                                                        role = Role.Button,
+                                                        onClick = { onMoveToProfile(profile.id) },
+                                                    ),
+                                                shape = CircleShape,
+                                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Text(profile.emoji, fontSize = 24.sp)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
+                            },
+                        )
                     }
-                },
-            )
+                }
+            }
         }
     }
 }

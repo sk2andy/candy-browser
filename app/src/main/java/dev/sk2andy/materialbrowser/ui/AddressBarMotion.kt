@@ -36,6 +36,7 @@ internal object AddressBarMotion {
 
     private const val CONTAINER_DAMPING_RATIO = 0.88f
     private const val CONTAINER_STIFFNESS = 600f
+    val OVERVIEW_WIDTH = 112.dp
 
     val containerAnimationSpec: SpringSpec<Dp>
         get() = spring(
@@ -55,6 +56,7 @@ internal object AddressBarMotion {
             .coerceAtLeast(96.dp.coerceAtMost(maxWidth))
             .coerceAtMost(maxWidth)
         AddressBarPresentation.Expanded -> maxWidth
+        AddressBarPresentation.Overview -> OVERVIEW_WIDTH.coerceAtMost(maxWidth)
         AddressBarPresentation.CommandFeedback -> feedbackWidth
             .coerceAtLeast(160.dp.coerceAtMost(maxWidth))
             .coerceAtMost(maxWidth)
@@ -65,6 +67,7 @@ internal object AddressBarMotion {
         AddressBarPresentation.Compact,
         -> 48.dp
         AddressBarPresentation.Expanded -> 56.dp
+        AddressBarPresentation.Overview -> 56.dp
         AddressBarPresentation.CommandFeedback -> 46.dp
     }
 
@@ -84,7 +87,9 @@ internal object AddressBarMotion {
         target: AddressBarPresentation,
     ): Boolean =
         initial == AddressBarPresentation.Compact && target == AddressBarPresentation.Expanded ||
-            initial == AddressBarPresentation.Expanded && target == AddressBarPresentation.Compact
+            initial == AddressBarPresentation.Expanded && target == AddressBarPresentation.Compact ||
+            initial == AddressBarPresentation.Overview ||
+            target == AddressBarPresentation.Overview
 
     fun exitDurationMillis(
         initial: AddressBarPresentation,

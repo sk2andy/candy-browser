@@ -100,7 +100,6 @@ internal fun CandyTrailScreen(
     forkFavicons: Map<String, Bitmap>,
     predictiveBackProgress: Float,
     predictiveBackEdgeSign: Int,
-    onOpenTabActions: () -> Unit,
     onSelectNode: (String) -> Boolean,
     onNodeSelectionFinished: () -> Unit,
     onForkNode: (String) -> String?,
@@ -507,7 +506,6 @@ internal fun CandyTrailScreen(
         CandyTrailTopBar(
             tab = tab,
             onBack = onDismiss,
-            onMore = onOpenTabActions,
             modifier = Modifier.align(Alignment.TopCenter),
         )
         CandyTrailZoomControls(
@@ -1047,7 +1045,6 @@ private fun CandyTrailNodeActionsSheet(
 private fun CandyTrailTopBar(
     tab: BrowserTab,
     onBack: () -> Unit,
-    onMore: () -> Unit,
     modifier: Modifier,
 ) {
     Row(
@@ -1073,9 +1070,6 @@ private fun CandyTrailTopBar(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelLarge,
             )
-        }
-        IconButton(onClick = onMore) {
-            Icon(Icons.Default.MoreVert, stringResource(R.string.cd_tab_actions))
         }
     }
 }

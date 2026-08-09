@@ -35,6 +35,7 @@ class BrowserMainMenuInstrumentedTest {
         val dismissals = AtomicInteger()
         val readerOpens = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             MaterialBrowserTheme {
                 var expanded by remember { mutableStateOf(true) }
@@ -75,6 +76,7 @@ class BrowserMainMenuInstrumentedTest {
                 }
             }
         }
+        composeRule.mainClock.advanceTimeBy(200L)
 
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
         val pageGroup = hasTestTag(BrowserMainMenuTestTags.PageGroup)
@@ -106,6 +108,17 @@ class BrowserMainMenuInstrumentedTest {
         ).performClick()
 
         assertEquals(1, dismissals.get())
+        assertEquals(1, readerOpens.get())
+        composeRule.mainClock.advanceTimeBy(
+            BrowserMainMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L,
+        )
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
+        assertEquals(1, readerOpens.get())
+        composeRule.mainClock.advanceTimeBy(
+            BrowserMainMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L + 32L,
+        )
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
         assertEquals(1, readerOpens.get())
     }
 
