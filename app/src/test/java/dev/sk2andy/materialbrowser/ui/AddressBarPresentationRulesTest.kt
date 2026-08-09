@@ -5,6 +5,20 @@ import org.junit.Test
 
 class AddressBarPresentationRulesTest {
     @Test
+    fun `tab overview chrome overrides editing compact and docked states`() {
+        assertEquals(
+            AddressBarPresentation.Overview,
+            AddressBarPresentationRules.resolve(
+                docked = true,
+                compact = true,
+                editing = true,
+                showingCommandFeedback = true,
+                showingTabOverview = true,
+            ),
+        )
+    }
+
+    @Test
     fun `docked presentation overrides scroll state`() {
         listOf(false, true).forEach { compact ->
             assertEquals(
@@ -67,4 +81,3 @@ class AddressBarPresentationRulesTest {
         )
     }
 }
-

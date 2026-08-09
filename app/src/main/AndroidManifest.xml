@@ -112,6 +112,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".SiteCapsuleEditorActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <receiver
             android:name=".data.SnoozeAlarmReceiver"
             android:enabled="true"

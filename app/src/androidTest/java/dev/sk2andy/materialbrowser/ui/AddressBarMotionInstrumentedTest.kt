@@ -72,6 +72,25 @@ class AddressBarMotionInstrumentedTest {
     }
 
     @Test
+    fun expandedAddressInputFadesOutBeforeOverviewActionsFadeIn() {
+        val presentation = mutableStateOf(AddressBarPresentation.Expanded)
+        setTransitionContent(
+            presentation = presentation,
+            foregroundPresentation = AddressBarPresentation.Expanded,
+        )
+        assertTargetColor(
+            target = AddressBarPresentation.Expanded,
+            foregroundPresentation = AddressBarPresentation.Expanded,
+        )
+
+        verifyDirection(
+            presentation = presentation,
+            target = AddressBarPresentation.Overview,
+            foregroundPresentation = AddressBarPresentation.Expanded,
+        )
+    }
+
+    @Test
     fun compactToEditingRequestsFocusAfterExpandedContentIsComposed() {
         val presentation = mutableStateOf(AddressBarPresentation.Compact)
         val editValue = mutableStateOf("")
@@ -108,6 +127,7 @@ class AddressBarMotionInstrumentedTest {
 
     private fun setTransitionContent(
         presentation: MutableState<AddressBarPresentation>,
+        foregroundPresentation: AddressBarPresentation = AddressBarPresentation.Compact,
     ) {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
@@ -127,7 +147,7 @@ class AddressBarMotionInstrumentedTest {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
-                                    if (target == AddressBarPresentation.Compact) {
+                                    if (target == foregroundPresentation) {
                                         Color.Red
                                     } else {
                                         Color.Blue
@@ -144,10 +164,11 @@ class AddressBarMotionInstrumentedTest {
     private fun verifyDirection(
         presentation: MutableState<AddressBarPresentation>,
         target: AddressBarPresentation,
+        foregroundPresentation: AddressBarPresentation = AddressBarPresentation.Compact,
     ) {
         composeRule.runOnIdle { presentation.value = target }
         advanceFramesAndAssertNoOverlap(frameCount = 16)
-        assertTargetColor(target)
+        assertTargetColor(target, foregroundPresentation)
     }
 
     private fun advanceFramesAndAssertNoOverlap(frameCount: Int) {
@@ -161,9 +182,12 @@ class AddressBarMotionInstrumentedTest {
         }
     }
 
-    private fun assertTargetColor(target: AddressBarPresentation) {
+    private fun assertTargetColor(
+        target: AddressBarPresentation,
+        foregroundPresentation: AddressBarPresentation = AddressBarPresentation.Compact,
+    ) {
         val center = centerColor()
-        val targetVisible = if (target == AddressBarPresentation.Compact) {
+        val targetVisible = if (target == foregroundPresentation) {
             center.red > SettledChannelThreshold && center.blue < VisibleChannelThreshold
         } else {
             center.blue > SettledChannelThreshold && center.red < VisibleChannelThreshold

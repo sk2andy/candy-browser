@@ -4,6 +4,7 @@ internal enum class AddressBarPresentation {
     Docked,
     Compact,
     Expanded,
+    Overview,
     CommandFeedback,
 }
 
@@ -13,7 +14,9 @@ internal object AddressBarPresentationRules {
         compact: Boolean,
         editing: Boolean,
         showingCommandFeedback: Boolean,
+        showingTabOverview: Boolean = false,
     ): AddressBarPresentation = when {
+        showingTabOverview -> AddressBarPresentation.Overview
         showingCommandFeedback -> AddressBarPresentation.CommandFeedback
         editing -> AddressBarPresentation.Expanded
         docked -> AddressBarPresentation.Docked
@@ -21,7 +24,6 @@ internal object AddressBarPresentationRules {
         else -> AddressBarPresentation.Expanded
     }
 }
-
 internal object AddressBarControlRules {
     fun tabCountLabel(tabCount: Int): String =
         if (tabCount > 99) "∞" else tabCount.coerceAtLeast(0).toString()

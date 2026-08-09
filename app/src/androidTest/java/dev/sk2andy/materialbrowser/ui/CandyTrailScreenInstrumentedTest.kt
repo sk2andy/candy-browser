@@ -16,6 +16,7 @@ import dev.sk2andy.materialbrowser.browser.CandyTrailFork
 import dev.sk2andy.materialbrowser.browser.CandyTrailForkLifecycle
 import dev.sk2andy.materialbrowser.browser.CandyTrailNode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -76,7 +77,6 @@ class CandyTrailScreenInstrumentedTest {
                             forkFavicons = emptyMap(),
                             predictiveBackProgress = 0f,
                             predictiveBackEdgeSign = 1,
-                            onOpenTabActions = {},
                             onSelectNode = { false },
                             onNodeSelectionFinished = {},
                             onForkNode = { nodeId ->
@@ -188,7 +188,6 @@ class CandyTrailScreenInstrumentedTest {
                             forkFavicons = emptyMap(),
                             predictiveBackProgress = 0f,
                             predictiveBackEdgeSign = 1,
-                            onOpenTabActions = {},
                             onSelectNode = { false },
                             onNodeSelectionFinished = {},
                             onForkNode = { null },
@@ -201,6 +200,10 @@ class CandyTrailScreenInstrumentedTest {
                 }
             }
             instrumentation.waitForIdleSync()
+            assertFalse(
+                "Candy Trail top bar still exposes tab actions",
+                nodeExists(activity.getString(R.string.cd_tab_actions)),
+            )
             assertTrue("Current node is outside the initial viewport", currentNodeIsVisible())
             assertTrue("Fork endpoint lacks accessibility semantics", nodeExists("Fork destination"))
             instrumentation.runOnMainSync {

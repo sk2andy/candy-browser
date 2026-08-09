@@ -5,14 +5,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,6 +54,7 @@ class SnoozeScreensInstrumentedTest {
 
     @After
     fun tearDown() {
+        composeRule.mainClock.autoAdvance = true
         composeRule.runOnIdle {
             controller?.destroy()
             controller = null
@@ -62,7 +67,7 @@ class SnoozeScreensInstrumentedTest {
         val calls = AtomicInteger()
         composeRule.setContent {
             MaterialBrowserTheme {
-                SnoozeTabSheet(
+                SnoozeTabDialog(
                     tab = BrowserTab("tab", 1L, title = "Example"),
                     onSnooze = { wakeAt ->
                         calls.incrementAndGet()
@@ -74,6 +79,8 @@ class SnoozeScreensInstrumentedTest {
             }
         }
 
+        composeRule.onNode(isDialog()).assertExists()
+        composeRule.onNodeWithTag(SnoozeTestTags.PresetGroup).assertIsDisplayed()
         composeRule.onNodeWithTag(SnoozeTestTags.Tomorrow)
             .assertIsEnabled()
             .performClick()
@@ -86,7 +93,7 @@ class SnoozeScreensInstrumentedTest {
     fun privateTabShowsPersistenceBoundaryAndDisablesChoices() {
         composeRule.setContent {
             MaterialBrowserTheme {
-                SnoozeTabSheet(
+                SnoozeTabDialog(
                     tab = BrowserTab("private", 1L, isIncognito = true),
                     onSnooze = { false },
                     onDismiss = {},
@@ -105,24 +112,9 @@ class SnoozeScreensInstrumentedTest {
         val snoozeCalls = AtomicInteger()
         composeRule.setContent {
             MaterialBrowserTheme {
-                TabActionsSheet(
+                TestTabActionsMenu(
                     tab = BrowserTab("tab", 1L, title = "Example"),
-                    profiles = listOf(BrowserProfile("default", "🍬")),
-                    isFavorite = false,
-                    canToggleDomainMute = false,
-                    isDomainMuted = false,
-                    onToggleFavorite = {},
-                    onOpenCandyTrail = {},
-                    onTogglePinned = {},
-                    onMoveToProfile = {},
-                    onShare = {},
-                    onOpenExternal = {},
-                    onPrint = {},
-                    onDomainMutedChange = {},
-                    onAddSiteCapsule = {},
-                    onSummarize = {},
                     onSnooze = { snoozeCalls.incrementAndGet() },
-                    onDismiss = {},
                 )
             }
         }
@@ -148,18 +140,87 @@ class SnoozeScreensInstrumentedTest {
     }
 
     @Test
-    fun heroLongPressOpensActionsBeforeSnoozePicker() {
-        verifyLongPressActionsFlow(TabOverviewMode.Hero)
+    fun tabActionsMenuKeepsOutgoingContentUntilExitMotionCompletes() {
+        val menuTab = mutableStateOf<BrowserTab?>(null)
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TestTabActionsMenu(tab = menuTab.value)
+            }
+        }
+        composeRule.mainClock.advanceTimeByFrame()
+
+        composeRule.runOnIdle {
+            menuTab.value = BrowserTab("tab", 1L, title = "Example")
+        }
+        composeRule.mainClock.advanceTimeBy(
+            TabActionsMenuMotion.ENTER_DURATION_MILLIS.toLong() + 32L,
+        )
+        composeRule.onNodeWithTag(SnoozeTestTags.TabActions).assertExists()
+
+        composeRule.runOnIdle { menuTab.value = null }
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(SnoozeTestTags.TabActions).assertExists()
+
+        composeRule.mainClock.advanceTimeBy(
+            TabActionsMenuMotion.EXIT_DURATION_MILLIS.toLong() + 32L,
+        )
+        composeRule.onNodeWithTag(SnoozeTestTags.TabActions).assertDoesNotExist()
     }
 
     @Test
-    fun gridLongPressOpensActionsBeforeSnoozePicker() {
-        verifyLongPressActionsFlow(TabOverviewMode.Grid)
+    fun favoriteActionKeepsPresentedStateDuringVisibleExit() {
+        val menuTab = mutableStateOf<BrowserTab?>(
+            BrowserTab("tab", 1L, title = "Example", url = "https://example.com"),
+        )
+        val isFavorite = mutableStateOf(false)
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TestTabActionsMenu(
+                    tab = menuTab.value,
+                    isFavorite = isFavorite.value,
+                    onToggleFavorite = {
+                        menuTab.value = null
+                        isFavorite.value = true
+                    },
+                )
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(
+            TabActionsMenuMotion.ENTER_DURATION_MILLIS.toLong() + 32L,
+        )
+
+        composeRule.onNodeWithTag(TabActionsMenuTestTags.Favorite)
+            .assertIsNotSelected()
+            .performClick()
+        composeRule.mainClock.advanceTimeBy(
+            TabActionsMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L,
+        )
+
+        composeRule.onNodeWithTag(SnoozeTestTags.TabActions).assertExists()
+        composeRule.onNodeWithTag(TabActionsMenuTestTags.Favorite).assertIsNotSelected()
+        composeRule.runOnIdle { assertTrue(isFavorite.value) }
+
+        composeRule.mainClock.advanceTimeBy(
+            TabActionsMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L + 32L,
+        )
+        composeRule.onNodeWithTag(SnoozeTestTags.TabActions).assertDoesNotExist()
     }
 
     @Test
-    fun listLongPressOpensActionsBeforeSnoozePicker() {
-        verifyLongPressActionsFlow(TabOverviewMode.List)
+    fun heroOverflowOpensActionsAboveChromeBeforeSnoozePicker() {
+        verifyOverflowActionsFlow(TabOverviewMode.Hero)
+    }
+
+    @Test
+    fun gridOverflowOpensActionsAboveChromeBeforeSnoozePicker() {
+        verifyOverflowActionsFlow(TabOverviewMode.Grid)
+    }
+
+    @Test
+    fun listOverflowOpensActionsAboveChromeBeforeSnoozePicker() {
+        verifyOverflowActionsFlow(TabOverviewMode.List)
     }
 
     @Test
@@ -236,19 +297,22 @@ class SnoozeScreensInstrumentedTest {
         assertEquals(1, undoCalls.get())
     }
 
-    private fun verifyLongPressActionsFlow(mode: TabOverviewMode) {
+    private fun verifyOverflowActionsFlow(mode: TabOverviewMode) {
         lateinit var browserController: BrowserController
-        lateinit var selectedTabId: String
         lateinit var tabId: String
         val favoriteTarget = AtomicReference<String?>(null)
         val snoozeTarget = AtomicReference<String?>(null)
-        val backgroundUrl = "https://${mode.name.lowercase()}.background.example"
+        val backgroundUrl = "https://background-${mode.name.lowercase()}.com"
         composeRule.runOnIdle {
             browserController = BrowserController(composeRule.activity)
             browserController.updateTabOverviewMode(mode)
             controller = browserController
-            selectedTabId = browserController.selectedTabId
             tabId = requireNotNull(browserController.createBackgroundTab(backgroundUrl))
+            browserController.selectTab(tabId)
+            browserController.setDomainMuted(tabId, false)
+            if (browserController.isFavorite(backgroundUrl)) {
+                browserController.toggleFavorite(tabId)
+            }
         }
         composeRule.setContent {
             var snoozeTabId by remember { mutableStateOf<String?>(null) }
@@ -262,8 +326,7 @@ class SnoozeScreensInstrumentedTest {
                         onClose = {},
                         onSelect = {},
                         onNewTab = {},
-                        onNewTabButtonBounds = {},
-                        destinationButtonVisible = false,
+                        destinationChromeVisible = true,
                         onEntryHeroStarted = {},
                         onEntryHeroCompleted = {},
                         candyTrailTabId = null,
@@ -283,7 +346,7 @@ class SnoozeScreensInstrumentedTest {
                             snoozeTabId = targetId
                         },
                     )
-                    SnoozeTabSheet(
+                    SnoozeTabDialog(
                         tab = snoozeTabId?.let { id ->
                             browserController.tabs.firstOrNull { it.id == id }
                         },
@@ -295,33 +358,65 @@ class SnoozeScreensInstrumentedTest {
         }
 
         composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(tabId))
-            .performSemanticsAction(SemanticsActions.OnLongClick)
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnLongClick))
+        val chromeBounds = composeRule.onNodeWithTag(TabOverviewChromeTestTags.Bar)
+            .fetchSemanticsNode().boundsInRoot
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.More).performClick()
         composeRule.onNodeWithTag(TabActionsMenuTestTags.Favorite).assertExists()
         composeRule.onNodeWithTag(TabActionsMenuTestTags.Pin).assertExists()
         composeRule.onNodeWithTag(TabActionsMenuTestTags.Trail).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.action_fork_tab))
             .assertDoesNotExist()
+        val menuBounds = composeRule.onNodeWithTag(SnoozeTestTags.TabActions)
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(menuBounds.bottom <= chromeBounds.top)
         composeRule.onNodeWithTag(DomainMuteMenuTestTags.Item).performClick()
         composeRule.runOnIdle {
             assertTrue(browserController.isDomainMuted(tabId))
-            assertTrue(!browserController.isDomainMuted(selectedTabId))
         }
         composeRule.onNodeWithTag(TabActionsMenuTestTags.Favorite).performClick()
         composeRule.runOnIdle {
             assertEquals(tabId, favoriteTarget.get())
             assertTrue(browserController.isFavorite(backgroundUrl))
-            assertEquals(selectedTabId, browserController.selectedTabId)
+            assertEquals(tabId, browserController.selectedTabId)
         }
 
-        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(tabId))
-            .performSemanticsAction(SemanticsActions.OnLongClick)
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.More).performClick()
         composeRule.onNodeWithTag(SnoozeTestTags.TabActionsSnooze).assertExists()
-        composeRule.onNodeWithTag(SnoozeTestTags.Sheet).assertDoesNotExist()
+        composeRule.onNodeWithTag(SnoozeTestTags.Dialog).assertDoesNotExist()
         composeRule.onNodeWithTag(SnoozeTestTags.TabActionsSnooze).performClick()
         assertEquals(tabId, snoozeTarget.get())
         composeRule.onNodeWithTag(SnoozeTestTags.TabActionsSnooze).assertDoesNotExist()
-        composeRule.onNodeWithTag(SnoozeTestTags.Sheet).assertExists()
+        composeRule.onNodeWithTag(SnoozeTestTags.Dialog).assertExists()
         composeRule.onNodeWithTag(SnoozeTestTags.Tomorrow).performClick()
-        composeRule.onNodeWithTag(SnoozeTestTags.Sheet).assertDoesNotExist()
+        composeRule.onNodeWithTag(SnoozeTestTags.Dialog).assertDoesNotExist()
+    }
+
+    @Composable
+    private fun TestTabActionsMenu(
+        tab: BrowserTab?,
+        isFavorite: Boolean = false,
+        onToggleFavorite: () -> Unit = {},
+        onSnooze: () -> Unit = {},
+    ) {
+        TabActionsFloatingMenu(
+            tab = tab,
+            profiles = listOf(BrowserProfile("default", "🍬")),
+            isFavorite = isFavorite,
+            canToggleDomainMute = false,
+            isDomainMuted = false,
+            onToggleFavorite = onToggleFavorite,
+            onOpenCandyTrail = {},
+            onTogglePinned = {},
+            onMoveToProfile = {},
+            onShare = {},
+            onOpenExternal = {},
+            onPrint = {},
+            onDomainMutedChange = {},
+            onAddSiteCapsule = {},
+            onSummarize = {},
+            onSnooze = onSnooze,
+            onDismiss = {},
+        )
     }
 }
