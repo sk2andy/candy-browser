@@ -41,7 +41,17 @@ object AddressResolver {
 
     fun displayText(url: String): String = when (url) {
         BLANK_URL -> ""
-        else -> runCatching { URI(url).host }.getOrNull()?.removePrefix("www.") ?: url
+        else -> displayHost(url)?.removePrefix("www.") ?: url
+    }
+
+    private fun displayHost(url: String): String? {
+        runCatching { URI(url).host }.getOrNull()?.let { return it }
+
+        val authorityStart = url.indexOf("://").takeIf { it > 0 }?.plus(3) ?: return null
+        val authorityEnd = url.indexOfAny(charArrayOf('/', '?', '#'), authorityStart)
+            .takeIf { it >= 0 }
+            ?: url.length
+        return runCatching { URI(url.substring(0, authorityEnd)).host }.getOrNull()
     }
 
     private fun String.toAsciiHostCandidate(): String {
