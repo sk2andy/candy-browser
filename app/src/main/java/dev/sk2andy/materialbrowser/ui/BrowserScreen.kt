@@ -195,6 +195,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -226,6 +227,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -343,6 +345,7 @@ fun BrowserScreen(controller: BrowserController) {
         SiteCapsuleBrowserScreen(controller, capsule)
         return
     }
+    val lifecycleOwner = LocalLifecycleOwner.current
     var tabOverviewVisible by rememberSaveable { mutableStateOf(false) }
     var candyTrailTabId by rememberSaveable { mutableStateOf<String?>(null) }
     var candyTrailSourceBounds by remember { mutableStateOf<Rect?>(null) }
@@ -409,6 +412,11 @@ fun BrowserScreen(controller: BrowserController) {
     val addressBarMorphInFront =
         tabOverviewVisible && !overviewDestinationChromeVisible
     val selectedTab = controller.selectedTab
+    val selectedSiteState = controller.siteProtectionState(selectedTab.id)
+    val selectedSiteHasHost = selectedSiteState.host != null
+    val canToggleSelectedCookieBannerRemoval = selectedSiteHasHost &&
+        controller.blockerSettings.hideCookieConsent &&
+        !selectedSiteState.isPaused
     val permissionActivityVisible = controller.hasPermissionActivity(selectedTab.id)
     LaunchedEffect(
         controller.contentActions.isLinkPeekVisible,
@@ -585,9 +593,12 @@ fun BrowserScreen(controller: BrowserController) {
             overviewMorphProgress.floatValue = 0f
             overviewEntryHeroCompleted = false
             tabOverviewOpening = true
-            controller.prepareTabOverview()
-            tabOverviewOpening = false
-            tabOverviewVisible = true
+            controller.prepareTabOverview {
+                tabOverviewOpening = false
+                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    tabOverviewVisible = true
+                }
+            }
         }
     }
     val closeTabOverview = {
@@ -1284,6 +1295,21 @@ fun BrowserScreen(controller: BrowserController) {
             canToggleDomainMute = controller.canToggleSelectedDomainMute,
             isDomainMuted = controller.isSelectedDomainMuted,
             onDomainMutedChange = controller::setSelectedDomainMuted,
+            canToggleCookieBannerRemoval = canToggleSelectedCookieBannerRemoval,
+            isCookieBannerRemovalEnabled = canToggleSelectedCookieBannerRemoval &&
+                !selectedSiteState.cookieBannerRemovalDisabled,
+            canToggleForceVerticalScrolling = selectedSiteHasHost,
+            isForceVerticalScrollingEnabled = selectedSiteState.forceVerticalScrolling,
+            onCookieBannerRemovalEnabledChange = { enabled ->
+                if (controller.setCookieBannerRemovalDisabled(selectedTab.id, !enabled)) {
+                    rootView.performConfirmHaptic()
+                }
+            },
+            onForceVerticalScrollingChange = { enabled ->
+                if (controller.setForceVerticalScrolling(selectedTab.id, enabled)) {
+                    rootView.performConfirmHaptic()
+                }
+            },
             snoozedTabCount = controller.snoozedTabs.size,
             onSnoozedTabs = {
                 addressEditorVisible = false
@@ -1519,7 +1545,6 @@ fun BrowserScreen(controller: BrowserController) {
                 tabOverviewMode = controller.tabOverviewMode,
                 dismissResistancePercent = controller.dismissResistancePercent,
                 isTabButtonVisible = controller.isTabButtonVisible,
-                isWebContentEdgeToEdgeEnabled = controller.isWebContentEdgeToEdgeEnabled,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
                 siteCapsules = controller.siteCapsules,
@@ -1530,7 +1555,6 @@ fun BrowserScreen(controller: BrowserController) {
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onTabButtonVisibleChanged = controller::updateTabButtonVisible,
-                onWebContentEdgeToEdgeChanged = controller::updateWebContentEdgeToEdgeEnabled,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
                     privacyXRayTabId = selectedTab.id
@@ -1574,12 +1598,6 @@ fun BrowserScreen(controller: BrowserController) {
                         controller.pauseSiteProtection(tabId, persistently)
                     },
                     onResume = { controller.resumeSiteProtection(tabId) },
-                    onCookieBannerRemovalEnabledChange = { enabled ->
-                        controller.setCookieBannerRemovalDisabled(tabId, !enabled)
-                    },
-                    onForceVerticalScrollingChange = { enabled ->
-                        controller.setForceVerticalScrolling(tabId, enabled)
-                    },
                     onRuleAction = { domain, action, siteScoped ->
                         val rule = controller.addFilterRuleFromXRay(
                             tabId = tabId,
@@ -2262,18 +2280,24 @@ private fun FullscreenTabPreviewContent(
     blankFavoritesAlpha: () -> Float = { 1f },
 ) {
     val density = LocalDensity.current
-    val previewLayout = TabSwitchPreviewLayoutRules.resolve(
-        rootHeightPx = rootHeightPx,
-        previewTopInsetPx = previewTopInsetPx,
-        bottomBarTopPx = bottomBarTopPx.floatValue,
-    )
-    val topInset = with(density) { previewLayout.topInsetPx.toDp() }
-    val visibleHeight = with(density) { previewLayout.visibleHeightPx.toDp() }
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface),
     ) {
+        val capturedHeightPx = preview
+            ?.takeIf { !it.isRecycled && it.width > 0 && it.height > 0 }
+            ?.let { bitmap ->
+                with(density) { maxWidth.toPx() } * bitmap.height / bitmap.width
+            }
+        val previewLayout = TabSwitchPreviewLayoutRules.resolve(
+            rootHeightPx = rootHeightPx,
+            previewTopInsetPx = previewTopInsetPx,
+            bottomBarTopPx = bottomBarTopPx.floatValue,
+            capturedHeightPx = capturedHeightPx,
+        )
+        val topInset = with(density) { previewLayout.topInsetPx.toDp() }
+        val visibleHeight = with(density) { previewLayout.visibleHeightPx.toDp() }
         when {
             tab.isIncognito -> IncognitoTabPlaceholder()
             tab.url == BLANK_URL -> BlankTabPreview(
@@ -2563,6 +2587,12 @@ private fun BrowserBottomBar(
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
+    canToggleCookieBannerRemoval: Boolean,
+    isCookieBannerRemovalEnabled: Boolean,
+    canToggleForceVerticalScrolling: Boolean,
+    isForceVerticalScrollingEnabled: Boolean,
+    onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
+    onForceVerticalScrollingChange: (Boolean) -> Unit,
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
@@ -2794,6 +2824,18 @@ private fun BrowserBottomBar(
                                 canToggleDomainMute = canToggleDomainMute,
                                 isDomainMuted = isDomainMuted,
                                 onDomainMutedChange = onDomainMutedChange,
+                                canToggleCookieBannerRemoval =
+                                    canToggleCookieBannerRemoval,
+                                isCookieBannerRemovalEnabled =
+                                    isCookieBannerRemovalEnabled,
+                                canToggleForceVerticalScrolling =
+                                    canToggleForceVerticalScrolling,
+                                isForceVerticalScrollingEnabled =
+                                    isForceVerticalScrollingEnabled,
+                                onCookieBannerRemovalEnabledChange =
+                                    onCookieBannerRemovalEnabledChange,
+                                onForceVerticalScrollingChange =
+                                    onForceVerticalScrollingChange,
                                 snoozedTabCount = snoozedTabCount,
                                 onSnoozedTabs = onSnoozedTabs,
                                 onSettings = onSettings,
@@ -2808,6 +2850,7 @@ private fun BrowserBottomBar(
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onSnooze = onSnooze,
                                 onAddSiteCapsule = onAddSiteCapsule,
+                                onDock = onDock,
                                 overviewGestureEnabled = overviewGestureEnabled,
                                 overviewGestureProgress = overviewGestureProgress,
                                 onOverviewGestureProgress = onOverviewGestureProgress,
@@ -3191,6 +3234,12 @@ private fun ExpandedBottomBarContent(
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
+    canToggleCookieBannerRemoval: Boolean,
+    isCookieBannerRemovalEnabled: Boolean,
+    canToggleForceVerticalScrolling: Boolean,
+    isForceVerticalScrollingEnabled: Boolean,
+    onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
+    onForceVerticalScrollingChange: (Boolean) -> Unit,
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
@@ -3205,6 +3254,7 @@ private fun ExpandedBottomBarContent(
     onOpenCandyTrail: () -> Unit,
     onSnooze: () -> Unit,
     onAddSiteCapsule: () -> Unit,
+    onDock: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
     onOverviewGestureProgress: (Float) -> Unit,
@@ -3488,6 +3538,14 @@ private fun ExpandedBottomBarContent(
                                 canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
                                 canToggleDomainMute = canToggleDomainMute,
                                 isDomainMuted = isDomainMuted,
+                                canToggleCookieBannerRemoval =
+                                    canToggleCookieBannerRemoval,
+                                isCookieBannerRemovalEnabled =
+                                    isCookieBannerRemovalEnabled,
+                                canToggleForceVerticalScrolling =
+                                    canToggleForceVerticalScrolling,
+                                isForceVerticalScrollingEnabled =
+                                    isForceVerticalScrollingEnabled,
                                 canAddSiteCapsule = tab.url != BLANK_URL &&
                                     !tab.isIncognito &&
                                     (
@@ -3505,11 +3563,16 @@ private fun ExpandedBottomBarContent(
                                 onPrint = onPrint,
                                 onOpenReader = onReaderStudio,
                                 onDomainMutedChange = onDomainMutedChange,
+                                onCookieBannerRemovalEnabledChange =
+                                    onCookieBannerRemovalEnabledChange,
+                                onForceVerticalScrollingChange =
+                                    onForceVerticalScrollingChange,
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onAddSiteCapsule = onAddSiteCapsule,
                                 onSummarize = onSummarizeWithAssistant,
                                 onSnooze = onSnooze,
                                 onSnoozedTabs = onSnoozedTabs,
+                                onDockAddressBar = onDock,
                                 onSettings = onSettings,
                             )
                         }
@@ -5761,7 +5824,6 @@ private fun TabCoverflowHeroContent(
     bottomBarTopPx: FloatState,
     targetFraction: () -> Float,
 ) {
-    val density = LocalDensity.current
     val previewLayout = TabOverviewHeroRules.coverflowPreviewLayout(
         rootWidthPx = rootWidthPx,
         rootHeightPx = rootHeightPx,
@@ -5769,7 +5831,6 @@ private fun TabCoverflowHeroContent(
         targetHeightPx = targetBounds.height,
         cropTopFraction = PREVIEW_CROP_TOP_FRACTION,
     )
-    val targetHeight = with(density) { previewLayout.sourceHeightPx.toDp() }
     Box(Modifier.fillMaxSize()) {
         if (tab.url == BLANK_URL && !tab.isIncognito) {
             FullscreenTabPreviewContent(
@@ -5784,41 +5845,61 @@ private fun TabCoverflowHeroContent(
                     TabOverviewHeroRules.blankFavoritesAlpha(targetFraction())
                 },
             )
+        } else if (tab.isIncognito) {
+            FullscreenTabPreviewContent(
+                tab = tab,
+                preview = preview,
+                favicon = favicon,
+                favorites = favorites,
+                rootHeightPx = rootHeightPx,
+                previewTopInsetPx = previewTopInsetPx,
+                bottomBarTopPx = bottomBarTopPx,
+            )
         } else {
-            Box(
+            Layout(
+                content = {
+                    TabPreviewContent(
+                        tab = tab,
+                        preview = preview,
+                        favicon = favicon,
+                        favorites = favorites,
+                    )
+                },
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.ModulateAlpha
-                        alpha = 1f - TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
-                    },
-            ) {
-                FullscreenTabPreviewContent(
-                    tab = tab,
-                    preview = preview,
-                    favicon = favicon,
-                    favorites = favorites,
+                    .background(MaterialTheme.colorScheme.surface)
+                    .clipToBounds(),
+            ) { measurables, constraints ->
+                val capturedHeightPx = preview
+                    ?.takeIf { !it.isRecycled && it.width > 0 && it.height > 0 }
+                    ?.let { bitmap -> rootWidthPx * bitmap.height / bitmap.width }
+                val startLayout = TabSwitchPreviewLayoutRules.resolve(
                     rootHeightPx = rootHeightPx,
                     previewTopInsetPx = previewTopInsetPx,
-                    bottomBarTopPx = bottomBarTopPx,
+                    bottomBarTopPx = bottomBarTopPx.floatValue,
+                    capturedHeightPx = capturedHeightPx,
                 )
-            }
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(0, previewLayout.sourceTopPx.roundToInt()) }
-                    .fillMaxWidth()
-                    .height(targetHeight)
-                    .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.ModulateAlpha
-                        alpha = TabOverviewHeroRules.coverflowPreviewAlpha(targetFraction())
-                    },
-            ) {
-                TabPreviewContent(
-                    tab = tab,
-                    preview = preview,
-                    favicon = favicon,
-                    favorites = favorites,
+                val frame = TabOverviewHeroRules.coverflowPreviewFrame(
+                    startTopPx = startLayout.topInsetPx,
+                    startHeightPx = startLayout.visibleHeightPx,
+                    targetLayout = previewLayout,
+                    targetFraction = targetFraction(),
                 )
+                val frameHeight = frame.sourceHeightPx
+                    .roundToInt()
+                    .coerceAtLeast(1)
+                val previewPlaceable = measurables.single().measure(
+                    Constraints.fixed(
+                        width = constraints.maxWidth,
+                        height = frameHeight,
+                    ),
+                )
+                layout(constraints.maxWidth, constraints.maxHeight) {
+                    previewPlaceable.placeRelative(
+                        x = 0,
+                        y = frame.sourceTopPx.roundToInt(),
+                    )
+                }
             }
         }
     }
@@ -7255,7 +7336,6 @@ private fun SettingsScreen(
     tabOverviewMode: TabOverviewMode,
     dismissResistancePercent: Int,
     isTabButtonVisible: Boolean,
-    isWebContentEdgeToEdgeEnabled: Boolean,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
     siteCapsules: List<SiteCapsule>,
@@ -7266,7 +7346,6 @@ private fun SettingsScreen(
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
-    onWebContentEdgeToEdgeChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
@@ -7523,14 +7602,6 @@ private fun SettingsScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            SettingsSwitch(
-                title = stringResource(R.string.settings_edge_to_edge_title),
-                subtitle = stringResource(R.string.settings_edge_to_edge_subtitle),
-                checked = isWebContentEdgeToEdgeEnabled,
-                onCheckedChange = onWebContentEdgeToEdgeChanged,
-            )
-
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.capsule_settings_title))
             Spacer(Modifier.height(8.dp))

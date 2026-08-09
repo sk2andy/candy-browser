@@ -5,8 +5,8 @@ import android.content.pm.PackageManager
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -14,6 +14,7 @@ import android.os.Looper
 import android.os.Message
 import android.net.Uri
 import android.print.PrintManager
+import android.view.PixelCopy
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
 import android.webkit.GeolocationPermissions
@@ -174,6 +175,7 @@ import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
+import dev.sk2andy.materialbrowser.data.TabPreviewQuality
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.data.TabWebViewStateRepository
@@ -187,6 +189,21 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+
+private class PendingPreviewCapture(
+    val tabId: String,
+    val webView: WebView,
+    val pageUrl: String?,
+    val navigationGeneration: Int,
+    val previewEpoch: Int,
+    val sourceRect: Rect,
+    val destination: Bitmap,
+    val onComplete: () -> Unit,
+) {
+    var timeout: Runnable? = null
+    var uiCompleted = false
+    var expired = false
+}
 
 class BrowserController(
     private val activity: Activity,
@@ -302,6 +319,12 @@ class BrowserController(
     @Volatile
     private var destroyed = false
     private var previewContentBottomInWindowPx: Int? = null
+    private var pendingPreviewCapture: PendingPreviewCapture? = null
+    private val previewPageUrls = mutableMapOf<String, String?>()
+    private val previewQualities = mutableMapOf<String, TabPreviewQuality>()
+    @VisibleForTesting
+    var previewCaptureRequestCountForTesting = 0
+        private set
     private var lastWindowInsets: WindowInsetsCompat? = null
     private var browserChromeOwnsIme = false
     private var previewEpoch = 0
@@ -886,7 +909,7 @@ class BrowserController(
         tabOverviewMode = store.loadTabOverviewMode()
         isAddressBarDocked = store.loadAddressBarDocked()
         isTabButtonVisible = store.loadTabButtonVisible()
-        isWebContentEdgeToEdgeEnabled = store.loadWebContentEdgeToEdgeEnabled()
+        store.clearLegacyWebContentEdgeToEdgePreference()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
         profiles += restoredProfiles.take(MAX_PROFILES)
@@ -2618,7 +2641,6 @@ class BrowserController(
     fun updateWebContentEdgeToEdgeEnabled(enabled: Boolean) {
         if (isWebContentEdgeToEdgeEnabled == enabled) return
         isWebContentEdgeToEdgeEnabled = enabled
-        store.saveWebContentEdgeToEdgeEnabled(enabled)
         lastWindowInsets?.let(::dispatchWindowInsetsToAttachedWebViews)
     }
 
@@ -2932,6 +2954,8 @@ class BrowserController(
         snoozeScheduler.schedule(emptyList())
         previewEpoch++
         previews.clear()
+        previewPageUrls.clear()
+        previewQualities.clear()
         previewRepository.clear()
         faviconEpoch++
         faviconGenerations.clear()
@@ -3001,6 +3025,8 @@ class BrowserController(
     fun destroy() {
         SnoozeRuntimeRegistry.unregister(snoozeRestoreCallback)
         destroyed = true
+        pendingPreviewCapture?.timeout?.let(mainHandler::removeCallbacks)
+        pendingPreviewCapture = null
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
         fileChooserValidationExecutor.shutdownNow()
@@ -3042,6 +3068,8 @@ class BrowserController(
         popupOpeners.clear()
         bottomBarCompactStates.clear()
         previews.clear()
+        previewPageUrls.clear()
+        previewQualities.clear()
         favicons.clear()
         privacySnapshots.clear()
         faviconGenerations.clear()
@@ -4345,6 +4373,10 @@ class BrowserController(
         width: Int = 480,
         onComplete: () -> Unit = {},
     ) {
+        if (pendingPreviewCapture != null) {
+            onComplete()
+            return
+        }
         val tab = tabs.firstOrNull { it.id == tabId }
         val view = webViews[tabId]
         if (
@@ -4372,44 +4404,138 @@ class BrowserController(
             decorHeightPx = decorView.height,
             contentBottomPx = contentBottom,
         )
-        val captureHeightPx = (sourceBottomPx - location[1]).coerceIn(0, view.height)
-        if (captureHeightPx <= 0) {
+        val sourceRect = Rect(
+            location[0].coerceIn(0, decorView.width),
+            location[1].coerceIn(0, decorView.height),
+            (location[0] + view.width).coerceIn(0, decorView.width),
+            sourceBottomPx.coerceIn(0, decorView.height),
+        )
+        if (sourceRect.width() <= 0 || sourceRect.height() <= 0) {
             onComplete()
             return
         }
-        val scale = width.toFloat() / view.width
-        val height = (captureHeightPx * scale)
+        val scale = width.toFloat() / sourceRect.width()
+        val height = (sourceRect.height() * scale)
             .toInt()
             .coerceIn(1, width * 3)
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val request = PendingPreviewCapture(
+            tabId = tabId,
+            webView = view,
+            pageUrl = pageUrls[tabId] ?: view.url,
+            navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
+            previewEpoch = previewEpoch,
+            sourceRect = sourceRect,
+            destination = bitmap,
+            onComplete = onComplete,
+        )
+        pendingPreviewCapture = request
+        previewCaptureRequestCountForTesting++
+        request.timeout = Runnable {
+            if (pendingPreviewCapture !== request) return@Runnable
+            request.expired = true
+            completePreviewOpening(request)
+        }.also { timeout ->
+            mainHandler.postDelayed(timeout, PREVIEW_CAPTURE_TIMEOUT_MS)
+        }
         try {
-            val canvas = Canvas(bitmap)
-            canvas.scale(scale, scale)
-            canvas.translate(-location[0].toFloat(), -location[1].toFloat())
-            decorView.draw(canvas)
-            if (bitmap.hasVisualVariation()) {
-                previews[tabId] = bitmap
-                previewRepository.save(tabId, bitmap)
-            } else {
-                bitmap.recycle()
-            }
-        } catch (_: RuntimeException) {
+            PixelCopy.request(
+                activity.window,
+                sourceRect,
+                bitmap,
+                pixelCopy@{ result ->
+                    if (pendingPreviewCapture !== request) {
+                        if (!bitmap.isRecycled) bitmap.recycle()
+                        return@pixelCopy
+                    }
+                    pendingPreviewCapture = null
+                    request.timeout?.let(mainHandler::removeCallbacks)
+                    if (
+                        result != PixelCopy.SUCCESS ||
+                        request.expired ||
+                        !isCurrentPreviewCapture(request)
+                    ) {
+                        bitmap.recycle()
+                        completePreviewOpening(request)
+                        return@pixelCopy
+                    }
+                    val candidateQuality = bitmap.previewQuality()
+                    val previousQuality = previewQualities[request.tabId]
+                        ?.takeIf { previewPageUrls[request.tabId] == request.pageUrl }
+                    if (
+                        candidateQuality != null &&
+                        TabPreviewCaptureRules.shouldStore(
+                            candidate = candidateQuality,
+                            previous = previousQuality,
+                            isSamePage = previousQuality != null,
+                        )
+                    ) {
+                        previews[request.tabId] = bitmap
+                        previewPageUrls[request.tabId] = request.pageUrl
+                        previewQualities[request.tabId] = candidateQuality
+                        previewRepository.save(request.tabId, bitmap)
+                    } else {
+                        bitmap.recycle()
+                    }
+                    completePreviewOpening(request)
+                },
+                mainHandler,
+            )
+        } catch (_: IllegalArgumentException) {
+            pendingPreviewCapture = null
+            request.timeout?.let(mainHandler::removeCallbacks)
             bitmap.recycle()
-        } finally {
-            onComplete()
+            completePreviewOpening(request)
         }
     }
 
-    private fun Bitmap.hasVisualVariation(): Boolean {
-        if (isRecycled || width <= 0 || height <= 0) return false
+    private fun completePreviewOpening(request: PendingPreviewCapture) {
+        if (request.uiCompleted) return
+        request.uiCompleted = true
+        request.onComplete()
+    }
+
+    private fun isCurrentPreviewCapture(request: PendingPreviewCapture): Boolean =
+        !destroyed &&
+            isActivityResumed &&
+            previewEpoch == request.previewEpoch &&
+            selectedTabId == request.tabId &&
+            webViews[request.tabId] === request.webView &&
+            request.webView.isAttachedToWindow &&
+            navigationGenerations.getOrDefault(request.tabId, 0) == request.navigationGeneration &&
+            (pageUrls[request.tabId] ?: request.webView.url) == request.pageUrl &&
+            hasSamePreviewGeometry(request)
+
+    private fun hasSamePreviewGeometry(request: PendingPreviewCapture): Boolean {
+        val view = request.webView
+        val decorView = activity.window.decorView
+        val location = IntArray(2)
+        view.getLocationInWindow(location)
+        val sourceBottomPx = TabPreviewCaptureRules.sourceBottomPx(
+            viewTopPx = location[1],
+            viewHeightPx = view.height,
+            decorHeightPx = decorView.height,
+            contentBottomPx = previewContentBottomInWindowPx ?: decorView.height,
+        )
+        return request.sourceRect == Rect(
+            location[0].coerceIn(0, decorView.width),
+            location[1].coerceIn(0, decorView.height),
+            (location[0] + view.width).coerceIn(0, decorView.width),
+            sourceBottomPx.coerceIn(0, decorView.height),
+        )
+    }
+
+    private fun Bitmap.previewQuality(): TabPreviewQuality? {
+        if (isRecycled || width <= 0 || height <= 0) return null
         var minimumRed = 255
         var minimumGreen = 255
         var minimumBlue = 255
         var maximumRed = 0
         var maximumGreen = 0
         var maximumBlue = 0
-        val columns = 24
-        val rows = 36
+        var nearBlackSamples = 0
+        val columns = 12
+        val rows = 18
         repeat(columns) { column ->
             val x = ((column + 0.5f) * width / columns).toInt().coerceIn(0, width - 1)
             repeat(rows) { row ->
@@ -4418,6 +4544,13 @@ class BrowserController(
                     .toInt()
                     .coerceIn(0, height - 1)
                 val color = getPixel(x, y)
+                if (
+                    Color.red(color) <= PREVIEW_NEAR_BLACK_CHANNEL_MAX &&
+                    Color.green(color) <= PREVIEW_NEAR_BLACK_CHANNEL_MAX &&
+                    Color.blue(color) <= PREVIEW_NEAR_BLACK_CHANNEL_MAX
+                ) {
+                    nearBlackSamples++
+                }
                 minimumRed = minOf(minimumRed, Color.red(color))
                 minimumGreen = minOf(minimumGreen, Color.green(color))
                 minimumBlue = minOf(minimumBlue, Color.blue(color))
@@ -4426,11 +4559,14 @@ class BrowserController(
                 maximumBlue = maxOf(maximumBlue, Color.blue(color))
             }
         }
-        return maxOf(
-            maximumRed - minimumRed,
-            maximumGreen - minimumGreen,
-            maximumBlue - minimumBlue,
-        ) >= 12
+        return TabPreviewQuality(
+            visualRange = maxOf(
+                maximumRed - minimumRed,
+                maximumGreen - minimumGreen,
+                maximumBlue - minimumBlue,
+            ),
+            nearBlackFraction = nearBlackSamples.toFloat() / (columns * rows),
+        )
     }
 
     private fun restorePersistedPreviews() {
@@ -4729,6 +4865,8 @@ class BrowserController(
         candyTrailRepository.delete(tabId)
         webViewStateRepository.delete(tabId)
         previews.remove(tabId)
+        previewPageUrls.remove(tabId)
+        previewQualities.remove(tabId)
         previewRepository.delete(tabId)
         invalidateFavicon(tabId)
         if (!preserveFaviconGeneration) faviconGenerations.remove(tabId)
@@ -4750,6 +4888,8 @@ class BrowserController(
         pendingCandyTrailRestoreIds.remove(tab.id)
         suppressedCandyTrailTabIds.remove(tab.id)
         previews.remove(tab.id)
+        previewPageUrls.remove(tab.id)
+        previewQualities.remove(tab.id)
         previewRepository.delete(tab.id)
         invalidateFavicon(tab.id)
         faviconGenerations.remove(tab.id)
@@ -5247,6 +5387,8 @@ class BrowserController(
             WindowInsetsCompat.Type.tappableElement(),
             WindowInsetsCompat.Type.displayCutout(),
         )
+        const val PREVIEW_CAPTURE_TIMEOUT_MS = 64L
+        const val PREVIEW_NEAR_BLACK_CHANNEL_MAX = 16
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
         const val MAX_COSMETIC_DOCUMENT_START_RULES = 64
         const val MAX_REPORTED_ALLOW_DECISIONS = 64

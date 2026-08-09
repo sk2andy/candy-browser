@@ -37,10 +37,6 @@ internal object TabOverviewHeroRules {
         ((targetFraction - COMPACT_CHROME_START) / (1f - COMPACT_CHROME_START))
             .coerceIn(0f, 1f)
 
-    fun coverflowPreviewAlpha(targetFraction: Float): Float =
-        ((targetFraction - COVERFLOW_PREVIEW_START) / (1f - COVERFLOW_PREVIEW_START))
-            .coerceIn(0f, 1f)
-
     fun blankFavoritesAlpha(targetFraction: Float): Float =
         (1f - (targetFraction - BLANK_FAVORITES_FADE_START) /
             (BLANK_FAVORITES_FADE_END - BLANK_FAVORITES_FADE_START))
@@ -69,11 +65,25 @@ internal object TabOverviewHeroRules {
         )
     }
 
+    fun coverflowPreviewFrame(
+        startTopPx: Float,
+        startHeightPx: Float,
+        targetLayout: CoverflowPreviewLayout,
+        targetFraction: Float,
+    ): CoverflowPreviewLayout {
+        val fraction = targetFraction.coerceIn(0f, 1f)
+        return CoverflowPreviewLayout(
+            sourceTopPx = startTopPx +
+                (targetLayout.sourceTopPx - startTopPx) * fraction,
+            sourceHeightPx = startHeightPx +
+                (targetLayout.sourceHeightPx - startHeightPx) * fraction,
+        )
+    }
+
     private const val COMPLETION_THRESHOLD = 0.995f
     private const val EXIT_CONTENT_FADE_MULTIPLIER = 4f
     private const val NEIGHBOR_ENTRY_START = 0.55f
     private const val COMPACT_CHROME_START = 0.62f
-    private const val COVERFLOW_PREVIEW_START = 0.82f
     private const val BLANK_FAVORITES_FADE_START = 0.35f
     private const val BLANK_FAVORITES_FADE_END = 0.78f
     private const val INCOGNITO_VEIL_END = 0.24f

@@ -48,4 +48,20 @@ class TabSwitchPreviewLayoutRulesTest {
             ),
         )
     }
+
+    @Test
+    fun `captured bitmap height stays stable while address bar animates`() {
+        assertEquals(
+            TabSwitchPreviewLayout(
+                topInsetPx = 72f,
+                visibleHeightPx = 1_920f,
+            ),
+            TabSwitchPreviewLayoutRules.resolve(
+                rootHeightPx = 2_400f,
+                previewTopInsetPx = 72,
+                bottomBarTopPx = 1_760f,
+                capturedHeightPx = 1_920f,
+            ),
+        )
+    }
 }

@@ -86,7 +86,7 @@
     <string name="cd_make_blank_tab_regular">Leeren Tab als normalen Tab verwenden</string>
     <string name="action_stop_loading">Laden stoppen</string>
     <string name="action_reload">Neu laden</string>
-    <string name="action_dock_address_bar">Adressleiste am Rand parken</string>
+    <string name="action_dock_address_bar">Pille rechts parken</string>
     <string name="action_mute_domain">Diese Website stummschalten</string>
     <string name="browser_menu_title">Menü</string>
     <string name="browser_menu_page_group">Seite</string>
@@ -205,8 +205,6 @@
     <string name="settings_default_browser">Standardbrowser</string>
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>
-    <string name="settings_edge_to_edge_title">Randlose Webseiten</string>
-    <string name="settings_edge_to_edge_subtitle">Zeigt kompatible Webseiten hinter Systemleisten. Ausschalten, wenn Bedienelemente mit Statusleiste oder Kameraausschnitt überlappen.</string>
     <string name="settings_section_gestures">Gesten</string>
     <string name="settings_tab_button_title">Tab-Schaltfläche anzeigen</string>
     <string name="settings_tab_button_subtitle">Zeigt den Tab-Zähler zusätzlich zur Wischgeste nach oben.</string>
@@ -355,14 +353,11 @@
     <string name="privacy_policy_allowed">Per Regel erlaubt</string>
     <string name="privacy_policy_off">Aus</string>
     <string name="privacy_policy_disclaimer">Der Status zeigt Candys aktuelle lokale Regeln, keine beobachteten Cookies oder Sicherheitsgarantie.</string>
-    <string name="privacy_site_options">Optionen für %1$s</string>
     <string name="privacy_cookie_banner_remove">Cookie-Banner ausblenden</string>
     <string name="privacy_cookie_banner_remove_description">Bekannte Einwilligungsdialoge auf dieser Domain ausblenden</string>
     <string name="privacy_cookie_banner_remove_unavailable">Nicht verfügbar, solange der Cookie-Banner-Schutz global aus oder der Website-Schutz pausiert ist</string>
     <string name="privacy_force_vertical_scrolling">Vertikales Scrollen erzwingen</string>
     <string name="privacy_force_vertical_scrolling_description">Scroll-Sperren der Seite auf dieser Domain überschreiben</string>
-    <string name="privacy_site_options_persistent_note">Für diese Domain und dieses Profil gespeichert. Änderungen laden die Seite neu.</string>
-    <string name="privacy_site_options_tab_note">Gilt nur für diesen privaten Tab. Änderungen laden die Seite neu.</string>
     <string name="privacy_site_protection">Schutz für diese Website</string>
     <string name="privacy_site_active">Aktiv</string>
     <string name="privacy_site_paused_temporary">Für diesen Tab pausiert</string>

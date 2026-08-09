@@ -252,15 +252,12 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
-    fun webContentEdgeToEdgeDefaultsOffAndRoundTrips() {
-        val store = BrowserSessionStore(context)
-        assertFalse(store.loadWebContentEdgeToEdgeEnabled())
+    fun legacyWebContentEdgeToEdgePreferenceIsRemoved() {
+        preferences.edit().putBoolean("web_content_edge_to_edge", true).commit()
 
-        store.saveWebContentEdgeToEdgeEnabled(true)
-        assertEquals(true, store.loadWebContentEdgeToEdgeEnabled())
+        BrowserSessionStore(context).clearLegacyWebContentEdgeToEdgePreference()
 
-        store.saveWebContentEdgeToEdgeEnabled(false)
-        assertFalse(store.loadWebContentEdgeToEdgeEnabled())
+        assertFalse(preferences.contains("web_content_edge_to_edge"))
     }
 
     @Test

@@ -58,11 +58,21 @@ class BrowserScrollInstrumentedTest {
             awaitProbe(webView)
             awaitMaximumScrollY(webView)
 
+            val initialRequestCount = scenario.readActivity { activity ->
+                activity.browserControllerForTesting().previewCaptureRequestCountForTesting
+            }
             val initialCapture = CountDownLatch(1)
             scenario.onActivity { activity ->
                 activity.browserControllerForTesting().prepareTabOverview(initialCapture::countDown)
             }
             assertTrue("Initial preview capture timed out", initialCapture.await(5, TimeUnit.SECONDS))
+            assertTrue(
+                "Opening tab overview did not request a preview capture",
+                scenario.readActivity { activity ->
+                    activity.browserControllerForTesting().previewCaptureRequestCountForTesting ==
+                        initialRequestCount + 1
+                },
+            )
 
             scenario.onActivity { activity ->
                 activity.browserControllerForTesting().previews.remove(testTabId)
@@ -72,19 +82,22 @@ class BrowserScrollInstrumentedTest {
             assertTrue(
                 "Scrolling unexpectedly scheduled a preview capture",
                 scenario.readActivity { activity ->
-                    activity.browserControllerForTesting().previews[testTabId] == null
+                    activity.browserControllerForTesting().previewCaptureRequestCountForTesting ==
+                        initialRequestCount + 1
                 },
             )
 
+            val overviewRequestCount = initialRequestCount + 1
             val overviewCapture = CountDownLatch(1)
             scenario.onActivity { activity ->
                 activity.browserControllerForTesting().prepareTabOverview(overviewCapture::countDown)
             }
             assertTrue("Overview preview capture timed out", overviewCapture.await(5, TimeUnit.SECONDS))
             assertTrue(
-                "Opening tab overview did not refresh the preview",
+                "Opening tab overview did not request a fresh preview",
                 scenario.readActivity { activity ->
-                    activity.browserControllerForTesting().previews[testTabId] != null
+                    activity.browserControllerForTesting().previewCaptureRequestCountForTesting ==
+                        overviewRequestCount + 1
                 },
             )
 

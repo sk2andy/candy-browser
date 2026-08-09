@@ -207,8 +207,6 @@
     <string name="settings_default_browser">Navigateur par défaut</string>
     <string name="settings_default_browser_active">Candy Browser est votre navigateur par défaut</string>
     <string name="settings_make_default_browser">Définir Candy Browser comme navigateur par défaut</string>
-    <string name="settings_edge_to_edge_title">Sites web bord à bord</string>
-    <string name="settings_edge_to_edge_subtitle">Autorise le contenu des sites compatibles sous les barres système. Désactivez cette option si des commandes chevauchent la barre d’état ou la découpe de l’appareil photo.</string>
     <string name="settings_section_gestures">Gestes</string>
     <string name="settings_tab_button_title">Afficher le bouton des onglets</string>
     <string name="settings_tab_button_subtitle">Affiche le compteur en plus du balayage vers le haut.</string>
@@ -307,14 +305,11 @@
     <string name="privacy_policy_allowed">Autorisés par la règle</string>
     <string name="privacy_policy_off">Désactivée</string>
     <string name="privacy_policy_disclaimer">L’état reflète les règles locales actuelles de Candy, pas des cookies observés ni une garantie de sécurité.</string>
-    <string name="privacy_site_options">Options pour %1$s</string>
     <string name="privacy_cookie_banner_remove">Supprimer les bandeaux de cookies</string>
     <string name="privacy_cookie_banner_remove_description">Masque les dialogues de consentement connus sur ce domaine</string>
     <string name="privacy_cookie_banner_remove_unavailable">Indisponible si la protection globale est désactivée ou si la protection du site est en pause</string>
     <string name="privacy_force_vertical_scrolling">Forcer le défilement vertical</string>
     <string name="privacy_force_vertical_scrolling_description">Remplace les verrouillages de défilement sur ce domaine</string>
-    <string name="privacy_site_options_persistent_note">Enregistré pour ce domaine et ce profil. Les modifications rechargent la page.</string>
-    <string name="privacy_site_options_tab_note">S’applique uniquement à cet onglet privé. Les modifications rechargent la page.</string>
     <string name="privacy_site_protection">Protection de ce site</string>
     <string name="privacy_site_active">Active</string>
     <string name="privacy_site_paused_temporary">Suspendue pour cet onglet</string>

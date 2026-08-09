@@ -10,16 +10,23 @@ internal object TabSwitchPreviewLayoutRules {
         rootHeightPx: Float,
         previewTopInsetPx: Int,
         bottomBarTopPx: Float,
+        capturedHeightPx: Float? = null,
     ): TabSwitchPreviewLayout {
         val rootHeight = rootHeightPx.coerceAtLeast(0f)
         val topInset = previewTopInsetPx.toFloat().coerceIn(0f, rootHeight)
-        val bottom = bottomBarTopPx
-            .takeIf(Float::isFinite)
-            ?.coerceIn(topInset, rootHeight)
-            ?: rootHeight
+        val visibleHeight = capturedHeightPx
+            ?.takeIf { it.isFinite() && it > 0f }
+            ?.coerceAtMost(rootHeight - topInset)
+            ?: run {
+                val bottom = bottomBarTopPx
+                    .takeIf(Float::isFinite)
+                    ?.coerceIn(topInset, rootHeight)
+                    ?: rootHeight
+                bottom - topInset
+            }
         return TabSwitchPreviewLayout(
             topInsetPx = topInset,
-            visibleHeightPx = bottom - topInset,
+            visibleHeightPx = visibleHeight,
         )
     }
 }

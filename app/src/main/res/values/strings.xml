@@ -215,8 +215,6 @@
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>
-    <string name="settings_edge_to_edge_title">Edge-to-edge websites</string>
-    <string name="settings_edge_to_edge_subtitle">Draw compatible websites behind system bars. Turn off if page controls overlap the status bar or camera cutout.</string>
     <string name="settings_section_gestures">Gestures</string>
     <string name="settings_tab_button_title">Show tab button</string>
     <string name="settings_tab_button_subtitle">Shows the tab counter in addition to the swipe-up gesture.</string>
@@ -368,14 +366,11 @@
     <string name="privacy_policy_allowed">Allowed by policy</string>
     <string name="privacy_policy_off">Off</string>
     <string name="privacy_policy_disclaimer">Status reflects Candy’s current local policy, not observed cookies or a security guarantee.</string>
-    <string name="privacy_site_options">Options for %1$s</string>
     <string name="privacy_cookie_banner_remove">Hide cookie banners</string>
     <string name="privacy_cookie_banner_remove_description">Hide known consent dialogs on this domain</string>
     <string name="privacy_cookie_banner_remove_unavailable">Unavailable while cookie-banner protection is globally off or site protection is paused</string>
     <string name="privacy_force_vertical_scrolling">Force vertical scrolling</string>
     <string name="privacy_force_vertical_scrolling_description">Override page scroll locks on this domain</string>
-    <string name="privacy_site_options_persistent_note">Saved for this domain and profile. Changes reload the page.</string>
-    <string name="privacy_site_options_tab_note">Applies only to this private tab. Changes reload the page.</string>
     <string name="privacy_site_protection">Protection for this site</string>
     <string name="privacy_site_active">Active</string>
     <string name="privacy_site_paused_temporary">Paused for this tab</string>

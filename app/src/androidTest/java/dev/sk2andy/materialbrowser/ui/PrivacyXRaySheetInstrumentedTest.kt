@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -25,7 +22,6 @@ import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -141,96 +137,6 @@ class PrivacyXRaySheetInstrumentedTest {
         composeRule.onNodeWithTag(PrivacyXRayTestTags.PauseTemporary).performClick()
 
         assertEquals(1, temporaryPauses.get())
-    }
-
-    @Test
-    fun domainOptionsReflectStateAndRouteBothChanges() {
-        val cookieChanges = AtomicInteger()
-        val scrollChanges = AtomicInteger()
-        composeRule.setContent {
-            MaterialBrowserTheme {
-                PrivacyXRayContent(
-                    snapshot = sampleSnapshot(),
-                    blockerSettings = BlockerSettings(),
-                    siteState = SiteProtectionState(
-                        host = "news.example",
-                        cookieBannerRemovalDisabled = true,
-                        forceVerticalScrolling = false,
-                        canPersist = true,
-                    ),
-                    onPauseClick = {},
-                    onResumeClick = {},
-                    onCookieBannerRemovalEnabledChange = { enabled ->
-                        if (enabled) cookieChanges.incrementAndGet()
-                    },
-                    onForceVerticalScrollingChange = { enabled ->
-                        if (enabled) scrollChanges.incrementAndGet()
-                    },
-                )
-            }
-        }
-
-        val siteOptionsTop = composeRule
-            .onNodeWithTag(PrivacyXRayTestTags.SiteOptionsTitle)
-            .fetchSemanticsNode()
-            .boundsInRoot
-            .top
-        val xRayTop = composeRule
-            .onNodeWithTag(PrivacyXRayTestTags.XRayTitle)
-            .fetchSemanticsNode()
-            .boundsInRoot
-            .top
-        val cookieToggleTop = composeRule
-            .onNodeWithTag(PrivacyXRayTestTags.CookieBannerRemoval)
-            .fetchSemanticsNode()
-            .boundsInRoot
-            .top
-        val scrollToggleTop = composeRule
-            .onNodeWithTag(PrivacyXRayTestTags.ForceVerticalScrolling)
-            .fetchSemanticsNode()
-            .boundsInRoot
-            .top
-        assertTrue(siteOptionsTop < cookieToggleTop)
-        assertTrue(cookieToggleTop < scrollToggleTop)
-        assertTrue(scrollToggleTop < xRayTop)
-
-        composeRule.onNodeWithTag(PrivacyXRayTestTags.CookieBannerRemoval)
-            .performScrollTo()
-            .assertIsEnabled()
-            .assertIsOff()
-            .performClick()
-        composeRule.onNodeWithTag(PrivacyXRayTestTags.ForceVerticalScrolling)
-            .performScrollTo()
-            .assertIsEnabled()
-            .assertIsOff()
-            .performClick()
-
-        assertEquals(1, cookieChanges.get())
-        assertEquals(1, scrollChanges.get())
-    }
-
-    @Test
-    fun cookieDomainOptionIsDisabledWhenGlobalProtectionIsOff() {
-        composeRule.setContent {
-            MaterialBrowserTheme {
-                PrivacyXRayContent(
-                    snapshot = sampleSnapshot(),
-                    blockerSettings = BlockerSettings(hideCookieConsent = false),
-                    siteState = SiteProtectionState(host = "news.example"),
-                    onPauseClick = {},
-                    onResumeClick = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag(PrivacyXRayTestTags.CookieBannerRemoval)
-            .performScrollTo()
-            .assertIsNotEnabled()
-            .assertIsOff()
-        composeRule.onNodeWithTag(PrivacyXRayTestTags.ForceVerticalScrolling)
-            .performScrollTo()
-            .assertIsEnabled()
-            .assertIsOff()
     }
 
     private fun sampleSnapshot() = PrivacyXRaySnapshot(

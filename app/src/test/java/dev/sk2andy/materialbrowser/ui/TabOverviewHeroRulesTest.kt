@@ -104,10 +104,38 @@ class TabOverviewHeroRulesTest {
     }
 
     @Test
-    fun `coverflow preview reaches exact card content before handoff`() {
-        assertEquals(0f, TabOverviewHeroRules.coverflowPreviewAlpha(0.82f), 0f)
-        assertEquals(0.5f, TabOverviewHeroRules.coverflowPreviewAlpha(0.91f), 0.001f)
-        assertEquals(1f, TabOverviewHeroRules.coverflowPreviewAlpha(1f), 0f)
+    fun `coverflow preview uses one continuously moving frame`() {
+        val target = TabOverviewHeroRules.CoverflowPreviewLayout(
+            sourceTopPx = 300f,
+            sourceHeightPx = 1_200f,
+        )
+        assertEquals(
+            TabOverviewHeroRules.CoverflowPreviewLayout(72f, 2_000f),
+            TabOverviewHeroRules.coverflowPreviewFrame(72f, 2_000f, target, 0f),
+        )
+        assertEquals(
+            TabOverviewHeroRules.CoverflowPreviewLayout(186f, 1_600f),
+            TabOverviewHeroRules.coverflowPreviewFrame(72f, 2_000f, target, 0.5f),
+        )
+        assertEquals(
+            target,
+            TabOverviewHeroRules.coverflowPreviewFrame(72f, 2_000f, target, 1f),
+        )
+    }
+
+    @Test
+    fun `landscape coverflow keeps full oversized source frame`() {
+        val target = TabOverviewHeroRules.coverflowPreviewLayout(
+            rootWidthPx = 2_400f,
+            rootHeightPx = 1_080f,
+            targetWidthPx = 600f,
+            targetHeightPx = 1_000f,
+            cropTopFraction = 0.25f,
+        )
+
+        assertEquals(4_000f, target.sourceHeightPx, 0f)
+        assertEquals(-730f, target.sourceTopPx, 0f)
+        assertTrue(target.sourceTopPx + target.sourceHeightPx >= 1_080f)
     }
 
     @Test

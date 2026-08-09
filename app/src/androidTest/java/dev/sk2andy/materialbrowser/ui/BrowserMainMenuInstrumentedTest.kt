@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
@@ -15,6 +17,7 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -33,12 +36,16 @@ class BrowserMainMenuInstrumentedTest {
     @Test
     fun usesApprovedGroupsAndDismissesAfterAction() {
         val dismissals = AtomicInteger()
-        val snoozedTabOpens = AtomicInteger()
+        val dockActions = AtomicInteger()
+        val cookieChanges = AtomicInteger()
+        val scrollChanges = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             MaterialBrowserTheme {
                 var expanded by remember { mutableStateOf(true) }
+                var cookieRemovalEnabled by remember { mutableStateOf(false) }
+                var forceVerticalScrolling by remember { mutableStateOf(false) }
                 Box {
                     BrowserMainMenu(
                         expanded = expanded,
@@ -56,6 +63,10 @@ class BrowserMainMenuInstrumentedTest {
                         canOpenReader = true,
                         canToggleDomainMute = true,
                         isDomainMuted = false,
+                        canToggleCookieBannerRemoval = true,
+                        isCookieBannerRemovalEnabled = cookieRemovalEnabled,
+                        canToggleForceVerticalScrolling = true,
+                        isForceVerticalScrollingEnabled = forceVerticalScrolling,
                         canAddSiteCapsule = true,
                         canSnooze = true,
                         snoozedTabCount = 2,
@@ -68,11 +79,20 @@ class BrowserMainMenuInstrumentedTest {
                         onPrint = {},
                         onOpenReader = {},
                         onDomainMutedChange = {},
+                        onCookieBannerRemovalEnabledChange = { enabled ->
+                            cookieChanges.incrementAndGet()
+                            cookieRemovalEnabled = enabled
+                        },
+                        onForceVerticalScrollingChange = { enabled ->
+                            scrollChanges.incrementAndGet()
+                            forceVerticalScrolling = enabled
+                        },
                         onOpenCandyTrail = {},
                         onAddSiteCapsule = {},
                         onSummarize = {},
                         onSnooze = {},
-                        onSnoozedTabs = snoozedTabOpens::incrementAndGet,
+                        onSnoozedTabs = {},
+                        onDockAddressBar = dockActions::incrementAndGet,
                         onSettings = {},
                     )
                 }
@@ -88,6 +108,8 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasText(context.getString(R.string.action_share))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_open_in_app))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_print))) and
+                hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.CookieBannerRemoval)) and
+                hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForceVerticalScrolling)) and
                 hasAnyDescendant(hasTestTag(DomainMuteMenuTestTags.Item)),
         ).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.action_mute_domain)).assertExists()
@@ -108,28 +130,46 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNode(
             hasTestTag(BrowserMainMenuTestTags.BrowserGroup) and
                 hasAnyDescendant(hasText(context.getString(R.string.snoozed_tabs_title))) and
+                hasAnyDescendant(hasText(context.getString(R.string.action_dock_address_bar))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_settings))),
         ).assertExists()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.BrowserGroup)
             .onChildren()
-            .assertCountEquals(2)
-        composeRule.onNodeWithText(
-            context.getString(R.string.snoozed_tabs_title),
-        ).performClick()
+            .assertCountEquals(3)
+
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
+            .performScrollTo()
+            .assertIsOff()
+            .performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval).assertIsOn()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling)
+            .performScrollTo()
+            .assertIsOff()
+            .performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling).assertIsOn()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
+        assertEquals(1, cookieChanges.get())
+        assertEquals(1, scrollChanges.get())
+
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DockAddressBar)
+            .performScrollTo()
+            .performClick()
 
         assertEquals(1, dismissals.get())
-        assertEquals(1, snoozedTabOpens.get())
+        assertEquals(1, dockActions.get())
         composeRule.mainClock.advanceTimeBy(
             BrowserMainMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L,
         )
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
-        assertEquals(1, snoozedTabOpens.get())
+        assertEquals(1, dockActions.get())
         composeRule.mainClock.advanceTimeBy(
             BrowserMainMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L + 32L,
         )
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
-        assertEquals(1, snoozedTabOpens.get())
+        assertEquals(1, dockActions.get())
     }
 
     @Test
@@ -150,6 +190,10 @@ class BrowserMainMenuInstrumentedTest {
                     canOpenReader = false,
                     canToggleDomainMute = false,
                     isDomainMuted = false,
+                    canToggleCookieBannerRemoval = false,
+                    isCookieBannerRemovalEnabled = false,
+                    canToggleForceVerticalScrolling = false,
+                    isForceVerticalScrollingEnabled = false,
                     canAddSiteCapsule = false,
                     canSnooze = false,
                     snoozedTabCount = 0,
@@ -162,11 +206,14 @@ class BrowserMainMenuInstrumentedTest {
                     onPrint = {},
                     onOpenReader = {},
                     onDomainMutedChange = {},
+                    onCookieBannerRemovalEnabledChange = {},
+                    onForceVerticalScrollingChange = {},
                     onOpenCandyTrail = {},
                     onAddSiteCapsule = {},
                     onSummarize = {},
                     onSnooze = {},
                     onSnoozedTabs = {},
+                    onDockAddressBar = {},
                     onSettings = {},
                 )
             }
@@ -175,5 +222,9 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.reader_open_action),
         ).assertIsNotEnabled()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
+            .assertDoesNotExist()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling)
+            .assertDoesNotExist()
     }
 }

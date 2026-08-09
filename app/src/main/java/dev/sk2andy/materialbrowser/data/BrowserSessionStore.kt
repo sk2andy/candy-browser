@@ -416,11 +416,8 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_TAB_BUTTON_VISIBLE, visible).apply()
     }
 
-    fun loadWebContentEdgeToEdgeEnabled(): Boolean =
-        preferences.getBoolean(KEY_WEB_CONTENT_EDGE_TO_EDGE, false)
-
-    fun saveWebContentEdgeToEdgeEnabled(enabled: Boolean) {
-        preferences.edit().putBoolean(KEY_WEB_CONTENT_EDGE_TO_EDGE, enabled).apply()
+    fun clearLegacyWebContentEdgeToEdgePreference() {
+        preferences.edit().remove(KEY_WEB_CONTENT_EDGE_TO_EDGE).apply()
     }
 
     private fun <T> loadArray(key: String, read: (JSONObject) -> T): List<T> {

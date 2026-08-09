@@ -72,6 +72,10 @@ private data class BrowserMainMenuPresentation(
     val canOpenReader: Boolean,
     val canToggleDomainMute: Boolean,
     val isDomainMuted: Boolean,
+    val canToggleCookieBannerRemoval: Boolean,
+    val isCookieBannerRemovalEnabled: Boolean,
+    val canToggleForceVerticalScrolling: Boolean,
+    val isForceVerticalScrollingEnabled: Boolean,
     val canAddSiteCapsule: Boolean,
     val canSnooze: Boolean,
 )
@@ -90,6 +94,10 @@ internal fun BrowserMainMenu(
     canOpenReader: Boolean,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
+    canToggleCookieBannerRemoval: Boolean,
+    isCookieBannerRemovalEnabled: Boolean,
+    canToggleForceVerticalScrolling: Boolean,
+    isForceVerticalScrollingEnabled: Boolean,
     canAddSiteCapsule: Boolean,
     canSnooze: Boolean,
     snoozedTabCount: Int,
@@ -102,11 +110,14 @@ internal fun BrowserMainMenu(
     onPrint: () -> Unit,
     onOpenReader: () -> Unit,
     onDomainMutedChange: (Boolean) -> Unit,
+    onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
+    onForceVerticalScrollingChange: (Boolean) -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     onSummarize: () -> Unit,
     onSnooze: () -> Unit,
     onSnoozedTabs: () -> Unit,
+    onDockAddressBar: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -138,6 +149,10 @@ internal fun BrowserMainMenu(
         canOpenReader = canOpenReader,
         canToggleDomainMute = canToggleDomainMute,
         isDomainMuted = isDomainMuted,
+        canToggleCookieBannerRemoval = canToggleCookieBannerRemoval,
+        isCookieBannerRemovalEnabled = isCookieBannerRemovalEnabled,
+        canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
+        isForceVerticalScrollingEnabled = isForceVerticalScrollingEnabled,
         canAddSiteCapsule = canAddSiteCapsule,
         canSnooze = canSnooze,
     )
@@ -321,6 +336,38 @@ internal fun BrowserMainMenu(
                     shape = innerCorners,
                     onClick = { dismissThen(onPrint) },
                 )
+                if (presentation.canToggleForceVerticalScrolling) {
+                    BrowserMenuToggleItem(
+                        label = stringResource(R.string.privacy_cookie_banner_remove),
+                        supportingText = stringResource(
+                            if (presentation.canToggleCookieBannerRemoval) {
+                                R.string.privacy_cookie_banner_remove_description
+                            } else {
+                                R.string.privacy_cookie_banner_remove_unavailable
+                            },
+                        ),
+                        checked = presentation.isCookieBannerRemovalEnabled,
+                        enabled = presentation.canToggleCookieBannerRemoval,
+                        onCheckedChange = onCookieBannerRemovalEnabledChange,
+                        modifier = Modifier.testTag(
+                            BrowserMainMenuTestTags.CookieBannerRemoval,
+                        ),
+                        shape = innerCorners,
+                    )
+                    BrowserMenuToggleItem(
+                        label = stringResource(R.string.privacy_force_vertical_scrolling),
+                        supportingText = stringResource(
+                            R.string.privacy_force_vertical_scrolling_description,
+                        ),
+                        checked = presentation.isForceVerticalScrollingEnabled,
+                        enabled = true,
+                        onCheckedChange = onForceVerticalScrollingChange,
+                        modifier = Modifier.testTag(
+                            BrowserMainMenuTestTags.ForceVerticalScrolling,
+                        ),
+                        shape = innerCorners,
+                    )
+                }
                 DomainMuteMenuItem(
                     enabled = presentation.canToggleDomainMute,
                     muted = presentation.isDomainMuted,
@@ -391,9 +438,16 @@ internal fun BrowserMainMenu(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 MenuRow(
+                    label = stringResource(R.string.action_dock_address_bar),
+                    iconRes = R.drawable.ic_symbol_chevron_right,
+                    shape = firstItemShape,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.DockAddressBar),
+                    onClick = { dismissThen(onDockAddressBar) },
+                )
+                MenuRow(
                     label = stringResource(R.string.snoozed_tabs_title),
                     iconRes = R.drawable.ic_snooze,
-                    shape = firstItemShape,
+                    shape = innerCorners,
                     modifier = Modifier.testTag(BrowserMainMenuTestTags.SnoozedTabs),
                     supportingText = if (snoozedTabCount == 0) {
                         stringResource(R.string.snoozed_tabs_settings_summary)
@@ -761,6 +815,60 @@ internal fun MenuRow(
 }
 
 @Composable
+internal fun BrowserMenuToggleItem(
+    label: String,
+    supportingText: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.medium,
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .semantics(mergeDescendants = true) {}
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            ),
+        shape = shape,
+        color = colors.surfaceContainer,
+        contentColor = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = supportingText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f),
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
+                enabled = enabled,
+            )
+        }
+    }
+}
+
+@Composable
 internal fun DomainMuteMenuItem(
     enabled: Boolean,
     muted: Boolean,
@@ -819,6 +927,9 @@ internal object BrowserMainMenuTestTags {
     const val Settings = "browser_main_menu_settings"
     const val Snooze = "browser_main_menu_snooze"
     const val SnoozedTabs = "browser_main_menu_snoozed_tabs"
+    const val DockAddressBar = "browser_main_menu_dock_address_bar"
+    const val CookieBannerRemoval = "browser_main_menu_cookie_banner_removal"
+    const val ForceVerticalScrolling = "browser_main_menu_force_vertical_scrolling"
 }
 
 internal object TabActionsMenuTestTags {
