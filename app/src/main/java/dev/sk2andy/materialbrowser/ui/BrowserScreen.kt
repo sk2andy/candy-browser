@@ -5981,16 +5981,6 @@ private fun TabListHeroContent(
             color = MaterialTheme.colorScheme.primaryContainer,
         ) {
             Box(Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .width(4.dp)
-                        .height(36.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primary,
-                            RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp),
-                        ),
-                )
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
@@ -6741,18 +6731,6 @@ private fun CompactListTabItem(
         shadowElevation = 0.dp,
     ) {
         Box(Modifier.fillMaxSize()) {
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .width(4.dp)
-                        .height(36.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primary,
-                            RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp),
-                        ),
-                )
-            }
             Row(
                 modifier = Modifier
                     .fillMaxSize()
