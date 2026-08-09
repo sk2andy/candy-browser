@@ -35,6 +35,10 @@
     <string name="action_forward">Vor</string>
     <string name="new_tab_title">Neuer Tab</string>
     <string name="cd_new_tab">Neuer Tab</string>
+    <plurals name="cd_open_tab_overview_count">
+        <item quantity="one">Tab-Übersicht öffnen, %1$d Tab</item>
+        <item quantity="other">Tab-Übersicht öffnen, %1$d Tabs</item>
+    </plurals>
     <string name="cd_close_tab_overview">Tab-Übersicht schließen</string>
     <string name="cd_close_tab">Tab schließen</string>
     <string name="cd_close_named_tab">%1$s schließen</string>
@@ -208,6 +212,8 @@
     <string name="settings_edge_to_edge_title">Randlose Webseiten</string>
     <string name="settings_edge_to_edge_subtitle">Zeigt kompatible Webseiten hinter Systemleisten. Ausschalten, wenn Bedienelemente mit Statusleiste oder Kameraausschnitt überlappen.</string>
     <string name="settings_section_gestures">Gesten</string>
+    <string name="settings_tab_button_title">Tab-Schaltfläche anzeigen</string>
+    <string name="settings_tab_button_subtitle">Zeigt den Tab-Zähler zusätzlich zur Wischgeste nach oben.</string>
     <string name="settings_tab_dismiss_resistance">Widerstand beim Schließen von Tabs</string>
     <string name="settings_tab_dismiss_resistance_summary">Widerstandsphase: %1$d%% des Schließwegs</string>
     <string name="settings_section_protection">Schutz &amp; Cookies</string>

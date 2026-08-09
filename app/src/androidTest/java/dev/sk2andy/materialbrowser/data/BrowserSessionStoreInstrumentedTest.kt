@@ -11,6 +11,7 @@ import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -236,6 +237,18 @@ class BrowserSessionStoreInstrumentedTest {
 
         store.saveAddressBarDocked(false)
         assertFalse(store.loadAddressBarDocked())
+    }
+
+    @Test
+    fun tabButtonPreferenceDefaultsVisibleAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertTrue(store.loadTabButtonVisible())
+
+        store.saveTabButtonVisible(false)
+        assertFalse(store.loadTabButtonVisible())
+
+        store.saveTabButtonVisible(true)
+        assertTrue(store.loadTabButtonVisible())
     }
 
     @Test

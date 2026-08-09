@@ -22,3 +22,13 @@ internal object AddressBarPresentationRules {
     }
 }
 
+internal object AddressBarControlRules {
+    fun tabCountLabel(tabCount: Int): String =
+        if (tabCount > 99) "∞" else tabCount.coerceAtLeast(0).toString()
+
+    fun editorUsesFullWidth(
+        editing: Boolean,
+        addressFieldFocused: Boolean,
+        imeVisible: Boolean,
+    ): Boolean = editing && addressFieldFocused && imeVisible
+}

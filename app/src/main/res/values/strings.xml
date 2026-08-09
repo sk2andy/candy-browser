@@ -39,6 +39,10 @@
     <!-- Tabs -->
     <string name="new_tab_title">New tab</string>
     <string name="cd_new_tab">New tab</string>
+    <plurals name="cd_open_tab_overview_count">
+        <item quantity="one">Open tab overview, %1$d tab</item>
+        <item quantity="other">Open tab overview, %1$d tabs</item>
+    </plurals>
     <string name="cd_close_tab_overview">Close tab overview</string>
     <string name="cd_close_tab">Close tab</string>
     <string name="cd_close_named_tab">Close %1$s</string>
@@ -218,6 +222,8 @@
     <string name="settings_edge_to_edge_title">Edge-to-edge websites</string>
     <string name="settings_edge_to_edge_subtitle">Draw compatible websites behind system bars. Turn off if page controls overlap the status bar or camera cutout.</string>
     <string name="settings_section_gestures">Gestures</string>
+    <string name="settings_tab_button_title">Show tab button</string>
+    <string name="settings_tab_button_subtitle">Shows the tab counter in addition to the swipe-up gesture.</string>
     <string name="settings_tab_dismiss_resistance">Tab dismissal resistance</string>
     <string name="settings_tab_dismiss_resistance_summary">Resistance phase: %1$d%% of the closing distance</string>
     <string name="settings_section_protection">Protection &amp; cookies</string>

@@ -1,4 +1,8 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@file:OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalFoundationApi::class,
+    ExperimentalLayoutApi::class,
+)
 
 package dev.sk2andy.materialbrowser.ui
 
@@ -22,8 +26,10 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -60,6 +66,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -71,6 +78,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -174,6 +182,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -1035,6 +1044,8 @@ fun BrowserScreen(controller: BrowserController) {
             compact = controller.isBottomBarCompact && !linkPeekAddressBarExpanded,
             docked = controller.isAddressBarDocked && !linkPeekAddressBarExpanded,
             editing = addressEditorVisible,
+            showTabButton = controller.isTabButtonVisible,
+            tabCount = controller.activeTabs.size,
             commandFeedback = commandFeedback,
             feedbackGesturesEnabled = !addressEditorVisible && !settingsVisible,
             onBack = controller::goBack,
@@ -1433,6 +1444,7 @@ fun BrowserScreen(controller: BrowserController) {
                 searchSuggestionProvider = controller.searchSuggestionProvider,
                 tabOverviewMode = controller.tabOverviewMode,
                 dismissResistancePercent = controller.dismissResistancePercent,
+                isTabButtonVisible = controller.isTabButtonVisible,
                 isWebContentEdgeToEdgeEnabled = controller.isWebContentEdgeToEdgeEnabled,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
@@ -1443,6 +1455,7 @@ fun BrowserScreen(controller: BrowserController) {
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
+                onTabButtonVisibleChanged = controller::updateTabButtonVisible,
                 onWebContentEdgeToEdgeChanged = controller::updateWebContentEdgeToEdgeEnabled,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
@@ -2664,6 +2677,8 @@ private fun BrowserBottomBar(
     compact: Boolean,
     docked: Boolean,
     editing: Boolean,
+    showTabButton: Boolean,
+    tabCount: Int,
     commandFeedback: AddressCommandFeedback?,
     feedbackGesturesEnabled: Boolean,
     onBack: () -> Unit,
@@ -2935,6 +2950,8 @@ private fun BrowserBottomBar(
                             }
                             AddressBarPresentation.Expanded -> ExpandedBottomBarContent(
                                 tab = tab,
+                                showTabButton = showTabButton,
+                                tabCount = tabCount,
                                 menuExpanded = menuExpanded,
                                 onMenuExpandedChange = { menuExpanded = it },
                                 onBack = onBack,
@@ -3327,6 +3344,8 @@ internal fun Modifier.addressBarVerticalGesture(
 @Composable
 private fun ExpandedBottomBarContent(
     tab: BrowserTab,
+    showTabButton: Boolean,
+    tabCount: Int,
     menuExpanded: Boolean,
     onMenuExpandedChange: (Boolean) -> Unit,
     onBack: () -> Unit,
@@ -3383,6 +3402,15 @@ private fun ExpandedBottomBarContent(
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
     val keyboard = LocalSoftwareKeyboardController.current
+    var addressFieldFocused by remember(tab.id) { mutableStateOf(false) }
+    val editorUsesFullWidth = AddressBarControlRules.editorUsesFullWidth(
+        editing = editing,
+        addressFieldFocused = addressFieldFocused,
+        imeVisible = WindowInsets.isImeVisible,
+    )
+    LaunchedEffect(editorUsesFullWidth) {
+        if (editorUsesFullWidth) onMenuExpandedChange(false)
+    }
     LaunchedEffect(requestAddressFocus, tab.id, addressFocusNonce) {
         if (requestAddressFocus) {
             withFrameNanos { }
@@ -3395,6 +3423,16 @@ private fun ExpandedBottomBarContent(
                 modifier = Modifier.padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+            AnimatedVisibility(
+                visible = showTabButton && !editorUsesFullWidth,
+                enter = fadeIn(tween(120)) + expandHorizontally(tween(180)),
+                exit = fadeOut(tween(80)) + shrinkHorizontally(tween(180)),
+            ) {
+                AddressBarTabCounterButton(
+                    tabCount = tabCount,
+                    onClick = onTabs,
+                )
+            }
             Surface(
                 modifier = Modifier
                     .weight(1f)
@@ -3471,7 +3509,8 @@ private fun ExpandedBottomBarContent(
                                         else -> false
                                     }
                                 }
-                                .focusRequester(focusRequester),
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { addressFieldFocused = it.isFocused },
                             singleLine = true,
                             textStyle = MaterialTheme.typography.bodyLarge.copy(
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -3573,87 +3612,142 @@ private fun ExpandedBottomBarContent(
                     }
                 }
             }
-            if (editing && tab.url == BLANK_URL) {
-                Spacer(Modifier.width(8.dp))
-                BlankTabIncognitoModeButton(
-                    enabled = tab.isIncognito,
-                    progress = blankTabModeProgress,
-                    onCenterChanged = onIncognitoControlCenterChanged,
-                    onClick = onToggleIncognito,
-                )
-            } else {
-                IconButton(
-                    onClick = onNewTab,
-                    modifier = Modifier
-                        .onGloballyPositioned { coordinates ->
-                            onNewTabButtonBounds(coordinates.boundsInRoot())
-                        }
-                        .graphicsLayer {
-                            scaleX = newTabPulseScale
-                            scaleY = newTabPulseScale
-                        }
-                        .testTag("address_bar_new_tab_button"),
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_new_tab))
-                }
-            }
-            if (editing && tab.url == BLANK_URL) {
-                IconButton(onClick = onScanQrCode) {
-                    Icon(
-                        painterResource(R.drawable.ic_qr_code_scanner),
-                        contentDescription = stringResource(R.string.cd_scan_qr_code),
-                    )
-                }
-            } else {
-                Box {
-                    IconButton(onClick = { onMenuExpandedChange(true) }) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.cd_more_options),
+            AnimatedVisibility(
+                visible = !editorUsesFullWidth,
+                enter = fadeIn(tween(120)) + expandHorizontally(tween(180)),
+                exit = fadeOut(tween(80)) + shrinkHorizontally(tween(180)),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (editing && tab.url == BLANK_URL) {
+                        Spacer(Modifier.width(8.dp))
+                        BlankTabIncognitoModeButton(
+                            enabled = tab.isIncognito,
+                            progress = blankTabModeProgress,
+                            onCenterChanged = onIncognitoControlCenterChanged,
+                            onClick = onToggleIncognito,
                         )
+                    } else {
+                        IconButton(
+                            onClick = onNewTab,
+                            modifier = Modifier
+                                .onGloballyPositioned { coordinates ->
+                                    onNewTabButtonBounds(coordinates.boundsInRoot())
+                                }
+                                .graphicsLayer {
+                                    scaleX = newTabPulseScale
+                                    scaleY = newTabPulseScale
+                                }
+                                .testTag("address_bar_new_tab_button"),
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = stringResource(R.string.cd_new_tab),
+                            )
+                        }
                     }
-                    BrowserMainMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { onMenuExpandedChange(false) },
-                        pageSubtitle = if (tab.url == BLANK_URL) {
-                            stringResource(R.string.new_tab_title)
-                        } else {
-                            AddressResolver.displayText(tab.url)
-                        },
-                        canGoBack = tab.canGoBack,
-                        canGoForward = tab.canGoForward,
-                        isLoading = tab.isLoading,
-                        canToggleFavorite = tab.url != BLANK_URL && !tab.isIncognito,
-                        isFavorite = isFavorite,
-                        canUsePageActions = tab.url != BLANK_URL,
-                        canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
-                        canToggleDomainMute = canToggleDomainMute,
-                        isDomainMuted = isDomainMuted,
-                        canAddSiteCapsule = tab.url != BLANK_URL &&
-                            !tab.isIncognito &&
-                            (tab.url.startsWith("https://") || tab.url.startsWith("http://")),
-                        canSnooze = !tab.isIncognito,
-                        snoozedTabCount = snoozedTabCount,
-                        onBack = onBack,
-                        onForward = onForward,
-                        onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
-                        onToggleFavorite = onToggleFavorite,
-                        onShare = onShare,
-                        onOpenExternal = onOpenExternal,
-                        onPrint = onPrint,
-                        onOpenReader = onReaderStudio,
-                        onDomainMutedChange = onDomainMutedChange,
-                        onOpenCandyTrail = onOpenCandyTrail,
-                        onAddSiteCapsule = onAddSiteCapsule,
-                        onSummarize = onSummarizeWithAssistant,
-                        onSnooze = onSnooze,
-                        onSnoozedTabs = onSnoozedTabs,
-                        onSettings = onSettings,
-                    )
+                    if (editing && tab.url == BLANK_URL) {
+                        IconButton(onClick = onScanQrCode) {
+                            Icon(
+                                painterResource(R.drawable.ic_qr_code_scanner),
+                                contentDescription = stringResource(R.string.cd_scan_qr_code),
+                            )
+                        }
+                    } else {
+                        Box {
+                            IconButton(onClick = { onMenuExpandedChange(true) }) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.cd_more_options),
+                                )
+                            }
+                            BrowserMainMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { onMenuExpandedChange(false) },
+                                pageSubtitle = if (tab.url == BLANK_URL) {
+                                    stringResource(R.string.new_tab_title)
+                                } else {
+                                    AddressResolver.displayText(tab.url)
+                                },
+                                canGoBack = tab.canGoBack,
+                                canGoForward = tab.canGoForward,
+                                isLoading = tab.isLoading,
+                                canToggleFavorite = tab.url != BLANK_URL && !tab.isIncognito,
+                                isFavorite = isFavorite,
+                                canUsePageActions = tab.url != BLANK_URL,
+                                canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
+                                canToggleDomainMute = canToggleDomainMute,
+                                isDomainMuted = isDomainMuted,
+                                canAddSiteCapsule = tab.url != BLANK_URL &&
+                                    !tab.isIncognito &&
+                                    (
+                                        tab.url.startsWith("https://") ||
+                                            tab.url.startsWith("http://")
+                                        ),
+                                canSnooze = !tab.isIncognito,
+                                snoozedTabCount = snoozedTabCount,
+                                onBack = onBack,
+                                onForward = onForward,
+                                onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
+                                onToggleFavorite = onToggleFavorite,
+                                onShare = onShare,
+                                onOpenExternal = onOpenExternal,
+                                onPrint = onPrint,
+                                onOpenReader = onReaderStudio,
+                                onDomainMutedChange = onDomainMutedChange,
+                                onOpenCandyTrail = onOpenCandyTrail,
+                                onAddSiteCapsule = onAddSiteCapsule,
+                                onSummarize = onSummarizeWithAssistant,
+                                onSnooze = onSnooze,
+                                onSnoozedTabs = onSnoozedTabs,
+                                onSettings = onSettings,
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+internal fun AddressBarTabCounterButton(
+    tabCount: Int,
+    onClick: () -> Unit,
+) {
+    val label = AddressBarControlRules.tabCountLabel(tabCount)
+    val description = pluralStringResource(
+        R.plurals.cd_open_tab_overview_count,
+        tabCount,
+        tabCount,
+    )
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .testTag(AddressBarTestTags.TabButton)
+            .semantics { contentDescription = description },
+    ) {
+        Box(
+            modifier = Modifier
+                .size(25.dp)
+                .border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    shape = RoundedCornerShape(6.dp),
+                )
+                .clearAndSetSemantics { },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+internal object AddressBarTestTags {
+    const val TabButton = "address_bar_tab_button"
 }
 
 @Composable
@@ -7289,6 +7383,7 @@ private fun SettingsScreen(
     searchSuggestionProvider: SearchSuggestionProvider,
     tabOverviewMode: TabOverviewMode,
     dismissResistancePercent: Int,
+    isTabButtonVisible: Boolean,
     isWebContentEdgeToEdgeEnabled: Boolean,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
@@ -7299,6 +7394,7 @@ private fun SettingsScreen(
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
+    onTabButtonVisibleChanged: (Boolean) -> Unit,
     onWebContentEdgeToEdgeChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
@@ -7488,6 +7584,13 @@ private fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
             Spacer(Modifier.height(8.dp))
+            SettingsSwitch(
+                title = stringResource(R.string.settings_tab_button_title),
+                subtitle = stringResource(R.string.settings_tab_button_subtitle),
+                checked = isTabButtonVisible,
+                onCheckedChange = onTabButtonVisibleChanged,
+            )
+            Spacer(Modifier.height(12.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),

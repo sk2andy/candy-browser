@@ -410,6 +410,12 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKED, docked).apply()
     }
 
+    fun loadTabButtonVisible(): Boolean = preferences.getBoolean(KEY_TAB_BUTTON_VISIBLE, true)
+
+    fun saveTabButtonVisible(visible: Boolean) {
+        preferences.edit().putBoolean(KEY_TAB_BUTTON_VISIBLE, visible).apply()
+    }
+
     fun loadWebContentEdgeToEdgeEnabled(): Boolean =
         preferences.getBoolean(KEY_WEB_CONTENT_EDGE_TO_EDGE, false)
 
@@ -454,6 +460,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
+        const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_WEB_CONTENT_EDGE_TO_EDGE = "web_content_edge_to_edge"
         const val DEFAULT_DISMISS_RESISTANCE_START_PERCENT = 40
         const val MIN_DISMISS_RESISTANCE_START_PERCENT = 10

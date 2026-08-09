@@ -234,6 +234,8 @@ class BrowserController(
         private set
     var isAddressBarDocked by mutableStateOf(false)
         private set
+    var isTabButtonVisible by mutableStateOf(true)
+        private set
     var isWebContentEdgeToEdgeEnabled by mutableStateOf(false)
         private set
     var isDefaultBrowser by mutableStateOf(false)
@@ -888,6 +890,7 @@ class BrowserController(
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
         isAddressBarDocked = store.loadAddressBarDocked()
+        isTabButtonVisible = store.loadTabButtonVisible()
         isWebContentEdgeToEdgeEnabled = store.loadWebContentEdgeToEdgeEnabled()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
@@ -2598,6 +2601,12 @@ class BrowserController(
         collapseBottomBar()
         isAddressBarDocked = docked
         store.saveAddressBarDocked(docked)
+    }
+
+    fun updateTabButtonVisible(visible: Boolean) {
+        if (isTabButtonVisible == visible) return
+        isTabButtonVisible = visible
+        store.saveTabButtonVisible(visible)
     }
 
     fun updateWebContentEdgeToEdgeEnabled(enabled: Boolean) {
