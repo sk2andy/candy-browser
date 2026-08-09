@@ -172,7 +172,6 @@
         <item quantity="other">%1$d doppelte Tabs schließen? Angepinnte Tabs und der aktuelle Tab bleiben offen.</item>
     </plurals>
     <string name="favorites_title">Favoriten</string>
-    <string name="favorites_empty">Noch keine Favoriten – über das ⋮-Menü hinzufügen.</string>
     <string name="content_actions_title">Seiteninhalt</string>
     <string name="action_open_link_background_tab">Link in neuem Hintergrund-Tab öffnen</string>
     <string name="link_peek_title">Link-Vorschau</string>

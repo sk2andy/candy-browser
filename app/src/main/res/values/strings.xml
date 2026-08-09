@@ -180,7 +180,6 @@
 
     <!-- Favorites and page content -->
     <string name="favorites_title">Favorites</string>
-    <string name="favorites_empty">No favorites yet — add them from the ⋮ menu.</string>
     <string name="content_actions_title">Page content</string>
     <string name="action_open_link_background_tab">Open link in new background tab</string>
     <string name="link_peek_title">Link Peek</string>
