@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser
 import android.Manifest
 import android.content.Intent
 import android.os.Bundle
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.ViewCompat
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
@@ -193,8 +195,22 @@ class MainActivity : ComponentActivity() {
         openIntent(intent)
     }
 
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        val hadWindowFocus = window.decorView.hasWindowFocus()
+        val focusedView = currentFocus
+        val handled = super.dispatchTouchEvent(event)
+        BrowserInputDiagnostics.activityDispatch(
+            event = event,
+            handled = handled,
+            hasWindowFocus = hadWindowFocus,
+            focusedView = focusedView,
+        )
+        return handled
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        BrowserInputDiagnostics.activityWindowFocus(hasFocus, currentFocus)
         if (hasFocus && ::browserController.isInitialized) {
             applyFullImmersiveMode(browserController.isFullImmersiveModeEnabled)
         }

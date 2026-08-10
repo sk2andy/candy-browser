@@ -3154,7 +3154,8 @@ class BrowserController(
         }
     }
 
-    private fun createWebView(tabId: String): WebView = WebView(activity).apply {
+    private fun createWebView(tabId: String): WebView = BrowserWebView(activity, tabId).apply {
+        BrowserInputDiagnostics.webViewCreated(tabId)
         val tab = tabs.first { it.id == tabId }
         val profileAssignment = profileAssignmentFor(tab)
         when (profileAssignment) {
@@ -3203,7 +3204,8 @@ class BrowserController(
         installForcedVerticalScrollDocumentStartScript(tabId, this)
         installCosmeticDocumentStartScripts(tabId, this, tab.url)
         setOnLongClickListener { clickedView ->
-            val webView = clickedView as? WebView ?: return@setOnLongClickListener false
+            val webView = clickedView as? BrowserWebView
+                ?: return@setOnLongClickListener false
             val hit = webView.hitTestResult
             if (!WebViewHitTestResolver.supports(hit.type)) {
                 return@setOnLongClickListener false
@@ -3222,6 +3224,7 @@ class BrowserController(
 
             val contentRevision = contentActions.revision
             val navigationGeneration = navigationGenerations[tabId]
+            val pointerSession = webView.pointerSessionSnapshot()
             val handler = Handler(Looper.getMainLooper()) { message ->
                 if (
                     !destroyed &&
@@ -3230,7 +3233,8 @@ class BrowserController(
                     selectedTabId == tabId &&
                     webViews[tabId] === webView &&
                     webView.isAttachedToWindow &&
-                    navigationGenerations[tabId] == navigationGeneration
+                    navigationGenerations[tabId] == navigationGeneration &&
+                    webView.acceptsPointerSession(pointerSession)
                 ) {
                     WebViewHitTestResolver.resolve(
                         hitType = hitType,

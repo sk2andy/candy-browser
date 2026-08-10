@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 
 internal object BrowserMainMenuMotion {
     const val EXIT_DURATION_MILLIS = 160
@@ -199,6 +200,9 @@ internal fun BrowserMainMenu(
             )
             popupVisible = false
         }
+    }
+    LaunchedEffect(expanded, popupVisible) {
+        BrowserInputDiagnostics.popupState(expanded, popupVisible)
     }
     fun dismissThen(action: () -> Unit) {
         if (!expanded || actionCommitted) return
