@@ -31,67 +31,41 @@ class TabPreviewCaptureRulesTest {
     }
 
     @Test
-    fun `same page keeps informative preview when protected surface turns black`() {
-        val previous = TabPreviewQuality(visualRange = 210, nearBlackFraction = 0.08f)
-        val protectedSurface = TabPreviewQuality(
-            visualRange = 240,
-            nearBlackFraction = 0.72f,
-        )
-
-        assertEquals(
-            false,
-            TabPreviewCaptureRules.shouldStore(
-                candidate = protectedSurface,
-                previous = previous,
-                isSamePage = true,
-            ),
-        )
-    }
-
-    @Test
-    fun `dark page remains valid when it is not a same page quality regression`() {
-        val restoredPreviewWithoutProvenance = TabPreviewQuality(
-            visualRange = 210,
-            nearBlackFraction = 0.08f,
-        )
-        val darkPage = TabPreviewQuality(visualRange = 180, nearBlackFraction = 0.72f)
-
+    fun `uniform black bitmap is recognized as failed capture`() {
         assertEquals(
             true,
-            TabPreviewCaptureRules.shouldStore(
-                candidate = darkPage,
-                previous = restoredPreviewWithoutProvenance,
-                isSamePage = false,
+            TabPreviewCaptureRules.isLikelyFailedCapture(
+                TabPreviewQuality(visualRange = 0, nearBlackFraction = 1f),
             ),
         )
     }
 
     @Test
-    fun `departure capture accepts a uniform light page`() {
-        val previous = TabPreviewQuality(visualRange = 210, nearBlackFraction = 0.08f)
-        val uniformLightPage = TabPreviewQuality(visualRange = 0, nearBlackFraction = 0f)
-
-        assertEquals(
-            true,
-            TabPreviewCaptureRules.shouldStoreDepartureCapture(
-                candidate = uniformLightPage,
-                previous = previous,
-                isSamePage = true,
-            ),
-        )
-    }
-
-    @Test
-    fun `departure capture rejects a newly black protected surface`() {
-        val previous = TabPreviewQuality(visualRange = 210, nearBlackFraction = 0.08f)
-        val protectedSurface = TabPreviewQuality(visualRange = 0, nearBlackFraction = 1f)
-
+    fun `dark page with visible content is not treated as failed capture`() {
         assertEquals(
             false,
-            TabPreviewCaptureRules.shouldStoreDepartureCapture(
-                candidate = protectedSurface,
-                previous = previous,
-                isSamePage = true,
+            TabPreviewCaptureRules.isLikelyFailedCapture(
+                TabPreviewQuality(visualRange = 120, nearBlackFraction = 0.98f),
+            ),
+        )
+    }
+
+    @Test
+    fun `black failed capture is never stored`() {
+        assertEquals(
+            false,
+            TabPreviewCaptureRules.shouldStorePixelCopy(
+                candidate = TabPreviewQuality(visualRange = 0, nearBlackFraction = 1f),
+            ),
+        )
+    }
+
+    @Test
+    fun `uniform light page remains a valid pixel copy`() {
+        assertEquals(
+            true,
+            TabPreviewCaptureRules.shouldStorePixelCopy(
+                candidate = TabPreviewQuality(visualRange = 0, nearBlackFraction = 0f),
             ),
         )
     }

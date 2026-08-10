@@ -621,14 +621,16 @@ fun BrowserScreen(controller: BrowserController) {
     }
     val openAddressEditor: () -> Unit = {
         if (activeCommandExecutionId == null) {
-            val initialAddress = selectedTab.url.takeUnless { it == BLANK_URL }.orEmpty()
-            addressValue = TextFieldValue(
-                text = initialAddress,
-                selection = TextRange(initialAddress.length, 0),
-            )
-            addressEditorVisible = true
-            highlightedSuggestionIndex = -1
-            addressFocusNonce++
+            controller.refreshSelectedTabPreview {
+                val initialAddress = selectedTab.url.takeUnless { it == BLANK_URL }.orEmpty()
+                addressValue = TextFieldValue(
+                    text = initialAddress,
+                    selection = TextRange(initialAddress.length, 0),
+                )
+                addressEditorVisible = true
+                highlightedSuggestionIndex = -1
+                addressFocusNonce++
+            }
         }
     }
     fun createTabAndConfirm(isIncognito: Boolean, emitHaptic: Boolean): Boolean {
@@ -639,11 +641,18 @@ fun BrowserScreen(controller: BrowserController) {
         return true
     }
     val openNewTabAndEdit: () -> Unit = {
-        if (createTabAndConfirm(isIncognito = false, emitHaptic = true)) {
-            addressValue = TextFieldValue()
-            addressEditorVisible = true
-            highlightedSuggestionIndex = -1
-            addressFocusNonce++
+        val createAndEdit = {
+            if (createTabAndConfirm(isIncognito = false, emitHaptic = true)) {
+                addressValue = TextFieldValue()
+                addressEditorVisible = true
+                highlightedSuggestionIndex = -1
+                addressFocusNonce++
+            }
+        }
+        if (addressEditorVisible || tabOverviewVisible) {
+            createAndEdit()
+        } else {
+            controller.refreshSelectedTabPreview(createAndEdit)
         }
     }
     LaunchedEffect(
@@ -1206,6 +1215,9 @@ fun BrowserScreen(controller: BrowserController) {
             onRestoreDock = { controller.updateAddressBarDocked(false) },
             onTabDrag = { delta ->
                 if (!addressEditorVisible && !tabOverviewVisible) {
+                    if (browserDragOffset.floatValue == 0f && delta != 0f) {
+                        controller.refreshSelectedTabPreviewBeforeDeparture()
+                    }
                     val proposed = browserDragOffset.floatValue + delta
                     val tabs = controller.activeTabs
                     val currentIndex = tabs.indexOfFirst { it.id == controller.selectedTabId }

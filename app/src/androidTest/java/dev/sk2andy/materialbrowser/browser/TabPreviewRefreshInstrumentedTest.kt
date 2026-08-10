@@ -43,11 +43,9 @@ class TabPreviewRefreshInstrumentedTest {
     }
 
     @Test
-    fun leavingTabRefreshesPreviewForCreateSelectAndPause() {
-        val sourceTabId = AtomicReference<String>()
-        val createdTabId = AtomicReference<String>()
-        val sourceWebView = AtomicReference<WebView>()
-        val createdWebView = AtomicReference<WebView>()
+    fun pixelCopyRefreshesPreviewBeforeActionsPauseAndDeparture() {
+        val tabId = AtomicReference<String>()
+        val webView = AtomicReference<WebView>()
         activityRule.scenario.onActivity { activity ->
             activity.getSharedPreferences(
                 BrowserSessionStore.PREFERENCES_NAME,
@@ -56,53 +54,39 @@ class TabPreviewRefreshInstrumentedTest {
             val controller = BrowserController(activity).also { this.controller = it }
             controller.onStart()
             controller.onResume()
-            sourceTabId.set(controller.selectedTabId)
-            sourceWebView.set(attachSelectedWebView(activity, controller))
-            loadPattern(sourceWebView.get(), "https://source.test/", initialPattern)
+            tabId.set(controller.selectedTabId)
+            webView.set(controller.selectedWebViewForTesting())
+            attachWebView(activity, webView.get())
+            loadPattern(webView.get(), "https://preview.test/", initialPattern)
         }
-        awaitPage(sourceWebView.get(), "https://source.test/")
-        seedStalePreview(sourceTabId.get())
-        updatePattern(sourceWebView.get(), createPattern)
+        awaitPage(webView.get(), "https://preview.test/")
+        seedStalePreview(tabId.get())
+        updatePattern(webView.get(), actionPattern)
 
+        val actionCapture = CountDownLatch(1)
         activityRule.scenario.onActivity {
-            createdTabId.set(requireNotNull(controller).createTab())
+            requireNotNull(controller).refreshSelectedTabPreview(actionCapture::countDown)
         }
-        assertPreviewContains(
-            sourceTabId.get(),
-            Color.rgb(255, 128, 0),
-            Color.rgb(128, 0, 255),
-        )
+        assertTrue(actionCapture.await(10, TimeUnit.SECONDS))
+        awaitPreviewColors(tabId.get(), Color.CYAN, Color.MAGENTA)
 
-        activityRule.scenario.onActivity { activity ->
-            val controller = requireNotNull(controller)
-            createdWebView.set(attachSelectedWebView(activity, controller))
-            loadPattern(createdWebView.get(), "https://created.test/", initialPattern)
-        }
-        awaitPage(createdWebView.get(), "https://created.test/")
-        seedStalePreview(createdTabId.get())
-        updatePattern(createdWebView.get(), selectPattern)
-
-        activityRule.scenario.onActivity {
-            requireNotNull(controller).selectTab(sourceTabId.get())
-        }
-        assertPreviewContains(createdTabId.get(), Color.CYAN, Color.MAGENTA)
-
-        activityRule.scenario.onActivity { activity ->
-            val controller = requireNotNull(controller)
-            attachWebView(activity, controller.selectedWebViewForTesting())
-        }
-        updatePattern(sourceWebView.get(), pausePattern)
-
+        updatePattern(webView.get(), pausePattern)
         activityRule.scenario.onActivity {
             requireNotNull(controller).onPause()
         }
-        assertPreviewContains(sourceTabId.get(), Color.RED)
-    }
+        awaitPreviewColors(tabId.get(), Color.GREEN, Color.YELLOW)
 
-    private fun attachSelectedWebView(
-        activity: ComponentActivity,
-        controller: BrowserController,
-    ): WebView = controller.selectedWebViewForTesting().also { attachWebView(activity, it) }
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).onResume()
+        }
+        updatePattern(webView.get(), solidPattern)
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).refreshSelectedTabPreviewBeforeDeparture {
+                requireNotNull(controller).createTab()
+            }
+        }
+        awaitPreviewColors(tabId.get(), solidColor)
+    }
 
     private fun attachWebView(activity: ComponentActivity, webView: WebView) {
         (webView.parent as? ViewGroup)?.removeView(webView)
@@ -160,6 +144,17 @@ class TabPreviewRefreshInstrumentedTest {
         }
     }
 
+    private fun updatePattern(webView: WebView, pattern: String) {
+        val latch = CountDownLatch(1)
+        instrumentation.runOnMainSync {
+            webView.evaluateJavascript(
+                "document.body.style.background = '$pattern'",
+            ) { latch.countDown() }
+        }
+        assertTrue(latch.await(10, TimeUnit.SECONDS))
+        awaitVisualState(webView)
+    }
+
     private fun awaitVisualState(webView: WebView) {
         val latch = CountDownLatch(1)
         instrumentation.runOnMainSync {
@@ -175,33 +170,27 @@ class TabPreviewRefreshInstrumentedTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS))
     }
 
-    private fun updatePattern(webView: WebView, pattern: String) {
-        val latch = CountDownLatch(1)
-        instrumentation.runOnMainSync {
-            webView.evaluateJavascript(
-                "document.body.style.background = '$pattern'",
-            ) { latch.countDown() }
+    private fun awaitPreviewColors(tabId: String, vararg expectedColors: Int) {
+        val deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(10)
+        while (SystemClock.uptimeMillis() < deadline) {
+            val preview = AtomicReference<Bitmap?>()
+            instrumentation.runOnMainSync {
+                preview.set(requireNotNull(controller).previews[tabId])
+            }
+            if (preview.get()?.containsColors(*expectedColors) == true) return
+            SystemClock.sleep(25)
         }
-        assertTrue(latch.await(10, TimeUnit.SECONDS))
-        awaitVisualState(webView)
-    }
-
-    private fun assertPreviewContains(tabId: String, vararg expectedColors: Int) {
         val preview = AtomicReference<Bitmap?>()
         instrumentation.runOnMainSync {
             preview.set(requireNotNull(controller).previews[tabId])
         }
-        val bitmap = preview.get()
-        assertNotNull(bitmap)
-        bitmap ?: return
-        val minimumPixels = bitmap.width * bitmap.height / 20
-        expectedColors.forEach { expected ->
-            val matchingPixels = bitmap.countPixelsNear(expected)
-            assertTrue(
-                "color=${Integer.toHexString(expected)} pixels=$matchingPixels",
-                matchingPixels >= minimumPixels,
-            )
-        }
+        assertNotNull(preview.get())
+        error("Preview did not contain expected colors")
+    }
+
+    private fun Bitmap.containsColors(vararg expectedColors: Int): Boolean {
+        val minimumPixels = width * height / 20
+        return expectedColors.all { expected -> countPixelsNear(expected) >= minimumPixels }
     }
 
     private fun Bitmap.countPixelsNear(expected: Int): Int {
@@ -226,8 +215,9 @@ class TabPreviewRefreshInstrumentedTest {
 
     private companion object {
         const val initialPattern = "linear-gradient(to bottom,#202020 0 50%,#d0d0d0 50% 100%)"
-        const val createPattern = "linear-gradient(to bottom,#ff8000 0 50%,#8000ff 50% 100%)"
-        const val selectPattern = "linear-gradient(to bottom,#00ffff 0 50%,#ff00ff 50% 100%)"
-        const val pausePattern = "#ff0000"
+        const val actionPattern = "linear-gradient(to bottom,#00ffff 0 50%,#ff00ff 50% 100%)"
+        const val pausePattern = "linear-gradient(to bottom,#00ff00 0 50%,#ffff00 50% 100%)"
+        const val solidPattern = "#1234ab"
+        val solidColor: Int = Color.rgb(0x12, 0x34, 0xab)
     }
 }
