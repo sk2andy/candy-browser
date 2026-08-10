@@ -1568,6 +1568,7 @@ fun BrowserScreen(controller: BrowserController) {
                 dismissResistancePercent = controller.dismissResistancePercent,
                 profilesEnabled = controller.profilesEnabled,
                 isTabButtonVisible = controller.isTabButtonVisible,
+                isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
                 siteCapsules = controller.siteCapsules.filter {
@@ -1581,6 +1582,8 @@ fun BrowserScreen(controller: BrowserController) {
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onProfilesEnabledChanged = controller::updateProfilesEnabled,
                 onTabButtonVisibleChanged = controller::updateTabButtonVisible,
+                onFullImmersiveModeEnabledChanged =
+                    controller::updateFullImmersiveModeEnabled,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
                     privacyXRayTabId = selectedTab.id
@@ -7354,6 +7357,7 @@ private fun SettingsScreen(
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
+    isFullImmersiveModeEnabled: Boolean,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
     siteCapsules: List<SiteCapsule>,
@@ -7365,6 +7369,7 @@ private fun SettingsScreen(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
+    onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
@@ -7600,6 +7605,13 @@ private fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
             SettingsSectionTitle(stringResource(R.string.settings_section_browser))
             Spacer(Modifier.height(8.dp))
+            SettingsSwitch(
+                title = stringResource(R.string.settings_full_immersive_mode_title),
+                subtitle = stringResource(R.string.settings_full_immersive_mode_subtitle),
+                checked = isFullImmersiveModeEnabled,
+                onCheckedChange = onFullImmersiveModeEnabledChanged,
+            )
+            Spacer(Modifier.height(12.dp))
             Surface(
                 onClick = onOpenDefaultBrowserSettings,
                 modifier = Modifier.fillMaxWidth(),

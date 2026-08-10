@@ -217,6 +217,7 @@ class BrowserController(
         activity.startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
     },
     private val requestSnoozeNotificationPermission: () -> Unit = {},
+    private val onFullImmersiveModeChanged: (Boolean) -> Unit = {},
 ) {
     val tabs = mutableStateListOf<BrowserTab>()
     val profiles = mutableStateListOf<BrowserProfile>()
@@ -254,6 +255,8 @@ class BrowserController(
     var isAddressBarDocked by mutableStateOf(false)
         private set
     var isTabButtonVisible by mutableStateOf(true)
+        private set
+    var isFullImmersiveModeEnabled by mutableStateOf(false)
         private set
     var isWebContentEdgeToEdgeEnabled by mutableStateOf(false)
         private set
@@ -911,6 +914,7 @@ class BrowserController(
         tabOverviewMode = store.loadTabOverviewMode()
         isAddressBarDocked = store.loadAddressBarDocked()
         isTabButtonVisible = store.loadTabButtonVisible()
+        isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         store.clearLegacyWebContentEdgeToEdgePreference()
         profilesEnabled = store.loadProfilesEnabled()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
@@ -2650,6 +2654,13 @@ class BrowserController(
         if (isTabButtonVisible == visible) return
         isTabButtonVisible = visible
         store.saveTabButtonVisible(visible)
+    }
+
+    fun updateFullImmersiveModeEnabled(enabled: Boolean) {
+        if (isFullImmersiveModeEnabled == enabled) return
+        isFullImmersiveModeEnabled = enabled
+        store.saveFullImmersiveModeEnabled(enabled)
+        onFullImmersiveModeChanged(enabled)
     }
 
     fun updateProfilesEnabled(enabled: Boolean) {

@@ -263,6 +263,18 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun fullImmersiveModeDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadFullImmersiveModeEnabled())
+
+        store.saveFullImmersiveModeEnabled(true)
+        assertTrue(store.loadFullImmersiveModeEnabled())
+
+        store.saveFullImmersiveModeEnabled(false)
+        assertFalse(store.loadFullImmersiveModeEnabled())
+    }
+
+    @Test
     fun legacyWebContentEdgeToEdgePreferenceIsRemoved() {
         preferences.edit().putBoolean("web_content_edge_to_edge", true).commit()
 

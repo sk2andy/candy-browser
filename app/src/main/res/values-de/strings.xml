@@ -203,6 +203,8 @@
     <string name="settings_search_suggestions_none_summary">Vorschläge bleiben lokal. Es wird kein eingegebener Text an einen Vorschlagsanbieter gesendet.</string>
     <string name="search_suggestion_provider_none">Keine</string>
     <string name="settings_section_browser">Browser</string>
+    <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>
+    <string name="settings_full_immersive_mode_subtitle">Blendet Status- und Navigationsleiste aus. Vom Bildschirmrand wischen, um sie kurz einzublenden.</string>
     <string name="settings_default_browser">Standardbrowser</string>
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>

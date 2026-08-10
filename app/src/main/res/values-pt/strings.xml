@@ -205,6 +205,8 @@
     <string name="settings_search_suggestions_none_summary">As sugestões permanecem locais. Nenhum texto introduzido é enviado a um fornecedor.</string>
     <string name="search_suggestion_provider_none">Nenhuma</string>
     <string name="settings_section_browser">Navegador</string>
+    <string name="settings_full_immersive_mode_title">Modo imersivo em ecrã inteiro</string>
+    <string name="settings_full_immersive_mode_subtitle">Oculta as barras de estado e navegação. Deslize a partir de uma margem para as mostrar temporariamente.</string>
     <string name="settings_default_browser">Navegador predefinido</string>
     <string name="settings_default_browser_active">O Candy Browser é o seu navegador predefinido</string>
     <string name="settings_make_default_browser">Definir o Candy Browser como navegador predefinido</string>

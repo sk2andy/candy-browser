@@ -79,7 +79,9 @@ class MainActivity : ComponentActivity() {
                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             },
+            onFullImmersiveModeChanged = ::applyFullImmersiveMode,
         )
+        applyFullImmersiveMode(browserController.isFullImmersiveModeEnabled)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             browserController.onWindowInsetsChanged(insets)
             insets
@@ -189,6 +191,13 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         openIntent(intent)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && ::browserController.isInitialized) {
+            applyFullImmersiveMode(browserController.isFullImmersiveModeEnabled)
+        }
     }
 
     override fun onPause() {
