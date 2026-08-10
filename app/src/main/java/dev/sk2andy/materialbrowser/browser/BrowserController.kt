@@ -173,6 +173,7 @@ import dev.sk2andy.materialbrowser.data.SnoozedTabStore
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
+import dev.sk2andy.materialbrowser.data.TabReorderingRules
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.TabPreviewQuality
@@ -2295,6 +2296,18 @@ class BrowserController(
             tabs = activeTabs,
             tabId = tabId,
             isPinned = isPinned,
+        )
+        if (updatedTabs == activeTabs) return false
+        replaceProfileTabs(activeProfileId, updatedTabs)
+        persist()
+        return true
+    }
+
+    fun reorderTab(tabId: String, destinationIndex: Int): Boolean {
+        val updatedTabs = TabReorderingRules.move(
+            tabs = activeTabs,
+            tabId = tabId,
+            requestedIndex = destinationIndex,
         )
         if (updatedTabs == activeTabs) return false
         replaceProfileTabs(activeProfileId, updatedTabs)
