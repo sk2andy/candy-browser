@@ -1,14 +1,19 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -24,6 +29,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,59 +48,65 @@ class BrowserMainMenuInstrumentedTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
-            MaterialBrowserTheme {
-                var expanded by remember { mutableStateOf(true) }
-                var cookieRemovalEnabled by remember { mutableStateOf(false) }
-                var forceVerticalScrolling by remember { mutableStateOf(false) }
-                Box {
-                    BrowserMainMenu(
-                        expanded = expanded,
-                        onDismissRequest = {
-                            if (expanded) dismissals.incrementAndGet()
-                            expanded = false
-                        },
-                        pageSubtitle = "developer.android.com",
-                        canGoBack = false,
-                        canGoForward = false,
-                        isLoading = false,
-                        canToggleFavorite = true,
-                        isFavorite = false,
-                        canUsePageActions = true,
-                        canOpenReader = true,
-                        canToggleDomainMute = true,
-                        isDomainMuted = false,
-                        canToggleCookieBannerRemoval = true,
-                        isCookieBannerRemovalEnabled = cookieRemovalEnabled,
-                        canToggleForceVerticalScrolling = true,
-                        isForceVerticalScrollingEnabled = forceVerticalScrolling,
-                        canAddSiteCapsule = true,
-                        canSnooze = true,
-                        snoozedTabCount = 2,
-                        onBack = {},
-                        onForward = {},
-                        onReloadOrStop = {},
-                        onToggleFavorite = {},
-                        onShare = {},
-                        onOpenExternal = {},
-                        onPrint = {},
-                        onOpenReader = {},
-                        onDomainMutedChange = {},
-                        onCookieBannerRemovalEnabledChange = { enabled ->
-                            cookieChanges.incrementAndGet()
-                            cookieRemovalEnabled = enabled
-                        },
-                        onForceVerticalScrollingChange = { enabled ->
-                            scrollChanges.incrementAndGet()
-                            forceVerticalScrolling = enabled
-                        },
-                        onOpenCandyTrail = {},
-                        onAddSiteCapsule = {},
-                        onSummarize = {},
-                        onSnooze = {},
-                        onSnoozedTabs = {},
-                        onDockAddressBar = dockActions::incrementAndGet,
-                        onSettings = {},
-                    )
+            val configuration = LocalConfiguration.current
+            val shortConfiguration = remember(configuration) {
+                Configuration(configuration).apply { screenHeightDp = 450 }
+            }
+            CompositionLocalProvider(LocalConfiguration provides shortConfiguration) {
+                MaterialBrowserTheme {
+                    var expanded by remember { mutableStateOf(true) }
+                    var cookieRemovalEnabled by remember { mutableStateOf(false) }
+                    var forceVerticalScrolling by remember { mutableStateOf(false) }
+                    Box {
+                        BrowserMainMenu(
+                            expanded = expanded,
+                            onDismissRequest = {
+                                if (expanded) dismissals.incrementAndGet()
+                                expanded = false
+                            },
+                            pageSubtitle = "developer.android.com",
+                            canGoBack = false,
+                            canGoForward = false,
+                            isLoading = false,
+                            canToggleFavorite = true,
+                            isFavorite = false,
+                            canUsePageActions = true,
+                            canOpenReader = true,
+                            canToggleDomainMute = true,
+                            isDomainMuted = false,
+                            canToggleCookieBannerRemoval = true,
+                            isCookieBannerRemovalEnabled = cookieRemovalEnabled,
+                            canToggleForceVerticalScrolling = true,
+                            isForceVerticalScrollingEnabled = forceVerticalScrolling,
+                            canAddSiteCapsule = true,
+                            canSnooze = true,
+                            snoozedTabCount = 2,
+                            onBack = {},
+                            onForward = {},
+                            onReloadOrStop = {},
+                            onToggleFavorite = {},
+                            onShare = {},
+                            onOpenExternal = {},
+                            onPrint = {},
+                            onOpenReader = {},
+                            onDomainMutedChange = {},
+                            onCookieBannerRemovalEnabledChange = { enabled ->
+                                cookieChanges.incrementAndGet()
+                                cookieRemovalEnabled = enabled
+                            },
+                            onForceVerticalScrollingChange = { enabled ->
+                                scrollChanges.incrementAndGet()
+                                forceVerticalScrolling = enabled
+                            },
+                            onOpenCandyTrail = {},
+                            onAddSiteCapsule = {},
+                            onSummarize = {},
+                            onSnooze = {},
+                            onSnoozedTabs = {},
+                            onDockAddressBar = dockActions::incrementAndGet,
+                            onSettings = {},
+                        )
+                    }
                 }
             }
         }
@@ -136,6 +148,15 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.BrowserGroup)
             .onChildren()
             .assertCountEquals(3)
+
+        val menuHeight = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
+            .fetchSemanticsNode().boundsInRoot.height
+        val maximumMenuHeight = 450f * context.resources.displayMetrics.density * 0.8f
+        assertTrue(menuHeight <= maximumMenuHeight + 1f)
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings)
+            .assertIsNotDisplayed()
+            .performScrollTo()
+            .assertIsDisplayed()
 
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
             .performScrollTo()

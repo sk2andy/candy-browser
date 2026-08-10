@@ -1,28 +1,33 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.content.res.Configuration
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -111,11 +116,17 @@ class SnoozeScreensInstrumentedTest {
     fun tabActionsExposeSnoozeAsOptionBeforeOpeningPicker() {
         val snoozeCalls = AtomicInteger()
         composeRule.setContent {
-            MaterialBrowserTheme {
-                TestTabActionsMenu(
-                    tab = BrowserTab("tab", 1L, title = "Example"),
-                    onSnooze = { snoozeCalls.incrementAndGet() },
-                )
+            val configuration = LocalConfiguration.current
+            val shortConfiguration = remember(configuration) {
+                Configuration(configuration).apply { screenHeightDp = 600 }
+            }
+            CompositionLocalProvider(LocalConfiguration provides shortConfiguration) {
+                MaterialBrowserTheme {
+                    TestTabActionsMenu(
+                        tab = BrowserTab("tab", 1L, title = "Example"),
+                        onSnooze = { snoozeCalls.incrementAndGet() },
+                    )
+                }
             }
         }
 
@@ -134,6 +145,9 @@ class SnoozeScreensInstrumentedTest {
         composeRule.onNodeWithText(context.getString(R.string.action_reload))
             .assertDoesNotExist()
         composeRule.onNodeWithTag(SnoozeTestTags.TabActionsSnooze)
+            .assertIsNotDisplayed()
+            .performScrollTo()
+            .assertIsDisplayed()
             .assertIsEnabled()
             .performClick()
         assertEquals(1, snoozeCalls.get())

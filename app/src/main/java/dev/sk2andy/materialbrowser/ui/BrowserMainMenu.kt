@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
@@ -137,7 +138,10 @@ internal fun BrowserMainMenu(
         bottomStart = outerCorners.bottomStart,
     )
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val menuWidth = minOf(360.dp, screenWidth - 32.dp)
+    val menuMaxHeight = screenHeight * BROWSER_MAIN_MENU_MAX_HEIGHT_FRACTION
+    val menuScrollState = rememberScrollState()
     val requestedPresentation = BrowserMainMenuPresentation(
         pageSubtitle = pageSubtitle,
         canGoBack = canGoBack,
@@ -182,6 +186,7 @@ internal fun BrowserMainMenu(
                     ),
                 )
             } else {
+                menuScrollState.scrollTo(0)
                 exitProgress.snapTo(1f)
             }
         } else if (popupVisible) {
@@ -207,6 +212,7 @@ internal fun BrowserMainMenu(
         onDismissRequest = onDismissRequest,
         modifier = Modifier
             .width(menuWidth)
+            .heightIn(max = menuMaxHeight)
             .graphicsLayer {
                 alpha = exitProgress.value
                 val scale = BrowserMainMenuMotion.EXIT_SCALE +
@@ -218,6 +224,7 @@ internal fun BrowserMainMenu(
             .clip(menuShape)
             .testTag(BrowserMainMenuTestTags.Menu),
         offset = DpOffset(x = 0.dp, y = (-10).dp),
+        scrollState = menuScrollState,
         shape = menuShape,
         containerColor = colors.surfaceContainerLow,
         tonalElevation = 0.dp,
@@ -944,3 +951,5 @@ internal object TabActionsMenuTestTags {
 internal object DomainMuteMenuTestTags {
     const val Item = "domain_mute_menu_item"
 }
+
+private const val BROWSER_MAIN_MENU_MAX_HEIGHT_FRACTION = 0.8f
