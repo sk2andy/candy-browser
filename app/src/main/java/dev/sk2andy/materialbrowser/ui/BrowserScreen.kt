@@ -44,10 +44,12 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateValueAsState
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -62,7 +64,9 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -151,6 +155,7 @@ import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -168,6 +173,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -280,6 +286,7 @@ import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.data.TabPinningRules
+import dev.sk2andy.materialbrowser.data.TabReorderingRules
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSession
@@ -325,6 +332,22 @@ private data class TabReorderAnimation(
     val tabId: String,
     val targetIndex: Int,
     val indexDeltas: Map<String, Int>,
+)
+
+private data class ActiveTabReorder(
+    val tabId: String,
+    val mode: TabOverviewMode,
+    val orderIds: List<String>,
+    val sourceIndex: Int,
+    val destinationIndex: Int,
+    val allowedRange: IntRange,
+    val sourceBounds: Rect,
+    val slotBounds: Map<String, Rect>,
+    val dragOffset: Offset = Offset.Zero,
+    val autoScrollOffset: Offset = Offset.Zero,
+    val heroEdgeStepping: Boolean = false,
+    val lifted: Boolean = false,
+    val settling: Boolean = false,
 )
 
 private enum class BrowserBackTarget {
@@ -4203,9 +4226,14 @@ internal fun TabOverview(
     var profileSwitching by remember { mutableStateOf(false) }
     var reorderAnimation by remember { mutableStateOf<TabReorderAnimation?>(null) }
     var reorderLayoutReady by remember { mutableStateOf(false) }
+    var activeTabReorder by remember { mutableStateOf<ActiveTabReorder?>(null) }
+    var heroReorderDropAnimating by remember { mutableStateOf(false) }
+    var tabReorderSettleJob by remember { mutableStateOf<Job?>(null) }
     val reorderProgress = remember { Animatable(1f) }
     val moveProgress = remember { Animatable(0f) }
     val tabCardBounds = remember { mutableStateMapOf<String, Rect>() }
+    val tabReorderBounds = remember { mutableStateMapOf<String, Rect>() }
+    var overviewRootBounds by remember { mutableStateOf<Rect?>(null) }
     val profileSwitchProgress = remember { Animatable(1f) }
     val tabFocusHapticEvents = remember {
         Channel<Unit>(
@@ -4228,6 +4256,7 @@ internal fun TabOverview(
             movingTabId != null ||
             exitHero != null ||
             reorderAnimation != null ||
+            activeTabReorder != null ||
             tabActionsTabId != null
         ) {
             return
@@ -4288,9 +4317,12 @@ internal fun TabOverview(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             pagerSessionEndJob?.cancel()
+            tabReorderSettleJob?.cancel()
             lifecycleOwner.lifecycle.removeObserver(observer)
             rootView.stopRubberbandHaptic()
             tabFocusHapticEvents.close()
+            activeTabReorder = null
+            heroReorderDropAnimating = false
         }
     }
 
@@ -4346,7 +4378,8 @@ internal fun TabOverview(
             controller.tabOverviewMode != TabOverviewMode.Hero ||
             !visible ||
             dismissingTabId != null ||
-            profileSwitching
+            profileSwitching ||
+            activeTabReorder != null
         ) {
             return@LaunchedEffect
         }
@@ -4393,6 +4426,7 @@ internal fun TabOverview(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
+            .onGloballyPositioned { overviewRootBounds = it.boundsInRoot() }
             .zIndex(if (layerVisible) 10f else -1f)
             .graphicsLayer { alpha = if (layerVisible) 1f else 0f },
     ) {
@@ -4407,6 +4441,306 @@ internal fun TabOverview(
         val pageSlotWidth = tabCardWidth + 18.dp
         val pageSlotWidthPx = with(density) { pageSlotWidth.toPx() }
         val pageHorizontalPadding = ((maxWidth - pageSlotWidth) / 2).coerceAtLeast(0.dp)
+        val gridGapPx = with(density) { 12.dp.toPx() }
+        val gridCardWidthPx = (
+            rootWidthPx - with(density) { 32.dp.toPx() } - gridGapPx
+        ) / 2f
+        val gridColumnPitchPx = gridCardWidthPx + gridGapPx
+        val gridRowPitchPx = with(density) { 60.dp.toPx() } + gridCardWidthPx / 0.72f
+        val listRowPitchPx = with(density) { 72.dp.toPx() }
+
+        fun reorderSlotOffset(
+            reorder: ActiveTabReorder,
+            sourceIndex: Int,
+            destinationIndex: Int,
+        ): Offset {
+            val slotOffset = when (reorder.mode) {
+                TabOverviewMode.Hero -> Offset(
+                    x = (destinationIndex - sourceIndex) * pageSlotWidthPx,
+                    y = 0f,
+                )
+                TabOverviewMode.Grid -> {
+                    val sourceRow = sourceIndex / 2
+                    val sourceColumn = sourceIndex % 2
+                    val destinationRow = destinationIndex / 2
+                    val destinationColumn = destinationIndex % 2
+                    Offset(
+                        x = (destinationColumn - sourceColumn) * gridColumnPitchPx,
+                        y = (destinationRow - sourceRow) * gridRowPitchPx,
+                    )
+                }
+                TabOverviewMode.List -> Offset(
+                    x = 0f,
+                    y = (destinationIndex - sourceIndex) * listRowPitchPx,
+                )
+            }
+            return if (sourceIndex == reorder.sourceIndex) {
+                slotOffset - reorder.autoScrollOffset
+            } else {
+                slotOffset
+            }
+        }
+
+        fun reorderTranslation(tabId: String): Offset {
+            val reorder = activeTabReorder ?: return Offset.Zero
+            val index = reorder.orderIds.indexOf(tabId)
+            if (index < 0) return Offset.Zero
+            if (index == reorder.sourceIndex) return Offset.Zero
+            val shiftedIndex = TabReorderMotion.shiftedIndex(
+                index = index,
+                sourceIndex = reorder.sourceIndex,
+                destinationIndex = reorder.destinationIndex,
+            )
+            return reorderSlotOffset(reorder, index, shiftedIndex)
+        }
+
+        fun startTabReorder(tab: BrowserTab, bounds: Rect) {
+            if (
+                activeTabReorder != null ||
+                dismissingTabId != null ||
+                movingTabId != null ||
+                exitHero != null ||
+                reorderAnimation != null ||
+                heroReorderDropAnimating ||
+                tabActionsTabId != null
+            ) {
+                return
+            }
+            val tabs = controller.activeTabs
+            val sourceIndex = tabs.indexOfFirst { it.id == tab.id }
+            val allowedRange = TabReorderingRules.destinationRange(tabs, tab.id) ?: return
+            if (sourceIndex < 0 || allowedRange.first == allowedRange.last) return
+            tabReorderSettleJob?.cancel()
+            activeTabReorder = ActiveTabReorder(
+                tabId = tab.id,
+                mode = controller.tabOverviewMode,
+                orderIds = tabs.map(BrowserTab::id),
+                sourceIndex = sourceIndex,
+                destinationIndex = sourceIndex,
+                allowedRange = allowedRange,
+                sourceBounds = bounds,
+                slotBounds = tabReorderBounds.toMap() + (tab.id to bounds),
+            )
+            rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        }
+
+        fun requestedReorderDestination(
+            reorder: ActiveTabReorder,
+            dragOffset: Offset,
+        ): Int {
+            if (reorder.mode == TabOverviewMode.Hero) {
+                return TabReorderMotion.heroDestinationIndexForDrag(
+                    sourceIndex = reorder.sourceIndex,
+                    currentDestinationIndex = reorder.destinationIndex,
+                    edgeStepping = reorder.heroEdgeStepping,
+                    dragOffsetPx = dragOffset.x,
+                    viewportOffsetPx = reorder.autoScrollOffset.x,
+                    slotWidthPx = pageSlotWidthPx,
+                    allowedRange = reorder.allowedRange,
+                )
+            }
+            if (reorder.autoScrollOffset != Offset.Zero) {
+                val contentOffset = dragOffset + reorder.autoScrollOffset
+                return when (reorder.mode) {
+                    TabOverviewMode.Grid -> TabReorderMotion.gridDestinationIndex(
+                        sourceIndex = reorder.sourceIndex,
+                        dragOffsetPx = contentOffset,
+                        columnPitchPx = gridColumnPitchPx,
+                        rowPitchPx = gridRowPitchPx,
+                        columnCount = 2,
+                        allowedRange = reorder.allowedRange,
+                    )
+                    TabOverviewMode.List -> TabReorderMotion.horizontalDestinationIndex(
+                        sourceIndex = reorder.sourceIndex,
+                        dragOffsetPx = contentOffset.y,
+                        slotWidthPx = listRowPitchPx,
+                        allowedRange = reorder.allowedRange,
+                    )
+                    TabOverviewMode.Hero -> reorder.destinationIndex
+                }
+            }
+            val projectedCenter = reorder.sourceBounds.center + dragOffset
+            val visibleCandidate = reorder.allowedRange
+                .mapNotNull { index ->
+                    val candidateId = reorder.orderIds.getOrNull(index)
+                    val candidateCenter = candidateId
+                        ?.let { tabId -> tabReorderBounds[tabId] ?: reorder.slotBounds[tabId] }
+                        ?.center
+                        ?: return@mapNotNull null
+                    val delta = candidateCenter - projectedCenter
+                    val distanceSquared = delta.x * delta.x + delta.y * delta.y
+                    index to distanceSquared
+                }
+                .minByOrNull { (_, distanceSquared) -> distanceSquared }
+                ?.first
+            return visibleCandidate ?: reorder.destinationIndex
+        }
+
+        fun updateReorderDestination(reorder: ActiveTabReorder, dragOffset: Offset) {
+            val requestedIndex = requestedReorderDestination(reorder, dragOffset)
+            if (requestedIndex != reorder.destinationIndex) {
+                rootView.performHapticFeedback(HapticFeedbackConstants.SEGMENT_FREQUENT_TICK)
+            }
+            activeTabReorder = reorder.copy(
+                destinationIndex = requestedIndex,
+                dragOffset = dragOffset,
+            )
+        }
+
+        fun updateTabReorder(dragAmount: Offset) {
+            val reorder = activeTabReorder?.takeUnless(ActiveTabReorder::settling) ?: return
+            updateReorderDestination(reorder, reorder.dragOffset + dragAmount)
+        }
+
+        fun advanceVerticalTabReorderAutoScroll(consumed: Float) {
+            val reorder = activeTabReorder?.takeUnless(ActiveTabReorder::settling) ?: return
+            updateReorderDestination(
+                reorder = reorder.copy(
+                    autoScrollOffset = reorder.autoScrollOffset + Offset(0f, consumed),
+                ),
+                dragOffset = reorder.dragOffset,
+            )
+        }
+
+        fun finishTabReorder(commit: Boolean) {
+            val reorder = activeTabReorder?.takeUnless(ActiveTabReorder::settling) ?: return
+            val destinationIndex = if (commit) {
+                reorder.destinationIndex
+            } else {
+                reorder.sourceIndex
+            }
+            val heroAnchorIndex = if (reorder.mode == TabOverviewMode.Hero) {
+                TabReorderMotion.heroPagerAnchorIndex(
+                    sourceIndex = reorder.sourceIndex,
+                    destinationIndex = destinationIndex,
+                )
+            } else {
+                null
+            }
+            val settling = reorder.copy(
+                destinationIndex = destinationIndex,
+                autoScrollOffset = heroAnchorIndex?.let { anchorIndex ->
+                    Offset(
+                        x = (anchorIndex - reorder.sourceIndex) * pageSlotWidthPx,
+                        y = 0f,
+                    )
+                } ?: reorder.autoScrollOffset,
+                lifted = false,
+                settling = true,
+            )
+            activeTabReorder = settling
+            tabReorderSettleJob?.cancel()
+            tabReorderSettleJob = overviewScope.launch {
+                try {
+                    if (
+                        heroAnchorIndex != null &&
+                        (
+                            pagerState.currentPage != heroAnchorIndex ||
+                                pagerState.currentPageOffsetFraction.absoluteValue > 0.001f
+                        )
+                    ) {
+                        pagerState.animateScrollToPage(
+                            page = heroAnchorIndex,
+                            animationSpec = spring(dampingRatio = 0.9f, stiffness = 900f),
+                        )
+                    }
+                    val targetOffset = reorderSlotOffset(
+                        reorder = settling,
+                        sourceIndex = settling.sourceIndex,
+                        destinationIndex = destinationIndex,
+                    )
+                    Animatable(settling.dragOffset, Offset.VectorConverter).animateTo(
+                        targetValue = targetOffset,
+                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 680f),
+                    ) {
+                        activeTabReorder = activeTabReorder
+                            ?.takeIf { it.tabId == settling.tabId }
+                            ?.copy(dragOffset = value)
+                    }
+                    val orderUnchanged = controller.activeTabs.map(BrowserTab::id) == settling.orderIds
+                    val animateHeroDrop = commit &&
+                        orderUnchanged &&
+                        settling.mode == TabOverviewMode.Hero &&
+                        destinationIndex != settling.sourceIndex
+                    if (animateHeroDrop) {
+                        // Switch from stable tab keys to position keys before mutating the list.
+                        // Otherwise Pager follows the moved key to its new index in one frame.
+                        heroReorderDropAnimating = true
+                        withFrameNanos { }
+                    }
+                    val changed = commit && orderUnchanged && controller.reorderTab(
+                        tabId = settling.tabId,
+                        destinationIndex = destinationIndex,
+                    )
+                    activeTabReorder = null
+                    if (changed && animateHeroDrop) {
+                        withFrameNanos { }
+                        pagerState.animateScrollToPage(
+                            page = destinationIndex,
+                            animationSpec = spring(
+                                dampingRatio = 0.84f,
+                                stiffness = 430f,
+                            ),
+                        )
+                    }
+                    if (changed) rootView.performConfirmHaptic()
+                } finally {
+                    if (activeTabReorder?.tabId == settling.tabId) {
+                        activeTabReorder = null
+                    }
+                    heroReorderDropAnimating = false
+                }
+            }
+        }
+
+        val heroReorder = activeTabReorder?.takeIf {
+            it.mode == TabOverviewMode.Hero && !it.settling
+        }
+        LaunchedEffect(activeTabReorder?.tabId) {
+            val reorder = activeTabReorder?.takeUnless(ActiveTabReorder::settling)
+                ?: return@LaunchedEffect
+            withFrameNanos { }
+            activeTabReorder
+                ?.takeIf { it.tabId == reorder.tabId && !it.settling }
+                ?.let { current -> activeTabReorder = current.copy(lifted = true) }
+        }
+        HeroTabReorderEdgeAutoScroll(
+            sessionId = heroReorder?.tabId,
+            pointerInRoot = heroReorder?.let { it.sourceBounds.center + it.dragOffset },
+            viewportBounds = overviewRootBounds,
+            canStepBackward = (heroReorder?.destinationIndex ?: 0) >
+                (heroReorder?.allowedRange?.first ?: 0),
+            canStepForward = (heroReorder?.destinationIndex ?: 0) <
+                (heroReorder?.allowedRange?.last ?: 0),
+            onStep = { direction ->
+                val current = activeTabReorder
+                    ?.takeIf { it.mode == TabOverviewMode.Hero && !it.settling }
+                    ?: return@HeroTabReorderEdgeAutoScroll false
+                val destinationIndex = (current.destinationIndex + direction)
+                    .coerceIn(current.allowedRange.first, current.allowedRange.last)
+                if (destinationIndex == current.destinationIndex) {
+                    return@HeroTabReorderEdgeAutoScroll false
+                }
+                val anchorIndex = TabReorderMotion.heroPagerAnchorIndex(
+                    sourceIndex = current.sourceIndex,
+                    destinationIndex = destinationIndex,
+                )
+                activeTabReorder = current.copy(
+                    destinationIndex = destinationIndex,
+                    heroEdgeStepping = true,
+                    autoScrollOffset = Offset(
+                        x = (anchorIndex - current.sourceIndex) * pageSlotWidthPx,
+                        y = 0f,
+                    ),
+                )
+                rootView.performHapticFeedback(HapticFeedbackConstants.SEGMENT_FREQUENT_TICK)
+                pagerState.animateScrollToPage(
+                    page = anchorIndex,
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = 1_350f),
+                )
+                true
+            },
+        )
 
         LaunchedEffect(visible, controller.tabOverviewMode, initialTabId) {
             if (!visible) {
@@ -4416,6 +4750,9 @@ internal fun TabOverview(
                 heroCompleted = false
                 heroVisible = true
                 exitHero = null
+                tabReorderSettleJob?.cancel()
+                activeTabReorder = null
+                heroReorderDropAnimating = false
                 return@LaunchedEffect
             }
 
@@ -4488,6 +4825,48 @@ internal fun TabOverview(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .longPressTabOverviewReorder(
+                    enabled = visible &&
+                        heroCompleted &&
+                        !heroVisible &&
+                        dismissingTabId == null &&
+                        movingTabId == null &&
+                        !profileSwitching &&
+                        exitHero == null &&
+                        reorderAnimation == null &&
+                        !heroReorderDropAnimating &&
+                        tabActionsTabId == null,
+                    sessionKey = Triple(
+                        controller.activeProfileId,
+                        controller.tabOverviewMode,
+                        controller.activeTabs.map(BrowserTab::id),
+                    ),
+                    onDragStart = { position ->
+                        val positionInRoot = position +
+                            (overviewRootBounds?.topLeft ?: Offset.Zero)
+                        val target = controller.activeTabs
+                            .asSequence()
+                            .filter { tab -> TabReorderingRules.canMove(controller.activeTabs, tab.id) }
+                            .mapNotNull { tab ->
+                                tabReorderBounds[tab.id]
+                                    ?.takeIf { bounds -> bounds.contains(positionInRoot) }
+                                    ?.let { bounds -> tab to bounds }
+                            }
+                            .minByOrNull { (_, bounds) ->
+                                val delta = bounds.center - positionInRoot
+                                delta.x * delta.x + delta.y * delta.y
+                            }
+                        if (target == null) {
+                            false
+                        } else {
+                            startTabReorder(target.first, target.second)
+                            activeTabReorder?.tabId == target.first.id
+                        }
+                    },
+                    onDrag = ::updateTabReorder,
+                    onDragEnd = { finishTabReorder(commit = true) },
+                    onDragCancel = { finishTabReorder(commit = false) },
+                )
                 .graphicsLayer {
                     alpha = if (visible) {
                         TabOverviewHeroRules.contentAlpha(
@@ -4522,6 +4901,8 @@ internal fun TabOverview(
                         !profileSwitching &&
                         exitHero == null &&
                         reorderAnimation == null &&
+                        !heroReorderDropAnimating &&
+                        activeTabReorder == null &&
                         tabActionsTabId == null &&
                         profileActionsProfileId == null &&
                         profileIsolationChange == null &&
@@ -4616,9 +4997,11 @@ internal fun TabOverview(
                     movingTabId == null &&
                     exitHero == null &&
                     reorderAnimation == null &&
+                    !heroReorderDropAnimating &&
+                    activeTabReorder == null &&
                     tabActionsTabId == null,
                 key = { page ->
-                    if (reorderAnimation == null) {
+                    if (reorderAnimation == null && !heroReorderDropAnimating) {
                         controller.activeTabs[page].id
                     } else {
                         "tab-reorder-$page"
@@ -4636,6 +5019,16 @@ internal fun TabOverview(
                 var rubberbandHapticActive by remember(tab.id) { mutableStateOf(false) }
                 var dismissHapticPlayed by remember(tab.id) { mutableStateOf(false) }
                 var cardBounds by remember(tab.id) { mutableStateOf<Rect?>(null) }
+                DisposableEffect(tab.id) {
+                    onDispose {
+                        if (tabCardBounds[tab.id] == cardBounds) {
+                            tabCardBounds.remove(tab.id)
+                        }
+                        if (tabReorderBounds[tab.id] == cardBounds) {
+                            tabReorderBounds.remove(tab.id)
+                        }
+                    }
+                }
                 val dismissThreshold = with(density) {
                     (tabCardWidth.toPx() / 0.53f) * 0.28f
                 }
@@ -4694,6 +5087,7 @@ internal fun TabOverview(
                         .fillMaxSize()
                         .zIndex(
                             when {
+                                activeTabReorder?.tabId == tab.id -> 6f
                                 reorderAnimation?.tabId == tab.id -> 4f
                                 dragActive || dismissOffset < 0f -> 2f
                                 else -> 0f
@@ -4710,7 +5104,12 @@ internal fun TabOverview(
                                 pageSlotWidthPx = pageSlotWidthPx,
                                 progress = reorderProgress.value,
                             )
-                        },
+                        }
+                        .tabReorderVisualMotion(
+                            sessionId = activeTabReorder?.tabId,
+                            isDragged = activeTabReorder?.tabId == tab.id,
+                            targetOffset = reorderTranslation(tab.id),
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(
@@ -4758,6 +5157,7 @@ internal fun TabOverview(
                                     movingTabId == null &&
                                     exitHero == null &&
                                     reorderAnimation == null &&
+                                    activeTabReorder == null &&
                                     tabActionsTabId == null,
                                 onDragStarted = {
                                     breakFreeJob?.cancel()
@@ -4878,6 +5278,7 @@ internal fun TabOverview(
                                     val bounds = coordinates.boundsInRoot()
                                     cardBounds = bounds
                                     tabCardBounds[tab.id] = bounds
+                                    tabReorderBounds[tab.id] = bounds
                                     if (isInitialCard) {
                                         heroTargetBounds = bounds
                                         heroTargetMode = TabOverviewMode.Hero
@@ -4913,13 +5314,39 @@ internal fun TabOverview(
                         movingTabId == null &&
                         exitHero == null &&
                         reorderAnimation == null &&
+                        activeTabReorder == null &&
                         tabActionsTabId == null,
+                    reorderSessionId = activeTabReorder?.tabId,
+                    reorderDraggedTabId = activeTabReorder?.tabId,
+                    reorderTranslation = ::reorderTranslation,
+                    reorderPointerInRoot = activeTabReorder
+                        ?.takeUnless(ActiveTabReorder::settling)
+                        ?.let {
+                        it.sourceBounds.center + it.dragOffset
+                    },
+                    reorderCanScrollBackward = activeTabReorder?.let {
+                        it.destinationIndex > it.allowedRange.first
+                    } ?: false,
+                    reorderCanScrollForward = activeTabReorder?.let {
+                        it.destinationIndex < it.allowedRange.last
+                    } ?: false,
+                    onReorderAutoScroll = { consumed ->
+                        advanceVerticalTabReorderAutoScroll(consumed)
+                    },
+                    onReorderBounds = { tab, bounds -> tabReorderBounds[tab.id] = bounds },
+                    onReorderBoundsDisposed = { tab, bounds ->
+                        if (tabReorderBounds[tab.id] == bounds) tabReorderBounds.remove(tab.id)
+                    },
                     onPreviewBounds = { tab, bounds ->
+                        tabCardBounds[tab.id] = bounds
                         if (tab.id == initialTabId && !heroCompleted) {
                             heroTargetBounds = bounds
                             heroTargetMode = TabOverviewMode.Grid
                             heroTargetTabId = tab.id
                         }
+                    },
+                    onPreviewBoundsDisposed = { tab, bounds ->
+                        if (tabCardBounds[tab.id] == bounds) tabCardBounds.remove(tab.id)
                     },
                     onSelect = { tab, bounds -> startExitHero(tab, bounds, 22.dp) },
                     onCloseTab = { tab ->
@@ -4967,13 +5394,37 @@ internal fun TabOverview(
                         movingTabId == null &&
                         exitHero == null &&
                         reorderAnimation == null &&
+                        activeTabReorder == null &&
                         tabActionsTabId == null,
+                    reorderSessionId = activeTabReorder?.tabId,
+                    reorderDraggedTabId = activeTabReorder?.tabId,
+                    reorderTranslation = ::reorderTranslation,
+                    reorderPointerInRoot = activeTabReorder
+                        ?.takeUnless(ActiveTabReorder::settling)
+                        ?.let {
+                        it.sourceBounds.center + it.dragOffset
+                    },
+                    reorderCanScrollBackward = activeTabReorder?.let {
+                        it.destinationIndex > it.allowedRange.first
+                    } ?: false,
+                    reorderCanScrollForward = activeTabReorder?.let {
+                        it.destinationIndex < it.allowedRange.last
+                    } ?: false,
+                    onReorderAutoScroll = { consumed ->
+                        advanceVerticalTabReorderAutoScroll(consumed)
+                    },
                     onRowBounds = { tab, bounds ->
+                        tabCardBounds[tab.id] = bounds
+                        tabReorderBounds[tab.id] = bounds
                         if (tab.id == initialTabId && !heroCompleted) {
                             heroTargetBounds = bounds
                             heroTargetMode = TabOverviewMode.List
                             heroTargetTabId = tab.id
                         }
+                    },
+                    onRowBoundsDisposed = { tab, bounds ->
+                        if (tabCardBounds[tab.id] == bounds) tabCardBounds.remove(tab.id)
+                        if (tabReorderBounds[tab.id] == bounds) tabReorderBounds.remove(tab.id)
                     },
                     onSelect = { tab, bounds -> startExitHero(tab, bounds, 22.dp) },
                     onCloseTab = { tab ->
@@ -5008,6 +5459,8 @@ internal fun TabOverview(
                     movingTabId == null &&
                     exitHero == null &&
                     reorderAnimation == null &&
+                    !heroReorderDropAnimating &&
+                    activeTabReorder == null &&
                     tabActionsTabId == null
                 Surface(
                     modifier = Modifier
@@ -5040,6 +5493,20 @@ internal fun TabOverview(
                         enabled = chromeEnabled,
                     )
                 }
+            }
+        }
+
+        activeTabReorder?.let { reorder ->
+            controller.activeTabs.firstOrNull { it.id == reorder.tabId }?.let { tab ->
+                DraggedTabReorderOverlay(
+                    reorder = reorder,
+                    tab = tab,
+                    preview = controller.previews[tab.id],
+                    favicon = controller.favicons[tab.id],
+                    favorites = controller.favorites,
+                    selected = tab.id == controller.selectedTabId,
+                    rootTopLeft = overviewRootBounds?.topLeft ?: Offset.Zero,
+                )
             }
         }
 
@@ -6110,6 +6577,345 @@ private fun displayTabTitle(tab: BrowserTab): String =
         tab.title
     }
 
+private fun Modifier.longPressTabOverviewReorder(
+    enabled: Boolean,
+    sessionKey: Any,
+    onDragStart: (Offset) -> Boolean,
+    onDrag: (Offset) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
+): Modifier = pointerInput(enabled, sessionKey) {
+    if (!enabled) return@pointerInput
+    var accepted = false
+    detectDragGesturesAfterLongPress(
+        onDragStart = { position -> accepted = onDragStart(position) },
+        onDragEnd = {
+            if (accepted) onDragEnd()
+            accepted = false
+        },
+        onDragCancel = {
+            if (accepted) onDragCancel()
+            accepted = false
+        },
+        onDrag = { change, dragAmount ->
+            if (accepted) {
+                change.consume()
+                onDrag(dragAmount)
+            }
+        },
+    )
+}
+
+@Composable
+private fun HeroTabReorderEdgeAutoScroll(
+    sessionId: String?,
+    pointerInRoot: Offset?,
+    viewportBounds: Rect?,
+    canStepBackward: Boolean,
+    canStepForward: Boolean,
+    onStep: suspend (Int) -> Boolean,
+) {
+    val density = LocalDensity.current
+    val edgeSizePx = with(density) { 72.dp.toPx() }
+    val maxSpeedPxPerSecond = with(density) { 1_100.dp.toPx() }
+    val currentPointer by rememberUpdatedState(pointerInRoot)
+    val currentBounds by rememberUpdatedState(viewportBounds)
+    val currentCanStepBackward by rememberUpdatedState(canStepBackward)
+    val currentCanStepForward by rememberUpdatedState(canStepForward)
+    val currentOnStep by rememberUpdatedState(onStep)
+    LaunchedEffect(sessionId) {
+        if (sessionId == null) return@LaunchedEffect
+        var activeDirection = 0
+        var nextStepNanos = Long.MAX_VALUE
+        while (true) {
+            val frameNanos = withFrameNanos { it }
+            val pointer = currentPointer
+            val bounds = currentBounds
+            val speed = if (pointer == null || bounds == null) {
+                0f
+            } else {
+                TabReorderMotion.edgeScrollSpeed(
+                    pointerPx = pointer.x,
+                    viewportStartPx = bounds.left,
+                    viewportEndPx = bounds.right,
+                    edgeSizePx = edgeSizePx,
+                    maxSpeedPxPerSecond = maxSpeedPxPerSecond,
+                )
+            }
+            val direction = when {
+                speed < 0f && currentCanStepBackward -> -1
+                speed > 0f && currentCanStepForward -> 1
+                else -> 0
+            }
+            if (direction == 0) {
+                activeDirection = 0
+                nextStepNanos = Long.MAX_VALUE
+                continue
+            }
+            if (direction != activeDirection) {
+                activeDirection = direction
+                nextStepNanos = frameNanos + 180_000_000L
+                continue
+            }
+            if (frameNanos < nextStepNanos) continue
+            val moved = currentOnStep(direction)
+            nextStepNanos = withFrameNanos { it } + if (moved) {
+                24_000_000L
+            } else {
+                90_000_000L
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabReorderEdgeAutoScroll(
+    sessionId: String?,
+    pointerInRoot: Offset?,
+    viewportBounds: Rect?,
+    orientation: Orientation,
+    canScrollBackward: Boolean,
+    canScrollForward: Boolean,
+    scrollBy: suspend (Float) -> Float,
+    onScrolled: (Float) -> Unit,
+) {
+    val density = LocalDensity.current
+    val edgeSizePx = with(density) { 96.dp.toPx() }
+    val maxSpeedPxPerSecond = with(density) { 1_800.dp.toPx() }
+    val currentPointer by rememberUpdatedState(pointerInRoot)
+    val currentBounds by rememberUpdatedState(viewportBounds)
+    val currentCanScrollBackward by rememberUpdatedState(canScrollBackward)
+    val currentCanScrollForward by rememberUpdatedState(canScrollForward)
+    val currentScrollBy by rememberUpdatedState(scrollBy)
+    val currentOnScrolled by rememberUpdatedState(onScrolled)
+    LaunchedEffect(sessionId, orientation) {
+        if (sessionId == null) return@LaunchedEffect
+        var previousFrameNanos = withFrameNanos { it }
+        while (true) {
+            val frameNanos = withFrameNanos { it }
+            val elapsedSeconds = ((frameNanos - previousFrameNanos) / 1_000_000_000f)
+                .coerceIn(0f, 0.032f)
+            previousFrameNanos = frameNanos
+            val pointer = currentPointer ?: continue
+            val bounds = currentBounds ?: continue
+            val pointerAxis = if (orientation == Orientation.Horizontal) pointer.x else pointer.y
+            val startAxis = if (orientation == Orientation.Horizontal) bounds.left else bounds.top
+            val endAxis = if (orientation == Orientation.Horizontal) bounds.right else bounds.bottom
+            var speed = TabReorderMotion.edgeScrollSpeed(
+                pointerPx = pointerAxis,
+                viewportStartPx = startAxis,
+                viewportEndPx = endAxis,
+                edgeSizePx = edgeSizePx,
+                maxSpeedPxPerSecond = maxSpeedPxPerSecond,
+            )
+            if (speed < 0f && !currentCanScrollBackward) speed = 0f
+            if (speed > 0f && !currentCanScrollForward) speed = 0f
+            if (speed == 0f) continue
+            val consumed = currentScrollBy(speed * elapsedSeconds)
+            if (consumed.absoluteValue > 0.01f) currentOnScrolled(consumed)
+        }
+    }
+}
+
+@Composable
+private fun Modifier.tabReorderVisualMotion(
+    sessionId: String?,
+    isDragged: Boolean,
+    targetOffset: Offset,
+): Modifier {
+    val animatedOffset = key(sessionId) {
+        animateValueAsState(
+            targetValue = if (isDragged) Offset.Zero else targetOffset,
+            typeConverter = Offset.VectorConverter,
+            animationSpec = spring(dampingRatio = 0.82f, stiffness = 620f),
+            label = "tab-reorder-slot",
+        )
+    }
+    return graphicsLayer {
+        val offset = if (isDragged) Offset.Zero else animatedOffset.value
+        translationX = offset.x
+        translationY = offset.y
+        alpha = if (isDragged) 0f else 1f
+    }
+}
+
+@Composable
+private fun DraggedTabReorderOverlay(
+    reorder: ActiveTabReorder,
+    tab: BrowserTab,
+    preview: Bitmap?,
+    favicon: Bitmap?,
+    favorites: List<FavoriteEntry>,
+    selected: Boolean,
+    rootTopLeft: Offset,
+) {
+    val density = LocalDensity.current
+    val width = with(density) { reorder.sourceBounds.width.toDp() }
+    val height = with(density) { reorder.sourceBounds.height.toDp() }
+    val shape = when (reorder.mode) {
+        TabOverviewMode.Hero -> RoundedCornerShape(28.dp)
+        TabOverviewMode.Grid -> RoundedCornerShape(22.dp)
+        TabOverviewMode.List -> RoundedCornerShape(18.dp)
+    }
+    val lift by animateFloatAsState(
+        targetValue = if (reorder.lifted) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f),
+        label = "tab-reorder-overlay-lift",
+    )
+    val elevation = (2f + lift * 5f).dp
+    Box(
+        modifier = Modifier
+            .offset {
+                val topLeft = reorder.sourceBounds.topLeft + reorder.dragOffset - rootTopLeft
+                IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt())
+            }
+            .size(width, height)
+            .zIndex(30f)
+            .graphicsLayer {
+                val scale = 1f + lift * 0.018f
+                scaleX = scale
+                scaleY = scale
+            }
+            .shadow(
+                elevation = elevation,
+                shape = shape,
+                clip = false,
+            )
+            .clearAndSetSemantics { },
+    ) {
+        when (reorder.mode) {
+            TabOverviewMode.Hero -> Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = shape,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+            ) {
+                TabPreviewContent(
+                    tab = tab,
+                    preview = preview,
+                    favicon = favicon,
+                    favorites = favorites,
+                )
+            }
+            TabOverviewMode.Grid -> Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = shape,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer
+                },
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .padding(start = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TabFavicon(tab = tab, favicon = favicon, size = 22.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            displayTabTitle(tab),
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                        )
+                        if (tab.isPinned) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_push_pin),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(horizontal = 15.dp)
+                                    .size(18.dp),
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(horizontal = 15.dp)
+                                    .size(18.dp),
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    ) {
+                        TabPreviewContent(
+                            tab = tab,
+                            preview = preview,
+                            favicon = favicon,
+                            favorites = favorites,
+                        )
+                    }
+                }
+            }
+            TabOverviewMode.List -> Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = shape,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.98f)
+                },
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TabFavicon(tab = tab, favicon = favicon, size = 36.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            displayTabTitle(tab),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                        )
+                        Text(
+                            if (tab.url == BLANK_URL) {
+                                stringResource(R.string.new_tab_title)
+                            } else {
+                                AddressResolver.displayText(tab.url)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (tab.isPinned) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_push_pin),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(horizontal = 15.dp)
+                                .size(20.dp),
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(horizontal = 15.dp)
+                                .size(20.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun TabCard(
     tab: BrowserTab,
@@ -6170,7 +6976,17 @@ private fun CompactTabGrid(
     exitHeroTabId: String?,
     dismissResistanceFraction: Float,
     interactionsEnabled: Boolean,
+    reorderSessionId: String?,
+    reorderDraggedTabId: String?,
+    reorderTranslation: (String) -> Offset,
+    reorderPointerInRoot: Offset?,
+    reorderCanScrollBackward: Boolean,
+    reorderCanScrollForward: Boolean,
+    onReorderAutoScroll: (Float) -> Unit,
+    onReorderBounds: (BrowserTab, Rect) -> Unit,
+    onReorderBoundsDisposed: (BrowserTab, Rect?) -> Unit,
     onPreviewBounds: (BrowserTab, Rect) -> Unit,
+    onPreviewBoundsDisposed: (BrowserTab, Rect?) -> Unit,
     onSelect: (BrowserTab, Rect) -> Unit,
     onCloseTab: (BrowserTab) -> Unit,
     onSwipeDismissStart: (BrowserTab) -> Boolean,
@@ -6180,7 +6996,7 @@ private fun CompactTabGrid(
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
     val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = selectedIndex)
-    LaunchedEffect(initialTabId, tabs.firstOrNull()?.id) {
+    LaunchedEffect(initialTabId, selectedTabId) {
         if (tabs.isEmpty()) return@LaunchedEffect
         withFrameNanos { }
         if (gridState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
@@ -6199,6 +7015,16 @@ private fun CompactTabGrid(
     )
     val rootView = LocalView.current
     var gridBounds by remember { mutableStateOf<Rect?>(null) }
+    TabReorderEdgeAutoScroll(
+        sessionId = reorderSessionId,
+        pointerInRoot = reorderPointerInRoot,
+        viewportBounds = gridBounds,
+        orientation = Orientation.Vertical,
+        canScrollBackward = gridState.canScrollBackward && reorderCanScrollBackward,
+        canScrollForward = gridState.canScrollForward && reorderCanScrollForward,
+        scrollBy = { delta -> gridState.scrollBy(delta) },
+        onScrolled = onReorderAutoScroll,
+    )
     val overviewBackgroundColors = listOf(
         MaterialTheme.colorScheme.primaryContainer,
         MaterialTheme.colorScheme.tertiaryContainer,
@@ -6213,6 +7039,7 @@ private fun CompactTabGrid(
             columns = GridCells.Fixed(2),
             state = gridState,
             modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = interactionsEnabled,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -6236,14 +7063,29 @@ private fun CompactTabGrid(
                     dismissResistanceFraction = dismissResistanceFraction,
                     interactionsEnabled = interactionsEnabled,
                     revealDelayMillis = (index % 6) * 24L,
+                    onReorderBounds = { bounds -> onReorderBounds(tab, bounds) },
+                    onReorderBoundsDisposed = { bounds ->
+                        onReorderBoundsDisposed(tab, bounds)
+                    },
                     onPreviewBounds = { bounds -> onPreviewBounds(tab, bounds) },
+                    onPreviewBoundsDisposed = { bounds ->
+                        onPreviewBoundsDisposed(tab, bounds)
+                    },
                     onSelect = { bounds -> onSelect(tab, bounds) },
                     onClose = { onCloseTab(tab) },
                     onSwipeDismissStart = { onSwipeDismissStart(tab) },
                     onSwipeDismissEnd = { onSwipeDismissEnd(tab) },
                     onSwipeDismiss = { onSwipeDismiss(tab) },
                     modifier = Modifier
-                        .animateItem()
+                        .then(
+                            if (reorderSessionId == null) Modifier.animateItem() else Modifier,
+                        )
+                        .zIndex(if (reorderDraggedTabId == tab.id) 6f else 0f)
+                        .tabReorderVisualMotion(
+                            sessionId = reorderSessionId,
+                            isDragged = reorderDraggedTabId == tab.id,
+                            targetOffset = reorderTranslation(tab.id),
+                        )
                         .testTag(SnoozeTestTags.overviewTab(tab.id)),
                 )
             }
@@ -6325,7 +7167,10 @@ private fun CompactGridTabItem(
     dismissResistanceFraction: Float,
     interactionsEnabled: Boolean,
     revealDelayMillis: Long,
+    onReorderBounds: (Rect) -> Unit,
+    onReorderBoundsDisposed: (Rect?) -> Unit,
     onPreviewBounds: (Rect) -> Unit,
+    onPreviewBoundsDisposed: (Rect?) -> Unit,
     onSelect: (Rect) -> Unit,
     onClose: () -> Unit,
     onSwipeDismissStart: () -> Boolean,
@@ -6336,6 +7181,7 @@ private fun CompactGridTabItem(
     val rootView = LocalView.current
     val gestureScope = rememberCoroutineScope()
     val boundsHolder = remember(tab.id) { TabBoundsHolder() }
+    val reorderBoundsHolder = remember(tab.id) { TabBoundsHolder() }
     val revealProgress = remember(tab.id) {
         Animatable(if (initial || heroCompleted) 1f else 0f)
     }
@@ -6353,6 +7199,8 @@ private fun CompactGridTabItem(
     DisposableEffect(tab.id, rootView) {
         onDispose {
             breakFreeJob?.cancel()
+            onPreviewBoundsDisposed(boundsHolder.bounds)
+            onReorderBoundsDisposed(reorderBoundsHolder.bounds)
             if (rubberbandHapticActive) {
                 rootView.stopRubberbandHaptic()
             }
@@ -6419,6 +7267,11 @@ private fun CompactGridTabItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                val bounds = coordinates.boundsInRoot()
+                reorderBoundsHolder.bounds = bounds
+                onReorderBounds(bounds)
+            }
             .onSizeChanged { cardWidthPx = it.width.toFloat().coerceAtLeast(1f) }
             .zIndex(if (gestureRaised) 2f else 0f)
             .graphicsLayer {
@@ -6611,14 +7464,33 @@ private fun CompactTabList(
     heroVisible: Boolean,
     exitHeroTabId: String?,
     interactionsEnabled: Boolean,
+    reorderSessionId: String?,
+    reorderDraggedTabId: String?,
+    reorderTranslation: (String) -> Offset,
+    reorderPointerInRoot: Offset?,
+    reorderCanScrollBackward: Boolean,
+    reorderCanScrollForward: Boolean,
+    onReorderAutoScroll: (Float) -> Unit,
     onRowBounds: (BrowserTab, Rect) -> Unit,
+    onRowBoundsDisposed: (BrowserTab, Rect?) -> Unit,
     onSelect: (BrowserTab, Rect) -> Unit,
     onCloseTab: (BrowserTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
-    LaunchedEffect(initialTabId, tabs.firstOrNull()?.id) {
+    var listBounds by remember { mutableStateOf<Rect?>(null) }
+    TabReorderEdgeAutoScroll(
+        sessionId = reorderSessionId,
+        pointerInRoot = reorderPointerInRoot,
+        viewportBounds = listBounds,
+        orientation = Orientation.Vertical,
+        canScrollBackward = listState.canScrollBackward && reorderCanScrollBackward,
+        canScrollForward = listState.canScrollForward && reorderCanScrollForward,
+        scrollBy = { delta -> listState.scrollBy(delta) },
+        onScrolled = onReorderAutoScroll,
+    )
+    LaunchedEffect(initialTabId, selectedTabId) {
         if (tabs.isEmpty()) return@LaunchedEffect
         withFrameNanos { }
         if (listState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
@@ -6627,7 +7499,10 @@ private fun CompactTabList(
     }
     LazyColumn(
         state = listState,
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { listBounds = it.boundsInRoot() },
+        userScrollEnabled = interactionsEnabled,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -6647,10 +7522,19 @@ private fun CompactTabList(
                 exitTarget = tab.id == exitHeroTabId,
                 interactionsEnabled = interactionsEnabled,
                 onBounds = { bounds -> onRowBounds(tab, bounds) },
+                onBoundsDisposed = { bounds -> onRowBoundsDisposed(tab, bounds) },
                 onSelect = { bounds -> onSelect(tab, bounds) },
                 onClose = { onCloseTab(tab) },
                 modifier = Modifier
-                    .animateItem()
+                    .then(
+                        if (reorderSessionId == null) Modifier.animateItem() else Modifier,
+                    )
+                    .zIndex(if (reorderDraggedTabId == tab.id) 6f else 0f)
+                    .tabReorderVisualMotion(
+                        sessionId = reorderSessionId,
+                        isDragged = reorderDraggedTabId == tab.id,
+                        targetOffset = reorderTranslation(tab.id),
+                    )
                     .testTag(SnoozeTestTags.overviewTab(tab.id)),
             )
         }
@@ -6669,11 +7553,15 @@ private fun CompactListTabItem(
     exitTarget: Boolean,
     interactionsEnabled: Boolean,
     onBounds: (Rect) -> Unit,
+    onBoundsDisposed: (Rect?) -> Unit,
     onSelect: (Rect) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val boundsHolder = remember(tab.id) { TabBoundsHolder() }
+    DisposableEffect(tab.id) {
+        onDispose { onBoundsDisposed(boundsHolder.bounds) }
+    }
     val realRowVisible = TabOverviewHeroRules.isCardVisible(
         isInitialCard = initial,
         progress = if (heroCompleted) 1f else 0f,
