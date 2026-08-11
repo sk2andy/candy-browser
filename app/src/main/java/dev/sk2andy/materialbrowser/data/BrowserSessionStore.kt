@@ -36,6 +36,8 @@ class BrowserSessionStore internal constructor(
                             lastAccessedAt = item.optLong("lastAccessedAt")
                                 .takeIf { it > 0L }
                                 ?: nowMillis,
+                            openerTabId = item.optString("openerTabId")
+                                .takeIf(String::isNotBlank),
                             profileId = item.optString("profileId", DEFAULT_PROFILE_ID)
                                 .takeIf(String::isNotBlank)
                                 ?: DEFAULT_PROFILE_ID,
@@ -100,6 +102,7 @@ class BrowserSessionStore internal constructor(
                     JSONObject()
                         .put("id", tab.id)
                         .put("lastAccessedAt", tab.lastAccessedAt)
+                        .put("openerTabId", tab.openerTabId)
                         .put("profileId", tab.profileId)
                         .put("isIncognito", false)
                         .put("isPinned", tab.isPinned)

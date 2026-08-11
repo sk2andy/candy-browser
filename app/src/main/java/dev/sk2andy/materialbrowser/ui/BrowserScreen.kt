@@ -257,6 +257,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
+import dev.sk2andy.materialbrowser.browser.RootTabBackResult
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
@@ -360,7 +361,7 @@ private enum class BrowserBackTarget {
     CandyTrail,
     TabOverview,
     WebHistory,
-    None,
+    RootTab,
 }
 
 @Composable
@@ -628,7 +629,8 @@ fun BrowserScreen(controller: BrowserController) {
             overviewMorphProgress.floatValue = 0f
             overviewEntryHeroCompleted = false
             tabOverviewOpening = true
-            controller.prepareTabOverview {
+            controller.prepareTabOverview prepared@{
+                if (!tabOverviewOpening) return@prepared
                 tabOverviewOpening = false
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                     tabOverviewVisible = true
@@ -642,6 +644,7 @@ fun BrowserScreen(controller: BrowserController) {
         overviewGestureProgress.floatValue = 0f
         overviewMorphProgress.floatValue = 0f
         overviewEntryHeroCompleted = false
+        tabOverviewOpening = false
         tabOverviewVisible = false
     }
     val openAddressEditor: () -> Unit = {
@@ -980,12 +983,12 @@ fun BrowserScreen(controller: BrowserController) {
             settingsVisible -> BrowserBackTarget.Settings
             addressEditorVisible -> BrowserBackTarget.AddressEditor
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
-            tabOverviewVisible -> BrowserBackTarget.TabOverview
+            tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
-            else -> BrowserBackTarget.None
+            else -> BrowserBackTarget.RootTab
         },
     )
-    PredictiveBackHandler(enabled = currentBackTarget != BrowserBackTarget.None) { events ->
+    PredictiveBackHandler(enabled = true) { events ->
         val target = currentBackTarget
         var receivedProgress = false
         try {
@@ -1042,7 +1045,11 @@ fun BrowserScreen(controller: BrowserController) {
                 }
                 BrowserBackTarget.TabOverview -> closeTabOverview()
                 BrowserBackTarget.WebHistory -> controller.goBack()
-                BrowserBackTarget.None -> Unit
+                BrowserBackTarget.RootTab -> {
+                    if (controller.closeSelectedRootTab() == RootTabBackResult.ShowTabOverview) {
+                        openTabOverview()
+                    }
+                }
             }
         } catch (cancellation: CancellationException) {
             if (target == BrowserBackTarget.Settings) {
@@ -2522,7 +2529,8 @@ private fun NewTabPage(
                 .align(Alignment.Center)
                 .fillMaxWidth(0.86f)
                 .heightIn(max = 520.dp)
-                .then(if (interactive) Modifier.verticalScroll(scrollState) else Modifier),
+                .then(if (interactive) Modifier.verticalScroll(scrollState) else Modifier)
+                .padding(vertical = BlankTabModeMorphRules.HERO_SHADOW_CLEARANCE_DP.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Surface(
@@ -2536,7 +2544,7 @@ private fun NewTabPage(
                     BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
                 ),
                 color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
-                shadowElevation = 14.dp,
+                shadowElevation = BlankTabModeMorphRules.HERO_SHADOW_ELEVATION_DP.dp,
             ) {
                 Box(
                     modifier = Modifier.size(96.dp),
@@ -2975,6 +2983,7 @@ internal object AddressBarDockTestTags {
 }
 
 internal object TabOverviewChromeTestTags {
+    const val Root = "tab_overview_root"
     const val Bar = "tab_overview_address_bar"
     const val NewTab = "tab_overview_new_tab"
     const val More = "tab_overview_more"
@@ -4822,6 +4831,7 @@ internal fun TabOverview(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .then(if (visible) Modifier.testTag(TabOverviewChromeTestTags.Root) else Modifier)
                 .graphicsLayer {
                     alpha = if (visible) {
                         TabOverviewHeroRules.backgroundAlpha(

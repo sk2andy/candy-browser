@@ -36,6 +36,8 @@ import kotlin.math.max
 
 internal object BlankTabModeMorphRules {
     const val DURATION_MILLIS = 360
+    const val HERO_SHADOW_ELEVATION_DP = 14
+    const val HERO_SHADOW_CLEARANCE_DP = 32
 
     fun target(incognito: Boolean): Float = if (incognito) 1f else 0f
 

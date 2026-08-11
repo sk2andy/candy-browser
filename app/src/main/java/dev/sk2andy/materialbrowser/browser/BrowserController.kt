@@ -309,7 +309,6 @@ class BrowserController(
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
     private var webContentRequestGeneration = 0L
-    private val popupOpeners = mutableMapOf<String, String>()
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
@@ -1395,7 +1394,7 @@ class BrowserController(
     fun openUrl(url: String, inNewTab: Boolean = false) {
         leaveSiteCapsule()
         if (inNewTab) {
-            createTab(url)
+            createTab(url, openerTabId = selectedTabId)
         } else {
             submitAddress(url)
         }
@@ -1620,6 +1619,7 @@ class BrowserController(
     fun createTab(
         initialUrl: String = BLANK_URL,
         isIncognito: Boolean = selectedTab.isIncognito,
+        openerTabId: String? = null,
     ): String {
         val nowMillis = System.currentTimeMillis()
         pruneStaleTabs(nowMillis)
@@ -1644,6 +1644,7 @@ class BrowserController(
             url = resolvedUrl,
             nowMillis = nowMillis,
             isIncognito = isIncognito,
+            openerTabId = openerTabId,
         )
         tabs += tab
         selectedTabId = tab.id
@@ -1652,7 +1653,7 @@ class BrowserController(
         return tab.id
     }
 
-    fun createBackgroundTab(initialUrl: String): String? {
+    fun createBackgroundTab(initialUrl: String, openerTabId: String? = null): String? {
         pruneStaleTabs()
         if (tabs.size >= MAX_TABS) {
             Toast.makeText(
@@ -1667,6 +1668,7 @@ class BrowserController(
             url = resolvedUrl,
             nowMillis = System.currentTimeMillis(),
             isIncognito = selectedTab.isIncognito,
+            openerTabId = openerTabId,
         )
         tabs += tab
         persist()
@@ -1935,7 +1937,9 @@ class BrowserController(
     fun openContextLinkInBackground() {
         val url = contentActions.target?.openLinkInBackgroundAction()?.url ?: return
         contentActions.dismiss()
-        if (createBackgroundTab(url) != null) contentActions.requestLinkPeekNewTabPulse()
+        if (createBackgroundTab(url, openerTabId = selectedTabId) != null) {
+            contentActions.requestLinkPeekNewTabPulse()
+        }
     }
 
     fun openDefaultBrowserSettings() {
@@ -2134,11 +2138,11 @@ class BrowserController(
             closingTab.isIncognito && tabs.count(BrowserTab::isIncognito) == 1
         if (closesLastIncognitoTab) prepareIncognitoProfileForRemoval()
         val profileIndex = activeTabs.indexOfFirst { it.id == tabId }
-        val popupOpenerId = popupOpeners.remove(tabId)
+        val openerTabId = closingTab.openerTabId
         removeTabResources(tabId)
         tabs.removeAt(index)
         if (selectedTabId == tabId) {
-            selectedTabId = popupOpenerId
+            selectedTabId = openerTabId
                 ?.takeIf { openerId -> activeTabs.any { it.id == openerId } }
                 ?: activeTabs.getOrNull(profileIndex.coerceAtMost(activeTabs.lastIndex))?.id
                 ?: newTabState(
@@ -2155,6 +2159,22 @@ class BrowserController(
         persist()
     }
 
+    fun closeSelectedRootTab(): RootTabBackResult {
+        val closingTab = tabs.firstOrNull { it.id == selectedTabId }
+            ?: return RootTabBackResult.ShowTabOverview
+        if (!TabDeletionRules.canDelete(closingTab)) {
+            return RootTabBackResult.ShowTabOverview
+        }
+        val openerTabId = closingTab.openerTabId
+            ?.takeIf { openerId -> activeTabs.any { it.id == openerId } }
+        closeTab(closingTab.id)
+        return if (openerTabId != null && selectedTabId == openerTabId) {
+            RootTabBackResult.ReturnedToOpener
+        } else {
+            RootTabBackResult.ShowTabOverview
+        }
+    }
+
     fun snoozeTab(
         tabId: String,
         wakeAtMillis: Long,
@@ -2168,7 +2188,7 @@ class BrowserController(
             SnoozedTab(tab, wakeAtMillis, nowMillis))
             .sortedWith(compareBy<SnoozedTab>({ it.wakeAtMillis }, { it.tab.id }))
         val profileIndex = activeTabs.indexOfFirst { it.id == tabId }
-        val popupOpenerId = popupOpeners[tabId]
+        val openerTabId = tab.openerTabId
         val updatedTabs = tabs.toMutableList().apply { removeAt(index) }
         val originalSelection = selectedTabId
         var updatedSelection = selectedTabId
@@ -2177,7 +2197,7 @@ class BrowserController(
         var touchedTabAfter: BrowserTab? = null
         if (selectedTabId == tabId) {
             val activeRemaining = updatedTabs.filter { it.profileId == activeProfileId }
-            updatedSelection = popupOpenerId
+            updatedSelection = openerTabId
                 ?.takeIf { openerId -> activeRemaining.any { it.id == openerId } }
                 ?: activeRemaining.getOrNull(
                     profileIndex.coerceAtMost(activeRemaining.lastIndex),
@@ -3174,7 +3194,6 @@ class BrowserController(
         }
         pageUrls.clear()
         configuredServiceWorkerProfiles.clear()
-        popupOpeners.clear()
         bottomBarCompactStates.clear()
         previews.clear()
         favicons.clear()
@@ -4220,8 +4239,7 @@ class BrowserController(
         val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
         val openerTabId = webViews.entries.firstOrNull { (_, webView) -> webView === source }?.key
             ?: selectedTabId
-        val popupTabId = createBackgroundTab(BLANK_URL) ?: return false
-        popupOpeners[popupTabId] = openerTabId
+        val popupTabId = createBackgroundTab(BLANK_URL, openerTabId = openerTabId) ?: return false
         transport.webView = webViewFor(popupTabId)
         resultMsg.sendToTarget()
         captureVisiblePreview(
@@ -4984,9 +5002,11 @@ class BrowserController(
         url: String = BLANK_URL,
         nowMillis: Long = System.currentTimeMillis(),
         isIncognito: Boolean = false,
+        openerTabId: String? = null,
     ) = BrowserTab(
         id = UUID.randomUUID().toString(),
         lastAccessedAt = nowMillis,
+        openerTabId = openerTabId,
         profileId = activeProfileId,
         isIncognito = isIncognito && isProfileIsolationSupported,
         url = url,
@@ -5053,8 +5073,6 @@ class BrowserController(
     ) {
         clearPermissionActivity(tabId)
         clearPrivacyDataForTab(tabId)
-        popupOpeners.remove(tabId)
-        popupOpeners.entries.removeAll { (_, openerId) -> openerId == tabId }
         webViews.remove(tabId)?.let(::destroyWebView)
         webViewProfileKeys.remove(tabId)
         edgeToEdgePages.remove(tabId)
@@ -5079,7 +5097,6 @@ class BrowserController(
         candyTrails[tab.id]?.let { trail -> candyTrailRepository.save(tab, trail) }
         webViews[tab.id]?.let { webView -> persistWebViewState(tab.id, webView) }
         clearPrivacyDataForTab(tab.id)
-        popupOpenerIdCleanup(tab.id)
         webViews.remove(tab.id)?.let(::destroyWebView)
         webViewProfileKeys.remove(tab.id)
         edgeToEdgePages.remove(tab.id)
@@ -5094,11 +5111,6 @@ class BrowserController(
         previewRepository.delete(tab.id)
         invalidateFavicon(tab.id)
         faviconGenerations.remove(tab.id)
-    }
-
-    private fun popupOpenerIdCleanup(tabId: String) {
-        popupOpeners.remove(tabId)
-        popupOpeners.entries.removeAll { (_, openerId) -> openerId == tabId }
     }
 
     private fun restoreDueSnoozedTabs(nowMillis: Long): Int {

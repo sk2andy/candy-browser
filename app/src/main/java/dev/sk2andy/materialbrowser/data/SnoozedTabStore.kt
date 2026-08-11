@@ -34,6 +34,8 @@ class SnoozedTabStore(context: Context) {
                             tab = BrowserTab(
                                 id = id,
                                 lastAccessedAt = item.optLong("lastAccessedAt").coerceAtLeast(0L),
+                                openerTabId = item.optString("openerTabId")
+                                    .takeIf(String::isNotBlank),
                                 profileId = item.optString("profileId", DEFAULT_PROFILE_ID)
                                     .takeIf(String::isNotBlank)
                                     ?: DEFAULT_PROFILE_ID,
@@ -73,6 +75,7 @@ class SnoozedTabStore(context: Context) {
                     JSONObject()
                         .put("id", tab.id)
                         .put("lastAccessedAt", tab.lastAccessedAt)
+                        .put("openerTabId", tab.openerTabId)
                         .put("profileId", tab.profileId)
                         .put("isPinned", tab.isPinned)
                         .put("title", tab.title)

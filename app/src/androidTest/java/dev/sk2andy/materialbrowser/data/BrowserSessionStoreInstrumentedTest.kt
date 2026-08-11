@@ -61,7 +61,12 @@ class BrowserSessionStoreInstrumentedTest {
         store.saveTabs(
             tabs = listOf(
                 BrowserTab(id = "regular", lastAccessedAt = 10L),
-                BrowserTab(id = "pinned", lastAccessedAt = 20L, isPinned = true),
+                BrowserTab(
+                    id = "pinned",
+                    lastAccessedAt = 20L,
+                    openerTabId = "regular",
+                    isPinned = true,
+                ),
             ),
             selectedTabId = "regular",
         )
@@ -70,6 +75,7 @@ class BrowserSessionStoreInstrumentedTest {
 
         assertEquals(listOf("pinned", "regular"), tabs.map(BrowserTab::id))
         assertEquals(listOf(true, false), tabs.map(BrowserTab::isPinned))
+        assertEquals("regular", tabs.first().openerTabId)
         assertEquals("regular", selectedId)
     }
 

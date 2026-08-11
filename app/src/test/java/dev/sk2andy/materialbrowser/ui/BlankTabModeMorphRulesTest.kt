@@ -1,9 +1,18 @@
 package dev.sk2andy.materialbrowser.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BlankTabModeMorphRulesTest {
+    @Test
+    fun `hero content leaves room for its shadow inside the scroll viewport`() {
+        assertTrue(
+            BlankTabModeMorphRules.HERO_SHADOW_CLEARANCE_DP >
+                BlankTabModeMorphRules.HERO_SHADOW_ELEVATION_DP,
+        )
+    }
+
     @Test
     fun `mode interpolation is bounded at both endpoints`() {
         assertEquals(0f, BlankTabModeMorphRules.bounded(-0.4f), 0.001f)

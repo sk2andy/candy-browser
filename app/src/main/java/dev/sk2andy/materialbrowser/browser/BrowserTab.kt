@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 data class BrowserTab(
     val id: String,
     val lastAccessedAt: Long,
+    val openerTabId: String? = null,
     val profileId: String = DEFAULT_PROFILE_ID,
     val isIncognito: Boolean = false,
     val isPinned: Boolean = false,
@@ -17,6 +18,11 @@ data class BrowserTab(
     val blockedCount: Int = 0,
     val error: String? = null,
 )
+
+enum class RootTabBackResult {
+    ReturnedToOpener,
+    ShowTabOverview,
+}
 
 data class TabPreview(
     val tabId: String,

@@ -37,6 +37,7 @@ class SnoozedTabStoreInstrumentedTest {
             tab = BrowserTab(
                 id = "persisted",
                 lastAccessedAt = 44L,
+                openerTabId = "source",
                 profileId = "work",
                 isPinned = true,
                 title = "Candy",
