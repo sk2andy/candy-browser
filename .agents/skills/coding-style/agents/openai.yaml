@@ -1,0 +1,4 @@
+interface:
+  display_name: "Candy Coding Style"
+  short_description: "Apply Candy Browser coding conventions"
+  default_prompt: "Use $coding-style to implement this change in Candy Browser style."

@@ -1,0 +1,29 @@
+# Address actions and UI
+
+## Address flow
+
+| Concern | Source | Rule |
+| --- | --- | --- |
+| Submission | [`AddressSubmissionRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/commands/AddressSubmissionRules.kt) | Highlighted suggestion wins; explicit `>` query never falls through to navigation |
+| Commands | [`browser/commands/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/commands/) | Build commands from current context, match deterministically, dispatch through actions |
+| Search suggestions | [`SearchSuggestionProvider.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/suggestions/SearchSuggestionProvider.kt) | Bound reads and keep provider calls disabled for private tabs |
+| Presentation | [`ui/AddressBarPresentationRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarPresentationRules.kt) | Resolve UI mode with pure rules before composing |
+
+## Gestures and actions
+
+| Interaction | Source | Boundary |
+| --- | --- | --- |
+| Horizontal tab switch | `AddressBarGestureRules`, `AddressBarTabSwitchRules` | Pure distance/velocity decision; controller changes selection |
+| Upward overview morph | `AddressBarOverviewGestureRules`, `AddressBarMotion` | Pure progress/motion math; Compose owns pointer input and animation |
+| Link Peek | [`LinkPeek.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/LinkPeek.kt), `WebContentActionState` | Temporary preview; commit/open behavior remains explicit |
+| Long-press page content | [`WebContentActions.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/WebContentActions.kt) | Normalize link/image URLs before background open or download |
+| Share/download/assistant/external app | [`browser/integration/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/integration/), [`browser/actions/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/) | Construct bounded requests, then let Android adapters launch them |
+
+## Change pattern
+
+1. Add or change deterministic behavior in a focused rule/model.
+2. Cover it in `src/test`.
+3. Wire controller state/actions.
+4. Render and animate in focused Compose functions.
+5. Add instrumentation only for Android, WebView, semantics, or gesture integration.
+
