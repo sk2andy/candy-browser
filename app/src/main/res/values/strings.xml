@@ -189,6 +189,22 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_home_search_summary">Search engine and suggestions</string>
+    <string name="settings_tabs_gestures_title">Tabs &amp; gestures</string>
+    <string name="settings_home_tabs_gestures_summary">Tab layout, lifetime, profiles, and controls</string>
+    <string name="settings_home_browser_summary">Interface and default-browser behavior</string>
+    <string name="settings_downloads_title">Downloads</string>
+    <string name="settings_home_capsules_summary">Manage saved Site Capsules and shortcuts</string>
+    <string name="settings_protection_data_title">Protection &amp; data</string>
+    <string name="settings_home_protection_summary">Tracking protection, cookies, permissions, and browsing data</string>
+    <string name="settings_home_about_summary">Version, imprint, licenses, and sources</string>
+    <string name="settings_download_manager_title">Download manager</string>
+    <string name="settings_download_manager_builtin">Candy built-in downloader</string>
+    <string name="settings_download_manager_ask">Ask every time</string>
+    <string name="settings_download_manager_external_unavailable">Selected app unavailable</string>
+    <string name="settings_download_no_external_managers">No compatible external download manager is installed.</string>
+    <string name="settings_download_one_dm_session_title">Share session data with 1DM</string>
+    <string name="settings_download_one_dm_session_summary">Shares cookies, user agent, and referrer with 1DM so signed-in downloads can work. The app may use them to access your session. Session data is never shared in private browsing.</string>
     <string name="settings_section_tabs">Tabs</string>
     <string name="settings_tab_overview_mode">Tab overview layout</string>
     <string name="tab_overview_mode_hero">Cover flow</string>
@@ -282,6 +298,8 @@
     <string name="error_renderer_terminated">Web renderer was stopped by the system</string>
     <string name="toast_download_type_unsupported">Download type not supported</string>
     <string name="toast_download_started">Download started: %1$s</string>
+    <string name="toast_download_handed_off">Sent to %1$s</string>
+    <string name="download_manager_chooser_title">Download with</string>
     <string name="error_download_invalid_address">Invalid download address</string>
     <string name="error_download_start_failed">Download could not be started</string>
     <string name="error_page_unreachable">Page can’t be reached</string>

@@ -11,6 +11,7 @@ data class BrowserDownloadRequest(
     val mimeType: String,
     val userAgent: String? = null,
     val cookies: String? = null,
+    val referrer: String? = null,
 )
 
 object BrowserDownloadRequestFactory {
@@ -20,6 +21,7 @@ object BrowserDownloadRequestFactory {
         mimeType: String? = null,
         userAgent: String? = null,
         cookies: String? = null,
+        referrer: String? = null,
     ): BrowserDownloadRequest? {
         if (!SafeDownloadValues.isHttpUrl(url)) return null
         val safeMimeType = SafeDownloadValues.mimeType(mimeType)
@@ -29,6 +31,7 @@ object BrowserDownloadRequestFactory {
             mimeType = safeMimeType,
             userAgent = SafeDownloadValues.header(userAgent),
             cookies = SafeDownloadValues.header(cookies, MAX_COOKIE_LENGTH),
+            referrer = SafeDownloadValues.referrer(referrer, url),
         )
     }
 
@@ -59,6 +62,39 @@ internal object SafeDownloadValues {
 
     fun header(value: String?, maxLength: Int = 4_096): String? = value
         ?.takeIf { it.isNotBlank() && it.length <= maxLength && '\r' !in it && '\n' !in it }
+
+    fun referrer(value: String?, targetUrl: String): String? = runCatching {
+        val source = URI(value?.trim() ?: return null)
+        val target = URI(targetUrl.trim())
+        if (!isHttpUrl(source.toString()) || !isHttpUrl(target.toString())) return null
+        if (source.scheme.equals("https", ignoreCase = true) &&
+            target.scheme.equals("http", ignoreCase = true)
+        ) {
+            return null
+        }
+        val sameOrigin = source.scheme.equals(target.scheme, ignoreCase = true) &&
+            source.host.equals(target.host, ignoreCase = true) &&
+            effectivePort(source) == effectivePort(target)
+        val safe = URI(
+            source.scheme,
+            null,
+            source.host,
+            source.port.takeUnless { it == defaultPort(source.scheme) } ?: -1,
+            source.path.takeIf { sameOrigin },
+            source.query.takeIf { sameOrigin },
+            null,
+        )
+        safe.toString()
+    }.getOrNull()?.let { header(it) }
+
+    private fun effectivePort(uri: URI): Int =
+        uri.port.takeUnless { it == -1 } ?: defaultPort(uri.scheme)
+
+    private fun defaultPort(scheme: String?): Int = when {
+        scheme.equals("http", ignoreCase = true) -> 80
+        scheme.equals("https", ignoreCase = true) -> 443
+        else -> -1
+    }
 
     fun fileName(url: String, contentDisposition: String?, mimeType: String): String {
         val candidate = contentDispositionFileName(contentDisposition)

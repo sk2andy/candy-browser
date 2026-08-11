@@ -28,12 +28,14 @@ data class WebContentTarget(
     fun downloadImageAction(
         userAgent: String? = null,
         cookies: String? = null,
+        referrer: String? = null,
     ): WebContentAction.DownloadImage? = imageUrl?.let { url ->
         BrowserDownloadRequestFactory.create(
             url = url,
             mimeType = imageMimeType(url),
             userAgent = userAgent,
             cookies = cookies,
+            referrer = referrer,
         )?.let { WebContentAction.DownloadImage(it) }
     }
 
@@ -175,6 +177,11 @@ sealed interface DownloadActionResult {
     data class Enqueued(
         val id: Long,
         val fileName: String,
+    ) : DownloadActionResult
+
+    data class HandedOff(
+        val fileName: String,
+        val appName: String,
     ) : DownloadActionResult
 
     data class Failed(val message: String) : DownloadActionResult

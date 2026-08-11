@@ -104,6 +104,10 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
+import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadLaunchResult
+import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManager
+import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
+import dev.sk2andy.materialbrowser.browser.actions.PendingDownloadChoice
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionComposer
@@ -147,6 +151,8 @@ import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.browser.permissions.runtimePermissions
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
+import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
+import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
@@ -157,6 +163,7 @@ import dev.sk2andy.materialbrowser.data.FavoriteUndoRules
 import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
+import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
 import dev.sk2andy.materialbrowser.data.SiteCapsuleIconStore
 import dev.sk2andy.materialbrowser.data.SiteCapsuleStore
@@ -184,6 +191,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
+import java.util.ArrayDeque
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -234,6 +242,7 @@ class BrowserController(
     val snoozedTabs = mutableStateListOf<SnoozedTab>()
     val siteCapsules = mutableStateListOf<SiteCapsule>()
     val contentActions = WebContentActionState()
+    val externalDownloadManagers = mutableStateListOf<ExternalDownloadManagerApp>()
 
     var selectedTabId by mutableStateOf("")
         private set
@@ -258,6 +267,10 @@ class BrowserController(
     var isTabButtonVisible by mutableStateOf(true)
         private set
     var isFullImmersiveModeEnabled by mutableStateOf(false)
+        private set
+    var downloadSettings by mutableStateOf(BrowserDownloadSettings())
+        private set
+    var pendingDownloadChoice by mutableStateOf<PendingDownloadChoice?>(null)
         private set
     var isWebContentEdgeToEdgeEnabled by mutableStateOf(false)
         private set
@@ -369,6 +382,8 @@ class BrowserController(
     private val candyRuleRepository = CandyRuleRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
     private val downloadManager = BrowserDownloadManager(activity)
+    private val externalDownloadManager = ExternalDownloadManager(activity)
+    private val queuedDownloadChoices = ArrayDeque<PendingDownloadChoice>()
     private val externalApps = ExternalAppLauncher(activity)
     private val assistantSummary = AssistantSummaryLauncher(activity)
     private val pageShare = PageShareLauncher(activity)
@@ -916,6 +931,8 @@ class BrowserController(
         isAddressBarDocked = store.loadAddressBarDocked()
         isTabButtonVisible = store.loadTabButtonVisible()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
+        downloadSettings = store.loadDownloadSettings()
+        refreshExternalDownloadManagers()
         store.clearLegacyWebContentEdgeToEdgePreference()
         profilesEnabled = store.loadProfilesEnabled()
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
@@ -1885,11 +1902,34 @@ class BrowserController(
         val action = target.downloadImageAction(
             userAgent = selectedWebView?.settings?.userAgentString,
             cookies = cookiesFor(selectedTabId, imageUrl),
+            referrer = referrerFor(selectedTabId),
         ) ?: return
-        val result = downloadManager.enqueue(action.request)
-        contentActions.reportDownload(result)
+        val result = routeDownload(action.request, selectedTabId)
+        result?.let(contentActions::reportDownload)
         contentActions.dismiss()
+        result?.let(::showDownloadResult)
+    }
+
+    fun confirmDownloadChoice(managerId: String?) {
+        val choice = pendingDownloadChoice ?: return
+        pendingDownloadChoice = null
+        val result = if (managerId == null) {
+            downloadManager.enqueue(choice.request)
+        } else {
+            val app = choice.apps.firstOrNull { it.id == managerId }
+            if (app == null) {
+                downloadManager.enqueue(choice.request)
+            } else {
+                launchExternallyOrFallback(choice.request, app, choice.isIncognito)
+            }
+        }
         showDownloadResult(result)
+        showNextDownloadChoice()
+    }
+
+    fun dismissDownloadChoice() {
+        pendingDownloadChoice = null
+        showNextDownloadChoice()
     }
 
     fun openContextLinkInBackground() {
@@ -2676,6 +2716,13 @@ class BrowserController(
         onFullImmersiveModeChanged(enabled)
     }
 
+    fun updateDownloadSettings(settings: BrowserDownloadSettings) {
+        val normalized = settings.normalized()
+        if (downloadSettings == normalized) return
+        downloadSettings = normalized
+        store.saveDownloadSettings(normalized)
+    }
+
     fun updateProfilesEnabled(enabled: Boolean) {
         if (profilesEnabled == enabled) return
         if (!enabled) {
@@ -3059,6 +3106,7 @@ class BrowserController(
     fun onResume() {
         isActivityResumed = true
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
+        refreshExternalDownloadManagers()
         val nowMillis = System.currentTimeMillis()
         restoreDueSnoozedTabs(nowMillis)
         pruneStaleTabs(nowMillis, persistChanges = false)
@@ -4197,6 +4245,7 @@ class BrowserController(
                 mimeType = mimeType,
                 userAgent = userAgent,
                 cookies = cookiesFor(tabId, url),
+                referrer = referrerFor(tabId),
             )
             if (request == null) {
                 Toast.makeText(
@@ -4206,8 +4255,80 @@ class BrowserController(
                 ).show()
                 return@DownloadListener
             }
-            showDownloadResult(downloadManager.enqueue(request))
+            routeDownload(request, tabId)?.let(::showDownloadResult)
         }
+
+    private fun routeDownload(request: BrowserDownloadRequest, tabId: String): DownloadActionResult? =
+        when (downloadSettings.managerMode) {
+            DownloadManagerMode.BuiltIn -> downloadManager.enqueue(request)
+            DownloadManagerMode.AskEveryTime -> {
+                val apps = externalDownloadManager.discover(request)
+                if (apps.isEmpty()) {
+                    downloadManager.enqueue(request)
+                } else {
+                    enqueueDownloadChoice(
+                        PendingDownloadChoice(
+                            request = request,
+                            apps = apps,
+                            isIncognito = tabs.firstOrNull { it.id == tabId }?.isIncognito == true,
+                        ),
+                    )
+                    null
+                }
+            }
+            DownloadManagerMode.External -> {
+                val app = externalDownloadManager.discover(request).firstOrNull {
+                    it.id == downloadSettings.externalManagerId
+                }
+                if (app == null) {
+                    downloadManager.enqueue(request)
+                } else {
+                    launchExternallyOrFallback(
+                        request = request,
+                        app = app,
+                        isIncognito = tabs.firstOrNull { it.id == tabId }?.isIncognito == true,
+                    )
+                }
+            }
+        }
+
+    private fun enqueueDownloadChoice(choice: PendingDownloadChoice) {
+        if (pendingDownloadChoice == null) {
+            pendingDownloadChoice = choice
+        } else {
+            queuedDownloadChoices.addLast(choice)
+        }
+    }
+
+    private fun showNextDownloadChoice() {
+        pendingDownloadChoice = queuedDownloadChoices.pollFirst()
+    }
+
+    private fun launchExternallyOrFallback(
+        request: BrowserDownloadRequest,
+        app: ExternalDownloadManagerApp,
+        isIncognito: Boolean,
+    ): DownloadActionResult = when (
+        val result = externalDownloadManager.launch(
+            request = request,
+            app = app,
+            settings = downloadSettings,
+            allowSessionData = !isIncognito,
+        )
+    ) {
+        is ExternalDownloadLaunchResult.Launched -> DownloadActionResult.HandedOff(
+            fileName = request.fileName,
+            appName = result.appName,
+        )
+        ExternalDownloadLaunchResult.Unavailable -> downloadManager.enqueue(request)
+    }
+
+    private fun refreshExternalDownloadManagers() {
+        val discovered = externalDownloadManager.discover()
+        if (externalDownloadManagers == discovered) return
+        externalDownloadManagers.clear()
+        externalDownloadManagers += discovered
+    }
 
     private fun showDownloadResult(result: DownloadActionResult) {
         Toast.makeText(
@@ -4215,6 +4336,8 @@ class BrowserController(
             when (result) {
                 is DownloadActionResult.Enqueued ->
                     activity.getString(R.string.toast_download_started, result.fileName)
+                is DownloadActionResult.HandedOff ->
+                    activity.getString(R.string.toast_download_handed_off, result.appName)
                 is DownloadActionResult.Failed -> activity.getString(R.string.error_download_start_failed)
             },
             Toast.LENGTH_SHORT,
@@ -5076,6 +5199,10 @@ class BrowserController(
             null
         }
     }
+
+    private fun referrerFor(tabId: String): String? = pageUrls[tabId]
+        ?: webViews[tabId]?.url
+        ?: tabs.firstOrNull { it.id == tabId }?.url
 
     private fun clearPrivacyDataForTab(tabId: String) {
         synchronized(privacyEventLock) {

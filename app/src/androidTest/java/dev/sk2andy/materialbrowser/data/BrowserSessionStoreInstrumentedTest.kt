@@ -116,6 +116,37 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun downloadSettingsDefaultSafelyAndRoundTrip() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(BrowserDownloadSettings(), store.loadDownloadSettings())
+
+        val settings = BrowserDownloadSettings(
+            managerMode = DownloadManagerMode.External,
+            externalManagerId = "view|idm.internet.download.manager|idm.internet.download.manager.Downloader",
+            shareSessionDataWithOneDm = true,
+        )
+        store.saveDownloadSettings(settings)
+
+        assertEquals(settings, store.loadDownloadSettings())
+    }
+
+    @Test
+    fun corruptExternalDownloadManagerFallsBackToBuiltIn() {
+        preferences.edit()
+            .putString("download_manager_mode", "external")
+            .putString("external_download_manager_id", "\n")
+            .putBoolean("share_session_data_with_one_dm", true)
+            .commit()
+
+        val settings = BrowserSessionStore(context).loadDownloadSettings()
+
+        assertEquals(DownloadManagerMode.BuiltIn, settings.managerMode)
+        assertEquals(null, settings.externalManagerId)
+        assertTrue(settings.shareSessionDataWithOneDm)
+    }
+
+    @Test
     fun missingOrInvalidProfilesFallBackToCandy() {
         val store = BrowserSessionStore(context)
         assertEquals(listOf("candy"), store.loadProfiles().first.map(BrowserProfile::id))

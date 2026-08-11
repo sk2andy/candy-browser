@@ -175,6 +175,8 @@ class MainActivity : ComponentActivity() {
                                 when (result) {
                                     is DownloadActionResult.Enqueued ->
                                         getString(R.string.toast_download_started, result.fileName)
+                                    is DownloadActionResult.HandedOff ->
+                                        getString(R.string.toast_download_handed_off, result.appName)
                                     is DownloadActionResult.Failed -> result.message
                                 },
                                 Toast.LENGTH_SHORT,

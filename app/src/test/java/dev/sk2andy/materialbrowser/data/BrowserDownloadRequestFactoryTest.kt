@@ -60,4 +60,36 @@ class BrowserDownloadRequestFactoryTest {
         assertTrue(requireNotNull(request).fileName.length <= 120)
         assertTrue(request.fileName.endsWith(".png"))
     }
+
+    @Test
+    fun `keeps safe referrer without fragment and rejects unsafe referrer`() {
+        val request = BrowserDownloadRequestFactory.create(
+            url = "https://example.com/file.pdf",
+            mimeType = "application/pdf",
+            referrer = "https://example.com/account?tab=files#private-section",
+        )
+
+        assertEquals("https://example.com/account?tab=files", request?.referrer)
+        assertNull(
+            BrowserDownloadRequestFactory.create(
+                url = "https://example.com/file.pdf",
+                referrer = "javascript:alert(1)",
+            )?.referrer,
+        )
+    }
+
+    @Test
+    fun `limits cross-origin referrer and omits downgrade referrer`() {
+        val crossOrigin = BrowserDownloadRequestFactory.create(
+            url = "https://downloads.example.net/file.pdf",
+            referrer = "https://example.com/account?token=secret#section",
+        )
+        val downgrade = BrowserDownloadRequestFactory.create(
+            url = "http://example.com/file.pdf",
+            referrer = "https://example.com/account?token=secret",
+        )
+
+        assertEquals("https://example.com", crossOrigin?.referrer)
+        assertNull(downgrade?.referrer)
+    }
 }

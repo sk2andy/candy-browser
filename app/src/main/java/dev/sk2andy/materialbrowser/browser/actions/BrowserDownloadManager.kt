@@ -18,6 +18,7 @@ class BrowserDownloadManager(context: Context) {
             mimeType = request.mimeType,
             userAgent = request.userAgent,
             cookies = request.cookies,
+            referrer = request.referrer,
         ) ?: return DownloadActionResult.Failed(
             applicationContext.getString(R.string.error_download_invalid_address),
         )
@@ -36,6 +37,7 @@ class BrowserDownloadManager(context: Context) {
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, safeRequest.fileName)
             safeRequest.userAgent?.let { platformRequest.addRequestHeader("User-Agent", it) }
             safeRequest.cookies?.let { platformRequest.addRequestHeader("Cookie", it) }
+            safeRequest.referrer?.let { platformRequest.addRequestHeader("Referer", it) }
             val manager = applicationContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             val id = manager.enqueue(platformRequest)
             DownloadActionResult.Enqueued(id, safeRequest.fileName)

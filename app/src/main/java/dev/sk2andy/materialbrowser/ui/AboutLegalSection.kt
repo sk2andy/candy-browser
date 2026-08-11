@@ -71,17 +71,20 @@ private enum class AboutLegalDialog {
 internal fun AboutLegalSection(
     onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
+    showTitle: Boolean = true,
 ) {
     var dialog by rememberSaveable { mutableStateOf<AboutLegalDialog?>(null) }
 
     Column(modifier = modifier.testTag(AboutLegalTestTags.Section)) {
-        Text(
-            stringResource(R.string.settings_section_about_legal),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(8.dp))
+        if (showTitle) {
+            Text(
+                stringResource(R.string.settings_section_about_legal),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge,
