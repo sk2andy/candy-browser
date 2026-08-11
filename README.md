@@ -49,9 +49,12 @@
 - Address commands with `>` for tab, profile, cache, cookie, and navigation actions
 - Background tabs, sharing, printing, external apps, assistant summaries, and built-in or external
   download managers
-- Link Peek previews for opening a link temporarily without adding a tab or history entry
+- **Link Peek:** long-press a link to inspect it in a live, disposable preview without creating a
+  tab or history entry, then send it to a background tab through the pulsing plus target
 
 <p align="center">
+  <img src="docs/screenshots/candy-link-peek.png" width="32%" alt="Candy Browser Link Peek live preview">
+  &nbsp;
   <img src="docs/screenshots/candy-commands.png" width="32%" alt="Candy Browser profile commands in the address bar">
 </p>
 
