@@ -8,6 +8,48 @@ import org.junit.Test
 
 class PrivacyXRayTest {
     @Test
+    fun `explicit force scroll override wins over bundled default`() {
+        assertTrue(SitePrivacyOverrideRules.forceVerticalScrolling(null, bundledDefault = true))
+        assertFalse(
+            SitePrivacyOverrideRules.forceVerticalScrolling(
+                SitePrivacyOverrides(forceVerticalScrolling = false),
+                bundledDefault = true,
+            ),
+        )
+        assertTrue(
+            SitePrivacyOverrideRules.forceVerticalScrolling(
+                SitePrivacyOverrides(forceVerticalScrolling = true),
+                bundledDefault = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `explicit cookie removal override wins over bundled default`() {
+        assertTrue(SitePrivacyOverrideRules.cookieBannerRemovalDisabled(null, bundledDefault = true))
+        assertFalse(
+            SitePrivacyOverrideRules.cookieBannerRemovalDisabled(
+                SitePrivacyOverrides(cookieBannerRemovalDisabled = false),
+                bundledDefault = true,
+            ),
+        )
+        assertTrue(
+            SitePrivacyOverrideRules.cookieBannerRemovalDisabled(
+                SitePrivacyOverrides(cookieBannerRemovalDisabled = true),
+                bundledDefault = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `selection stores only values that differ from bundled default`() {
+        assertEquals(null, SitePrivacyOverrideRules.overrideForSelection(false, false))
+        assertEquals(true, SitePrivacyOverrideRules.overrideForSelection(true, false))
+        assertEquals(null, SitePrivacyOverrideRules.overrideForSelection(true, true))
+        assertEquals(false, SitePrivacyOverrideRules.overrideForSelection(false, true))
+    }
+
+    @Test
     fun `site privacy overrides normalize replace and keep new value within limit`() {
         val existing = linkedMapOf(
             "one.example" to SitePrivacyOverrides(cookieBannerRemovalDisabled = true),

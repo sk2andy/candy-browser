@@ -1,0 +1,21 @@
+# candy site privacy defaults v2
+force_vertical_scroll	badoo.com
+force_vertical_scroll	comicbook.com
+force_vertical_scroll	de.findagrave.com
+force_vertical_scroll	flipboard.com
+force_vertical_scroll	futurism.com
+force_vertical_scroll	router-network.com
+force_vertical_scroll	www.2dehands.be
+force_vertical_scroll	www.businessinsider.de
+cookie_banner_removal_disabled	www.computerworld.com
+force_vertical_scroll	www.cuisineaz.com
+force_vertical_scroll	www.e.leclerc
+force_vertical_scroll	www.france24.com
+force_vertical_scroll	www.ft.com
+force_vertical_scroll	www.iltalehti.fi
+cookie_banner_removal_disabled	www.infoworld.com
+force_vertical_scroll	www.macworld.com
+cookie_banner_removal_disabled	www.myfitnesspal.com
+force_vertical_scroll	www.refinery29.com
+force_vertical_scroll	www.techtarget.com
+force_vertical_scroll	www.yumpu.com
