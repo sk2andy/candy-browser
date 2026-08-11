@@ -41,12 +41,15 @@
 
 ### Browsing and gestures
 
-- Floating bottom chrome over edge-to-edge WebView content
+- Floating chrome over edge-to-edge WebView content, with an optional tab counter and a docked
+  edge mode
 - Pull to refresh, direct URL navigation, QR scanning, local domain completion, and optional
   provider-backed search suggestions (disabled in private tabs)
 - Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, and Qwant search
 - Address commands with `>` for tab, profile, cache, cookie, and navigation actions
-- Background tabs, downloads, sharing, printing, external apps, and assistant summaries
+- Background tabs, sharing, printing, external apps, assistant summaries, and built-in or external
+  download managers
+- Link Peek previews for opening a link temporarily without adding a tab or history entry
 
 <p align="center">
   <img src="docs/screenshots/candy-commands.png" width="32%" alt="Candy Browser profile commands in the address bar">
@@ -56,7 +59,9 @@
 
 - Persistent tabs with saved page previews, favicons, pinning, reordering, and automatic cleanup
 - Cover flow, compact grid, and preview-free list layouts
+- Tab snoozing with scheduled returns, notifications, and a dedicated snoozed-tab manager
 - Optional per-profile WebView storage isolation where the installed provider supports it
+- Optional profile controls for a simpler single-profile setup
 - Private tabs that keep their session and journey data in memory only
 - **Candy Trails:** persistent branching navigation graphs with pan, zoom, direct navigation,
   and forkable paths
@@ -77,12 +82,24 @@
   <img src="docs/screenshots/candy-tabs-list.png" width="30%" alt="Preview-free list tab overview">
 </p>
 
+### Reading and page tools
+
+- **Reader Studio:** local article extraction with typography, alignment, paper and night themes,
+  offline saves, and text-to-speech
+- Per-domain mute controls for silencing noisy sites
+- Optional full immersive mode and a setting that prevents video autoplay
+
+<p align="center">
+  <img src="docs/screenshots/candy-reader.png" width="32%" alt="Candy Browser Reader Studio">
+</p>
+
 ### Local protection
 
 - EasyList/EasyPrivacy hosts and domain-scoped cosmetic CSS plus a pinned, safely representable
   uAssets subset
 - Third-party-cookie blocking and cosmetic cookie-banner hiding
 - **Privacy X-Ray:** live per-tab block counts, categories, domains, and exceptions
+- **Permission Radar:** per-site camera, microphone, location, and other WebView permission activity
 - **Filter Studio:** global or profile rules, import/export, and confirmed HTTPS subscriptions
 - Safe Browsing, TLS failure handling, blocked unsafe schemes, and external-scheme allowlisting
 
