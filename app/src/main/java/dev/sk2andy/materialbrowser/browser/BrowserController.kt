@@ -268,6 +268,8 @@ class BrowserController(
         private set
     var isFullImmersiveModeEnabled by mutableStateOf(false)
         private set
+    var isVideoAutoplayBlocked by mutableStateOf(false)
+        private set
     var downloadSettings by mutableStateOf(BrowserDownloadSettings())
         private set
     var pendingDownloadChoice by mutableStateOf<PendingDownloadChoice?>(null)
@@ -284,6 +286,8 @@ class BrowserController(
         private set
     val isProfileIsolationSupported: Boolean =
         WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
+    val isVideoAutoplayBlockingSupported: Boolean =
+        WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
     val activeSiteCapsule: SiteCapsule?
         get() = activeCapsuleId?.let { id -> siteCapsules.firstOrNull { it.id == id } }
     val isCapsulePinningSupported: Boolean
@@ -304,6 +308,10 @@ class BrowserController(
     val activeLinkPeekPreviewCountForTesting: Int
         get() = linkPeekPreviewAssignments.size
 
+    @VisibleForTesting
+    val videoAutoplayScriptHandlerCountForTesting: Int
+        get() = videoAutoplayScriptHandlers.size
+
     private val webViews = mutableMapOf<String, WebView>()
     private val linkPeekPreviewAssignments = mutableMapOf<WebView, WebViewProfileAssignment>()
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
@@ -311,6 +319,7 @@ class BrowserController(
     private var webContentRequestGeneration = 0L
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
+    private val videoAutoplayScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val webViewProfileKeys = ConcurrentHashMap<String, String>()
@@ -930,6 +939,8 @@ class BrowserController(
         isAddressBarDocked = store.loadAddressBarDocked()
         isTabButtonVisible = store.loadTabButtonVisible()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
+        isVideoAutoplayBlocked =
+            isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
         downloadSettings = store.loadDownloadSettings()
         refreshExternalDownloadManagers()
         store.clearLegacyWebContentEdgeToEdgePreference()
@@ -1158,6 +1169,7 @@ class BrowserController(
                 safeBrowsingEnabled = true
                 requireMediaPlaybackGesture()
             }
+            if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(this)
             if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
                 WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
             }
@@ -2736,6 +2748,25 @@ class BrowserController(
         onFullImmersiveModeChanged(enabled)
     }
 
+    fun updateVideoAutoplayBlocked(blocked: Boolean) {
+        if (blocked && !isVideoAutoplayBlockingSupported) return
+        if (isVideoAutoplayBlocked == blocked) return
+        isVideoAutoplayBlocked = blocked
+        store.saveVideoAutoplayBlocked(blocked)
+        val activeWebViews = (webViews.values + linkPeekPreviewAssignments.keys).distinct()
+        if (blocked) {
+            activeWebViews.forEach { webView ->
+                installVideoAutoplayDocumentStartScript(webView)
+                webView.evaluateJavascript(VideoAutoplayBlockerScript.installScript, null)
+            }
+        } else {
+            activeWebViews.forEach { webView ->
+                removeVideoAutoplayDocumentStartScript(webView)
+                webView.evaluateJavascript(VideoAutoplayBlockerScript.cleanupScript, null)
+            }
+        }
+    }
+
     fun updateDownloadSettings(settings: BrowserDownloadSettings) {
         val normalized = settings.normalized()
         if (downloadSettings == normalized) return
@@ -3182,6 +3213,7 @@ class BrowserController(
         webViewProfileKeys.clear()
         forcedVerticalScrollScriptHandlers.clear()
         cosmeticScriptHandlers.clear()
+        videoAutoplayScriptHandlers.clear()
         pendingConsentCssUrls.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
@@ -3258,6 +3290,7 @@ class BrowserController(
         }
         applyMediaPlaybackPolicy(tabId, this)
         applyDomainMutePolicy(tabId, this, tab.url)
+        if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(this)
         SystemWebViewCredentials.configure(this)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
             WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
@@ -3532,6 +3565,7 @@ class BrowserController(
             webViewProfileKeys.remove(tabId)
             removeForcedVerticalScrollDocumentStartScript(view)
             removeCosmeticDocumentStartScripts(view)
+            removeVideoAutoplayDocumentStartScript(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
             candyTrailHistoryBindings.remove(tabId)
@@ -3741,6 +3775,24 @@ class BrowserController(
 
     private fun removeForcedVerticalScrollDocumentStartScript(view: WebView) {
         forcedVerticalScrollScriptHandlers.remove(view)?.let { handler ->
+            runCatching(handler::remove)
+        }
+    }
+
+    private fun installVideoAutoplayDocumentStartScript(view: WebView) {
+        if (!isVideoAutoplayBlocked || view in videoAutoplayScriptHandlers) return
+        if (!isVideoAutoplayBlockingSupported) return
+        runCatching {
+            WebViewCompat.addDocumentStartJavaScript(
+                view,
+                VideoAutoplayBlockerScript.installScript,
+                ALL_WEB_ORIGINS,
+            )
+        }.getOrNull()?.let { handler -> videoAutoplayScriptHandlers[view] = handler }
+    }
+
+    private fun removeVideoAutoplayDocumentStartScript(view: WebView) {
+        videoAutoplayScriptHandlers.remove(view)?.let { handler ->
             runCatching(handler::remove)
         }
     }
@@ -5521,6 +5573,7 @@ class BrowserController(
     private fun destroyWebView(webView: WebView) {
         removeForcedVerticalScrollDocumentStartScript(webView)
         removeCosmeticDocumentStartScripts(webView)
+        removeVideoAutoplayDocumentStartScript(webView)
         webView.setOnScrollChangeListener(null)
         (webView.parent as? FrameLayout)?.removeView(webView)
         webView.stopLoading()
@@ -5559,7 +5612,13 @@ class BrowserController(
     }
 
     private fun applyMediaPlaybackPolicy(tabId: String, webView: WebView) {
-        if (MediaPlaybackPolicy.requiresUserGesture(tabId, selectedTabId, isActivityResumed)) {
+        if (
+            MediaPlaybackPolicy.requiresUserGesture(
+                tabId = tabId,
+                selectedTabId = selectedTabId,
+                isActivityResumed = isActivityResumed,
+            )
+        ) {
             webView.settings.requireMediaPlaybackGesture()
         } else {
             webView.settings.allowContinuousMediaPlayback()

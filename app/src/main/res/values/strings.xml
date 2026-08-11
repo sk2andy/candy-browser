@@ -231,6 +231,9 @@
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Full immersive mode</string>
     <string name="settings_full_immersive_mode_subtitle">Hides the status and navigation bars. Swipe from a screen edge to show them temporarily.</string>
+    <string name="settings_video_autoplay_title">Prevent video autoplay</string>
+    <string name="settings_video_autoplay_subtitle">Videos start only when you play them.</string>
+    <string name="settings_video_autoplay_unsupported">Requires a newer Android WebView version.</string>
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>

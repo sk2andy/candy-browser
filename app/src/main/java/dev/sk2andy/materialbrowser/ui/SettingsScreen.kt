@@ -96,6 +96,8 @@ internal fun SettingsScreen(
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
     isFullImmersiveModeEnabled: Boolean,
+    isVideoAutoplayBlocked: Boolean,
+    isVideoAutoplayBlockingSupported: Boolean,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
     siteCapsules: List<SiteCapsule>,
@@ -110,6 +112,7 @@ internal fun SettingsScreen(
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
+    onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
@@ -172,8 +175,11 @@ internal fun SettingsScreen(
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
+                    isVideoAutoplayBlocked = isVideoAutoplayBlocked,
+                    isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
                     isDefaultBrowser = isDefaultBrowser,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
+                    onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
                     onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
@@ -471,8 +477,11 @@ private fun TabsAndGesturesSettingsPage(
 @Composable
 private fun BrowserSettingsPage(
     isFullImmersiveModeEnabled: Boolean,
+    isVideoAutoplayBlocked: Boolean,
+    isVideoAutoplayBlockingSupported: Boolean,
     isDefaultBrowser: Boolean,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
+    onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -485,6 +494,20 @@ private fun BrowserSettingsPage(
             subtitle = stringResource(R.string.settings_full_immersive_mode_subtitle),
             checked = isFullImmersiveModeEnabled,
             onCheckedChange = onFullImmersiveModeEnabledChanged,
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_video_autoplay_title),
+            subtitle = stringResource(
+                if (isVideoAutoplayBlockingSupported) {
+                    R.string.settings_video_autoplay_subtitle
+                } else {
+                    R.string.settings_video_autoplay_unsupported
+                },
+            ),
+            checked = isVideoAutoplayBlocked,
+            enabled = isVideoAutoplayBlockingSupported,
+            onCheckedChange = onVideoAutoplayBlockedChanged,
         )
         Spacer(Modifier.height(8.dp))
         Surface(

@@ -312,6 +312,18 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun videoAutoplayBlockingDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadVideoAutoplayBlocked())
+
+        store.saveVideoAutoplayBlocked(true)
+        assertTrue(store.loadVideoAutoplayBlocked())
+
+        store.saveVideoAutoplayBlocked(false)
+        assertFalse(store.loadVideoAutoplayBlocked())
+    }
+
+    @Test
     fun legacyWebContentEdgeToEdgePreferenceIsRemoved() {
         preferences.edit().putBoolean("web_content_edge_to_edge", true).commit()
 
