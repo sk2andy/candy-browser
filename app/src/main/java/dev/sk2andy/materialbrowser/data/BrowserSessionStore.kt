@@ -268,9 +268,18 @@ class BrowserSessionStore internal constructor(
                 item.optString("profileId"),
                 item.optString("host"),
                 SitePrivacyOverrides(
-                    cookieBannerRemovalDisabled =
-                        item.optBoolean("cookieBannerRemovalDisabled", false),
-                    forceVerticalScrolling = item.optBoolean("forceVerticalScrolling", false),
+                    cookieBannerRemovalDisabled = when {
+                        item.has("cookieBannerRemovalDisabledOverride") ->
+                            item.optBoolean("cookieBannerRemovalDisabledOverride")
+                        item.optBoolean("cookieBannerRemovalDisabled", false) -> true
+                        else -> null
+                    },
+                    forceVerticalScrolling = when {
+                        item.has("forceVerticalScrollingOverride") ->
+                            item.optBoolean("forceVerticalScrollingOverride")
+                        item.optBoolean("forceVerticalScrolling", false) -> true
+                        else -> null
+                    },
                 ),
             )
         }.mapNotNull { (profileId, host, overrides) ->
@@ -309,8 +318,14 @@ class BrowserSessionStore internal constructor(
             JSONObject()
                 .put("profileId", profileId)
                 .put("host", host)
-                .put("cookieBannerRemovalDisabled", overrides.cookieBannerRemovalDisabled)
-                .put("forceVerticalScrolling", overrides.forceVerticalScrolling)
+                .also { item ->
+                    overrides.cookieBannerRemovalDisabled?.let { disabled ->
+                        item.put("cookieBannerRemovalDisabledOverride", disabled)
+                    }
+                    overrides.forceVerticalScrolling?.let { enabled ->
+                        item.put("forceVerticalScrollingOverride", enabled)
+                    }
+                }
         }
     }
 

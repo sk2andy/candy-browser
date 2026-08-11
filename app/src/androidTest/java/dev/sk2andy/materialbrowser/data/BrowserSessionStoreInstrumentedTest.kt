@@ -360,4 +360,65 @@ class BrowserSessionStoreInstrumentedTest {
 
         assertEquals(64, store.loadSitePrivacyOverrides().getValue("candy").size)
     }
+
+    @Test
+    fun explicitFalsePrivacyOverridesRoundTripAndLegacyValuesMigrate() {
+        val store = BrowserSessionStore(context)
+        store.saveSitePrivacyOverrides(
+            mapOf(
+                "candy" to mapOf(
+                    "disabled.example" to SitePrivacyOverrides(forceVerticalScrolling = false),
+                    "consent.example" to SitePrivacyOverrides(
+                        cookieBannerRemovalDisabled = false,
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(
+            false,
+            store.loadSitePrivacyOverrides()
+                .getValue("candy")
+                .getValue("disabled.example")
+                .forceVerticalScrolling,
+        )
+        assertEquals(
+            false,
+            store.loadSitePrivacyOverrides()
+                .getValue("candy")
+                .getValue("consent.example")
+                .cookieBannerRemovalDisabled,
+        )
+
+        preferences.edit().putString(
+            "site_privacy_overrides",
+            """
+            [
+              {"profileId":"candy","host":"legacy.example","forceVerticalScrolling":false,"cookieBannerRemovalDisabled":true},
+              {"profileId":"candy","host":"legacy-visible.example","forceVerticalScrolling":true,"cookieBannerRemovalDisabled":false}
+            ]
+            """.trimIndent(),
+        ).commit()
+        assertEquals(
+            null,
+            store.loadSitePrivacyOverrides()
+                .getValue("candy")
+                .getValue("legacy.example")
+                .forceVerticalScrolling,
+        )
+        assertEquals(
+            true,
+            store.loadSitePrivacyOverrides()
+                .getValue("candy")
+                .getValue("legacy.example")
+                .cookieBannerRemovalDisabled,
+        )
+        assertEquals(
+            null,
+            store.loadSitePrivacyOverrides()
+                .getValue("candy")
+                .getValue("legacy-visible.example")
+                .cookieBannerRemovalDisabled,
+        )
+    }
 }

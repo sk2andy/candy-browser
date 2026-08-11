@@ -65,17 +65,30 @@ class TopSiteBlockingAuditInstrumentedTest {
         if (pass == AuditPass.Candidate) validateCandidateAssets()
         val buildId = arguments.getString(ARG_BUILD_ID)?.trim()?.takeIf(String::isNotEmpty)
             ?: error("buildId is required for reproducible audit output")
+        val captureScreenshots = arguments.getString(ARG_CAPTURE_SCREENSHOTS) == "true"
         val startRank = arguments.getString(ARG_START_RANK)?.toIntOrNull()?.coerceAtLeast(1) ?: 1
         val siteCount = arguments.getString(ARG_SITE_COUNT)?.toIntOrNull()
             ?.coerceIn(1, MAX_SITES_PER_RUN)
             ?: DEFAULT_SITE_COUNT
-        val targets = loadTargets(startRank, siteCount)
-        assertEquals("Incomplete Tranco range", siteCount, targets.size)
-        assertEquals(
-            "Non-contiguous Tranco ranks",
-            (startRank until startRank + siteCount).toList(),
-            targets.map(AuditTarget::rank),
-        )
+        val requestedRanks = parseRequestedRanks(arguments.getString(ARG_TARGET_RANKS))
+        val targets = if (requestedRanks.isEmpty()) {
+            loadTargets(startRank, siteCount).also { loaded ->
+                assertEquals("Incomplete Tranco range", siteCount, loaded.size)
+                assertEquals(
+                    "Non-contiguous Tranco ranks",
+                    (startRank until startRank + siteCount).toList(),
+                    loaded.map(AuditTarget::rank),
+                )
+            }
+        } else {
+            loadTargets(requestedRanks).also { loaded ->
+                assertEquals(
+                    "Incomplete explicit Tranco ranks",
+                    requestedRanks,
+                    loaded.map(AuditTarget::rank),
+                )
+            }
+        }
 
         val targetContext = instrumentation.targetContext
         targetContext.getSystemService(LocaleManager::class.java).applicationLocales =
@@ -111,17 +124,26 @@ class TopSiteBlockingAuditInstrumentedTest {
                     }
                     val startedAt = System.currentTimeMillis()
                     navigate(scenario, target)
+                    val auditTabId = safeAreaAuditTabId ?: previousAuditTabId
                     val page = awaitPage(
                         scenario,
                         target,
                         PAGE_TIMEOUT_MILLIS,
-                        safeAreaAuditTabId,
+                        auditTabId,
                     )
-                    safeAreaAuditTabId?.let { auditTabId ->
-                        selectSafeAreaAuditTab(scenario, auditTabId, stopLoading = false)
+                    checkNotNull(auditTabId)
+                    val webViewAttached = selectSafeAreaAuditTab(
+                        scenario,
+                        auditTabId,
+                        stopLoading = false,
+                    )
+                    if (webViewAttached) Thread.sleep(SETTLE_MILLIS)
+                    val probe = if (webViewAttached) evaluateProbe(scenario) else null
+                    val verticalScroll = if (pass == AuditPass.SafeArea || !webViewAttached) {
+                        null
+                    } else {
+                        evaluateVerticalScroll(scenario)
                     }
-                    Thread.sleep(SETTLE_MILLIS)
-                    val probe = evaluateProbe(scenario)
                     val safeAreaLayout = if (pass == AuditPass.SafeArea) {
                         auditSafeAreaLayout(
                             scenario,
@@ -142,12 +164,15 @@ class TopSiteBlockingAuditInstrumentedTest {
                         val controller = activity.browserControllerForTesting()
                         controller.privacySnapshot(controller.selectedTabId)
                     }
-                    val screenshot = if (probe?.needsScreenshot() == true) {
+                    val screenshot = if (
+                        captureScreenshots && probe?.needsScreenshot() == true
+                    ) {
                         captureScreenshot(scenario, screenshotRoot, target)
                     } else {
                         null
                     }
                     val record = JSONObject()
+                        .put("schemaVersion", AUDIT_SCHEMA_VERSION)
                         .put("rank", target.rank)
                         .put("domain", target.domain)
                         .put("pass", pass.argument)
@@ -157,12 +182,27 @@ class TopSiteBlockingAuditInstrumentedTest {
                         .put("title", page.title.take(MAX_TITLE_LENGTH))
                         .put("durationMillis", System.currentTimeMillis() - startedAt)
                         .put("loadingTimedOut", page.loadingTimedOut)
-                        .put("mainFrameError", page.error ?: JSONObject.NULL)
+                        .put(
+                            "mainFrameError",
+                            page.error ?: if (webViewAttached) JSONObject.NULL else WEBVIEW_NOT_ATTACHED,
+                        )
                         .put("blockedTotal", snapshot.totalBlocked)
                         .put("blockedDomains", snapshot.domains.toJson())
                         .put("probe", probe ?: JSONObject.NULL)
+                        .put("verticalScroll", verticalScroll ?: JSONObject.NULL)
                         .put("safeAreaLayout", safeAreaLayout ?: JSONObject.NULL)
                         .put("screenshot", screenshot ?: JSONObject.NULL)
+                    if (pass == AuditPass.ForceScroll && webViewAttached) {
+                        record.put(
+                            "forceVerticalScroll",
+                            evaluateForcedVerticalScroll(scenario, target, auditTabId),
+                        )
+                    } else if (pass == AuditPass.ForceScroll) {
+                        record.put(
+                            "forceVerticalScroll",
+                            JSONObject().put("enabled", false).put("reason", WEBVIEW_NOT_ATTACHED),
+                        )
+                    }
                     writer.append(record.toString()).append('\n')
                     writer.flush()
                     instrumentation.sendStatus(
@@ -236,7 +276,7 @@ class TopSiteBlockingAuditInstrumentedTest {
         scenario: ActivityScenario<MainActivity>,
         auditTabId: String,
         stopLoading: Boolean,
-    ) {
+    ): Boolean {
         scenario.onActivity { activity ->
             val controller = activity.browserControllerForTesting()
             controller.selectTab(auditTabId)
@@ -246,7 +286,7 @@ class TopSiteBlockingAuditInstrumentedTest {
                 .forEach(controller::closeTab)
             if (stopLoading) controller.selectedWebViewForTesting().stopLoading()
         }
-        if (!stopLoading) check(awaitAttachedWebView(scenario)) { "Audit WebView was not attached" }
+        return stopLoading || awaitAttachedWebView(scenario)
     }
 
     private fun awaitAttachedWebView(scenario: ActivityScenario<MainActivity>): Boolean {
@@ -300,11 +340,18 @@ class TopSiteBlockingAuditInstrumentedTest {
     }
 
     private fun evaluateProbe(scenario: ActivityScenario<MainActivity>): JSONObject? {
+        return evaluateJson(scenario, DOM_PROBE_SCRIPT)
+    }
+
+    private fun evaluateJson(
+        scenario: ActivityScenario<MainActivity>,
+        script: String,
+    ): JSONObject? {
         val rawResult = AtomicReference<String>()
         val evaluated = CountDownLatch(1)
         scenario.onActivity { activity ->
             val webView = activity.browserControllerForTesting().selectedWebViewForTesting()
-            webView.evaluateJavascript(DOM_PROBE_SCRIPT) { value ->
+            webView.evaluateJavascript(script) { value ->
                 rawResult.set(value)
                 evaluated.countDown()
             }
@@ -318,6 +365,57 @@ class TopSiteBlockingAuditInstrumentedTest {
                 else -> null
             }
         }.getOrNull()
+    }
+
+    private fun evaluateVerticalScroll(
+        scenario: ActivityScenario<MainActivity>,
+    ): JSONObject? {
+        evaluateJson(scenario, SCROLL_RESET_SCRIPT) ?: return null
+        Thread.sleep(SCROLL_SETTLE_MILLIS)
+        val attempt = evaluateJson(scenario, SCROLL_ATTEMPT_SCRIPT) ?: return null
+        Thread.sleep(SCROLL_SETTLE_MILLIS)
+        val result = evaluateJson(scenario, SCROLL_RESULT_SCRIPT) ?: return null
+        val webViewCanScrollDown = scenario.readActivity { activity ->
+            activity.browserControllerForTesting().selectedWebViewForTesting()
+                .canScrollVertically(1)
+        }
+        val maximum = attempt.optDouble("maximum", 0.0)
+        val before = attempt.optDouble("before", 0.0)
+        val after = result.optDouble("after", before)
+        val applicable = maximum > MIN_SCROLL_RANGE_PX
+        val windowMoved = after > before + MIN_SCROLL_MOVEMENT_PX
+        return JSONObject()
+            .put("applicable", applicable)
+            .put("before", before)
+            .put("after", after)
+            .put("maximum", maximum)
+            .put("windowMoved", windowMoved)
+            .put("webViewCanScrollDown", webViewCanScrollDown)
+            .put("worked", !applicable || windowMoved || webViewCanScrollDown)
+    }
+
+    private fun evaluateForcedVerticalScroll(
+        scenario: ActivityScenario<MainActivity>,
+        target: AuditTarget,
+        auditTabId: String?,
+    ): JSONObject {
+        val enabled = scenario.readActivity { activity ->
+            activity.browserControllerForTesting().let { controller ->
+                controller.setForceVerticalScrolling(controller.selectedTabId, true)
+            }
+        }
+        if (!enabled) {
+            return JSONObject().put("enabled", false).put("reason", "override-not-applied")
+        }
+        val page = awaitPage(scenario, target, PAGE_TIMEOUT_MILLIS, auditTabId)
+        Thread.sleep(SETTLE_MILLIS)
+        return JSONObject()
+            .put("enabled", true)
+            .put("finalUrl", sanitizeUrl(page.url))
+            .put("loadingTimedOut", page.loadingTimedOut)
+            .put("mainFrameError", page.error ?: JSONObject.NULL)
+            .put("probe", evaluateProbe(scenario) ?: JSONObject.NULL)
+            .put("verticalScroll", evaluateVerticalScroll(scenario) ?: JSONObject.NULL)
     }
 
     private fun captureScreenshot(
@@ -456,6 +554,17 @@ class TopSiteBlockingAuditInstrumentedTest {
         }
 
     private fun loadTargets(startRank: Int, siteCount: Int): List<AuditTarget> =
+        loadAllTargets().asSequence()
+            .filter { it.rank >= startRank }
+            .take(siteCount)
+            .toList()
+
+    private fun loadTargets(ranks: List<Int>): List<AuditTarget> {
+        val targetsByRank = loadAllTargets().associateBy(AuditTarget::rank)
+        return ranks.mapNotNull(targetsByRank::get)
+    }
+
+    private fun loadAllTargets(): List<AuditTarget> =
         instrumentation.context.assets.open(TRANCO_ASSET).bufferedReader().useLines { lines ->
             lines.map(String::trim)
                 .filter { it.isNotEmpty() && !it.startsWith('#') }
@@ -466,10 +575,15 @@ class TopSiteBlockingAuditInstrumentedTest {
                         ?: return@mapNotNull null
                     AuditTarget(rank, domain)
                 }
-                .filter { it.rank >= startRank }
-                .take(siteCount)
                 .toList()
         }
+
+    private fun parseRequestedRanks(value: String?): List<Int> = value.orEmpty()
+        .split(',')
+        .mapNotNull { it.trim().toIntOrNull() }
+        .filter { it in 1..MAX_TRANCO_RANK }
+        .distinct()
+        .sorted()
 
     private fun isEmulator(): Boolean =
         android.os.Build.FINGERPRINT.startsWith("generic") ||
@@ -586,6 +700,10 @@ class TopSiteBlockingAuditInstrumentedTest {
             argument = "candidate",
             settings = BlockerSettings(),
         ),
+        ForceScroll(
+            argument = "force-scroll",
+            settings = BlockerSettings(),
+        ),
         SafeArea(
             argument = "safe-area",
             settings = BlockerSettings(),
@@ -593,7 +711,9 @@ class TopSiteBlockingAuditInstrumentedTest {
 
         companion object {
             fun parse(value: String?): AuditPass = entries.firstOrNull { it.argument == value }
-                ?: error("auditPass must be baseline, current, candidate, or safe-area")
+                ?: error(
+                    "auditPass must be baseline, current, candidate, force-scroll, or safe-area",
+                )
         }
     }
 
@@ -603,10 +723,13 @@ class TopSiteBlockingAuditInstrumentedTest {
         const val ARG_BUILD_ID = "buildId"
         const val ARG_START_RANK = "startRank"
         const val ARG_SITE_COUNT = "siteCount"
+        const val ARG_TARGET_RANKS = "targetRanks"
+        const val ARG_CAPTURE_SCREENSHOTS = "captureScreenshots"
         const val AUDIT_DIRECTORY = "top-site-audit"
         const val AUDIT_LOCALE = "de-DE"
-        const val TRANCO_ASSET = "tranco_PYG5J_top_1000.csv"
+        const val TRANCO_ASSET = "tranco_PYG5J_top_10000.csv"
         const val BLANK_URL = "about:blank"
+        const val WEBVIEW_NOT_ATTACHED = "webview-not-attached"
         const val DEFAULT_SITE_COUNT = 25
         const val ATTACH_POLL_ATTEMPTS = 100
         const val SAFE_AREA_SCROLL_SETTLE_MILLIS = 250L
@@ -614,7 +737,8 @@ class TopSiteBlockingAuditInstrumentedTest {
         const val SAFE_AREA_NATIVE_SCROLL_PX = 1_000
         val SAFE_AREA_INSET_TYPES =
             WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-        const val MAX_SITES_PER_RUN = 1_000
+        const val MAX_SITES_PER_RUN = 10_000
+        const val MAX_TRANCO_RANK = 10_000
         const val MAX_TITLE_LENGTH = 200
         const val MAX_FILE_COMPONENT_LENGTH = 120
         const val PAGE_TIMEOUT_MILLIS = 12_000L
@@ -624,6 +748,39 @@ class TopSiteBlockingAuditInstrumentedTest {
         const val POLL_MILLIS = 250L
         const val JS_TIMEOUT_SECONDS = 8L
         const val STATUS_PROGRESS = 2
+        const val AUDIT_SCHEMA_VERSION = 2
+        const val SCROLL_SETTLE_MILLIS = 250L
+        const val MIN_SCROLL_RANGE_PX = 32.0
+        const val MIN_SCROLL_MOVEMENT_PX = 1.0
+
+        val SCROLL_RESET_SCRIPT = """
+            (() => {
+              scrollTo({top: 0, left: 0, behavior: 'instant'});
+              return JSON.stringify({reset: true});
+            })();
+        """.trimIndent()
+
+        val SCROLL_ATTEMPT_SCRIPT = """
+            (() => {
+              const root = document.scrollingElement || document.documentElement;
+              const before = Number(root?.scrollTop || scrollY || 0);
+              const height = Math.max(
+                root?.scrollHeight || 0,
+                document.documentElement?.scrollHeight || 0,
+                document.body?.scrollHeight || 0
+              );
+              const maximum = Math.max(0, height - innerHeight);
+              scrollTo({top: Math.min(maximum, 512), left: 0, behavior: 'instant'});
+              return JSON.stringify({before, maximum});
+            })();
+        """.trimIndent()
+
+        val SCROLL_RESULT_SCRIPT = """
+            (() => {
+              const root = document.scrollingElement || document.documentElement;
+              return JSON.stringify({after: Number(root?.scrollTop || scrollY || 0)});
+            })();
+        """.trimIndent()
 
         val DOM_PROBE_SCRIPT = """
             (() => {

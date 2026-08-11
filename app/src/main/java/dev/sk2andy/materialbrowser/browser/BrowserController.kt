@@ -58,6 +58,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
+import dev.sk2andy.materialbrowser.blocking.BundledSitePrivacyDefaults
 import dev.sk2andy.materialbrowser.blocking.CandyCosmeticScript
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
 import dev.sk2andy.materialbrowser.blocking.CandyDocumentStartOrigin
@@ -344,6 +345,7 @@ class BrowserController(
     private val capsuleShortcuts = CapsuleShortcutPublisher(activity)
     private val candyRuleRepository = CandyRuleRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
+    private val bundledSitePrivacyDefaults = BundledSitePrivacyDefaults.load(activity)
     private val downloadManager = BrowserDownloadManager(activity)
     private val externalApps = ExternalAppLauncher(activity)
     private val assistantSummary = AssistantSummaryLauncher(activity)
@@ -2744,23 +2746,33 @@ class BrowserController(
     }
 
     fun setCookieBannerRemovalDisabled(tabId: String, disabled: Boolean): Boolean =
-        updateSitePrivacyOverrides(tabId) { current ->
-            current.copy(cookieBannerRemovalDisabled = disabled)
+        updateSitePrivacyOverrides(tabId) { current, host ->
+            current.copy(
+                cookieBannerRemovalDisabled = SitePrivacyOverrideRules.overrideForSelection(
+                    enabled = disabled,
+                    bundledDefault = bundledSitePrivacyDefaults.cookieBannerRemovalDisabled(host),
+                ),
+            )
         }
 
     fun setForceVerticalScrolling(tabId: String, enabled: Boolean): Boolean =
-        updateSitePrivacyOverrides(tabId) { current ->
-            current.copy(forceVerticalScrolling = enabled)
+        updateSitePrivacyOverrides(tabId) { current, host ->
+            current.copy(
+                forceVerticalScrolling = SitePrivacyOverrideRules.overrideForSelection(
+                    enabled = enabled,
+                    bundledDefault = bundledSitePrivacyDefaults.forceVerticalScrolling(host),
+                ),
+            )
         }
 
     private fun updateSitePrivacyOverrides(
         tabId: String,
-        transform: (SitePrivacyOverrides) -> SitePrivacyOverrides,
+        transform: (SitePrivacyOverrides, String) -> SitePrivacyOverrides,
     ): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         val host = PrivacyRequestSanitizer.webHost(pageUrls[tabId] ?: tab.url) ?: return false
         val current = sitePrivacyOverridesFor(tab)[host] ?: SitePrivacyOverrides()
-        val updated = transform(current)
+        val updated = transform(current, host)
         if (updated == current) return false
 
         val affectedTabIds = linkedSetOf(tabId)
@@ -3493,11 +3505,12 @@ class BrowserController(
     }
 
     private fun injectForcedVerticalScrollFallback(tabId: String, view: WebView, pageUrl: String?) {
-        if (view in forcedVerticalScrollScriptHandlers) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         val host = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url) ?: return
         if (!isForcedVerticalScrolling(tab, host)) return
-        ForcedVerticalScrollScript.create(forcedVerticalScrollHostsForTab(tabId))
+        // Redirects can register a document-start handler after its injection point. Always run
+        // the idempotent fallback for the committed document, even when a handler now exists.
+        ForcedVerticalScrollScript.create(forcedVerticalScrollHostsForTab(tabId, pageUrl))
             .takeIf(String::isNotEmpty)
             ?.let { script -> view.evaluateJavascript(script, null) }
     }
@@ -3578,10 +3591,16 @@ class BrowserController(
         }
     }
 
-    private fun installForcedVerticalScrollDocumentStartScript(tabId: String, view: WebView) {
+    private fun installForcedVerticalScrollDocumentStartScript(
+        tabId: String,
+        view: WebView,
+        pageUrl: String? = null,
+    ) {
         removeForcedVerticalScrollDocumentStartScript(view)
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
-        val script = ForcedVerticalScrollScript.create(forcedVerticalScrollHostsForTab(tabId))
+        val script = ForcedVerticalScrollScript.create(
+            forcedVerticalScrollHostsForTab(tabId, pageUrl),
+        )
         if (script.isEmpty()) return
         runCatching {
             WebViewCompat.addDocumentStartJavaScript(view, script, ALL_WEB_ORIGINS)
@@ -4982,19 +5001,38 @@ class BrowserController(
             permanentSitePrivacyOverrides[tab.profileId].orEmpty()
         }
 
-    private fun forcedVerticalScrollHostsForTab(tabId: String): Set<String> {
+    private fun forcedVerticalScrollHostsForTab(
+        tabId: String,
+        pageUrl: String? = null,
+    ): Set<String> {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return emptySet()
-        return sitePrivacyOverridesFor(tab).asSequence()
-            .filter { (_, overrides) -> overrides.forceVerticalScrolling }
+        val overridesByHost = sitePrivacyOverridesFor(tab)
+        val forcedHosts = overridesByHost.asSequence()
+            .filter { (_, overrides) -> overrides.forceVerticalScrolling == true }
             .map { (host, _) -> host }
-            .toSet()
+            .toMutableSet()
+        val pageHost = PrivacyRequestSanitizer.webHost(pageUrl ?: pageUrls[tabId] ?: tab.url)
+        if (pageHost != null && SitePrivacyOverrideRules.forceVerticalScrolling(
+                overrides = overridesByHost[pageHost],
+                bundledDefault = bundledSitePrivacyDefaults.forceVerticalScrolling(pageHost),
+            )
+        ) {
+            forcedHosts += pageHost
+        }
+        return forcedHosts
     }
 
     private fun isCookieBannerRemovalDisabled(tab: BrowserTab, host: String): Boolean =
-        sitePrivacyOverridesFor(tab)[host]?.cookieBannerRemovalDisabled == true
+        SitePrivacyOverrideRules.cookieBannerRemovalDisabled(
+            overrides = sitePrivacyOverridesFor(tab)[host],
+            bundledDefault = bundledSitePrivacyDefaults.cookieBannerRemovalDisabled(host),
+        )
 
     private fun isForcedVerticalScrolling(tab: BrowserTab, host: String): Boolean =
-        sitePrivacyOverridesFor(tab)[host]?.forceVerticalScrolling == true
+        SitePrivacyOverrideRules.forceVerticalScrolling(
+            overrides = sitePrivacyOverridesFor(tab)[host],
+            bundledDefault = bundledSitePrivacyDefaults.forceVerticalScrolling(host),
+        )
 
     private fun isCookieBannerRemovalEnabled(tabId: String, pageUrl: String?): Boolean {
         if (!workerSettings.hideCookieConsent || isSiteProtectionPaused(tabId, pageUrl)) return false
@@ -5017,6 +5055,7 @@ class BrowserController(
         pageUrl: String,
     ) {
         applyCookiePolicy(tabId, webView, pageUrl)
+        installForcedVerticalScrollDocumentStartScript(tabId, webView, pageUrl)
         installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
         if (!workerSettings.hideCookieConsent) {
             webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
