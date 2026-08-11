@@ -223,6 +223,9 @@
     <string name="settings_section_browser">Navigateur</string>
     <string name="settings_full_immersive_mode_title">Mode immersif plein écran</string>
     <string name="settings_full_immersive_mode_subtitle">Masque les barres d’état et de navigation. Balayez depuis un bord pour les afficher temporairement.</string>
+    <string name="settings_video_autoplay_title">Empêcher la lecture automatique des vidéos</string>
+    <string name="settings_video_autoplay_subtitle">Les vidéos ne démarrent que lorsque vous les lancez.</string>
+    <string name="settings_video_autoplay_unsupported">Nécessite une version plus récente d’Android WebView.</string>
     <string name="settings_default_browser">Navigateur par défaut</string>
     <string name="settings_default_browser_active">Candy Browser est votre navigateur par défaut</string>
     <string name="settings_make_default_browser">Définir Candy Browser comme navigateur par défaut</string>

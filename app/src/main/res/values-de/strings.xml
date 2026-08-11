@@ -221,6 +221,9 @@
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>
     <string name="settings_full_immersive_mode_subtitle">Blendet Status- und Navigationsleiste aus. Vom Bildschirmrand wischen, um sie kurz einzublenden.</string>
+    <string name="settings_video_autoplay_title">Automatische Videowiedergabe verhindern</string>
+    <string name="settings_video_autoplay_subtitle">Videos starten nur, wenn du sie selbst abspielst.</string>
+    <string name="settings_video_autoplay_unsupported">Erfordert eine neuere Android-WebView-Version.</string>
     <string name="settings_default_browser">Standardbrowser</string>
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>

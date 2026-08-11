@@ -429,6 +429,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_FULL_IMMERSIVE_MODE_ENABLED, enabled).apply()
     }
 
+    fun loadVideoAutoplayBlocked(): Boolean =
+        preferences.getBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, false)
+
+    fun saveVideoAutoplayBlocked(blocked: Boolean) {
+        preferences.edit().putBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, blocked).apply()
+    }
+
     fun loadDownloadSettings(): BrowserDownloadSettings = BrowserDownloadSettings(
         managerMode = DownloadManagerMode.fromStableId(
             preferences.getString(KEY_DOWNLOAD_MANAGER_MODE, null),
@@ -502,6 +509,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
+        const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_DOWNLOAD_MANAGER_MODE = "download_manager_mode"
         const val KEY_EXTERNAL_DOWNLOAD_MANAGER_ID = "external_download_manager_id"
         const val KEY_SHARE_SESSION_DATA_WITH_ONE_DM = "share_session_data_with_one_dm"

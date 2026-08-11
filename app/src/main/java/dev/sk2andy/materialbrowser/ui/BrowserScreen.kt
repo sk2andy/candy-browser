@@ -1604,6 +1604,8 @@ fun BrowserScreen(controller: BrowserController) {
                 profilesEnabled = controller.profilesEnabled,
                 isTabButtonVisible = controller.isTabButtonVisible,
                 isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
+                isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
+                isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
                 siteCapsules = controller.siteCapsules.filter {
@@ -1621,6 +1623,7 @@ fun BrowserScreen(controller: BrowserController) {
                 onTabButtonVisibleChanged = controller::updateTabButtonVisible,
                 onFullImmersiveModeEnabledChanged =
                     controller::updateFullImmersiveModeEnabled,
+                onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
                     privacyXRayTabId = selectedTab.id
