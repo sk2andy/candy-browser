@@ -6,15 +6,16 @@ import android.graphics.BitmapFactory
 import android.util.AtomicFile
 import java.io.File
 import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.util.UUID
 
 class TabPreviewStore(context: Context) {
-    private val directory = File(context.noBackupFilesDir, DIRECTORY_NAME)
+    private val files = AtomicTabFileDirectory(
+        directory = File(context.noBackupFilesDir, DIRECTORY_NAME),
+        extension = FILE_EXTENSION,
+    )
     private val legacyDirectory = File(context.noBackupFilesDir, LEGACY_DIRECTORY_NAME)
 
     init {
-        clearDirectory(legacyDirectory)
+        deleteDirectory(legacyDirectory)
     }
 
     fun load(tabId: String): Bitmap? {
@@ -55,65 +56,35 @@ class TabPreviewStore(context: Context) {
     }
 
     fun save(tabId: String, bitmap: Bitmap): Boolean {
-        if (bitmap.isRecycled || (!directory.exists() && !directory.mkdirs())) return false
+        if (bitmap.isRecycled || !files.ensureExists()) return false
         val target = fileFor(tabId) ?: return false
-        val atomicFile = AtomicFile(target)
-        var output: FileOutputStream? = null
-        return try {
-            output = atomicFile.startWrite()
+        return AtomicFile(target).writeSafely { output ->
             check(bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, WEBP_QUALITY, output))
-            atomicFile.finishWrite(output)
-            true
-        } catch (_: Exception) {
-            output?.let(atomicFile::failWrite)
-            false
         }
     }
 
-    fun delete(tabId: String) {
-        val target = fileFor(tabId) ?: return
-        AtomicFile(target).delete()
-    }
+    fun delete(tabId: String) = files.delete(tabId)
 
-    fun prune(validTabIds: Set<String>) {
-        val validNames = validTabIds.mapNotNull(::previewFileName).toSet()
-        val orphanBaseNames = directory.listFiles()
-            ?.map { file -> atomicBaseName(file.name) }
-            ?.filterNot(validNames::contains)
-            ?.toSet()
-            .orEmpty()
-        orphanBaseNames.forEach { baseName ->
-            AtomicFile(File(directory, baseName)).delete()
-        }
-    }
+    fun prune(validTabIds: Set<String>) = files.prune(validTabIds)
 
     fun clear() {
-        clearDirectory(directory)
-        clearDirectory(legacyDirectory)
+        files.clearAndRemoveDirectory()
+        deleteDirectory(legacyDirectory)
     }
 
-    internal fun fileFor(tabId: String): File? = previewFileName(tabId)?.let { File(directory, it) }
+    internal fun fileFor(tabId: String): File? = files.fileFor(tabId)
 
     private companion object {
         const val DIRECTORY_NAME = "tab_previews_v2"
         const val LEGACY_DIRECTORY_NAME = "tab_previews"
+        const val FILE_EXTENSION = "webp"
         const val WEBP_QUALITY = 82
         const val MAX_BITMAP_DIMENSION = 4_096
         const val MAX_FILE_SIZE_BYTES = 12L * 1_024L * 1_024L
     }
 }
 
-private fun clearDirectory(directory: File) {
+private fun deleteDirectory(directory: File) {
     directory.listFiles()?.forEach(File::delete)
     directory.delete()
-}
-
-internal fun previewFileName(tabId: String): String? = runCatching {
-    "${UUID.fromString(tabId)}.webp"
-}.getOrNull()
-
-private fun atomicBaseName(fileName: String): String = when {
-    fileName.endsWith(".new") -> fileName.removeSuffix(".new")
-    fileName.endsWith(".bak") -> fileName.removeSuffix(".bak")
-    else -> fileName
 }

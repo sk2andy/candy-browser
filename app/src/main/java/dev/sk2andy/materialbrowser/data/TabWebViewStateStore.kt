@@ -6,11 +6,12 @@ import android.os.Parcel
 import android.util.AtomicFile
 import java.io.File
 import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.util.UUID
 
 class TabWebViewStateStore(context: Context) {
-    private val directory = File(context.noBackupFilesDir, DIRECTORY_NAME)
+    private val files = AtomicTabFileDirectory(
+        directory = File(context.noBackupFilesDir, DIRECTORY_NAME),
+        extension = FILE_EXTENSION,
+    )
     private val classLoader = context.classLoader
 
     fun load(tabId: String): Bundle? {
@@ -47,7 +48,7 @@ class TabWebViewStateStore(context: Context) {
     }
 
     fun save(tabId: String, state: Bundle): Boolean {
-        if (!directory.exists() && !directory.mkdirs()) return false
+        if (!files.ensureExists()) return false
         val target = fileFor(tabId) ?: return false
         val parcel = Parcel.obtain()
         val bytes = try {
@@ -60,55 +61,22 @@ class TabWebViewStateStore(context: Context) {
         }
         if (bytes.size !in 1..MAX_FILE_SIZE_BYTES) return false
 
-        val atomicFile = AtomicFile(target)
-        var output: FileOutputStream? = null
-        return try {
-            output = atomicFile.startWrite()
+        return AtomicFile(target).writeSafely { output ->
             output.write(bytes)
-            atomicFile.finishWrite(output)
-            true
-        } catch (_: Exception) {
-            output?.let(atomicFile::failWrite)
-            false
         }
     }
 
-    fun delete(tabId: String) {
-        val target = fileFor(tabId) ?: return
-        AtomicFile(target).delete()
-    }
+    fun delete(tabId: String) = files.delete(tabId)
 
-    fun prune(validTabIds: Set<String>) {
-        val validNames = validTabIds.mapNotNull(::stateFileName).toSet()
-        val orphanBaseNames = directory.listFiles()
-            ?.map { file -> atomicBaseName(file.name) }
-            ?.filterNot(validNames::contains)
-            ?.toSet()
-            .orEmpty()
-        orphanBaseNames.forEach { baseName ->
-            AtomicFile(File(directory, baseName)).delete()
-        }
-    }
+    fun prune(validTabIds: Set<String>) = files.prune(validTabIds)
 
-    fun clear() {
-        directory.listFiles()?.forEach(File::delete)
-        directory.delete()
-    }
+    fun clear() = files.clearAndRemoveDirectory()
 
-    internal fun fileFor(tabId: String): File? = stateFileName(tabId)?.let { File(directory, it) }
+    internal fun fileFor(tabId: String): File? = files.fileFor(tabId)
 
     private companion object {
         const val DIRECTORY_NAME = "tab_webview_states"
+        const val FILE_EXTENSION = "bin"
         const val MAX_FILE_SIZE_BYTES = 8 * 1_024 * 1_024
     }
-}
-
-private fun stateFileName(tabId: String): String? = runCatching {
-    "${UUID.fromString(tabId)}.bin"
-}.getOrNull()
-
-private fun atomicBaseName(fileName: String): String = when {
-    fileName.endsWith(".new") -> fileName.removeSuffix(".new")
-    fileName.endsWith(".bak") -> fileName.removeSuffix(".bak")
-    else -> fileName
 }
