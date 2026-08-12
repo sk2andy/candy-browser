@@ -19,6 +19,8 @@
 - Add a regression test at the lowest seam that reproduces the real bug pattern.
 - Prefer pure JVM coverage for policy. Add instrumentation only when Android, WebView, lifecycle, storage or Compose semantics are essential.
 - Keep async tests deterministic: explicit idle/wait hooks, bounded timeouts and stable identities.
+- Test shared pure invariants once, then retain per-store coverage for round trips, corrupt data, pruning, interrupted writes and caller-specific lifecycle behavior.
+- When consolidating duplicate helper tests, verify no observable boundary scenario disappears.
 
 ## Handoff lookup
 

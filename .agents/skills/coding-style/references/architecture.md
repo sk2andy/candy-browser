@@ -22,6 +22,8 @@
 - Normalize and bound untrusted/persisted input before it enters runtime state.
 - Preserve memory-only private state at every storage and network boundary.
 - Reuse existing policy such as `BrowserUriPolicy`, `PermissionOrigin`, `CandyRuleValidator`, and feature `sanitize` functions.
+- Share mechanics only after identifying a stable invariant across callers. Keep differences such as retention, cleanup and error reporting explicit at each owner.
+- Treat best-effort cleanup as an API contract, not an accidental ignored result. Surface deletion failure when completeness matters.
 
 ## File-growth rule
 
@@ -30,4 +32,3 @@
 | `BrowserController.kt` | State connection, WebView callback wiring, orchestration call | New pure policy, parser, store, adapter, reducer |
 | `BrowserScreen.kt` | Root composition and feature-state wiring | Focused screen/component, layout rule, gesture/motion math |
 | `BrowserSessionStore.kt` | Small existing-preference addition | Independent file-backed feature store or complex mutation policy |
-

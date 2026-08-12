@@ -21,8 +21,8 @@ description: Apply Candy Browser's project-specific Kotlin, Jetpack Compose, And
 | Order | Action | Completion criterion |
 | ---: | --- | --- |
 | 1 | Inspect neighboring production code and mirrored tests | Existing ownership and naming pattern identified |
-| 2 | Read only matching references above | Every changed surface has a loaded rule source |
-| 3 | Implement smallest coherent change | Deterministic policy remains outside Android/Compose wiring where possible |
-| 4 | Run checks routed by [`AGENTS.md`](../../../AGENTS.md#verification) | Relevant checks pass or exact blocker is reported |
-| 5 | Update matching feature docs | Changed behavior, invariant, storage, or ownership is discoverable |
-
+| 2 | Read matching references and official docs for version-sensitive APIs | Project convention and framework requirement are distinguished |
+| 3 | Check resolved dependency versions before adding compatibility helpers | Existing platform/library primitive is reused when available and contract-compatible |
+| 4 | Implement smallest coherent change | Deterministic policy remains outside Android/Compose wiring where possible |
+| 5 | Run checks routed by [`AGENTS.md`](../../../AGENTS.md#verification) | Relevant checks pass or exact blocker is reported |
+| 6 | Update matching feature docs | Changed behavior, invariant, storage or ownership is discoverable |

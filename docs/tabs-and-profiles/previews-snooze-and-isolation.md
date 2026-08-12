@@ -8,6 +8,7 @@
 | `BrowserController` | Own PixelCopy/WebView timing, navigation generation and stale-result rejection |
 | `TabPreviewRepository` | Serialize preview file I/O on one executor and prune unknown tab IDs |
 | `TabPreviewStore` | Validate bitmap dimensions/encoding and bound stored data |
+| `AtomicTabFileDirectory` | Share safe UUID filenames, atomic writes, pruning and explicit directory lifecycle with favicon and WebView-state stores |
 
 ## Snoozing
 
