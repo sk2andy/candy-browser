@@ -8,7 +8,7 @@
 | Pin/order | `TabPinningRules`, `TabReorderingRules` | Pinned ordering is normalized after mutations |
 | Delete/duplicate | `TabDeletionRules`, `TabDuplicateRules` | Policy chooses valid targets before controller side effects |
 | Retention | `TabRetentionRules`, `InactiveTabLifetime` | Never expire selected/protected or non-deletable tabs |
-| Overview mode | `TabOverviewMode` and `ui/TabOverview*Rules` | Cover flow uses an Android-switcher-like card at roughly 74% of screen width and 0.45 aspect, with the favicon and title overlaid at top-left; grid and list share the same controller tab state |
+| Overview mode | `TabOverviewMode` and `ui/TabOverview*Rules` | Cover flow uses an Android-switcher-like card at roughly 74% of screen width and 0.45 aspect, with the favicon and title overlaid at top-left; grid and list share the same controller tab state; the overview locks the activity to portrait until it closes |
 
 ## Persistence
 

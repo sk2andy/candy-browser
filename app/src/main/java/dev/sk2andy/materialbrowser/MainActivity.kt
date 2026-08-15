@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.MotionEvent
 import android.widget.Toast
@@ -137,7 +138,10 @@ class MainActivity : ComponentActivity() {
                     updateCheckCompleted = true
                 }
                 Box {
-                    BrowserScreen(browserController)
+                    BrowserScreen(
+                        controller = browserController,
+                        onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
+                    )
                     if (onboardingVisible) {
                         GestureOnboardingScreen(
                             onCompleted = {
@@ -282,6 +286,15 @@ class MainActivity : ComponentActivity() {
 
     @VisibleForTesting
     fun browserControllerForTesting(): BrowserController = browserController
+
+    private fun setTabOverviewPortraitLocked(locked: Boolean) {
+        val orientation = if (locked) {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        if (requestedOrientation != orientation) requestedOrientation = orientation
+    }
 
     private companion object {
         const val SPLASH_DURATION_MILLIS = 1_050L

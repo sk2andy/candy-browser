@@ -365,8 +365,17 @@ private enum class BrowserBackTarget {
 }
 
 @Composable
-fun BrowserScreen(controller: BrowserController) {
+fun BrowserScreen(
+    controller: BrowserController,
+    onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
+) {
+    val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
+        onTabOverviewPortraitLockChanged,
+    )
     controller.activeSiteCapsule?.let { capsule ->
+        LaunchedEffect(capsule.id) {
+            currentTabOverviewPortraitLockChanged(false)
+        }
         SiteCapsuleBrowserScreen(controller, capsule)
         return
     }
@@ -1105,6 +1114,7 @@ fun BrowserScreen(controller: BrowserController) {
         }
     }
     LaunchedEffect(tabOverviewVisible) {
+        currentTabOverviewPortraitLockChanged(tabOverviewVisible)
         if (!tabOverviewVisible) {
             overviewGestureProgress.floatValue = 0f
         }

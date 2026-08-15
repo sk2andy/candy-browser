@@ -9,7 +9,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,6 +49,33 @@ class BrowserRootBackInstrumentedTest {
         composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertExists()
     }
 
+    @Test
+    fun tabOverviewRequestsPortraitUntilClosed() {
+        val browserController = createController()
+        val portraitLocked = AtomicBoolean(false)
+        setBrowserContent(
+            browserController = browserController,
+            onTabOverviewPortraitLockChanged = portraitLocked::set,
+        )
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) { portraitLocked.get() }
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertExists()
+        composeRule.runOnIdle { assertTrue(portraitLocked.get()) }
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertFalse(portraitLocked.get())
+        }
+    }
+
     private fun createController(): BrowserController {
         lateinit var browserController: BrowserController
         composeRule.runOnIdle {
@@ -56,10 +86,16 @@ class BrowserRootBackInstrumentedTest {
         return browserController
     }
 
-    private fun setBrowserContent(browserController: BrowserController) {
+    private fun setBrowserContent(
+        browserController: BrowserController,
+        onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
+    ) {
         composeRule.setContent {
             MaterialBrowserTheme {
-                BrowserScreen(browserController)
+                BrowserScreen(
+                    controller = browserController,
+                    onTabOverviewPortraitLockChanged = onTabOverviewPortraitLockChanged,
+                )
             }
         }
         composeRule.waitForIdle()
