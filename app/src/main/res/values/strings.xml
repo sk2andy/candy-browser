@@ -94,6 +94,8 @@
     <string name="action_reload">Reload</string>
     <string name="action_dock_address_bar">Park address bar at edge</string>
     <string name="action_mute_domain">Mute this site</string>
+    <string name="action_desktop_view">Desktop view</string>
+    <string name="action_desktop_view_description">Request the desktop version for this domain</string>
     <string name="browser_menu_title">Menu</string>
     <string name="browser_menu_page_group">Page</string>
     <string name="browser_menu_browser_group">Browser</string>

@@ -379,6 +379,29 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun desktopViewDomainsRoundTripByProfileAsRegistrableDomains() {
+        val store = BrowserSessionStore(context)
+        store.saveDesktopViewDomains(
+            mapOf(
+                "candy" to setOf("Mobile.News.Example.co.uk", "unsafe host"),
+                "work" to setOf("docs.example"),
+                "" to setOf("ignored.example"),
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "candy" to setOf("example.co.uk"),
+                "work" to setOf("docs.example"),
+            ),
+            store.loadDesktopViewDomains(),
+        )
+
+        preferences.edit().putString("desktop_view_domains", "not-json").commit()
+        assertEquals(emptyMap<String, Set<String>>(), store.loadDesktopViewDomains())
+    }
+
+    @Test
     fun sitePrivacyOverridesRoundTripAtomicallyWithoutDefaultOrUnsafeEntries() {
         val store = BrowserSessionStore(context)
         store.saveSitePrivacyOverrides(

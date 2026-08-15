@@ -10,6 +10,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
@@ -271,6 +272,24 @@ class BrowserSessionStore internal constructor(
     }
 
     @Synchronized
+    fun loadDesktopViewDomains(): Map<String, Set<String>> =
+        loadProfileHosts(
+            key = KEY_DESKTOP_VIEW_DOMAINS,
+            normalizeHost = DesktopSiteRules::normalizedDomain,
+            limit = DesktopSiteRules.MAX_PER_PROFILE,
+        )
+
+    @Synchronized
+    fun saveDesktopViewDomains(domainsByProfile: Map<String, Set<String>>) {
+        saveProfileHosts(
+            key = KEY_DESKTOP_VIEW_DOMAINS,
+            hostsByProfile = domainsByProfile,
+            normalizeHost = DesktopSiteRules::normalizedDomain,
+            limit = DesktopSiteRules.MAX_PER_PROFILE,
+        )
+    }
+
+    @Synchronized
     fun loadSitePrivacyOverrides(): Map<String, Map<String, SitePrivacyOverrides>> =
         loadArray(KEY_SITE_PRIVACY_OVERRIDES) { item ->
             Triple(
@@ -516,6 +535,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_BLOCK_THIRD_PARTY_COOKIES = "block_third_party_cookies"
         const val KEY_SITE_EXCEPTIONS = "site_exceptions"
         const val KEY_MUTED_DOMAINS = "muted_domains"
+        const val KEY_DESKTOP_VIEW_DOMAINS = "desktop_view_domains"
         const val KEY_SITE_PRIVACY_OVERRIDES = "site_privacy_overrides"
         const val KEY_HISTORY = "history"
         const val KEY_FAVORITES = "favorites"

@@ -52,6 +52,7 @@ import androidx.webkit.ProfileStore
 import androidx.webkit.ScriptHandler
 import androidx.webkit.ServiceWorkerClientCompat
 import androidx.webkit.ServiceWorkerControllerCompat
+import androidx.webkit.UserAgentMetadata
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebStorageCompat
 import androidx.webkit.WebViewCompat
@@ -194,6 +195,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
 import java.util.ArrayDeque
 import java.util.UUID
+import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -379,6 +381,11 @@ class BrowserController(
         putAll(store.loadMutedDomains())
     }
     private val temporaryMutedDomains = mutableStateMapOf<String, Set<String>>()
+    private val permanentDesktopViewDomains = mutableStateMapOf<String, Set<String>>().apply {
+        putAll(store.loadDesktopViewDomains())
+    }
+    private val temporaryDesktopViewDomains = mutableStateMapOf<String, Set<String>>()
+    private val defaultUserAgentMetadataBySettings = WeakHashMap<WebSettings, UserAgentMetadata>()
     private val profileDeletionCoordinator =
         WebViewProfileDeletionCoordinator(store, ::tryDeleteNamedWebViewProfile)
     private val previewRepository = TabPreviewRepository.get(activity)
@@ -424,6 +431,12 @@ class BrowserController(
     val isSelectedDomainMuted: Boolean
         get() = isDomainMuted(selectedTabId)
 
+    val canToggleSelectedDesktopView: Boolean
+        get() = canToggleDesktopView(selectedTabId)
+
+    val isSelectedDesktopView: Boolean
+        get() = isDesktopView(selectedTabId)
+
     fun canToggleDomainMute(tabId: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         val pageUrl = pageUrls[tabId] ?: tab.url
@@ -434,6 +447,17 @@ class BrowserController(
         siteExceptionRevision
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         return isDomainMuted(tab, pageUrls[tabId] ?: tab.url)
+    }
+
+    fun canToggleDesktopView(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        return DesktopSiteRules.domainForUrl(pageUrl) != null
+    }
+
+    fun isDesktopView(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return isDesktopView(tab, pageUrls[tabId] ?: tab.url)
     }
 
     fun permissionRadarSnapshot(
@@ -969,6 +993,8 @@ class BrowserController(
         store.saveSitePrivacyOverrides(permanentSitePrivacyOverrides)
         permanentMutedDomains.keys.retainAll(restoredProfileIds)
         store.saveMutedDomains(permanentMutedDomains.toMap())
+        permanentDesktopViewDomains.keys.retainAll(restoredProfileIds)
+        store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
         activeProfileId = if (profilesEnabled) {
             restoredActiveProfileId.takeIf { id -> profiles.any { it.id == id } }
         } else {
@@ -1175,6 +1201,7 @@ class BrowserController(
             if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
                 WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
             }
+            applyDesktopViewPolicy(sourceTabId, this, safeUrl)
             cookieManagerFor(this).setAcceptCookie(true)
             applyCookiePolicy(sourceTabId, this, safeUrl)
             webViewClient = linkPeekPreviewWebViewClient(
@@ -1212,6 +1239,7 @@ class BrowserController(
     ) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             BrowserUriPolicy.normalizeHttpUrl(url)?.let(currentUrl::set)
+            applyDesktopViewPolicy(sourceTabId, view, url)
         }
 
         override fun onPageCommitVisible(view: WebView, url: String) {
@@ -1234,7 +1262,14 @@ class BrowserController(
         override fun shouldOverrideUrlLoading(
             view: WebView,
             request: WebResourceRequest,
-        ): Boolean = LinkPeekPreviewNavigationPolicy.shouldBlock(request.url.toString())
+        ): Boolean {
+            val targetUrl = request.url.toString()
+            val shouldBlock = LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)
+            if (!shouldBlock && request.isForMainFrame) {
+                applyDesktopViewPolicy(sourceTabId, view, targetUrl)
+            }
+            return shouldBlock
+        }
     }
 
     private fun dispatchCurrentWindowInsets(tabId: String, webView: WebView) {
@@ -1810,6 +1845,10 @@ class BrowserController(
             store.saveMutedDomains(permanentMutedDomains.toMap())
         }
         temporaryMutedDomains.remove(profileId)
+        if (permanentDesktopViewDomains.remove(profileId) != null) {
+            store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
+        }
+        temporaryDesktopViewDomains.remove(profileId)
         permissionRepository.removeProfile(profileId)
         permissionRevision++
         val webViewProfileName = WebViewProfileRules.isolatedProfileName(profileId)
@@ -3053,6 +3092,37 @@ class BrowserController(
         return true
     }
 
+    fun setSelectedDesktopView(enabled: Boolean): Boolean =
+        setDesktopView(selectedTabId, enabled)
+
+    fun setDesktopView(tabId: String, enabled: Boolean): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        val domain = DesktopSiteRules.domainForUrl(pageUrl) ?: return false
+        if (isDesktopView(tab, pageUrl) == enabled) return false
+        val domainsByProfile = if (tab.isIncognito) {
+            temporaryDesktopViewDomains
+        } else {
+            permanentDesktopViewDomains
+        }
+        val updated = DesktopSiteRules.withDesktopViewState(
+            current = domainsByProfile[tab.profileId].orEmpty(),
+            domain = domain,
+            enabled = enabled,
+        )
+        if (updated.isEmpty()) domainsByProfile.remove(tab.profileId)
+        else domainsByProfile[tab.profileId] = updated
+        if (!tab.isIncognito) {
+            store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
+        }
+        reloadDesktopViewDomain(
+            profileId = tab.profileId,
+            isIncognito = tab.isIncognito,
+            domain = domain,
+        )
+        return true
+    }
+
     fun clearBrowsingData() {
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
@@ -3065,6 +3135,11 @@ class BrowserController(
                 val host = PrivacyRequestSanitizer.webHost(pageUrls[tab.id] ?: tab.url)
                 host != null && isForcedVerticalScrolling(tab, host)
             }
+            .map(BrowserTab::id)
+            .toSet()
+        val regularDesktopViewTabIds = tabs.asSequence()
+            .filterNot(BrowserTab::isIncognito)
+            .filter { tab -> isDesktopView(tab, pageUrls[tab.id] ?: tab.url) }
             .map(BrowserTab::id)
             .toSet()
         tabs.forEach { tab ->
@@ -3096,6 +3171,9 @@ class BrowserController(
         temporaryMutedDomains.clear()
         permanentMutedDomains.clear()
         store.saveMutedDomains(emptyMap())
+        temporaryDesktopViewDomains.clear()
+        permanentDesktopViewDomains.clear()
+        store.saveDesktopViewDomains(emptyMap())
         siteExceptionRevision++
         webViews.forEach { (tabId, webView) ->
             val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
@@ -3142,8 +3220,10 @@ class BrowserController(
         regularForcedScrollTabIds.forEach { tabId ->
             webViews[tabId]?.let { webView ->
                 webView.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
-                reloadTabWithProtection(tabId)
             }
+        }
+        (regularForcedScrollTabIds + regularDesktopViewTabIds).forEach { tabId ->
+            if (webViews[tabId] != null) reloadTabWithProtection(tabId)
         }
         Toast.makeText(
             activity,
@@ -3215,6 +3295,7 @@ class BrowserController(
         temporarySiteExceptions.clear()
         temporarySitePrivacyOverrides.clear()
         temporaryMutedDomains.clear()
+        temporaryDesktopViewDomains.clear()
         savePersistentFilterRules()
         persist()
         destroyLinkPeekPreviewWebViews()
@@ -3302,6 +3383,7 @@ class BrowserController(
         }
         applyMediaPlaybackPolicy(tabId, this)
         applyDomainMutePolicy(tabId, this, tab.url)
+        applyDesktopViewPolicy(tabId, this, tab.url)
         if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(this)
         SystemWebViewCredentials.configure(this)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
@@ -5407,6 +5489,7 @@ class BrowserController(
         webView: WebView,
         pageUrl: String,
     ) {
+        applyDesktopViewPolicy(tabId, webView, pageUrl)
         applyCookiePolicy(tabId, webView, pageUrl)
         installForcedVerticalScrollDocumentStartScript(tabId, webView, pageUrl)
         installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
@@ -5425,6 +5508,7 @@ class BrowserController(
     private fun reloadTabWithProtection(tabId: String) {
         val webView = webViewFor(tabId)
         val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
+        applyDesktopViewPolicy(tabId, webView, pageUrl)
         applyCookiePolicy(tabId, webView, pageUrl)
         installCosmeticDocumentStartScripts(tabId, webView)
         installForcedVerticalScrollDocumentStartScript(tabId, webView)
@@ -5529,6 +5613,7 @@ class BrowserController(
     private fun clearIncognitoProfile() {
         incognitoRuleHits.clear()
         temporaryMutedDomains.clear()
+        temporaryDesktopViewDomains.clear()
         permissionRepository.clearPrivateSession()
         permissionRevision++
         if (ephemeralRuleIds.isNotEmpty()) {
@@ -5613,6 +5698,7 @@ class BrowserController(
         removeForcedVerticalScrollDocumentStartScript(webView)
         removeCosmeticDocumentStartScripts(webView)
         removeVideoAutoplayDocumentStartScript(webView)
+        defaultUserAgentMetadataBySettings.remove(webView.settings)
         webView.setOnScrollChangeListener(null)
         (webView.parent as? FrameLayout)?.removeView(webView)
         webView.stopLoading()
@@ -5671,6 +5757,81 @@ class BrowserController(
             permanentMutedDomains[tab.profileId]
         }
         return DomainMuteRules.isMuted(pageUrl, mutedDomains.orEmpty())
+    }
+
+    private fun isDesktopView(tab: BrowserTab, pageUrl: String?): Boolean {
+        val desktopDomains = if (tab.isIncognito) {
+            temporaryDesktopViewDomains[tab.profileId]
+        } else {
+            permanentDesktopViewDomains[tab.profileId]
+        }
+        return DesktopSiteRules.isDesktopView(pageUrl, desktopDomains.orEmpty())
+    }
+
+    private fun reloadDesktopViewDomain(
+        profileId: String,
+        isIncognito: Boolean,
+        domain: String,
+    ) {
+        tabs.asSequence()
+            .filter { tab -> tab.profileId == profileId && tab.isIncognito == isIncognito }
+            .filter { tab ->
+                DesktopSiteRules.domainForUrl(pageUrls[tab.id] ?: tab.url) == domain
+            }
+            .mapNotNull { tab -> webViews[tab.id]?.let { webView -> tab.id to webView } }
+            .forEach { (tabId, webView) ->
+                webView.stopLoading()
+                reloadTabWithProtection(tabId)
+            }
+    }
+
+    private fun applyDesktopViewPolicy(tabId: String, webView: WebView, pageUrl: String?) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val enabled = isDesktopView(tab, pageUrl)
+        val defaultUserAgent = WebSettings.getDefaultUserAgent(activity)
+        val desiredUserAgent = if (enabled) {
+            DesktopSiteRules.desktopUserAgent(defaultUserAgent)
+        } else {
+            defaultUserAgent
+        }
+        val defaultMetadata = defaultUserAgentMetadata(webView.settings)
+        with(webView.settings) {
+            if (userAgentString != desiredUserAgent) {
+                userAgentString = if (enabled) desiredUserAgent else null
+            }
+            if (useWideViewPort != enabled) useWideViewPort = enabled
+            if (loadWithOverviewMode != enabled) loadWithOverviewMode = enabled
+        }
+        applyDesktopUserAgentMetadata(webView.settings, enabled, defaultMetadata)
+    }
+
+    private fun defaultUserAgentMetadata(settings: WebSettings): UserAgentMetadata? {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.USER_AGENT_METADATA)) return null
+        return defaultUserAgentMetadataBySettings[settings] ?: runCatching {
+            WebSettingsCompat.getUserAgentMetadata(settings)
+        }.getOrNull()?.also { metadata ->
+            defaultUserAgentMetadataBySettings[settings] = metadata
+        }
+    }
+
+    private fun applyDesktopUserAgentMetadata(
+        settings: WebSettings,
+        enabled: Boolean,
+        defaultMetadata: UserAgentMetadata?,
+    ) {
+        defaultMetadata ?: return
+        val desiredMetadata = if (enabled) {
+            UserAgentMetadata.Builder(defaultMetadata)
+                .setMobile(false)
+                .build()
+        } else {
+            defaultMetadata
+        }
+        val currentMetadata = runCatching {
+            WebSettingsCompat.getUserAgentMetadata(settings)
+        }.getOrNull()
+        if (currentMetadata == desiredMetadata) return
+        runCatching { WebSettingsCompat.setUserAgentMetadata(settings, desiredMetadata) }
     }
 
     private fun refreshDomainMuteForProfile(profileId: String, isIncognito: Boolean) {

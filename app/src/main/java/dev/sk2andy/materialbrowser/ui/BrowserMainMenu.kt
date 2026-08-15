@@ -74,6 +74,8 @@ private data class BrowserMainMenuPresentation(
     val canOpenReader: Boolean,
     val canToggleDomainMute: Boolean,
     val isDomainMuted: Boolean,
+    val canToggleDesktopView: Boolean,
+    val isDesktopView: Boolean,
     val canToggleCookieBannerRemoval: Boolean,
     val isCookieBannerRemovalEnabled: Boolean,
     val canToggleForceVerticalScrolling: Boolean,
@@ -96,6 +98,8 @@ internal fun BrowserMainMenu(
     canOpenReader: Boolean,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
+    canToggleDesktopView: Boolean,
+    isDesktopView: Boolean,
     canToggleCookieBannerRemoval: Boolean,
     isCookieBannerRemovalEnabled: Boolean,
     canToggleForceVerticalScrolling: Boolean,
@@ -112,6 +116,7 @@ internal fun BrowserMainMenu(
     onPrint: () -> Unit,
     onOpenReader: () -> Unit,
     onDomainMutedChange: (Boolean) -> Unit,
+    onDesktopViewChange: (Boolean) -> Unit,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
     onForceVerticalScrollingChange: (Boolean) -> Unit,
     onOpenCandyTrail: () -> Unit,
@@ -154,6 +159,8 @@ internal fun BrowserMainMenu(
         canOpenReader = canOpenReader,
         canToggleDomainMute = canToggleDomainMute,
         isDomainMuted = isDomainMuted,
+        canToggleDesktopView = canToggleDesktopView,
+        isDesktopView = isDesktopView,
         canToggleCookieBannerRemoval = canToggleCookieBannerRemoval,
         isCookieBannerRemovalEnabled = isCookieBannerRemovalEnabled,
         canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
@@ -379,6 +386,15 @@ internal fun BrowserMainMenu(
                         shape = innerCorners,
                     )
                 }
+                BrowserMenuToggleItem(
+                    label = stringResource(R.string.action_desktop_view),
+                    supportingText = stringResource(R.string.action_desktop_view_description),
+                    checked = presentation.isDesktopView,
+                    enabled = presentation.canToggleDesktopView,
+                    onCheckedChange = onDesktopViewChange,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.DesktopView),
+                    shape = innerCorners,
+                )
                 DomainMuteMenuItem(
                     enabled = presentation.canToggleDomainMute,
                     muted = presentation.isDomainMuted,
@@ -941,6 +957,7 @@ internal object BrowserMainMenuTestTags {
     const val DockAddressBar = "browser_main_menu_dock_address_bar"
     const val CookieBannerRemoval = "browser_main_menu_cookie_banner_removal"
     const val ForceVerticalScrolling = "browser_main_menu_force_vertical_scrolling"
+    const val DesktopView = "browser_main_menu_desktop_view"
 }
 
 internal object TabActionsMenuTestTags {

@@ -1355,6 +1355,9 @@ fun BrowserScreen(controller: BrowserController) {
             canToggleDomainMute = controller.canToggleSelectedDomainMute,
             isDomainMuted = controller.isSelectedDomainMuted,
             onDomainMutedChange = controller::setSelectedDomainMuted,
+            canToggleDesktopView = controller.canToggleSelectedDesktopView,
+            isDesktopView = controller.isSelectedDesktopView,
+            onDesktopViewChange = controller::setSelectedDesktopView,
             canToggleCookieBannerRemoval = canToggleSelectedCookieBannerRemoval,
             isCookieBannerRemovalEnabled = canToggleSelectedCookieBannerRemoval &&
                 !selectedSiteState.cookieBannerRemovalDisabled,
@@ -2656,6 +2659,9 @@ private fun BrowserBottomBar(
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
+    canToggleDesktopView: Boolean,
+    isDesktopView: Boolean,
+    onDesktopViewChange: (Boolean) -> Unit,
     canToggleCookieBannerRemoval: Boolean,
     isCookieBannerRemovalEnabled: Boolean,
     canToggleForceVerticalScrolling: Boolean,
@@ -2893,6 +2899,9 @@ private fun BrowserBottomBar(
                                 canToggleDomainMute = canToggleDomainMute,
                                 isDomainMuted = isDomainMuted,
                                 onDomainMutedChange = onDomainMutedChange,
+                                canToggleDesktopView = canToggleDesktopView,
+                                isDesktopView = isDesktopView,
+                                onDesktopViewChange = onDesktopViewChange,
                                 canToggleCookieBannerRemoval =
                                     canToggleCookieBannerRemoval,
                                 isCookieBannerRemovalEnabled =
@@ -3304,6 +3313,9 @@ private fun ExpandedBottomBarContent(
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
+    canToggleDesktopView: Boolean,
+    isDesktopView: Boolean,
+    onDesktopViewChange: (Boolean) -> Unit,
     canToggleCookieBannerRemoval: Boolean,
     isCookieBannerRemovalEnabled: Boolean,
     canToggleForceVerticalScrolling: Boolean,
@@ -3608,6 +3620,8 @@ private fun ExpandedBottomBarContent(
                                 canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
                                 canToggleDomainMute = canToggleDomainMute,
                                 isDomainMuted = isDomainMuted,
+                                canToggleDesktopView = canToggleDesktopView,
+                                isDesktopView = isDesktopView,
                                 canToggleCookieBannerRemoval =
                                     canToggleCookieBannerRemoval,
                                 isCookieBannerRemovalEnabled =
@@ -3633,6 +3647,7 @@ private fun ExpandedBottomBarContent(
                                 onPrint = onPrint,
                                 onOpenReader = onReaderStudio,
                                 onDomainMutedChange = onDomainMutedChange,
+                                onDesktopViewChange = onDesktopViewChange,
                                 onCookieBannerRemovalEnabledChange =
                                     onCookieBannerRemovalEnabledChange,
                                 onForceVerticalScrollingChange =

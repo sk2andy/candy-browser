@@ -18,6 +18,7 @@
 | Special scheme | `BrowserUriPolicy` → `ExternalAppLauncher` | Block unsafe/internal schemes; require explicit external handling |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
+| Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; apply desktop user agent and viewport before navigation |
 
 ## Invariants
 
@@ -25,6 +26,8 @@
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.
+- Keep private desktop-view domains memory-only; persist regular domains per profile only.
+- Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
 ## Verification
@@ -34,4 +37,3 @@
 | Input/URL policy | Matching JVM rule test |
 | WebView settings or callbacks | Focused browser instrumented test |
 | Android intent routing | Integration unit test plus launch instrumented test when lifecycle matters |
-

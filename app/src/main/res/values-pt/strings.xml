@@ -88,6 +88,8 @@
     <string name="action_reload">Recarregar</string>
     <string name="action_dock_address_bar">Fixar a barra de endereço na margem</string>
     <string name="action_mute_domain">Silenciar este site</string>
+    <string name="action_desktop_view">Vista para computador</string>
+    <string name="action_desktop_view_description">Pedir a versão para computador neste domínio</string>
     <string name="browser_menu_title">Menu</string>
     <string name="browser_menu_page_group">Página</string>
     <string name="browser_menu_browser_group">Navegador</string>

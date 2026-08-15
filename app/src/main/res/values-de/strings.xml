@@ -88,6 +88,8 @@
     <string name="action_reload">Neu laden</string>
     <string name="action_dock_address_bar">Pille rechts parken</string>
     <string name="action_mute_domain">Diese Website stummschalten</string>
+    <string name="action_desktop_view">Desktop-Ansicht</string>
+    <string name="action_desktop_view_description">Desktop-Version für diese Domain anfordern</string>
     <string name="browser_menu_title">Menü</string>
     <string name="browser_menu_page_group">Seite</string>
     <string name="browser_menu_browser_group">Browser</string>

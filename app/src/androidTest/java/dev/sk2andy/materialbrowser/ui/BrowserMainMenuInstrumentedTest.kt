@@ -45,6 +45,7 @@ class BrowserMainMenuInstrumentedTest {
         val dockActions = AtomicInteger()
         val cookieChanges = AtomicInteger()
         val scrollChanges = AtomicInteger()
+        val desktopViewChanges = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
@@ -57,6 +58,7 @@ class BrowserMainMenuInstrumentedTest {
                     var expanded by remember { mutableStateOf(true) }
                     var cookieRemovalEnabled by remember { mutableStateOf(false) }
                     var forceVerticalScrolling by remember { mutableStateOf(false) }
+                    var desktopView by remember { mutableStateOf(false) }
                     Box {
                         BrowserMainMenu(
                             expanded = expanded,
@@ -74,6 +76,8 @@ class BrowserMainMenuInstrumentedTest {
                             canOpenReader = true,
                             canToggleDomainMute = true,
                             isDomainMuted = false,
+                            canToggleDesktopView = true,
+                            isDesktopView = desktopView,
                             canToggleCookieBannerRemoval = true,
                             isCookieBannerRemovalEnabled = cookieRemovalEnabled,
                             canToggleForceVerticalScrolling = true,
@@ -90,6 +94,10 @@ class BrowserMainMenuInstrumentedTest {
                             onPrint = {},
                             onOpenReader = {},
                             onDomainMutedChange = {},
+                            onDesktopViewChange = { enabled ->
+                                desktopViewChanges.incrementAndGet()
+                                desktopView = enabled
+                            },
                             onCookieBannerRemovalEnabledChange = { enabled ->
                                 cookieChanges.incrementAndGet()
                                 cookieRemovalEnabled = enabled
@@ -122,6 +130,7 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasText(context.getString(R.string.action_print))) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.CookieBannerRemoval)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForceVerticalScrolling)) and
+                hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.DesktopView)) and
                 hasAnyDescendant(hasTestTag(DomainMuteMenuTestTags.Item)),
         ).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.action_mute_domain)).assertExists()
@@ -170,9 +179,16 @@ class BrowserMainMenuInstrumentedTest {
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling).assertIsOn()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView)
+            .performScrollTo()
+            .assertIsOff()
+            .performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
         assertEquals(1, cookieChanges.get())
         assertEquals(1, scrollChanges.get())
+        assertEquals(1, desktopViewChanges.get())
 
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DockAddressBar)
             .performScrollTo()
@@ -211,6 +227,8 @@ class BrowserMainMenuInstrumentedTest {
                     canOpenReader = false,
                     canToggleDomainMute = false,
                     isDomainMuted = false,
+                    canToggleDesktopView = false,
+                    isDesktopView = false,
                     canToggleCookieBannerRemoval = false,
                     isCookieBannerRemovalEnabled = false,
                     canToggleForceVerticalScrolling = false,
@@ -227,6 +245,7 @@ class BrowserMainMenuInstrumentedTest {
                     onPrint = {},
                     onOpenReader = {},
                     onDomainMutedChange = {},
+                    onDesktopViewChange = {},
                     onCookieBannerRemovalEnabledChange = {},
                     onForceVerticalScrollingChange = {},
                     onOpenCandyTrail = {},
@@ -247,5 +266,7 @@ class BrowserMainMenuInstrumentedTest {
             .assertDoesNotExist()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling)
             .assertDoesNotExist()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView)
+            .assertIsNotEnabled()
     }
 }
