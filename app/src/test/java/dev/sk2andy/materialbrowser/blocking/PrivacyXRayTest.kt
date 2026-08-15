@@ -25,6 +25,21 @@ class PrivacyXRayTest {
     }
 
     @Test
+    fun `page zooming is forced only by explicit override`() {
+        assertFalse(SitePrivacyOverrideRules.forcePageZooming(null))
+        assertFalse(
+            SitePrivacyOverrideRules.forcePageZooming(
+                SitePrivacyOverrides(forcePageZooming = false),
+            ),
+        )
+        assertTrue(
+            SitePrivacyOverrideRules.forcePageZooming(
+                SitePrivacyOverrides(forcePageZooming = true),
+            ),
+        )
+    }
+
+    @Test
     fun `explicit cookie removal override wins over bundled default`() {
         assertTrue(SitePrivacyOverrideRules.cookieBannerRemovalDisabled(null, bundledDefault = true))
         assertFalse(
@@ -59,12 +74,12 @@ class PrivacyXRayTest {
         val updated = SitePrivacyOverrideRules.withOverride(
             current = existing,
             host = "News.Example",
-            overrides = SitePrivacyOverrides(forceVerticalScrolling = true),
+            overrides = SitePrivacyOverrides(forcePageZooming = true),
             limit = 2,
         )
 
         assertEquals(setOf("one.example", "news.example"), updated.keys)
-        assertEquals(true, updated.getValue("news.example").forceVerticalScrolling)
+        assertEquals(true, updated.getValue("news.example").forcePageZooming)
         assertTrue(
             SitePrivacyOverrideRules.withOverride(
                 current = updated,

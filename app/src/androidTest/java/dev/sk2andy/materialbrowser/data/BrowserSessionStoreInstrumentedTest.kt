@@ -387,6 +387,7 @@ class BrowserSessionStoreInstrumentedTest {
                     "News.Example" to SitePrivacyOverrides(
                         cookieBannerRemovalDisabled = true,
                         forceVerticalScrolling = true,
+                        forcePageZooming = true,
                     ),
                     "default.example" to SitePrivacyOverrides(),
                     "unsafe host" to SitePrivacyOverrides(forceVerticalScrolling = true),
@@ -403,6 +404,7 @@ class BrowserSessionStoreInstrumentedTest {
                     "news.example" to SitePrivacyOverrides(
                         cookieBannerRemovalDisabled = true,
                         forceVerticalScrolling = true,
+                        forcePageZooming = true,
                     ),
                 ),
             ),
@@ -440,6 +442,7 @@ class BrowserSessionStoreInstrumentedTest {
                     "consent.example" to SitePrivacyOverrides(
                         cookieBannerRemovalDisabled = false,
                     ),
+                    "zoom.example" to SitePrivacyOverrides(forcePageZooming = false),
                 ),
             ),
         )
@@ -457,6 +460,13 @@ class BrowserSessionStoreInstrumentedTest {
                 .getValue("candy")
                 .getValue("consent.example")
                 .cookieBannerRemovalDisabled,
+        )
+        assertEquals(
+            false,
+            store.loadSitePrivacyOverrides()
+                .getValue("candy")
+                .getValue("zoom.example")
+                .forcePageZooming,
         )
 
         preferences.edit().putString(

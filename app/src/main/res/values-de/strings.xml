@@ -382,6 +382,8 @@
     <string name="privacy_cookie_banner_remove_unavailable">Nicht verfügbar, solange der Cookie-Banner-Schutz global aus oder der Website-Schutz pausiert ist</string>
     <string name="privacy_force_vertical_scrolling">Vertikales Scrollen erzwingen</string>
     <string name="privacy_force_vertical_scrolling_description">Scroll-Sperren der Seite auf dieser Domain überschreiben</string>
+    <string name="privacy_force_page_zooming">Zoomen auf der Seite erzwingen</string>
+    <string name="privacy_force_page_zooming_description">Zoom-Sperren der Seite auf dieser Domain überschreiben</string>
     <string name="privacy_site_protection">Schutz für diese Website</string>
     <string name="privacy_site_active">Aktiv</string>
     <string name="privacy_site_paused_temporary">Für diesen Tab pausiert</string>

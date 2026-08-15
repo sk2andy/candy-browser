@@ -289,6 +289,8 @@ class BrowserSessionStore internal constructor(
                         item.optBoolean("forceVerticalScrolling", false) -> true
                         else -> null
                     },
+                    forcePageZooming = item.optBoolean("forcePageZoomingOverride", false)
+                        .takeIf { item.has("forcePageZoomingOverride") },
                 ),
             )
         }.mapNotNull { (profileId, host, overrides) ->
@@ -333,6 +335,9 @@ class BrowserSessionStore internal constructor(
                     }
                     overrides.forceVerticalScrolling?.let { enabled ->
                         item.put("forceVerticalScrollingOverride", enabled)
+                    }
+                    overrides.forcePageZooming?.let { enabled ->
+                        item.put("forcePageZoomingOverride", enabled)
                     }
                 }
         }
