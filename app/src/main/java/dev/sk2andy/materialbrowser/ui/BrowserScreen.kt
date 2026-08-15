@@ -1116,6 +1116,11 @@ fun BrowserScreen(controller: BrowserController) {
     DisposableEffect(controller) {
         onDispose { controller.setBrowserChromeOwnsIme(false) }
     }
+    val showInteractiveBlankStart = addressEditorVisible &&
+        selectedTab.url == BLANK_URL &&
+        addressValue.text.isEmpty() &&
+        !selectedTab.isIncognito &&
+        controller.favorites.isNotEmpty()
 
     Box(
         modifier = Modifier
@@ -1151,13 +1156,21 @@ fun BrowserScreen(controller: BrowserController) {
             liveFrameTabId = liveFrameTabId,
             tabOverviewVisible = tabOverviewVisible,
             onLiveFrame = reportLiveFrame,
-            onSearch = openAddressEditor,
+            onSearch = if (showInteractiveBlankStart) {
+                { addressEditorVisible = false }
+            } else {
+                openAddressEditor
+            },
+            onFavorite = { url ->
+                addressEditorVisible = false
+                controller.submitAddress(url)
+            },
             blankTabModeProgress = blankTabModeProgress,
             blankTabModeRevealOrigin = blankTabModeRevealOrigin,
             onRetry = controller::retryFailedPage,
         )
 
-        if (addressEditorVisible) {
+        if (addressEditorVisible && !showInteractiveBlankStart) {
             AddressEditorBackdrop(
                 showStartContent = selectedTab.url == BLANK_URL,
                 modeProgress = blankTabModeProgress,
@@ -2019,6 +2032,7 @@ private fun BrowserViewport(
     tabOverviewVisible: Boolean,
     onLiveFrame: (String) -> Unit,
     onSearch: () -> Unit,
+    onFavorite: (String) -> Unit,
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
     onRetry: () -> Boolean,
@@ -2107,7 +2121,7 @@ private fun BrowserViewport(
                 modeProgress = blankTabModeProgress,
                 revealOriginInRoot = blankTabModeRevealOrigin,
                 onSearch = onSearch,
-                onFavorite = controller::submitAddress,
+                onFavorite = onFavorite,
             )
         }
 
