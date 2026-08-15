@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.SystemClock
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.FrameLayout
@@ -16,6 +17,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -88,6 +90,36 @@ class TabPreviewRefreshInstrumentedTest {
         awaitPreviewColors(tabId.get(), solidColor)
     }
 
+    @Test
+    fun pauseDoesNotReplacePreviewWhenWebViewParentIsTransparent() {
+        val tabId = AtomicReference<String>()
+        val webView = AtomicReference<WebView>()
+        activityRule.scenario.onActivity { activity ->
+            activity.getSharedPreferences(
+                BrowserSessionStore.PREFERENCES_NAME,
+                Context.MODE_PRIVATE,
+            ).edit().clear().commit()
+            val controller = BrowserController(activity).also { this.controller = it }
+            controller.onStart()
+            controller.onResume()
+            tabId.set(controller.createTab("https://preview.test/"))
+            webView.set(controller.selectedWebViewForTesting())
+            attachWebView(activity, webView.get())
+        }
+        awaitLayout(webView.get())
+        seedStalePreview(tabId.get())
+
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            val captureCount = controller.previewCaptureRequestCountForTesting
+            (webView.get().parent as View).alpha = 0f
+            assertTrue(webView.get().isShown)
+            controller.onPause()
+            assertEquals(captureCount, controller.previewCaptureRequestCountForTesting)
+        }
+        awaitPreviewColors(tabId.get(), Color.GRAY)
+    }
+
     private fun attachWebView(activity: ComponentActivity, webView: WebView) {
         (webView.parent as? ViewGroup)?.removeView(webView)
         activity.setContentView(
@@ -133,6 +165,21 @@ class TabPreviewRefreshInstrumentedTest {
             SystemClock.sleep(25)
         }
         error("WebView did not render $url")
+    }
+
+    private fun awaitLayout(webView: WebView) {
+        val deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(10)
+        while (SystemClock.uptimeMillis() < deadline) {
+            val laidOut = AtomicReference(false)
+            instrumentation.runOnMainSync {
+                laidOut.set(
+                    webView.isAttachedToWindow && webView.width > 0 && webView.height > 0,
+                )
+            }
+            if (laidOut.get()) return
+            SystemClock.sleep(25)
+        }
+        error("WebView did not lay out")
     }
 
     private fun seedStalePreview(tabId: String) {

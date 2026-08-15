@@ -5,7 +5,7 @@
 | Piece | Responsibility |
 | --- | --- |
 | `TabPreviewCaptureRules` | Bound capture geometry and reject likely failed PixelCopy results |
-| `BrowserController` | Own PixelCopy/WebView timing, navigation generation and stale-result rejection |
+| `BrowserController` | Own PixelCopy/WebView timing, reject captures through transparent view hierarchies, and enforce navigation generation/stale-result checks |
 | `TabPreviewRepository` | Serialize preview file I/O on one executor and prune unknown tab IDs |
 | `TabPreviewStore` | Validate bitmap dimensions/encoding and bound stored data |
 | `AtomicTabFileDirectory` | Share safe UUID filenames, atomic writes, pruning and explicit directory lifecycle with favicon and WebView-state stores |

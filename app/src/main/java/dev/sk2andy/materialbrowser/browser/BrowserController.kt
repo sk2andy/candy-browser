@@ -15,6 +15,7 @@ import android.os.Message
 import android.net.Uri
 import android.print.PrintManager
 import android.view.PixelCopy
+import android.view.View
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
 import android.webkit.GeolocationPermissions
@@ -4674,6 +4675,7 @@ class BrowserController(
             view == null ||
             !view.isAttachedToWindow ||
             !view.isShown ||
+            view.hasTransparentViewInHierarchy() ||
             view.width <= 0 ||
             view.height <= 0 ||
             tab.url == BLANK_URL
@@ -4811,6 +4813,15 @@ class BrowserController(
             (location[0] + view.width).coerceIn(0, decorView.width),
             sourceBottomPx.coerceIn(0, decorView.height),
         )
+    }
+
+    private fun View.hasTransparentViewInHierarchy(): Boolean {
+        var current: View? = this
+        while (current != null) {
+            if (current.alpha <= 0f) return true
+            current = current.parent as? View
+        }
+        return false
     }
 
     private fun Bitmap.previewQuality(): TabPreviewQuality? {
