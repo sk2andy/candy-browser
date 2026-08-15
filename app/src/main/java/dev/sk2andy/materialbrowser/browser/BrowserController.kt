@@ -81,6 +81,7 @@ import dev.sk2andy.materialbrowser.blocking.CandyRuleValidation
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidator
 import dev.sk2andy.materialbrowser.blocking.CandySubscriptionRules
 import dev.sk2andy.materialbrowser.blocking.ContentBlocker
+import dev.sk2andy.materialbrowser.blocking.ForcedPageZoomScript
 import dev.sk2andy.materialbrowser.blocking.ForcedVerticalScrollScript
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestSanitizer
 import dev.sk2andy.materialbrowser.blocking.PrivacyPolicyRules
@@ -320,6 +321,7 @@ class BrowserController(
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
     private var webContentRequestGeneration = 0L
+    private val forcedPageZoomScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
     private val videoAutoplayScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
@@ -717,6 +719,7 @@ class BrowserController(
             canPersist = SiteExceptionRules.mayPersist(tab.isIncognito),
             cookieBannerRemovalDisabled = isCookieBannerRemovalDisabled(tab, host),
             forceVerticalScrolling = isForcedVerticalScrolling(tab, host),
+            forcePageZooming = isPageZoomingForced(tab, host),
         )
     }
 
@@ -1885,7 +1888,7 @@ class BrowserController(
         movedTabIds.forEach { tabId ->
             updateProtectionRequestContext(tabId, pageUrls[tabId])
             webViews[tabId]?.let { webView ->
-                webView.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
+                cleanupSiteCompatibilityScripts(webView)
                 reloadTabWithProtection(tabId)
             }
         }
@@ -1932,7 +1935,7 @@ class BrowserController(
         updateTab(tabId) { movedTab }
         updateProtectionRequestContext(tabId, pageUrls[tabId])
         webViews[tabId]?.let { webView ->
-            webView.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
+            cleanupSiteCompatibilityScripts(webView)
             reloadTabWithProtection(tabId)
         }
         replaceProfileTabs(
@@ -2984,6 +2987,16 @@ class BrowserController(
             )
         }
 
+    fun setForcePageZooming(tabId: String, enabled: Boolean): Boolean =
+        updateSitePrivacyOverrides(tabId) { current, _ ->
+            current.copy(
+                forcePageZooming = SitePrivacyOverrideRules.overrideForSelection(
+                    enabled = enabled,
+                    bundledDefault = false,
+                ),
+            )
+        }
+
     private fun updateSitePrivacyOverrides(
         tabId: String,
         transform: (SitePrivacyOverrides, String) -> SitePrivacyOverrides,
@@ -3004,7 +3017,7 @@ class BrowserController(
             if (byHost.isEmpty()) temporarySitePrivacyOverrides.remove(tabId)
             else temporarySitePrivacyOverrides[tabId] = byHost
             webViews[tabId]?.let { webView ->
-                installForcedVerticalScrollDocumentStartScript(tabId, webView)
+                installSiteCompatibilityDocumentStartScripts(tabId, webView)
             }
         } else {
             val byHost = SitePrivacyOverrideRules.withOverride(
@@ -3026,14 +3039,13 @@ class BrowserController(
                     )
                     if (candidateHost == host) affectedTabIds += candidate.id
                     webViews[candidate.id]?.let { webView ->
-                        installForcedVerticalScrollDocumentStartScript(candidate.id, webView)
+                        installSiteCompatibilityDocumentStartScripts(candidate.id, webView)
                     }
                 }
         }
         siteExceptionRevision++
         affectedTabIds.forEach { affectedTabId ->
-            webViews[affectedTabId]
-                ?.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
+            webViews[affectedTabId]?.let(::cleanupSiteCompatibilityScripts)
             if (affectedTabId == tabId || affectedTabId in webViews) {
                 reloadTabWithProtection(affectedTabId)
             }
@@ -3129,11 +3141,12 @@ class BrowserController(
         activePermissions.clear()
         permissionRepository.clearAll()
         permissionRevision++
-        val regularForcedScrollTabIds = tabs.asSequence()
+        val regularSiteCompatibilityTabIds = tabs.asSequence()
             .filterNot(BrowserTab::isIncognito)
             .filter { tab ->
                 val host = PrivacyRequestSanitizer.webHost(pageUrls[tab.id] ?: tab.url)
-                host != null && isForcedVerticalScrolling(tab, host)
+                host != null &&
+                    (isForcedVerticalScrolling(tab, host) || isPageZoomingForced(tab, host))
             }
             .map(BrowserTab::id)
             .toSet()
@@ -3178,7 +3191,7 @@ class BrowserController(
         webViews.forEach { (tabId, webView) ->
             val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
                 ?: BLANK_URL
-            installForcedVerticalScrollDocumentStartScript(tabId, webView)
+            installSiteCompatibilityDocumentStartScripts(tabId, webView)
             applySiteProtectionForNavigation(tabId, webView, pageUrl)
             applyDomainMutePolicy(tabId, webView, pageUrl)
         }
@@ -3217,12 +3230,12 @@ class BrowserController(
         candyTrailRepository.clear()
         webViewStateRepository.clear()
         webViewStateRepository.flush()
-        regularForcedScrollTabIds.forEach { tabId ->
+        regularSiteCompatibilityTabIds.forEach { tabId ->
             webViews[tabId]?.let { webView ->
-                webView.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
+                cleanupSiteCompatibilityScripts(webView)
             }
         }
-        (regularForcedScrollTabIds + regularDesktopViewTabIds).forEach { tabId ->
+        (regularSiteCompatibilityTabIds + regularDesktopViewTabIds).forEach { tabId ->
             if (webViews[tabId] != null) reloadTabWithProtection(tabId)
         }
         Toast.makeText(
@@ -3304,6 +3317,7 @@ class BrowserController(
         webViews.values.forEach(::destroyWebView)
         webViews.clear()
         webViewProfileKeys.clear()
+        forcedPageZoomScriptHandlers.clear()
         forcedVerticalScrollScriptHandlers.clear()
         cosmeticScriptHandlers.clear()
         videoAutoplayScriptHandlers.clear()
@@ -3395,7 +3409,7 @@ class BrowserController(
         webViewClient = browserWebViewClient(tabId)
         webChromeClient = browserChromeClient(tabId)
         setDownloadListener(downloadListener(tabId))
-        installForcedVerticalScrollDocumentStartScript(tabId, this)
+        installSiteCompatibilityDocumentStartScripts(tabId, this)
         installCosmeticDocumentStartScripts(tabId, this, tab.url)
         setOnLongClickListener { clickedView ->
             val webView = clickedView as? BrowserWebView
@@ -3523,6 +3537,7 @@ class BrowserController(
             detectPageEdgeToEdge(tabId, view)
             injectCookieConsentCss(tabId, view, url)
             injectForcedVerticalScrollFallback(tabId, view, url)
+            injectForcedPageZoomFallback(tabId, view, url)
             injectCandyCosmeticFallback(tabId, view, url)
         }
 
@@ -3657,7 +3672,7 @@ class BrowserController(
             clearServiceWorkerClientsLosingLastWebView(setOf(tabId))
             webViews.remove(tabId)
             webViewProfileKeys.remove(tabId)
-            removeForcedVerticalScrollDocumentStartScript(view)
+            removeSiteCompatibilityDocumentStartScripts(view)
             removeCosmeticDocumentStartScripts(view)
             removeVideoAutoplayDocumentStartScript(view)
             edgeToEdgePages.remove(tabId)
@@ -3782,6 +3797,17 @@ class BrowserController(
             ?.let { script -> view.evaluateJavascript(script, null) }
     }
 
+    private fun injectForcedPageZoomFallback(tabId: String, view: WebView, pageUrl: String?) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val host = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url) ?: return
+        if (!isPageZoomingForced(tab, host)) return
+        // Redirects can register a document-start handler after its injection point. Always run
+        // the idempotent fallback for the committed document, even when a handler now exists.
+        ForcedPageZoomScript.create(forcedPageZoomHostsForTab(tabId, pageUrl))
+            .takeIf(String::isNotEmpty)
+            ?.let { script -> view.evaluateJavascript(script, null) }
+    }
+
     private fun injectCandyCosmeticFallback(tabId: String, view: WebView, pageUrl: String?) {
         if (!workerSettings.blockAdsAndTrackers || isSiteProtectionPaused(tabId, pageUrl)) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
@@ -3878,6 +3904,45 @@ class BrowserController(
         forcedVerticalScrollScriptHandlers.remove(view)?.let { handler ->
             runCatching(handler::remove)
         }
+    }
+
+    private fun installForcedPageZoomDocumentStartScript(
+        tabId: String,
+        view: WebView,
+        pageUrl: String? = null,
+    ) {
+        removeForcedPageZoomDocumentStartScript(view)
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
+        val script = ForcedPageZoomScript.create(forcedPageZoomHostsForTab(tabId, pageUrl))
+        if (script.isEmpty()) return
+        runCatching {
+            WebViewCompat.addDocumentStartJavaScript(view, script, ALL_WEB_ORIGINS)
+        }.getOrNull()?.let { handler -> forcedPageZoomScriptHandlers[view] = handler }
+    }
+
+    private fun removeForcedPageZoomDocumentStartScript(view: WebView) {
+        forcedPageZoomScriptHandlers.remove(view)?.let { handler ->
+            runCatching(handler::remove)
+        }
+    }
+
+    private fun installSiteCompatibilityDocumentStartScripts(
+        tabId: String,
+        view: WebView,
+        pageUrl: String? = null,
+    ) {
+        installForcedVerticalScrollDocumentStartScript(tabId, view, pageUrl)
+        installForcedPageZoomDocumentStartScript(tabId, view, pageUrl)
+    }
+
+    private fun removeSiteCompatibilityDocumentStartScripts(view: WebView) {
+        removeForcedVerticalScrollDocumentStartScript(view)
+        removeForcedPageZoomDocumentStartScript(view)
+    }
+
+    private fun cleanupSiteCompatibilityScripts(view: WebView) {
+        view.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
+        view.evaluateJavascript(ForcedPageZoomScript.cleanupScript, null)
     }
 
     private fun installVideoAutoplayDocumentStartScript(view: WebView) {
@@ -5457,6 +5522,26 @@ class BrowserController(
         return forcedHosts
     }
 
+    private fun forcedPageZoomHostsForTab(
+        tabId: String,
+        pageUrl: String? = null,
+    ): Set<String> {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return emptySet()
+        val overridesByHost = sitePrivacyOverridesFor(tab)
+        val forcedHosts = overridesByHost.asSequence()
+            .filter { (_, overrides) -> overrides.forcePageZooming == true }
+            .map { (host, _) -> host }
+            .toMutableSet()
+        val pageHost = PrivacyRequestSanitizer.webHost(pageUrl ?: pageUrls[tabId] ?: tab.url)
+        if (pageHost != null && SitePrivacyOverrideRules.forcePageZooming(
+                overridesByHost[pageHost],
+            )
+        ) {
+            forcedHosts += pageHost
+        }
+        return forcedHosts
+    }
+
     private fun isCookieBannerRemovalDisabled(tab: BrowserTab, host: String): Boolean =
         SitePrivacyOverrideRules.cookieBannerRemovalDisabled(
             overrides = sitePrivacyOverridesFor(tab)[host],
@@ -5468,6 +5553,9 @@ class BrowserController(
             overrides = sitePrivacyOverridesFor(tab)[host],
             bundledDefault = bundledSitePrivacyDefaults.forceVerticalScrolling(host),
         )
+
+    private fun isPageZoomingForced(tab: BrowserTab, host: String): Boolean =
+        SitePrivacyOverrideRules.forcePageZooming(sitePrivacyOverridesFor(tab)[host])
 
     private fun isCookieBannerRemovalEnabled(tabId: String, pageUrl: String?): Boolean {
         if (!workerSettings.hideCookieConsent || isSiteProtectionPaused(tabId, pageUrl)) return false
@@ -5491,7 +5579,7 @@ class BrowserController(
     ) {
         applyDesktopViewPolicy(tabId, webView, pageUrl)
         applyCookiePolicy(tabId, webView, pageUrl)
-        installForcedVerticalScrollDocumentStartScript(tabId, webView, pageUrl)
+        installSiteCompatibilityDocumentStartScripts(tabId, webView, pageUrl)
         installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
         if (!workerSettings.hideCookieConsent) {
             webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
@@ -5511,7 +5599,7 @@ class BrowserController(
         applyDesktopViewPolicy(tabId, webView, pageUrl)
         applyCookiePolicy(tabId, webView, pageUrl)
         installCosmeticDocumentStartScripts(tabId, webView)
-        installForcedVerticalScrollDocumentStartScript(tabId, webView)
+        installSiteCompatibilityDocumentStartScripts(tabId, webView)
         if (!isCookieBannerRemovalEnabled(tabId, pageUrl)) {
             webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
         }
@@ -5526,7 +5614,7 @@ class BrowserController(
                 val webView = webViews[tab.id] ?: return@forEach
                 val pageUrl = pageUrls[tab.id] ?: tab.url
                 updateProtectionRequestContext(tab.id, pageUrl)
-                installForcedVerticalScrollDocumentStartScript(tab.id, webView)
+                installSiteCompatibilityDocumentStartScripts(tab.id, webView)
                 installCosmeticDocumentStartScripts(tab.id, webView)
                 applySiteProtectionForNavigation(tab.id, webView, pageUrl)
             }
@@ -5695,7 +5783,7 @@ class BrowserController(
     }
 
     private fun destroyWebView(webView: WebView) {
-        removeForcedVerticalScrollDocumentStartScript(webView)
+        removeSiteCompatibilityDocumentStartScripts(webView)
         removeCosmeticDocumentStartScripts(webView)
         removeVideoAutoplayDocumentStartScript(webView)
         defaultUserAgentMetadataBySettings.remove(webView.settings)

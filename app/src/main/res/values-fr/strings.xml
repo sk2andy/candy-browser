@@ -336,6 +336,8 @@
     <string name="privacy_cookie_banner_remove_unavailable">Indisponible si la protection globale est désactivée ou si la protection du site est en pause</string>
     <string name="privacy_force_vertical_scrolling">Forcer le défilement vertical</string>
     <string name="privacy_force_vertical_scrolling_description">Remplace les verrouillages de défilement sur ce domaine</string>
+    <string name="privacy_force_page_zooming">Forcer le zoom de la page</string>
+    <string name="privacy_force_page_zooming_description">Remplace les restrictions de zoom de la page sur ce domaine</string>
     <string name="privacy_site_protection">Protection de ce site</string>
     <string name="privacy_site_active">Active</string>
     <string name="privacy_site_paused_temporary">Suspendue pour cet onglet</string>

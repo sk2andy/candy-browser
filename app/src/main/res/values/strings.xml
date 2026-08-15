@@ -397,6 +397,8 @@
     <string name="privacy_cookie_banner_remove_unavailable">Unavailable while cookie-banner protection is globally off or site protection is paused</string>
     <string name="privacy_force_vertical_scrolling">Force vertical scrolling</string>
     <string name="privacy_force_vertical_scrolling_description">Override page scroll locks on this domain</string>
+    <string name="privacy_force_page_zooming">Force page zooming</string>
+    <string name="privacy_force_page_zooming_description">Override page zoom restrictions on this domain</string>
     <string name="privacy_site_protection">Protection for this site</string>
     <string name="privacy_site_active">Active</string>
     <string name="privacy_site_paused_temporary">Paused for this tab</string>

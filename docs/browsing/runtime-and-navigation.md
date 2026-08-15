@@ -30,6 +30,18 @@
 - Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
+## Domain compatibility overrides
+
+| Override | Runtime behavior |
+| --- | --- |
+| Force vertical scrolling | Removes vertical page scroll locks without changing horizontal overflow |
+| Force page zooming | Removes viewport `user-scalable`, minimum-scale and maximum-scale restrictions while preserving other viewport directives |
+
+- Compatibility overrides match the exact current host. Regular tabs persist them per profile;
+  private tabs keep them in memory for that tab only.
+- Changing an override reloads affected pages. Document-start scripts handle direct navigation and
+  commit-visible fallbacks cover redirects whose final host was not known before navigation.
+
 ## Verification
 
 | Change | Check |

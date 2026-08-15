@@ -80,6 +80,8 @@ private data class BrowserMainMenuPresentation(
     val isCookieBannerRemovalEnabled: Boolean,
     val canToggleForceVerticalScrolling: Boolean,
     val isForceVerticalScrollingEnabled: Boolean,
+    val canToggleForcePageZooming: Boolean,
+    val isForcePageZoomingEnabled: Boolean,
     val canAddSiteCapsule: Boolean,
     val canSnooze: Boolean,
 )
@@ -104,6 +106,8 @@ internal fun BrowserMainMenu(
     isCookieBannerRemovalEnabled: Boolean,
     canToggleForceVerticalScrolling: Boolean,
     isForceVerticalScrollingEnabled: Boolean,
+    canToggleForcePageZooming: Boolean,
+    isForcePageZoomingEnabled: Boolean,
     canAddSiteCapsule: Boolean,
     canSnooze: Boolean,
     snoozedTabCount: Int,
@@ -119,6 +123,7 @@ internal fun BrowserMainMenu(
     onDesktopViewChange: (Boolean) -> Unit,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
     onForceVerticalScrollingChange: (Boolean) -> Unit,
+    onForcePageZoomingChange: (Boolean) -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     onSummarize: () -> Unit,
@@ -165,6 +170,8 @@ internal fun BrowserMainMenu(
         isCookieBannerRemovalEnabled = isCookieBannerRemovalEnabled,
         canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
         isForceVerticalScrollingEnabled = isForceVerticalScrollingEnabled,
+        canToggleForcePageZooming = canToggleForcePageZooming,
+        isForcePageZoomingEnabled = isForcePageZoomingEnabled,
         canAddSiteCapsule = canAddSiteCapsule,
         canSnooze = canSnooze,
     )
@@ -354,7 +361,10 @@ internal fun BrowserMainMenu(
                     shape = innerCorners,
                     onClick = { dismissThen(onPrint) },
                 )
-                if (presentation.canToggleForceVerticalScrolling) {
+                if (
+                    presentation.canToggleForceVerticalScrolling ||
+                    presentation.canToggleForcePageZooming
+                ) {
                     BrowserMenuToggleItem(
                         label = stringResource(R.string.privacy_cookie_banner_remove),
                         supportingText = stringResource(
@@ -372,19 +382,36 @@ internal fun BrowserMainMenu(
                         ),
                         shape = innerCorners,
                     )
-                    BrowserMenuToggleItem(
-                        label = stringResource(R.string.privacy_force_vertical_scrolling),
-                        supportingText = stringResource(
-                            R.string.privacy_force_vertical_scrolling_description,
-                        ),
-                        checked = presentation.isForceVerticalScrollingEnabled,
-                        enabled = true,
-                        onCheckedChange = onForceVerticalScrollingChange,
-                        modifier = Modifier.testTag(
-                            BrowserMainMenuTestTags.ForceVerticalScrolling,
-                        ),
-                        shape = innerCorners,
-                    )
+                    if (presentation.canToggleForceVerticalScrolling) {
+                        BrowserMenuToggleItem(
+                            label = stringResource(R.string.privacy_force_vertical_scrolling),
+                            supportingText = stringResource(
+                                R.string.privacy_force_vertical_scrolling_description,
+                            ),
+                            checked = presentation.isForceVerticalScrollingEnabled,
+                            enabled = true,
+                            onCheckedChange = onForceVerticalScrollingChange,
+                            modifier = Modifier.testTag(
+                                BrowserMainMenuTestTags.ForceVerticalScrolling,
+                            ),
+                            shape = innerCorners,
+                        )
+                    }
+                    if (presentation.canToggleForcePageZooming) {
+                        BrowserMenuToggleItem(
+                            label = stringResource(R.string.privacy_force_page_zooming),
+                            supportingText = stringResource(
+                                R.string.privacy_force_page_zooming_description,
+                            ),
+                            checked = presentation.isForcePageZoomingEnabled,
+                            enabled = true,
+                            onCheckedChange = onForcePageZoomingChange,
+                            modifier = Modifier.testTag(
+                                BrowserMainMenuTestTags.ForcePageZooming,
+                            ),
+                            shape = innerCorners,
+                        )
+                    }
                 }
                 BrowserMenuToggleItem(
                     label = stringResource(R.string.action_desktop_view),
@@ -958,6 +985,7 @@ internal object BrowserMainMenuTestTags {
     const val CookieBannerRemoval = "browser_main_menu_cookie_banner_removal"
     const val ForceVerticalScrolling = "browser_main_menu_force_vertical_scrolling"
     const val DesktopView = "browser_main_menu_desktop_view"
+    const val ForcePageZooming = "browser_main_menu_force_page_zooming"
 }
 
 internal object TabActionsMenuTestTags {
