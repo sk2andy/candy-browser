@@ -4502,7 +4502,7 @@ internal fun TabOverview(
         val isExiting = exitHero != null
         val tabCardWidth = (maxWidth * COVERFLOW_CARD_WIDTH_FRACTION)
             .coerceIn(244.dp, 360.dp)
-        val pageSlotWidth = tabCardWidth + 18.dp
+        val pageSlotWidth = tabCardWidth + 12.dp
         val pageSlotWidthPx = with(density) { pageSlotWidth.toPx() }
         val pageHorizontalPadding = ((maxWidth - pageSlotWidth) / 2).coerceAtLeast(0.dp)
         val gridGapPx = with(density) { 12.dp.toPx() }
@@ -5311,10 +5311,10 @@ internal fun TabOverview(
                                     }
                                 },
                             )
-                            .padding(horizontal = 16.dp, vertical = 28.dp),
+                            .padding(horizontal = 4.dp, vertical = 28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Spacer(Modifier.height(36.dp))
+                        Spacer(Modifier.height(8.dp))
                         Box(modifier = Modifier.width(tabCardWidth)) {
                             TabCard(
                                 tab = tab,
@@ -5361,7 +5361,7 @@ internal fun TabOverview(
                                 },
                                 modifier = Modifier
                                     .align(Alignment.TopStart)
-                                    .padding(start = 20.dp, top = 20.dp, end = 20.dp),
+                                    .padding(start = 12.dp, top = 4.dp, end = 12.dp),
                             )
                         }
                     }
