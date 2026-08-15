@@ -29,6 +29,22 @@
   <img src="docs/screenshots/candy-privacy.png" width="30%" alt="Candy Browser Privacy X-Ray">
 </p>
 
+## See Candy in motion
+
+<p align="center">
+  <a href="docs/promo/video/candy-browser-reddit-4x5.mp4">
+    <img src="docs/promo/video/candy-browser-reddit-poster.jpg" width="55%" alt="Candy Browser feature tour poster">
+  </a>
+</p>
+
+<p align="center">
+  <a href="docs/promo/video/candy-browser-reddit-4x5.mp4"><strong>Watch the 60 fps feature tour (MP4, 4.7 MB)</strong></a>
+</p>
+
+The tour combines live API 36 emulator footage with repository screenshots to show the gesture-first
+tab switcher, Link Peek, Privacy X-Ray, Reader Studio, Candy Trails, profiles, and every tab layout.
+Its original soundtrack and motion graphics are generated entirely from repository-owned sources.
+
 ## Why Candy?
 
 - **Made for gestures.** Switch tabs from the address bar, swipe into the visual overview, and
