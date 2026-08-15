@@ -21,5 +21,5 @@
 | Privacy and compatibility audits | [`audits/`](audits/) |
 | Product screenshots | [`screenshots/`](screenshots/) |
 | Address-bar design studies | [`designs/`](designs/) |
-| Promotional artwork | [`promo/`](promo/) and [`../scripts/generate_promo_poster.py`](../scripts/generate_promo_poster.py) |
+| Promotional artwork and video | [`promo/`](promo/), [`promo/video/README.md`](promo/video/README.md), and the `generate_*promo*` scripts in [`../scripts/`](../scripts/) |
 | Release implementation | [`../.github/workflows/release.yml`](../.github/workflows/release.yml) |

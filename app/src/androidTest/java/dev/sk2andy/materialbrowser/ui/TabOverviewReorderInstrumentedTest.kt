@@ -9,6 +9,7 @@ import androidx.compose.ui.test.down
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +20,7 @@ import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,6 +55,35 @@ class TabOverviewReorderInstrumentedTest {
         mode = TabOverviewMode.Hero,
         moveDurationMillis = 80L,
     )
+
+    @Test
+    fun heroCardMatchesAndroidSwitcherProportions() {
+        lateinit var browserController: BrowserController
+        lateinit var tabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            tabId = browserController.selectedTabId
+            browserController.updateTabOverviewMode(TabOverviewMode.Hero)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val cardBounds = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(tabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val density = composeRule.activity.resources.displayMetrics.density
+        val expectedWidth = (rootBounds.width * 0.70f)
+            .coerceIn(244f * density, 360f * density)
+
+        assertEquals(expectedWidth, cardBounds.width, 8f)
+        assertEquals(0.45f, cardBounds.width / cardBounds.height, 0.001f)
+        assertTrue(cardBounds.top >= rootBounds.top)
+        assertTrue(cardBounds.bottom <= rootBounds.bottom)
+    }
 
     private fun verifyReorder(
         mode: TabOverviewMode,
