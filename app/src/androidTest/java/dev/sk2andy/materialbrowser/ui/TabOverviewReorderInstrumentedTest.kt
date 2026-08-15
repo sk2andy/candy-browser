@@ -76,7 +76,7 @@ class TabOverviewReorderInstrumentedTest {
             .fetchSemanticsNode()
             .boundsInRoot
         val density = composeRule.activity.resources.displayMetrics.density
-        val expectedWidth = (rootBounds.width * 0.70f)
+        val expectedWidth = (rootBounds.width * 0.74f)
             .coerceIn(244f * density, 360f * density)
 
         assertEquals(expectedWidth, cardBounds.width, 8f)
