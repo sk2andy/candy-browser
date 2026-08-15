@@ -15,6 +15,7 @@ Apache License 2.0 components
 - JSpecify annotations
 - Guava ListenableFuture
 - javax.inject
+- BlurView by Dmytro Saviuk
 
 License and terms links for current component groups are shown in Settings > About & legal.
 

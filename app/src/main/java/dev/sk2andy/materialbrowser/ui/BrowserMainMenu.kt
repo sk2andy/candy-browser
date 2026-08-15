@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -51,12 +52,17 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
+import eightbitlab.com.blurview.BlurTarget
 
 internal object BrowserMainMenuMotion {
     const val EXIT_DURATION_MILLIS = 160
@@ -89,6 +95,7 @@ private data class BrowserMainMenuPresentation(
 @Composable
 internal fun BrowserMainMenu(
     expanded: Boolean,
+    blurTarget: BlurTarget?,
     onDismissRequest: () -> Unit,
     pageSubtitle: String,
     canGoBack: Boolean,
@@ -133,6 +140,7 @@ internal fun BrowserMainMenu(
     onSettings: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
+    val chromeTokens = browserChromeSurfaceTokens()
     val menuShape = MaterialTheme.shapes.large
     val outerCorners = MaterialTheme.shapes.medium
     val innerCorners = MaterialTheme.shapes.extraSmall
@@ -153,6 +161,7 @@ internal fun BrowserMainMenu(
     val menuWidth = minOf(360.dp, screenWidth - 32.dp)
     val menuMaxHeight = screenHeight * BROWSER_MAIN_MENU_MAX_HEIGHT_FRACTION
     val menuScrollState = rememberScrollState()
+    val popupOffset = with(LocalDensity.current) { IntOffset(0, (-10).dp.roundToPx()) }
     val requestedPresentation = BrowserMainMenuPresentation(
         pageSubtitle = pageSubtitle,
         canGoBack = canGoBack,
@@ -225,30 +234,36 @@ internal fun BrowserMainMenu(
         action()
     }
 
-    if (popupVisible) DropdownMenu(
-        expanded = true,
+    if (popupVisible) Popup(
+        alignment = Alignment.BottomEnd,
+        offset = popupOffset,
         onDismissRequest = onDismissRequest,
-        modifier = Modifier
-            .width(menuWidth)
-            .heightIn(max = menuMaxHeight)
-            .graphicsLayer {
-                alpha = exitProgress.value
-                val scale = BrowserMainMenuMotion.EXIT_SCALE +
-                    (1f - BrowserMainMenuMotion.EXIT_SCALE) * exitProgress.value
-                scaleX = scale
-                scaleY = scale
-                transformOrigin = menuTransformOrigin
-            }
-            .clip(menuShape)
-            .testTag(BrowserMainMenuTestTags.Menu),
-        offset = DpOffset(x = 0.dp, y = (-10).dp),
-        scrollState = menuScrollState,
-        shape = menuShape,
-        containerColor = colors.surfaceContainerLow,
-        tonalElevation = 0.dp,
-        shadowElevation = 3.dp,
+        properties = PopupProperties(focusable = true),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        BrowserChromeSurface(
+            blurTarget = blurTarget,
+            tokens = chromeTokens,
+            modifier = Modifier
+                .width(menuWidth)
+                .height(menuMaxHeight)
+                .graphicsLayer {
+                    alpha = exitProgress.value
+                    val scale = BrowserMainMenuMotion.EXIT_SCALE +
+                        (1f - BrowserMainMenuMotion.EXIT_SCALE) * exitProgress.value
+                    scaleX = scale
+                    scaleY = scale
+                    transformOrigin = menuTransformOrigin
+                }
+                .clip(menuShape)
+                .testTag(BrowserMainMenuTestTags.Menu),
+            shape = menuShape,
+            blurCornerRadius = chromeTokens.largeCornerRadius,
+        ) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(menuScrollState)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
             Text(
                 text = stringResource(R.string.browser_menu_title),
                 style = MaterialTheme.typography.titleLarge,
@@ -536,6 +551,7 @@ internal fun BrowserMainMenu(
                     },
                 )
             }
+            }
         }
     }
 }
@@ -763,7 +779,7 @@ internal fun MenuToolbarAction(
             .then(accessibilityModifier),
         enabled = enabled,
         shape = MaterialTheme.shapes.large,
-        color = containerColor,
+        color = browserChromeColor(containerColor),
         contentColor = contentColor,
     ) {
         if (horizontalContent) {
@@ -830,7 +846,7 @@ internal fun MenuRow(
             .heightIn(min = 44.dp),
         enabled = enabled,
         shape = shape,
-        color = containerColor,
+        color = browserChromeColor(containerColor, frostedAlpha = 0.68f),
         contentColor = if (enabled) contentColor else contentColor.copy(alpha = 0.38f),
     ) {
         Row(
@@ -891,7 +907,7 @@ internal fun BrowserMenuToggleItem(
                 onValueChange = onCheckedChange,
             ),
         shape = shape,
-        color = colors.surfaceContainer,
+        color = browserChromeColor(colors.surfaceContainer),
         contentColor = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f),
     ) {
         Row(
@@ -944,7 +960,7 @@ internal fun DomainMuteMenuItem(
                 onValueChange = onMutedChange,
             ),
         shape = shape,
-        color = colors.surfaceContainer,
+        color = browserChromeColor(colors.surfaceContainer),
         contentColor = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f),
     ) {
         Row(

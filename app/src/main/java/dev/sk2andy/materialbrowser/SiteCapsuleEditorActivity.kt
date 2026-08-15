@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorContract
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.SiteCapsuleEditorScreen
@@ -24,8 +26,11 @@ class SiteCapsuleEditorActivity : ComponentActivity() {
             finish()
             return
         }
+        val appearanceSettings = BrowserSessionStore(this).loadAppearanceSettings()
         setContent {
-            MaterialBrowserTheme {
+            val appearanceDark = appearanceSettings.usesDarkColors(isSystemInDarkTheme())
+            SideEffect { applyAppearanceSystemBars(appearanceDark) }
+            MaterialBrowserTheme(settings = appearanceSettings) {
                 SiteCapsuleEditorScreen(
                     request = request,
                     onSubmit = { submission ->

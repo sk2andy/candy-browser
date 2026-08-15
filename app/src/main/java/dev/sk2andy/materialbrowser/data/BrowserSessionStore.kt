@@ -478,6 +478,69 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, blocked).apply()
     }
 
+    fun loadAppearanceSettings(): AppearanceSettings {
+        val frostedTransparencyPercent = loadBoundedInt(
+            key = KEY_FROSTED_TRANSPARENCY_PERCENT,
+            defaultValue = AppearanceSettings.DEFAULT_FROSTED_TRANSPARENCY_PERCENT,
+            range = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT..
+                AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT,
+        )
+        return AppearanceSettings(
+            appearanceMode = BrowserAppearanceMode.fromStableId(
+                preferences.getString(KEY_APPEARANCE_MODE, null),
+            ),
+            colorPalette = BrowserColorPalette.fromStableId(
+                preferences.getString(KEY_COLOR_PALETTE, null),
+            ),
+            surfaceStyle = BrowserSurfaceStyle.fromStableId(
+                preferences.getString(KEY_SURFACE_STYLE, null),
+            ),
+            shapeStyle = BrowserShapeStyle.fromStableId(
+                preferences.getString(KEY_SHAPE_STYLE, null),
+            ),
+            frostedTransparencyPercent = frostedTransparencyPercent,
+            frostedAddressBarTransparencyPercent = loadBoundedInt(
+                key = KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT,
+                defaultValue = frostedTransparencyPercent,
+                range = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT..
+                    AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT,
+            ),
+            frostedBlurPercent = loadBoundedInt(
+                key = KEY_FROSTED_BLUR_PERCENT,
+                defaultValue = AppearanceSettings.DEFAULT_FROSTED_BLUR_PERCENT,
+                range = AppearanceSettings.MIN_FROSTED_BLUR_PERCENT..
+                    AppearanceSettings.MAX_FROSTED_BLUR_PERCENT,
+            ),
+        ).normalized()
+    }
+
+    fun saveAppearanceSettings(settings: AppearanceSettings) {
+        val normalized = settings.normalized()
+        preferences.edit()
+            .putString(KEY_APPEARANCE_MODE, normalized.appearanceMode.stableId)
+            .putString(KEY_COLOR_PALETTE, normalized.colorPalette.stableId)
+            .putString(KEY_SURFACE_STYLE, normalized.surfaceStyle.stableId)
+            .putString(KEY_SHAPE_STYLE, normalized.shapeStyle.stableId)
+            .putInt(
+                KEY_FROSTED_TRANSPARENCY_PERCENT,
+                normalized.frostedTransparencyPercent,
+            )
+            .putInt(
+                KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT,
+                normalized.frostedAddressBarTransparencyPercent,
+            )
+            .putInt(KEY_FROSTED_BLUR_PERCENT, normalized.frostedBlurPercent)
+            .apply()
+    }
+
+    private fun loadBoundedInt(
+        key: String,
+        defaultValue: Int,
+        range: IntRange,
+    ): Int = runCatching { preferences.getInt(key, defaultValue) }
+        .getOrDefault(defaultValue)
+        .coerceIn(range)
+
     fun loadDownloadSettings(): BrowserDownloadSettings = BrowserDownloadSettings(
         managerMode = DownloadManagerMode.fromStableId(
             preferences.getString(KEY_DOWNLOAD_MANAGER_MODE, null),
@@ -553,6 +616,14 @@ class BrowserSessionStore internal constructor(
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
+        const val KEY_APPEARANCE_MODE = "appearance_mode"
+        const val KEY_COLOR_PALETTE = "color_palette"
+        const val KEY_SURFACE_STYLE = "surface_style"
+        const val KEY_SHAPE_STYLE = "shape_style"
+        const val KEY_FROSTED_TRANSPARENCY_PERCENT = "frosted_transparency_percent"
+        const val KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT =
+            "frosted_address_bar_transparency_percent"
+        const val KEY_FROSTED_BLUR_PERCENT = "frosted_blur_percent"
         const val KEY_DOWNLOAD_MANAGER_MODE = "download_manager_mode"
         const val KEY_EXTERNAL_DOWNLOAD_MANAGER_ID = "external_download_manager_id"
         const val KEY_SHARE_SESSION_DATA_WITH_ONE_DM = "share_session_data_with_one_dm"

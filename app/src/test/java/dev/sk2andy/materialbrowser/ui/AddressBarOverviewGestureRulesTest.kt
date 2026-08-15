@@ -196,4 +196,18 @@ class AddressBarOverviewGestureRulesTest {
             ),
         )
     }
+
+    @Test
+    fun `morph starts with configured angular source radius`() {
+        val radii = AddressBarOverviewGestureRules.morphCornerRadii(
+            progress = 0f,
+            sourceWidth = 280f,
+            sourceHeight = 56f,
+            targetSize = 56f,
+            sourceCornerRadius = 16f,
+        )
+
+        assertEquals(16f, radii.horizontal, 0.001f)
+        assertEquals(16f, radii.vertical, 0.001f)
+    }
 }

@@ -74,6 +74,17 @@ Its original soundtrack and motion graphics are generated entirely from reposito
   <img src="docs/screenshots/candy-commands.png" width="32%" alt="Candy Browser profile commands in the address bar">
 </p>
 
+### Appearance and browser chrome
+
+- System, light, dark, and AMOLED appearances with Material You, Candy, or neutral color palettes
+- Clear or frosted browser surfaces plus angular, rounded, or extra-rounded shapes
+- Independent transparency controls for general browser chrome and the address bar, with adjustable
+  live background blur over loaded pages
+
+<p align="center">
+  <img src="docs/screenshots/candy-frosted-address-bar.png" width="42%" alt="Candy Browser frosted transparent address bar over a loaded page">
+</p>
+
 ### Tabs, profiles, and journeys
 
 - Persistent tabs with saved page previews, favicons, pinning, reordering, and automatic cleanup

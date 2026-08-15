@@ -16,6 +16,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -25,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
@@ -99,7 +101,11 @@ class MainActivity : ComponentActivity() {
             openIntent(intent)
         }
         setContent {
-            MaterialBrowserTheme {
+            val appearanceDark = browserController.appearanceSettings.usesDarkColors(
+                isSystemInDarkTheme(),
+            )
+            SideEffect { applyAppearanceSystemBars(appearanceDark) }
+            MaterialBrowserTheme(settings = browserController.appearanceSettings) {
                 var onboardingVisible by rememberSaveable {
                     mutableStateOf(onboardingRequired)
                 }

@@ -111,6 +111,7 @@ internal object AddressBarOverviewGestureRules {
         sourceWidth: Float,
         sourceHeight: Float,
         targetSize: Float,
+        sourceCornerRadius: Float? = null,
     ): AddressBarMorphCornerRadii {
         if (
             !sourceWidth.isFinite() ||
@@ -123,7 +124,11 @@ internal object AddressBarOverviewGestureRules {
             return AddressBarMorphCornerRadii(horizontal = 0f, vertical = 0f)
         }
         val morphProgress = resistedProgress(progress)
-        val sourceRadius = min(sourceWidth, sourceHeight) / 2f
+        val maximumSourceRadius = min(sourceWidth, sourceHeight) / 2f
+        val sourceRadius = sourceCornerRadius
+            ?.takeIf(Float::isFinite)
+            ?.coerceIn(0f, maximumSourceRadius)
+            ?: maximumSourceRadius
         val displayedRadius = sourceRadius + (targetSize / 2f - sourceRadius) * morphProgress
         val scaleX = containerScale(progress, sourceWidth, targetSize)
         val scaleY = containerScale(progress, sourceHeight, targetSize)

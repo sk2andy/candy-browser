@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -22,7 +23,9 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -64,6 +67,7 @@ class BrowserMainMenuInstrumentedTest {
                     Box {
                         BrowserMainMenu(
                             expanded = expanded,
+                            blurTarget = null,
                             onDismissRequest = {
                                 if (expanded) dismissals.incrementAndGet()
                                 expanded = false
@@ -171,31 +175,40 @@ class BrowserMainMenuInstrumentedTest {
             .fetchSemanticsNode().boundsInRoot.height
         val maximumMenuHeight = 450f * context.resources.displayMetrics.density * 0.8f
         assertTrue(menuHeight <= maximumMenuHeight + 1f)
+        composeRule.mainClock.autoAdvance = true
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings)
             .assertIsNotDisplayed()
-            .performScrollTo()
-            .assertIsDisplayed()
+        repeat(3) {
+            composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
+                .performTouchInput {
+                    swipe(
+                        start = center + Offset(0f, 150f),
+                        end = center + Offset(0f, -150f),
+                        durationMillis = 1_000L,
+                    )
+                }
+        }
 
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
-            .performScrollTo()
+            .assertIsDisplayed()
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling)
-            .performScrollTo()
+            .assertIsDisplayed()
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView)
-            .performScrollTo()
+            .assertIsDisplayed()
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForcePageZooming)
-            .performScrollTo()
+            .assertIsDisplayed()
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
@@ -206,8 +219,14 @@ class BrowserMainMenuInstrumentedTest {
         assertEquals(1, desktopViewChanges.get())
         assertEquals(1, zoomChanges.get())
 
+        repeat(3) {
+            composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
+                .performTouchInput { swipeUp() }
+        }
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings).assertIsDisplayed()
+        composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DockAddressBar)
-            .performScrollTo()
+            .assertIsDisplayed()
             .performClick()
 
         assertEquals(1, dismissals.get())
@@ -232,6 +251,7 @@ class BrowserMainMenuInstrumentedTest {
             MaterialBrowserTheme {
                 BrowserMainMenu(
                     expanded = true,
+                    blurTarget = null,
                     onDismissRequest = {},
                     pageSubtitle = "New tab",
                     canGoBack = false,

@@ -191,6 +191,28 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_appearance_title">Appearance</string>
+    <string name="settings_home_appearance_summary">Colors, surfaces, and shape</string>
+    <string name="settings_appearance_mode">Appearance</string>
+    <string name="appearance_mode_system">System</string>
+    <string name="appearance_mode_light">Light</string>
+    <string name="appearance_mode_dark">Dark</string>
+    <string name="appearance_mode_amoled">AMOLED</string>
+    <string name="settings_color_palette">Color palette</string>
+    <string name="color_palette_dynamic">Material You</string>
+    <string name="color_palette_candy">Candy</string>
+    <string name="color_palette_neutral">Neutral</string>
+    <string name="settings_surface_style">Surfaces</string>
+    <string name="settings_surface_style_summary">Clear uses opaque surfaces. Frosted uses transparent surfaces with background blur.</string>
+    <string name="surface_style_clear">Clear</string>
+    <string name="surface_style_frosted">Frosted</string>
+    <string name="settings_frosted_transparency">Transparency</string>
+    <string name="settings_frosted_address_bar_transparency">Address bar transparency</string>
+    <string name="settings_frosted_blur">Blur strength</string>
+    <string name="settings_shape_style">Shape</string>
+    <string name="shape_style_angular">Angular</string>
+    <string name="shape_style_rounded">Rounded</string>
+    <string name="shape_style_extra_rounded">Extra rounded</string>
     <string name="settings_home_search_summary">Search engine and suggestions</string>
     <string name="settings_tabs_gestures_title">Tabs &amp; gestures</string>
     <string name="settings_home_tabs_gestures_summary">Tab layout, lifetime, profiles, and controls</string>
