@@ -177,6 +177,7 @@ internal fun AddressLoadCapsuleFeedback(
     progressPercent: Int,
     morphProgress: Float,
     morphTargetSizePx: Float,
+    sourceCornerRadiusPx: Float? = null,
     modifier: Modifier = Modifier,
 ) {
     var observedActiveLoad by remember(tabId) { mutableStateOf(isLoading) }
@@ -250,6 +251,7 @@ internal fun AddressLoadCapsuleFeedback(
                     sourceWidth = size.width,
                     sourceHeight = size.height,
                     targetSize = morphTargetSizePx,
+                    sourceCornerRadius = sourceCornerRadiusPx,
                 )
                 val outlineCornerRadius = CornerRadius(
                     x = (morphRadii.horizontal - outlineInset).coerceAtLeast(0f),

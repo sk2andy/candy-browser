@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -65,16 +64,23 @@ import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
+import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
+import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
+import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
 internal enum class SettingsDestination {
     Home,
     Search,
     TabsAndGestures,
+    Appearance,
     Browser,
     Downloads,
     SiteCapsules,
@@ -82,9 +88,21 @@ internal enum class SettingsDestination {
     AboutLegal,
 }
 
+internal object AppearanceSettingsTestTags {
+    const val AppearanceMode = "appearance_settings_mode"
+    const val ColorPalette = "appearance_settings_palette"
+    const val SurfaceStyle = "appearance_settings_surface"
+    const val ShapeStyle = "appearance_settings_shape"
+    const val FrostedTransparency = "appearance_settings_frosted_transparency"
+    const val FrostedAddressBarTransparency =
+        "appearance_settings_frosted_address_bar_transparency"
+    const val FrostedBlur = "appearance_settings_frosted_blur"
+}
+
 @Composable
 internal fun SettingsScreen(
     destination: SettingsDestination,
+    appearanceSettings: AppearanceSettings,
     downloadSettings: BrowserDownloadSettings,
     externalDownloadManagers: List<ExternalDownloadManagerApp>,
     blockerSettings: BlockerSettings,
@@ -102,6 +120,7 @@ internal fun SettingsScreen(
     isDefaultBrowser: Boolean,
     siteCapsules: List<SiteCapsule>,
     onDestinationChanged: (SettingsDestination) -> Unit,
+    onAppearanceSettingsChanged: (AppearanceSettings) -> Unit,
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
@@ -170,6 +189,12 @@ internal fun SettingsScreen(
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onTabButtonVisibleChanged = onTabButtonVisibleChanged,
+                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                )
+
+                SettingsDestination.Appearance -> AppearanceSettingsPage(
+                    settings = appearanceSettings,
+                    onSettingsChanged = onAppearanceSettingsChanged,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 
@@ -246,6 +271,12 @@ private fun SettingsHomePage(
         )
         SettingsPageSpacer()
         SettingsLink(
+            title = stringResource(R.string.settings_appearance_title),
+            subtitle = stringResource(R.string.settings_home_appearance_summary),
+            onClick = { onDestinationChanged(SettingsDestination.Appearance) },
+        )
+        SettingsPageSpacer()
+        SettingsLink(
             title = stringResource(R.string.settings_section_browser),
             subtitle = stringResource(R.string.settings_home_browser_summary),
             onClick = { onDestinationChanged(SettingsDestination.Browser) },
@@ -274,6 +305,215 @@ private fun SettingsHomePage(
             subtitle = stringResource(R.string.settings_home_about_summary),
             onClick = { onDestinationChanged(SettingsDestination.AboutLegal) },
         )
+    }
+}
+
+@Composable
+internal fun AppearanceSettingsPage(
+    settings: AppearanceSettings,
+    onSettingsChanged: (AppearanceSettings) -> Unit,
+    onBack: () -> Unit,
+) {
+    var appearanceMenuExpanded by remember { mutableStateOf(false) }
+    var paletteMenuExpanded by remember { mutableStateOf(false) }
+    var surfaceMenuExpanded by remember { mutableStateOf(false) }
+    var shapeMenuExpanded by remember { mutableStateOf(false) }
+
+    SettingsPage(
+        title = stringResource(R.string.settings_appearance_title),
+        onBack = onBack,
+    ) {
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_appearance_mode),
+                value = settings.appearanceMode.displayName(),
+                expanded = appearanceMenuExpanded,
+                onClick = { appearanceMenuExpanded = true },
+                modifier = Modifier.testTag(AppearanceSettingsTestTags.AppearanceMode),
+            )
+            SettingsDropdown(
+                expanded = appearanceMenuExpanded,
+                onDismissRequest = { appearanceMenuExpanded = false },
+            ) {
+                BrowserAppearanceMode.entries.forEach { mode ->
+                    SettingsDropdownItem(
+                        label = mode.displayName(),
+                        selected = mode == settings.appearanceMode,
+                        onClick = {
+                            appearanceMenuExpanded = false
+                            onSettingsChanged(settings.copy(appearanceMode = mode))
+                        },
+                    )
+                }
+            }
+        }
+        SettingsPageSpacer()
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_color_palette),
+                value = settings.colorPalette.displayName(),
+                expanded = paletteMenuExpanded,
+                onClick = { paletteMenuExpanded = true },
+                modifier = Modifier.testTag(AppearanceSettingsTestTags.ColorPalette),
+            )
+            SettingsDropdown(
+                expanded = paletteMenuExpanded,
+                onDismissRequest = { paletteMenuExpanded = false },
+            ) {
+                BrowserColorPalette.entries.forEach { palette ->
+                    SettingsDropdownItem(
+                        label = palette.displayName(),
+                        selected = palette == settings.colorPalette,
+                        onClick = {
+                            paletteMenuExpanded = false
+                            onSettingsChanged(settings.copy(colorPalette = palette))
+                        },
+                    )
+                }
+            }
+        }
+        SettingsPageSpacer()
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_surface_style),
+                value = settings.surfaceStyle.displayName(),
+                expanded = surfaceMenuExpanded,
+                onClick = { surfaceMenuExpanded = true },
+                modifier = Modifier.testTag(AppearanceSettingsTestTags.SurfaceStyle),
+            )
+            SettingsDropdown(
+                expanded = surfaceMenuExpanded,
+                onDismissRequest = { surfaceMenuExpanded = false },
+            ) {
+                BrowserSurfaceStyle.entries.forEach { style ->
+                    SettingsDropdownItem(
+                        label = style.displayName(),
+                        selected = style == settings.surfaceStyle,
+                        onClick = {
+                            surfaceMenuExpanded = false
+                            onSettingsChanged(settings.copy(surfaceStyle = style))
+                        },
+                    )
+                }
+            }
+        }
+        Text(
+            stringResource(R.string.settings_surface_style_summary),
+            modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (settings.surfaceStyle == BrowserSurfaceStyle.Frosted) {
+            SettingsPageSpacer()
+            AppearanceSlider(
+                title = stringResource(R.string.settings_frosted_transparency),
+                value = settings.frostedTransparencyPercent.toFloat(),
+                valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
+                    AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
+                steps = 7,
+                onValueChange = { value ->
+                    onSettingsChanged(
+                        settings.copy(
+                            frostedTransparencyPercent = value.roundToInt(),
+                        ),
+                    )
+                },
+                testTag = AppearanceSettingsTestTags.FrostedTransparency,
+            )
+            SettingsPageSpacer()
+            AppearanceSlider(
+                title = stringResource(R.string.settings_frosted_address_bar_transparency),
+                value = settings.frostedAddressBarTransparencyPercent.toFloat(),
+                valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
+                    AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
+                steps = 7,
+                onValueChange = { value ->
+                    onSettingsChanged(
+                        settings.copy(
+                            frostedAddressBarTransparencyPercent = value.roundToInt(),
+                        ),
+                    )
+                },
+                testTag = AppearanceSettingsTestTags.FrostedAddressBarTransparency,
+            )
+            SettingsPageSpacer()
+            AppearanceSlider(
+                title = stringResource(R.string.settings_frosted_blur),
+                value = settings.frostedBlurPercent.toFloat(),
+                valueRange = AppearanceSettings.MIN_FROSTED_BLUR_PERCENT.toFloat()..
+                    AppearanceSettings.MAX_FROSTED_BLUR_PERCENT.toFloat(),
+                steps = 9,
+                onValueChange = { value ->
+                    onSettingsChanged(
+                        settings.copy(frostedBlurPercent = value.roundToInt()),
+                    )
+                },
+                testTag = AppearanceSettingsTestTags.FrostedBlur,
+            )
+        }
+        SettingsPageSpacer()
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_shape_style),
+                value = settings.shapeStyle.displayName(),
+                expanded = shapeMenuExpanded,
+                onClick = { shapeMenuExpanded = true },
+                modifier = Modifier.testTag(AppearanceSettingsTestTags.ShapeStyle),
+            )
+            SettingsDropdown(
+                expanded = shapeMenuExpanded,
+                onDismissRequest = { shapeMenuExpanded = false },
+            ) {
+                BrowserShapeStyle.entries.forEach { style ->
+                    SettingsDropdownItem(
+                        label = style.displayName(),
+                        selected = style == settings.shapeStyle,
+                        onClick = {
+                            shapeMenuExpanded = false
+                            onSettingsChanged(settings.copy(shapeStyle = style))
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppearanceSlider(
+    title: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    onValueChange: (Float) -> Unit,
+    testTag: String,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    "${value.roundToInt()} %",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.testTag(testTag),
+                valueRange = valueRange,
+                steps = steps,
+            )
+        }
     }
 }
 
@@ -444,8 +684,8 @@ private fun TabsAndGesturesSettingsPage(
         Spacer(Modifier.height(2.dp))
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.large,
+            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
             Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                 Text(
@@ -513,8 +753,8 @@ private fun BrowserSettingsPage(
         Surface(
             onClick = onOpenDefaultBrowserSettings,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.large,
+            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
             Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
                 Text(
@@ -658,8 +898,8 @@ private fun SiteCapsulesSettingsPage(
         if (siteCapsules.isEmpty()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = MaterialTheme.shapes.large,
+                color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
             ) {
                 Text(
                     stringResource(R.string.capsule_settings_empty),
@@ -674,8 +914,8 @@ private fun SiteCapsulesSettingsPage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = MaterialTheme.shapes.large,
+                    color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
                 ) {
                     Row(
                         modifier = Modifier.padding(start = 18.dp, top = 8.dp, bottom = 8.dp),
@@ -725,7 +965,7 @@ private fun ProtectionAndDataSettingsPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .sizeIn(minHeight = 48.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.tertiaryContainer,
         ) {
             Row(
@@ -762,7 +1002,7 @@ private fun ProtectionAndDataSettingsPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .sizeIn(minHeight = 48.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.secondaryContainer,
         ) {
             Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp)) {
@@ -815,7 +1055,7 @@ private fun ProtectionAndDataSettingsPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .sizeIn(minHeight = 48.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
         ) {
@@ -888,7 +1128,7 @@ internal fun PrivacyXRaySettingsCounter(
             .fillMaxWidth()
             .sizeIn(minHeight = 48.dp)
             .testTag(PrivacyXRayTestTags.SettingsCounter),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.primaryContainer,
     ) {
         Row(
@@ -944,6 +1184,34 @@ private fun SearchSuggestionProvider.displayName(): String = when (this) {
 }
 
 @Composable
+private fun BrowserAppearanceMode.displayName(): String = when (this) {
+    BrowserAppearanceMode.System -> stringResource(R.string.appearance_mode_system)
+    BrowserAppearanceMode.Light -> stringResource(R.string.appearance_mode_light)
+    BrowserAppearanceMode.Dark -> stringResource(R.string.appearance_mode_dark)
+    BrowserAppearanceMode.Amoled -> stringResource(R.string.appearance_mode_amoled)
+}
+
+@Composable
+private fun BrowserColorPalette.displayName(): String = when (this) {
+    BrowserColorPalette.Dynamic -> stringResource(R.string.color_palette_dynamic)
+    BrowserColorPalette.Candy -> stringResource(R.string.color_palette_candy)
+    BrowserColorPalette.Neutral -> stringResource(R.string.color_palette_neutral)
+}
+
+@Composable
+private fun BrowserSurfaceStyle.displayName(): String = when (this) {
+    BrowserSurfaceStyle.Clear -> stringResource(R.string.surface_style_clear)
+    BrowserSurfaceStyle.Frosted -> stringResource(R.string.surface_style_frosted)
+}
+
+@Composable
+private fun BrowserShapeStyle.displayName(): String = when (this) {
+    BrowserShapeStyle.Angular -> stringResource(R.string.shape_style_angular)
+    BrowserShapeStyle.Rounded -> stringResource(R.string.shape_style_rounded)
+    BrowserShapeStyle.ExtraRounded -> stringResource(R.string.shape_style_extra_rounded)
+}
+
+@Composable
 private fun SettingsSectionTitle(text: String) {
     Text(
         text,
@@ -959,6 +1227,7 @@ private fun SettingsChoice(
     value: String,
     expanded: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
@@ -967,9 +1236,9 @@ private fun SettingsChoice(
     )
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -986,7 +1255,7 @@ private fun SettingsChoice(
             Spacer(Modifier.width(16.dp))
             Surface(
                 modifier = Modifier.size(42.dp),
-                shape = RoundedCornerShape(14.dp),
+                shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -1013,8 +1282,8 @@ private fun SettingsDropdown(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        modifier = Modifier.clip(RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.clip(MaterialTheme.shapes.extraLarge),
+        shape = MaterialTheme.shapes.extraLarge,
         content = content,
     )
 }
@@ -1043,8 +1312,8 @@ private fun SettingsLink(
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),

@@ -138,6 +138,64 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun appearanceSettingsDefaultSafelyAndRoundTrip() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(AppearanceSettings(), store.loadAppearanceSettings())
+
+        val settings = AppearanceSettings(
+            appearanceMode = BrowserAppearanceMode.Amoled,
+            colorPalette = BrowserColorPalette.Candy,
+            surfaceStyle = BrowserSurfaceStyle.Frosted,
+            shapeStyle = BrowserShapeStyle.Angular,
+            frostedTransparencyPercent = 70,
+            frostedAddressBarTransparencyPercent = 50,
+            frostedBlurPercent = 90,
+        )
+        store.saveAppearanceSettings(settings)
+
+        assertEquals(settings, store.loadAppearanceSettings())
+    }
+
+    @Test
+    fun corruptAppearanceSettingsFallBackPerField() {
+        preferences.edit()
+            .putString("appearance_mode", "unknown")
+            .putString("color_palette", "candy")
+            .putString("surface_style", "unknown")
+            .putString("shape_style", "extra_rounded")
+            .putInt("frosted_transparency_percent", 200)
+            .putInt("frosted_address_bar_transparency_percent", -1)
+            .putString("frosted_blur_percent", "invalid")
+            .commit()
+
+        assertEquals(
+            AppearanceSettings(
+                appearanceMode = BrowserAppearanceMode.System,
+                colorPalette = BrowserColorPalette.Candy,
+                surfaceStyle = BrowserSurfaceStyle.Clear,
+                shapeStyle = BrowserShapeStyle.ExtraRounded,
+                frostedTransparencyPercent = 80,
+                frostedAddressBarTransparencyPercent = 0,
+                frostedBlurPercent = AppearanceSettings.DEFAULT_FROSTED_BLUR_PERCENT,
+            ),
+            BrowserSessionStore(context).loadAppearanceSettings(),
+        )
+    }
+
+    @Test
+    fun legacyFrostedTransparencySeedsAddressBarTransparency() {
+        preferences.edit()
+            .putInt("frosted_transparency_percent", 70)
+            .commit()
+
+        val settings = BrowserSessionStore(context).loadAppearanceSettings()
+
+        assertEquals(70, settings.frostedTransparencyPercent)
+        assertEquals(70, settings.frostedAddressBarTransparencyPercent)
+    }
+
+    @Test
     fun corruptExternalDownloadManagerFallsBackToBuiltIn() {
         preferences.edit()
             .putString("download_manager_mode", "external")

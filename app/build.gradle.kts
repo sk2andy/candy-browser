@@ -160,6 +160,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.webkit:webkit:1.13.0")
     implementation("com.google.guava:guava:33.2.1-android")
+    implementation("com.github.Dimezis:BlurView:version-3.2.0")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material-icons-core")

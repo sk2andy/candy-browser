@@ -292,6 +292,10 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSession
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
+import eightbitlab.com.blurview.BlurTarget
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
@@ -415,6 +419,7 @@ fun BrowserScreen(controller: BrowserController) {
     var keepLinkPeekAddressBarExpanded by remember { mutableStateOf(false) }
     var tabOverviewOpening by remember { mutableStateOf(false) }
     var tabHandoff by remember { mutableStateOf<TabHandoff?>(null) }
+    var webContentBlurTarget by remember { mutableStateOf<BlurTarget?>(null) }
     val liveFrameTabIdState = remember { mutableStateOf<String?>(null) }
     var liveFrameTabId by liveFrameTabIdState
     val reportLiveFrame = remember { { tabId: String -> liveFrameTabIdState.value = tabId } }
@@ -1155,6 +1160,10 @@ fun BrowserScreen(controller: BrowserController) {
             blankTabModeProgress = blankTabModeProgress,
             blankTabModeRevealOrigin = blankTabModeRevealOrigin,
             onRetry = controller::retryFailedPage,
+            onBlurTargetAttached = { target -> webContentBlurTarget = target },
+            onBlurTargetReleased = { target ->
+                if (webContentBlurTarget === target) webContentBlurTarget = null
+            },
         )
 
         if (addressEditorVisible) {
@@ -1186,6 +1195,8 @@ fun BrowserScreen(controller: BrowserController) {
             showTabButton = controller.isTabButtonVisible,
             tabCount = controller.activeTabs.size,
             commandFeedback = commandFeedback,
+            blurTarget = webContentBlurTarget,
+            blurSourceVisible = selectedTab.url != BLANK_URL && !tabOverviewVisible,
             feedbackGesturesEnabled = !addressEditorVisible && !settingsVisible,
             onBack = controller::goBack,
             onForward = controller::goForward,
@@ -1610,6 +1621,7 @@ fun BrowserScreen(controller: BrowserController) {
         ) {
             SettingsScreen(
                 destination = settingsDestination,
+                appearanceSettings = controller.appearanceSettings,
                 downloadSettings = controller.downloadSettings,
                 externalDownloadManagers = controller.externalDownloadManagers,
                 blockerSettings = controller.blockerSettings,
@@ -1629,6 +1641,7 @@ fun BrowserScreen(controller: BrowserController) {
                     it.profileId in visibleProfileIds
                 },
                 onDestinationChanged = { settingsDestination = it },
+                onAppearanceSettingsChanged = controller::updateAppearanceSettings,
                 onDownloadSettingsChanged = controller::updateDownloadSettings,
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
@@ -2022,6 +2035,8 @@ private fun BrowserViewport(
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
     onRetry: () -> Boolean,
+    onBlurTargetAttached: (BlurTarget) -> Unit,
+    onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
     val density = LocalDensity.current
     val hapticView = LocalView.current
@@ -2093,6 +2108,8 @@ private fun BrowserViewport(
                 controller = controller,
                 visible = !tabOverviewVisible || selectedTab.isIncognito,
                 onLiveFrame = onLiveFrame,
+                onBlurTargetAttached = onBlurTargetAttached,
+                onBlurTargetReleased = onBlurTargetReleased,
             )
         }
 
@@ -2153,15 +2170,20 @@ private fun ActiveWebView(
     controller: BrowserController,
     visible: Boolean,
     onLiveFrame: (String) -> Unit,
+    onBlurTargetAttached: (BlurTarget) -> Unit,
+    onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
     val selectedTabId = controller.selectedTabId
     val webViewRevision = controller.webViewRevision
     val currentOnLiveFrame by rememberUpdatedState(onLiveFrame)
+    val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
+    val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
     AndroidView(
         factory = { context ->
-            FrameLayout(context).apply { tag = WebViewHostState(this) }
+            BlurTarget(context).apply { tag = WebViewHostState(this) }
         },
         update = { hostView ->
+            currentOnBlurTargetAttached(hostView)
             hostView.alpha = if (visible) 1f else 0f
             val hostState = hostView.tag as WebViewHostState
             controller.attachSelectedWebView(hostState.container)
@@ -2181,6 +2203,7 @@ private fun ActiveWebView(
             hostState?.release()
             hostView.tag = null
             hostState?.let { controller.detachWebView(it.container) }
+            currentOnBlurTargetReleased(hostView)
         },
         modifier = Modifier.fillMaxSize(),
     )
@@ -2635,6 +2658,8 @@ private fun BrowserBottomBar(
     showTabButton: Boolean,
     tabCount: Int,
     commandFeedback: AddressCommandFeedback?,
+    blurTarget: BlurTarget?,
+    blurSourceVisible: Boolean,
     feedbackGesturesEnabled: Boolean,
     onBack: () -> Unit,
     onForward: () -> Unit,
@@ -2722,6 +2747,7 @@ private fun BrowserBottomBar(
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
+    val chromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
     LaunchedEffect(addressBarPulseNonce) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
         pulseScale.snapTo(1f)
@@ -2764,7 +2790,7 @@ private fun BrowserBottomBar(
         targetValue = when (commandFeedback?.tone) {
             AddressCommandFeedbackTone.Confirm -> MaterialTheme.colorScheme.primaryContainer
             AddressCommandFeedbackTone.Reject -> MaterialTheme.colorScheme.errorContainer
-            null -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f)
+            null -> chromeTokens.containerColor
         },
         animationSpec = tween(160),
         label = "Address command feedback color",
@@ -2792,7 +2818,9 @@ private fun BrowserBottomBar(
         val animatedBarHeight = motion.height
         val dockOffset = motion.dockOffset
         Box(contentAlignment = Alignment.Center) {
-            Surface(
+            BrowserChromeSurface(
+                blurTarget = blurTarget,
+                tokens = chromeTokens,
                 modifier = Modifier
                     .offset(x = dockOffset)
                     .width(animatedBarWidth)
@@ -2801,10 +2829,12 @@ private fun BrowserBottomBar(
                         scaleX = pulseScale.value
                         scaleY = pulseScale.value
                     },
-                shape = CircleShape,
-                color = barColor,
-                tonalElevation = 12.dp,
-                shadowElevation = 14.dp,
+                shape = MaterialTheme.shapes.extraLarge,
+                containerColor = barColor,
+                backdropBlurEnabled = commandFeedback == null &&
+                    blurSourceVisible &&
+                    !menuExpanded &&
+                    chromeTokens.backdropBlurEnabled,
             ) {
                 Box {
                     AddressBarPresentationTransition(
@@ -2872,6 +2902,7 @@ private fun BrowserBottomBar(
                             }
                             AddressBarPresentation.Expanded -> ExpandedBottomBarContent(
                                 tab = tab,
+                                blurTarget = blurTarget.takeIf { blurSourceVisible },
                                 showTabButton = showTabButton,
                                 tabCount = tabCount,
                                 menuExpanded = menuExpanded,
@@ -2974,6 +3005,9 @@ private fun BrowserBottomBar(
                             progressPercent = tab.progress,
                             morphProgress = 0f,
                             morphTargetSizePx = with(density) { 56.dp.toPx() },
+                            sourceCornerRadiusPx = with(density) {
+                                chromeTokens.cornerRadius.toPx()
+                            },
                             modifier = Modifier.matchParentSize(),
                         )
                     }
@@ -3290,6 +3324,7 @@ internal fun Modifier.addressBarVerticalGesture(
 @Composable
 private fun ExpandedBottomBarContent(
     tab: BrowserTab,
+    blurTarget: BlurTarget?,
     showTabButton: Boolean,
     tabCount: Int,
     menuExpanded: Boolean,
@@ -3409,8 +3444,12 @@ private fun ExpandedBottomBarContent(
                         enabled = !editing,
                         onDragStopped = { velocity -> onTabDragStopped(velocity) },
                     ),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                shape = MaterialTheme.shapes.extraLarge,
+                color = browserChromeColor(
+                    MaterialTheme.colorScheme.surfaceContainerLowest,
+                    frostedAlpha = 0.22f,
+                    role = BrowserChromeSurfaceRole.AddressBar,
+                ),
             ) {
                 Box {
                     if (editing) {
@@ -3621,6 +3660,7 @@ private fun ExpandedBottomBarContent(
                             }
                             BrowserMainMenu(
                                 expanded = menuExpanded,
+                                blurTarget = blurTarget,
                                 onDismissRequest = { onMenuExpandedChange(false) },
                                 pageSubtitle = if (tab.url == BLANK_URL) {
                                     stringResource(R.string.new_tab_title)
@@ -3882,8 +3922,11 @@ private fun AddressSuggestions(
             .padding(horizontal = 12.dp)
             .padding(bottom = bottomPadding)
             .fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = browserChromeColor(
+            MaterialTheme.colorScheme.surfaceContainerHigh,
+            frostedAlpha = 0.9f,
+        ),
         tonalElevation = 12.dp,
         shadowElevation = 12.dp,
     ) {
@@ -5531,6 +5574,9 @@ internal fun TabOverview(
                     !heroReorderDropAnimating &&
                     activeTabReorder == null &&
                     tabActionsTabId == null
+                val overviewChromeTokens = browserChromeSurfaceTokens(
+                    BrowserChromeSurfaceRole.AddressBar,
+                )
                 Surface(
                     modifier = Modifier
                         .width(AddressBarMotion.OVERVIEW_WIDTH)
@@ -5545,11 +5591,11 @@ internal fun TabOverview(
                             } else {
                                 Modifier.clearAndSetSemantics { }
                             },
-                        ),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
-                    tonalElevation = 12.dp,
-                    shadowElevation = 14.dp,
+                    ),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = overviewChromeTokens.containerColor,
+                    tonalElevation = overviewChromeTokens.tonalElevation,
+                    shadowElevation = overviewChromeTokens.shadowElevation,
                 ) {
                     OverviewAddressBarContent(
                         onNewTab = onNewTab,
@@ -6133,8 +6179,11 @@ internal fun ProfileSwitcher(
                 .testTag(ProfileSwitcherTestTags.Switcher)
                 .width(barWidth)
                 .height(60.dp),
-            shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = browserChromeColor(
+                MaterialTheme.colorScheme.surfaceContainerHigh,
+                frostedAlpha = 0.88f,
+            ),
             tonalElevation = 6.dp,
             shadowElevation = 4.dp,
         ) {
@@ -6577,8 +6626,11 @@ private fun TabTitleRow(
 ) {
     Surface(
         modifier = modifier.graphicsLayer { this.alpha = alpha() },
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = browserChromeColor(
+            MaterialTheme.colorScheme.surfaceContainerHigh,
+            frostedAlpha = 0.88f,
+        ),
         contentColor = contentColor,
         shadowElevation = 2.dp,
     ) {
@@ -7012,7 +7064,7 @@ private fun TabCard(
                 onClick = onClick,
                 role = Role.Button,
             ),
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
@@ -7847,6 +7899,11 @@ internal fun TabActionsFloatingMenu(
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val menuWidth = minOf(360.dp, screenWidth - 32.dp)
+    val chromeTokens = browserChromeSurfaceTokens().copy(
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
+        tonalElevation = 0.dp,
+        shadowElevation = 6.dp,
+    )
     val menuPaneTitle = stringResource(R.string.tab_actions_title)
     val menuTransformOrigin = if (LocalLayoutDirection.current == LayoutDirection.Ltr) {
         TransformOrigin(1f, 1f)
@@ -7922,16 +7979,15 @@ internal fun TabActionsFloatingMenu(
                 label = "Tab actions menu visibility",
             ) {
                 val presentedTab = presented.tab
-                Surface(
+                BrowserChromeSurface(
+                    blurTarget = null,
+                    tokens = chromeTokens,
                     modifier = Modifier
                         .width(menuWidth)
                         .heightIn(max = screenHeight * 0.68f)
                         .testTag(SnoozeTestTags.TabActions)
                         .semantics { paneTitle = menuPaneTitle },
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 6.dp,
                 ) {
                     Column(
                         modifier = Modifier

@@ -157,6 +157,7 @@ import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
@@ -274,6 +275,8 @@ class BrowserController(
     var isFullImmersiveModeEnabled by mutableStateOf(false)
         private set
     var isVideoAutoplayBlocked by mutableStateOf(false)
+        private set
+    var appearanceSettings by mutableStateOf(AppearanceSettings())
         private set
     var downloadSettings by mutableStateOf(BrowserDownloadSettings())
         private set
@@ -971,6 +974,7 @@ class BrowserController(
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         isVideoAutoplayBlocked =
             isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
+        appearanceSettings = store.loadAppearanceSettings()
         downloadSettings = store.loadDownloadSettings()
         refreshExternalDownloadManagers()
         store.clearLegacyWebContentEdgeToEdgePreference()
@@ -2810,6 +2814,13 @@ class BrowserController(
                 webView.evaluateJavascript(VideoAutoplayBlockerScript.cleanupScript, null)
             }
         }
+    }
+
+    fun updateAppearanceSettings(settings: AppearanceSettings) {
+        val normalized = settings.normalized()
+        if (appearanceSettings == normalized) return
+        appearanceSettings = normalized
+        store.saveAppearanceSettings(normalized)
     }
 
     fun updateDownloadSettings(settings: BrowserDownloadSettings) {
