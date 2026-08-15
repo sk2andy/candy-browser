@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Activity | Android lifecycle, incoming intents, permission/file chooser launchers, root theme | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt) |
 | Controller | WebView creation, tab/profile state, navigation, persistence coordination, platform callbacks | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
-| Compose | Render controller state and forward user actions | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt) |
+| Compose | Render controller state and forward user actions | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt), [`StatusBarFrostedGlass.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/StatusBarFrostedGlass.kt) |
 | Policies | Resolve input, URLs, settings, media, file chooser and external routes | [`browser/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/) |
 
 ## Navigation paths
@@ -28,6 +28,8 @@
 - Keep private tab state memory-only and skip remote suggestions for private input.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.
 - Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
+- Keep browser content edge-to-edge. The top safe area redraws a blurred content layer with a
+  surface-tinted fade so status-bar icons stay legible without adding WebView padding.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
 ## Domain compatibility overrides

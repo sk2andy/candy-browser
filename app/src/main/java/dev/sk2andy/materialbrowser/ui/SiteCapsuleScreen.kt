@@ -4,7 +4,6 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.graphics.Bitmap
 import android.webkit.WebView
-import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,8 +57,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -116,7 +119,10 @@ fun SiteCapsuleBrowserScreen(
                 clip = progress < 1f
             },
     ) {
-        CapsuleWebViewHost(controller)
+        CapsuleWebViewHost(
+            controller = controller,
+            statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
+        )
         tab.error?.takeIf { capsule.chromeMode.showsControls }?.let { error ->
             CapsuleErrorCard(
                 message = error,
@@ -151,16 +157,32 @@ fun SiteCapsuleBrowserScreen(
 }
 
 @Composable
-private fun CapsuleWebViewHost(controller: BrowserController) {
+private fun CapsuleWebViewHost(
+    controller: BrowserController,
+    statusBarTint: Int,
+) {
+    val density = LocalDensity.current
+    val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
+        statusBarHeightPx = WindowInsets.statusBars.getTop(density),
+        density = density.density,
+    )
     val selectedTabId = controller.selectedTabId
     val webViewRevision = controller.webViewRevision
     AndroidView(
-        factory = { context -> FrameLayout(context) },
-        update = { container ->
-            container.tag = selectedTabId to webViewRevision
-            controller.attachSelectedWebView(container)
+        factory = { context -> StatusBarFrostedGlassHost(context) },
+        update = { host ->
+            host.tag = selectedTabId to webViewRevision
+            host.updateFrostedGlass(
+                geometry = statusBarGeometry,
+                tint = statusBarTint,
+                visible = true,
+            )
+            controller.attachSelectedWebView(host.blurTarget)
         },
-        onRelease = controller::detachWebView,
+        onRelease = { host ->
+            controller.detachWebView(host.blurTarget)
+            host.release()
+        },
         modifier = Modifier
             .fillMaxSize()
             .testTag(SiteCapsuleTestTags.WebView),

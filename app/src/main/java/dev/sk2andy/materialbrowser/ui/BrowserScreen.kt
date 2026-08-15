@@ -191,6 +191,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -2131,6 +2132,8 @@ private fun BrowserViewport(
             ActiveWebView(
                 controller = controller,
                 visible = !tabOverviewVisible || selectedTab.isIncognito,
+                showStatusBarFrostedGlass = !tabOverviewVisible,
+                statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
                 onBlurTargetReleased = onBlurTargetReleased,
@@ -2193,10 +2196,17 @@ private fun BrowserViewport(
 private fun ActiveWebView(
     controller: BrowserController,
     visible: Boolean,
+    showStatusBarFrostedGlass: Boolean,
+    statusBarTint: Int,
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
+    val density = LocalDensity.current
+    val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
+        statusBarHeightPx = WindowInsets.statusBars.getTop(density),
+        density = density.density,
+    )
     val selectedTabId = controller.selectedTabId
     val webViewRevision = controller.webViewRevision
     val currentOnLiveFrame by rememberUpdatedState(onLiveFrame)
@@ -2204,11 +2214,18 @@ private fun ActiveWebView(
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
     AndroidView(
         factory = { context ->
-            BlurTarget(context).apply { tag = WebViewHostState(this) }
+            StatusBarFrostedGlassHost(context).apply {
+                tag = WebViewHostState(blurTarget)
+            }
         },
         update = { hostView ->
-            currentOnBlurTargetAttached(hostView)
+            currentOnBlurTargetAttached(hostView.blurTarget)
             hostView.alpha = if (visible) 1f else 0f
+            hostView.updateFrostedGlass(
+                geometry = statusBarGeometry,
+                tint = statusBarTint,
+                visible = showStatusBarFrostedGlass,
+            )
             val hostState = hostView.tag as WebViewHostState
             controller.attachSelectedWebView(hostState.container)
             val attachedWebView = hostState.container.getChildAt(0) as? WebView
@@ -2227,7 +2244,8 @@ private fun ActiveWebView(
             hostState?.release()
             hostView.tag = null
             hostState?.let { controller.detachWebView(it.container) }
-            currentOnBlurTargetReleased(hostView)
+            hostView.release()
+            currentOnBlurTargetReleased(hostView.blurTarget)
         },
         modifier = Modifier.fillMaxSize(),
     )
