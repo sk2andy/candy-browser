@@ -4275,10 +4275,6 @@ internal fun TabOverview(
         )
     }
     val exitHeroProgress = remember { Animatable(0f) }
-    val titleContentColor = TabOverviewContrastRules.titleContentColor(
-        primaryContainer = MaterialTheme.colorScheme.primaryContainer,
-        tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer,
-    )
     fun startExitHero(
         tab: BrowserTab,
         bounds: Rect,
@@ -4470,7 +4466,8 @@ internal fun TabOverview(
             heroTargetMode == controller.tabOverviewMode && heroTargetTabId == initialTabId
         }
         val isExiting = exitHero != null
-        val tabCardWidth = (maxWidth * 0.68f).coerceIn(244.dp, 292.dp)
+        val tabCardWidth = (maxWidth * COVERFLOW_CARD_WIDTH_FRACTION)
+            .coerceIn(244.dp, 360.dp)
         val pageSlotWidth = tabCardWidth + 18.dp
         val pageSlotWidthPx = with(density) { pageSlotWidth.toPx() }
         val pageHorizontalPadding = ((maxWidth - pageSlotWidth) / 2).coerceAtLeast(0.dp)
@@ -5064,7 +5061,7 @@ internal fun TabOverview(
                     }
                 }
                 val dismissThreshold = with(density) {
-                    (tabCardWidth.toPx() / 0.53f) * 0.28f
+                    tabCardWidth.toPx() * TabDismissPhysics.CARD_DISMISS_THRESHOLD_FRACTION
                 }
                 val resistanceFraction = controller.dismissResistancePercent / 100f
                 val dragState = rememberDraggableState { delta ->
@@ -5283,52 +5280,56 @@ internal fun TabOverview(
                             .padding(horizontal = 16.dp, vertical = 28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        TabTitleRow(
-                            tab = tab,
-                            favicon = controller.favicons[tab.id],
-                            contentColor = titleContentColor,
-                            alpha = {
-                                if (isInitialCard) {
-                                    ((heroProgress.value - 0.72f) / 0.28f).coerceIn(0f, 1f)
-                                } else {
-                                    1f
-                                }
-                            },
-                            modifier = Modifier.width(tabCardWidth),
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        TabCard(
-                            tab = tab,
-                            preview = controller.previews[tab.id],
-                            favicon = controller.favicons[tab.id],
-                            favorites = controller.favorites,
-                            cardWidth = tabCardWidth,
-                            modifier = Modifier
-                                .testTag(SnoozeTestTags.overviewTab(tab.id))
-                                .graphicsLayer {
-                                    alpha = if (realCardVisible) 1f else 0f
-                                }
-                                .onGloballyPositioned { coordinates ->
-                                    val bounds = coordinates.boundsInRoot()
-                                    cardBounds = bounds
-                                    tabCardBounds[tab.id] = bounds
-                                    tabReorderBounds[tab.id] = bounds
+                        Spacer(Modifier.height(36.dp))
+                        Box(modifier = Modifier.width(tabCardWidth)) {
+                            TabCard(
+                                tab = tab,
+                                preview = controller.previews[tab.id],
+                                favicon = controller.favicons[tab.id],
+                                favorites = controller.favorites,
+                                cardWidth = tabCardWidth,
+                                modifier = Modifier
+                                    .testTag(SnoozeTestTags.overviewTab(tab.id))
+                                    .graphicsLayer {
+                                        alpha = if (realCardVisible) 1f else 0f
+                                    }
+                                    .onGloballyPositioned { coordinates ->
+                                        val bounds = coordinates.boundsInRoot()
+                                        cardBounds = bounds
+                                        tabCardBounds[tab.id] = bounds
+                                        tabReorderBounds[tab.id] = bounds
+                                        if (isInitialCard) {
+                                            heroTargetBounds = bounds
+                                            heroTargetMode = TabOverviewMode.Hero
+                                            heroTargetTabId = tab.id
+                                        }
+                                    },
+                                onClick = {
+                                    val bounds = cardBounds
+                                    if (bounds == null) {
+                                        onSelect(tab.id)
+                                        onClose()
+                                        return@TabCard
+                                    }
+                                    startExitHero(tab, bounds)
+                                },
+                            )
+                            TabTitleRow(
+                                tab = tab,
+                                favicon = controller.favicons[tab.id],
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                alpha = {
                                     if (isInitialCard) {
-                                        heroTargetBounds = bounds
-                                        heroTargetMode = TabOverviewMode.Hero
-                                        heroTargetTabId = tab.id
+                                        ((heroProgress.value - 0.72f) / 0.28f).coerceIn(0f, 1f)
+                                    } else {
+                                        1f
                                     }
                                 },
-                            onClick = {
-                                val bounds = cardBounds
-                                if (bounds == null) {
-                                    onSelect(tab.id)
-                                    onClose()
-                                    return@TabCard
-                                }
-                                startExitHero(tab, bounds)
-                            },
-                        )
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = 20.dp, top = 20.dp, end = 20.dp),
+                            )
+                        }
                     }
                 }
                 }
@@ -6540,65 +6541,73 @@ private fun TabTitleRow(
     alpha: () -> Float,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Surface(
         modifier = modifier.graphicsLayer { this.alpha = alpha() },
-        verticalAlignment = Alignment.CenterVertically,
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+        contentColor = contentColor,
+        shadowElevation = 2.dp,
     ) {
-        if (tab.isIncognito) {
-            Icon(
-                painter = painterResource(R.drawable.ic_incognito_outline),
-                contentDescription = null,
-                modifier = Modifier.size(26.dp),
-                tint = contentColor,
-            )
-        } else if (tab.url == BLANK_URL) {
-            Icon(
-                painter = painterResource(R.drawable.ic_launcher_foreground_art),
-                contentDescription = null,
-                modifier = Modifier.size(26.dp),
-                tint = Color.Unspecified,
-            )
-        } else if (favicon != null && !favicon.isRecycled) {
-            Image(
-                bitmap = favicon.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.size(26.dp),
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            Surface(
-                modifier = Modifier.size(26.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primary,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        displayTabTitle(tab).take(1).uppercase(),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelMedium,
-                    )
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (tab.isIncognito) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_incognito_outline),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = contentColor,
+                )
+            } else if (tab.url == BLANK_URL) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_launcher_foreground_art),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = Color.Unspecified,
+                )
+            } else if (favicon != null && !favicon.isRecycled) {
+                Image(
+                    bitmap = favicon.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.size(22.dp),
+                    shape = RoundedCornerShape(7.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            displayTabTitle(tab).take(1).uppercase(),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                 }
             }
-        }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            displayTabTitle(tab),
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.titleMedium,
-            color = contentColor,
-            fontWeight = FontWeight.SemiBold,
-        )
-        if (tab.isPinned) {
-            Spacer(Modifier.width(8.dp))
-            Icon(
-                painter = painterResource(R.drawable.ic_push_pin),
-                contentDescription = stringResource(R.string.cd_pinned_tab),
-                modifier = Modifier.size(18.dp),
-                tint = contentColor,
+            Spacer(Modifier.width(10.dp))
+            Text(
+                displayTabTitle(tab),
+                modifier = Modifier.weight(1f, fill = false),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleSmall,
+                color = contentColor,
+                fontWeight = FontWeight.SemiBold,
             )
+            if (tab.isPinned) {
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    painter = painterResource(R.drawable.ic_push_pin),
+                    contentDescription = stringResource(R.string.cd_pinned_tab),
+                    modifier = Modifier.size(18.dp),
+                    tint = contentColor,
+                )
+            }
         }
     }
 }
@@ -6963,7 +6972,7 @@ private fun TabCard(
     Card(
         modifier = Modifier
             .width(cardWidth)
-            .aspectRatio(0.53f)
+            .aspectRatio(COVERFLOW_CARD_ASPECT_RATIO)
             .then(modifier)
             .clickable(
                 onClick = onClick,
@@ -8168,6 +8177,8 @@ internal object ProfileCreationTestTags {
 }
 
 private const val PREVIEW_CROP_TOP_FRACTION = 0.25f
+private const val COVERFLOW_CARD_WIDTH_FRACTION = 0.74f
+private const val COVERFLOW_CARD_ASPECT_RATIO = 0.45f
 private const val PROFILE_CREATION_SHEET_HEIGHT_FRACTION = 0.66f
 private const val NEW_PROFILE_TARGET = "__new_profile__"
 private val PROFILE_EMOJIS = listOf(
