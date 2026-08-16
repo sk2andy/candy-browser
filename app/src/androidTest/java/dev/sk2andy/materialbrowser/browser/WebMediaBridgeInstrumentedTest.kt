@@ -184,6 +184,102 @@ class WebMediaBridgeInstrumentedTest {
     }
 
     @Test
+    fun repeatedPipPreparationRecoversDroppedPresentationCommand() {
+        lateinit var webView: WebView
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            webView = controller.selectedWebViewForTesting()
+            webView.loadDataWithBaseURL(
+                "https://media.example/",
+                PLAYING_VIDEO_HTML,
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        awaitCondition {
+            var playing = false
+            activityRule.scenario.onActivity { playing = controller?.webMediaState?.isPlaying == true }
+            playing
+        }
+
+        val interceptorReady = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const bridge = globalThis.CandyWebMediaBridge;
+                  const originalHandler = bridge.onmessage;
+                  globalThis.candyBlockEnterPresentation = true;
+                  globalThis.candyBlockedEnterPresentationCount = 0;
+                  bridge.onmessage = event => {
+                    const message = JSON.parse(event.data);
+                    if (
+                      globalThis.candyBlockEnterPresentation &&
+                      message.command === 'enter-presentation'
+                    ) {
+                      globalThis.candyBlockedEnterPresentationCount++;
+                      return;
+                    }
+                    originalHandler.call(bridge, event);
+                  };
+                  return 'ready';
+                })()
+                """.trimIndent(),
+            ) { result -> interceptorReady[0] = result }
+        }
+        awaitCondition { interceptorReady[0] == "\"ready\"" }
+
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).prepareForPictureInPicture()
+        }
+        awaitJavascriptIntAtLeast(
+            webView = webView,
+            expression = "globalThis.candyBlockedEnterPresentationCount",
+            minimum = 1,
+        )
+        val blockedPosition = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript("document.querySelector('video').style.position") { result ->
+                blockedPosition[0] = result
+            }
+        }
+        awaitCondition { blockedPosition[0] != null }
+        assertEquals("\"\"", blockedPosition[0])
+
+        val retryReady = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                "globalThis.candyBlockEnterPresentation = false",
+            ) { result -> retryReady[0] = result }
+        }
+        awaitCondition { retryReady[0] != null }
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).prepareForPictureInPicture()
+        }
+        val retriedPosition = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript("document.querySelector('video').style.position") { result ->
+                    retriedPosition[0] = result
+                }
+            }
+            retriedPosition[0] == "\"fixed\""
+        }
+    }
+
+    @Test
     fun chromiumCustomViewFallsBackToPresentedWebViewWithoutEndingSession() {
         lateinit var webView: WebView
         var callbackInvoked = false
