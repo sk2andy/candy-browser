@@ -205,6 +205,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -3103,6 +3104,7 @@ internal object AddressBarDockTestTags {
 
 internal object TabOverviewChromeTestTags {
     const val Root = "tab_overview_root"
+    const val HeroPager = "tab_overview_hero_pager"
     const val Bar = "tab_overview_address_bar"
     const val NewTab = "tab_overview_new_tab"
     const val More = "tab_overview_more"
@@ -4615,6 +4617,12 @@ internal fun TabOverview(
         val gridColumnPitchPx = gridCardWidthPx + gridGapPx
         val gridRowPitchPx = with(density) { 60.dp.toPx() } + gridCardWidthPx / 0.72f
         val listRowPitchPx = with(density) { 72.dp.toPx() }
+        val heroPagerTopOverflow = TAB_OVERVIEW_TOP_SPACING +
+            if (controller.profilesEnabled) {
+                PROFILE_SWITCHER_LAYOUT_HEIGHT + TAB_OVERVIEW_PROFILE_SPACING
+            } else {
+                0.dp
+            }
 
         fun reorderSlotOffset(
             reorder: ActiveTabReorder,
@@ -5059,7 +5067,7 @@ internal fun TabOverview(
                     },
                 ),
         ) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(TAB_OVERVIEW_TOP_SPACING))
             if (controller.profilesEnabled) {
                 ProfileSwitcher(
                     profiles = controller.profiles,
@@ -5136,7 +5144,7 @@ internal fun TabOverview(
                         translationY = (1f - chromeProgress) * -18f
                     },
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(TAB_OVERVIEW_PROFILE_SPACING))
             }
             when (controller.tabOverviewMode) {
                 TabOverviewMode.Hero -> HorizontalPager(
@@ -5150,8 +5158,15 @@ internal fun TabOverview(
                         val scale = 0.97f + progress * 0.03f
                         scaleX = scale
                         scaleY = scale
-                    },
-                contentPadding = PaddingValues(horizontal = pageHorizontalPadding, vertical = 4.dp),
+                    }
+                    .allowTopOverflow(heroPagerTopOverflow)
+                    .testTag(TabOverviewChromeTestTags.HeroPager),
+                contentPadding = PaddingValues(
+                    start = pageHorizontalPadding,
+                    top = heroPagerTopOverflow + HERO_PAGER_VERTICAL_PADDING,
+                    end = pageHorizontalPadding,
+                    bottom = HERO_PAGER_VERTICAL_PADDING,
+                ),
                 pageSpacing = 0.dp,
                 pageSize = PageSize.Fixed(pageSlotWidth),
                 flingBehavior = pagerFlingBehavior,
@@ -6211,7 +6226,7 @@ internal fun ProfileSwitcher(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp),
+            .height(PROFILE_SWITCHER_LAYOUT_HEIGHT),
         contentAlignment = Alignment.Center,
     ) {
         val profileContentWidth = (profiles.size * PROFILE_SLOT_WIDTH).dp
@@ -6414,6 +6429,31 @@ internal fun ProfileSwitcher(
                 }
             }
         }
+    }
+}
+
+private fun Modifier.allowTopOverflow(topOverflow: Dp): Modifier = layout { measurable, constraints ->
+    val overflowPx = topOverflow.roundToPx().coerceAtLeast(0)
+    if (overflowPx == 0 || !constraints.hasBoundedHeight) {
+        val placeable = measurable.measure(constraints)
+        return@layout layout(placeable.width, placeable.height) {
+            placeable.placeRelative(0, 0)
+        }
+    }
+    val expandedHeight = (constraints.maxHeight.toLong() + overflowPx)
+        .coerceAtMost(Constraints.Infinity.toLong())
+        .toInt()
+    val placeable = measurable.measure(
+        constraints.copy(
+            minHeight = expandedHeight,
+            maxHeight = expandedHeight,
+        ),
+    )
+    layout(
+        width = placeable.width,
+        height = constraints.maxHeight,
+    ) {
+        placeable.placeRelative(0, -overflowPx)
     }
 }
 
@@ -8332,6 +8372,10 @@ private const val COVERFLOW_CARD_ASPECT_RATIO = 0.45f
 private const val PROFILE_CREATION_SHEET_HEIGHT_FRACTION = 0.66f
 private const val NEW_PROFILE_TARGET = "__new_profile__"
 private const val VIDEO_ONLY_WEB_VIEW_Z_INDEX = 100f
+private val TAB_OVERVIEW_TOP_SPACING = 12.dp
+private val TAB_OVERVIEW_PROFILE_SPACING = 4.dp
+private val PROFILE_SWITCHER_LAYOUT_HEIGHT = 64.dp
+private val HERO_PAGER_VERTICAL_PADDING = 4.dp
 private val PROFILE_EMOJIS = listOf(
     "🍬", "⭐", "💼", "🛒", "🎮", "📚",
     "✈️", "🏠", "🎵", "🧪", "📰", "❤️",
