@@ -31,14 +31,10 @@
 
 ## See Candy in motion
 
-<p align="center">
-  <a href="docs/promo/video/candy-browser-reddit-4x5.mp4">
-    <img src="docs/promo/video/candy-browser-reddit-poster.jpg" width="55%" alt="Candy Browser feature tour poster">
-  </a>
-</p>
+https://github.com/user-attachments/assets/cb9b61d4-5047-4b85-b41e-255f9654949f
 
 <p align="center">
-  <a href="docs/promo/video/candy-browser-reddit-4x5.mp4"><strong>Watch the 60 fps feature tour (MP4, 4.7 MB)</strong></a>
+  <a href="docs/promo/video/candy-browser-reddit-4x5.mp4"><strong>Download the 60 fps feature tour (MP4, 4.7 MB)</strong></a>
 </p>
 
 The tour combines live API 36 emulator footage with repository screenshots to show the gesture-first
