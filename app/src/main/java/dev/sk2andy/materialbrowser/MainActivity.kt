@@ -52,6 +52,8 @@ import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private lateinit var browserController: BrowserController
+    private lateinit var fullscreenWebContentHost: FullscreenWebContentHost
+    private var isTabOverviewPortraitLocked = false
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
+        fullscreenWebContentHost = FullscreenWebContentHost(this, ::applyEffectiveWindowState)
         browserController = BrowserController(
             activity = this,
             requestRuntimePermissions = { permissions ->
@@ -85,9 +88,12 @@ class MainActivity : ComponentActivity() {
                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             },
-            onFullImmersiveModeChanged = ::applyFullImmersiveMode,
+            onFullImmersiveModeChanged = { applyEffectiveWindowState() },
+            showFullscreenWebContent = fullscreenWebContentHost::show,
+            hideFullscreenWebContent = fullscreenWebContentHost::hideFromWebContent,
+            dismissFullscreenWebContent = fullscreenWebContentHost::dismissFromBrowser,
         )
-        applyFullImmersiveMode(browserController.isFullImmersiveModeEnabled)
+        applyEffectiveWindowState()
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             browserController.onWindowInsetsChanged(insets)
             insets
@@ -231,7 +237,7 @@ class MainActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         BrowserInputDiagnostics.activityWindowFocus(hasFocus, currentFocus)
         if (hasFocus && ::browserController.isInitialized) {
-            applyFullImmersiveMode(browserController.isFullImmersiveModeEnabled)
+            applyEffectiveWindowState()
         }
     }
 
@@ -256,6 +262,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        if (::fullscreenWebContentHost.isInitialized) {
+            fullscreenWebContentHost.dismissFromBrowser()
+        }
         if (::browserController.isInitialized) browserController.destroy()
         super.onDestroy()
     }
@@ -301,10 +310,25 @@ class MainActivity : ComponentActivity() {
     fun browserControllerForTesting(): BrowserController = browserController
 
     private fun setTabOverviewPortraitLocked(locked: Boolean) {
-        val orientation = if (locked) {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        isTabOverviewPortraitLocked = locked
+        applyEffectiveWindowState()
+    }
+
+    private fun applyEffectiveWindowState() {
+        val webContentFullscreen =
+            ::fullscreenWebContentHost.isInitialized && fullscreenWebContentHost.isShowing
+        val browserFullscreen =
+            ::browserController.isInitialized && browserController.isFullImmersiveModeEnabled
+        val state = BrowserWindowStateRules.resolve(
+            isWebContentFullscreen = webContentFullscreen,
+            isBrowserFullscreen = browserFullscreen,
+            isTabOverviewPortraitLocked = isTabOverviewPortraitLocked,
+        )
+        applyFullImmersiveMode(state.isImmersive)
+        val orientation = when (state.requestedOrientation) {
+            BrowserRequestedOrientation.Sensor -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+            BrowserRequestedOrientation.Portrait -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            BrowserRequestedOrientation.Unspecified -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
         if (requestedOrientation != orientation) requestedOrientation = orientation
     }

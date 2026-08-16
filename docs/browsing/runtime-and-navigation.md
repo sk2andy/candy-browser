@@ -4,7 +4,7 @@
 
 | Layer | Responsibility | Entry points |
 | --- | --- | --- |
-| Activity | Android lifecycle, incoming intents, permission/file chooser launchers, root theme | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt) |
+| Activity | Android lifecycle, incoming intents, permission/file chooser launchers, fullscreen web content, root theme | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt), [`FullscreenWebContentHost.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/FullscreenWebContentHost.kt) |
 | Controller | WebView creation, tab/profile state, navigation, persistence coordination, platform callbacks | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
 | Compose | Render controller state and forward user actions | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt), [`StatusBarFrostedGlass.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/StatusBarFrostedGlass.kt) |
 | Policies | Resolve input, URLs, settings, media, file chooser and external routes | [`browser/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/) |
@@ -23,6 +23,9 @@
 ## Invariants
 
 - Keep activity-result and lifecycle ownership in `MainActivity`; keep browser state in `BrowserController`.
+- Show WebView custom views above browser chrome and enable sensor rotation for their lifetime.
+  Web fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
+  the current browser orientation and system-bar policy.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.

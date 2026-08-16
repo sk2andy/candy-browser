@@ -79,6 +79,11 @@ internal object BrowserInputDiagnostics {
         )
     }
 
+    fun fullscreenCustomView(stage: String, tabId: String, detail: String) {
+        if (!enabled) return
+        Log.v(TAG, "stage=fullscreen-$stage tab=$tabId $detail")
+    }
+
     private fun traceEvent(
         stage: String,
         event: MotionEvent,

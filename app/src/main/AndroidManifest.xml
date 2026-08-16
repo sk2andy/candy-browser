@@ -108,6 +108,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenLayout|screenSize"
             android:exported="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">

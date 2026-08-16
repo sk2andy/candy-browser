@@ -222,6 +222,11 @@ private class PendingPreviewCapture(
     var expired = false
 }
 
+private class FullscreenWebContentOwner(
+    val tabId: String,
+    val webView: WebView,
+)
+
 class BrowserController(
     private val activity: Activity,
     private val requestRuntimePermissions: (Set<String>) -> Unit = { permissions ->
@@ -233,6 +238,15 @@ class BrowserController(
     },
     private val requestSnoozeNotificationPermission: () -> Unit = {},
     private val onFullImmersiveModeChanged: (Boolean) -> Unit = {},
+    private val showFullscreenWebContent: (
+        View,
+        WebChromeClient.CustomViewCallback,
+    ) -> Boolean = { _, callback ->
+        callback.onCustomViewHidden()
+        false
+    },
+    private val hideFullscreenWebContent: () -> Unit = {},
+    private val dismissFullscreenWebContent: () -> Unit = {},
 ) {
     val tabs = mutableStateListOf<BrowserTab>()
     val profiles = mutableStateListOf<BrowserProfile>()
@@ -329,6 +343,8 @@ class BrowserController(
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
     private val videoAutoplayScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
+    private var fullscreenWebContentOwner: FullscreenWebContentOwner? = null
+    private var fullscreenWebContentAwaitingHide: FullscreenWebContentOwner? = null
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val webViewProfileKeys = ConcurrentHashMap<String, String>()
@@ -1704,7 +1720,7 @@ class BrowserController(
             openerTabId = openerTabId,
         )
         tabs += tab
-        selectedTabId = tab.id
+        updateSelectedTabId(tab.id)
         rememberSelectedTab(activeProfileId, tab.id)
         persist()
         return tab.id
@@ -1774,7 +1790,7 @@ class BrowserController(
         activeProfileId = profile.id
         val tab = newTabState()
         tabs += tab
-        selectedTabId = tab.id
+        updateSelectedTabId(tab.id)
         rememberSelectedTab(profile.id, tab.id)
         persist()
         return profile.id
@@ -1794,7 +1810,7 @@ class BrowserController(
             ?.let { tabId -> tabs.firstOrNull { it.id == tabId && it.profileId == profileId } }
             ?: activeTabs.maxByOrNull(BrowserTab::lastAccessedAt)
             ?: newTabState().also(tabs::add)
-        selectedTabId = targetTab.id
+        updateSelectedTabId(targetTab.id)
         touchTab(targetTab.id, System.currentTimeMillis())
         rememberSelectedTab(profileId, targetTab.id)
         persist()
@@ -1907,7 +1923,7 @@ class BrowserController(
             tabs.any { it.id == selectedId && it.profileId == fallbackProfile.id }
         } ?: activeTabs.first().id
         if (activeProfileId == fallbackProfile.id) {
-            selectedTabId = fallbackSelection
+            updateSelectedTabId(fallbackSelection)
             rememberSelectedTab(fallbackProfile.id, fallbackSelection)
         }
         reconcileCandyTrailForks(System.currentTimeMillis())
@@ -1948,8 +1964,10 @@ class BrowserController(
             TabPinningRules.orderedTabs(tabs.filter { it.profileId == profileId }),
         )
         if (tabId == selectedTabId) {
-            selectedTabId = activeTabs.getOrNull(sourceIndex.coerceAtMost(activeTabs.lastIndex))?.id
-                ?: newTabState(isIncognito = sourceTab.isIncognito).also(tabs::add).id
+            updateSelectedTabId(
+                activeTabs.getOrNull(sourceIndex.coerceAtMost(activeTabs.lastIndex))?.id
+                    ?: newTabState(isIncognito = sourceTab.isIncognito).also(tabs::add).id,
+            )
             touchTab(selectedTabId, System.currentTimeMillis())
             rememberSelectedTab(activeProfileId, selectedTabId)
         }
@@ -2135,7 +2153,7 @@ class BrowserController(
         }
         clearPermissionActivity(selectedTabId)
         webViews[selectedTabId]?.let(::pauseWebView)
-        selectedTabId = tabId
+        updateSelectedTabId(tabId)
         rememberSelectedTab(activeProfileId, tabId)
         persist()
     }
@@ -2203,13 +2221,14 @@ class BrowserController(
         removeTabResources(tabId)
         tabs.removeAt(index)
         if (selectedTabId == tabId) {
-            selectedTabId = openerTabId
-                ?.takeIf { openerId -> activeTabs.any { it.id == openerId } }
-                ?: activeTabs.getOrNull(profileIndex.coerceAtMost(activeTabs.lastIndex))?.id
-                ?: newTabState(
-                    nowMillis = nowMillis,
-                    isIncognito = closingTab.isIncognito,
-                ).also(tabs::add).id
+            updateSelectedTabId(
+                openerTabId?.takeIf { openerId -> activeTabs.any { it.id == openerId } }
+                    ?: activeTabs.getOrNull(profileIndex.coerceAtMost(activeTabs.lastIndex))?.id
+                    ?: newTabState(
+                        nowMillis = nowMillis,
+                        isIncognito = closingTab.isIncognito,
+                    ).also(tabs::add).id,
+            )
             touchTab(selectedTabId, nowMillis)
             rememberSelectedTab(activeProfileId, selectedTabId)
         }
@@ -2291,7 +2310,7 @@ class BrowserController(
         snoozedTabs.clear()
         snoozedTabs += updatedSnoozed
         if (selectedTabId == tabId) {
-            selectedTabId = updatedSelection
+            updateSelectedTabId(updatedSelection)
             rememberSelectedTab(activeProfileId, selectedTabId)
         }
         reconcileCandyTrailForks(nowMillis)
@@ -2335,7 +2354,7 @@ class BrowserController(
         tabs += result.tabs
         snoozedTabs.clear()
         snoozedTabs += result.snoozedTabs
-        selectedTabId = result.selectedTabId
+        updateSelectedTabId(result.selectedTabId)
         if (selectedTabId == result.restoredTab.id) activeProfileId = result.restoredTab.profileId
         rememberSelectedTab(activeProfileId, selectedTabId)
         reconcileCandyTrailForks(nowMillis)
@@ -2391,7 +2410,7 @@ class BrowserController(
         tabs.clear()
         tabs += result.tabs
         activeProfileId = restoredTab.profileId
-        selectedTabId = tabId
+        updateSelectedTabId(tabId)
         rememberSelectedTab(activeProfileId, tabId)
         snoozedTabs.clear()
         snoozedTabs += remaining
@@ -2470,7 +2489,7 @@ class BrowserController(
         webViews[selectedTabId]?.let(::pauseWebView)
         tabs += destinationTab
         setCandyTrail(originTab, forkedTrail)
-        selectedTabId = destinationTab.id
+        updateSelectedTabId(destinationTab.id)
         rememberSelectedTab(activeProfileId, destinationTab.id)
         persist()
         return destinationTab.id
@@ -2515,7 +2534,7 @@ class BrowserController(
         webViews[selectedTabId]?.let(::pauseWebView)
         tabs += destinationTab
         setCandyTrail(originTab, reopenedTrail)
-        selectedTabId = destinationTab.id
+        updateSelectedTabId(destinationTab.id)
         rememberSelectedTab(activeProfileId, destinationTab.id)
         persist()
         return destinationTab.id
@@ -3306,6 +3325,8 @@ class BrowserController(
         pendingPreviewCaptures.clear()
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
+        dismissFullscreenWebContentIfOwned()
+        fullscreenWebContentAwaitingHide = null
         fileChooserValidationExecutor.shutdownNow()
         activePermissions.clear()
         permissionRepository.clearPrivateSession()
@@ -3419,7 +3440,7 @@ class BrowserController(
         cookieManagerFor(this).setAcceptCookie(true)
         applyCookiePolicy(tabId, configuredWebView, tab.url)
         webViewClient = browserWebViewClient(tabId)
-        webChromeClient = browserChromeClient(tabId)
+        webChromeClient = browserChromeClient(tabId, this)
         setDownloadListener(downloadListener(tabId))
         installSiteCompatibilityDocumentStartScripts(tabId, this)
         installCosmeticDocumentStartScripts(tabId, this, tab.url)
@@ -3680,6 +3701,7 @@ class BrowserController(
         }
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            dismissFullscreenWebContentIfOwned(view)
             clearPermissionActivity(tabId)
             clearServiceWorkerClientsLosingLastWebView(setOf(tabId))
             webViews.remove(tabId)
@@ -4306,7 +4328,10 @@ class BrowserController(
         pending.delivery.complete(null)
     }
 
-    private fun browserChromeClient(tabId: String) = object : WebChromeClient() {
+    private fun browserChromeClient(
+        tabId: String,
+        sourceWebView: WebView,
+    ) = object : WebChromeClient() {
         override fun onProgressChanged(view: WebView, newProgress: Int) {
             val currentProgress = tabs.firstOrNull { it.id == tabId }?.progress ?: return
             if (newProgress in 1..99 && newProgress - currentProgress < 3) return
@@ -4322,6 +4347,70 @@ class BrowserController(
 
         override fun onReceivedIcon(view: WebView, icon: Bitmap?) {
             icon?.let { storeFavicon(tabId, it) }
+        }
+
+        override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+            BrowserInputDiagnostics.fullscreenCustomView(
+                stage = "show-request",
+                tabId = tabId,
+                detail = "destroyed=$destroyed selected=${tabId == selectedTabId} " +
+                    "current=${webViews[tabId] === sourceWebView} " +
+                    "owner=${fullscreenWebContentOwner?.tabId ?: "none"} " +
+                    "awaiting=${fullscreenWebContentAwaitingHide?.tabId ?: "none"}",
+            )
+            if (
+                destroyed ||
+                tabId != selectedTabId ||
+                webViews[tabId] !== sourceWebView ||
+                fullscreenWebContentOwner != null ||
+                fullscreenWebContentAwaitingHide?.webView === sourceWebView
+            ) {
+                callback.onCustomViewHidden()
+                return
+            }
+            val owner = FullscreenWebContentOwner(tabId, sourceWebView)
+            val ownerCallback = CustomViewCallback {
+                BrowserInputDiagnostics.fullscreenCustomView(
+                    stage = "host-dismissed",
+                    tabId = tabId,
+                    detail = "isOwner=${fullscreenWebContentOwner === owner}",
+                )
+                if (fullscreenWebContentOwner === owner) {
+                    fullscreenWebContentOwner = null
+                    fullscreenWebContentAwaitingHide = owner
+                }
+                callback.onCustomViewHidden()
+            }
+            fullscreenWebContentOwner = owner
+            val shown = showFullscreenWebContent(view, ownerCallback)
+            BrowserInputDiagnostics.fullscreenCustomView(
+                stage = "show-result",
+                tabId = tabId,
+                detail = "shown=$shown",
+            )
+            if (!shown) {
+                if (fullscreenWebContentOwner === owner) {
+                    fullscreenWebContentOwner = null
+                }
+            }
+        }
+
+        override fun onHideCustomView() {
+            BrowserInputDiagnostics.fullscreenCustomView(
+                stage = "hide-request",
+                tabId = tabId,
+                detail = "owner=${fullscreenWebContentOwner?.tabId ?: "none"} " +
+                    "awaiting=${fullscreenWebContentAwaitingHide?.tabId ?: "none"}",
+            )
+            val awaitingHide = fullscreenWebContentAwaitingHide
+            if (awaitingHide?.tabId == tabId && awaitingHide.webView === sourceWebView) {
+                fullscreenWebContentAwaitingHide = null
+                return
+            }
+            val owner = fullscreenWebContentOwner ?: return
+            if (owner.tabId != tabId || owner.webView !== sourceWebView) return
+            fullscreenWebContentOwner = null
+            hideFullscreenWebContent()
         }
 
         override fun onPermissionRequest(request: PermissionRequest) {
@@ -5300,7 +5389,7 @@ class BrowserController(
         }
         if (activeTabs.isEmpty()) {
             tabs += newTabState(nowMillis = nowMillis)
-            selectedTabId = activeTabs.first().id
+            updateSelectedTabId(activeTabs.first().id)
             rememberSelectedTab(activeProfileId, selectedTabId)
         }
         if (persistChanges) persist()
@@ -5380,7 +5469,7 @@ class BrowserController(
         ) return 0
         tabs.clear()
         tabs += result.tabs
-        selectedTabId = validSelection
+        updateSelectedTabId(validSelection)
         snoozedTabs.clear()
         snoozedTabs += remaining
         reconcileCandyTrailForks(nowMillis)
@@ -5805,6 +5894,7 @@ class BrowserController(
     }
 
     private fun destroyWebView(webView: WebView) {
+        dismissFullscreenWebContentIfOwned(webView)
         removeSiteCompatibilityDocumentStartScripts(webView)
         removeCosmeticDocumentStartScripts(webView)
         removeVideoAutoplayDocumentStartScript(webView)
@@ -5815,6 +5905,25 @@ class BrowserController(
         webView.clearHistory()
         webView.removeAllViews()
         webView.destroy()
+    }
+
+    private fun updateSelectedTabId(tabId: String) {
+        if (selectedTabId == tabId) return
+        dismissFullscreenWebContentIfOwned()
+        selectedTabId = tabId
+    }
+
+    private fun dismissFullscreenWebContentIfOwned(webView: WebView? = null) {
+        if (webView != null && fullscreenWebContentAwaitingHide?.webView === webView) {
+            fullscreenWebContentAwaitingHide = null
+        }
+        val owner = fullscreenWebContentOwner
+        if (owner == null) return
+        if (webView != null && owner.webView !== webView) return
+        dismissFullscreenWebContent()
+        if (fullscreenWebContentOwner === owner) {
+            fullscreenWebContentOwner = null
+        }
     }
 
     private fun destroyLinkPeekPreviewWebViews(storageKey: String? = null) {
