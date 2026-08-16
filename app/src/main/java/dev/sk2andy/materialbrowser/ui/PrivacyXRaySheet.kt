@@ -87,6 +87,7 @@ import dev.sk2andy.materialbrowser.blocking.PrivacyRequestCategory
 import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlinx.coroutines.delay
 
 internal object PrivacyXRayTestTags {
@@ -199,7 +200,7 @@ internal fun PrivacyXRaySheet(
         modifier = Modifier
             .testTag(PrivacyXRayTestTags.Sheet)
             .semantics { paneTitle = title },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         PrivacyXRayContent(
             snapshot = snapshot,

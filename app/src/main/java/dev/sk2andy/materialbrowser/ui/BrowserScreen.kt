@@ -3896,7 +3896,10 @@ private fun WebContentContextSheet(
     onDismiss: () -> Unit,
 ) {
     if (target == null) return
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -8122,7 +8125,10 @@ private fun ProfileActionsSheet(
     onDismiss: () -> Unit,
 ) {
     if (profile == null) return
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -8196,6 +8202,7 @@ internal fun EmojiPickerSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         modifier = Modifier.testTag(ProfileCreationTestTags.Sheet),
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
         dragHandle = dragHandle,
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {

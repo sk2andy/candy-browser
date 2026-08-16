@@ -45,5 +45,6 @@ Frosted exposes three persisted controls while selected:
 - General transparency controls menus and other browser chrome; address-bar transparency independently controls the browsing and tab-overview address bars.
 - Tab options use that translucent Frosted fallback over tab-overview cards instead of an opaque menu surface.
 - The main `…` menu shares the visible WebView blur source; its rows remain translucent so the effect stays visible.
+- Bottom sheets use the general Frosted transparency setting; Clear and AMOLED sheets remain opaque.
 - Forced light, dark and AMOLED modes update system-bar icon contrast independently from system night mode.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.

@@ -89,6 +89,7 @@ import dev.sk2andy.materialbrowser.browser.CandyTrail
 import dev.sk2andy.materialbrowser.browser.CandyTrailFork
 import dev.sk2andy.materialbrowser.browser.CandyTrailForkLifecycle
 import dev.sk2andy.materialbrowser.browser.CandyTrailNode
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -1011,7 +1012,10 @@ private fun CandyTrailNodeActionsSheet(
     onDismiss: () -> Unit,
 ) {
     if (node == null) return
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

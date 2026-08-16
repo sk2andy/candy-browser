@@ -43,6 +43,7 @@ import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarSnapshot
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionActivity
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 
 @Composable
 internal fun PermissionRadarSheet(
@@ -57,6 +58,7 @@ internal fun PermissionRadarSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag(PermissionRadarTestTags.Sheet),
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(
             modifier = Modifier
