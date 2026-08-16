@@ -39,6 +39,10 @@
     </plurals>
     <string name="cd_close_tab_overview">Cerrar vista de pestañas</string>
     <string name="cd_close_tab">Cerrar pestaña</string>
+    <string name="cd_minimize_fullscreen_video">Minimizar vídeo</string>
+    <string name="cd_expand_fullscreen_video">Ampliar vídeo</string>
+    <string name="cd_close_fullscreen_video">Cerrar vídeo</string>
+    <string name="cd_move_fullscreen_video">Mover vídeo</string>
     <string name="cd_close_named_tab">Cerrar %1$s</string>
     <string name="action_switch_to_tab">Cambiar a la pestaña</string>
     <string name="tab_actions_title">Opciones de la pestaña</string>
@@ -630,4 +634,6 @@
     <string name="reader_offline_empty">Aún no hay artículos sin conexión guardados.</string>
     <string name="reader_progress_percent">%1$d%% leído</string>
     <string name="reader_delete_snapshot">Eliminar artículo sin conexión</string>
+    <string name="media_notification_channel_name">Reproducción multimedia</string>
+    <string name="media_notification_channel_description">Controla los medios que se reproducen en Candy</string>
 </resources>

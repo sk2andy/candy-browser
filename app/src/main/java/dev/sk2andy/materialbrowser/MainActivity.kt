@@ -1,10 +1,18 @@
 package dev.sk2andy.materialbrowser
 
 import android.Manifest
+import android.app.PictureInPictureParams
+import android.app.PictureInPictureUiState
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.graphics.Rect
+import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import android.view.MotionEvent
+import android.view.View
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,7 +23,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -29,10 +39,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.ViewCompat
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
+import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
+import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
+import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
@@ -43,6 +58,7 @@ import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
+import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import dev.sk2andy.materialbrowser.update.AvailableAppUpdate
@@ -52,7 +68,15 @@ import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private lateinit var browserController: BrowserController
-    private lateinit var fullscreenWebContentHost: FullscreenWebContentHost
+    private lateinit var webMediaSystemSession: WebMediaSystemSession
+    private var videoOnlyPresentation by mutableStateOf(false)
+    private var fullscreenVideoBounds: Rect? = null
+    private var pictureInPictureSourceRectHint: Rect? = null
+    private var appliedPictureInPictureState: AppliedPictureInPictureState? = null
+    private var pictureInPictureReturnLayoutListener: View.OnLayoutChangeListener? = null
+    private var pictureInPictureReturnInProgress = false
+    private var pictureInPictureStartedFullscreen = false
+    private var pictureInPictureModeEntered = false
     private var isTabOverviewPortraitLocked = false
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -76,7 +100,6 @@ class MainActivity : ComponentActivity() {
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
-        fullscreenWebContentHost = FullscreenWebContentHost(this, ::applyEffectiveWindowState)
         browserController = BrowserController(
             activity = this,
             requestRuntimePermissions = { permissions ->
@@ -88,12 +111,22 @@ class MainActivity : ComponentActivity() {
                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             },
-            onFullImmersiveModeChanged = { applyEffectiveWindowState() },
-            showFullscreenWebContent = fullscreenWebContentHost::show,
-            hideFullscreenWebContent = fullscreenWebContentHost::hideFromWebContent,
-            dismissFullscreenWebContent = fullscreenWebContentHost::dismissFromBrowser,
+            onFullImmersiveModeChanged = { applyBrowserSystemUi() },
+            onWebMediaStateChanged = {
+                if (::webMediaSystemSession.isInitialized) {
+                    webMediaSystemSession.publish(browserController.systemWebMediaState)
+                }
+                updatePictureInPictureParams()
+            },
         )
-        applyEffectiveWindowState()
+        webMediaSystemSession = WebMediaSystemSession(
+            context = this,
+            onPlay = browserController::playActiveWebMedia,
+            onPause = browserController::pauseActiveWebMedia,
+            onStop = browserController::stopActiveWebMedia,
+            onSeekTo = browserController::seekActiveWebMedia,
+        )
+        applyBrowserSystemUi()
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             browserController.onWindowInsetsChanged(insets)
             insets
@@ -128,6 +161,15 @@ class MainActivity : ComponentActivity() {
                 var updateDialogDismissed by rememberSaveable { mutableStateOf(false) }
                 val updateChecker = remember { GitHubAppUpdateChecker() }
                 val updateDownloadManager = remember { BrowserDownloadManager(this) }
+                val fullscreenVideoState = browserController.fullscreenVideoState
+                val selectedTabId = browserController.selectedTabId
+                val webViewVideoOnlyPresentation = fullscreenVideoState?.let { state ->
+                    videoOnlyPresentation &&
+                        !FullscreenVideoRules.hostsSourceInOverlay(
+                            host = state.host,
+                            videoOnlyPresentation = true,
+                        )
+                } == true
                 val availableUpdate = availableUpdateVersion?.let { version ->
                     val url = availableUpdateUrl ?: return@let null
                     val fileName = availableUpdateFileName ?: return@let null
@@ -156,12 +198,36 @@ class MainActivity : ComponentActivity() {
                     }
                     updateCheckCompleted = true
                 }
-                Box {
+                LaunchedEffect(
+                    fullscreenVideoState,
+                    browserController.webMediaState,
+                    selectedTabId,
+                    videoOnlyPresentation,
+                ) {
+                    applyBrowserSystemUi()
+                    updatePictureInPictureParams()
+                    if (
+                        browserController.fullscreenVideoState == null &&
+                        isInPictureInPictureMode
+                    ) {
+                        moveTaskToBack(true)
+                    }
+                }
+                Box(modifier = Modifier.fillMaxSize()) {
                     BrowserScreen(
                         controller = browserController,
+                        webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
                     )
-                    if (onboardingVisible) {
+                    if (videoOnlyPresentation && !webViewVideoOnlyPresentation) {
+                        Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                    }
+                    FullscreenVideoOverlay(
+                        controller = browserController,
+                        videoOnlyPresentation = videoOnlyPresentation,
+                        onBoundsChanged = ::onFullscreenVideoBoundsChanged,
+                    )
+                    if (!videoOnlyPresentation && onboardingVisible) {
                         GestureOnboardingScreen(
                             onCompleted = {
                                 onboardingStore.markCompleted()
@@ -170,7 +236,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     AnimatedVisibility(
-                        visible = splashVisible,
+                        visible = splashVisible && !videoOnlyPresentation,
                         exit = fadeOut(tween(260)) + scaleOut(targetScale = 0.96f),
                     ) {
                         CandySplashScreen()
@@ -180,7 +246,8 @@ class MainActivity : ComponentActivity() {
                     availableUpdate != null &&
                     !updateDialogDismissed &&
                     !onboardingVisible &&
-                    !splashVisible
+                    !splashVisible &&
+                    !videoOnlyPresentation
                 ) {
                     AppUpdateDialog(
                         update = availableUpdate,
@@ -237,13 +304,19 @@ class MainActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         BrowserInputDiagnostics.activityWindowFocus(hasFocus, currentFocus)
         if (hasFocus && ::browserController.isInitialized) {
-            applyEffectiveWindowState()
+            applyBrowserSystemUi()
         }
     }
 
     override fun onPause() {
+        prepareForPictureInPictureTransition()
         browserController.onPause()
         super.onPause()
+    }
+
+    override fun onUserLeaveHint() {
+        prepareForPictureInPictureTransition()
+        super.onUserLeaveHint()
     }
 
     override fun onStart() {
@@ -252,20 +325,93 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        if (::browserController.isInitialized) browserController.onStop()
+        if (::browserController.isInitialized) {
+            browserController.onStop(isInPictureInPictureMode)
+        }
         super.onStop()
+    }
+
+    override fun onPictureInPictureRequested(): Boolean {
+        if (!canEnterPictureInPicture()) return false
+        prepareForPictureInPictureTransition()
+        val entered = enterPictureInPictureMode(
+            buildPictureInPictureParams(
+                autoEnterEnabled = true,
+                sourceRectHint = eligiblePictureInPictureSourceRect(true),
+            ),
+        )
+        if (!entered) cancelPictureInPictureTransition()
+        return entered
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (isInPictureInPictureMode) {
+            pictureInPictureModeEntered = true
+            videoOnlyPresentation = true
+        }
+        browserController.onPictureInPictureModeChanged(isInPictureInPictureMode)
+        if (isInPictureInPictureMode) {
+            pictureInPictureReturnInProgress = false
+            cancelPictureInPictureReturnLayoutWait()
+            if (pictureInPictureStartedFullscreen) {
+                pictureInPictureSourceRectHint = pictureInPictureSourceRect(
+                    maximumWindowContentBounds(),
+                )
+            }
+        } else {
+            pictureInPictureReturnInProgress = true
+            completePictureInPictureReturnAfterLayout(newConfig)
+        }
+        applyBrowserSystemUi()
+        updatePictureInPictureParams()
+    }
+
+    override fun onPictureInPictureUiStateChanged(pipState: PictureInPictureUiState) {
+        super.onPictureInPictureUiStateChanged(pipState)
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM &&
+            pipState.isTransitioningToPip
+        ) {
+            prepareForPictureInPictureTransition()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
+            pictureInPictureSourceRectHint = pictureInPictureSourceRect(
+                maximumWindowContentBounds(),
+            )
+            updatePictureInPictureParams()
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        reconcilePictureInPictureStateOnResume()
         if (::browserController.isInitialized) browserController.onResume()
+        updatePictureInPictureParams()
+    }
+
+    private fun reconcilePictureInPictureStateOnResume() {
+        if (
+            !isInPictureInPictureMode &&
+            !pictureInPictureModeEntered &&
+            !pictureInPictureReturnInProgress &&
+            videoOnlyPresentation
+        ) {
+            cancelPictureInPictureTransition()
+        }
     }
 
     override fun onDestroy() {
-        if (::fullscreenWebContentHost.isInitialized) {
-            fullscreenWebContentHost.dismissFromBrowser()
-        }
+        cancelPictureInPictureReturnLayoutWait()
         if (::browserController.isInitialized) browserController.destroy()
+        if (::webMediaSystemSession.isInitialized) webMediaSystemSession.release()
         super.onDestroy()
     }
 
@@ -309,19 +455,224 @@ class MainActivity : ComponentActivity() {
     @VisibleForTesting
     fun browserControllerForTesting(): BrowserController = browserController
 
-    private fun setTabOverviewPortraitLocked(locked: Boolean) {
-        isTabOverviewPortraitLocked = locked
-        applyEffectiveWindowState()
+    @VisibleForTesting
+    fun prepareForPictureInPictureTransitionForTesting() {
+        prepareForPictureInPictureTransition()
     }
 
-    private fun applyEffectiveWindowState() {
-        val webContentFullscreen =
-            ::fullscreenWebContentHost.isInitialized && fullscreenWebContentHost.isShowing
-        val browserFullscreen =
-            ::browserController.isInitialized && browserController.isFullImmersiveModeEnabled
+    @VisibleForTesting
+    fun isPictureInPictureEligibleForTesting(): Boolean = canEnterPictureInPicture()
+
+    @VisibleForTesting
+    fun pictureInPictureSourceRectHintForTesting(): Rect? =
+        appliedPictureInPictureState?.sourceRectHint?.let(::Rect)
+
+    @VisibleForTesting
+    fun reconcilePictureInPictureStateOnResumeForTesting() {
+        reconcilePictureInPictureStateOnResume()
+    }
+
+    private fun setTabOverviewPortraitLocked(locked: Boolean) {
+        isTabOverviewPortraitLocked = locked
+        applyBrowserSystemUi()
+    }
+
+    private fun onFullscreenVideoBoundsChanged(bounds: Rect) {
+        if (fullscreenVideoBounds == bounds) return
+        fullscreenVideoBounds = Rect(bounds)
+        if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
+            pictureInPictureSourceRectHint = pictureInPictureSourceRect(
+                maximumWindowContentBounds(),
+            )
+        }
+        updatePictureInPictureParams()
+    }
+
+    private fun prepareForPictureInPictureTransition() {
+        if (!::browserController.isInitialized || !canEnterPictureInPicture()) return
+        if (!videoOnlyPresentation) {
+            pictureInPictureStartedFullscreen = isCurrentWindowFullscreen()
+            pictureInPictureSourceRectHint = currentPictureInPictureSourceRect()
+        }
+        videoOnlyPresentation = true
+        browserController.prepareForPictureInPicture()
+        updatePictureInPictureParams()
+    }
+
+    private fun cancelPictureInPictureTransition() {
+        pictureInPictureReturnInProgress = false
+        pictureInPictureStartedFullscreen = false
+        pictureInPictureModeEntered = false
+        cancelPictureInPictureReturnLayoutWait()
+        videoOnlyPresentation = false
+        pictureInPictureSourceRectHint = null
+        browserController.cancelPictureInPictureTransition()
+        updatePictureInPictureParams()
+    }
+
+    private fun completePictureInPictureReturnAfterLayout(configuration: Configuration) {
+        cancelPictureInPictureReturnLayoutWait()
+        val decorView = window.decorView
+        val density = resources.displayMetrics.density
+        val targetWidth = (configuration.screenWidthDp * density).toInt()
+        val targetHeight = (configuration.screenHeightDp * density).toInt()
+        val tolerance = (PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP * density).toInt()
+        fun isExpandedLayout(width: Int, height: Int): Boolean =
+            FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
+                width = width,
+                height = height,
+                targetWidth = targetWidth,
+                targetHeight = targetHeight,
+                tolerance = tolerance,
+            )
+        if (isExpandedLayout(decorView.width, decorView.height)) {
+            finishPictureInPictureReturn()
+            return
+        }
+        val listener = View.OnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
+            if (!isInPictureInPictureMode && isExpandedLayout(right - left, bottom - top)) {
+                cancelPictureInPictureReturnLayoutWait()
+                finishPictureInPictureReturn()
+            }
+        }
+        pictureInPictureReturnLayoutListener = listener
+        decorView.addOnLayoutChangeListener(listener)
+        decorView.postDelayed(
+            {
+                if (
+                    pictureInPictureReturnLayoutListener === listener &&
+                    !isInPictureInPictureMode
+                ) {
+                    cancelPictureInPictureReturnLayoutWait()
+                    finishPictureInPictureReturn()
+                }
+            },
+            PICTURE_IN_PICTURE_RETURN_LAYOUT_TIMEOUT_MILLIS,
+        )
+    }
+
+    private fun cancelPictureInPictureReturnLayoutWait() {
+        val listener = pictureInPictureReturnLayoutListener ?: return
+        window.decorView.removeOnLayoutChangeListener(listener)
+        pictureInPictureReturnLayoutListener = null
+    }
+
+    private fun finishPictureInPictureReturn() {
+        pictureInPictureReturnInProgress = false
+        pictureInPictureStartedFullscreen = false
+        pictureInPictureModeEntered = false
+        videoOnlyPresentation = false
+        pictureInPictureSourceRectHint = null
+        browserController.completePictureInPictureReturn()
+        applyBrowserSystemUi()
+        updatePictureInPictureParams()
+    }
+
+    private fun updatePictureInPictureParams() {
+        if (!supportsPictureInPicture()) return
+        val autoEnterEnabled = canEnterPictureInPicture()
+        val sourceRectHint = eligiblePictureInPictureSourceRect(autoEnterEnabled)
+        val nextState = AppliedPictureInPictureState(autoEnterEnabled, sourceRectHint)
+        if (appliedPictureInPictureState == nextState) return
+        appliedPictureInPictureState = nextState
+        setPictureInPictureParams(
+            buildPictureInPictureParams(autoEnterEnabled, sourceRectHint),
+        )
+    }
+
+    private fun buildPictureInPictureParams(
+        autoEnterEnabled: Boolean,
+        sourceRectHint: Rect?,
+    ): PictureInPictureParams {
+        val builder = PictureInPictureParams.Builder()
+            .setAspectRatio(Rational(VIDEO_ASPECT_WIDTH, VIDEO_ASPECT_HEIGHT))
+            .setAutoEnterEnabled(autoEnterEnabled)
+            .setSeamlessResizeEnabled(true)
+            .setSourceRectHint(sourceRectHint)
+        return builder.build()
+    }
+
+    private fun eligiblePictureInPictureSourceRect(autoEnterEnabled: Boolean): Rect? =
+        currentPictureInPictureSourceRect()
+            ?.takeIf {
+                autoEnterEnabled &&
+                    !it.isEmpty
+            }
+            ?.let(::Rect)
+
+    private fun currentPictureInPictureSourceRect(): Rect? {
+        pictureInPictureSourceRectHint?.let { return Rect(it) }
+        val windowBounds = Rect()
+        val visibleBounds = if (
+            window.decorView.getGlobalVisibleRect(windowBounds) && !windowBounds.isEmpty
+        ) {
+            windowBounds
+        } else {
+            fullscreenVideoBounds ?: return null
+        }
+        return pictureInPictureSourceRect(visibleBounds)
+    }
+
+    private fun pictureInPictureSourceRect(bounds: Rect): Rect? {
+        val sourceBounds = FullscreenVideoRules.pictureInPictureSourceBounds(
+            windowBounds = FullscreenVideoBounds(
+                left = bounds.left,
+                top = bounds.top,
+                right = bounds.right,
+                bottom = bounds.bottom,
+            ),
+            aspectWidth = VIDEO_ASPECT_WIDTH,
+            aspectHeight = VIDEO_ASPECT_HEIGHT,
+        ) ?: return null
+        return Rect(
+            sourceBounds.left,
+            sourceBounds.top,
+            sourceBounds.right,
+            sourceBounds.bottom,
+        )
+    }
+
+    private fun maximumWindowContentBounds(): Rect {
+        val bounds = windowManager.maximumWindowMetrics.bounds
+        return Rect(0, 0, bounds.width(), bounds.height())
+    }
+
+    private fun isCurrentWindowFullscreen(): Boolean {
+        val visibleBounds = Rect()
+        if (!window.decorView.getGlobalVisibleRect(visibleBounds) || visibleBounds.isEmpty) {
+            return false
+        }
+        val maximumBounds = windowManager.maximumWindowMetrics.bounds
+        val tolerance = (
+            PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP *
+                resources.displayMetrics.density
+            ).toInt()
+        return FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
+            width = visibleBounds.width(),
+            height = visibleBounds.height(),
+            targetWidth = maximumBounds.width(),
+            targetHeight = maximumBounds.height(),
+            tolerance = tolerance,
+        )
+    }
+
+    private fun canEnterPictureInPicture(): Boolean =
+        supportsPictureInPicture() &&
+            ::browserController.isInitialized &&
+            browserController.isPictureInPictureEligible
+
+    private fun supportsPictureInPicture(): Boolean = packageManager.hasSystemFeature(
+        PackageManager.FEATURE_PICTURE_IN_PICTURE,
+    )
+
+    private fun applyBrowserSystemUi() {
+        val fullscreenVideoExpanded = ::browserController.isInitialized &&
+            browserController.isFullscreenVideoExpanded
+        val browserImmersive = ::browserController.isInitialized &&
+            browserController.isFullImmersiveModeEnabled
         val state = BrowserWindowStateRules.resolve(
-            isWebContentFullscreen = webContentFullscreen,
-            isBrowserFullscreen = browserFullscreen,
+            isWebContentFullscreen = fullscreenVideoExpanded || videoOnlyPresentation,
+            isBrowserFullscreen = browserImmersive,
             isTabOverviewPortraitLocked = isTabOverviewPortraitLocked,
         )
         applyFullImmersiveMode(state.isImmersive)
@@ -337,8 +688,17 @@ class MainActivity : ComponentActivity() {
         const val SPLASH_DURATION_MILLIS = 1_050L
         const val STATE_CAPSULE_ID = "active_site_capsule_id"
         const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
+        const val VIDEO_ASPECT_WIDTH = 16
+        const val VIDEO_ASPECT_HEIGHT = 9
+        const val PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP = 8
+        const val PICTURE_IN_PICTURE_RETURN_LAYOUT_TIMEOUT_MILLIS = 3_000L
     }
 }
+
+private data class AppliedPictureInPictureState(
+    val autoEnterEnabled: Boolean,
+    val sourceRectHint: Rect?,
+)
 
 @Composable
 private fun AppUpdateDialog(

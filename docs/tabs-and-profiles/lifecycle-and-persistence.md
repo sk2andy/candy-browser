@@ -18,6 +18,7 @@
 | History and favorites | `BrowserSessionStore`, `BrowsingLibrary` | Keep local, bounded, canonicalized records |
 | WebView history state | `TabWebViewStateStore`/`Repository` | Persist separately from the tab summary and prune orphan files |
 | Deletion side data | Controller + repositories | Remove preview, favicon, WebView state and trail consistently |
+| Fullscreen video session | Memory only | Protect the owning regular tab's WebView while its custom view is expanded, floating or in system PiP; never restore the session or mini-player position |
 
 ## Mutation checklist
 
@@ -25,3 +26,5 @@
 - Preserve stable tab IDs across normal restore; reset transient load/error/progress state when reconstructing.
 - Apply persistence policy before encoding. Never rely on callers to pre-filter private tabs.
 - Keep selection valid after deletion, retention, profile moves and snooze restore.
+- End an owning fullscreen-video session before its tab or WebView is removed. Private sessions end
+  when selection leaves their tab; regular sessions may remain transiently attached as a mini-player.

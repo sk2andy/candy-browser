@@ -96,13 +96,14 @@ object SiteCapsuleTestTags {
 fun SiteCapsuleBrowserScreen(
     controller: BrowserController,
     capsule: SiteCapsule,
+    webViewVideoOnlyPresentation: Boolean = false,
 ) {
     val tab = controller.selectedTab
     val entrance = remember(capsule.id) { Animatable(0f) }
     LaunchedEffect(capsule.id) {
         entrance.animateTo(1f, spring(dampingRatio = 0.84f, stiffness = 520f))
     }
-    PredictiveBackHandler(enabled = tab.canGoBack) { events ->
+    PredictiveBackHandler(enabled = !webViewVideoOnlyPresentation && tab.canGoBack) { events ->
         events.collect { }
         controller.goBack()
     }
@@ -111,6 +112,7 @@ fun SiteCapsuleBrowserScreen(
             .fillMaxSize()
             .testTag(SiteCapsuleTestTags.Screen)
             .graphicsLayer {
+                if (webViewVideoOnlyPresentation) return@graphicsLayer
                 val progress = entrance.value.coerceIn(0f, 1f)
                 alpha = progress
                 scaleX = 0.94f + progress * 0.06f
@@ -122,15 +124,18 @@ fun SiteCapsuleBrowserScreen(
         CapsuleWebViewHost(
             controller = controller,
             statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
+            showStatusBarFrostedGlass = !webViewVideoOnlyPresentation,
         )
-        tab.error?.takeIf { capsule.chromeMode.showsControls }?.let { error ->
+        tab.error?.takeIf {
+            !webViewVideoOnlyPresentation && capsule.chromeMode.showsControls
+        }?.let { error ->
             CapsuleErrorCard(
                 message = error,
                 onRetry = controller::reload,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
-        if (capsule.chromeMode.showsControls && tab.isLoading) {
+        if (!webViewVideoOnlyPresentation && capsule.chromeMode.showsControls && tab.isLoading) {
             LinearProgressIndicator(
                 progress = { (tab.progress / 100f).coerceIn(0f, 1f) },
                 modifier = Modifier
@@ -139,7 +144,7 @@ fun SiteCapsuleBrowserScreen(
                     .align(Alignment.TopCenter),
             )
         }
-        if (capsule.chromeMode.showsControls) {
+        if (!webViewVideoOnlyPresentation && capsule.chromeMode.showsControls) {
             CapsuleChrome(
                 capsule = capsule,
                 currentUrl = tab.url,
@@ -160,6 +165,7 @@ fun SiteCapsuleBrowserScreen(
 private fun CapsuleWebViewHost(
     controller: BrowserController,
     statusBarTint: Int,
+    showStatusBarFrostedGlass: Boolean,
 ) {
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
@@ -175,7 +181,7 @@ private fun CapsuleWebViewHost(
             host.updateFrostedGlass(
                 geometry = statusBarGeometry,
                 tint = statusBarTint,
-                visible = true,
+                visible = showStatusBarFrostedGlass,
             )
             controller.attachSelectedWebView(host.blurTarget)
         },

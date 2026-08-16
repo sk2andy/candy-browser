@@ -5,8 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.down
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -20,6 +24,7 @@ import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -83,6 +88,78 @@ class TabOverviewReorderInstrumentedTest {
         assertEquals(0.45f, cardBounds.width / cardBounds.height, 0.001f)
         assertTrue(cardBounds.top >= rootBounds.top)
         assertTrue(cardBounds.bottom <= rootBounds.bottom)
+    }
+
+    @Test
+    fun heroPagerDrawAreaExtendsBehindProfileSwitcher() {
+        lateinit var browserController: BrowserController
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            browserController.updateDismissResistancePercent(90)
+            browserController.updateTabOverviewMode(TabOverviewMode.Hero)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        val card = composeRule.onNodeWithTag(
+            SnoozeTestTags.overviewTab(browserController.selectedTabId),
+        )
+        val cardBounds = card.fetchSemanticsNode().boundsInRoot
+        val pagerBounds = composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.HeroPager)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val profileBounds = composeRule
+            .onNodeWithTag(ProfileSwitcherTestTags.Switcher)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(pagerBounds.top <= profileBounds.top)
+        assertTrue(pagerBounds.bottom > profileBounds.bottom)
+
+        val density = composeRule.activity.resources.displayMetrics.density
+        val sourceX = cardBounds.center.x
+        val sourceY = cardBounds.top + 12f * density
+        val requestedTargetY = profileBounds.bottom - 32f * density
+        val requiredVisualDistance = sourceY - requestedTargetY
+        assertTrue(requiredVisualDistance > 0f)
+        var rawDragDistance = 0f
+        while (
+            TabDismissPhysics.visualDistance(rawDragDistance) < requiredVisualDistance &&
+            rawDragDistance < cardBounds.width
+        ) {
+            rawDragDistance += 1f
+        }
+        val visualDistance = TabDismissPhysics.visualDistance(rawDragDistance)
+        val dismissThreshold = cardBounds.width *
+            TabDismissPhysics.CARD_DISMISS_THRESHOLD_FRACTION
+        assertFalse(
+            "Drag must remain below dismiss threshold: raw=$rawDragDistance " +
+                "threshold=$dismissThreshold requiredVisual=$requiredVisualDistance",
+            TabDismissPhysics.hasClearedResistance(
+                rawDistance = rawDragDistance,
+                dismissThreshold = dismissThreshold,
+                resistanceFraction = 0.9f,
+            ),
+        )
+        val restingPixels = composeRule.onRoot().captureToImage().toPixelMap()
+        card.performTouchInput {
+            down(center)
+            moveBy(Offset(0f, -rawDragDistance), delayMillis = 500L)
+        }
+        composeRule.waitForIdle()
+        val draggedPixels = composeRule.onRoot().captureToImage().toPixelMap()
+        val targetY = sourceY - visualDistance
+        val colorDistance = colorDistance(
+            restingPixels[sourceX.toInt(), sourceY.toInt()],
+            draggedPixels[sourceX.toInt(), targetY.toInt()],
+        )
+
+        assertTrue(targetY < profileBounds.bottom - 30f * density)
+        assertTrue("Dragged card top was clipped: color distance=$colorDistance", colorDistance < 0.3f)
+        card.performTouchInput { up() }
     }
 
     private fun verifyReorder(
@@ -175,4 +252,9 @@ class TabOverviewReorderInstrumentedTest {
             .clear()
             .commit()
     }
+
+    private fun colorDistance(first: Color, second: Color): Float =
+        kotlin.math.abs(first.red - second.red) +
+            kotlin.math.abs(first.green - second.green) +
+            kotlin.math.abs(first.blue - second.blue)
 }
