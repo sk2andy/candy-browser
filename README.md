@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/sk2andy/candy-browser/releases"><img alt="Release" src="https://img.shields.io/github/v/release/sk2andy/candy-browser?display_name=tag&sort=semver"></a>
-  <img alt="Android 14+" src="https://img.shields.io/badge/Android-14%2B-3DDC84?logo=android&logoColor=white">
+  <img alt="Android 13+" src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white">
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-1.9.24-7F52FF?logo=kotlin&logoColor=white">
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white">
   <a href="LICENSE"><img alt="License: PolyForm Noncommercial 1.0.0" src="https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-orange.svg"></a>
@@ -135,7 +135,7 @@ Its original soundtrack and motion graphics are generated entirely from reposito
 
 ## Download
 
-Candy Browser requires Android 14 (API 34) or newer.
+Candy Browser requires Android 13 (API 33) or newer.
 
 [Download Candy Browser](https://github.com/sk2andy/candy-browser/releases)
 
