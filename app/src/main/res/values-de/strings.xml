@@ -268,6 +268,8 @@
     <string name="settings_block_third_party_cookies_title">Drittanbieter-Cookies blockieren</string>
     <string name="settings_block_third_party_cookies_subtitle">Cookies von Erstanbietern bleiben für Anmeldungen aktiv</string>
     <string name="settings_protection_disclaimer">Lokaler heuristischer Schutz. Manche Werbung, CNAME-Tracker und Banner in geschlossenen Frames können durchkommen.</string>
+    <string name="settings_user_ca_title">Benutzerinstallierten CA-Zertifikaten wird vertraut</string>
+    <string name="settings_user_ca_summary">Dieser Build erlaubt jeder von dir oder deiner Geräteverwaltung installierten CA, Candys HTTPS-Datenverkehr einzusehen und zu verändern. Verwende nur Zertifikate und Filter-Tools, denen du vertraust.</string>
     <string name="settings_section_about_legal">Über Candy &amp; Rechtliches</string>
     <string name="settings_imprint_title">Entwickler &amp; Impressum</string>
     <string name="settings_imprint_summary">Entwickleridentität und öffentliches GitHub-Projektprofil</string>

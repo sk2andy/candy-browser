@@ -25,10 +25,25 @@ internal data class GitHubReleaseAsset(
     val downloadUrl: String,
 )
 
+internal enum class AppReleaseChannel(
+    val assetSuffix: String,
+) {
+    Standard("release"),
+    UserCa("user-ca-release"),
+
+    ;
+
+    companion object {
+        fun forUserCertificateTrust(enabled: Boolean): AppReleaseChannel =
+            if (enabled) UserCa else Standard
+    }
+}
+
 internal object AppUpdateRules {
     fun findAvailableUpdate(
         currentVersionName: String,
         release: GitHubReleaseMetadata,
+        channel: AppReleaseChannel = AppReleaseChannel.Standard,
     ): AvailableAppUpdate? {
         if (release.draft || release.prerelease) return null
         val currentVersion = AppVersion.parse(currentVersionName) ?: return null
@@ -36,7 +51,7 @@ internal object AppUpdateRules {
         if (releaseVersion <= currentVersion) return null
 
         val normalizedTag = release.tagName.removePrefix("v")
-        val expectedFileName = "CandyBrowser-v$normalizedTag-release.apk"
+        val expectedFileName = "CandyBrowser-v$normalizedTag-${channel.assetSuffix}.apk"
         val asset = release.assets.singleOrNull { candidate ->
             candidate.name == expectedFileName &&
                 candidate.contentType == AvailableAppUpdate.APK_MIME_TYPE &&

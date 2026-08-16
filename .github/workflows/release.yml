@@ -132,7 +132,7 @@ jobs:
 
           echo "CANDY_RELEASE_KEYSTORE_PATH=${keystore_path}" >> "$GITHUB_ENV"
 
-      - name: Test and build signed release APK
+      - name: Test and build signed release APKs
         shell: bash
         env:
           CANDY_RELEASE_STORE_PASSWORD: ${{ secrets.CANDY_RELEASE_STORE_PASSWORD }}
@@ -145,44 +145,57 @@ jobs:
           git diff --exit-code -- app/src/main/assets/easylist_cosmetic_rules.txt
           ./gradlew --no-daemon \
             testDebugUnitTest \
+            testUserCaDebugUnitTest \
+            testReleaseUnitTest \
+            testUserCaReleaseUnitTest \
             assembleRelease \
+            assembleUserCaRelease \
             -Pcandy.versionName="$RELEASE_VERSION" \
             -Pcandy.versionCode="$RELEASE_VERSION_CODE"
+          CANDY_STANDARD_APK="app/build/outputs/apk/release/app-release.apk" \
+            CANDY_USER_CA_APK="app/build/outputs/apk/userCaRelease/app-userCaRelease.apk" \
+            python3 scripts/test_network_security_apks.py
 
-      - name: Verify and checksum APK
+      - name: Verify and checksum APKs
         shell: bash
         env:
           CANDY_RELEASE_CERTIFICATE_SHA256: ${{ vars.CANDY_RELEASE_CERTIFICATE_SHA256 }}
         run: |
           set -euo pipefail
 
-          source_apk="app/build/outputs/apk/release/app-release.apk"
           release_apk="CandyBrowser-${RELEASE_TAG}-release.apk"
-          cp "$source_apk" "$release_apk"
+          user_ca_release_apk="CandyBrowser-${RELEASE_TAG}-user-ca-release.apk"
+          cp "app/build/outputs/apk/release/app-release.apk" "$release_apk"
+          cp \
+            "app/build/outputs/apk/userCaRelease/app-userCaRelease.apk" \
+            "$user_ca_release_apk"
 
           apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)"
-          verification="$("$apksigner" verify --verbose --print-certs "$release_apk")"
-          printf '%s\n' "$verification"
-
           expected_certificate="${CANDY_RELEASE_CERTIFICATE_SHA256//:/}"
           expected_certificate="${expected_certificate,,}"
-          actual_certificate="$(
-            printf '%s\n' "$verification" \
-              | sed -nE 's/^.*certificate SHA-256 digest: ([[:xdigit:]:]+)$/\1/p' \
-              | tr '[:upper:]' '[:lower:]' \
-              | tr -d ':' \
-              | sort -u
-          )"
-          if [[ "$actual_certificate" != "$expected_certificate" ]]; then
-            echo "Release APK certificate does not match pinned repository fingerprint." >&2
-            exit 1
-          fi
 
-          sha256sum "$release_apk" > "${release_apk}.sha256"
+          for apk in "$release_apk" "$user_ca_release_apk"; do
+            verification="$("$apksigner" verify --verbose --print-certs "$apk")"
+            printf '%s\n' "$verification"
+            actual_certificate="$(
+              printf '%s\n' "$verification" \
+                | sed -nE 's/^.*certificate SHA-256 digest: ([[:xdigit:]:]+)$/\1/p' \
+                | tr '[:upper:]' '[:lower:]' \
+                | tr -d ':' \
+                | sort -u
+            )"
+            if [[ "$actual_certificate" != "$expected_certificate" ]]; then
+              echo "${apk} certificate does not match pinned repository fingerprint." >&2
+              exit 1
+            fi
+            sha256sum "$apk" > "${apk}.sha256"
+          done
 
           {
             echo "RELEASE_APK=${release_apk}"
             echo "RELEASE_CHECKSUM=${release_apk}.sha256"
+            echo "USER_CA_RELEASE_APK=${user_ca_release_apk}"
+            echo "USER_CA_RELEASE_CHECKSUM=${user_ca_release_apk}.sha256"
           } >> "$GITHUB_ENV"
 
       - name: Create tag and GitHub release
@@ -205,6 +218,8 @@ jobs:
             "$RELEASE_TAG" \
             "$RELEASE_APK" \
             "$RELEASE_CHECKSUM" \
+            "$USER_CA_RELEASE_APK" \
+            "$USER_CA_RELEASE_CHECKSUM" \
             "${release_flags[@]}"
 
       - name: Remove release keystore

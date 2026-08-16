@@ -7,6 +7,18 @@ import org.junit.Test
 
 class AppUpdateRulesTest {
     @Test
+    fun `certificate trust selects matching release channel`() {
+        assertEquals(
+            AppReleaseChannel.Standard,
+            AppReleaseChannel.forUserCertificateTrust(enabled = false),
+        )
+        assertEquals(
+            AppReleaseChannel.UserCa,
+            AppReleaseChannel.forUserCertificateTrust(enabled = true),
+        )
+    }
+
+    @Test
     fun `finds newer signed release APK`() {
         val update = AppUpdateRules.findAvailableUpdate(
             currentVersionName = "0.8",
@@ -21,6 +33,31 @@ class AppUpdateRulesTest {
     fun `does not offer same or older release`() {
         assertNull(AppUpdateRules.findAvailableUpdate("0.9", release("v0.9")))
         assertNull(AppUpdateRules.findAvailableUpdate("1.0", release("v0.9")))
+    }
+
+    @Test
+    fun `keeps user CA installs on user CA release channel`() {
+        val standardAsset = asset("v0.9", suffix = "release")
+        val userCaAsset = asset("v0.9", suffix = "user-ca-release")
+
+        val update = AppUpdateRules.findAvailableUpdate(
+            currentVersionName = "0.8",
+            release = release("v0.9", assets = listOf(standardAsset, userCaAsset)),
+            channel = AppReleaseChannel.UserCa,
+        )
+
+        assertEquals("CandyBrowser-v0.9-user-ca-release.apk", update?.fileName)
+    }
+
+    @Test
+    fun `does not downgrade user CA install to standard release`() {
+        assertNull(
+            AppUpdateRules.findAvailableUpdate(
+                currentVersionName = "0.8",
+                release = release("v0.9"),
+                channel = AppReleaseChannel.UserCa,
+            ),
+        )
     }
 
     @Test
@@ -73,16 +110,27 @@ class AppUpdateRulesTest {
         downloadUrl: String =
             "https://github.com/sk2andy/candy-browser/releases/download/$tag/" +
                 "CandyBrowser-$tag-release.apk",
+        assets: List<GitHubReleaseAsset>? = null,
     ) = GitHubReleaseMetadata(
         tagName = tag,
         draft = draft,
         prerelease = prerelease,
-        assets = listOf(
+        assets = assets ?: listOf(
             GitHubReleaseAsset(
                 name = "CandyBrowser-$tag-release.apk",
                 contentType = contentType,
                 downloadUrl = downloadUrl,
             ),
         ),
+    )
+
+    private fun asset(
+        tag: String,
+        suffix: String,
+    ) = GitHubReleaseAsset(
+        name = "CandyBrowser-$tag-$suffix.apk",
+        contentType = AvailableAppUpdate.APK_MIME_TYPE,
+        downloadUrl = "https://github.com/sk2andy/candy-browser/releases/download/$tag/" +
+            "CandyBrowser-$tag-$suffix.apk",
     )
 }

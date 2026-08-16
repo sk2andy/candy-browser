@@ -46,6 +46,7 @@ import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import dev.sk2andy.materialbrowser.update.AvailableAppUpdate
+import dev.sk2andy.materialbrowser.update.AppReleaseChannel
 import dev.sk2andy.materialbrowser.update.GitHubAppUpdateChecker
 import kotlinx.coroutines.delay
 
@@ -135,7 +136,13 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(updateCheckCompleted) {
                     if (updateCheckCompleted) return@LaunchedEffect
                     if (BuildConfig.ENABLE_GITHUB_UPDATES) {
-                        updateChecker.findAvailableUpdate(BuildConfig.VERSION_NAME)?.let { update ->
+                        val releaseChannel = AppReleaseChannel.forUserCertificateTrust(
+                            BuildConfig.TRUST_USER_CERTIFICATES,
+                        )
+                        updateChecker.findAvailableUpdate(
+                            currentVersionName = BuildConfig.VERSION_NAME,
+                            channel = releaseChannel,
+                        )?.let { update ->
                             availableUpdateVersion = update.versionName
                             availableUpdateUrl = update.downloadUrl
                             availableUpdateFileName = update.fileName

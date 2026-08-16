@@ -142,12 +142,37 @@ Candy Browser requires Android 14 (API 34) or newer.
 Production builds check GitHub for updates at startup and offer the signed APK for download. Android
 still requires you to open the downloaded file and approve installation.
 
+Releases contain two APK channels:
+
+| APK suffix | Certificate trust | Intended use |
+| --- | --- | --- |
+| `-release.apk` | Android system CAs only | Recommended default |
+| `-user-ca-release.apk` | System CAs plus every CA in Android's user store | Explicit opt-in for HTTPS filtering/proxy tools such as AdGuard |
+
+The User CA build has the same application ID and signing key as the standard build, so installing it
+replaces the other channel without clearing Candy's data. Its launcher label and the warning under
+**Settings → Protection & data** identify the broader trust policy. Updates stay on the installed
+channel.
+
+**Security warning:** a trusted user CA can inspect and modify all HTTPS traffic made by Candy,
+including normal and private tabs, suggestions, filter subscriptions, and update metadata. Only
+install the User CA APK when you trust every CA in Android's user credential store and the software
+that controls its private key. APK signature verification still protects Candy updates from APKs
+signed by another key.
+
 ## Build from source
 
 Requirements: Android SDK 35 and JDK 17. Point `JAVA_HOME` to your JDK 17 installation.
 
 ```bash
 ./gradlew testDebugUnitTest lintDebug assembleDebug
+```
+
+To build the explicit User CA development variant:
+
+```bash
+./gradlew testUserCaDebugUnitTest lintUserCaDebug assembleUserCaDebug
+python3 scripts/test_network_security_apks.py
 ```
 
 Debug APK: `app/build/outputs/apk/debug/app-debug.apk`. It installs as
@@ -194,14 +219,14 @@ Signed local APK: `app/build/outputs/apk/localRelease/app-localRelease.apk`
 
 `localRelease` installs beside the GitHub build as `dev.sk2andy.materialbrowser.local` and uses a
 separate launcher icon and the label `Candy Browser Local`. GitHub update prompts are disabled for
-this side-by-side build because production APKs cannot update its package. The GitHub workflow
-continues to use `assembleRelease`, preserving the production application ID and icon.
+this side-by-side build because production APKs cannot update its package. The GitHub workflow uses
+`assembleRelease` and `assembleUserCaRelease`; both preserve the production application ID and icon.
 
 ### GitHub releases
 
-The manual `Release Android APK` workflow tests the selected source revision, builds and verifies a
-signed APK, creates a `v<version>` source tag, and publishes the APK plus its SHA-256 checksum. Add
-four repository secrets once:
+The manual `Release Android APK` workflow tests the selected source revision, builds and verifies the
+signed standard and User CA APKs, creates a `v<version>` source tag, and publishes both APKs plus
+their SHA-256 checksums. Add four repository secrets once:
 
 ```bash
 base64 < "$CANDY_RELEASE_KEYSTORE_PATH" | gh secret set CANDY_RELEASE_KEYSTORE_BASE64

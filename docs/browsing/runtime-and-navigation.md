@@ -32,6 +32,22 @@
   surface-tinted fade so status-bar icons stay legible without adding WebView padding.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
+## TLS trust channels
+
+| Build | Trust anchors | Release asset |
+| --- | --- | --- |
+| Standard | Android system CA store | `CandyBrowser-v<version>-release.apk` |
+| User CA | Android system and user CA stores | `CandyBrowser-v<version>-user-ca-release.apk` |
+
+- Network Security Config is static and app-wide. Android WebView cannot safely switch trust anchors
+  from a runtime preference, so broader trust requires installing the explicitly labeled User CA APK.
+- Both channels use the same application ID and signing key. Update selection preserves the installed
+  channel and rejects a release that contains only the other channel's asset.
+- User CA trust applies to all app HTTPS connections, not only rendered pages or a selected profile.
+  The settings warning must remain visible in User CA builds.
+- `BrowserController.onReceivedSslError` always cancels. Never use `SslErrorHandler.proceed()` to
+  approximate user-CA support; valid user-CA chains are accepted before that callback.
+
 ## Domain compatibility overrides
 
 | Override | Runtime behavior |
@@ -51,3 +67,4 @@
 | Input/URL policy | Matching JVM rule test |
 | WebView settings or callbacks | Focused browser instrumented test |
 | Android intent routing | Integration unit test plus launch instrumented test when lifecycle matters |
+| TLS trust channels | `./gradlew testDebugUnitTest testUserCaDebugUnitTest assembleDebug assembleUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
