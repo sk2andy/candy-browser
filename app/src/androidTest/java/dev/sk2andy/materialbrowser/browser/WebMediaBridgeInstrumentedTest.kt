@@ -72,6 +72,31 @@ class WebMediaBridgeInstrumentedTest {
             state?.isPlaying == true
         }
 
+        val observerReady = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  globalThis.candyStyleMutationCount = 0;
+                  globalThis.candyPlayCommandCount = 0;
+                  document.querySelector('video').play = () => {
+                    globalThis.candyPlayCommandCount++;
+                    return Promise.resolve();
+                  };
+                  new MutationObserver(records => {
+                    globalThis.candyStyleMutationCount += records.length;
+                  }).observe(document.documentElement, {
+                    attributes: true,
+                    subtree: true,
+                    attributeFilter: ['style']
+                  });
+                  return 'ready';
+                })()
+                """.trimIndent(),
+            ) { result -> observerReady[0] = result }
+        }
+        awaitCondition { observerReady[0] == "\"ready\"" }
+
         activityRule.scenario.onActivity {
             val controller = requireNotNull(controller)
             val state = requireNotNull(controller.webMediaState)
@@ -93,6 +118,33 @@ class WebMediaBridgeInstrumentedTest {
         }
         awaitCondition { presentationResult[0] != null }
         assertEquals("\"fixed\"", presentationResult[0])
+
+        val firstPresentationMutationCount = awaitStableJavascriptInt(
+            webView = webView,
+            expression = "globalThis.candyStyleMutationCount",
+        )
+        val firstPresentationPlayCommandCount = awaitStableJavascriptInt(
+            webView = webView,
+            expression = "globalThis.candyPlayCommandCount",
+        )
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            repeat(3) { controller.prepareForPictureInPicture() }
+            controller.onPictureInPictureModeChanged(true)
+        }
+        awaitJavascriptIntAtLeast(
+            webView = webView,
+            expression = "globalThis.candyPlayCommandCount",
+            minimum = firstPresentationPlayCommandCount + 6,
+        )
+        val repeatedPreparationMutationCount = awaitStableJavascriptInt(
+            webView = webView,
+            expression = "globalThis.candyStyleMutationCount",
+        )
+        assertEquals(firstPresentationMutationCount, repeatedPreparationMutationCount)
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).onPictureInPictureModeChanged(false)
+        }
 
         val tokenProbeResult = arrayOfNulls<String>(1)
         activityRule.scenario.onActivity {
@@ -134,6 +186,8 @@ class WebMediaBridgeInstrumentedTest {
     @Test
     fun chromiumCustomViewFallsBackToPresentedWebViewWithoutEndingSession() {
         lateinit var webView: WebView
+        var callbackInvoked = false
+        var customRevision = 0
         activityRule.scenario.onActivity { activity ->
             clearSession(activity)
             val controller = BrowserController(activity).also { this.controller = it }
@@ -164,16 +218,77 @@ class WebMediaBridgeInstrumentedTest {
 
         activityRule.scenario.onActivity { activity ->
             val controller = requireNotNull(controller)
-            var callbackInvoked = false
             controller.showFullscreenVideoForTesting(
                 FrameLayout(activity),
                 WebChromeClient.CustomViewCallback { callbackInvoked = true },
             )
-            val customRevision = requireNotNull(controller.fullscreenVideoState).sourceRevision
-
+            customRevision = requireNotNull(controller.fullscreenVideoState).sourceRevision
             controller.prepareForPictureInPicture()
-            controller.hideFullscreenVideoForTesting()
+        }
+        val moveResult = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const holder = document.createElement('div');
+                  holder.id = 'replacement-holder';
+                  document.body.append(holder);
+                  holder.append(document.querySelector('video'));
+                  return document.querySelector('video').isConnected;
+                })()
+                """.trimIndent(),
+            ) { result -> moveResult[0] = result }
+        }
+        awaitCondition { moveResult[0] == "true" }
 
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.hideFullscreenVideoForTesting()
+        }
+        val replacementHolderPosition = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "document.querySelector('#replacement-holder').style.position",
+                ) { result -> replacementHolderPosition[0] = result }
+            }
+            replacementHolderPosition[0] == "\"fixed\""
+        }
+        activityRule.scenario.onActivity { activity ->
+            requireNotNull(controller).showFullscreenVideoForTesting(
+                FrameLayout(activity),
+                WebChromeClient.CustomViewCallback { callbackInvoked = true },
+            )
+        }
+        val removeResult = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  globalThis.removedPresentationHolder =
+                    document.querySelector('#replacement-holder');
+                  document.body.append(document.querySelector('video'));
+                  globalThis.removedPresentationHolder.remove();
+                  return document.querySelector('video').isConnected;
+                })()
+                """.trimIndent(),
+            ) { result -> removeResult[0] = result }
+        }
+        awaitCondition { removeResult[0] == "true" }
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).hideFullscreenVideoForTesting()
+        }
+        val removedHolderPosition = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "globalThis.removedPresentationHolder.style.position",
+                ) { result -> removedHolderPosition[0] = result }
+            }
+            removedHolderPosition[0] == "\"\""
+        }
+        activityRule.scenario.onActivity { activity ->
+            val controller = requireNotNull(controller)
             val fallbackState = requireNotNull(controller.fullscreenVideoState)
             val host = FrameLayout(activity)
             controller.attachFullscreenVideoView(host)
@@ -421,6 +536,48 @@ class WebMediaBridgeInstrumentedTest {
             SystemClock.sleep(50)
         }
         assertTrue("Condition was not met within $timeoutMillis ms", condition())
+    }
+
+    private fun awaitStableJavascriptInt(
+        webView: WebView,
+        expression: String,
+        timeoutMillis: Long = 5_000,
+    ): Int {
+        val deadline = SystemClock.uptimeMillis() + timeoutMillis
+        var previous: Int? = null
+        var stableReads = 0
+        while (SystemClock.uptimeMillis() < deadline) {
+            val result = arrayOfNulls<String>(1)
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(expression) { value -> result[0] = value }
+            }
+            awaitCondition(timeoutMillis = 1_000) { result[0] != null }
+            val current = requireNotNull(result[0]).toInt()
+            if (current == previous) stableReads++ else stableReads = 0
+            if (stableReads >= 2) return current
+            previous = current
+            SystemClock.sleep(50)
+        }
+        error("JavaScript value did not stabilize within $timeoutMillis ms")
+    }
+
+    private fun awaitJavascriptIntAtLeast(
+        webView: WebView,
+        expression: String,
+        minimum: Int,
+        timeoutMillis: Long = 5_000,
+    ) {
+        var current: Int? = null
+        awaitCondition(timeoutMillis) {
+            val result = arrayOfNulls<String>(1)
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(expression) { value -> result[0] = value }
+            }
+            awaitCondition(timeoutMillis = 1_000) { result[0] != null }
+            current = requireNotNull(result[0]).toInt()
+            requireNotNull(current) >= minimum
+        }
+        assertTrue("Expected at least $minimum, got $current", requireNotNull(current) >= minimum)
     }
 
     private companion object {

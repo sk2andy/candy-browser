@@ -351,7 +351,7 @@ class MainActivity : ComponentActivity() {
             cancelPictureInPictureReturnLayoutWait()
             if (pictureInPictureStartedFullscreen) {
                 pictureInPictureSourceRectHint = pictureInPictureSourceRect(
-                    windowManager.maximumWindowMetrics.bounds,
+                    maximumWindowContentBounds(),
                 )
             }
         } else {
@@ -376,7 +376,7 @@ class MainActivity : ComponentActivity() {
         super.onConfigurationChanged(newConfig)
         if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
             pictureInPictureSourceRectHint = pictureInPictureSourceRect(
-                windowManager.maximumWindowMetrics.bounds,
+                maximumWindowContentBounds(),
             )
             updatePictureInPictureParams()
         }
@@ -478,7 +478,7 @@ class MainActivity : ComponentActivity() {
         fullscreenVideoBounds = Rect(bounds)
         if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
             pictureInPictureSourceRectHint = pictureInPictureSourceRect(
-                windowManager.maximumWindowMetrics.bounds,
+                maximumWindowContentBounds(),
             )
         }
         updatePictureInPictureParams()
@@ -626,6 +626,11 @@ class MainActivity : ComponentActivity() {
             sourceBounds.right,
             sourceBounds.bottom,
         )
+    }
+
+    private fun maximumWindowContentBounds(): Rect {
+        val bounds = windowManager.maximumWindowMetrics.bounds
+        return Rect(0, 0, bounds.width(), bounds.height())
     }
 
     private fun isCurrentWindowFullscreen(): Boolean {

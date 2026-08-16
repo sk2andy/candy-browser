@@ -152,18 +152,30 @@ internal object WebMediaBridgeScript {
                 appliedStyles.clear();
                 presented = null;
               };
-              const enterPresentation = media => {
-                if (keepPlaying && keepPlaying !== media) keepPlaying = null;
-                exitPresentation();
-                presented = media;
-                fillViewport(document.documentElement);
-                fillViewport(document.body);
+              const presentationElements = media => {
+                const elements = [document.documentElement, document.body];
                 let node = media;
                 while (node && node instanceof HTMLElement) {
-                  fillViewport(node);
+                  if (!elements.includes(node)) elements.push(node);
                   const root = node.getRootNode && node.getRootNode();
                   node = node.parentElement || (root && root.host) || null;
                 }
+                return elements.filter(Boolean);
+              };
+              const enterPresentation = media => {
+                const elements = presentationElements(media);
+                if (
+                  presented === media &&
+                  elements.length === originals.size &&
+                  elements.every(element => originals.has(element))
+                ) {
+                  report(media, 'presentation');
+                  return;
+                }
+                if (keepPlaying && keepPlaying !== media) keepPlaying = null;
+                exitPresentation();
+                presented = media;
+                elements.forEach(fillViewport);
                 report(media, 'presentation');
               };
               bridge.onmessage = event => {

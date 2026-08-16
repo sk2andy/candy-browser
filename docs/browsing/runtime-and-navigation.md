@@ -79,6 +79,9 @@
   select another tab or invoke native actions.
 - Media sessions, frame endpoints, metadata, presentation state and mini-player position are
   memory-only and never persisted.
+- Repeated lifecycle callbacks for one PiP transition are idempotent: they do not restyle the same
+  document presentation or reattach its decoder surface. PiP source rectangles use Activity-local
+  coordinates even when window metrics carry a display offset.
 - Private media may be detected transiently for local lifecycle correctness, but never becomes an
   in-app mini-player, Android PiP, system media session or notification.
 - System PiP renders only the custom video view or video-isolated source WebView. Onboarding,

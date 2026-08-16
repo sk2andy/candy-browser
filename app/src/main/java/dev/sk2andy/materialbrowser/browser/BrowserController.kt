@@ -1433,7 +1433,6 @@ class BrowserController(
             )
         }
         presentedWebMediaChannel()?.let { channel ->
-            sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
             if (pictureInPicturePlaybackExpected) {
                 sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
             }
