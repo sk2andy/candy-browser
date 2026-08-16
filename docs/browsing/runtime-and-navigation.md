@@ -67,7 +67,7 @@
 | HTML media appears or starts | A document-start bridge observes bounded HTML5 `video`/`audio` state in supported HTTP(S) frames; the frame-specific reply proxy is the only command path back to that player |
 | Web page requests fullscreen | `WebChromeClient.onShowCustomView` creates one transient controller-owned custom-view session; the root Compose overlay hosts Chromium's view |
 | User selects another regular tab | The current eligible video is pinned and its source WebView moves into the draggable in-app mini-player while non-owning WebViews remain paused |
-| App leaves the foreground | The active eligible regular video is pinned before Activity PiP. If Chromium returns its custom view to the page, Candy keeps the same WebView in its existing Android host, raises that host above browser chrome and switches the document to video-only presentation without reparenting the decoder surface. A pre-existing mini-player also keeps one stable Android host while its placement changes. While system PiP expects playback, page-driven background pauses are ignored; explicit system pause and stop commands still take effect |
+| App leaves the foreground | The active eligible regular video is pinned before Activity PiP. If Chromium returns its custom view to the page, Candy keeps the same WebView in its existing Android host, raises that host above browser chrome and switches the document to video-only presentation without reparenting the decoder surface. Only the video becomes a full-viewport compositor layer; its ancestor chain is unclipped without creating more full-screen layers. A pre-existing mini-player also keeps one stable Android host while its placement changes. While system PiP expects playback, page-driven background pauses are ignored; explicit system pause and stop commands still take effect |
 | System media control is used | The app-owned Android `MediaSession` sends play, pause, stop or seek only through the accepted frame reply proxy |
 | Audible audio continues in background | A `mediaPlayback` foreground service owns the visible media notification while the Activity-owned WebView and session remain alive |
 | PiP expands back into the app | Android expands the shared WebView surface through a centered source rectangle matching the PiP/video aspect ratio instead of targeting the former inline-video rectangle. Presentation CSS and the prior Android host are then restored without pausing; the page-pause guard remains active until the resumed UI has settled |
@@ -82,6 +82,9 @@
 - Repeated lifecycle callbacks for one PiP transition are idempotent: they do not restyle the same
   document presentation or reattach its decoder surface. PiP source rectangles use Activity-local
   coordinates even when window metrics carry a display offset.
+- Inline PiP presentation repairs site-driven style changes and DOM reparenting while active. If a
+  site replaces its playing video element, the new top-level video inherits the same transient PiP
+  owner and playback intent; bounded command retries cannot override an explicit system pause.
 - Private media may be detected transiently for local lifecycle correctness, but never becomes an
   in-app mini-player, Android PiP, system media session or notification.
 - System PiP renders only the custom video view or video-isolated source WebView. Onboarding,

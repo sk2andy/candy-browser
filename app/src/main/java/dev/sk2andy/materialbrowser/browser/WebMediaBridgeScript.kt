@@ -29,12 +29,18 @@ internal object WebMediaBridgeScript {
               const observedRoots = new WeakSet();
               const nativePause = HTMLMediaElement.prototype.pause;
               const candyProperties = [
-                'display', 'position', 'inset', 'width', 'height', 'max-width', 'max-height',
-                'margin', 'padding', 'background', 'object-fit', 'z-index', 'visibility'
+                'display', 'position', 'top', 'right', 'bottom', 'left', 'width', 'height',
+                'max-width', 'max-height', 'margin', 'padding', 'background', 'object-fit',
+                'z-index', 'visibility', 'content-visibility', 'overflow-x', 'overflow-y',
+                'transform', 'translate', 'scale', 'rotate', 'filter', 'backdrop-filter',
+                'perspective', 'contain', 'container-type', 'will-change', 'clip', 'clip-path',
+                'mask', 'opacity', 'isolation', 'mix-blend-mode', 'transition', 'animation'
               ];
               let nextId = 1;
               let presented = null;
               let keepPlaying = null;
+              let presentationObserver = null;
+              let presentationRepairScheduled = false;
 
               HTMLMediaElement.prototype.pause = function() {
                 if (keepPlaying === this) return;
@@ -117,12 +123,53 @@ internal object WebMediaBridgeScript {
                   priority: element.style.getPropertyPriority(property)
                 });
               };
+              const unclipAncestor = element => {
+                if (!element) return;
+                const computedDisplay = getComputedStyle(element).display;
+                saveStyle(element);
+                setCandyStyle(element, 'transition', 'none');
+                setCandyStyle(element, 'animation', 'none');
+                setCandyStyle(
+                  element,
+                  'display',
+                  computedDisplay === 'none' ? 'block' : computedDisplay
+                );
+                setCandyStyle(element, 'position', 'relative');
+                setCandyStyle(element, 'top', 'auto');
+                setCandyStyle(element, 'right', 'auto');
+                setCandyStyle(element, 'bottom', 'auto');
+                setCandyStyle(element, 'left', 'auto');
+                setCandyStyle(element, 'z-index', 'auto');
+                setCandyStyle(element, 'visibility', 'visible');
+                setCandyStyle(element, 'content-visibility', 'visible');
+                setCandyStyle(element, 'overflow-x', 'visible');
+                setCandyStyle(element, 'overflow-y', 'visible');
+                setCandyStyle(element, 'transform', 'none');
+                setCandyStyle(element, 'translate', 'none');
+                setCandyStyle(element, 'scale', 'none');
+                setCandyStyle(element, 'rotate', 'none');
+                setCandyStyle(element, 'filter', 'none');
+                setCandyStyle(element, 'backdrop-filter', 'none');
+                setCandyStyle(element, 'perspective', 'none');
+                setCandyStyle(element, 'contain', 'none');
+                setCandyStyle(element, 'container-type', 'normal');
+                setCandyStyle(element, 'will-change', 'auto');
+                setCandyStyle(element, 'clip', 'auto');
+                setCandyStyle(element, 'clip-path', 'none');
+                setCandyStyle(element, 'mask', 'none');
+                setCandyStyle(element, 'opacity', '1');
+                setCandyStyle(element, 'isolation', 'auto');
+                setCandyStyle(element, 'mix-blend-mode', 'normal');
+              };
               const fillViewport = element => {
                 if (!element) return;
                 saveStyle(element);
                 setCandyStyle(element, 'display', 'block');
                 setCandyStyle(element, 'position', 'fixed');
-                setCandyStyle(element, 'inset', '0');
+                setCandyStyle(element, 'top', '0');
+                setCandyStyle(element, 'right', '0');
+                setCandyStyle(element, 'bottom', '0');
+                setCandyStyle(element, 'left', '0');
                 setCandyStyle(element, 'width', '100vw');
                 setCandyStyle(element, 'height', '100vh');
                 setCandyStyle(element, 'max-width', 'none');
@@ -133,6 +180,14 @@ internal object WebMediaBridgeScript {
                 setCandyStyle(element, 'object-fit', 'contain');
                 setCandyStyle(element, 'z-index', '2147483647');
                 setCandyStyle(element, 'visibility', 'visible');
+                setCandyStyle(element, 'transform', 'none');
+                setCandyStyle(element, 'translate', 'none');
+                setCandyStyle(element, 'scale', 'none');
+                setCandyStyle(element, 'rotate', 'none');
+                setCandyStyle(element, 'filter', 'none');
+                setCandyStyle(element, 'clip', 'auto');
+                setCandyStyle(element, 'clip-path', 'none');
+                setCandyStyle(element, 'opacity', '1');
               };
               const restore = (element, values) => {
                 const applied = appliedStyles.get(element);
@@ -147,6 +202,9 @@ internal object WebMediaBridgeScript {
               };
               const exitPresentation = () => {
                 if (!presented && originals.size === 0) return;
+                if (presentationObserver) presentationObserver.disconnect();
+                presentationObserver = null;
+                presentationRepairScheduled = false;
                 originals.forEach((values, element) => restore(element, values));
                 originals.clear();
                 appliedStyles.clear();
@@ -162,20 +220,55 @@ internal object WebMediaBridgeScript {
                 }
                 return elements.filter(Boolean);
               };
+              const presentationIsApplied = elements => {
+                if (
+                  !presented ||
+                  elements.length !== originals.size ||
+                  !elements.every(element => originals.has(element))
+                ) return false;
+                return elements.every(element => {
+                  const applied = appliedStyles.get(element);
+                  if (!applied) return false;
+                  let matches = true;
+                  applied.forEach((candy, property) => {
+                    if (element.style.getPropertyValue(property) !== candy.value) matches = false;
+                    if (element.style.getPropertyPriority(property) !== candy.priority) matches = false;
+                  });
+                  return matches;
+                });
+              };
+              const observePresentation = elements => {
+                presentationObserver = new MutationObserver(() => {
+                  if (presentationRepairScheduled) return;
+                  presentationRepairScheduled = true;
+                  scheduleMicrotask(() => {
+                    presentationRepairScheduled = false;
+                    if (!presented) return;
+                    if (!presented.isConnected) {
+                      exitPresentation();
+                      return;
+                    }
+                    const currentElements = presentationElements(presented);
+                    if (!presentationIsApplied(currentElements)) enterPresentation(presented);
+                  });
+                });
+                elements.forEach(element => presentationObserver.observe(
+                  element,
+                  { attributes: true, attributeFilter: ['style'], childList: true }
+                ));
+              };
               const enterPresentation = media => {
                 const elements = presentationElements(media);
-                if (
-                  presented === media &&
-                  elements.length === originals.size &&
-                  elements.every(element => originals.has(element))
-                ) {
+                if (presented === media && presentationIsApplied(elements)) {
                   report(media, 'presentation');
                   return;
                 }
                 if (keepPlaying && keepPlaying !== media) keepPlaying = null;
                 exitPresentation();
                 presented = media;
-                elements.forEach(fillViewport);
+                elements.forEach(unclipAncestor);
+                fillViewport(media);
+                observePresentation(elements);
                 report(media, 'presentation');
               };
               bridge.onmessage = event => {

@@ -464,8 +464,11 @@ class BrowserController(
     private var pictureInPicturePresentationCreatedForTransition = false
     private var pictureInPicturePresentationPendingReturnCleanupKey: WebMediaChannelKey? = null
     private var pictureInPicturePresentationReturnHost: FullscreenVideoHost? = null
+    private var pictureInPictureOwnerTabId: String? = null
     private var pictureInPicturePlaybackExpected = false
     private var pictureInPicturePlayRetryPending = false
+    private var pictureInPicturePresentationRetryKey: WebMediaChannelKey? = null
+    private var pictureInPicturePresentationRetryGeneration = 0
     private var pictureInPictureExitGuardKey: WebMediaChannelKey? = null
     private var pictureInPictureExitGuardGeneration = 0
     private var isInPictureInPicture = false
@@ -1395,6 +1398,8 @@ class BrowserController(
     }
 
     internal fun exitFullscreenVideo() {
+        cancelPictureInPicturePresentationRetry()
+        pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
         fullscreenVideoSession?.let { session ->
             dismissFullscreenVideo(session, notifyPage = true)
@@ -1407,17 +1412,21 @@ class BrowserController(
         if (session?.isPrivate == true) return
         val startsTransition = !pictureInPictureTransitionPending && !isInPictureInPicture
         if (startsTransition) {
-            val retainedTransitionPresentation =
-                pictureInPicturePresentationPendingReturnCleanupKey == webMediaPresentation?.key
+            cancelPictureInPicturePresentationRetry()
+            val ownerTabId = session?.tabId ?: webMediaPresentation?.key?.tabId ?: selectedTabId
+            val returnCleanupKey = pictureInPicturePresentationPendingReturnCleanupKey
+            val retainedTransitionPresentation = returnCleanupKey != null &&
+                returnCleanupKey == webMediaPresentation?.key
             pictureInPictureTransitionGeneration++
             pictureInPictureExitGuardGeneration++
             pictureInPictureExitGuardKey = null
             pictureInPicturePresentationPendingReturnCleanupKey = null
             pictureInPicturePresentationCreatedForTransition = retainedTransitionPresentation
             pictureInPicturePresentationReturnHost = webMediaPresentation?.host
+            pictureInPictureOwnerTabId = ownerTabId
             pictureInPicturePlaybackExpected = session != null ||
                 presentedWebMediaChannel()?.payload?.isPlaying == true ||
-                activeVideoChannel(session?.tabId ?: selectedTabId)?.payload?.isPlaying == true
+                activeVideoChannel(ownerTabId)?.payload?.isPlaying == true
         }
         pictureInPictureTransitionPending = true
         val hadWebMediaPresentation = webMediaPresentation != null
@@ -1433,6 +1442,7 @@ class BrowserController(
             )
         }
         presentedWebMediaChannel()?.let { channel ->
+            schedulePictureInPicturePresentationRetry(channel.key)
             if (hadWebMediaPresentation) {
                 sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
             }
@@ -1462,6 +1472,8 @@ class BrowserController(
             }
         }
         pictureInPicturePresentationReturnHost = null
+        cancelPictureInPicturePresentationRetry()
+        pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
         pictureInPicturePlayRetryPending = false
     }
@@ -1487,6 +1499,8 @@ class BrowserController(
             pictureInPictureTransitionPending = false
             pictureInPicturePresentationCreatedForTransition = false
             pictureInPicturePresentationReturnHost = null
+            cancelPictureInPicturePresentationRetry()
+            pictureInPictureOwnerTabId = null
             pictureInPicturePlaybackExpected = false
             pictureInPicturePlayRetryPending = false
             if (presentationWasCreatedForTransition) {
@@ -3713,6 +3727,8 @@ class BrowserController(
         pictureInPictureTransitionPending = false
         pictureInPicturePresentationCreatedForTransition = false
         pictureInPicturePresentationReturnHost = null
+        cancelPictureInPicturePresentationRetry()
+        pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
         pictureInPicturePlayRetryPending = false
         pictureInPictureExitGuardKey
@@ -3739,6 +3755,8 @@ class BrowserController(
         destroyed = true
         pictureInPictureTransitionPending = false
         pictureInPicturePresentationReturnHost = null
+        cancelPictureInPicturePresentationRetry()
+        pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
         pictureInPicturePlayRetryPending = false
         pictureInPictureExitGuardGeneration++
@@ -4523,7 +4541,13 @@ class BrowserController(
             isMainFrame = isMainFrame,
         )
         if (payload.ended) {
-            if (webMediaPresentation?.key == key) pictureInPicturePlaybackExpected = false
+            if (
+                webMediaPresentation?.key == key &&
+                (!pictureInPicturePlaybackExpected ||
+                    (!pictureInPictureTransitionPending && !isInPictureInPicture))
+            ) {
+                pictureInPicturePlaybackExpected = false
+            }
             if (backgroundAudioKey == key) backgroundAudioKey = null
             if (webMediaPresentation?.key == key) clearWebMediaPresentation()
             webMediaChannels.remove(key)
@@ -4557,31 +4581,9 @@ class BrowserController(
                     ?.let { background -> sendWebMediaCommand(background, WebMediaCommand.Pause) }
                 backgroundAudioKey = null
             }
-            if (
-                (pictureInPictureTransitionPending || isInPictureInPicture) &&
-                fullscreenVideoSession?.tabId == key.tabId &&
-                payload.kind == WebMediaKind.Video &&
-                (payload.isPlaying || payload.currentPositionMillis > 0)
-            ) {
-                pinWebMediaForPresentation(
-                    channel = webMediaChannels[key],
-                    minimizedByUser = false,
-                    host = FullscreenVideoHost.Browser,
-                )
-                if (webMediaPresentation?.key == key) {
-                    webMediaChannels[key]?.let { mediaChannel ->
-                        if (pictureInPicturePlaybackExpected) {
-                            sendWebMediaCommand(mediaChannel, WebMediaCommand.KeepPlaying)
-                        }
-                        sendWebMediaCommand(mediaChannel, WebMediaCommand.Play)
-                    }
-                    fullscreenVideoSession
-                        ?.takeIf { session -> session.tabId == key.tabId }
-                        ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
-                }
-            }
             schedulePictureInPicturePlayRetry(key)
         }
+        recoverPictureInPicturePresentation()
         publishWebMediaState()
         if (
             !isActivityResumed &&
@@ -4620,6 +4622,73 @@ class BrowserController(
             },
             PICTURE_IN_PICTURE_PLAY_RETRY_DELAY_MILLIS,
         )
+    }
+
+    private fun recoverPictureInPicturePresentation() {
+        if (
+            !pictureInPicturePlaybackExpected ||
+            (!pictureInPictureTransitionPending && !isInPictureInPicture)
+        ) return
+        val ownerTabId = pictureInPictureOwnerTabId ?: return
+        if (tabs.firstOrNull { tab -> tab.id == ownerTabId }?.isIncognito != false) return
+        val current = presentedWebMediaChannel()
+        if (
+            current?.key?.tabId == ownerTabId &&
+            current.payload.isPlaying &&
+            WebMediaRules.isExternalPresentationEligible(
+                state = current.toState(),
+                isPrivate = false,
+            )
+        ) return
+        val candidate = activeVideoChannel(
+            tabId = ownerTabId,
+            requireVisible = false,
+            preferPresented = false,
+        ) ?: return
+        if (webMediaPresentation?.key == candidate.key) return
+        val host = webMediaPresentation?.host ?: if (ownerTabId == selectedTabId) {
+            FullscreenVideoHost.Browser
+        } else {
+            FullscreenVideoHost.Overlay
+        }
+        pinWebMediaForPresentation(
+            channel = candidate,
+            minimizedByUser = false,
+            host = host,
+        )
+        if (webMediaPresentation?.key != candidate.key) return
+        schedulePictureInPicturePresentationRetry(candidate.key)
+        candidate.webView.settings.allowContinuousMediaPlayback()
+        candidate.webView.onResume()
+        sendWebMediaCommand(candidate, WebMediaCommand.KeepPlaying)
+        fullscreenVideoSession
+            ?.takeIf { session -> session.tabId == ownerTabId }
+            ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
+    }
+
+    private fun schedulePictureInPicturePresentationRetry(key: WebMediaChannelKey) {
+        if (pictureInPicturePresentationRetryKey == key) return
+        pictureInPicturePresentationRetryKey = key
+        val generation = ++pictureInPicturePresentationRetryGeneration
+        mainHandler.postDelayed(
+            {
+                if (
+                    pictureInPicturePresentationRetryGeneration != generation ||
+                    webMediaPresentation?.key != key ||
+                    !pictureInPicturePlaybackExpected ||
+                    (!pictureInPictureTransitionPending && !isInPictureInPicture)
+                ) return@postDelayed
+                webMediaChannels[key]?.let { channel ->
+                    sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
+                }
+            },
+            PICTURE_IN_PICTURE_PLAY_RETRY_DELAY_MILLIS,
+        )
+    }
+
+    private fun cancelPictureInPicturePresentationRetry() {
+        pictureInPicturePresentationRetryGeneration++
+        pictureInPicturePresentationRetryKey = null
     }
 
     private fun publishWebMediaState() {
@@ -4697,6 +4766,7 @@ class BrowserController(
         tabId: String,
         requireVisible: Boolean = true,
         allowPaused: Boolean = false,
+        preferPresented: Boolean = true,
     ): WebMediaChannel? = webMediaChannels.values
         .asSequence()
         .filter(::isCurrentWebMediaChannel)
@@ -4721,7 +4791,7 @@ class BrowserController(
                 WebMediaRules.score(
                     payload = channel.payload,
                     isSelectedTab = channel.key.tabId == selectedTabId,
-                    isPresented = channel.key == webMediaPresentation?.key,
+                    isPresented = preferPresented && channel.key == webMediaPresentation?.key,
                 )
             }.thenBy(WebMediaChannel::receivedAtMillis),
         )
@@ -4970,9 +5040,14 @@ class BrowserController(
         systemWebMediaChannel()?.let { channel ->
             if (
                 (pictureInPictureTransitionPending || isInPictureInPicture) &&
-                webMediaPresentation?.key == channel.key
+                (webMediaPresentation?.key == channel.key ||
+                    (channel.payload.kind == WebMediaKind.Video &&
+                        channel.key.tabId == pictureInPictureOwnerTabId))
             ) {
                 pictureInPicturePlaybackExpected = true
+                cancelPictureInPicturePresentationRetry()
+                sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
+                schedulePictureInPicturePresentationRetry(channel.key)
                 sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
             }
             val tab = tabs.firstOrNull { it.id == channel.key.tabId }
@@ -4986,7 +5061,12 @@ class BrowserController(
 
     fun pauseActiveWebMedia() {
         systemWebMediaChannel()?.let { channel ->
-            if (webMediaPresentation?.key == channel.key) {
+            if (
+                webMediaPresentation?.key == channel.key ||
+                ((pictureInPictureTransitionPending || isInPictureInPicture) &&
+                    channel.payload.kind == WebMediaKind.Video &&
+                    channel.key.tabId == pictureInPictureOwnerTabId)
+            ) {
                 pictureInPicturePlaybackExpected = false
                 pictureInPicturePlayRetryPending = false
             }
@@ -4996,7 +5076,12 @@ class BrowserController(
 
     fun stopActiveWebMedia() {
         systemWebMediaChannel()?.let { channel ->
-            if (webMediaPresentation?.key == channel.key) {
+            if (
+                webMediaPresentation?.key == channel.key ||
+                ((pictureInPictureTransitionPending || isInPictureInPicture) &&
+                    channel.payload.kind == WebMediaKind.Video &&
+                    channel.key.tabId == pictureInPictureOwnerTabId)
+            ) {
                 pictureInPicturePlaybackExpected = false
                 pictureInPicturePlayRetryPending = false
             }

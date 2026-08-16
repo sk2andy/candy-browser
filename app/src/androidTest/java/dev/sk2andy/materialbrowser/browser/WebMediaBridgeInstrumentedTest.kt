@@ -119,6 +119,46 @@ class WebMediaBridgeInstrumentedTest {
         awaitCondition { presentationResult[0] != null }
         assertEquals("\"fixed\"", presentationResult[0])
 
+        val fixedPresentationLayerCount = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const video = document.querySelector('video');
+                  const elements = [];
+                  let element = video;
+                  while (element) {
+                    elements.push(element);
+                    element = element.parentElement;
+                  }
+                  const fullViewportLayers = elements.filter(element => {
+                    const style = getComputedStyle(element);
+                    return style.position === 'fixed' && style.zIndex === '2147483647';
+                  });
+                  const ancestorsAreUnclipped = elements
+                    .filter(element => element !== video)
+                    .every(element => {
+                      const style = getComputedStyle(element);
+                      return style.position !== 'fixed' &&
+                        style.zIndex === 'auto' &&
+                        style.overflowX === 'visible' &&
+                        style.overflowY === 'visible' &&
+                        style.transform === 'none' &&
+                        style.contain === 'none' &&
+                        style.clipPath === 'none' &&
+                        style.transitionProperty === 'none' &&
+                        style.animationName === 'none';
+                    });
+                  return fullViewportLayers.length === 1 &&
+                    fullViewportLayers[0] === video &&
+                    ancestorsAreUnclipped;
+                })()
+                """.trimIndent(),
+            ) { result -> fixedPresentationLayerCount[0] = result }
+        }
+        awaitCondition { fixedPresentationLayerCount[0] != null }
+        assertEquals("true", fixedPresentationLayerCount[0])
+
         val firstPresentationMutationCount = awaitStableJavascriptInt(
             webView = webView,
             expression = "globalThis.candyStyleMutationCount",
@@ -142,8 +182,98 @@ class WebMediaBridgeInstrumentedTest {
             expression = "globalThis.candyStyleMutationCount",
         )
         assertEquals(firstPresentationMutationCount, repeatedPreparationMutationCount)
+
+        val styleDriftResult = arrayOfNulls<String>(1)
         activityRule.scenario.onActivity {
-            requireNotNull(controller).onPictureInPictureModeChanged(false)
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const video = document.querySelector('video');
+                  video.style.setProperty('top', '409px', 'important');
+                  video.style.setProperty('width', '527px', 'important');
+                  return true;
+                })()
+                """.trimIndent(),
+            ) { result -> styleDriftResult[0] = result }
+        }
+        awaitCondition { styleDriftResult[0] == "true" }
+        val repairedStyleResult = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    """
+                    (() => {
+                      const style = document.querySelector('video').style;
+                      return style.getPropertyValue('top') === '0px' &&
+                        style.getPropertyPriority('top') === 'important' &&
+                        style.getPropertyValue('width') === '100vw' &&
+                        style.getPropertyPriority('width') === 'important';
+                    })()
+                    """.trimIndent(),
+                ) { result -> repairedStyleResult[0] = result }
+            }
+            repairedStyleResult[0] == "true"
+        }
+
+        val reparentResult = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const holder = document.createElement('div');
+                  holder.id = 'live-presentation-holder';
+                  holder.style.cssText =
+                    'overflow:hidden;transform:translateZ(0);contain:paint;clip-path:inset(40%)';
+                  document.body.append(holder);
+                  holder.append(document.querySelector('video'));
+                  return true;
+                })()
+                """.trimIndent(),
+            ) { result -> reparentResult[0] = result }
+        }
+        awaitCondition { reparentResult[0] == "true" }
+        val repairedReparentResult = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    """
+                    (() => {
+                      const video = document.querySelector('video');
+                      const holderStyle = getComputedStyle(video.parentElement);
+                      return video.style.position === 'fixed' &&
+                        holderStyle.position === 'relative' &&
+                        holderStyle.overflow === 'visible' &&
+                        holderStyle.transform === 'none' &&
+                        holderStyle.contain === 'none' &&
+                        holderStyle.clipPath === 'none';
+                    })()
+                    """.trimIndent(),
+                ) { result -> repairedReparentResult[0] = result }
+            }
+            repairedReparentResult[0] == "true"
+        }
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.onPictureInPictureModeChanged(false)
+            controller.completePictureInPictureReturn()
+        }
+        val restoredAnimationResult = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    """
+                    (() => {
+                      const marker = document.querySelector('#transition-marker');
+                      const style = getComputedStyle(marker);
+                      return style.transitionProperty === 'transform' &&
+                        style.animationName === 'pulse' &&
+                        marker.style.getPropertyPriority('transition') === 'important' &&
+                        marker.style.getPropertyPriority('animation') === 'important';
+                    })()
+                    """.trimIndent(),
+                ) { result -> restoredAnimationResult[0] = result }
+            }
+            restoredAnimationResult[0] == "true"
         }
 
         val tokenProbeResult = arrayOfNulls<String>(1)
@@ -280,6 +410,115 @@ class WebMediaBridgeInstrumentedTest {
     }
 
     @Test
+    fun playingReplacementVideoTakesOverActivePipPresentation() {
+        lateinit var webView: WebView
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            webView = controller.selectedWebViewForTesting()
+            webView.loadDataWithBaseURL(
+                "https://media.example/",
+                REPLACED_PLAYING_VIDEO_HTML,
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        awaitCondition {
+            var positionMillis = 0L
+            activityRule.scenario.onActivity {
+                positionMillis = controller?.webMediaState?.currentPositionMillis ?: 0L
+            }
+            positionMillis == 12_000L
+        }
+
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.prepareForPictureInPicture()
+            controller.onPictureInPictureModeChanged(true)
+        }
+        val firstVideoPosition = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript("document.querySelector('#first').style.position") {
+                    result -> firstVideoPosition[0] = result
+                }
+            }
+            firstVideoPosition[0] == "\"fixed\""
+        }
+        SystemClock.sleep(350)
+        activityRule.scenario.onActivity {}
+
+        val interceptorReady = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const bridge = globalThis.CandyWebMediaBridge;
+                  const originalHandler = bridge.onmessage;
+                  globalThis.candyDroppedReplacementPresentation = false;
+                  bridge.onmessage = event => {
+                    const message = JSON.parse(event.data);
+                    if (
+                      !globalThis.candyDroppedReplacementPresentation &&
+                      message.command === 'enter-presentation'
+                    ) {
+                      globalThis.candyDroppedReplacementPresentation = true;
+                      return;
+                    }
+                    originalHandler.call(bridge, event);
+                  };
+                  return 'ready';
+                })()
+                """.trimIndent(),
+            ) { result -> interceptorReady[0] = result }
+        }
+        awaitCondition { interceptorReady[0] == "\"ready\"" }
+
+        val replacementStarted = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript("startReplacementVideo()") { result ->
+                replacementStarted[0] = result
+            }
+        }
+        awaitCondition { replacementStarted[0] == "true" }
+        val presentationOwner = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    """
+                    globalThis.removedFirst.style.position === '' &&
+                      document.querySelector('#second').style.position === 'fixed'
+                    """.trimIndent(),
+                ) { result -> presentationOwner[0] = result }
+            }
+            presentationOwner[0] == "true"
+        }
+        activityRule.scenario.onActivity {
+            val state = requireNotNull(requireNotNull(controller).webMediaState)
+            assertEquals(20_000L, state.currentPositionMillis)
+            assertTrue(state.isPlaying)
+        }
+        val replacementPresentationWasRetried = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                "globalThis.candyDroppedReplacementPresentation",
+            ) { result -> replacementPresentationWasRetried[0] = result }
+        }
+        awaitCondition { replacementPresentationWasRetried[0] == "true" }
+    }
+
+    @Test
     fun chromiumCustomViewFallsBackToPresentedWebViewWithoutEndingSession() {
         lateinit var webView: WebView
         var callbackInvoked = false
@@ -348,7 +587,7 @@ class WebMediaBridgeInstrumentedTest {
                     "document.querySelector('#replacement-holder').style.position",
                 ) { result -> replacementHolderPosition[0] = result }
             }
-            replacementHolderPosition[0] == "\"fixed\""
+            replacementHolderPosition[0] == "\"relative\""
         }
         activityRule.scenario.onActivity { activity ->
             requireNotNull(controller).showFullscreenVideoForTesting(
@@ -573,6 +812,132 @@ class WebMediaBridgeInstrumentedTest {
     }
 
     @Test
+    fun sameTabAudioControlsDoNotReplaceMutedVideoPipPresentation() {
+        var sourceTabId = ""
+        lateinit var container: FrameLayout
+        lateinit var sourceWebView: WebView
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            sourceTabId = controller.selectedTabId
+            sourceWebView = controller.selectedWebViewForTesting()
+            sourceWebView.settings.mediaPlaybackRequiresUserGesture = false
+            sourceWebView.loadDataWithBaseURL(
+                "https://mixed-media.example/",
+                PLAYING_AUDIO_HTML,
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        awaitCondition {
+            var playingAudio = false
+            activityRule.scenario.onActivity {
+                playingAudio = controller?.webMediaState?.let { state ->
+                    state.kind == WebMediaKind.Audio && state.isPlaying
+                } == true
+            }
+            playingAudio
+        }
+
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.createTab()
+            assertEquals(sourceTabId, controller.backgroundAudioTabIdForTesting)
+            controller.selectTab(sourceTabId)
+            controller.attachSelectedWebView(container)
+            sourceWebView.evaluateJavascript(
+                """
+                (() => {
+                  const video = document.createElement('video');
+                  video.id = 'muted-pip-video';
+                  Object.defineProperty(video, 'paused', { value: false, configurable: true });
+                  Object.defineProperty(video, 'ended', { value: false, configurable: true });
+                  Object.defineProperty(video, 'currentTime', {
+                    value: 16,
+                    writable: true,
+                    configurable: true
+                  });
+                  Object.defineProperty(video, 'duration', { value: 120, configurable: true });
+                  Object.defineProperty(video, 'videoWidth', { value: 640, configurable: true });
+                  Object.defineProperty(video, 'videoHeight', { value: 360, configurable: true });
+                  Object.defineProperty(video, 'muted', { value: true, configurable: true });
+                  Object.defineProperty(video, 'volume', { value: 0, configurable: true });
+                  video.getBoundingClientRect = () => ({
+                    left: 0, top: 0, right: 320, bottom: 180, width: 320, height: 180
+                  });
+                  document.body.append(video);
+                  video.dispatchEvent(new Event('playing'));
+                  return true;
+                })()
+                """.trimIndent(),
+                null,
+            )
+        }
+        awaitCondition {
+            var videoIsActive = false
+            activityRule.scenario.onActivity {
+                videoIsActive = controller?.webMediaState?.kind == WebMediaKind.Video
+            }
+            videoIsActive
+        }
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            assertEquals(WebMediaKind.Audio, controller.systemWebMediaState?.kind)
+            controller.prepareForPictureInPicture()
+            controller.onPictureInPictureModeChanged(true)
+        }
+        val videoPresented = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                sourceWebView.evaluateJavascript(
+                    "document.querySelector('#muted-pip-video').style.position",
+                ) { result -> videoPresented[0] = result }
+            }
+            videoPresented[0] == "\"fixed\""
+        }
+
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).playActiveWebMedia()
+        }
+        SystemClock.sleep(350)
+        activityRule.scenario.onActivity {}
+        val presentationOwner = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            sourceWebView.evaluateJavascript(
+                """
+                document.querySelector('#muted-pip-video').style.position === 'fixed' &&
+                  document.querySelector('audio').style.position !== 'fixed'
+                """.trimIndent(),
+            ) { result -> presentationOwner[0] = result }
+        }
+        awaitCondition { presentationOwner[0] != null }
+        assertEquals("true", presentationOwner[0])
+
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).pauseActiveWebMedia()
+        }
+        val presentationSurvivedPause = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            sourceWebView.evaluateJavascript(
+                "document.querySelector('#muted-pip-video').style.position",
+            ) { result -> presentationSurvivedPause[0] = result }
+        }
+        awaitCondition { presentationSurvivedPause[0] != null }
+        assertEquals("\"fixed\"", presentationSurvivedPause[0])
+    }
+
+    @Test
     fun audibleAudioBecomesBackgroundOwnerWhenActivityPauses() {
         var sourceTabId = ""
         activityRule.scenario.onActivity { activity ->
@@ -680,8 +1045,23 @@ class WebMediaBridgeInstrumentedTest {
         val PLAYING_VIDEO_HTML =
             """
             <!doctype html>
-            <html><body>
-              <video style="width:320px;height:180px"></video>
+            <html>
+            <head>
+              <style>@keyframes pulse { from { opacity: .9; } to { opacity: 1; } }</style>
+            </head>
+            <body>
+              <div
+                id="transition-marker"
+                style="overflow:hidden;transform:translateZ(0);contain:paint;
+                  transition:transform 10s linear!important;
+                  animation:pulse 10s linear infinite!important"
+              >
+                <div style="clip-path:inset(30%);filter:blur(0)">
+                  <div style="overflow:hidden;perspective:500px">
+                    <video style="width:320px;height:180px"></video>
+                  </div>
+                </div>
+              </div>
               <script>
                 const video = document.querySelector('video');
                 Object.defineProperty(video, 'paused', { value: false, configurable: true });
@@ -780,6 +1160,60 @@ class WebMediaBridgeInstrumentedTest {
                   document.body.append(video);
                   video.dispatchEvent(new Event('playing'));
                 }
+              </script>
+            </body></html>
+            """.trimIndent()
+
+        val REPLACED_PLAYING_VIDEO_HTML =
+            """
+            <!doctype html>
+            <html><body>
+              <video id="first" style="width:320px;height:180px"></video>
+              <script>
+                const first = document.querySelector('#first');
+                let firstPaused = false;
+                let firstTime = 12;
+                const configure = (video, paused, currentTime) => {
+                  Object.defineProperty(video, 'paused', {
+                    get: paused,
+                    configurable: true
+                  });
+                  Object.defineProperty(video, 'ended', { value: false, configurable: true });
+                  Object.defineProperty(video, 'currentTime', {
+                    get: currentTime,
+                    configurable: true
+                  });
+                  Object.defineProperty(video, 'duration', { value: 120, configurable: true });
+                  Object.defineProperty(video, 'videoWidth', { value: 640, configurable: true });
+                  Object.defineProperty(video, 'videoHeight', { value: 360, configurable: true });
+                };
+                configure(first, () => firstPaused, () => firstTime);
+                first.getBoundingClientRect = () => ({
+                  left: 0, top: 0, right: 320, bottom: 180, width: 320, height: 180
+                });
+                globalThis.startReplacementVideo = () => {
+                  firstPaused = true;
+                  firstTime = 0;
+                  first.dispatchEvent(new Event('pause'));
+                  globalThis.removedFirst = first;
+                  first.remove();
+                  const second = document.createElement('video');
+                  second.id = 'second';
+                  second.style.cssText = 'width:320px;height:180px';
+                  configure(second, () => false, () => 20);
+                  second.getBoundingClientRect = () => ({
+                    left: 0,
+                    top: 5000,
+                    right: 320,
+                    bottom: 5180,
+                    width: 320,
+                    height: 180
+                  });
+                  document.body.append(second);
+                  second.dispatchEvent(new Event('playing'));
+                  return true;
+                };
+                setTimeout(() => first.dispatchEvent(new Event('playing')), 250);
               </script>
             </body></html>
             """.trimIndent()
