@@ -39,6 +39,10 @@
     </plurals>
     <string name="cd_close_tab_overview">Fechar visão geral dos separadores</string>
     <string name="cd_close_tab">Fechar separador</string>
+    <string name="cd_minimize_fullscreen_video">Minimizar vídeo</string>
+    <string name="cd_expand_fullscreen_video">Expandir vídeo</string>
+    <string name="cd_close_fullscreen_video">Fechar vídeo</string>
+    <string name="cd_move_fullscreen_video">Mover vídeo</string>
     <string name="cd_close_named_tab">Fechar %1$s</string>
     <string name="action_switch_to_tab">Mudar para o separador</string>
     <string name="tab_actions_title">Opções do separador</string>
@@ -628,4 +632,6 @@
     <string name="reader_offline_empty">Ainda não há artigos offline guardados.</string>
     <string name="reader_progress_percent">%1$d%% lido</string>
     <string name="reader_delete_snapshot">Eliminar artigo offline</string>
+    <string name="media_notification_channel_name">Reprodução de multimédia</string>
+    <string name="media_notification_channel_description">Controla os conteúdos reproduzidos no Candy</string>
 </resources>

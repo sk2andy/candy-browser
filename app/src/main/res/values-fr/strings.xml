@@ -39,6 +39,10 @@
     </plurals>
     <string name="cd_close_tab_overview">Fermer l’aperçu des onglets</string>
     <string name="cd_close_tab">Fermer l’onglet</string>
+    <string name="cd_minimize_fullscreen_video">Réduire la vidéo</string>
+    <string name="cd_expand_fullscreen_video">Agrandir la vidéo</string>
+    <string name="cd_close_fullscreen_video">Fermer la vidéo</string>
+    <string name="cd_move_fullscreen_video">Déplacer la vidéo</string>
     <string name="cd_close_named_tab">Fermer %1$s</string>
     <string name="action_switch_to_tab">Accéder à l’onglet</string>
     <string name="tab_actions_title">Options de l’onglet</string>
@@ -628,4 +632,6 @@
     <string name="reader_offline_empty">Aucun article hors ligne enregistré.</string>
     <string name="reader_progress_percent">%1$d%% lu</string>
     <string name="reader_delete_snapshot">Supprimer l’article hors ligne</string>
+    <string name="media_notification_channel_name">Lecture multimédia</string>
+    <string name="media_notification_channel_description">Contrôle les médias lus dans Candy</string>
 </resources>

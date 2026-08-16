@@ -372,6 +372,7 @@ private enum class BrowserBackTarget {
 @Composable
 fun BrowserScreen(
     controller: BrowserController,
+    webViewVideoOnlyPresentation: Boolean = false,
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
 ) {
     val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
@@ -381,7 +382,11 @@ fun BrowserScreen(
         LaunchedEffect(capsule.id) {
             currentTabOverviewPortraitLockChanged(false)
         }
-        SiteCapsuleBrowserScreen(controller, capsule)
+        SiteCapsuleBrowserScreen(
+            controller = controller,
+            capsule = capsule,
+            webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
+        )
         return
     }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -1162,6 +1167,7 @@ fun BrowserScreen(
         )
         BrowserViewport(
             controller = controller,
+            webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
             selectedTab = selectedTab,
             dragOffset = browserDragOffset,
             travelDistance = tabSwitchTravelPx,
@@ -2045,6 +2051,7 @@ fun BrowserScreen(
 @Composable
 private fun BrowserViewport(
     controller: BrowserController,
+    webViewVideoOnlyPresentation: Boolean,
     selectedTab: BrowserTab,
     dragOffset: MutableFloatState,
     travelDistance: Float,
@@ -2110,7 +2117,16 @@ private fun BrowserViewport(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(if (webViewVideoOnlyPresentation) VIDEO_ONLY_WEB_VIEW_Z_INDEX else 0f)
             .graphicsLayer {
+                if (webViewVideoOnlyPresentation) {
+                    translationX = 0f
+                    scaleX = 1f
+                    scaleY = 1f
+                    clip = false
+                    shadowElevation = 0f
+                    return@graphicsLayer
+                }
                 val offset = dragOffset.floatValue
                 val travelProgress = (offset.absoluteValue / travelDistance).coerceIn(0f, 1f)
                 val cardProgress = if (adjacentTab != null) {
@@ -2131,8 +2147,10 @@ private fun BrowserViewport(
         if (selectedTab.url != BLANK_URL) {
             ActiveWebView(
                 controller = controller,
-                visible = !tabOverviewVisible || selectedTab.isIncognito,
-                showStatusBarFrostedGlass = !tabOverviewVisible,
+                visible = webViewVideoOnlyPresentation ||
+                    !tabOverviewVisible ||
+                    selectedTab.isIncognito,
+                showStatusBarFrostedGlass = !webViewVideoOnlyPresentation && !tabOverviewVisible,
                 statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
@@ -8313,6 +8331,7 @@ private const val COVERFLOW_CARD_WIDTH_FRACTION = 0.74f
 private const val COVERFLOW_CARD_ASPECT_RATIO = 0.45f
 private const val PROFILE_CREATION_SHEET_HEIGHT_FRACTION = 0.66f
 private const val NEW_PROFILE_TARGET = "__new_profile__"
+private const val VIDEO_ONLY_WEB_VIEW_Z_INDEX = 100f
 private val PROFILE_EMOJIS = listOf(
     "🍬", "⭐", "💼", "🛒", "🎮", "📚",
     "✈️", "🏠", "🎵", "🧪", "📰", "❤️",

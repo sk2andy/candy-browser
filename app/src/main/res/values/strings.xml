@@ -43,6 +43,10 @@
     </plurals>
     <string name="cd_close_tab_overview">Close tab overview</string>
     <string name="cd_close_tab">Close tab</string>
+    <string name="cd_minimize_fullscreen_video">Minimize video</string>
+    <string name="cd_expand_fullscreen_video">Expand video</string>
+    <string name="cd_close_fullscreen_video">Close video</string>
+    <string name="cd_move_fullscreen_video">Move video</string>
     <string name="cd_close_named_tab">Close %1$s</string>
     <string name="action_switch_to_tab">Switch to tab</string>
     <string name="tab_actions_title">Tab options</string>
@@ -637,4 +641,6 @@
     <string name="reader_offline_empty">No offline articles saved yet.</string>
     <string name="reader_progress_percent">%1$d%% read</string>
     <string name="reader_delete_snapshot">Delete offline article</string>
+    <string name="media_notification_channel_name">Media playback</string>
+    <string name="media_notification_channel_description">Controls media playing in Candy</string>
 </resources>
