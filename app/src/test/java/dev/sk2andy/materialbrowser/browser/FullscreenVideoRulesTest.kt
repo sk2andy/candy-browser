@@ -126,6 +126,68 @@ class FullscreenVideoRulesTest {
     }
 
     @Test
+    fun `picture in picture source is centered and matches landscape video aspect`() {
+        assertEquals(
+            FullscreenVideoBounds(left = 0, top = 896, right = 1_080, bottom = 1_503),
+            FullscreenVideoRules.pictureInPictureSourceBounds(
+                windowBounds = FullscreenVideoBounds(0, 0, 1_080, 2_400),
+                aspectWidth = 16,
+                aspectHeight = 9,
+            ),
+        )
+        assertEquals(
+            FullscreenVideoBounds(left = 0, top = 0, right = 1_920, bottom = 1_080),
+            FullscreenVideoRules.pictureInPictureSourceBounds(
+                windowBounds = FullscreenVideoBounds(0, 0, 1_920, 1_080),
+                aspectWidth = 16,
+                aspectHeight = 9,
+            ),
+        )
+    }
+
+    @Test
+    fun `picture in picture source rejects invalid bounds`() {
+        assertNull(
+            FullscreenVideoRules.pictureInPictureSourceBounds(
+                windowBounds = FullscreenVideoBounds(0, 0, 0, 100),
+                aspectWidth = 16,
+                aspectHeight = 9,
+            ),
+        )
+    }
+
+    @Test
+    fun `picture in picture return waits for target layout within tolerance`() {
+        assertFalse(
+            FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
+                width = 598,
+                height = 336,
+                targetWidth = 1_080,
+                targetHeight = 2_400,
+                tolerance = 21,
+            ),
+        )
+        assertTrue(
+            FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
+                width = 1_080,
+                height = 2_380,
+                targetWidth = 1_080,
+                targetHeight = 2_400,
+                tolerance = 21,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
+                width = 1_080,
+                height = 2_378,
+                targetWidth = 1_080,
+                targetHeight = 2_400,
+                tolerance = 21,
+            ),
+        )
+    }
+
+    @Test
     fun `mini player drag stays inside available bounds`() {
         assertEquals(
             FullscreenVideoOffset(x = -120f, y = -80f),

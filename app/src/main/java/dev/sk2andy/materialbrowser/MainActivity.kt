@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import android.view.MotionEvent
+import android.view.View
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.view.ViewCompat
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
+import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
@@ -69,8 +71,11 @@ class MainActivity : ComponentActivity() {
     private var videoOnlyPresentation by mutableStateOf(false)
     private var fullscreenVideoBounds: Rect? = null
     private var pictureInPictureSourceRectHint: Rect? = null
-    private var suppressPictureInPictureSourceRectHint = false
     private var appliedPictureInPictureState: AppliedPictureInPictureState? = null
+    private var pictureInPictureReturnLayoutListener: View.OnLayoutChangeListener? = null
+    private var pictureInPictureReturnInProgress = false
+    private var pictureInPictureStartedFullscreen = false
+    private var pictureInPictureModeEntered = false
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
@@ -193,7 +198,10 @@ class MainActivity : ComponentActivity() {
                 ) {
                     applyBrowserSystemUi()
                     updatePictureInPictureParams()
-                    if (fullscreenVideoState == null && isInPictureInPictureMode) {
+                    if (
+                        browserController.fullscreenVideoState == null &&
+                        isInPictureInPictureMode
+                    ) {
                         moveTaskToBack(true)
                     }
                 }
@@ -334,11 +342,22 @@ class MainActivity : ComponentActivity() {
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         if (isInPictureInPictureMode) {
-            suppressPictureInPictureSourceRectHint = true
-            pictureInPictureSourceRectHint = null
+            pictureInPictureModeEntered = true
+            videoOnlyPresentation = true
         }
-        videoOnlyPresentation = isInPictureInPictureMode
         browserController.onPictureInPictureModeChanged(isInPictureInPictureMode)
+        if (isInPictureInPictureMode) {
+            pictureInPictureReturnInProgress = false
+            cancelPictureInPictureReturnLayoutWait()
+            if (pictureInPictureStartedFullscreen) {
+                pictureInPictureSourceRectHint = pictureInPictureSourceRect(
+                    windowManager.maximumWindowMetrics.bounds,
+                )
+            }
+        } else {
+            pictureInPictureReturnInProgress = true
+            completePictureInPictureReturnAfterLayout(newConfig)
+        }
         applyBrowserSystemUi()
         updatePictureInPictureParams()
     }
@@ -353,18 +372,36 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
+            pictureInPictureSourceRectHint = pictureInPictureSourceRect(
+                windowManager.maximumWindowMetrics.bounds,
+            )
+            updatePictureInPictureParams()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        if (!isInPictureInPictureMode) {
-            videoOnlyPresentation = false
-            pictureInPictureSourceRectHint = null
-            suppressPictureInPictureSourceRectHint = false
-        }
+        reconcilePictureInPictureStateOnResume()
         if (::browserController.isInitialized) browserController.onResume()
         updatePictureInPictureParams()
     }
 
+    private fun reconcilePictureInPictureStateOnResume() {
+        if (
+            !isInPictureInPictureMode &&
+            !pictureInPictureModeEntered &&
+            !pictureInPictureReturnInProgress &&
+            videoOnlyPresentation
+        ) {
+            cancelPictureInPictureTransition()
+        }
+    }
+
     override fun onDestroy() {
+        cancelPictureInPictureReturnLayoutWait()
         if (::browserController.isInitialized) browserController.destroy()
         if (::webMediaSystemSession.isInitialized) webMediaSystemSession.release()
         super.onDestroy()
@@ -422,6 +459,11 @@ class MainActivity : ComponentActivity() {
     fun pictureInPictureSourceRectHintForTesting(): Rect? =
         appliedPictureInPictureState?.sourceRectHint?.let(::Rect)
 
+    @VisibleForTesting
+    fun reconcilePictureInPictureStateOnResumeForTesting() {
+        reconcilePictureInPictureStateOnResume()
+    }
+
     private fun setTabOverviewPortraitLocked(locked: Boolean) {
         val orientation = if (locked) {
             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -434,13 +476,18 @@ class MainActivity : ComponentActivity() {
     private fun onFullscreenVideoBoundsChanged(bounds: Rect) {
         if (fullscreenVideoBounds == bounds) return
         fullscreenVideoBounds = Rect(bounds)
+        if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
+            pictureInPictureSourceRectHint = pictureInPictureSourceRect(
+                windowManager.maximumWindowMetrics.bounds,
+            )
+        }
         updatePictureInPictureParams()
     }
 
     private fun prepareForPictureInPictureTransition() {
         if (!::browserController.isInitialized || !canEnterPictureInPicture()) return
-        suppressPictureInPictureSourceRectHint = false
         if (!videoOnlyPresentation) {
+            pictureInPictureStartedFullscreen = isCurrentWindowFullscreen()
             pictureInPictureSourceRectHint = currentPictureInPictureSourceRect()
         }
         videoOnlyPresentation = true
@@ -449,10 +496,71 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun cancelPictureInPictureTransition() {
+        pictureInPictureReturnInProgress = false
+        pictureInPictureStartedFullscreen = false
+        pictureInPictureModeEntered = false
+        cancelPictureInPictureReturnLayoutWait()
         videoOnlyPresentation = false
         pictureInPictureSourceRectHint = null
-        suppressPictureInPictureSourceRectHint = false
         browserController.cancelPictureInPictureTransition()
+        updatePictureInPictureParams()
+    }
+
+    private fun completePictureInPictureReturnAfterLayout(configuration: Configuration) {
+        cancelPictureInPictureReturnLayoutWait()
+        val decorView = window.decorView
+        val density = resources.displayMetrics.density
+        val targetWidth = (configuration.screenWidthDp * density).toInt()
+        val targetHeight = (configuration.screenHeightDp * density).toInt()
+        val tolerance = (PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP * density).toInt()
+        fun isExpandedLayout(width: Int, height: Int): Boolean =
+            FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
+                width = width,
+                height = height,
+                targetWidth = targetWidth,
+                targetHeight = targetHeight,
+                tolerance = tolerance,
+            )
+        if (isExpandedLayout(decorView.width, decorView.height)) {
+            finishPictureInPictureReturn()
+            return
+        }
+        val listener = View.OnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
+            if (!isInPictureInPictureMode && isExpandedLayout(right - left, bottom - top)) {
+                cancelPictureInPictureReturnLayoutWait()
+                finishPictureInPictureReturn()
+            }
+        }
+        pictureInPictureReturnLayoutListener = listener
+        decorView.addOnLayoutChangeListener(listener)
+        decorView.postDelayed(
+            {
+                if (
+                    pictureInPictureReturnLayoutListener === listener &&
+                    !isInPictureInPictureMode
+                ) {
+                    cancelPictureInPictureReturnLayoutWait()
+                    finishPictureInPictureReturn()
+                }
+            },
+            PICTURE_IN_PICTURE_RETURN_LAYOUT_TIMEOUT_MILLIS,
+        )
+    }
+
+    private fun cancelPictureInPictureReturnLayoutWait() {
+        val listener = pictureInPictureReturnLayoutListener ?: return
+        window.decorView.removeOnLayoutChangeListener(listener)
+        pictureInPictureReturnLayoutListener = null
+    }
+
+    private fun finishPictureInPictureReturn() {
+        pictureInPictureReturnInProgress = false
+        pictureInPictureStartedFullscreen = false
+        pictureInPictureModeEntered = false
+        videoOnlyPresentation = false
+        pictureInPictureSourceRectHint = null
+        browserController.completePictureInPictureReturn()
+        applyBrowserSystemUi()
         updatePictureInPictureParams()
     }
 
@@ -484,7 +592,6 @@ class MainActivity : ComponentActivity() {
         currentPictureInPictureSourceRect()
             ?.takeIf {
                 autoEnterEnabled &&
-                    !suppressPictureInPictureSourceRectHint &&
                     !it.isEmpty
             }
             ?.let(::Rect)
@@ -492,10 +599,52 @@ class MainActivity : ComponentActivity() {
     private fun currentPictureInPictureSourceRect(): Rect? {
         pictureInPictureSourceRectHint?.let { return Rect(it) }
         val windowBounds = Rect()
-        if (window.decorView.getGlobalVisibleRect(windowBounds) && !windowBounds.isEmpty) {
-            return windowBounds
+        val visibleBounds = if (
+            window.decorView.getGlobalVisibleRect(windowBounds) && !windowBounds.isEmpty
+        ) {
+            windowBounds
+        } else {
+            fullscreenVideoBounds ?: return null
         }
-        return fullscreenVideoBounds?.let(::Rect)
+        return pictureInPictureSourceRect(visibleBounds)
+    }
+
+    private fun pictureInPictureSourceRect(bounds: Rect): Rect? {
+        val sourceBounds = FullscreenVideoRules.pictureInPictureSourceBounds(
+            windowBounds = FullscreenVideoBounds(
+                left = bounds.left,
+                top = bounds.top,
+                right = bounds.right,
+                bottom = bounds.bottom,
+            ),
+            aspectWidth = VIDEO_ASPECT_WIDTH,
+            aspectHeight = VIDEO_ASPECT_HEIGHT,
+        ) ?: return null
+        return Rect(
+            sourceBounds.left,
+            sourceBounds.top,
+            sourceBounds.right,
+            sourceBounds.bottom,
+        )
+    }
+
+    private fun isCurrentWindowFullscreen(): Boolean {
+        val visibleBounds = Rect()
+        if (!window.decorView.getGlobalVisibleRect(visibleBounds) || visibleBounds.isEmpty) {
+            return false
+        }
+        val maximumBounds = windowManager.maximumWindowMetrics.bounds
+        val tolerance = (
+            PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP *
+                resources.displayMetrics.density
+            ).toInt()
+        return FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
+            width = visibleBounds.width(),
+            height = visibleBounds.height(),
+            targetWidth = maximumBounds.width(),
+            targetHeight = maximumBounds.height(),
+            tolerance = tolerance,
+        )
     }
 
     private fun canEnterPictureInPicture(): Boolean =
@@ -523,6 +672,8 @@ class MainActivity : ComponentActivity() {
         const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
         const val VIDEO_ASPECT_WIDTH = 16
         const val VIDEO_ASPECT_HEIGHT = 9
+        const val PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP = 8
+        const val PICTURE_IN_PICTURE_RETURN_LAYOUT_TIMEOUT_MILLIS = 3_000L
     }
 }
 

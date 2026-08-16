@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -85,69 +86,36 @@ internal fun FullscreenVideoOverlay(
         enabled = placement == FullscreenVideoPlacement.Expanded && !videoOnlyPresentation,
         onBack = controller::exitFullscreenVideo,
     )
-    when (placement) {
-        FullscreenVideoPlacement.Expanded -> ExpandedFullscreenVideo(
-            controller = controller,
-            videoOnlyPresentation = videoOnlyPresentation,
-            canMinimize = controller.canMinimizeFullscreenVideo,
-            onBoundsChanged = onBoundsChanged,
-        )
-        FullscreenVideoPlacement.MiniPlayer -> MiniFullscreenVideo(
-            controller = controller,
-            sessionTabId = state.tabId,
-            onBoundsChanged = onBoundsChanged,
-        )
-    }
+    StableFullscreenVideoHost(
+        controller = controller,
+        sessionTabId = state.tabId,
+        placement = placement,
+        videoOnlyPresentation = videoOnlyPresentation,
+        canMinimize = controller.canMinimizeFullscreenVideo,
+        onBoundsChanged = onBoundsChanged,
+    )
 }
 
 @Composable
-private fun ExpandedFullscreenVideo(
+private fun StableFullscreenVideoHost(
     controller: BrowserController,
+    sessionTabId: String,
+    placement: FullscreenVideoPlacement,
     videoOnlyPresentation: Boolean,
     canMinimize: Boolean,
     onBoundsChanged: (Rect) -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(ComposeColor.Black)
-            .onVideoBoundsChanged(onBoundsChanged)
-            .testTag(FullscreenVideoTestTags.Expanded)
-            .zIndex(FULLSCREEN_VIDEO_Z_INDEX),
-    ) {
-        FullscreenVideoView(
-            controller = controller,
-            modifier = Modifier.fillMaxSize(),
-        )
-        if (!videoOnlyPresentation && canMinimize) {
-            VideoOverlayButton(
-                onClick = controller::minimizeFullscreenVideo,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(16.dp)
-                    .testTag(FullscreenVideoTestTags.Minimize),
-                contentDescription = stringResource(R.string.cd_minimize_fullscreen_video),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MiniFullscreenVideo(
-    controller: BrowserController,
-    sessionTabId: String,
-    onBoundsChanged: (Rect) -> Unit,
-) {
+    val isMiniPlayer = placement == FullscreenVideoPlacement.MiniPlayer
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .then(
+                if (isMiniPlayer) {
+                    Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+                } else {
+                    Modifier
+                },
+            )
             .zIndex(FULLSCREEN_VIDEO_Z_INDEX),
     ) {
         val density = androidx.compose.ui.platform.LocalDensity.current
@@ -158,22 +126,24 @@ private fun MiniFullscreenVideo(
         var offset by remember(sessionTabId) {
             mutableStateOf(FullscreenVideoOffset(x = 0f, y = 0f))
         }
-        LaunchedEffect(rootSize, playerSize) {
-            offset = clampedMiniPlayerOffset(
-                offset = offset,
-                rootSize = rootSize,
-                playerSize = playerSize,
-                horizontalMarginPx = with(density) { MINI_PLAYER_HORIZONTAL_MARGIN.toPx() },
-                bottomMarginPx = with(density) { MINI_PLAYER_BOTTOM_MARGIN.toPx() },
-            )
+        LaunchedEffect(isMiniPlayer, rootSize, playerSize) {
+            if (isMiniPlayer) {
+                offset = clampedMiniPlayerOffset(
+                    offset = offset,
+                    rootSize = rootSize,
+                    playerSize = playerSize,
+                    horizontalMarginPx = with(density) { MINI_PLAYER_HORIZONTAL_MARGIN.toPx() },
+                    bottomMarginPx = with(density) { MINI_PLAYER_BOTTOM_MARGIN.toPx() },
+                )
+            }
         }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .onGloballyPositioned { rootSize = it.size },
         ) {
-            Surface(
-                modifier = Modifier
+            val playerModifier = if (isMiniPlayer) {
+                Modifier
                     .align(Alignment.BottomEnd)
                     .padding(
                         end = MINI_PLAYER_HORIZONTAL_MARGIN,
@@ -188,85 +158,126 @@ private fun MiniFullscreenVideo(
                     .width(miniPlayerWidth)
                     .aspectRatio(VIDEO_ASPECT_RATIO)
                     .onGloballyPositioned { playerSize = it.size }
+                    .testTag(FullscreenVideoTestTags.MiniPlayer)
+            } else {
+                Modifier
+                    .fillMaxSize()
+                    .testTag(FullscreenVideoTestTags.Expanded)
+            }
+            Surface(
+                modifier = playerModifier
                     .onVideoBoundsChanged(onBoundsChanged)
-                    .testTag(FullscreenVideoTestTags.MiniPlayer),
-                shape = RoundedCornerShape(18.dp),
+                    .background(ComposeColor.Black),
+                shape = if (isMiniPlayer) RoundedCornerShape(18.dp) else RectangleShape,
                 color = ComposeColor.Black,
-                shadowElevation = 12.dp,
+                shadowElevation = if (isMiniPlayer) 12.dp else 0.dp,
             ) {
                 Box {
                     FullscreenVideoView(
                         controller = controller,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(18.dp)),
+                            .then(
+                                if (isMiniPlayer) {
+                                    Modifier.clip(RoundedCornerShape(18.dp))
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     )
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp),
-                    ) {
+                    if (!isMiniPlayer && !videoOnlyPresentation && canMinimize) {
                         VideoOverlayButton(
-                            onClick = controller::expandFullscreenVideo,
-                            modifier = Modifier.testTag(FullscreenVideoTestTags.Expand),
-                            contentDescription = stringResource(R.string.cd_expand_fullscreen_video),
+                            onClick = controller::minimizeFullscreenVideo,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .windowInsetsPadding(WindowInsets.safeDrawing)
+                                .padding(16.dp)
+                                .testTag(FullscreenVideoTestTags.Minimize),
+                            contentDescription = stringResource(
+                                R.string.cd_minimize_fullscreen_video,
+                            ),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.KeyboardArrowUp,
-                                contentDescription = null,
-                            )
-                        }
-                        VideoOverlayButton(
-                            onClick = controller::exitFullscreenVideo,
-                            modifier = Modifier.testTag(FullscreenVideoTestTags.Close),
-                            contentDescription = stringResource(R.string.cd_close_fullscreen_video),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Default.KeyboardArrowDown,
                                 contentDescription = null,
                             )
                         }
                     }
-                    VideoOverlayButton(
-                        onClick = {
-                            offset = nextMiniPlayerAnchor(
-                                offset = offset,
-                                rootSize = rootSize,
-                                playerSize = playerSize,
-                                horizontalMarginPx = with(density) {
-                                    MINI_PLAYER_HORIZONTAL_MARGIN.toPx()
-                                },
-                                bottomMarginPx = with(density) {
-                                    MINI_PLAYER_BOTTOM_MARGIN.toPx()
-                                },
-                            )
-                        },
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(4.dp)
-                            .pointerInput(rootSize, playerSize) {
-                                detectDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    offset = clampedMiniPlayerOffset(
-                                        offset = FullscreenVideoOffset(
-                                            x = offset.x + dragAmount.x,
-                                            y = offset.y + dragAmount.y,
-                                        ),
-                                        rootSize = rootSize,
-                                        playerSize = playerSize,
-                                        horizontalMarginPx = MINI_PLAYER_HORIZONTAL_MARGIN.toPx(),
-                                        bottomMarginPx = MINI_PLAYER_BOTTOM_MARGIN.toPx(),
-                                    )
-                                }
+                    if (isMiniPlayer) {
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp),
+                        ) {
+                            VideoOverlayButton(
+                                onClick = controller::expandFullscreenVideo,
+                                modifier = Modifier.testTag(FullscreenVideoTestTags.Expand),
+                                contentDescription = stringResource(
+                                    R.string.cd_expand_fullscreen_video,
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowUp,
+                                    contentDescription = null,
+                                )
                             }
-                            .testTag(FullscreenVideoTestTags.DragHandle),
-                        contentDescription = stringResource(R.string.cd_move_fullscreen_video),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = null,
-                            modifier = Modifier.rotate(90f),
-                        )
+                            VideoOverlayButton(
+                                onClick = controller::exitFullscreenVideo,
+                                modifier = Modifier.testTag(FullscreenVideoTestTags.Close),
+                                contentDescription = stringResource(
+                                    R.string.cd_close_fullscreen_video,
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                )
+                            }
+                        }
+                        VideoOverlayButton(
+                            onClick = {
+                                offset = nextMiniPlayerAnchor(
+                                    offset = offset,
+                                    rootSize = rootSize,
+                                    playerSize = playerSize,
+                                    horizontalMarginPx = with(density) {
+                                        MINI_PLAYER_HORIZONTAL_MARGIN.toPx()
+                                    },
+                                    bottomMarginPx = with(density) {
+                                        MINI_PLAYER_BOTTOM_MARGIN.toPx()
+                                    },
+                                )
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(4.dp)
+                                .pointerInput(rootSize, playerSize) {
+                                    detectDragGestures { change, dragAmount ->
+                                        change.consume()
+                                        offset = clampedMiniPlayerOffset(
+                                            offset = FullscreenVideoOffset(
+                                                x = offset.x + dragAmount.x,
+                                                y = offset.y + dragAmount.y,
+                                            ),
+                                            rootSize = rootSize,
+                                            playerSize = playerSize,
+                                            horizontalMarginPx =
+                                                MINI_PLAYER_HORIZONTAL_MARGIN.toPx(),
+                                            bottomMarginPx = MINI_PLAYER_BOTTOM_MARGIN.toPx(),
+                                        )
+                                    }
+                                }
+                                .testTag(FullscreenVideoTestTags.DragHandle),
+                            contentDescription = stringResource(
+                                R.string.cd_move_fullscreen_video,
+                            ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = null,
+                                modifier = Modifier.rotate(90f),
+                            )
+                        }
                     }
                 }
             }

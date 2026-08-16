@@ -462,6 +462,7 @@ class BrowserController(
     private var pictureInPictureTransitionPending = false
     private var pictureInPictureTransitionGeneration = 0
     private var pictureInPicturePresentationCreatedForTransition = false
+    private var pictureInPicturePresentationPendingReturnCleanupKey: WebMediaChannelKey? = null
     private var pictureInPicturePresentationReturnHost: FullscreenVideoHost? = null
     private var pictureInPicturePlaybackExpected = false
     private var pictureInPicturePlayRetryPending = false
@@ -1406,10 +1407,13 @@ class BrowserController(
         if (session?.isPrivate == true) return
         val startsTransition = !pictureInPictureTransitionPending && !isInPictureInPicture
         if (startsTransition) {
+            val retainedTransitionPresentation =
+                pictureInPicturePresentationPendingReturnCleanupKey == webMediaPresentation?.key
             pictureInPictureTransitionGeneration++
             pictureInPictureExitGuardGeneration++
             pictureInPictureExitGuardKey = null
-            pictureInPicturePresentationCreatedForTransition = false
+            pictureInPicturePresentationPendingReturnCleanupKey = null
+            pictureInPicturePresentationCreatedForTransition = retainedTransitionPresentation
             pictureInPicturePresentationReturnHost = webMediaPresentation?.host
             pictureInPicturePlaybackExpected = session != null ||
                 presentedWebMediaChannel()?.payload?.isPlaying == true ||
@@ -1444,6 +1448,9 @@ class BrowserController(
         val wasTransitionPending = pictureInPictureTransitionPending
         pictureInPictureTransitionGeneration++
         pictureInPictureTransitionPending = false
+        if (wasTransitionPending) {
+            pictureInPicturePresentationPendingReturnCleanupKey = null
+        }
         if (pictureInPicturePresentationCreatedForTransition) {
             pictureInPicturePresentationCreatedForTransition = false
             clearWebMediaPresentation()
@@ -1481,7 +1488,8 @@ class BrowserController(
             pictureInPicturePlaybackExpected = false
             pictureInPicturePlayRetryPending = false
             if (presentationWasCreatedForTransition) {
-                clearWebMediaPresentation(preservePlaybackGuard = shouldResumePlayback)
+                pictureInPicturePresentationPendingReturnCleanupKey = presentedChannel?.key
+                if (presentedChannel == null) clearWebMediaPresentation()
             } else {
                 webMediaPresentation?.host = returnHost ?: FullscreenVideoHost.Overlay
                 publishFullscreenVideoState()
@@ -1498,6 +1506,18 @@ class BrowserController(
                 ?.takeIf { session -> fullscreenVideoSession === session }
                 ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
         }
+    }
+
+    fun completePictureInPictureReturn() {
+        if (isInPictureInPicture || pictureInPictureTransitionPending) return
+        val key = pictureInPicturePresentationPendingReturnCleanupKey ?: return
+        pictureInPicturePresentationPendingReturnCleanupKey = null
+        if (webMediaPresentation?.key == key) {
+            clearWebMediaPresentation(
+                preservePlaybackGuard = pictureInPictureExitGuardKey == key,
+            )
+        }
+        releasePictureInPictureExitGuardWhenResumed()
     }
 
     /**
@@ -4795,7 +4815,8 @@ class BrowserController(
         if (
             !isActivityResumed ||
             pictureInPictureTransitionPending ||
-            isInPictureInPicture
+            isInPictureInPicture ||
+            pictureInPicturePresentationPendingReturnCleanupKey == key
         ) return
         mainHandler.postDelayed(
             {
@@ -4804,7 +4825,8 @@ class BrowserController(
                     pictureInPictureExitGuardKey != key ||
                     !isActivityResumed ||
                     pictureInPictureTransitionPending ||
-                    isInPictureInPicture
+                    isInPictureInPicture ||
+                    pictureInPicturePresentationPendingReturnCleanupKey == key
                 ) return@postDelayed
                 webMediaChannels[key]?.let { channel ->
                     sendWebMediaCommand(channel, WebMediaCommand.AllowPause)

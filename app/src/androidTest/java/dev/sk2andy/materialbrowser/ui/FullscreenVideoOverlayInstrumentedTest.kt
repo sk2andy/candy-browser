@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.View
 import android.webkit.WebChromeClient
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -12,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import java.util.concurrent.atomic.AtomicInteger
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -39,12 +41,24 @@ class FullscreenVideoOverlayInstrumentedTest {
     fun regularVideoMovesBetweenExpandedAndMiniHost() {
         lateinit var browserController: BrowserController
         var callbackCount = 0
+        val detachCount = AtomicInteger()
+        val videoOnlyPresentation = mutableStateOf(false)
         composeRule.runOnUiThread {
             clearSession()
             browserController = BrowserController(composeRule.activity).also { controller = it }
             browserController.onResume()
+            val sourceView = View(composeRule.activity)
+            sourceView.addOnAttachStateChangeListener(
+                object : View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(view: View) = Unit
+
+                    override fun onViewDetachedFromWindow(view: View) {
+                        detachCount.incrementAndGet()
+                    }
+                },
+            )
             browserController.showFullscreenVideoForTesting(
-                view = View(composeRule.activity),
+                view = sourceView,
                 callback = WebChromeClient.CustomViewCallback { callbackCount++ },
             )
         }
@@ -52,7 +66,7 @@ class FullscreenVideoOverlayInstrumentedTest {
             MaterialBrowserTheme {
                 FullscreenVideoOverlay(
                     controller = browserController,
-                    videoOnlyPresentation = false,
+                    videoOnlyPresentation = videoOnlyPresentation.value,
                     onBoundsChanged = {},
                 )
             }
@@ -61,8 +75,15 @@ class FullscreenVideoOverlayInstrumentedTest {
         composeRule.onNodeWithTag(FullscreenVideoTestTags.Expanded).assertIsDisplayed()
         composeRule.onNodeWithTag(FullscreenVideoTestTags.Minimize).performClick()
         composeRule.onNodeWithTag(FullscreenVideoTestTags.MiniPlayer).assertIsDisplayed()
+        composeRule.runOnUiThread { videoOnlyPresentation.value = true }
+        composeRule.onNodeWithTag(FullscreenVideoTestTags.Expanded).assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, detachCount.get()) }
+        composeRule.runOnUiThread { videoOnlyPresentation.value = false }
+        composeRule.onNodeWithTag(FullscreenVideoTestTags.MiniPlayer).assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, detachCount.get()) }
         composeRule.onNodeWithTag(FullscreenVideoTestTags.Expand).performClick()
         composeRule.onNodeWithTag(FullscreenVideoTestTags.Expanded).assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, detachCount.get()) }
         composeRule.onNodeWithTag(FullscreenVideoTestTags.Minimize).performClick()
         composeRule.onNodeWithTag(FullscreenVideoTestTags.Close).performClick()
 

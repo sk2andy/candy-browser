@@ -10,8 +10,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.abs
 import org.junit.After
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -131,8 +131,11 @@ class FullscreenVideoActivityInstrumentedTest {
                 val sourceRectHint = requireNotNull(
                     activity.pictureInPictureSourceRectHintForTesting(),
                 )
-                assertTrue(sourceRectHint.width() >= sourceView.width)
-                assertTrue(sourceRectHint.height() >= sourceView.height)
+                assertTrue(sourceRectHint.width() in 1..sourceView.width)
+                assertTrue(sourceRectHint.height() in 1..sourceView.height)
+                assertTrue(
+                    abs(sourceRectHint.width() * 9 - sourceRectHint.height() * 16) <= 16,
+                )
             }
 
             scenario.onActivity { activity ->
@@ -161,7 +164,11 @@ class FullscreenVideoActivityInstrumentedTest {
             assertTrue(sourceView.isAttachedToWindow)
             assertTrue(detachCount.get() == 0)
             scenario.onActivity { activity ->
-                assertNull(activity.pictureInPictureSourceRectHintForTesting())
+                assertTrue(activity.pictureInPictureSourceRectHintForTesting() != null)
+                // Some platform builds resume the Activity before delivering mode(false).
+                activity.reconcilePictureInPictureStateOnResumeForTesting()
+                assertTrue(activity.browserControllerForTesting().fullscreenVideoState != null)
+                assertTrue(activity.pictureInPictureSourceRectHintForTesting() != null)
             }
             scenario.onActivity { activity ->
                 assertTrue(activity.browserControllerForTesting().fullscreenVideoState != null)
