@@ -147,13 +147,13 @@ internal object WebMediaBridgeScript {
               };
               const exitPresentation = () => {
                 if (!presented && originals.size === 0) return;
-                if (keepPlaying === presented) keepPlaying = null;
                 originals.forEach((values, element) => restore(element, values));
                 originals.clear();
                 appliedStyles.clear();
                 presented = null;
               };
               const enterPresentation = media => {
+                if (keepPlaying && keepPlaying !== media) keepPlaying = null;
                 exitPresentation();
                 presented = media;
                 fillViewport(document.documentElement);
@@ -191,6 +191,9 @@ internal object WebMediaBridgeScript {
                       keepPlaying = media;
                       media.play().catch(() => {});
                       break;
+                    case 'allow-pause':
+                      if (keepPlaying === media) keepPlaying = null;
+                      break;
                     case 'seek-to':
                       if (Number.isFinite(message.position)) media.currentTime = Math.max(0, message.position);
                       break;
@@ -206,6 +209,7 @@ internal object WebMediaBridgeScript {
               const reportRemoved = node => {
                 if (node && node.isConnected) return;
                 if (node instanceof HTMLMediaElement) {
+                  if (keepPlaying === node) keepPlaying = null;
                   if (presented === node) exitPresentation();
                   report(node, 'removed', true);
                   mediaById.delete(mediaId(node));
@@ -222,7 +226,10 @@ internal object WebMediaBridgeScript {
                   if (
                     (name === 'ended' || name === 'emptied') &&
                     presented === event.target
-                  ) exitPresentation();
+                  ) {
+                    if (keepPlaying === event.target) keepPlaying = null;
+                    exitPresentation();
+                  }
                   report(event.target, name);
                 }, true));
                 scan(root);
@@ -252,6 +259,7 @@ internal object WebMediaBridgeScript {
                 { once: true }
               );
               addEventListener('pagehide', () => {
+                keepPlaying = null;
                 exitPresentation();
                 send({ v: 1, event: 'document-gone', documentId });
               });

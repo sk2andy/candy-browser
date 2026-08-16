@@ -465,6 +465,8 @@ class BrowserController(
     private var pictureInPicturePresentationReturnHost: FullscreenVideoHost? = null
     private var pictureInPicturePlaybackExpected = false
     private var pictureInPicturePlayRetryPending = false
+    private var pictureInPictureExitGuardKey: WebMediaChannelKey? = null
+    private var pictureInPictureExitGuardGeneration = 0
     private var isInPictureInPicture = false
     private var fullscreenVideoHiddenDuringPictureInPicture: FullscreenVideoSession? = null
     private val webMediaChannels = mutableMapOf<WebMediaChannelKey, WebMediaChannel>()
@@ -1405,6 +1407,8 @@ class BrowserController(
         val startsTransition = !pictureInPictureTransitionPending && !isInPictureInPicture
         if (startsTransition) {
             pictureInPictureTransitionGeneration++
+            pictureInPictureExitGuardGeneration++
+            pictureInPictureExitGuardKey = null
             pictureInPicturePresentationCreatedForTransition = false
             pictureInPicturePresentationReturnHost = webMediaPresentation?.host
             pictureInPicturePlaybackExpected = session != null ||
@@ -1437,11 +1441,16 @@ class BrowserController(
 
     fun cancelPictureInPictureTransition() {
         if (isInPictureInPicture) return
+        val wasTransitionPending = pictureInPictureTransitionPending
         pictureInPictureTransitionGeneration++
         pictureInPictureTransitionPending = false
         if (pictureInPicturePresentationCreatedForTransition) {
             pictureInPicturePresentationCreatedForTransition = false
             clearWebMediaPresentation()
+        } else if (wasTransitionPending && pictureInPictureExitGuardKey == null) {
+            presentedWebMediaChannel()?.let { channel ->
+                sendWebMediaCommand(channel, WebMediaCommand.AllowPause)
+            }
         }
         pictureInPicturePresentationReturnHost = null
         pictureInPicturePlaybackExpected = false
@@ -1472,16 +1481,19 @@ class BrowserController(
             pictureInPicturePlaybackExpected = false
             pictureInPicturePlayRetryPending = false
             if (presentationWasCreatedForTransition) {
-                clearWebMediaPresentation()
+                clearWebMediaPresentation(preservePlaybackGuard = shouldResumePlayback)
             } else {
                 webMediaPresentation?.host = returnHost ?: FullscreenVideoHost.Overlay
                 publishFullscreenVideoState()
             }
             if (shouldResumePlayback && presentedChannel != null) {
+                pictureInPictureExitGuardGeneration++
+                pictureInPictureExitGuardKey = presentedChannel.key
                 resumeWebView(presentedChannel.key.tabId, presentedChannel.webView)
                 presentedChannel.webView.settings.allowContinuousMediaPlayback()
                 sendWebMediaCommand(presentedChannel, WebMediaCommand.Play)
             }
+            releasePictureInPictureExitGuardWhenResumed()
             fullscreenVideoHiddenDuringPictureInPicture
                 ?.takeIf { session -> fullscreenVideoSession === session }
                 ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
@@ -3637,6 +3649,7 @@ class BrowserController(
             ?.takeIf { channel -> channel.key.tabId != selectedTabId }
             ?.let { channel -> resumeWebView(channel.key.tabId, channel.webView) }
         linkPeekPreviewAssignments.keys.forEach(WebView::onResume)
+        releasePictureInPictureExitGuardWhenResumed()
     }
 
     fun onStart() {
@@ -3680,6 +3693,11 @@ class BrowserController(
         pictureInPicturePresentationReturnHost = null
         pictureInPicturePlaybackExpected = false
         pictureInPicturePlayRetryPending = false
+        pictureInPictureExitGuardKey
+            ?.let(webMediaChannels::get)
+            ?.let { channel -> sendWebMediaCommand(channel, WebMediaCommand.Pause) }
+        pictureInPictureExitGuardGeneration++
+        pictureInPictureExitGuardKey = null
         isInPictureInPicture = false
         fullscreenVideoHiddenDuringPictureInPicture
             ?.takeIf { session -> fullscreenVideoSession === session }
@@ -3701,6 +3719,8 @@ class BrowserController(
         pictureInPicturePresentationReturnHost = null
         pictureInPicturePlaybackExpected = false
         pictureInPicturePlayRetryPending = false
+        pictureInPictureExitGuardGeneration++
+        pictureInPictureExitGuardKey = null
         isInPictureInPicture = false
         backgroundAudioKey = null
         pendingPreviewCaptures.values.forEach { request ->
@@ -4750,17 +4770,49 @@ class BrowserController(
         publishWebMediaState()
     }
 
-    private fun clearWebMediaPresentation(pause: Boolean = false) {
+    private fun clearWebMediaPresentation(
+        pause: Boolean = false,
+        preservePlaybackGuard: Boolean = false,
+    ) {
         val presentation = webMediaPresentation ?: return
         val channel = webMediaChannels[presentation.key]
         if (channel != null) {
             if (pause) sendWebMediaCommand(channel, WebMediaCommand.Pause)
+            else if (!preservePlaybackGuard) {
+                sendWebMediaCommand(channel, WebMediaCommand.AllowPause)
+            }
             sendWebMediaCommand(channel, WebMediaCommand.ExitPresentation)
         }
         webMediaPresentation = null
         publishFullscreenVideoState()
         publishWebMediaState()
         webViewRevision++
+    }
+
+    private fun releasePictureInPictureExitGuardWhenResumed() {
+        val key = pictureInPictureExitGuardKey ?: return
+        val generation = pictureInPictureExitGuardGeneration
+        if (
+            !isActivityResumed ||
+            pictureInPictureTransitionPending ||
+            isInPictureInPicture
+        ) return
+        mainHandler.postDelayed(
+            {
+                if (
+                    pictureInPictureExitGuardGeneration != generation ||
+                    pictureInPictureExitGuardKey != key ||
+                    !isActivityResumed ||
+                    pictureInPictureTransitionPending ||
+                    isInPictureInPicture
+                ) return@postDelayed
+                webMediaChannels[key]?.let { channel ->
+                    sendWebMediaCommand(channel, WebMediaCommand.AllowPause)
+                }
+                pictureInPictureExitGuardKey = null
+            },
+            PICTURE_IN_PICTURE_EXIT_GUARD_DELAY_MILLIS,
+        )
     }
 
     private fun clearMediaPresentation() {
@@ -7147,6 +7199,7 @@ class BrowserController(
         const val MAX_WEB_MEDIA_MESSAGES_PER_WINDOW = 128
         const val WEB_MEDIA_RATE_WINDOW_MILLIS = 1_000L
         const val PICTURE_IN_PICTURE_FALLBACK_GRACE_MILLIS = 900L
+        const val PICTURE_IN_PICTURE_EXIT_GUARD_DELAY_MILLIS = 350L
         const val PICTURE_IN_PICTURE_PLAY_RETRY_DELAY_MILLIS = 250L
         const val PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS = 2_000L
         const val WEB_PERMISSION_REQUEST_CODE = 7_041

@@ -263,6 +263,7 @@ class WebMediaBridgeInstrumentedTest {
             controller.attachSelectedWebView(container)
             sourceTabId = controller.selectedTabId
             sourceWebView = controller.selectedWebViewForTesting()
+            sourceWebView.settings.mediaPlaybackRequiresUserGesture = false
             sourceWebView.loadDataWithBaseURL(
                 "https://audio.example/",
                 PLAYING_AUDIO_HTML,
@@ -377,7 +378,9 @@ class WebMediaBridgeInstrumentedTest {
             activity.setContentView(container)
             controller.attachSelectedWebView(container)
             sourceTabId = controller.selectedTabId
-            controller.selectedWebViewForTesting().loadDataWithBaseURL(
+            controller.selectedWebViewForTesting().apply {
+                settings.mediaPlaybackRequiresUserGesture = false
+            }.loadDataWithBaseURL(
                 "https://audio.example/",
                 PLAYING_AUDIO_HTML,
                 "text/html",
@@ -448,33 +451,38 @@ class WebMediaBridgeInstrumentedTest {
             """
             <!doctype html>
             <html><body>
-              <audio></audio>
+              <audio muted></audio>
               <script>
                 const audio = document.querySelector('audio');
                 globalThis.audioPaused = false;
-                Object.defineProperty(audio, 'paused', {
-                  get: () => globalThis.audioPaused,
-                  configurable: true
+                audio.addEventListener('pause', () => { globalThis.audioPaused = true; });
+                audio.addEventListener('playing', () => { globalThis.audioPaused = false; });
+                const context = new AudioContext();
+                const oscillator = context.createOscillator();
+                const destination = context.createMediaStreamDestination();
+                oscillator.connect(destination);
+                oscillator.start();
+                audio.srcObject = destination.stream;
+                audio.play().then(() => {
+                  Object.defineProperty(audio, 'currentTime', {
+                    value: 8,
+                    writable: true,
+                    configurable: true
+                  });
+                  Object.defineProperty(audio, 'duration', {
+                    value: 180,
+                    configurable: true
+                  });
+                  Object.defineProperty(audio, 'muted', {
+                    value: false,
+                    configurable: true
+                  });
+                  Object.defineProperty(audio, 'volume', {
+                    value: 1,
+                    configurable: true
+                  });
+                  audio.dispatchEvent(new Event('volumechange'));
                 });
-                Object.defineProperty(audio, 'ended', { value: false, configurable: true });
-                Object.defineProperty(audio, 'currentTime', {
-                  value: 8,
-                  writable: true,
-                  configurable: true
-                });
-                Object.defineProperty(audio, 'duration', { value: 180, configurable: true });
-                Object.defineProperty(audio, 'muted', { value: false, configurable: true });
-                Object.defineProperty(audio, 'volume', { value: 1, configurable: true });
-                audio.pause = () => {
-                  globalThis.audioPaused = true;
-                  audio.dispatchEvent(new Event('pause'));
-                };
-                audio.play = () => {
-                  globalThis.audioPaused = false;
-                  audio.dispatchEvent(new Event('playing'));
-                  return Promise.resolve();
-                };
-                setTimeout(() => audio.dispatchEvent(new Event('playing')), 250);
               </script>
             </body></html>
             """.trimIndent()

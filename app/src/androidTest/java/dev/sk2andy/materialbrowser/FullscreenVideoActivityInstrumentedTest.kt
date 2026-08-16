@@ -11,6 +11,7 @@ import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -115,10 +116,23 @@ class FullscreenVideoActivityInstrumentedTest {
                 }
                 playing
             }
+            awaitCondition {
+                var hasSourceRectHint = false
+                scenario.onActivity { activity ->
+                    hasSourceRectHint =
+                        activity.pictureInPictureSourceRectHintForTesting() != null
+                }
+                hasSourceRectHint
+            }
             instrumentation.waitForIdleSync()
             scenario.onActivity { activity ->
                 assertTrue(activity.browserControllerForTesting().isPictureInPictureEligible)
                 assertTrue(activity.isPictureInPictureEligibleForTesting())
+                val sourceRectHint = requireNotNull(
+                    activity.pictureInPictureSourceRectHintForTesting(),
+                )
+                assertTrue(sourceRectHint.width() >= sourceView.width)
+                assertTrue(sourceRectHint.height() >= sourceView.height)
             }
 
             scenario.onActivity { activity ->
@@ -147,7 +161,35 @@ class FullscreenVideoActivityInstrumentedTest {
             assertTrue(sourceView.isAttachedToWindow)
             assertTrue(detachCount.get() == 0)
             scenario.onActivity { activity ->
+                assertNull(activity.pictureInPictureSourceRectHintForTesting())
+            }
+            scenario.onActivity { activity ->
                 assertTrue(activity.browserControllerForTesting().fullscreenVideoState != null)
+                activity.onPictureInPictureModeChanged(
+                    false,
+                    Configuration(activity.resources.configuration),
+                )
+            }
+            awaitCondition {
+                var playbackSurvivedReturn = false
+                scenario.onActivity { activity ->
+                    playbackSurvivedReturn =
+                        activity.browserControllerForTesting().webMediaState?.isPlaying == true
+                }
+                playbackSurvivedReturn
+            }
+            scenario.onActivity { activity ->
+                activity.prepareForPictureInPictureTransitionForTesting()
+                activity.onPictureInPictureModeChanged(
+                    true,
+                    Configuration(activity.resources.configuration),
+                )
+            }
+            instrumentation.waitForIdleSync()
+            assertSame(originalParent, sourceView.parent)
+            assertTrue(sourceView.isAttachedToWindow)
+            assertTrue(detachCount.get() == 0)
+            scenario.onActivity { activity ->
                 activity.onPictureInPictureModeChanged(
                     false,
                     Configuration(activity.resources.configuration),

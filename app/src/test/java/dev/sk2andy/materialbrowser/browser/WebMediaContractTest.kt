@@ -132,6 +132,11 @@ class WebMediaContractTest {
             WebMediaContract.command(WebMediaCommand.KeepPlaying, "doc", "m1"),
         )
         assertEquals("keep-playing", keepPlaying.getString("command"))
+
+        val allowPause = JSONObject(
+            WebMediaContract.command(WebMediaCommand.AllowPause, "doc", "m1"),
+        )
+        assertEquals("allow-pause", allowPause.getString("command"))
     }
 
     private fun payload(paused: Boolean): WebMediaPayload = WebMediaPayload(

@@ -59,6 +59,7 @@ internal enum class WebMediaCommand {
     Pause,
     Stop,
     KeepPlaying,
+    AllowPause,
     EnterPresentation,
     ExitPresentation,
 }
@@ -162,6 +163,7 @@ internal object WebMediaContract {
             WebMediaCommand.Pause -> "pause"
             WebMediaCommand.Stop -> "stop"
             WebMediaCommand.KeepPlaying -> "keep-playing"
+            WebMediaCommand.AllowPause -> "allow-pause"
             WebMediaCommand.EnterPresentation -> "enter-presentation"
             WebMediaCommand.ExitPresentation -> "exit-presentation"
         })

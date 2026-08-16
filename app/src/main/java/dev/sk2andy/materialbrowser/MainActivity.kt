@@ -68,6 +68,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var webMediaSystemSession: WebMediaSystemSession
     private var videoOnlyPresentation by mutableStateOf(false)
     private var fullscreenVideoBounds: Rect? = null
+    private var pictureInPictureSourceRectHint: Rect? = null
+    private var suppressPictureInPictureSourceRectHint = false
     private var appliedPictureInPictureState: AppliedPictureInPictureState? = null
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -317,7 +319,10 @@ class MainActivity : ComponentActivity() {
         if (!canEnterPictureInPicture()) return false
         prepareForPictureInPictureTransition()
         val entered = enterPictureInPictureMode(
-            buildPictureInPictureParams(autoEnterEnabled = true),
+            buildPictureInPictureParams(
+                autoEnterEnabled = true,
+                sourceRectHint = eligiblePictureInPictureSourceRect(true),
+            ),
         )
         if (!entered) cancelPictureInPictureTransition()
         return entered
@@ -328,9 +333,14 @@ class MainActivity : ComponentActivity() {
         newConfig: Configuration,
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (isInPictureInPictureMode) {
+            suppressPictureInPictureSourceRectHint = true
+            pictureInPictureSourceRectHint = null
+        }
         videoOnlyPresentation = isInPictureInPictureMode
         browserController.onPictureInPictureModeChanged(isInPictureInPictureMode)
         applyBrowserSystemUi()
+        updatePictureInPictureParams()
     }
 
     override fun onPictureInPictureUiStateChanged(pipState: PictureInPictureUiState) {
@@ -347,8 +357,11 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         if (!isInPictureInPictureMode) {
             videoOnlyPresentation = false
+            pictureInPictureSourceRectHint = null
+            suppressPictureInPictureSourceRectHint = false
         }
         if (::browserController.isInitialized) browserController.onResume()
+        updatePictureInPictureParams()
     }
 
     override fun onDestroy() {
@@ -405,6 +418,10 @@ class MainActivity : ComponentActivity() {
     @VisibleForTesting
     fun isPictureInPictureEligibleForTesting(): Boolean = canEnterPictureInPicture()
 
+    @VisibleForTesting
+    fun pictureInPictureSourceRectHintForTesting(): Rect? =
+        appliedPictureInPictureState?.sourceRectHint?.let(::Rect)
+
     private fun setTabOverviewPortraitLocked(locked: Boolean) {
         val orientation = if (locked) {
             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -422,6 +439,10 @@ class MainActivity : ComponentActivity() {
 
     private fun prepareForPictureInPictureTransition() {
         if (!::browserController.isInitialized || !canEnterPictureInPicture()) return
+        suppressPictureInPictureSourceRectHint = false
+        if (!videoOnlyPresentation) {
+            pictureInPictureSourceRectHint = currentPictureInPictureSourceRect()
+        }
         videoOnlyPresentation = true
         browserController.prepareForPictureInPicture()
         updatePictureInPictureParams()
@@ -429,6 +450,8 @@ class MainActivity : ComponentActivity() {
 
     private fun cancelPictureInPictureTransition() {
         videoOnlyPresentation = false
+        pictureInPictureSourceRectHint = null
+        suppressPictureInPictureSourceRectHint = false
         browserController.cancelPictureInPictureTransition()
         updatePictureInPictureParams()
     }
@@ -436,26 +459,43 @@ class MainActivity : ComponentActivity() {
     private fun updatePictureInPictureParams() {
         if (!supportsPictureInPicture()) return
         val autoEnterEnabled = canEnterPictureInPicture()
-        val sourceRectHint = fullscreenVideoBounds
-            ?.takeIf { autoEnterEnabled && !it.isEmpty }
-            ?.let(::Rect)
+        val sourceRectHint = eligiblePictureInPictureSourceRect(autoEnterEnabled)
         val nextState = AppliedPictureInPictureState(autoEnterEnabled, sourceRectHint)
         if (appliedPictureInPictureState == nextState) return
         appliedPictureInPictureState = nextState
         setPictureInPictureParams(
-            buildPictureInPictureParams(autoEnterEnabled = autoEnterEnabled),
+            buildPictureInPictureParams(autoEnterEnabled, sourceRectHint),
         )
     }
 
-    private fun buildPictureInPictureParams(autoEnterEnabled: Boolean): PictureInPictureParams {
+    private fun buildPictureInPictureParams(
+        autoEnterEnabled: Boolean,
+        sourceRectHint: Rect?,
+    ): PictureInPictureParams {
         val builder = PictureInPictureParams.Builder()
             .setAspectRatio(Rational(VIDEO_ASPECT_WIDTH, VIDEO_ASPECT_HEIGHT))
             .setAutoEnterEnabled(autoEnterEnabled)
             .setSeamlessResizeEnabled(true)
-        fullscreenVideoBounds
-            ?.takeIf { autoEnterEnabled && !it.isEmpty }
-            ?.let(builder::setSourceRectHint)
+            .setSourceRectHint(sourceRectHint)
         return builder.build()
+    }
+
+    private fun eligiblePictureInPictureSourceRect(autoEnterEnabled: Boolean): Rect? =
+        currentPictureInPictureSourceRect()
+            ?.takeIf {
+                autoEnterEnabled &&
+                    !suppressPictureInPictureSourceRectHint &&
+                    !it.isEmpty
+            }
+            ?.let(::Rect)
+
+    private fun currentPictureInPictureSourceRect(): Rect? {
+        pictureInPictureSourceRectHint?.let { return Rect(it) }
+        val windowBounds = Rect()
+        if (window.decorView.getGlobalVisibleRect(windowBounds) && !windowBounds.isEmpty) {
+            return windowBounds
+        }
+        return fullscreenVideoBounds?.let(::Rect)
     }
 
     private fun canEnterPictureInPicture(): Boolean =
