@@ -137,6 +137,11 @@ class WebMediaContractTest {
             WebMediaContract.command(WebMediaCommand.AllowPause, "doc", "m1"),
         )
         assertEquals("allow-pause", allowPause.getString("command"))
+
+        val reconcilePlaying = JSONObject(
+            WebMediaContract.command(WebMediaCommand.ReconcilePlaying, "doc", "m1"),
+        )
+        assertEquals("reconcile-playing", reconcilePlaying.getString("command"))
     }
 
     private fun payload(paused: Boolean): WebMediaPayload = WebMediaPayload(

@@ -82,6 +82,8 @@
 - Repeated lifecycle callbacks for one PiP transition are idempotent: they do not restyle the same
   document presentation or reattach its decoder surface. PiP source rectangles use Activity-local
   coordinates even when window metrics carry a display offset.
+- When a site requests a background pause that PiP must suppress, the next play request reconciles
+  the site's player state through native media events without exposing a paused transition frame.
 - Inline PiP presentation repairs site-driven style changes and DOM reparenting while active. If a
   site replaces its playing video element, the new top-level video inherits the same transient PiP
   owner and playback intent; bounded command retries cannot override an explicit system pause.

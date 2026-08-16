@@ -253,9 +253,7 @@ class WebMediaBridgeInstrumentedTest {
             repairedReparentResult[0] == "true"
         }
         activityRule.scenario.onActivity {
-            val controller = requireNotNull(controller)
-            controller.onPictureInPictureModeChanged(false)
-            controller.completePictureInPictureReturn()
+            requireNotNull(controller).onPictureInPictureModeChanged(false)
         }
         val restoredAnimationResult = arrayOfNulls<String>(1)
         awaitCondition {
@@ -406,6 +404,225 @@ class WebMediaBridgeInstrumentedTest {
                 }
             }
             retriedPosition[0] == "\"fixed\""
+        }
+    }
+
+    @Test
+    fun playAfterSuppressedPipPauseReconcilesPagePlaybackState() {
+        lateinit var webView: WebView
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            webView = controller.selectedWebViewForTesting().apply {
+                settings.mediaPlaybackRequiresUserGesture = false
+            }
+            webView.loadDataWithBaseURL(
+                "https://media.example/",
+                ACTUAL_PLAYING_VIDEO_HTML,
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        awaitCondition {
+            var playingVideo = false
+            activityRule.scenario.onActivity {
+                playingVideo = controller?.webMediaState?.let { state ->
+                    state.kind == WebMediaKind.Video && state.isPlaying
+                } == true && controller?.isPictureInPictureEligible == true
+            }
+            playingVideo
+        }
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.prepareForPictureInPicture()
+            controller.onPictureInPictureModeChanged(true)
+        }
+        val presentationReady = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "document.querySelector('video').style.position",
+                ) { result -> presentationReady[0] = result }
+            }
+            presentationReady[0] == "\"fixed\""
+        }
+        SystemClock.sleep(250)
+        activityRule.scenario.onActivity {}
+
+        val reconciliationStarted = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const video = document.querySelector('video');
+                  globalThis.candyPagePlaybackState = 'playing';
+                  globalThis.candyNativePauseEvents = 0;
+                  globalThis.candyNativePlayEvents = 0;
+                  video.addEventListener('pause', () => {
+                    globalThis.candyNativePauseEvents++;
+                    globalThis.candyPagePlaybackState = 'paused';
+                  });
+                  video.addEventListener('play', () => {
+                    globalThis.candyNativePlayEvents++;
+                    globalThis.candyPagePlaybackState = 'playing';
+                  });
+                  globalThis.candyPagePlaybackState = 'paused';
+                  video.pause();
+                  return !video.paused;
+                })()
+                """.trimIndent(),
+            ) { result -> reconciliationStarted[0] = result }
+        }
+        awaitCondition { reconciliationStarted[0] != null }
+        assertEquals("true", reconciliationStarted[0])
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.onPictureInPictureModeChanged(false)
+            controller.completePictureInPictureReturn()
+        }
+        val reconciledState = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    """
+                    globalThis.candyPagePlaybackState === 'playing' &&
+                      globalThis.candyNativePauseEvents >= 1 &&
+                      globalThis.candyNativePlayEvents >= 1 &&
+                      !document.querySelector('video').paused
+                    """.trimIndent(),
+                ) { result -> reconciledState[0] = result }
+            }
+            reconciledState[0] == "true"
+        }
+        val lateReturnPauseRequested = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const video = document.querySelector('video');
+                  globalThis.candyPagePlaybackState = 'paused';
+                  video.pause();
+                  return !video.paused;
+                })()
+                """.trimIndent(),
+            ) { result -> lateReturnPauseRequested[0] = result }
+        }
+        awaitCondition { lateReturnPauseRequested[0] != null }
+        assertEquals("true", lateReturnPauseRequested[0])
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).completePictureInPictureReturn()
+        }
+        val lateReturnPauseReconciled = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    """
+                    globalThis.candyPagePlaybackState === 'playing' &&
+                      globalThis.candyNativePauseEvents >= 2 &&
+                      globalThis.candyNativePlayEvents >= 2 &&
+                      !document.querySelector('video').paused
+                    """.trimIndent(),
+                ) { result -> lateReturnPauseReconciled[0] = result }
+            }
+            lateReturnPauseReconciled[0] == "true"
+        }
+
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.prepareForPictureInPicture()
+            controller.onPictureInPictureModeChanged(true)
+            controller.pauseActiveWebMedia()
+        }
+        val explicitlyPaused = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    """
+                    document.querySelector('video').paused &&
+                      globalThis.candyPagePlaybackState === 'paused'
+                    """.trimIndent(),
+                ) { result -> explicitlyPaused[0] = result }
+            }
+            explicitlyPaused[0] == "true"
+        }
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.onPictureInPictureModeChanged(false)
+            controller.completePictureInPictureReturn()
+            webView.evaluateJavascript(
+                "document.querySelector('video').play().catch(() => {})",
+                null,
+            )
+        }
+        val pageResumedPlayback = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    """
+                    !document.querySelector('video').paused &&
+                      globalThis.candyPagePlaybackState === 'playing'
+                    """.trimIndent(),
+                ) { result -> pageResumedPlayback[0] = result }
+            }
+            pageResumedPlayback[0] == "true"
+        }
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.prepareForPictureInPicture()
+            controller.onPictureInPictureModeChanged(true)
+            assertNotNull(controller.fullscreenVideoState)
+        }
+        val reenteredPresentation = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "document.querySelector('video').style.position",
+                ) { result -> reenteredPresentation[0] = result }
+            }
+            reenteredPresentation[0] == "\"fixed\""
+        }
+        activityRule.scenario.onActivity {
+            val controller = requireNotNull(controller)
+            controller.onPictureInPictureModeChanged(false)
+            controller.completePictureInPictureReturn()
+            controller.prepareForPictureInPicture()
+        }
+        val cancelledPauseRequested = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(
+                """
+                (() => {
+                  const video = document.querySelector('video');
+                  video.pause();
+                  return !video.paused;
+                })()
+                """.trimIndent(),
+            ) { result -> cancelledPauseRequested[0] = result }
+        }
+        awaitCondition { cancelledPauseRequested[0] != null }
+        assertEquals("true", cancelledPauseRequested[0])
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).cancelPictureInPictureTransition()
+        }
+        val cancelledTransitionPaused = arrayOfNulls<String>(1)
+        awaitCondition {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "document.querySelector('video').paused",
+                ) { result -> cancelledTransitionPaused[0] = result }
+            }
+            cancelledTransitionPaused[0] == "true"
         }
     }
 
@@ -1214,6 +1431,31 @@ class WebMediaBridgeInstrumentedTest {
                   return true;
                 };
                 setTimeout(() => first.dispatchEvent(new Event('playing')), 250);
+              </script>
+            </body></html>
+            """.trimIndent()
+
+        val ACTUAL_PLAYING_VIDEO_HTML =
+            """
+            <!doctype html>
+            <html><body>
+              <video muted loop playsinline style="width:320px;height:180px"></video>
+              <script>
+                const video = document.querySelector('video');
+                const encodedVideo = [
+                  'GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAIXEU2bdLpNu4tTq4QV',
+                  'SalmU6yBoU27i1OrhBZUrmtTrIHWTbuMU6uEElTDZ1OsggEyTbuMU6uEHFO7a1OsggIB7AEAAAAAAABZ',
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsCrXsYMPQkBNgIxMYXZmNjMuMS4xMDFXQYxM',
+                  'YXZmNjMuMS4xMDFEiYhAj0AAAAAAABZUrmvXrgEAAAAAAABO14EBc8WIDxQnt/iyoUGcgQAitZyDdW5k',
+                  'iIEAhoVWX1ZQOIOBASPjg4QdzWUA4JCwgUC6gSSagQJVsIRVuYEBVe6BAOwBAAAAAAAAAgAAElTDZ/pz',
+                  'c59jwIBnyJlFo4dFTkNPREVSRIeMTGF2ZjYzLjEuMTAxc3PVY8CLY8WIDxQnt/iyoUFnyKBFo4dFTkNP',
+                  'REVSRIeTTGF2YzYzLjEuMTAxIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDEuMDAwMDAwMDAw',
+                  'AB9DtnXL54EAo6iBAACAsAIAnQEqQAAkAABHCIWFiJmEiAICAAaOT8zHm/FYAP7/q1CAo5yBAfQAEQIA',
+                  'ARAQABgAGk/0DAAB1f/4AP7/q1CAHFO7a5G7j7OBALeK94EB8YIBsfCBAw=='
+                ].join('');
+                video.src = 'data:video/webm;base64,' + encodedVideo;
+                video.play().catch(() => {});
               </script>
             </body></html>
             """.trimIndent()

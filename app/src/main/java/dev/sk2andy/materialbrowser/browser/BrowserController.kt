@@ -4901,7 +4901,7 @@ class BrowserController(
                     pictureInPicturePresentationPendingReturnCleanupKey == key
                 ) return@postDelayed
                 webMediaChannels[key]?.let { channel ->
-                    sendWebMediaCommand(channel, WebMediaCommand.AllowPause)
+                    sendWebMediaCommand(channel, WebMediaCommand.ReconcilePlaying)
                 }
                 pictureInPictureExitGuardKey = null
             },

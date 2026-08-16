@@ -27,6 +27,8 @@ internal object WebMediaBridgeScript {
               const originals = new Map();
               const appliedStyles = new Map();
               const observedRoots = new WeakSet();
+              const suppressedPauses = new WeakSet();
+              const nativePlay = HTMLMediaElement.prototype.play;
               const nativePause = HTMLMediaElement.prototype.pause;
               const candyProperties = [
                 'display', 'position', 'top', 'right', 'bottom', 'left', 'width', 'height',
@@ -42,9 +44,37 @@ internal object WebMediaBridgeScript {
               let presentationObserver = null;
               let presentationRepairScheduled = false;
 
+              const releaseKeepPlaying = (media, honorSuppressedPause) => {
+                if (keepPlaying === media) keepPlaying = null;
+                const pauseWasSuppressed = suppressedPauses.delete(media);
+                if (honorSuppressedPause && pauseWasSuppressed && !media.paused) {
+                  nativePause.call(media);
+                }
+              };
+
+              const reconcilePlaying = media => {
+                if (keepPlaying === media) keepPlaying = null;
+                const pauseWasSuppressed = suppressedPauses.delete(media);
+                if (pauseWasSuppressed && !media.paused) nativePause.call(media);
+                if (pauseWasSuppressed || media.paused) {
+                  nativePlay.call(media).catch(() => {});
+                }
+              };
+
               HTMLMediaElement.prototype.pause = function() {
-                if (keepPlaying === this) return;
+                if (keepPlaying === this) {
+                  suppressedPauses.add(this);
+                  return;
+                }
+                suppressedPauses.delete(this);
                 return nativePause.call(this);
+              };
+
+              HTMLMediaElement.prototype.play = function() {
+                if (suppressedPauses.delete(this) && !this.paused) {
+                  nativePause.call(this);
+                }
+                return nativePlay.call(this);
               };
 
               const mediaId = media => {
@@ -263,7 +293,9 @@ internal object WebMediaBridgeScript {
                   report(media, 'presentation');
                   return;
                 }
-                if (keepPlaying && keepPlaying !== media) keepPlaying = null;
+                if (keepPlaying && keepPlaying !== media) {
+                  releaseKeepPlaying(keepPlaying, true);
+                }
                 exitPresentation();
                 presented = media;
                 elements.forEach(unclipAncestor);
@@ -284,20 +316,26 @@ internal object WebMediaBridgeScript {
                   switch (message.command) {
                     case 'play': media.play().catch(() => {}); break;
                     case 'pause':
-                      if (keepPlaying === media) keepPlaying = null;
+                      releaseKeepPlaying(media, false);
                       nativePause.call(media);
                       break;
                     case 'stop':
-                      if (keepPlaying === media) keepPlaying = null;
+                      releaseKeepPlaying(media, false);
                       try { nativePause.call(media); media.currentTime = 0; }
                       finally { exitPresentation(); }
                       break;
                     case 'keep-playing':
+                      if (keepPlaying && keepPlaying !== media) {
+                        releaseKeepPlaying(keepPlaying, true);
+                      }
                       keepPlaying = media;
                       media.play().catch(() => {});
                       break;
+                    case 'reconcile-playing':
+                      reconcilePlaying(media);
+                      break;
                     case 'allow-pause':
-                      if (keepPlaying === media) keepPlaying = null;
+                      releaseKeepPlaying(media, true);
                       break;
                     case 'seek-to':
                       if (Number.isFinite(message.position)) media.currentTime = Math.max(0, message.position);
@@ -314,7 +352,7 @@ internal object WebMediaBridgeScript {
               const reportRemoved = node => {
                 if (node && node.isConnected) return;
                 if (node instanceof HTMLMediaElement) {
-                  if (keepPlaying === node) keepPlaying = null;
+                  releaseKeepPlaying(node, true);
                   if (presented === node) exitPresentation();
                   report(node, 'removed', true);
                   mediaById.delete(mediaId(node));
