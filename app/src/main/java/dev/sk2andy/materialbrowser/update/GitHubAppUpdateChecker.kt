@@ -10,8 +10,11 @@ import java.io.StringReader
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
-class GitHubAppUpdateChecker {
-    suspend fun findAvailableUpdate(currentVersionName: String): AvailableAppUpdate? =
+internal class GitHubAppUpdateChecker {
+    suspend fun findAvailableUpdate(
+        currentVersionName: String,
+        channel: AppReleaseChannel,
+    ): AvailableAppUpdate? =
         withContext(Dispatchers.IO) {
             try {
                 ensureActive()
@@ -20,6 +23,7 @@ class GitHubAppUpdateChecker {
                 AppUpdateRules.findAvailableUpdate(
                     currentVersionName = currentVersionName,
                     release = release,
+                    channel = channel,
                 )
             } catch (cancellation: CancellationException) {
                 throw cancellation

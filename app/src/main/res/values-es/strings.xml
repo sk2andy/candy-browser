@@ -275,6 +275,8 @@
     <string name="settings_block_third_party_cookies_title">Bloquear cookies de terceros</string>
     <string name="settings_block_third_party_cookies_subtitle">Las cookies propias permanecen activas para iniciar sesión</string>
     <string name="settings_protection_disclaimer">Protección heurística local. Algunos anuncios, rastreadores CNAME y banners en marcos cerrados pueden pasar.</string>
+    <string name="settings_user_ca_title">Se confía en los certificados de CA instalados por el usuario</string>
+    <string name="settings_user_ca_summary">Esta compilación permite que cualquier CA instalada por ti o por el administrador del dispositivo inspeccione y modifique el tráfico HTTPS de Candy. Usa solo certificados y herramientas de filtrado de confianza.</string>
     <string name="settings_section_about_legal">Acerca de y aviso legal</string>
     <string name="settings_imprint_title">Desarrollador y aviso legal</string>
     <string name="settings_imprint_summary">Identidad del desarrollador y perfil público del proyecto en GitHub</string>

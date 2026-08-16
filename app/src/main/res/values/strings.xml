@@ -282,6 +282,8 @@
     <string name="settings_block_third_party_cookies_title">Block third-party cookies</string>
     <string name="settings_block_third_party_cookies_subtitle">First-party cookies remain enabled for sign-ins</string>
     <string name="settings_protection_disclaimer">Local heuristic protection. Some ads, CNAME trackers, and banners in closed frames may get through.</string>
+    <string name="settings_user_ca_title">User-installed CA certificates trusted</string>
+    <string name="settings_user_ca_summary">This build lets every CA installed by you or your device administrator inspect and modify Candy’s HTTPS traffic. Only use certificates and filtering tools you trust.</string>
     <string name="settings_section_about_legal">About &amp; legal</string>
     <string name="settings_imprint_title">Developer &amp; imprint</string>
     <string name="settings_imprint_summary">Developer identity and public GitHub project profile</string>

@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AddressResolver
@@ -99,6 +100,10 @@ internal object AppearanceSettingsTestTags {
     const val FrostedBlur = "appearance_settings_frosted_blur"
 }
 
+internal object ProtectionSettingsTestTags {
+    const val UserCaWarning = "protection_settings_user_ca_warning"
+}
+
 @Composable
 internal fun SettingsScreen(
     destination: SettingsDestination,
@@ -116,6 +121,7 @@ internal fun SettingsScreen(
     isFullImmersiveModeEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
+    trustsUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
     siteCapsules: List<SiteCapsule>,
@@ -226,6 +232,7 @@ internal fun SettingsScreen(
                 SettingsDestination.ProtectionAndData -> ProtectionAndDataSettingsPage(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
+                    trustsUserCertificates = trustsUserCertificates,
                     onBlockerSettingsChanged = onBlockerSettingsChanged,
                     onPrivacyXRay = onPrivacyXRay,
                     onPermissionRadar = onPermissionRadar,
@@ -946,9 +953,10 @@ private fun SiteCapsulesSettingsPage(
 }
 
 @Composable
-private fun ProtectionAndDataSettingsPage(
+internal fun ProtectionAndDataSettingsPage(
     blockerSettings: BlockerSettings,
     blockedCount: Int,
+    trustsUserCertificates: Boolean,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
@@ -1018,6 +1026,10 @@ private fun ProtectionAndDataSettingsPage(
                 )
             }
         }
+        if (trustsUserCertificates) {
+            Spacer(Modifier.height(18.dp))
+            UserCaTrustWarning()
+        }
         Spacer(Modifier.height(18.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_block_ads_title),
@@ -1064,6 +1076,32 @@ private fun ProtectionAndDataSettingsPage(
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun UserCaTrustWarning(
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(ProtectionSettingsTestTags.UserCaWarning),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+            Text(
+                stringResource(R.string.settings_user_ca_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                stringResource(R.string.settings_user_ca_summary),
+                style = MaterialTheme.typography.bodySmall,
             )
         }
     }

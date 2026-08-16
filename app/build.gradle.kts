@@ -64,7 +64,9 @@ android {
         versionCode = candyVersionCode.get().toInt()
         versionName = candyVersionName.get()
         manifestPlaceholders["appLabel"] = "@string/app_name"
+        manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config"
         buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
+        buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -107,6 +109,29 @@ android {
             buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
             matchingFallbacks += listOf("release")
         }
+
+        create("userCaDebug") {
+            initWith(getByName("debug"))
+            manifestPlaceholders["appLabel"] = "Candy Browser User CA Debug"
+            manifestPlaceholders["networkSecurityConfig"] =
+                "@xml/network_security_config_user_ca"
+            buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "true")
+            matchingFallbacks += listOf("debug")
+        }
+
+        create("userCaRelease") {
+            initWith(getByName("release"))
+            manifestPlaceholders["appLabel"] = "Candy Browser User CA"
+            manifestPlaceholders["networkSecurityConfig"] =
+                "@xml/network_security_config_user_ca"
+            buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "true")
+            matchingFallbacks += listOf("release")
+        }
+    }
+
+    sourceSets {
+        getByName("userCaDebug").res.srcDir("src/userCa/res")
+        getByName("userCaRelease").res.srcDir("src/userCa/res")
     }
 
     compileOptions {
@@ -149,7 +174,11 @@ val validateReleaseSigning by tasks.registering {
     }
 }
 
-tasks.matching { it.name == "preReleaseBuild" || it.name == "preLocalReleaseBuild" }.configureEach {
+tasks.matching {
+    it.name == "preReleaseBuild" ||
+        it.name == "preLocalReleaseBuild" ||
+        it.name == "preUserCaReleaseBuild"
+}.configureEach {
     dependsOn(validateReleaseSigning)
 }
 
@@ -180,4 +209,6 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    add("userCaDebugImplementation", "androidx.compose.ui:ui-tooling")
+    add("userCaDebugImplementation", "androidx.compose.ui:ui-test-manifest")
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="AcceptsUserCertificates">
+    <!-- Opt-in build for HTTPS filtering and managed-device proxies. Every CA in Android's
+         user store can inspect or modify this app's TLS traffic, so the standard build omits it. -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
