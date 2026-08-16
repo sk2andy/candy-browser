@@ -123,6 +123,16 @@ Its original soundtrack and motion graphics are generated entirely from reposito
   <img src="docs/screenshots/candy-reader.png" width="32%" alt="Candy Browser Reader Studio">
 </p>
 
+### Media, fullscreen, and picture-in-picture
+
+- Native fullscreen support for HTML5 and YouTube video, including rotation-aware Android system UI
+- Automatic Android picture-in-picture when leaving Candy with an active regular-tab video
+- Seamless PiP entry and return without pausing or recreating the decoder surface, even when a site
+  replaces or restyles its video element
+- Draggable in-app mini-player when switching tabs, plus background audio playback where supported
+- Android media notification and system controls for play, pause, stop, and seek
+- Private-tab media remains transient and never enters PiP, the mini-player, or system media controls
+
 ### Local protection
 
 - EasyList/EasyPrivacy hosts and domain-scoped cosmetic CSS plus a pinned, safely representable
