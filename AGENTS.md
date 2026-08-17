@@ -33,6 +33,10 @@
 
 ## Verification
 
+- Every agent session must use its own dedicated emulator for Android tests. Never share an
+  emulator or physical device between concurrent agent sessions. Set `ANDROID_SERIAL` for Gradle
+  device tests and pass the same explicit serial with `adb -s` for every ADB command.
+
 | Change | Minimum check |
 | --- | --- |
 | Pure Kotlin rules/models | `./gradlew testDebugUnitTest` |
