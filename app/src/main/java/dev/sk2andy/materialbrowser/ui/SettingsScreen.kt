@@ -84,6 +84,8 @@ internal enum class SettingsDestination {
     Appearance,
     Browser,
     Downloads,
+    Userscripts,
+    ToppingCatalog,
     SiteCapsules,
     ProtectionAndData,
     AboutLegal,
@@ -125,7 +127,10 @@ internal fun SettingsScreen(
     trustsUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
+    isUserScriptSupported: Boolean,
     siteCapsules: List<SiteCapsule>,
+    userScripts: List<UserscriptUiItem>,
+    toppingCatalogState: ToppingCatalogUiState,
     onDestinationChanged: (SettingsDestination) -> Unit,
     onAppearanceSettingsChanged: (AppearanceSettings) -> Unit,
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
@@ -145,6 +150,13 @@ internal fun SettingsScreen(
     onPermissionRadar: () -> Unit,
     onEditCapsule: (SiteCapsule) -> Unit,
     onDeleteCapsule: (SiteCapsule) -> Unit,
+    onToggleUserScript: (id: String, enabled: Boolean, onResult: (String?) -> Unit) -> Unit,
+    onSaveUserScript: (id: String?, source: String, onResult: (String?) -> Unit) -> Unit,
+    onDeleteUserScript: (id: String, onResult: (String?) -> Unit) -> Unit,
+    onImportUserScript: () -> Unit,
+    onToggleTopping: (id: String, enabled: Boolean) -> Unit,
+    onUpdateTopping: (id: String) -> Unit,
+    onRefreshToppingCatalog: () -> Unit,
     onFilterStudio: () -> Unit,
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
@@ -161,7 +173,11 @@ internal fun SettingsScreen(
             targetState = destination,
             modifier = Modifier.fillMaxSize(),
             transitionSpec = {
-                if (targetState == SettingsDestination.Home) {
+                if (
+                    targetState == SettingsDestination.Home ||
+                    initialState == SettingsDestination.ToppingCatalog &&
+                    targetState == SettingsDestination.Userscripts
+                ) {
                     (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith
                         (slideOutHorizontally { width -> width } + fadeOut())
                 } else {
@@ -224,6 +240,25 @@ internal fun SettingsScreen(
                     externalManagers = externalDownloadManagers,
                     onSettingsChanged = onDownloadSettingsChanged,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
+                )
+
+                SettingsDestination.Userscripts -> UserscriptManagementScreen(
+                    scripts = userScripts,
+                    isRuntimeSupported = isUserScriptSupported,
+                    onToggle = onToggleUserScript,
+                    onSave = onSaveUserScript,
+                    onDelete = onDeleteUserScript,
+                    onImport = onImportUserScript,
+                    onDiscover = { onDestinationChanged(SettingsDestination.ToppingCatalog) },
+                    onDismiss = { onDestinationChanged(SettingsDestination.Home) },
+                )
+
+                SettingsDestination.ToppingCatalog -> ToppingCatalogScreen(
+                    state = toppingCatalogState,
+                    onToggle = onToggleTopping,
+                    onUpdate = onUpdateTopping,
+                    onRetry = onRefreshToppingCatalog,
+                    onDismiss = { onDestinationChanged(SettingsDestination.Userscripts) },
                 )
 
                 SettingsDestination.SiteCapsules -> SiteCapsulesSettingsPage(
@@ -297,6 +332,12 @@ private fun SettingsHomePage(
             title = stringResource(R.string.settings_downloads_title),
             subtitle = downloadSummary,
             onClick = { onDestinationChanged(SettingsDestination.Downloads) },
+        )
+        SettingsPageSpacer()
+        SettingsLink(
+            title = stringResource(R.string.userscript_title),
+            subtitle = stringResource(R.string.settings_home_userscripts_summary),
+            onClick = { onDestinationChanged(SettingsDestination.Userscripts) },
         )
         SettingsPageSpacer()
         SettingsLink(

@@ -262,6 +262,7 @@ import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
 import dev.sk2andy.materialbrowser.browser.RootTabBackResult
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionRules
@@ -280,6 +281,10 @@ import dev.sk2andy.materialbrowser.browser.commands.CommandDispatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
 import dev.sk2andy.materialbrowser.browser.commands.CommandSuggestion
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
+import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogRules
+import dev.sk2andy.materialbrowser.browser.userscript.ToppingVerifier
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRunAt
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
@@ -292,6 +297,7 @@ import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabReorderingRules
+import dev.sk2andy.materialbrowser.data.ToppingCatalogRefreshResult
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSession
@@ -377,6 +383,7 @@ fun BrowserScreen(
     controller: BrowserController,
     webViewVideoOnlyPresentation: Boolean = false,
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
+    onImportUserScript: () -> Unit = {},
 ) {
     val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
         onTabOverviewPortraitLockChanged,
@@ -1014,6 +1021,11 @@ fun BrowserScreen(
             permissionRadarOrigin = null
         }
     }
+    LaunchedEffect(settingsVisible, settingsDestination) {
+        if (settingsVisible && settingsDestination == SettingsDestination.ToppingCatalog) {
+            controller.refreshToppingCatalog()
+        }
+    }
 
 
     val currentBackTarget by rememberUpdatedState(
@@ -1052,7 +1064,10 @@ fun BrowserScreen(
                 BrowserBackTarget.FilterStudio -> filterStudioVisible = false
                 BrowserBackTarget.SnoozedTabs -> snoozedTabsVisible = false
                 BrowserBackTarget.SettingsSubpage -> {
-                    settingsDestination = SettingsDestination.Home
+                    settingsDestination = when (settingsDestination) {
+                        SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
+                        else -> SettingsDestination.Home
+                    }
                 }
                 BrowserBackTarget.Settings -> {
                     settingsPredictiveBackCommitted = receivedProgress
@@ -1652,6 +1667,56 @@ fun BrowserScreen(
             onDismiss = { snoozeTabId = null },
         )
 
+        val toppingCatalogResult = controller.toppingCatalogResult
+        val toppingCatalogScripts = controller.userScripts.toList()
+        val busyToppingIds = controller.busyToppingIds.toSet()
+        val toppingCatalogState = remember(
+            toppingCatalogResult,
+            controller.isToppingCatalogLoading,
+            toppingCatalogScripts,
+            busyToppingIds,
+        ) {
+            fun itemsFor(result: ToppingCatalogRefreshResult): List<ToppingCatalogItem> {
+                val catalog = when (result) {
+                    is ToppingCatalogRefreshResult.Fresh -> result.catalog
+                    is ToppingCatalogRefreshResult.Cached -> result.catalog
+                    is ToppingCatalogRefreshResult.Error -> return emptyList()
+                }
+                return catalog.toppings.map { entry ->
+                    val installed = toppingCatalogScripts.firstOrNull { script ->
+                        script.id == ToppingCatalogRules.stableScriptId(entry.id)
+                    }
+                    ToppingCatalogItem(
+                        id = entry.id,
+                        name = entry.name,
+                        description = entry.description,
+                        author = entry.author,
+                        license = entry.license,
+                        version = entry.version,
+                        scopes = entry.matches,
+                        installed = installed != null,
+                        enabled = installed?.enabled == true,
+                        updateAvailable = installed != null &&
+                            ToppingVerifier.sha256(installed.source.toByteArray()) != entry.sha256,
+                        busy = entry.id in busyToppingIds,
+                    )
+                }
+            }
+
+            when {
+                controller.isToppingCatalogLoading || toppingCatalogResult == null -> {
+                    ToppingCatalogUiState.Loading
+                }
+                toppingCatalogResult is ToppingCatalogRefreshResult.Fresh -> {
+                    ToppingCatalogUiState.Content(itemsFor(toppingCatalogResult))
+                }
+                toppingCatalogResult is ToppingCatalogRefreshResult.Cached -> {
+                    ToppingCatalogUiState.Cached(itemsFor(toppingCatalogResult))
+                }
+                else -> ToppingCatalogUiState.Error()
+            }
+        }
+
         AnimatedVisibility(
             visible = settingsVisible,
             enter = slideInHorizontally(
@@ -1697,9 +1762,28 @@ fun BrowserScreen(
                 isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
                 blockedCount = selectedTab.blockedCount,
                 isDefaultBrowser = controller.isDefaultBrowser,
+                isUserScriptSupported = controller.isUserScriptSupported,
                 siteCapsules = controller.siteCapsules.filter {
                     it.profileId in visibleProfileIds
                 },
+                userScripts = controller.userScripts.map { script ->
+                    UserscriptUiItem(
+                        id = script.id,
+                        name = script.name,
+                        source = script.source,
+                        enabled = script.enabled,
+                        runAtLabel = context.getString(
+                            when (script.runAt) {
+                                UserScriptRunAt.DocumentStart ->
+                                    R.string.userscript_run_at_document_start
+                                UserScriptRunAt.DocumentEnd ->
+                                    R.string.userscript_run_at_document_end
+                            },
+                        ),
+                        urlPatterns = script.matchPatterns + script.includePatterns,
+                    )
+                },
+                toppingCatalogState = toppingCatalogState,
                 onDestinationChanged = { settingsDestination = it },
                 onAppearanceSettingsChanged = controller::updateAppearanceSettings,
                 onDownloadSettingsChanged = controller::updateDownloadSettings,
@@ -1729,6 +1813,63 @@ fun BrowserScreen(
                     openSiteCapsuleEditor(existing = capsule, sourceTab = null)
                 },
                 onDeleteCapsule = { capsule -> pendingCapsuleDelete = capsule },
+                onToggleUserScript = { id, enabled, onResult ->
+                    controller.setUserScriptEnabled(id, enabled) { saved ->
+                        onResult(
+                            if (saved) null
+                            else context.getString(R.string.userscript_error_generic),
+                        )
+                    }
+                },
+                onSaveUserScript = { id, source, onResult ->
+                    controller.saveUserScript(id, source) { outcome ->
+                        onResult(
+                            when (outcome) {
+                                UserScriptSaveOutcome.Saved -> null
+                                UserScriptSaveOutcome.LimitReached -> context.getString(
+                                    R.string.userscript_error_limit,
+                                    UserScriptParser.MAX_SCRIPTS,
+                                )
+                                UserScriptSaveOutcome.Missing,
+                                UserScriptSaveOutcome.PersistenceFailed,
+                                is UserScriptSaveOutcome.Rejected,
+                                -> context.getString(R.string.userscript_error_generic)
+                            },
+                        )
+                    }
+                },
+                onDeleteUserScript = { id, onResult ->
+                    controller.deleteUserScript(id) { deleted ->
+                        onResult(
+                            if (deleted) null
+                            else context.getString(R.string.userscript_error_generic),
+                        )
+                    }
+                },
+                onImportUserScript = onImportUserScript,
+                onToggleTopping = { id, enabled ->
+                    controller.setToppingEnabled(id, enabled) { saved ->
+                        if (!saved) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.topping_catalog_action_error),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                },
+                onUpdateTopping = { id ->
+                    controller.updateTopping(id) { saved ->
+                        if (!saved) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.topping_catalog_action_error),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                },
+                onRefreshToppingCatalog = controller::refreshToppingCatalog,
                 onFilterStudio = {
                     filterStudioSelectedRuleId = null
                     filterStudioVisible = true

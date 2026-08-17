@@ -187,7 +187,11 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.webkit:webkit:1.13.0")
+    implementation("androidx.webkit:webkit:1.16.0") {
+        // WebKit is Java-only, but 1.16.0 publishes a Kotlin 2.1 stdlib dependency. Keep this
+        // project on its compiler-compatible Kotlin 1.9 stdlib until the toolchain is upgraded.
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+    }
     implementation("com.google.guava:guava:33.2.1-android")
     implementation("com.github.Dimezis:BlurView:version-3.2.0")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))

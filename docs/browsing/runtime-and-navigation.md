@@ -19,6 +19,7 @@
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
 | Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; apply desktop user agent and viewport before navigation |
+| Local userscript | `UserScriptRules` → AndroidX WebKit document-start handler | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 
 ## Invariants
 
@@ -30,6 +31,8 @@
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.
+- Never register userscript handlers on private or Link Peek WebViews. Userscript source is global
+  regular-browser configuration, not private session state.
 - Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
 - Keep browser content edge-to-edge. The top safe area redraws a blurred content layer with a
   surface-tinted fade so status-bar icons stay legible without adding WebView padding.

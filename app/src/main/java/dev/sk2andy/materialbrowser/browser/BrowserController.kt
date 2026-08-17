@@ -51,6 +51,7 @@ import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
+import androidx.webkit.JavaScriptExecutionWorld
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProfileStore
 import androidx.webkit.ScriptHandler
@@ -156,6 +157,16 @@ import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionActivity
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.browser.permissions.runtimePermissions
+import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogEntry
+import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogRules
+import dev.sk2andy.materialbrowser.browser.userscript.UserScript
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptInjection
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptInjectionSources
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRejectionReason
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRunAt
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
@@ -195,6 +206,10 @@ import dev.sk2andy.materialbrowser.data.TabPreviewQuality
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.data.TabWebViewStateRepository
+import dev.sk2andy.materialbrowser.data.ToppingCatalogRefreshResult
+import dev.sk2andy.materialbrowser.data.ToppingCatalogRepository
+import dev.sk2andy.materialbrowser.data.ToppingDownloadResult
+import dev.sk2andy.materialbrowser.data.UserScriptRepository
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
@@ -243,6 +258,14 @@ internal enum class FullscreenVideoHost {
     Overlay,
 }
 
+internal sealed interface UserScriptSaveOutcome {
+    data object Saved : UserScriptSaveOutcome
+    data object LimitReached : UserScriptSaveOutcome
+    data object Missing : UserScriptSaveOutcome
+    data object PersistenceFailed : UserScriptSaveOutcome
+    data class Rejected(val reason: UserScriptRejectionReason) : UserScriptSaveOutcome
+}
+
 private class FullscreenVideoSession(
     val tabId: String,
     val webView: WebView,
@@ -260,6 +283,13 @@ private data class WebMediaChannelKey(
     val mediaId: String,
     val origin: String,
     val isMainFrame: Boolean,
+)
+
+private data class UserScriptRegistration(
+    val script: UserScript,
+    val allowedOrigins: Set<String>,
+    val sources: UserScriptInjectionSources,
+    val executionWorld: JavaScriptExecutionWorld,
 )
 
 private class WebMediaChannel(
@@ -313,6 +343,12 @@ class BrowserController(
     val candyTrails = mutableStateMapOf<String, CandyTrail>()
     val snoozedTabs = mutableStateListOf<SnoozedTab>()
     val siteCapsules = mutableStateListOf<SiteCapsule>()
+    internal val userScripts = mutableStateListOf<UserScript>()
+    internal var toppingCatalogResult by mutableStateOf<ToppingCatalogRefreshResult?>(null)
+        private set
+    internal var isToppingCatalogLoading by mutableStateOf(false)
+        private set
+    internal val busyToppingIds = mutableStateListOf<String>()
     val contentActions = WebContentActionState()
     val externalDownloadManagers = mutableStateListOf<ExternalDownloadManagerApp>()
 
@@ -384,6 +420,8 @@ class BrowserController(
         WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
     val isVideoAutoplayBlockingSupported: Boolean =
         WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+    val isUserScriptSupported: Boolean =
+        WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD)
     val activeSiteCapsule: SiteCapsule?
         get() = activeCapsuleId?.let { id -> siteCapsules.firstOrNull { it.id == id } }
     val isCapsulePinningSupported: Boolean
@@ -489,6 +527,9 @@ class BrowserController(
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
     private val videoAutoplayScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
+    private val userScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
+    private var userScriptMutationPending = false
+    private var toppingCatalogRefreshGeneration = 0
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val webViewProfileKeys = ConcurrentHashMap<String, String>()
@@ -562,6 +603,8 @@ class BrowserController(
     private val siteCapsuleIconStore = SiteCapsuleIconStore(activity)
     private val capsuleShortcuts = CapsuleShortcutPublisher(activity)
     private val candyRuleRepository = CandyRuleRepository.get(activity)
+    private val userScriptRepository = UserScriptRepository.get(activity)
+    private val toppingCatalogRepository = ToppingCatalogRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
     private val bundledSitePrivacyDefaults = BundledSitePrivacyDefaults.load(activity)
     private val downloadManager = BrowserDownloadManager(activity)
@@ -1120,6 +1163,7 @@ class BrowserController(
     init {
         deletePendingWebViewProfiles()
         filterRules += candyRuleRepository.load()
+        userScripts += userScriptRepository.load()
         rebuildCandyMatcher()
         val nowMillis = System.currentTimeMillis()
         snoozedTabs += snoozedTabStore.load()
@@ -2016,6 +2060,203 @@ class BrowserController(
     }
 
     fun siteCapsuleIcon(capsuleId: String): Bitmap? = siteCapsuleIconStore.load(capsuleId)
+
+    internal fun refreshToppingCatalog() {
+        val generation = ++toppingCatalogRefreshGeneration
+        isToppingCatalogLoading = true
+        toppingCatalogRepository.refresh { result ->
+            if (destroyed || generation != toppingCatalogRefreshGeneration) return@refresh
+            isToppingCatalogLoading = false
+            toppingCatalogResult = result
+        }
+    }
+
+    internal fun setToppingEnabled(
+        toppingId: String,
+        enabled: Boolean,
+        onComplete: (Boolean) -> Unit = {},
+    ) {
+        val entry = toppingCatalogEntry(toppingId)
+        if (entry == null || toppingId in busyToppingIds) {
+            onComplete(false)
+            return
+        }
+        val scriptId = ToppingCatalogRules.stableScriptId(toppingId)
+        val installed = userScripts.firstOrNull { script -> script.id == scriptId }
+        if (installed != null) {
+            busyToppingIds += toppingId
+            setUserScriptEnabled(scriptId, enabled) { saved ->
+                busyToppingIds.remove(toppingId)
+                onComplete(saved)
+            }
+            return
+        }
+        if (!enabled) {
+            onComplete(true)
+            return
+        }
+        downloadAndSaveTopping(entry = entry, preserveEnabled = false, onComplete = onComplete)
+    }
+
+    internal fun updateTopping(
+        toppingId: String,
+        onComplete: (Boolean) -> Unit = {},
+    ) {
+        val entry = toppingCatalogEntry(toppingId)
+        val installed = userScripts.any { script ->
+            script.id == ToppingCatalogRules.stableScriptId(toppingId)
+        }
+        if (entry == null || !installed || toppingId in busyToppingIds) {
+            onComplete(false)
+            return
+        }
+        downloadAndSaveTopping(entry = entry, preserveEnabled = true, onComplete = onComplete)
+    }
+
+    private fun toppingCatalogEntry(id: String): ToppingCatalogEntry? {
+        val catalog = when (val result = toppingCatalogResult) {
+            is ToppingCatalogRefreshResult.Fresh -> result.catalog
+            is ToppingCatalogRefreshResult.Cached -> result.catalog
+            is ToppingCatalogRefreshResult.Error,
+            null,
+            -> return null
+        }
+        return catalog.toppings.firstOrNull { entry -> entry.id == id }
+    }
+
+    private fun downloadAndSaveTopping(
+        entry: ToppingCatalogEntry,
+        preserveEnabled: Boolean,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        busyToppingIds += entry.id
+        toppingCatalogRepository.download(entry) { result ->
+            if (destroyed) return@download
+            val downloaded = (result as? ToppingDownloadResult.Accepted)?.script
+            if (downloaded == null) {
+                busyToppingIds.remove(entry.id)
+                onComplete(false)
+                return@download
+            }
+            val existing = userScripts.firstOrNull { script -> script.id == downloaded.id }
+            val script = downloaded.copy(
+                enabled = if (preserveEnabled) existing?.enabled ?: true else true,
+            )
+            val proposed = userScripts.toMutableList()
+            val index = proposed.indexOfFirst { candidate -> candidate.id == script.id }
+            if (index >= 0) proposed[index] = script else proposed += script
+            if (!UserScriptRules.isWithinCollectionBounds(proposed)) {
+                busyToppingIds.remove(entry.id)
+                onComplete(false)
+                return@download
+            }
+            commitUserScripts(proposed) { persisted ->
+                busyToppingIds.remove(entry.id)
+                onComplete(persisted)
+            }
+        }
+    }
+
+    internal fun saveUserScript(
+        id: String?,
+        source: String,
+        onComplete: (UserScriptSaveOutcome) -> Unit,
+    ) {
+        val existing = id?.let { candidate -> userScripts.firstOrNull { it.id == candidate } }
+        if (id != null && existing == null) {
+            onComplete(UserScriptSaveOutcome.Missing)
+            return
+        }
+        if (existing == null && userScripts.size >= UserScriptParser.MAX_SCRIPTS) {
+            onComplete(UserScriptSaveOutcome.LimitReached)
+            return
+        }
+        val result = UserScriptParser.parse(
+            id = existing?.id ?: UUID.randomUUID().toString(),
+            source = source,
+            enabled = existing?.enabled ?: true,
+            updatedAtMillis = System.currentTimeMillis(),
+        )
+        val script = when (result) {
+            is UserScriptParseResult.Accepted -> result.script
+            is UserScriptParseResult.Rejected -> {
+                onComplete(UserScriptSaveOutcome.Rejected(result.reason))
+                return
+            }
+        }
+        val proposed = userScripts.toMutableList()
+        val index = proposed.indexOfFirst { it.id == script.id }
+        if (index >= 0) proposed[index] = script else proposed += script
+        if (!UserScriptRules.isWithinCollectionBounds(proposed)) {
+            onComplete(UserScriptSaveOutcome.LimitReached)
+            return
+        }
+        commitUserScripts(proposed) { persisted ->
+            onComplete(
+                if (persisted) {
+                    UserScriptSaveOutcome.Saved
+                } else {
+                    UserScriptSaveOutcome.PersistenceFailed
+                },
+            )
+        }
+    }
+
+    internal fun setUserScriptEnabled(
+        id: String,
+        enabled: Boolean,
+        onComplete: (Boolean) -> Unit = {},
+    ) {
+        val index = userScripts.indexOfFirst { it.id == id }
+        if (index < 0 || userScripts[index].enabled == enabled) {
+            onComplete(index >= 0)
+            return
+        }
+        val proposed = userScripts.toMutableList()
+        proposed[index] = proposed[index].copy(
+            enabled = enabled,
+            updatedAtMillis = System.currentTimeMillis(),
+        )
+        if (!UserScriptRules.isWithinCollectionBounds(proposed)) {
+            onComplete(false)
+            return
+        }
+        commitUserScripts(proposed, onComplete)
+    }
+
+    internal fun deleteUserScript(id: String, onComplete: (Boolean) -> Unit = {}) {
+        if (userScripts.none { it.id == id }) {
+            onComplete(false)
+            return
+        }
+        commitUserScripts(userScripts.filterNot { it.id == id }, onComplete)
+    }
+
+    private fun commitUserScripts(
+        proposed: List<UserScript>,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        if (userScriptMutationPending) {
+            onComplete(false)
+            return
+        }
+        userScriptMutationPending = true
+        val snapshot = proposed.toList()
+        userScriptRepository.save(snapshot) { persisted ->
+            mainHandler.post {
+                if (destroyed) return@post
+                userScriptMutationPending = false
+                if (persisted) {
+                    userScripts.clear()
+                    userScripts += snapshot
+                    webViews.forEach { (tabId, webView) ->
+                        installUserScripts(tabId, webView)
+                    }
+                }
+                onComplete(persisted)
+            }
+        }
+    }
 
     private fun reassignSiteCapsules(
         sourceProfileId: String,
@@ -3810,6 +4051,7 @@ class BrowserController(
         forcedVerticalScrollScriptHandlers.clear()
         cosmeticScriptHandlers.clear()
         videoAutoplayScriptHandlers.clear()
+        userScriptHandlers.clear()
         webMediaScriptHandlers.clear()
         webMediaBridgeTokens.clear()
         retiredWebMediaDocumentIds.clear()
@@ -3895,6 +4137,7 @@ class BrowserController(
         applyDomainMutePolicy(tabId, this, tab.url)
         applyDesktopViewPolicy(tabId, this, tab.url)
         if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(this)
+        installUserScripts(tabId, this)
         SystemWebViewCredentials.configure(this)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
             WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
@@ -4179,6 +4422,7 @@ class BrowserController(
             removeSiteCompatibilityDocumentStartScripts(view)
             removeCosmeticDocumentStartScripts(view)
             removeVideoAutoplayDocumentStartScript(view)
+            removeUserScripts(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
             candyTrailHistoryBindings.remove(tabId)
@@ -4384,6 +4628,82 @@ class BrowserController(
 
     private fun removeCosmeticDocumentStartScripts(view: WebView) {
         cosmeticScriptHandlers.remove(view).orEmpty().forEach { handler ->
+            runCatching(handler::remove)
+        }
+    }
+
+    private fun installUserScripts(tabId: String, view: WebView) {
+        removeUserScripts(view)
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD)) {
+            return
+        }
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val registrations = UserScriptRules.selectForRegistration(
+            scripts = userScripts,
+            isPrivate = tab.isIncognito,
+        ).map { script ->
+            val allowedOrigins = UserScriptRules.allowedOriginRules(script)
+            val sources = UserScriptInjection.sources(script)
+            if (allowedOrigins.isEmpty() || sources == null) return
+            val executionWorld = runCatching {
+                WebViewCompat.getExecutionWorld(
+                    view,
+                    UserScriptInjection.executionWorldName(script.id),
+                )
+            }.getOrNull() ?: return
+            UserScriptRegistration(
+                script = script,
+                allowedOrigins = allowedOrigins,
+                sources = sources,
+                executionWorld = executionWorld,
+            )
+        }
+        val handlers = mutableListOf<ScriptHandler>()
+        fun rollbackHandlers() {
+            handlers.forEach { handler -> runCatching(handler::remove) }
+            handlers.clear()
+        }
+        registrations.forEach { registration ->
+            val guardHandler = runCatching {
+                WebViewCompat.addJavaScriptOnEvent(
+                    view,
+                    registration.sources.guardSource,
+                    WebViewCompat.INJECTION_EVENT_DOCUMENT_START,
+                    registration.allowedOrigins,
+                    registration.executionWorld,
+                )
+            }.getOrNull()
+            if (guardHandler == null) {
+                rollbackHandlers()
+                return
+            }
+            handlers += guardHandler
+        }
+        registrations.forEach { registration ->
+            val injectionEvent = when (registration.script.runAt) {
+                UserScriptRunAt.DocumentStart -> WebViewCompat.INJECTION_EVENT_DOCUMENT_START
+                UserScriptRunAt.DocumentEnd -> WebViewCompat.INJECTION_EVENT_DOCUMENT_END
+            }
+            val sourceHandler = runCatching {
+                WebViewCompat.addJavaScriptOnEvent(
+                    view,
+                    registration.sources.userSource,
+                    injectionEvent,
+                    registration.allowedOrigins,
+                    registration.executionWorld,
+                )
+            }.getOrNull()
+            if (sourceHandler == null) {
+                rollbackHandlers()
+                return
+            }
+            handlers += sourceHandler
+        }
+        if (handlers.isNotEmpty()) userScriptHandlers[view] = handlers
+    }
+
+    private fun removeUserScripts(view: WebView) {
+        userScriptHandlers.remove(view).orEmpty().forEach { handler ->
             runCatching(handler::remove)
         }
     }
@@ -7112,6 +7432,7 @@ class BrowserController(
         removeSiteCompatibilityDocumentStartScripts(webView)
         removeCosmeticDocumentStartScripts(webView)
         removeVideoAutoplayDocumentStartScript(webView)
+        removeUserScripts(webView)
         defaultUserAgentMetadataBySettings.remove(webView.settings)
         webView.setOnScrollChangeListener(null)
         (webView.parent as? FrameLayout)?.removeView(webView)

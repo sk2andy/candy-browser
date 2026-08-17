@@ -10,6 +10,7 @@
 | Theme | Color schemes, surface treatment, shape tokens and AMOLED surfaces | `ui/theme/MaterialBrowserTheme.kt` |
 | UI | Appearance destination and live selection controls | `ui/SettingsScreen.kt` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
+| Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
 
 ## Choices
 

@@ -8,6 +8,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
@@ -43,19 +44,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.ViewCompat
+import androidx.lifecycle.lifecycleScope
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
+import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
+import dev.sk2andy.materialbrowser.data.UserScriptImportReader
+import dev.sk2andy.materialbrowser.data.UserScriptImportResult
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
@@ -64,7 +71,10 @@ import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import dev.sk2andy.materialbrowser.update.AvailableAppUpdate
 import dev.sk2andy.materialbrowser.update.AppReleaseChannel
 import dev.sk2andy.materialbrowser.update.GitHubAppUpdateChecker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private lateinit var browserController: BrowserController
@@ -92,6 +102,11 @@ class MainActivity : ComponentActivity() {
         if (::browserController.isInitialized) {
             browserController.onFileChooserResult(result.resultCode, result.data)
         }
+    }
+    private val userScriptImportLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null && ::browserController.isInitialized) importUserScript(uri)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -218,6 +233,15 @@ class MainActivity : ComponentActivity() {
                         controller = browserController,
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
+                        onImportUserScript = {
+                            userScriptImportLauncher.launch(
+                                arrayOf(
+                                    "application/javascript",
+                                    "text/javascript",
+                                    "text/plain",
+                                ),
+                            )
+                        },
                     )
                     if (videoOnlyPresentation && !webViewVideoOnlyPresentation) {
                         Box(modifier = Modifier.fillMaxSize().background(Color.Black))
@@ -419,6 +443,53 @@ class MainActivity : ComponentActivity() {
         browserController.activeCapsuleId?.let { outState.putString(STATE_CAPSULE_ID, it) }
         browserController.activeCapsuleTabId?.let { outState.putString(STATE_CAPSULE_TAB_ID, it) }
         super.onSaveInstanceState(outState)
+    }
+
+    private fun importUserScript(uri: Uri) {
+        lifecycleScope.launch {
+            val importResult = withContext(Dispatchers.IO) {
+                UserScriptImportReader.read(contentResolver, uri)
+            }
+            when (importResult) {
+                is UserScriptImportResult.Loaded -> {
+                    val parsedName = (
+                        UserScriptParser.parse(
+                            id = "import-preview",
+                            source = importResult.source,
+                        ) as? UserScriptParseResult.Accepted
+                        )?.script?.name
+                    browserController.saveUserScript(
+                        id = null,
+                        source = importResult.source,
+                    ) { outcome ->
+                        val message = when (outcome) {
+                            UserScriptSaveOutcome.Saved -> getString(
+                                R.string.userscript_import_success,
+                                parsedName ?: getString(R.string.userscript_title),
+                            )
+                            UserScriptSaveOutcome.LimitReached -> getString(
+                                R.string.userscript_error_limit,
+                                UserScriptParser.MAX_SCRIPTS,
+                            )
+                            UserScriptSaveOutcome.Missing,
+                            UserScriptSaveOutcome.PersistenceFailed,
+                            is UserScriptSaveOutcome.Rejected,
+                            -> getString(R.string.userscript_import_error)
+                        }
+                        Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                UserScriptImportResult.Empty,
+                UserScriptImportResult.InvalidUtf8,
+                UserScriptImportResult.TooLarge,
+                UserScriptImportResult.Unreadable,
+                -> Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.userscript_import_error),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
     }
 
     private fun openIntent(intent: Intent) {
