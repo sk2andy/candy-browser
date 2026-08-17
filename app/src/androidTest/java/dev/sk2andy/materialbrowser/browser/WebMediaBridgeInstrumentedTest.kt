@@ -314,6 +314,116 @@ class WebMediaBridgeInstrumentedTest {
     }
 
     @Test
+    fun embeddedVideoIsolatedForAutomaticBackgroundPip() {
+        lateinit var webView: WebView
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            webView = controller.selectedWebViewForTesting()
+            webView.loadDataWithBaseURL(
+                "https://host.example/",
+                EMBEDDED_PLAYING_VIDEO_HTML,
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        awaitCondition {
+            var eligible = false
+            activityRule.scenario.onActivity {
+                eligible = controller?.isPictureInPictureEligible == true
+            }
+            eligible
+        }
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).prepareForPictureInPicture()
+        }
+        awaitCondition {
+            evaluate(
+                webView,
+                """
+                (() => {
+                  const frame = document.getElementsByTagName('iframe')[0];
+                  const video = frames[0].document.querySelector('video');
+                  return frame.style.position === 'fixed' &&
+                    frame.style.width === '100vw' &&
+                    video.style.position === 'fixed';
+                })()
+                """.trimIndent(),
+            ) == "true"
+        }
+        assertEquals("0", evaluate(webView, "String(globalThis.framePresentationMessageCount)"))
+
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).cancelPictureInPictureTransition()
+        }
+        awaitCondition {
+            evaluate(
+                webView,
+                """
+                (() => {
+                  const frame = document.getElementsByTagName('iframe')[0];
+                  const video = frames[0].document.querySelector('video');
+                  return frame.style.position === 'relative' &&
+                    frame.style.width === '320px' &&
+                    video.style.position === '';
+                })()
+                """.trimIndent(),
+            ) == "true"
+        }
+    }
+
+    @Test
+    fun offscreenEmbeddedVideoIsNotEligibleForAutomaticBackgroundPip() {
+        lateinit var webView: WebView
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            webView = controller.selectedWebViewForTesting()
+            webView.loadDataWithBaseURL(
+                "https://host.example/",
+                EMBEDDED_PLAYING_VIDEO_HTML.replace(
+                    "position:relative;width:320px",
+                    "position:absolute;top:2000px;width:320px",
+                ),
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        awaitCondition {
+            var state: WebMediaState? = null
+            activityRule.scenario.onActivity { state = controller?.webMediaState }
+            state?.isPlaying == true && state?.visibleRatio == 0f
+        }
+        activityRule.scenario.onActivity {
+            assertFalse(requireNotNull(controller).isPictureInPictureEligible)
+        }
+    }
+
+    @Test
     fun repeatedPipPreparationRecoversDroppedPresentationCommand() {
         lateinit var webView: WebView
         activityRule.scenario.onActivity { activity ->
@@ -1587,6 +1697,55 @@ class WebMediaBridgeInstrumentedTest {
                           error => { globalThis.sitePipResult = error.name; }
                         );
                       };
+                      setTimeout(() => video.dispatchEvent(new Event('playing')), 100);
+                    <\/script>
+                  </body></html>
+                `;
+                document.querySelectorAll = () => [];
+              </script>
+            </body></html>
+            """.trimIndent()
+
+        val EMBEDDED_PLAYING_VIDEO_HTML =
+            """
+            <!doctype html>
+            <html><body style="margin:0">
+              <iframe
+                style="position:relative;width:320px;height:180px;border:0"
+              ></iframe>
+              <script>
+                globalThis.framePresentationMessageCount = 0;
+                addEventListener('message', () => {
+                  globalThis.framePresentationMessageCount++;
+                });
+                const frame = document.querySelector('iframe');
+                frame.srcdoc = `
+                  <!doctype html>
+                  <html><body style="margin:0">
+                    <video style="width:320px;height:180px"></video>
+                    <script>
+                      const video = document.querySelector('video');
+                      Object.defineProperty(video, 'paused', {
+                        value: false, configurable: true
+                      });
+                      Object.defineProperty(video, 'ended', {
+                        value: false, configurable: true
+                      });
+                      Object.defineProperty(video, 'currentTime', {
+                        value: 12, configurable: true
+                      });
+                      Object.defineProperty(video, 'duration', {
+                        value: 120, configurable: true
+                      });
+                      Object.defineProperty(video, 'videoWidth', {
+                        value: 640, configurable: true
+                      });
+                      Object.defineProperty(video, 'videoHeight', {
+                        value: 360, configurable: true
+                      });
+                      Object.defineProperty(video, 'readyState', {
+                        value: 4, configurable: true
+                      });
                       setTimeout(() => video.dispatchEvent(new Event('playing')), 100);
                     <\/script>
                   </body></html>

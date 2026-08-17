@@ -72,7 +72,7 @@
 | Top-level web video requests PiP | A user-activated `requestPictureInPicture()` compatibility bridge validates the exact current regular-tab video, then routes the request through Activity PiP; the page promise and enter/leave events follow confirmed Android mode changes |
 | Embedded web video requests PiP | The same trusted tap first asks Chromium to fullscreen the exact iframe video. Candy accepts the PiP request only while that matching non-private custom-view session remains current, so surrounding page content never enters the system PiP surface |
 | User selects another regular tab | The current eligible video is pinned and its source WebView moves into the draggable in-app mini-player while non-owning WebViews remain paused |
-| App leaves the foreground | The active eligible regular video is pinned before Activity PiP. If Chromium returns its custom view to the page, Candy keeps the same WebView in its existing Android host, raises that host above browser chrome and switches the document to video-only presentation without reparenting the decoder surface. Only the video becomes a full-viewport compositor layer; its ancestor chain is unclipped without creating more full-screen layers. A pre-existing mini-player also keeps one stable Android host while its placement changes. While system PiP expects playback, page-driven background pauses are ignored; explicit system pause and stop commands still take effect |
+| App leaves the foreground | The active eligible regular video is pinned before Activity PiP. If Chromium returns its custom view to the page, Candy keeps the same WebView in its existing Android host, raises that host above browser chrome and switches the document to video-only presentation without reparenting the decoder surface. Only the video becomes a full-viewport compositor layer; its ancestor chain is unclipped without creating more full-screen layers. For an embedded player, the trusted document-start bridge also isolates each containing iframe up to the top document. A pre-existing mini-player keeps one stable Android host while its placement changes. While system PiP expects playback, page-driven background pauses are ignored; explicit system pause and stop commands still take effect |
 | System media control is used | The app-owned Android `MediaSession` sends play, pause, stop or seek only through the accepted frame reply proxy |
 | Audible audio continues in background | A `mediaPlayback` foreground service owns the visible media notification while the Activity-owned WebView and session remain alive |
 | PiP expands back into the app | Android expands the shared WebView surface through a centered source rectangle matching the PiP/video aspect ratio instead of targeting the former inline-video rectangle. Presentation CSS and the prior Android host are then restored without pausing; the page-pause guard remains active until the resumed UI has settled |
@@ -98,9 +98,11 @@
   in-app mini-player, Android PiP, system media session or notification.
 - System PiP renders only the custom video view or video-isolated source WebView. Onboarding,
   splash, update UI and Candy controls stay outside the PiP surface.
-- Inline WebView presentation is limited to a top-level document. Subframe PiP uses Chromium's
-  transient fullscreen custom view and restores the embedded player when Android PiP exits; it
-  never expands or captures the parent document through the bridge.
+- Explicit subframe PiP uses Chromium's transient fullscreen custom view. Automatic background PiP
+  isolates the selected video and each containing iframe through a dedicated document-start relay.
+  Its credential is separate from native bridge authorization, and each receiver verifies the
+  sending frame relationship. Both paths restore the embedded player when Android PiP exits and
+  never expose the surrounding parent document in the PiP surface.
 - Compatibility is best effort for HTML5 media. DRM restrictions, canvas-only rendering,
   deliberately hostile players and site-specific visibility policies can still prevent control or
   continued playback.

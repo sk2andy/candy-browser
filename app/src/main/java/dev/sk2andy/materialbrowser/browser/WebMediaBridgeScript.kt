@@ -1,8 +1,14 @@
 package dev.sk2andy.materialbrowser.browser
 
 internal object WebMediaBridgeScript {
-    fun javascript(bridgeToken: String, pictureInPictureEnabled: Boolean): String {
+    fun javascript(
+        bridgeToken: String,
+        frameRelayToken: String,
+        pictureInPictureEnabled: Boolean,
+    ): String {
         require(bridgeToken.matches(Regex("[A-Za-z0-9_-]{32,80}")))
+        require(frameRelayToken.matches(Regex("[A-Za-z0-9_-]{32,80}")))
+        require(frameRelayToken != bridgeToken)
         return """
             (() => {
               if (globalThis.__candyWebMediaInstalled) return;
@@ -10,12 +16,26 @@ internal object WebMediaBridgeScript {
               if (!bridge || typeof bridge.postMessage !== 'function') return;
               globalThis.__candyWebMediaInstalled = true;
               const bridgeToken = '$bridgeToken';
+              const frameRelayToken = '$frameRelayToken';
               const nativePost = bridge.postMessage.bind(bridge);
+              const nativeAddEventListener = EventTarget.prototype.addEventListener;
+              const nativeStopImmediatePropagation = Event.prototype.stopImmediatePropagation;
               const stringify = JSON.stringify.bind(JSON);
               const parse = JSON.parse.bind(JSON);
               const createObject = Object.create.bind(Object);
               const objectKeys = Object.keys.bind(Object);
               const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor.bind(Object);
+              const nativeDocumentQuerySelectorAll = Document.prototype.querySelectorAll;
+              const nativeArrayFrom = Array.from.bind(Array);
+              const nativeGetComputedStyle = globalThis.getComputedStyle.bind(globalThis);
+              const nativeIframeContentWindowGetter = getOwnPropertyDescriptor(
+                HTMLIFrameElement.prototype,
+                'contentWindow'
+              )?.get;
+              const nativeFrameContentWindowGetter = getOwnPropertyDescriptor(
+                HTMLFrameElement.prototype,
+                'contentWindow'
+              )?.get;
               const scheduleMicrotask = globalThis.queueMicrotask.bind(globalThis);
               const scheduleTimeout = globalThis.setTimeout.bind(globalThis);
               const cancelTimeout = globalThis.clearTimeout.bind(globalThis);
@@ -41,6 +61,9 @@ internal object WebMediaBridgeScript {
                 'fullscreenElement'
               )?.get;
               const isTopLevelDocument = globalThis === globalThis.top;
+              const nativeParentPostMessage = isTopLevelDocument
+                ? null
+                : globalThis.parent.postMessage.bind(globalThis.parent);
               const candyProperties = [
                 'display', 'position', 'top', 'right', 'bottom', 'left', 'width', 'height',
                 'max-width', 'max-height', 'margin', 'padding', 'background', 'object-fit',
@@ -51,6 +74,7 @@ internal object WebMediaBridgeScript {
               ];
               let nextId = 1;
               let presented = null;
+              let presentedChildFrame = null;
               let keepPlaying = null;
               let presentationObserver = null;
               let presentationRepairScheduled = false;
@@ -58,6 +82,19 @@ internal object WebMediaBridgeScript {
               let pendingPictureInPicture = null;
               let pictureInPictureMedia = null;
               let pictureInPictureWindow = null;
+              let ancestorVisibleRatio = isTopLevelDocument ? 1 : 0;
+
+              const postParentFrameRelay = (command, value = null) => {
+                if (isTopLevelDocument) return;
+                try {
+                  nativeParentPostMessage({
+                    type: 'candy-web-media-frame-presentation',
+                    frameRelayToken,
+                    command,
+                    value
+                  }, '*');
+                } catch (_) {}
+              };
 
               const releaseKeepPlaying = (media, honorSuppressedPause) => {
                 if (keepPlaying === media) keepPlaying = null;
@@ -103,6 +140,17 @@ internal object WebMediaBridgeScript {
               };
               const finite = value => Number.isFinite(value) ? value : null;
               const visibleRatio = media => {
+                let element = media;
+                while (element instanceof Element) {
+                  const style = nativeGetComputedStyle(element);
+                  if (
+                    style.display === 'none' ||
+                    style.visibility === 'hidden' ||
+                    style.visibility === 'collapse' ||
+                    Number.parseFloat(style.opacity) <= 0.01
+                  ) return 0;
+                  element = element.parentElement;
+                }
                 const rect = media.getBoundingClientRect();
                 const width = Math.max(0, Math.min(rect.right, innerWidth) - Math.max(rect.left, 0));
                 const height = Math.max(0, Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0));
@@ -125,6 +173,7 @@ internal object WebMediaBridgeScript {
                 requestId = null
               ) => {
                 if (!(media instanceof HTMLMediaElement)) return;
+                if (!isTopLevelDocument) postParentFrameRelay('visibility-request');
                 const now = Date.now();
                 const lastReport = lastTimeReports.get(media) || 0;
                 if (eventName === 'timeupdate' && now - lastReport < 1000) return;
@@ -148,7 +197,7 @@ internal object WebMediaBridgeScript {
                   videoHeight: video ? media.videoHeight : 0,
                   clientWidth: media.clientWidth || 0,
                   clientHeight: media.clientHeight || 0,
-                  visibleRatio: removed ? 0 : visibleRatio(media)
+                  visibleRatio: removed ? 0 : visibleRatio(media) * ancestorVisibleRatio
                 });
               };
               const domError = (message, name) => {
@@ -460,8 +509,11 @@ internal object WebMediaBridgeScript {
                   else element.style.removeProperty(property);
                 });
               };
-              const exitPresentation = () => {
-                if (!presented && originals.size === 0) return;
+              const sendFramePresentation = command => {
+                postParentFrameRelay(command);
+              };
+              const exitPresentation = (notifyParent = true) => {
+                if (!presented && !presentedChildFrame && originals.size === 0) return;
                 if (presentationObserver) presentationObserver.disconnect();
                 presentationObserver = null;
                 presentationRepairScheduled = false;
@@ -469,6 +521,8 @@ internal object WebMediaBridgeScript {
                 originals.clear();
                 appliedStyles.clear();
                 presented = null;
+                presentedChildFrame = null;
+                if (notifyParent) sendFramePresentation('exit');
               };
               const presentationElements = media => {
                 const elements = [document.documentElement, document.body];
@@ -482,7 +536,7 @@ internal object WebMediaBridgeScript {
               };
               const presentationIsApplied = elements => {
                 if (
-                  !presented ||
+                  (!presented && !presentedChildFrame) ||
                   elements.length !== originals.size ||
                   !elements.every(element => originals.has(element))
                 ) return false;
@@ -503,13 +557,17 @@ internal object WebMediaBridgeScript {
                   presentationRepairScheduled = true;
                   scheduleMicrotask(() => {
                     presentationRepairScheduled = false;
-                    if (!presented) return;
-                    if (!presented.isConnected) {
+                    const target = presented || presentedChildFrame;
+                    if (!target) return;
+                    if (!target.isConnected) {
                       exitPresentation();
                       return;
                     }
-                    const currentElements = presentationElements(presented);
-                    if (!presentationIsApplied(currentElements)) enterPresentation(presented);
+                    const currentElements = presentationElements(target);
+                    if (!presentationIsApplied(currentElements)) {
+                      if (presented) enterPresentation(target);
+                      else enterChildPresentation(target);
+                    }
                   });
                 });
                 elements.forEach(element => presentationObserver.observe(
@@ -526,13 +584,78 @@ internal object WebMediaBridgeScript {
                 if (keepPlaying && keepPlaying !== media) {
                   releaseKeepPlaying(keepPlaying, true);
                 }
-                exitPresentation();
+                exitPresentation(false);
                 presented = media;
                 elements.forEach(unclipAncestor);
                 fillViewport(media);
                 observePresentation(elements);
+                sendFramePresentation('enter');
                 report(media, 'presentation');
               };
+              const enterChildPresentation = frame => {
+                const elements = presentationElements(frame);
+                if (presentedChildFrame === frame && presentationIsApplied(elements)) return;
+                exitPresentation(false);
+                presentedChildFrame = frame;
+                elements.forEach(unclipAncestor);
+                fillViewport(frame);
+                observePresentation(elements);
+                sendFramePresentation('enter');
+              };
+              nativeAddEventListener.call(globalThis, 'message', event => {
+                const message = event.data;
+                if (
+                  !message ||
+                  message.type !== 'candy-web-media-frame-presentation' ||
+                  message.frameRelayToken !== frameRelayToken ||
+                  !['enter', 'exit', 'visibility-request', 'visibility-result'].includes(
+                    message.command
+                  )
+                ) return;
+                if (
+                  message.command === 'visibility-result' &&
+                  event.source === globalThis.parent
+                ) {
+                  nativeStopImmediatePropagation.call(event);
+                  const nextRatio = Number.isFinite(message.value)
+                    ? Math.max(0, Math.min(1, message.value))
+                    : 0;
+                  if (nextRatio !== ancestorVisibleRatio) {
+                    ancestorVisibleRatio = nextRatio;
+                    scan(document);
+                  }
+                  return;
+                }
+                const frame = nativeArrayFrom(
+                  nativeDocumentQuerySelectorAll.call(document, 'iframe,frame')
+                ).find(candidate => {
+                  let contentWindow = null;
+                  try {
+                    contentWindow = nativeIframeContentWindowGetter?.call(candidate);
+                  } catch (_) {}
+                  if (!contentWindow) {
+                    try {
+                      contentWindow = nativeFrameContentWindowGetter?.call(candidate);
+                    } catch (_) {}
+                  }
+                  return contentWindow === event.source;
+                });
+                if (!frame) return;
+                nativeStopImmediatePropagation.call(event);
+                if (message.command === 'visibility-request') {
+                  try {
+                    event.source.postMessage({
+                      type: 'candy-web-media-frame-presentation',
+                      frameRelayToken,
+                      command: 'visibility-result',
+                      value: visibleRatio(frame) * ancestorVisibleRatio
+                    }, '*');
+                  } catch (_) {}
+                  return;
+                }
+                if (message.command === 'enter') enterChildPresentation(frame);
+                else if (presentedChildFrame === frame) exitPresentation();
+              }, true);
               bridge.onmessage = event => {
                 try {
                   const message = parse(event.data);

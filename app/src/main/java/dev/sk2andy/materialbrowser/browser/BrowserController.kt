@@ -4514,6 +4514,7 @@ class BrowserController(
             !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         ) return
         val bridgeToken = UUID.randomUUID().toString().replace("-", "")
+        val frameRelayToken = UUID.randomUUID().toString().replace("-", "")
         val pictureInPictureEnabled =
             tabs.firstOrNull { tab -> tab.id == tabId }?.isIncognito == false &&
                 activity.packageManager.hasSystemFeature(
@@ -4538,6 +4539,7 @@ class BrowserController(
                 webView,
                 WebMediaBridgeScript.javascript(
                     bridgeToken = bridgeToken,
+                    frameRelayToken = frameRelayToken,
                     pictureInPictureEnabled = pictureInPictureEnabled,
                 ),
                 ALL_WEB_ORIGINS,
@@ -4947,7 +4949,6 @@ class BrowserController(
         .filter(::isCurrentWebMediaChannel)
         .filter { channel ->
             channel.key.tabId == tabId &&
-                channel.key.isMainFrame &&
                 channel.payload.kind == WebMediaKind.Video &&
                 (
                     channel.payload.isPlaying ||
@@ -5019,7 +5020,6 @@ class BrowserController(
         val tab = tabs.firstOrNull { it.id == channel.key.tabId } ?: return
         if (
             tab.isIncognito ||
-            !channel.key.isMainFrame ||
             channel.payload.kind != WebMediaKind.Video ||
             channel.payload.videoWidth <= 0 ||
             channel.payload.videoHeight <= 0
