@@ -113,6 +113,7 @@ internal fun SettingsScreen(
     blockerSettings: BlockerSettings,
     inactiveTabLifetime: InactiveTabLifetime,
     searchEngine: SearchEngine,
+    isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
     tabOverviewMode: TabOverviewMode,
     dismissResistancePercent: Int,
@@ -131,6 +132,7 @@ internal fun SettingsScreen(
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
+    onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
@@ -178,8 +180,10 @@ internal fun SettingsScreen(
 
                 SettingsDestination.Search -> SearchSettingsPage(
                     searchEngine = searchEngine,
+                    isAiModeToggleVisible = isAiModeToggleVisible,
                     searchSuggestionProvider = searchSuggestionProvider,
                     onSearchEngineChanged = onSearchEngineChanged,
+                    onAiModeToggleVisibleChanged = onAiModeToggleVisibleChanged,
                     onSearchSuggestionProviderChanged = onSearchSuggestionProviderChanged,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
@@ -527,8 +531,10 @@ private fun AppearanceSlider(
 @Composable
 private fun SearchSettingsPage(
     searchEngine: SearchEngine,
+    isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
     onSearchEngineChanged: (SearchEngine) -> Unit,
+    onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -560,6 +566,15 @@ private fun SearchSettingsPage(
                     )
                 }
             }
+        }
+        if (searchEngine.supportsAiSearch) {
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = stringResource(R.string.settings_ai_mode_toggle_title),
+                subtitle = stringResource(R.string.settings_ai_mode_toggle_subtitle),
+                checked = isAiModeToggleVisible,
+                onCheckedChange = onAiModeToggleVisibleChanged,
+            )
         }
         SettingsPageSpacer()
         Box {

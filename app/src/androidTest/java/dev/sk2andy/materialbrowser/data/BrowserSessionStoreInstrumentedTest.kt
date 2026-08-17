@@ -122,6 +122,21 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun aiModeToggleDefaultsToHiddenAndRoundTripsVisibleState() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadAiModeToggleVisible())
+
+        store.saveAiModeToggleVisible(true)
+
+        assertTrue(store.loadAiModeToggleVisible())
+
+        store.saveAiModeToggleVisible(false)
+
+        assertFalse(store.loadAiModeToggleVisible())
+    }
+
+    @Test
     fun downloadSettingsDefaultSafelyAndRoundTrip() {
         val store = BrowserSessionStore(context)
 

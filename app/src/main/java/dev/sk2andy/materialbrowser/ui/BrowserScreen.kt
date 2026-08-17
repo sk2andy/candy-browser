@@ -134,6 +134,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -265,6 +266,7 @@ import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionRules
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.browser.commands.AddressAiModeRules
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionItem
 import dev.sk2andy.materialbrowser.browser.commands.AddressSubmission
 import dev.sk2andy.materialbrowser.browser.commands.AddressSubmissionRules
@@ -395,6 +397,7 @@ fun BrowserScreen(
     var candyTrailTabId by rememberSaveable { mutableStateOf<String?>(null) }
     var candyTrailSourceBounds by remember { mutableStateOf<Rect?>(null) }
     var addressEditorVisible by remember { mutableStateOf(false) }
+    val aiModeSelectedState = remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var settingsDestination by rememberSaveable { mutableStateOf(SettingsDestination.Home) }
     var snoozedTabsVisible by rememberSaveable { mutableStateOf(false) }
@@ -750,6 +753,16 @@ fun BrowserScreen(
     } else {
         null
     }
+    val showAiModeToggle = addressEditorVisible && AddressAiModeRules.isToggleVisible(
+        input = addressValue.text,
+        searchEngine = controller.searchEngine,
+        settingEnabled = controller.isAiModeToggleVisible,
+    )
+    LaunchedEffect(addressEditorVisible, selectedTab.id, showAiModeToggle) {
+        if (!addressEditorVisible || !showAiModeToggle) {
+            aiModeSelectedState.value = false
+        }
+    }
     val commandActions = object : CommandActions {
         override fun clearCacheAndReload(): Boolean = controller.clearCacheAndReload()
         override fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean =
@@ -841,6 +854,15 @@ fun BrowserScreen(
         }
     }
 
+    fun searchModeFor(input: String) = AddressAiModeRules.searchMode(
+        toggleVisible = AddressAiModeRules.isToggleVisible(
+            input = input,
+            searchEngine = controller.searchEngine,
+            settingEnabled = controller.isAiModeToggleVisible,
+        ),
+        toggleSelected = aiModeSelectedState.value,
+    )
+
     fun selectNavigation(suggestion: AddressSuggestion): Unit {
         val target = suggestion.openTabId
             ?.let { tabId -> controller.activeTabs.firstOrNull { it.id == tabId } }
@@ -874,7 +896,7 @@ fun BrowserScreen(
             is AddressSuggestionItem.Command -> selectCommand(item.suggestion)
             is AddressSuggestionItem.Search -> {
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                controller.submitAddress(item.query)
+                controller.submitAddress(item.query, searchModeFor(item.query))
                 addressEditorVisible = false
             }
         }
@@ -902,7 +924,7 @@ fun BrowserScreen(
         ) {
             is AddressSubmission.Select -> selectSuggestion(submission.suggestion)
             is AddressSubmission.Navigate -> {
-                controller.submitAddress(submission.input)
+                controller.submitAddress(submission.input, searchModeFor(submission.input))
                 addressEditorVisible = false
             }
             AddressSubmission.None -> Unit
@@ -1261,6 +1283,12 @@ fun BrowserScreen(
             },
             onDismissEditor = { addressEditorVisible = false },
             onSubmitAddress = ::submitAddressOrCommand,
+            showAiModeToggle = showAiModeToggle,
+            aiModeSelected = aiModeSelectedState.value,
+            onAiModeSelectedChange = { selected ->
+                aiModeSelectedState.value = selected
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            },
             onScanQrCode = {
                 if (!qrScanInProgress) {
                     qrScanInProgress = true
@@ -1658,6 +1686,7 @@ fun BrowserScreen(
                 blockerSettings = controller.blockerSettings,
                 inactiveTabLifetime = controller.inactiveTabLifetime,
                 searchEngine = controller.searchEngine,
+                isAiModeToggleVisible = controller.isAiModeToggleVisible,
                 searchSuggestionProvider = controller.searchSuggestionProvider,
                 tabOverviewMode = controller.tabOverviewMode,
                 dismissResistancePercent = controller.dismissResistancePercent,
@@ -1677,6 +1706,7 @@ fun BrowserScreen(
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onSearchEngineChanged = controller::updateSearchEngine,
+                onAiModeToggleVisibleChanged = controller::updateAiModeToggleVisible,
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
@@ -2734,6 +2764,9 @@ private fun BrowserBottomBar(
     onActivateAddressSuggestion: () -> Unit,
     onDismissEditor: () -> Unit,
     onSubmitAddress: (String) -> Unit,
+    showAiModeToggle: Boolean,
+    aiModeSelected: Boolean,
+    onAiModeSelectedChange: (Boolean) -> Unit,
     onScanQrCode: () -> Unit,
     onExpand: () -> Unit,
     onDock: () -> Unit,
@@ -2983,6 +3016,9 @@ private fun BrowserBottomBar(
                                 onActivateAddressSuggestion = onActivateAddressSuggestion,
                                 onDismissEditor = onDismissEditor,
                                 onSubmitAddress = onSubmitAddress,
+                                showAiModeToggle = showAiModeToggle,
+                                aiModeSelected = aiModeSelected,
+                                onAiModeSelectedChange = onAiModeSelectedChange,
                                 onScanQrCode = onScanQrCode,
                                 onTabDrag = onTabDrag,
                                 onTabDragStopped = onTabDragStopped,
@@ -3406,6 +3442,9 @@ private fun ExpandedBottomBarContent(
     onActivateAddressSuggestion: () -> Unit,
     onDismissEditor: () -> Unit,
     onSubmitAddress: (String) -> Unit,
+    showAiModeToggle: Boolean,
+    aiModeSelected: Boolean,
+    onAiModeSelectedChange: (Boolean) -> Unit,
     onScanQrCode: () -> Unit,
     onTabDrag: (Float) -> Unit,
     onTabDragStopped: suspend (Float) -> Unit,
@@ -3519,12 +3558,6 @@ private fun ExpandedBottomBarContent(
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                         BasicTextField(
                             value = editValue,
                             onValueChange = onEditValueChange,
@@ -3589,7 +3622,11 @@ private fun ExpandedBottomBarContent(
                             ),
                             decorationBox = { innerTextField ->
                                 Box(
-                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    modifier = Modifier.padding(
+                                        start = 8.dp,
+                                        top = 10.dp,
+                                        bottom = 10.dp,
+                                    ),
                                     contentAlignment = Alignment.CenterStart,
                                 ) {
                                     if (editValue.text.isEmpty()) {
@@ -3621,6 +3658,12 @@ private fun ExpandedBottomBarContent(
                                 }
                             },
                         )
+                        if (showAiModeToggle) {
+                            AddressAiModeToggle(
+                                selected = aiModeSelected,
+                                onSelectedChange = onAiModeSelectedChange,
+                            )
+                        }
                         IconButton(onClick = onDismissEditor) {
                             Icon(
                                 Icons.Default.Close,
@@ -3790,6 +3833,56 @@ private fun ExpandedBottomBarContent(
 }
 
 @Composable
+internal fun AddressAiModeToggle(
+    selected: Boolean,
+    onSelectedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(160),
+        label = "Address AI mode container color",
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(160),
+        label = "Address AI mode content color",
+    )
+    IconToggleButton(
+        checked = selected,
+        onCheckedChange = onSelectedChange,
+        modifier = modifier
+            .size(48.dp)
+            .shadow(
+                elevation = if (selected) 6.dp else 0.dp,
+                shape = CircleShape,
+            )
+            .background(containerColor, CircleShape)
+            .testTag(AddressBarTestTags.AiModeToggle),
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_symbol_auto_awesome),
+            contentDescription = stringResource(
+                if (selected) {
+                    R.string.cd_disable_google_ai_mode
+                } else {
+                    R.string.cd_enable_google_ai_mode
+                },
+            ),
+            tint = contentColor,
+        )
+    }
+}
+
+@Composable
 internal fun AddressBarTabCounterButton(
     tabCount: Int,
     onClick: () -> Unit,
@@ -3827,6 +3920,7 @@ internal fun AddressBarTabCounterButton(
 }
 
 internal object AddressBarTestTags {
+    const val AiModeToggle = "address_bar_ai_mode_toggle"
     const val TabButton = "address_bar_tab_button"
 }
 

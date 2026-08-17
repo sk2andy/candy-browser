@@ -37,4 +37,20 @@ class SearchEngineTest {
             assertEquals(url, engine.buildSearchUrl("candy & browser"))
         }
     }
+
+    @Test
+    fun `google builds dedicated ai mode url`() {
+        assertEquals(
+            "https://www.google.com/ai?q=candy%20%26%20browser",
+            SearchEngine.Google.buildSearchUrl("candy & browser", SearchMode.Ai),
+        )
+    }
+
+    @Test
+    fun `engines without ai route safely use web search`() {
+        assertEquals(
+            "https://duckduckgo.com/?q=candy%20browser",
+            SearchEngine.DuckDuckGo.buildSearchUrl("candy browser", SearchMode.Ai),
+        )
+    }
 }

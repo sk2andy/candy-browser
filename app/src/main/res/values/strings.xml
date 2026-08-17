@@ -27,6 +27,8 @@
     <string name="search_or_enter_url">Search or enter a URL</string>
     <string name="cd_open_search">Open search</string>
     <string name="cd_close_address_input">Close address input</string>
+    <string name="cd_enable_google_ai_mode">Use Google AI Mode for this search</string>
+    <string name="cd_disable_google_ai_mode">Use regular Google Search for this search</string>
     <string name="cd_fill_address_suggestion">Fill address bar with %1$s</string>
     <string name="cd_more_options">More options</string>
     <string name="cd_restore_address_bar">Restore address bar to center</string>
@@ -252,6 +254,8 @@
     </plurals>
     <string name="settings_section_search">Search</string>
     <string name="settings_search_engine">Search engine</string>
+    <string name="settings_ai_mode_toggle_title">Show AI Mode logo</string>
+    <string name="settings_ai_mode_toggle_subtitle">Tap the logo in the address bar to switch the current query between Google Search and AI Mode.</string>
     <string name="settings_search_suggestions">Search suggestions</string>
     <string name="settings_search_suggestions_summary">After three characters, typed search text is sent to this provider. Disabled in private tabs.</string>
     <string name="settings_search_suggestions_none_summary">Suggestions stay local. No typed text is sent to a suggestion provider.</string>

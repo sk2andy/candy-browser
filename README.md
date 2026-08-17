@@ -58,6 +58,7 @@ Its original soundtrack and motion graphics are generated entirely from reposito
 - Pull to refresh, direct URL navigation, QR scanning, local domain completion, and optional
   provider-backed search suggestions (disabled in private tabs)
 - Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, and Qwant search
+- Optional Google AI Mode routing through a toggleable address-bar logo, enabled from search settings
 - Address commands with `>` for tab, profile, cache, cookie, and navigation actions
 - Background tabs, sharing, printing, external apps, assistant summaries, and built-in or external
   download managers

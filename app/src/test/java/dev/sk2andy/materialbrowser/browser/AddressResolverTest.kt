@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -53,6 +54,35 @@ class AddressResolverTest {
             "https://example.com/news",
             AddressResolver.resolve("example.com/news", SearchEngine.Perplexity),
         )
+    }
+
+    @Test
+    fun `ai mode changes only search query resolution`() {
+        assertEquals(
+            "https://www.google.com/ai?q=why%20is%20the%20sky%20blue",
+            AddressResolver.resolve(
+                input = "why is the sky blue",
+                searchEngine = SearchEngine.Google,
+                searchMode = SearchMode.Ai,
+            ),
+        )
+        assertEquals(
+            "https://example.com/news",
+            AddressResolver.resolve(
+                input = "example.com/news",
+                searchEngine = SearchEngine.Google,
+                searchMode = SearchMode.Ai,
+            ),
+        )
+    }
+
+    @Test
+    fun `search query classification matches resolution policy`() {
+        assertTrue(AddressResolver.isSearchQuery("why is the sky blue"))
+        assertTrue(AddressResolver.isSearchQuery("javascript://alert(1)"))
+        assertFalse(AddressResolver.isSearchQuery("example.com/news"))
+        assertFalse(AddressResolver.isSearchQuery("https://example.com"))
+        assertFalse(AddressResolver.isSearchQuery("  "))
     }
 
     @Test

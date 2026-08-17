@@ -3,15 +3,22 @@ package dev.sk2andy.materialbrowser.browser
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
+enum class SearchMode {
+    Web,
+    Ai,
+}
+
 enum class SearchEngine(
     val stableId: String,
     val displayName: String,
     private val searchUrl: String,
+    private val aiSearchUrl: String? = null,
 ) {
     Google(
         stableId = "google",
         displayName = "Google",
         searchUrl = "https://www.google.com/search?q=%s",
+        aiSearchUrl = "https://www.google.com/ai?q=%s",
     ),
     DuckDuckGo(
         stableId = "duckduckgo",
@@ -55,7 +62,16 @@ enum class SearchEngine(
     ),
     ;
 
-    fun buildSearchUrl(query: String): String = searchUrl.format(query.urlEncoded())
+    val supportsAiSearch: Boolean
+        get() = aiSearchUrl != null
+
+    fun buildSearchUrl(
+        query: String,
+        mode: SearchMode = SearchMode.Web,
+    ): String {
+        val template = if (mode == SearchMode.Ai) aiSearchUrl ?: searchUrl else searchUrl
+        return template.format(query.urlEncoded())
+    }
 
     companion object {
         fun fromStableId(stableId: String?): SearchEngine =

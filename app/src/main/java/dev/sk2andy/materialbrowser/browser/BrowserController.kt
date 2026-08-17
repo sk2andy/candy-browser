@@ -344,6 +344,8 @@ class BrowserController(
         private set
     var searchEngine by mutableStateOf(SearchEngine.Google)
         private set
+    var isAiModeToggleVisible by mutableStateOf(false)
+        private set
     var searchSuggestionProvider by mutableStateOf(SearchSuggestionProvider.DuckDuckGo)
         private set
     var dismissResistancePercent by mutableIntStateOf(40)
@@ -1124,6 +1126,7 @@ class BrowserController(
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
         searchEngine = store.loadSearchEngine()
+        isAiModeToggleVisible = store.loadAiModeToggleVisible()
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
@@ -1806,9 +1809,12 @@ class BrowserController(
         applyWindowInsets(tabId, webView, insets)
     }
 
-    fun submitAddress(input: String) {
+    fun submitAddress(
+        input: String,
+        searchMode: SearchMode = SearchMode.Web,
+    ) {
         bottomBarCompactStates[selectedTabId] = false
-        val target = AddressResolver.resolve(input, searchEngine)
+        val target = AddressResolver.resolve(input, searchEngine, searchMode)
         val webView = webViewFor(selectedTabId)
         applyMediaPlaybackPolicy(selectedTabId, webView)
         updateTab(selectedTabId) {
@@ -3459,6 +3465,11 @@ class BrowserController(
     fun updateSearchEngine(engine: SearchEngine) {
         searchEngine = engine
         store.saveSearchEngine(engine)
+    }
+
+    fun updateAiModeToggleVisible(visible: Boolean) {
+        isAiModeToggleVisible = visible
+        store.saveAiModeToggleVisible(visible)
     }
 
     fun updateSearchSuggestionProvider(provider: SearchSuggestionProvider) {

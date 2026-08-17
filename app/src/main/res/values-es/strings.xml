@@ -25,6 +25,8 @@
     <string name="search_or_enter_url">Buscar o introducir una URL</string>
     <string name="cd_open_search">Abrir búsqueda</string>
     <string name="cd_close_address_input">Cerrar campo de dirección</string>
+    <string name="cd_enable_google_ai_mode">Usar el Modo IA de Google para esta búsqueda</string>
+    <string name="cd_disable_google_ai_mode">Usar la búsqueda normal de Google para esta búsqueda</string>
     <string name="cd_fill_address_suggestion">Introducir %1$s en la barra de direcciones</string>
     <string name="cd_more_options">Más opciones</string>
     <string name="cd_restore_address_bar">Volver a centrar la barra de direcciones</string>
@@ -244,6 +246,8 @@
     </plurals>
     <string name="settings_section_search">Búsqueda</string>
     <string name="settings_search_engine">Motor de búsqueda</string>
+    <string name="settings_ai_mode_toggle_title">Mostrar el logotipo de Modo IA</string>
+    <string name="settings_ai_mode_toggle_subtitle">Toca el logotipo de la barra de direcciones para alternar la consulta actual entre la búsqueda de Google y Modo IA.</string>
     <string name="settings_search_suggestions">Sugerencias de búsqueda</string>
     <string name="settings_search_suggestions_summary">A partir de tres caracteres, el texto se envía a este proveedor. Desactivado en pestañas privadas.</string>
     <string name="settings_search_suggestions_none_summary">Las sugerencias permanecen locales. No se envía texto a ningún proveedor.</string>

@@ -12,16 +12,28 @@ object AddressResolver {
 
     fun resolve(input: String): String = resolve(input, SearchEngine.Google)
 
-    fun resolve(input: String, searchEngine: SearchEngine): String {
+    fun resolve(
+        input: String,
+        searchEngine: SearchEngine,
+        searchMode: SearchMode = SearchMode.Web,
+    ): String = when (val target = classify(input)) {
+        AddressTarget.Blank -> BLANK_URL
+        is AddressTarget.Url -> target.value
+        is AddressTarget.Search -> searchEngine.buildSearchUrl(target.query, searchMode)
+    }
+
+    fun isSearchQuery(input: String): Boolean = classify(input) is AddressTarget.Search
+
+    private fun classify(input: String): AddressTarget {
         val value = input.trim()
-        if (value.isEmpty()) return BLANK_URL
+        if (value.isEmpty()) return AddressTarget.Blank
 
         if (schemePattern.containsMatchIn(value)) {
             val scheme = runCatching { URI(value).scheme }.getOrNull()
             return if (scheme.equals("http", true) || scheme.equals("https", true)) {
-                value
+                AddressTarget.Url(value)
             } else {
-                searchEngine.buildSearchUrl(value)
+                AddressTarget.Search(value)
             }
         }
 
@@ -33,9 +45,9 @@ object AddressResolver {
             !value.contains(' ') &&
             (hostPattern.matches(asciiCandidate) || ipPattern.matches(asciiCandidate) || isLocalhost)
         ) {
-            "https://$asciiCandidate"
+            AddressTarget.Url("https://$asciiCandidate")
         } else {
-            searchEngine.buildSearchUrl(value)
+            AddressTarget.Search(value)
         }
     }
 
@@ -66,5 +78,11 @@ object AddressResolver {
         val host = if (hasPort) hostPort.substring(0, colonIndex) else hostPort
         val port = if (hasPort) hostPort.substring(colonIndex) else ""
         return runCatching { IDN.toASCII(host) }.getOrDefault(host) + port + path
+    }
+
+    private sealed interface AddressTarget {
+        data object Blank : AddressTarget
+        data class Url(val value: String) : AddressTarget
+        data class Search(val query: String) : AddressTarget
     }
 }

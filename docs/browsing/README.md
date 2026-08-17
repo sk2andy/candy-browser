@@ -12,7 +12,7 @@
 
 | Surface | Tests |
 | --- | --- |
-| URL, search, URI policy | `AddressResolverTest`, `SearchEngineTest`, `BrowserUriPolicyTest` |
+| URL, search, AI mode, URI policy | `AddressResolverTest`, `SearchEngineTest`, `AddressAiModeRulesTest`, `AddressAiModeToggleInstrumentedTest`, `BrowserUriPolicyTest` |
 | Commands and suggestions | `browser/commands/*Test`, `SearchSuggestionProviderTest` |
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |
 | WebView runtime and Link Peek | `browser/*InstrumentedTest`, `ui/LinkPeekOverlayInstrumentedTest` |

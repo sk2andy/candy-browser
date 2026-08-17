@@ -418,6 +418,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_SEARCH_ENGINE, searchEngine.stableId).apply()
     }
 
+    fun loadAiModeToggleVisible(): Boolean =
+        preferences.getBoolean(KEY_AI_MODE_TOGGLE_VISIBLE, false)
+
+    fun saveAiModeToggleVisible(visible: Boolean) {
+        preferences.edit().putBoolean(KEY_AI_MODE_TOGGLE_VISIBLE, visible).apply()
+    }
+
     fun loadSearchSuggestionProvider(): SearchSuggestionProvider =
         SearchSuggestionProvider.fromStableId(
             preferences.getString(KEY_SEARCH_SUGGESTION_PROVIDER, null),
@@ -609,6 +616,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_FAVORITES = "favorites"
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
         const val KEY_SEARCH_ENGINE = "search_engine"
+        const val KEY_AI_MODE_TOGGLE_VISIBLE = "ai_mode_toggle_visible"
         const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
