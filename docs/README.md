@@ -16,6 +16,7 @@
 | Need | Document or source |
 | --- | --- |
 | Agent onboarding | [`../AGENTS.md`](../AGENTS.md) |
+| Picture-in-picture agent guide | [`browsing/picture-in-picture.md`](browsing/picture-in-picture.md) |
 | Project coding conventions | [`../.agents/skills/coding-style/SKILL.md`](../.agents/skills/coding-style/SKILL.md) |
 | Product overview and build commands | [`../README.md`](../README.md) |
 | Privacy and compatibility audits | [`audits/`](audits/) |

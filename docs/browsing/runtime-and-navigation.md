@@ -65,6 +65,9 @@
 
 ## Web media, fullscreen and picture-in-picture
 
+Agent implementation, security and debugging guide:
+[`picture-in-picture.md`](picture-in-picture.md).
+
 | Transition | Behavior |
 | --- | --- |
 | HTML media appears or starts | A document-start bridge observes bounded HTML5 `video`/`audio` state in supported HTTP(S) frames; the frame-specific reply proxy is the only command path back to that player |
