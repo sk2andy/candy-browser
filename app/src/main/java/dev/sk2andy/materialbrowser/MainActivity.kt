@@ -118,6 +118,8 @@ class MainActivity : ComponentActivity() {
                 }
                 updatePictureInPictureParams()
             },
+            onWebPictureInPictureRequested = ::onPictureInPictureRequested,
+            onWebPictureInPictureRequestTimedOut = ::cancelPictureInPictureTransition,
         )
         webMediaSystemSession = WebMediaSystemSession(
             context = this,

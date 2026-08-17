@@ -1,7 +1,7 @@
 package dev.sk2andy.materialbrowser.browser
 
 internal object WebMediaBridgeScript {
-    fun javascript(bridgeToken: String): String {
+    fun javascript(bridgeToken: String, pictureInPictureEnabled: Boolean): String {
         require(bridgeToken.matches(Regex("[A-Za-z0-9_-]{32,80}")))
         return """
             (() => {
@@ -15,7 +15,11 @@ internal object WebMediaBridgeScript {
               const parse = JSON.parse.bind(JSON);
               const createObject = Object.create.bind(Object);
               const objectKeys = Object.keys.bind(Object);
+              const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor.bind(Object);
               const scheduleMicrotask = globalThis.queueMicrotask.bind(globalThis);
+              const scheduleTimeout = globalThis.setTimeout.bind(globalThis);
+              const cancelTimeout = globalThis.clearTimeout.bind(globalThis);
+              const userActivation = navigator.userActivation;
               const newDocumentId = () => {
                 try { return crypto.randomUUID().replaceAll('-', ''); }
                 catch (_) { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
@@ -30,6 +34,13 @@ internal object WebMediaBridgeScript {
               const suppressedPauses = new WeakSet();
               const nativePlay = HTMLMediaElement.prototype.play;
               const nativePause = HTMLMediaElement.prototype.pause;
+              const nativeRequestFullscreen = Element.prototype.requestFullscreen;
+              const nativeExitFullscreen = Document.prototype.exitFullscreen;
+              const nativeFullscreenElementGetter = getOwnPropertyDescriptor(
+                Document.prototype,
+                'fullscreenElement'
+              )?.get;
+              const isTopLevelDocument = globalThis === globalThis.top;
               const candyProperties = [
                 'display', 'position', 'top', 'right', 'bottom', 'left', 'width', 'height',
                 'max-width', 'max-height', 'margin', 'padding', 'background', 'object-fit',
@@ -43,6 +54,10 @@ internal object WebMediaBridgeScript {
               let keepPlaying = null;
               let presentationObserver = null;
               let presentationRepairScheduled = false;
+              let nextPictureInPictureRequestId = 1;
+              let pendingPictureInPicture = null;
+              let pictureInPictureMedia = null;
+              let pictureInPictureWindow = null;
 
               const releaseKeepPlaying = (media, honorSuppressedPause) => {
                 if (keepPlaying === media) keepPlaying = null;
@@ -102,7 +117,13 @@ internal object WebMediaBridgeScript {
                   nativePost(stringify(envelope));
                 } catch (_) {}
               };
-              const report = (media, eventName, removed = false) => {
+              const report = (
+                media,
+                eventName,
+                removed = false,
+                bridgeEvent = 'state',
+                requestId = null
+              ) => {
                 if (!(media instanceof HTMLMediaElement)) return;
                 const now = Date.now();
                 const lastReport = lastTimeReports.get(media) || 0;
@@ -111,9 +132,10 @@ internal object WebMediaBridgeScript {
                 const video = media instanceof HTMLVideoElement;
                 send({
                   v: 1,
-                  event: 'state',
+                  event: bridgeEvent,
                   documentId,
                   mediaId: mediaId(media),
+                  requestId,
                   kind: video ? 'video' : 'audio',
                   paused: removed || !!media.paused,
                   ended: removed || !!media.ended,
@@ -129,6 +151,214 @@ internal object WebMediaBridgeScript {
                   visibleRatio: removed ? 0 : visibleRatio(media)
                 });
               };
+              const domError = (message, name) => {
+                try { return new DOMException(message, name); }
+                catch (_) {
+                  const error = new Error(message);
+                  error.name = name;
+                  return error;
+                }
+              };
+              const pictureInPicturePolicyAllows = () => {
+                const policy = document.permissionsPolicy || document.featurePolicy;
+                if (!policy || typeof policy.allowsFeature !== 'function') {
+                  return isTopLevelDocument;
+                }
+                try { return policy.allowsFeature('picture-in-picture'); }
+                catch (_) { return isTopLevelDocument; }
+              };
+              const pictureInPicturePresentationAvailable = () =>
+                isTopLevelDocument || (
+                  document.fullscreenEnabled === true &&
+                  typeof nativeRequestFullscreen === 'function' &&
+                  typeof nativeExitFullscreen === 'function' &&
+                  typeof nativeFullscreenElementGetter === 'function'
+                );
+              const pictureInPictureAvailable = () =>
+                pictureInPicturePolicyAllows() && pictureInPicturePresentationAvailable();
+              const exitPictureInPictureFullscreen = request => {
+                if (
+                  !request?.usesFullscreen ||
+                  nativeFullscreenElementGetter.call(document) !== request.media ||
+                  typeof nativeExitFullscreen !== 'function'
+                ) return;
+                try {
+                  const result = nativeExitFullscreen.call(document);
+                  if (result && typeof result.catch === 'function') result.catch(() => {});
+                } catch (_) {}
+              };
+              const createPictureInPictureWindow = media => {
+                const target = new EventTarget();
+                Object.defineProperties(target, {
+                  width: {
+                    get: () => Math.max(1, media.clientWidth || media.videoWidth || 1)
+                  },
+                  height: {
+                    get: () => Math.max(1, media.clientHeight || media.videoHeight || 1)
+                  }
+                });
+                return target;
+              };
+              const pictureInPictureEvent = name => {
+                const event = new Event(name);
+                try {
+                  Object.defineProperty(event, 'pictureInPictureWindow', {
+                    value: pictureInPictureWindow
+                  });
+                } catch (_) {}
+                return event;
+              };
+              const rejectPictureInPicture = (request, name, message) => {
+                if (!request) return;
+                request.reject(domError(message, name));
+              };
+              const leavePictureInPicture = media => {
+                if (pictureInPictureMedia !== media) return;
+                pictureInPictureMedia = null;
+                media.dispatchEvent(pictureInPictureEvent('leavepictureinpicture'));
+                pictureInPictureWindow = null;
+              };
+              const requestPictureInPicture = media => {
+                if (!pictureInPictureAvailable()) {
+                  return Promise.reject(domError(
+                    'Picture-in-picture is unavailable for this frame.',
+                    'NotAllowedError'
+                  ));
+                }
+                if (media.disablePictureInPicture) {
+                  return Promise.reject(domError(
+                    'Picture-in-picture is disabled for this video.',
+                    'InvalidStateError'
+                  ));
+                }
+                if (
+                  !media.isConnected ||
+                  media.ended ||
+                  media.readyState === HTMLMediaElement.HAVE_NOTHING ||
+                  media.videoWidth <= 0 ||
+                  media.videoHeight <= 0
+                ) {
+                  return Promise.reject(domError(
+                    'Video metadata is not available.',
+                    'InvalidStateError'
+                  ));
+                }
+                if (!userActivation || !userActivation.isActive) {
+                  return Promise.reject(domError(
+                    'Picture-in-picture requires a user gesture.',
+                    'NotAllowedError'
+                  ));
+                }
+                if (pictureInPictureMedia === media && pictureInPictureWindow) {
+                  return Promise.resolve(pictureInPictureWindow);
+                }
+                if (pendingPictureInPicture || pictureInPictureMedia) {
+                  return Promise.reject(domError(
+                    'Another picture-in-picture request is active.',
+                    'InvalidStateError'
+                  ));
+                }
+                const requestId = 'p' + nextPictureInPictureRequestId++;
+                return new Promise((resolve, reject) => {
+                  const request = {
+                    media,
+                    requestId,
+                    resolve,
+                    reject,
+                    timeoutId: null,
+                    usesFullscreen: !isTopLevelDocument
+                  };
+                  pendingPictureInPicture = request;
+                  request.timeoutId = scheduleTimeout(() => {
+                    if (pendingPictureInPicture !== request) return;
+                    pendingPictureInPicture = null;
+                    exitPictureInPictureFullscreen(request);
+                    rejectPictureInPicture(
+                      request,
+                      'AbortError',
+                      'Picture-in-picture request timed out.'
+                    );
+                  }, 6000);
+                  const reportRequest = () => {
+                    if (pendingPictureInPicture !== request) return;
+                    report(
+                      media,
+                      'picture-in-picture-request',
+                      false,
+                      'picture-in-picture-request',
+                      requestId
+                    );
+                  };
+                  if (!request.usesFullscreen) {
+                    reportRequest();
+                    return;
+                  }
+                  try {
+                    Promise.resolve(nativeRequestFullscreen.call(media)).then(
+                      () => {
+                        if (
+                          pendingPictureInPicture !== request ||
+                          nativeFullscreenElementGetter.call(document) !== media
+                        ) {
+                          throw domError(
+                            'Video did not enter fullscreen.',
+                            'NotAllowedError'
+                          );
+                        }
+                        reportRequest();
+                      },
+                      error => { throw error; }
+                    ).catch(error => {
+                      if (pendingPictureInPicture !== request) return;
+                      pendingPictureInPicture = null;
+                      cancelTimeout(request.timeoutId);
+                      exitPictureInPictureFullscreen(request);
+                      rejectPictureInPicture(
+                        request,
+                        error?.name || 'NotAllowedError',
+                        error?.message || 'Fullscreen was rejected.'
+                      );
+                    });
+                  } catch (error) {
+                    pendingPictureInPicture = null;
+                    cancelTimeout(request.timeoutId);
+                    rejectPictureInPicture(
+                      request,
+                      error?.name || 'NotAllowedError',
+                      error?.message || 'Fullscreen was rejected.'
+                    );
+                  }
+                });
+              };
+              const installPictureInPictureApi = () => {
+                if (!${pictureInPictureEnabled} || !pictureInPicturePresentationAvailable()) return;
+                if (
+                  document.pictureInPictureEnabled === true &&
+                  typeof HTMLVideoElement.prototype.requestPictureInPicture === 'function'
+                ) return;
+                try {
+                  Object.defineProperties(document, {
+                    pictureInPictureEnabled: {
+                      configurable: true,
+                      get: pictureInPictureAvailable
+                    },
+                    pictureInPictureElement: {
+                      configurable: true,
+                      get: () => pictureInPictureMedia
+                    }
+                  });
+                  Object.defineProperty(
+                    HTMLVideoElement.prototype,
+                    'requestPictureInPicture',
+                    {
+                      configurable: true,
+                      writable: true,
+                      value: function() { return requestPictureInPicture(this); }
+                    }
+                  );
+                } catch (_) {}
+              };
+              installPictureInPictureApi();
               const scan = root => {
                 if (!root || !root.querySelectorAll) return;
                 root.querySelectorAll('video,audio').forEach(media => report(media, 'scan'));
@@ -313,6 +543,41 @@ internal object WebMediaBridgeScript {
                   }
                   const media = mediaById.get(message.mediaId);
                   if (!media) return;
+                  if (message.command === 'picture-in-picture-entered') {
+                    const request = pendingPictureInPicture;
+                    if (!request || request.requestId !== message.requestId || request.media !== media) {
+                      return;
+                    }
+                    pendingPictureInPicture = null;
+                    cancelTimeout(request.timeoutId);
+                    pictureInPictureMedia = media;
+                    pictureInPictureWindow = createPictureInPictureWindow(media);
+                    media.dispatchEvent(pictureInPictureEvent('enterpictureinpicture'));
+                    request.resolve(pictureInPictureWindow);
+                    return;
+                  }
+                  if (message.command === 'picture-in-picture-failed') {
+                    const request = pendingPictureInPicture;
+                    if (!request || request.requestId !== message.requestId || request.media !== media) {
+                      return;
+                    }
+                    pendingPictureInPicture = null;
+                    cancelTimeout(request.timeoutId);
+                    exitPictureInPictureFullscreen(request);
+                    rejectPictureInPicture(
+                      request,
+                      'NotAllowedError',
+                      'Android rejected the picture-in-picture request.'
+                    );
+                    return;
+                  }
+                  if (message.command === 'picture-in-picture-left') {
+                    leavePictureInPicture(media);
+                    if (!isTopLevelDocument) {
+                      exitPictureInPictureFullscreen({ media, usesFullscreen: true });
+                    }
+                    return;
+                  }
                   switch (message.command) {
                     case 'play': media.play().catch(() => {}); break;
                     case 'pause':
@@ -352,6 +617,18 @@ internal object WebMediaBridgeScript {
               const reportRemoved = node => {
                 if (node && node.isConnected) return;
                 if (node instanceof HTMLMediaElement) {
+                  if (pendingPictureInPicture?.media === node) {
+                    const request = pendingPictureInPicture;
+                    pendingPictureInPicture = null;
+                    cancelTimeout(request.timeoutId);
+                    exitPictureInPictureFullscreen(request);
+                    rejectPictureInPicture(
+                      request,
+                      'AbortError',
+                      'Video was removed before picture-in-picture started.'
+                    );
+                  }
+                  leavePictureInPicture(node);
                   releaseKeepPlaying(node, true);
                   if (presented === node) exitPresentation();
                   report(node, 'removed', true);
@@ -402,6 +679,17 @@ internal object WebMediaBridgeScript {
                 { once: true }
               );
               addEventListener('pagehide', () => {
+                if (pendingPictureInPicture) {
+                  cancelTimeout(pendingPictureInPicture.timeoutId);
+                }
+                rejectPictureInPicture(
+                  pendingPictureInPicture,
+                  'AbortError',
+                  'Document left before picture-in-picture started.'
+                );
+                pendingPictureInPicture = null;
+                pictureInPictureMedia = null;
+                pictureInPictureWindow = null;
                 keepPlaying = null;
                 exitPresentation();
                 send({ v: 1, event: 'document-gone', documentId });

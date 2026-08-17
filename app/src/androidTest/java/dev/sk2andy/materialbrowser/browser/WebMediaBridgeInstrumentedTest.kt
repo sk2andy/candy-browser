@@ -1,7 +1,9 @@
 package dev.sk2andy.materialbrowser.browser
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.SystemClock
+import android.view.MotionEvent
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.widget.FrameLayout
@@ -1155,6 +1157,172 @@ class WebMediaBridgeInstrumentedTest {
     }
 
     @Test
+    fun sitePictureInPictureButtonUsesAndroidPictureInPictureLifecycle() {
+        lateinit var webView: WebView
+        var nativeRequestCount = 0
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            assumeTrue(
+                activity.packageManager.hasSystemFeature(
+                    PackageManager.FEATURE_PICTURE_IN_PICTURE,
+                ),
+            )
+            val controller = BrowserController(
+                activity = activity,
+                onWebPictureInPictureRequested = {
+                    nativeRequestCount++
+                    true
+                },
+            ).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            webView = controller.selectedWebViewForTesting()
+            webView.loadDataWithBaseURL(
+                "https://pip.example/",
+                PICTURE_IN_PICTURE_REQUEST_VIDEO_HTML,
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        awaitCondition {
+            var eligible = false
+            activityRule.scenario.onActivity {
+                eligible = controller?.isPictureInPictureEligible == true
+            }
+            eligible
+        }
+        assertEquals("true", evaluate(webView, "String(document.pictureInPictureEnabled)"))
+        assertEquals(
+            "function",
+            evaluate(webView, "typeof document.querySelector('video').requestPictureInPicture"),
+        )
+
+        evaluate(
+            webView,
+            """
+            globalThis.programmaticPipResult = 'pending';
+            document.querySelector('video').requestPictureInPicture().then(
+              () => { globalThis.programmaticPipResult = 'resolved'; },
+              error => { globalThis.programmaticPipResult = error.name; }
+            );
+            """.trimIndent(),
+        )
+        awaitCondition {
+            evaluate(webView, "globalThis.programmaticPipResult") == "NotAllowedError"
+        }
+        assertEquals(0, nativeRequestCount)
+
+        dispatchTap(webView)
+        awaitCondition { nativeRequestCount == 1 }
+        assertEquals("pending", evaluate(webView, "globalThis.sitePipResult"))
+
+        activityRule.scenario.onActivity {
+            repeat(2) { requireNotNull(controller).onPictureInPictureModeChanged(true) }
+        }
+        awaitCondition { evaluate(webView, "globalThis.sitePipResult") == "resolved" }
+        assertEquals("true", evaluate(webView, "document.pictureInPictureElement !== null"))
+        assertEquals("1", evaluate(webView, "String(globalThis.enterPipEventCount)"))
+        assertEquals("true", evaluate(webView, "globalThis.sitePipWindowHasSize"))
+
+        activityRule.scenario.onActivity {
+            repeat(2) { requireNotNull(controller).onPictureInPictureModeChanged(false) }
+        }
+        awaitCondition { evaluate(webView, "document.pictureInPictureElement === null") == "true" }
+        assertEquals("1", evaluate(webView, "String(globalThis.leavePipEventCount)"))
+    }
+
+    @Test
+    fun iframeSitePictureInPictureUsesFullscreenVideoSession() {
+        lateinit var webView: WebView
+        var nativeRequestCount = 0
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            assumeTrue(
+                activity.packageManager.hasSystemFeature(
+                    PackageManager.FEATURE_PICTURE_IN_PICTURE,
+                ),
+            )
+            val controller = BrowserController(
+                activity = activity,
+                onWebPictureInPictureRequested = {
+                    nativeRequestCount++
+                    true
+                },
+            ).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            webView = controller.selectedWebViewForTesting()
+            webView.loadDataWithBaseURL(
+                "https://host.example/",
+                IFRAME_PICTURE_IN_PICTURE_REQUEST_VIDEO_HTML,
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        awaitCondition {
+            evaluate(
+                webView,
+                "String(frames[0]?.document?.pictureInPictureEnabled === true)",
+            ) == "true"
+        }
+        dispatchTap(webView)
+        awaitCondition {
+            evaluate(webView, "frames[0].sitePipResult") != "idle"
+        }
+        awaitCondition {
+            nativeRequestCount == 1 ||
+                evaluate(webView, "frames[0].sitePipResult") != "pending"
+        }
+        assertEquals(
+            "iframe PiP result=${evaluate(webView, "frames[0].sitePipResult")}",
+            1,
+            nativeRequestCount,
+        )
+        assertEquals("pending", evaluate(webView, "frames[0].sitePipResult"))
+        activityRule.scenario.onActivity {
+            assertEquals(
+                FullscreenVideoSource.CustomView,
+                requireNotNull(controller).fullscreenVideoState?.source,
+            )
+            requireNotNull(controller).onPictureInPictureModeChanged(true)
+        }
+        awaitCondition { evaluate(webView, "frames[0].sitePipResult") == "resolved" }
+
+        activityRule.scenario.onActivity {
+            requireNotNull(controller).onPictureInPictureModeChanged(false)
+        }
+        awaitCondition {
+            var source: FullscreenVideoSource? = FullscreenVideoSource.CustomView
+            activityRule.scenario.onActivity { source = controller?.fullscreenVideoState?.source }
+            source != FullscreenVideoSource.CustomView
+        }
+        assertEquals(
+            "true",
+            evaluate(webView, "frames[0].document.pictureInPictureElement === null"),
+        )
+    }
+
+    @Test
     fun audibleAudioBecomesBackgroundOwnerWhenActivityPauses() {
         var sourceTabId = ""
         activityRule.scenario.onActivity { activity ->
@@ -1258,6 +1426,36 @@ class WebMediaBridgeInstrumentedTest {
         assertTrue("Expected at least $minimum, got $current", requireNotNull(current) >= minimum)
     }
 
+    private fun evaluate(webView: WebView, script: String): String? {
+        val result = arrayOfNulls<String>(1)
+        activityRule.scenario.onActivity {
+            webView.evaluateJavascript(script) { value ->
+                result[0] = value?.removeSurrounding("\"")
+            }
+        }
+        awaitCondition(timeoutMillis = 1_000) { result[0] != null }
+        return result[0]
+    }
+
+    private fun dispatchTap(webView: WebView) {
+        activityRule.scenario.onActivity {
+            val downTime = SystemClock.uptimeMillis()
+            listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP).forEach { action ->
+                MotionEvent.obtain(
+                    downTime,
+                    SystemClock.uptimeMillis(),
+                    action,
+                    50f,
+                    50f,
+                    0,
+                ).let { event ->
+                    webView.dispatchTouchEvent(event)
+                    event.recycle()
+                }
+            }
+        }
+    }
+
     private companion object {
         val PLAYING_VIDEO_HTML =
             """
@@ -1287,12 +1485,112 @@ class WebMediaBridgeInstrumentedTest {
                 Object.defineProperty(video, 'duration', { value: 120, configurable: true });
                 Object.defineProperty(video, 'videoWidth', { value: 640, configurable: true });
                 Object.defineProperty(video, 'videoHeight', { value: 360, configurable: true });
+                Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
                 Object.defineProperty(window, 'innerWidth', { value: 1080, configurable: true });
                 Object.defineProperty(window, 'innerHeight', { value: 1920, configurable: true });
                 video.getBoundingClientRect = () => ({
                   left: 0, top: 0, right: 320, bottom: 180, width: 320, height: 180
                 });
                 setTimeout(() => video.dispatchEvent(new Event('playing')), 250);
+              </script>
+            </body></html>
+            """.trimIndent()
+
+        val PICTURE_IN_PICTURE_REQUEST_VIDEO_HTML = PLAYING_VIDEO_HTML
+            .replace(
+                "<body>",
+                """
+                <body>
+                  <button
+                    style="position:fixed;inset:0;width:200px;height:200px;z-index:100"
+                    onclick="
+                      globalThis.sitePipResult = 'pending';
+                      document.querySelector('video').requestPictureInPicture().then(
+                        pipWindow => {
+                          globalThis.sitePipResult = 'resolved';
+                          globalThis.sitePipWindowHasSize =
+                            pipWindow.width > 0 && pipWindow.height > 0;
+                        },
+                        error => { globalThis.sitePipResult = error.name; }
+                      );
+                    "
+                  >PiP</button>
+                """.trimIndent(),
+            )
+            .replace(
+                "const video = document.querySelector('video');",
+                """
+                const video = document.querySelector('video');
+                globalThis.sitePipResult = 'idle';
+                globalThis.enterPipEventCount = 0;
+                globalThis.leavePipEventCount = 0;
+                video.addEventListener('enterpictureinpicture', () => {
+                  globalThis.enterPipEventCount++;
+                });
+                video.addEventListener('leavepictureinpicture', () => {
+                  globalThis.leavePipEventCount++;
+                });
+                """.trimIndent(),
+            )
+
+        val IFRAME_PICTURE_IN_PICTURE_REQUEST_VIDEO_HTML =
+            """
+            <!doctype html>
+            <html><body style="margin:0">
+              <iframe
+                allow="fullscreen; picture-in-picture"
+                allowfullscreen
+                style="position:fixed;inset:0;width:100%;height:100%;border:0"
+              ></iframe>
+              <button
+                style="position:fixed;inset:0;width:200px;height:200px;z-index:10"
+                onclick="frames[0].requestSitePip()"
+              >PiP</button>
+              <script>
+                const frame = document.querySelector('iframe');
+                frame.srcdoc = `
+                  <!doctype html>
+                  <html><body style="margin:0">
+                    <video style="width:320px;height:180px"></video>
+                    <script>
+                      const video = document.querySelector('video');
+                      globalThis.sitePipResult = 'idle';
+                      Object.defineProperty(video, 'paused', {
+                        value: false, configurable: true
+                      });
+                      Object.defineProperty(video, 'ended', {
+                        value: false, configurable: true
+                      });
+                      Object.defineProperty(video, 'currentTime', {
+                        value: 12, configurable: true
+                      });
+                      Object.defineProperty(video, 'duration', {
+                        value: 120, configurable: true
+                      });
+                      Object.defineProperty(video, 'videoWidth', {
+                        value: 640, configurable: true
+                      });
+                      Object.defineProperty(video, 'videoHeight', {
+                        value: 360, configurable: true
+                      });
+                      Object.defineProperty(video, 'readyState', {
+                        value: 4, configurable: true
+                      });
+                      video.getBoundingClientRect = () => ({
+                        left: 0, top: 0, right: 320, bottom: 180,
+                        width: 320, height: 180
+                      });
+                      globalThis.requestSitePip = () => {
+                        globalThis.sitePipResult = 'pending';
+                        video.requestPictureInPicture().then(
+                          () => { globalThis.sitePipResult = 'resolved'; },
+                          error => { globalThis.sitePipResult = error.name; }
+                        );
+                      };
+                      setTimeout(() => video.dispatchEvent(new Event('playing')), 100);
+                    <\/script>
+                  </body></html>
+                `;
               </script>
             </body></html>
             """.trimIndent()
