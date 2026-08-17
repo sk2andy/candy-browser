@@ -81,6 +81,44 @@ class WebMediaContractTest {
     }
 
     @Test
+    fun pictureInPictureRequestRequiresSafeRequestAndVideoState() {
+        val payload = WebMediaContract.parse(
+            """
+            {
+              "v":1,
+              "bridgeToken":"token",
+              "event":"picture-in-picture-request",
+              "documentId":"doc",
+              "mediaId":"m1",
+              "requestId":"p1",
+              "kind":"video",
+              "paused":false,
+              "ended":false,
+              "currentTime":12,
+              "duration":120,
+              "videoWidth":640,
+              "videoHeight":360,
+              "clientWidth":320,
+              "clientHeight":180,
+              "visibleRatio":1
+            }
+            """.trimIndent(),
+            expectedBridgeToken = "token",
+        )
+
+        requireNotNull(payload)
+        assertEquals(WebMediaEvent.PictureInPictureRequested, payload.event)
+        assertEquals("p1", payload.requestId)
+        assertEquals(WebMediaKind.Video, payload.kind)
+        assertNull(
+            WebMediaContract.parse(
+                """{"v":1,"bridgeToken":"token","event":"picture-in-picture-request","documentId":"doc","mediaId":"m1","requestId":"../bad","kind":"video"}""",
+                expectedBridgeToken = "token",
+            ),
+        )
+    }
+
+    @Test
     fun privateMediaNeverBecomesExternalOrSystemSession() {
         val state = videoState()
 
@@ -88,6 +126,36 @@ class WebMediaContractTest {
         assertFalse(WebMediaRules.isSystemSessionEligible(state, isPrivate = true))
         assertTrue(WebMediaRules.isExternalPresentationEligible(state, isPrivate = false))
         assertTrue(WebMediaRules.isSystemSessionEligible(state, isPrivate = false))
+    }
+
+    @Test
+    fun iframePictureInPictureNeedsMatchingFullscreenSession() {
+        val state = videoState()
+
+        assertFalse(
+            WebMediaRules.isPictureInPictureRequestEligible(
+                state = state,
+                isPrivate = false,
+                isMainFrame = false,
+                hasMatchingFullscreenSession = false,
+            ),
+        )
+        assertTrue(
+            WebMediaRules.isPictureInPictureRequestEligible(
+                state = state,
+                isPrivate = false,
+                isMainFrame = false,
+                hasMatchingFullscreenSession = true,
+            ),
+        )
+        assertFalse(
+            WebMediaRules.isPictureInPictureRequestEligible(
+                state = state,
+                isPrivate = true,
+                isMainFrame = false,
+                hasMatchingFullscreenSession = true,
+            ),
+        )
     }
 
     @Test
@@ -142,6 +210,20 @@ class WebMediaContractTest {
             WebMediaContract.command(WebMediaCommand.ReconcilePlaying, "doc", "m1"),
         )
         assertEquals("reconcile-playing", reconcilePlaying.getString("command"))
+
+        val pictureInPictureEntered = JSONObject(
+            WebMediaContract.command(
+                command = WebMediaCommand.PictureInPictureEntered,
+                documentId = "doc",
+                mediaId = "m1",
+                requestId = "p1",
+            ),
+        )
+        assertEquals(
+            "picture-in-picture-entered",
+            pictureInPictureEntered.getString("command"),
+        )
+        assertEquals("p1", pictureInPictureEntered.getString("requestId"))
     }
 
     private fun payload(paused: Boolean): WebMediaPayload = WebMediaPayload(

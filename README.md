@@ -128,6 +128,7 @@ Its original soundtrack and motion graphics are generated entirely from reposito
 
 - Native fullscreen support for HTML5 and YouTube video, including rotation-aware Android system UI
 - Automatic Android picture-in-picture when leaving Candy with an active regular-tab video
+- Website picture-in-picture buttons for eligible top-level and fullscreen-capable embedded HTML5 video
 - Seamless PiP entry and return without pausing or recreating the decoder surface, even when a site
   replaces or restyles its video element
 - Draggable in-app mini-player when switching tabs, plus background audio playback where supported

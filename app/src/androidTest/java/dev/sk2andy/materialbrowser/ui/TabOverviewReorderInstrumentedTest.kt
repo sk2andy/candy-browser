@@ -14,6 +14,7 @@ import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -29,6 +30,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(AndroidJUnit4::class)
 class TabOverviewReorderInstrumentedTest {
@@ -162,6 +165,31 @@ class TabOverviewReorderInstrumentedTest {
         card.performTouchInput { up() }
     }
 
+    @Test
+    fun selectingTabReportsExitHeroVisibility() {
+        lateinit var browserController: BrowserController
+        val activeReports = AtomicInteger()
+        val exitHeroVisible = AtomicBoolean()
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            browserController.updateTabOverviewMode(TabOverviewMode.List)
+        }
+        setOverviewContent(browserController) { visible ->
+            if (visible) activeReports.incrementAndGet()
+            exitHeroVisible.set(visible)
+        }
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(browserController.selectedTabId))
+            .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 12_000L) { activeReports.get() > 0 }
+        composeRule.waitUntil(timeoutMillis = 12_000L) { !exitHeroVisible.get() }
+    }
+
     private fun verifyReorder(
         mode: TabOverviewMode,
         moveDurationMillis: Long = 240L,
@@ -216,7 +244,10 @@ class TabOverviewReorderInstrumentedTest {
         }
     }
 
-    private fun setOverviewContent(browserController: BrowserController) {
+    private fun setOverviewContent(
+        browserController: BrowserController,
+        onExitHeroVisibilityChanged: (Boolean) -> Unit = {},
+    ) {
         composeRule.setContent {
             val bottomBarTop = remember { mutableFloatStateOf(2_000f) }
             MaterialBrowserTheme {
@@ -230,6 +261,7 @@ class TabOverviewReorderInstrumentedTest {
                     destinationChromeVisible = true,
                     onEntryHeroStarted = {},
                     onEntryHeroCompleted = {},
+                    onExitHeroVisibilityChanged = onExitHeroVisibilityChanged,
                     candyTrailTabId = null,
                     candyTrailSourceBounds = null,
                     candyTrailBackProgress = 0f,

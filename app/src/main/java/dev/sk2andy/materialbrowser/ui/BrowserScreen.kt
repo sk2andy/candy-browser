@@ -430,6 +430,7 @@ fun BrowserScreen(
     var overviewGestureSettleJob by remember { mutableStateOf<Job?>(null) }
     var overviewMorphJob by remember { mutableStateOf<Job?>(null) }
     var overviewEntryHeroCompleted by remember { mutableStateOf(false) }
+    var overviewExitHeroVisible by remember { mutableStateOf(false) }
     val overviewGestureScope = rememberCoroutineScope()
     var favoriteFeedbackId by remember { mutableIntStateOf(0) }
     var favoriteFeedbackEvent by remember { mutableStateOf<FavoriteFeedbackEvent?>(null) }
@@ -466,8 +467,11 @@ fun BrowserScreen(
                 )
         }
     }
-    val addressBarMorphInFront =
-        tabOverviewVisible && !overviewDestinationChromeVisible
+    val addressBarMorphInFront = AddressBarOverviewGestureRules.isMorphInFront(
+        tabOverviewVisible = tabOverviewVisible,
+        destinationChromeVisible = overviewDestinationChromeVisible,
+        exitHeroVisible = overviewExitHeroVisible,
+    )
     val selectedTab = controller.selectedTab
     val selectedSiteState = controller.siteProtectionState(selectedTab.id)
     val selectedSiteHasHost = selectedSiteState.host != null
@@ -659,6 +663,7 @@ fun BrowserScreen(
             overviewMorphJob?.cancel()
             overviewMorphProgress.floatValue = 0f
             overviewEntryHeroCompleted = false
+            overviewExitHeroVisible = false
             tabOverviewOpening = true
             controller.prepareTabOverview prepared@{
                 if (!tabOverviewOpening) return@prepared
@@ -675,6 +680,7 @@ fun BrowserScreen(
         overviewGestureProgress.floatValue = 0f
         overviewMorphProgress.floatValue = 0f
         overviewEntryHeroCompleted = false
+        overviewExitHeroVisible = false
         tabOverviewOpening = false
         tabOverviewVisible = false
     }
@@ -1622,6 +1628,7 @@ fun BrowserScreen(
                 }
             },
             onEntryHeroCompleted = { overviewEntryHeroCompleted = true },
+            onExitHeroVisibilityChanged = { overviewExitHeroVisible = it },
             candyTrailTabId = candyTrailTabId,
             candyTrailSourceBounds = candyTrailSourceBounds,
             candyTrailBackProgress = candyTrailBackProgress.value,
@@ -4573,6 +4580,7 @@ internal fun TabOverview(
     destinationChromeVisible: Boolean,
     onEntryHeroStarted: (Boolean) -> Unit,
     onEntryHeroCompleted: () -> Unit,
+    onExitHeroVisibilityChanged: (Boolean) -> Unit,
     candyTrailTabId: String?,
     candyTrailSourceBounds: Rect?,
     candyTrailBackProgress: Float,
@@ -4625,6 +4633,13 @@ internal fun TabOverview(
     var heroVisible by remember { mutableStateOf(true) }
     var dismissingTabId by remember { mutableStateOf<String?>(null) }
     var exitHero by remember { mutableStateOf<TabExitHero?>(null) }
+    val currentOnExitHeroVisibilityChanged by rememberUpdatedState(
+        onExitHeroVisibilityChanged,
+    )
+    fun updateExitHero(hero: TabExitHero?) {
+        exitHero = hero
+        currentOnExitHeroVisibilityChanged(hero != null)
+    }
     var userPagerGestureActive by remember { mutableStateOf(false) }
     var lastHapticPage by remember { mutableStateOf<Int?>(null) }
     var pagerSessionEndJob by remember { mutableStateOf<Job?>(null) }
@@ -4652,6 +4667,9 @@ internal fun TabOverview(
         )
     }
     val exitHeroProgress = remember { Animatable(0f) }
+    DisposableEffect(Unit) {
+        onDispose { currentOnExitHeroVisibilityChanged(false) }
+    }
     fun startExitHero(
         tab: BrowserTab,
         bounds: Rect,
@@ -4670,14 +4688,16 @@ internal fun TabOverview(
         val mode = controller.tabOverviewMode
         val preview = controller.previews[tab.id]
             ?.takeIf { !tab.isIncognito && !it.isRecycled }
-        exitHero = TabExitHero(
-            tabId = tab.id,
-            preview = preview,
-            startBounds = bounds,
-            isIncognito = tab.isIncognito,
-            startCornerRadius = cornerRadius,
-            previewTopInsetPx = controller.previewTopInsetPx(tab.id),
-            mode = mode,
+        updateExitHero(
+            TabExitHero(
+                tabId = tab.id,
+                preview = preview,
+                startBounds = bounds,
+                isIncognito = tab.isIncognito,
+                startCornerRadius = cornerRadius,
+                previewTopInsetPx = controller.previewTopInsetPx(tab.id),
+                mode = mode,
+            ),
         )
         overviewScope.launch {
             try {
@@ -4693,7 +4713,7 @@ internal fun TabOverview(
                 onSelect(tab.id)
                 onClose()
             } finally {
-                exitHero = null
+                updateExitHero(null)
             }
         }
     }
@@ -5162,7 +5182,7 @@ internal fun TabOverview(
                 heroStarted = false
                 heroCompleted = false
                 heroVisible = true
-                exitHero = null
+                updateExitHero(null)
                 tabReorderSettleJob?.cancel()
                 activeTabReorder = null
                 heroReorderDropAnimating = false
@@ -6159,26 +6179,34 @@ internal fun TabOverview(
                         } else {
                             val preview = controller.previews[candyTrailTab.id]
                                 ?.takeIf { !candyTrailTab.isIncognito && !it.isRecycled }
-                            exitHero = TabExitHero(
-                                candyTrailTab.id,
-                                preview,
-                                bounds,
-                                candyTrailTab.isIncognito,
-                                previewTopInsetPx = controller.previewTopInsetPx(candyTrailTab.id),
-                                mode = controller.tabOverviewMode,
+                            updateExitHero(
+                                TabExitHero(
+                                    candyTrailTab.id,
+                                    preview,
+                                    bounds,
+                                    candyTrailTab.isIncognito,
+                                    previewTopInsetPx = controller.previewTopInsetPx(
+                                        candyTrailTab.id,
+                                    ),
+                                    mode = controller.tabOverviewMode,
+                                ),
                             )
                             overviewScope.launch {
-                                exitHeroProgress.snapTo(0f)
-                                withFrameNanos { }
-                                exitHeroProgress.animateTo(
-                                    targetValue = 1f,
-                                    animationSpec = tween(
-                                        durationMillis = 200,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                )
-                                onSelect(candyTrailTab.id)
-                                onClose()
+                                try {
+                                    exitHeroProgress.snapTo(0f)
+                                    withFrameNanos { }
+                                    exitHeroProgress.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = tween(
+                                            durationMillis = 200,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                    )
+                                    onSelect(candyTrailTab.id)
+                                    onClose()
+                                } finally {
+                                    updateExitHero(null)
+                                }
                             }
                         }
                     },
