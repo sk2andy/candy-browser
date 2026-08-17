@@ -48,3 +48,4 @@ Frosted exposes three persisted controls while selected:
 - Bottom sheets use the general Frosted transparency setting; Clear and AMOLED sheets remain opaque.
 - Forced light, dark and AMOLED modes update system-bar icon contrast independently from system night mode.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
+- Each top-level settings destination has a distinct leading icon on the settings home page.

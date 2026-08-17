@@ -28,9 +28,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -50,9 +57,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -270,48 +279,56 @@ private fun SettingsHomePage(
         onBack = onDismiss,
     ) {
         SettingsLink(
+            icon = Icons.Default.Search,
             title = stringResource(R.string.settings_section_search),
             subtitle = stringResource(R.string.settings_home_search_summary),
             onClick = { onDestinationChanged(SettingsDestination.Search) },
         )
         SettingsPageSpacer()
         SettingsLink(
+            icon = Icons.AutoMirrored.Filled.List,
             title = stringResource(R.string.settings_tabs_gestures_title),
             subtitle = stringResource(R.string.settings_home_tabs_gestures_summary),
             onClick = { onDestinationChanged(SettingsDestination.TabsAndGestures) },
         )
         SettingsPageSpacer()
         SettingsLink(
+            icon = Icons.Default.Face,
             title = stringResource(R.string.settings_appearance_title),
             subtitle = stringResource(R.string.settings_home_appearance_summary),
             onClick = { onDestinationChanged(SettingsDestination.Appearance) },
         )
         SettingsPageSpacer()
         SettingsLink(
+            icon = Icons.Default.Settings,
             title = stringResource(R.string.settings_section_browser),
             subtitle = stringResource(R.string.settings_home_browser_summary),
             onClick = { onDestinationChanged(SettingsDestination.Browser) },
         )
         SettingsPageSpacer()
         SettingsLink(
+            icon = ImageVector.vectorResource(R.drawable.ic_reader_download),
             title = stringResource(R.string.settings_downloads_title),
             subtitle = downloadSummary,
             onClick = { onDestinationChanged(SettingsDestination.Downloads) },
         )
         SettingsPageSpacer()
         SettingsLink(
+            icon = Icons.Default.Favorite,
             title = stringResource(R.string.capsule_settings_title),
             subtitle = stringResource(R.string.settings_home_capsules_summary),
             onClick = { onDestinationChanged(SettingsDestination.SiteCapsules) },
         )
         SettingsPageSpacer()
         SettingsLink(
+            icon = Icons.Default.Lock,
             title = stringResource(R.string.settings_protection_data_title),
             subtitle = stringResource(R.string.settings_home_protection_summary),
             onClick = { onDestinationChanged(SettingsDestination.ProtectionAndData) },
         )
         SettingsPageSpacer()
         SettingsLink(
+            icon = Icons.Default.Info,
             title = stringResource(R.string.settings_section_about_legal),
             subtitle = stringResource(R.string.settings_home_about_summary),
             onClick = { onDestinationChanged(SettingsDestination.AboutLegal) },
@@ -1358,6 +1375,7 @@ private fun SettingsDropdownItem(
 
 @Composable
 private fun SettingsLink(
+    icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
@@ -1372,6 +1390,21 @@ private fun SettingsLink(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+            }
+            Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall)
                 Text(
