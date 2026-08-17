@@ -343,6 +343,7 @@ class SnoozeScreensInstrumentedTest {
                         destinationChromeVisible = true,
                         onEntryHeroStarted = {},
                         onEntryHeroCompleted = {},
+                        onExitHeroVisibilityChanged = {},
                         candyTrailTabId = null,
                         candyTrailSourceBounds = null,
                         candyTrailBackProgress = 0f,

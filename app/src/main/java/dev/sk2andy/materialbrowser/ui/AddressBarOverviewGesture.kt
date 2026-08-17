@@ -100,6 +100,12 @@ internal object AddressBarOverviewGestureRules {
     fun isDestinationButtonVisible(progress: Float): Boolean =
         progress >= MORPH_COMPLETION_THRESHOLD
 
+    fun isMorphInFront(
+        tabOverviewVisible: Boolean,
+        destinationChromeVisible: Boolean,
+        exitHeroVisible: Boolean,
+    ): Boolean = tabOverviewVisible && (!destinationChromeVisible || exitHeroVisible)
+
     fun containerScale(progress: Float, sourceSize: Float, targetSize: Float): Float {
         if (sourceSize <= 0f || targetSize <= 0f) return 1f
         val boundedProgress = resistedProgress(progress)

@@ -150,6 +150,38 @@ class AddressBarOverviewGestureRulesTest {
     }
 
     @Test
+    fun `morph stays in front while tab exit hero expands`() {
+        assertTrue(
+            AddressBarOverviewGestureRules.isMorphInFront(
+                tabOverviewVisible = true,
+                destinationChromeVisible = false,
+                exitHeroVisible = false,
+            ),
+        )
+        assertFalse(
+            AddressBarOverviewGestureRules.isMorphInFront(
+                tabOverviewVisible = true,
+                destinationChromeVisible = true,
+                exitHeroVisible = false,
+            ),
+        )
+        assertTrue(
+            AddressBarOverviewGestureRules.isMorphInFront(
+                tabOverviewVisible = true,
+                destinationChromeVisible = true,
+                exitHeroVisible = true,
+            ),
+        )
+        assertFalse(
+            AddressBarOverviewGestureRules.isMorphInFront(
+                tabOverviewVisible = false,
+                destinationChromeVisible = true,
+                exitHeroVisible = true,
+            ),
+        )
+    }
+
+    @Test
     fun `morph keeps displayed corners circular during non uniform scaling`() {
         val sourceWidth = 280f
         val sourceHeight = 48f
