@@ -86,6 +86,7 @@ import dev.sk2andy.materialbrowser.blocking.CandyRuleValidation
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidator
 import dev.sk2andy.materialbrowser.blocking.CandySubscriptionRules
 import dev.sk2andy.materialbrowser.blocking.ContentBlocker
+import dev.sk2andy.materialbrowser.blocking.ConsentRequestRules
 import dev.sk2andy.materialbrowser.blocking.ForcedPageZoomScript
 import dev.sk2andy.materialbrowser.blocking.ForcedVerticalScrollScript
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestSanitizer
@@ -1649,13 +1650,12 @@ class BrowserController(
         val sourceTab = tabs.first { it.id == selectedTabId }
         val sourceTabId = sourceTab.id
         val profileAssignment = profileAssignmentFor(sourceTab)
-        val requestContext = ProtectionRequestContext(
-            profileId = sourceTab.profileId,
-            isIncognito = sourceTab.isIncognito,
-            storageKey = profileAssignment.storageKey,
-            pageHost = PrivacyRequestSanitizer.webHost(safeUrl),
+        val protectionState = AtomicReference(
+            LinkPeekProtectionState(
+                pageUrl = safeUrl,
+                requestContext = protectionRequestContextFor(sourceTab, safeUrl),
+            ),
         )
-        val currentPreviewUrl = AtomicReference(safeUrl)
         return WebView(activity).apply {
             when (profileAssignment) {
                 WebViewProfileAssignment.Default -> Unit
@@ -1690,8 +1690,7 @@ class BrowserController(
             applyCookiePolicy(sourceTabId, this, safeUrl)
             webViewClient = linkPeekPreviewWebViewClient(
                 sourceTabId = sourceTabId,
-                requestContext = requestContext,
-                currentUrl = currentPreviewUrl,
+                protectionState = protectionState,
                 onCommittedUrlChanged = onCommittedUrlChanged,
             )
             webChromeClient = object : WebChromeClient() {
@@ -1717,12 +1716,20 @@ class BrowserController(
 
     private fun linkPeekPreviewWebViewClient(
         sourceTabId: String,
-        requestContext: ProtectionRequestContext,
-        currentUrl: AtomicReference<String>,
+        protectionState: AtomicReference<LinkPeekProtectionState>,
         onCommittedUrlChanged: (String) -> Unit,
     ) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-            BrowserUriPolicy.normalizeHttpUrl(url)?.let(currentUrl::set)
+            BrowserUriPolicy.normalizeHttpUrl(url)?.let { safeUrl ->
+                tabs.firstOrNull { tab -> tab.id == sourceTabId }
+                    ?.let { tab ->
+                        LinkPeekProtectionState(
+                            pageUrl = safeUrl,
+                            requestContext = protectionRequestContextFor(tab, safeUrl),
+                        )
+                    }
+                    ?.let(protectionState::set)
+            }
             applyDesktopViewPolicy(sourceTabId, view, url)
         }
 
@@ -1733,15 +1740,16 @@ class BrowserController(
         override fun shouldInterceptRequest(
             view: WebView,
             request: WebResourceRequest,
-        ): WebResourceResponse? = interceptProtectedSubresourceRequest(
-            tabId = sourceTabId,
-            request = request,
-            requestContext = requestContext.copy(
-                pageHost = PrivacyRequestSanitizer.webHost(currentUrl.get()),
-            ),
-            pageUrl = currentUrl.get(),
-            recordDecision = false,
-        )
+        ): WebResourceResponse? {
+            val state = protectionState.get()
+            return interceptProtectedSubresourceRequest(
+                tabId = sourceTabId,
+                request = request,
+                requestContext = state.requestContext,
+                pageUrl = state.pageUrl,
+                recordDecision = false,
+            )
+        }
 
         override fun shouldOverrideUrlLoading(
             view: WebView,
@@ -4503,12 +4511,14 @@ class BrowserController(
         pageUrl: String?,
         recordDecision: Boolean,
     ): WebResourceResponse? {
-        if (request.isForMainFrame || !workerSettings.blockAdsAndTrackers) return null
+        if (request.isForMainFrame) return null
         if (request.url.scheme?.lowercase() !in WEB_SCHEMES) return null
-        if (isSiteProtectionPaused(tabId, requestContext, pageUrl)) return null
+        val sitePaused = isSiteProtectionPaused(tabId, requestContext, pageUrl)
+        if (sitePaused) return null
+        val settings = workerSettings
         val matcher = matcherFor(requestContext.isIncognito)
         val requestUrl by lazy(LazyThreadSafetyMode.NONE) { request.url.toString() }
-        val candyDecision = if (matcher.hasRequestRules) {
+        val candyDecision = if (settings.blockAdsAndTrackers && matcher.hasRequestRules) {
             matcher.decideHosts(
                 requestHost = request.url.host,
                 pageHost = requestContext.pageHost,
@@ -4528,6 +4538,30 @@ class BrowserController(
                 null
             }
         }
+        if (ConsentRequestRules.shouldBlock(
+                isForMainFrame = false,
+                cookieBannerRemovalEnabled = settings.hideCookieConsent &&
+                    !requestContext.cookieBannerRemovalDisabled,
+                sitePaused = false,
+                requestHost = request.url.host,
+            )
+        ) {
+            if (recordDecision) {
+                queueBlockedRequest(
+                    tabId,
+                    requestUrl,
+                    pageUrl,
+                    requestContext,
+                    PrivacyRuleDecisionSummary(
+                        ruleId = null,
+                        label = activity.getString(R.string.filter_rule_builtin),
+                        action = PrivacyRuleDecisionAction.Block,
+                    ),
+                )
+            }
+            return blockedResponse()
+        }
+        if (!settings.blockAdsAndTrackers) return null
         val listedRequest = contentBlocker.shouldBlockHosts(
             requestHost = request.url.host,
             pageHost = requestContext.pageHost,
@@ -6270,13 +6304,26 @@ class BrowserController(
         request: WebResourceRequest,
         storageKey: String,
     ): WebResourceResponse? {
-        if (!workerSettings.blockAdsAndTrackers) return null
         if (request.url.scheme?.lowercase() !in WEB_SCHEMES) return null
         val relevantPages = protectionRequestContexts.entries.asSequence()
             .filter { (_, context) -> context.storageKey == storageKey }
             .mapNotNull { (tabId, context) -> tabId.takeIf { context.pageHost != null } }
             .toList()
         if (relevantPages.isEmpty()) return null
+        val settings = workerSettings
+        if (!settings.blockAdsAndTrackers) {
+            val shouldBlockConsentRuntime = relevantPages.all { tabId ->
+                val context = protectionRequestContexts[tabId] ?: return@all false
+                ConsentRequestRules.shouldBlock(
+                    isForMainFrame = request.isForMainFrame,
+                    cookieBannerRemovalEnabled = settings.hideCookieConsent &&
+                        !context.cookieBannerRemovalDisabled,
+                    sitePaused = isSiteProtectionPaused(tabId, context, null),
+                    requestHost = request.url.host,
+                )
+            }
+            return if (shouldBlockConsentRuntime) blockedResponse() else null
+        }
         // Android does not expose a reliable originating tab here. Preserve the existing
         // conservative all-page decision: a request is blocked only when every possible page
         // context agrees, including site pauses and upstream allowlist rules. Never attribute
@@ -6295,7 +6342,13 @@ class BrowserController(
             ) {
                 CandyDecisionAction.Allow -> false
                 CandyDecisionAction.Block -> true
-                null -> contentBlocker.shouldBlockHosts(
+                null -> ConsentRequestRules.shouldBlock(
+                    isForMainFrame = request.isForMainFrame,
+                    cookieBannerRemovalEnabled = settings.hideCookieConsent &&
+                        !context.cookieBannerRemovalDisabled,
+                    sitePaused = false,
+                    requestHost = request.url.host,
+                ) || contentBlocker.shouldBlockHosts(
                     requestHost = request.url.host,
                     pageHost = context.pageHost,
                 )
@@ -7345,15 +7398,25 @@ class BrowserController(
 
     private fun updateProtectionRequestContext(tabId: String, pageUrl: String?) {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val context = ProtectionRequestContext(
-            profileId = tab.profileId,
-            isIncognito = tab.isIncognito,
-            storageKey = profileAssignmentFor(tab).storageKey,
-            pageHost = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url),
-        )
+        val context = protectionRequestContextFor(tab, pageUrl ?: tab.url)
         synchronized(privacyEventLock) {
             protectionRequestContexts[tabId] = context
         }
+    }
+
+    private fun protectionRequestContextFor(
+        tab: BrowserTab,
+        pageUrl: String,
+    ): ProtectionRequestContext {
+        val pageHost = PrivacyRequestSanitizer.webHost(pageUrl)
+        return ProtectionRequestContext(
+            profileId = tab.profileId,
+            isIncognito = tab.isIncognito,
+            storageKey = profileAssignmentFor(tab).storageKey,
+            pageHost = pageHost,
+            cookieBannerRemovalDisabled = pageHost == null ||
+                isCookieBannerRemovalDisabled(tab, pageHost),
+        )
     }
 
     private fun siteExceptionHostsForTab(tabId: String): Set<String> {
@@ -7468,6 +7531,7 @@ class BrowserController(
     private fun reloadTabWithProtection(tabId: String) {
         val webView = webViewFor(tabId)
         val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
+        updateProtectionRequestContext(tabId, pageUrl)
         applyDesktopViewPolicy(tabId, webView, pageUrl)
         applyCookiePolicy(tabId, webView, pageUrl)
         installCosmeticDocumentStartScripts(tabId, webView)
@@ -7916,7 +7980,13 @@ class BrowserController(
         val isIncognito: Boolean,
         val storageKey: String,
         val pageHost: String?,
+        val cookieBannerRemovalDisabled: Boolean,
         val pendingFilterHits: ConcurrentHashMap<String, AtomicInteger> = ConcurrentHashMap(),
+    )
+
+    private data class LinkPeekProtectionState(
+        val pageUrl: String,
+        val requestContext: ProtectionRequestContext,
     )
 }
 

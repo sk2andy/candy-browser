@@ -53,13 +53,14 @@ class CookieConsentBlockerInstrumentedTest {
                     getComputedStyle(lateBanner).display,
                     getComputedStyle(document.getElementById('normal-modal')).display,
                     document.body.style.overflow,
-                    document.body.style.overflowY
+                    document.body.style.overflowY,
+                    getComputedStyle(document.body).overflowY
                   ].join('|');
                 })();
             """.trimIndent(),
         )
 
-        assertEquals("\"true|none|none|none|block|hidden|hidden\"", result)
+        assertEquals("\"true|none|none|none|block|hidden|hidden|hidden\"", result)
     }
 
     @Test

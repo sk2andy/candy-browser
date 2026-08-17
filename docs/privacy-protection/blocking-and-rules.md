@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Bundled network lists | `ContentBlocker` + `RequestBlocker` | Exact/subdomain host and scoped pair blocking with allow exceptions |
 | Bundled cosmetic lists | `EasyListCosmeticRules`, `BundledCandyRules` | Resolve origin-scoped standard selectors |
-| Consent handling | `ConsentBlockerScript` | Apply bundled CSS and bounded declarative site rules |
+| Consent handling | `ConsentBlockerScript` + curated request rules | Hide consent UI, stop known modal CMP runtimes and apply bounded declarative site rules |
 | User/import/subscription rules | `CandyRule*`, `CandyRuleRepository` | Validate, normalize, persist and compile per-profile matchers |
 | Runtime interception | `BrowserController` | Combine site settings, bundled lists and Candy Rule decision for WebView requests |
 
@@ -26,6 +26,8 @@
 - Validate hosts, public suffixes, selectors, profile IDs and HTTPS subscription sources atomically.
 - Keep persistent matcher free of ephemeral private rules; private matcher may include them only in memory.
 - Support only declared Candy/ABP subsets. Reject unsupported syntax instead of approximating it.
+- Curated consent-runtime hosts apply provider-wide only while cookie-banner removal is enabled;
+  site protection pause and per-site consent overrides remain escape hatches.
 
 ## Main files
 
@@ -35,4 +37,3 @@
 | Host lookup | [`RequestBlocker.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/blocking/RequestBlocker.kt) |
 | Rule validation/matching | [`CandyRule.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/blocking/CandyRule.kt) |
 | Import/export/subscriptions | [`CandyRuleFormat.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/blocking/CandyRuleFormat.kt) |
-
