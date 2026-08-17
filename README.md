@@ -113,8 +113,9 @@ Its original soundtrack and motion graphics are generated entirely from reposito
 
 - **Reader Studio:** local article extraction with typography, alignment, paper and night themes,
   offline saves, and text-to-speech
-- **Toppings:** discover, install, update, toggle, import, and edit bounded userscripts for regular
-  tabs. The reviewed catalog lives in
+- **Toppings:** Candy's lightweight, transparent alternative to traditional browser extensions.
+  Discover, install, update, toggle, import, and edit bounded userscripts that customize matching
+  regular tabs without privileged browser or `GM_*` APIs. The reviewed catalog lives in
   [`candy-browser-toppings`](https://github.com/sk2andy/candy-browser-toppings), so new Toppings do
   not require a Candy Browser release
 - Per-domain mute controls for silencing noisy sites
