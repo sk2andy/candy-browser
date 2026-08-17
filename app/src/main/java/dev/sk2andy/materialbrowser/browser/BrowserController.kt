@@ -287,6 +287,12 @@ private class WebMediaPresentation(
     var host: FullscreenVideoHost,
 )
 
+private data class WebPictureInPictureRequest(
+    val key: WebMediaChannelKey,
+    val requestId: String,
+    val fallbackSession: FullscreenVideoSession? = null,
+)
+
 class BrowserController(
     private val activity: Activity,
     private val requestRuntimePermissions: (Set<String>) -> Unit = { permissions ->
@@ -299,6 +305,8 @@ class BrowserController(
     private val requestSnoozeNotificationPermission: () -> Unit = {},
     private val onFullImmersiveModeChanged: (Boolean) -> Unit = {},
     private val onWebMediaStateChanged: () -> Unit = {},
+    private val onWebPictureInPictureRequested: () -> Boolean = { false },
+    private val onWebPictureInPictureRequestTimedOut: () -> Unit = {},
 ) {
     val tabs = mutableStateListOf<BrowserTab>()
     val profiles = mutableStateListOf<BrowserProfile>()
@@ -411,16 +419,22 @@ class BrowserController(
                 sessionTabId = session?.tabId,
                 isPrivate = session?.isPrivate,
             )) return true
-            val channel = presentedWebMediaChannel() ?: activeVideoChannel(selectedTabId)
+            val requestedChannel = pendingWebPictureInPictureRequest
+                ?.key
+                ?.let(webMediaChannels::get)
+                ?.takeIf(::isCurrentWebMediaChannel)
+            val channel = requestedChannel ?: presentedWebMediaChannel()
+                ?: activeVideoChannel(selectedTabId)
             val tab = channel?.key?.tabId?.let { id -> tabs.firstOrNull { it.id == id } }
             val isPresented = channel != null && webMediaPresentation?.key == channel.key
+            val isRequested = channel != null && requestedChannel?.key == channel.key
             return channel != null &&
                 (channel.key.tabId == selectedTabId || isPresented) &&
                 WebMediaRules.isExternalPresentationEligible(
                     state = channel.toState(),
                     isPrivate = tab?.isIncognito != false,
                 ) &&
-                (channel.payload.isPlaying || webMediaPresentation?.key == channel.key)
+                (channel.payload.isPlaying || isPresented || isRequested)
         }
 
     internal val systemWebMediaState: WebMediaState?
@@ -474,6 +488,9 @@ class BrowserController(
     private var pictureInPictureExitGuardKey: WebMediaChannelKey? = null
     private var pictureInPictureExitGuardGeneration = 0
     private var isInPictureInPicture = false
+    private var pendingWebPictureInPictureRequest: WebPictureInPictureRequest? = null
+    private var activeWebPictureInPictureRequest: WebPictureInPictureRequest? = null
+    private var webPictureInPictureFallbackPendingReturnCleanup: FullscreenVideoSession? = null
     private var fullscreenVideoHiddenDuringPictureInPicture: FullscreenVideoSession? = null
     private val webMediaChannels = mutableMapOf<WebMediaChannelKey, WebMediaChannel>()
     private val webMediaScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
@@ -1413,10 +1430,16 @@ class BrowserController(
     fun prepareForPictureInPicture() {
         val session = fullscreenVideoSession
         if (session?.isPrivate == true) return
+        val requestedChannel = pendingWebPictureInPictureRequest
+            ?.key
+            ?.let(webMediaChannels::get)
+            ?.takeIf(::isCurrentWebMediaChannel)
+        val requestedFallbackSession = pendingWebPictureInPictureRequest?.fallbackSession
         val startsTransition = !pictureInPictureTransitionPending && !isInPictureInPicture
         if (startsTransition) {
             cancelPictureInPicturePresentationRetry()
-            val ownerTabId = session?.tabId ?: webMediaPresentation?.key?.tabId ?: selectedTabId
+            val ownerTabId = session?.tabId ?: requestedChannel?.key?.tabId
+                ?: webMediaPresentation?.key?.tabId ?: selectedTabId
             val returnCleanupKey = pictureInPicturePresentationPendingReturnCleanupKey
             val retainedTransitionPresentation = returnCleanupKey != null &&
                 returnCleanupKey == webMediaPresentation?.key
@@ -1428,14 +1451,15 @@ class BrowserController(
             pictureInPicturePresentationReturnHost = webMediaPresentation?.host
             pictureInPictureOwnerTabId = ownerTabId
             pictureInPicturePlaybackExpected = session != null ||
+                requestedChannel?.payload?.isPlaying == true ||
                 presentedWebMediaChannel()?.payload?.isPlaying == true ||
                 activeVideoChannel(ownerTabId)?.payload?.isPlaying == true
         }
         pictureInPictureTransitionPending = true
         val hadWebMediaPresentation = webMediaPresentation != null
-        if (webMediaPresentation == null) {
+        if (webMediaPresentation == null && requestedFallbackSession == null) {
             pinWebMediaForPresentation(
-                channel = activeVideoChannel(
+                channel = requestedChannel ?: activeVideoChannel(
                     tabId = session?.tabId ?: selectedTabId,
                     requireVisible = session == null,
                     allowPaused = session != null,
@@ -1444,13 +1468,15 @@ class BrowserController(
                 host = FullscreenVideoHost.Browser,
             )
         }
-        presentedWebMediaChannel()?.let { channel ->
-            schedulePictureInPicturePresentationRetry(channel.key)
-            if (hadWebMediaPresentation) {
-                sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
-            }
-            if (pictureInPicturePlaybackExpected) {
-                sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
+        if (requestedFallbackSession == null) {
+            presentedWebMediaChannel()?.let { channel ->
+                schedulePictureInPicturePresentationRetry(channel.key)
+                if (hadWebMediaPresentation) {
+                    sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
+                }
+                if (pictureInPicturePlaybackExpected) {
+                    sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
+                }
             }
         }
         if (!hadWebMediaPresentation && webMediaPresentation != null) {
@@ -1486,6 +1512,14 @@ class BrowserController(
         if (inPictureInPicture) {
             prepareForPictureInPicture()
             pictureInPictureTransitionPending = false
+            pendingWebPictureInPictureRequest?.let { request ->
+                pendingWebPictureInPictureRequest = null
+                activeWebPictureInPictureRequest = request
+                sendWebPictureInPictureCommand(
+                    request = request,
+                    command = WebMediaCommand.PictureInPictureEntered,
+                )
+            }
             presentedWebMediaChannel()?.let { channel ->
                 if (pictureInPicturePlaybackExpected) {
                     sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
@@ -1493,6 +1527,18 @@ class BrowserController(
                 }
             }
         } else {
+            pendingWebPictureInPictureRequest?.let(::failWebPictureInPictureRequest)
+            val leavingRequest = activeWebPictureInPictureRequest
+            leavingRequest?.let { request ->
+                sendWebPictureInPictureCommand(
+                    request = request,
+                    command = WebMediaCommand.PictureInPictureLeft,
+                )
+            }
+            leavingRequest?.fallbackSession?.let { session ->
+                webPictureInPictureFallbackPendingReturnCleanup = session
+            }
+            activeWebPictureInPictureRequest = null
             val presentedChannel = presentedWebMediaChannel()
             val shouldResumePlayback = pictureInPicturePlaybackExpected
             val presentationWasCreatedForTransition =
@@ -1529,6 +1575,12 @@ class BrowserController(
 
     fun completePictureInPictureReturn() {
         if (isInPictureInPicture || pictureInPictureTransitionPending) return
+        webPictureInPictureFallbackPendingReturnCleanup?.let { session ->
+            webPictureInPictureFallbackPendingReturnCleanup = null
+            if (fullscreenVideoSession === session) {
+                dismissFullscreenVideo(session, notifyPage = true)
+            }
+        }
         val key = pictureInPicturePresentationPendingReturnCleanupKey ?: return
         pictureInPicturePresentationPendingReturnCleanupKey = null
         if (webMediaPresentation?.key == key) {
@@ -4473,6 +4525,12 @@ class BrowserController(
             !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         ) return
         val bridgeToken = UUID.randomUUID().toString().replace("-", "")
+        val frameRelayToken = UUID.randomUUID().toString().replace("-", "")
+        val pictureInPictureEnabled =
+            tabs.firstOrNull { tab -> tab.id == tabId }?.isIncognito == false &&
+                activity.packageManager.hasSystemFeature(
+                    PackageManager.FEATURE_PICTURE_IN_PICTURE,
+                )
         runCatching {
             WebViewCompat.addWebMessageListener(
                 webView,
@@ -4490,7 +4548,11 @@ class BrowserController(
             }
             WebViewCompat.addDocumentStartJavaScript(
                 webView,
-                WebMediaBridgeScript.javascript(bridgeToken),
+                WebMediaBridgeScript.javascript(
+                    bridgeToken = bridgeToken,
+                    frameRelayToken = frameRelayToken,
+                    pictureInPictureEnabled = pictureInPictureEnabled,
+                ),
                 ALL_WEB_ORIGINS,
             )
         }.onSuccess { handler ->
@@ -4563,6 +4625,7 @@ class BrowserController(
                 pictureInPicturePlaybackExpected = false
             }
             if (backgroundAudioKey == key) backgroundAudioKey = null
+            clearWebPictureInPictureChannel(key)
             if (webMediaPresentation?.key == key) clearWebMediaPresentation()
             webMediaChannels.remove(key)
         } else {
@@ -4597,6 +4660,12 @@ class BrowserController(
             }
             schedulePictureInPicturePlayRetry(key)
         }
+        if (payload.event == WebMediaEvent.PictureInPictureRequested) {
+            handleWebPictureInPictureRequest(
+                channel = webMediaChannels[key] ?: return,
+                requestId = payload.requestId ?: return,
+            )
+        }
         recoverPictureInPicturePresentation()
         publishWebMediaState()
         if (
@@ -4606,6 +4675,111 @@ class BrowserController(
         ) {
             forcePauseWebView(sourceView)
         }
+    }
+
+    private fun handleWebPictureInPictureRequest(
+        channel: WebMediaChannel,
+        requestId: String,
+    ) {
+        val tab = tabs.firstOrNull { it.id == channel.key.tabId }
+        val fallbackSession = if (channel.key.isMainFrame) {
+            null
+        } else {
+            matchingFullscreenVideoSession(channel)
+        }
+        val isEligible = isActivityResumed &&
+            channel.key.tabId == selectedTabId &&
+            tab?.isIncognito == false &&
+            pendingWebPictureInPictureRequest == null &&
+            activeWebPictureInPictureRequest == null &&
+            (webMediaPresentation == null || webMediaPresentation?.key == channel.key) &&
+            !pictureInPictureTransitionPending &&
+            !isInPictureInPicture &&
+            WebMediaRules.isPictureInPictureRequestEligible(
+                state = channel.toState(),
+                isPrivate = false,
+                isMainFrame = channel.key.isMainFrame,
+                hasMatchingFullscreenSession = fallbackSession != null,
+            )
+        val request = WebPictureInPictureRequest(
+            key = channel.key,
+            requestId = requestId,
+            fallbackSession = fallbackSession,
+        )
+        if (!isEligible) {
+            sendWebPictureInPictureCommand(
+                request = request,
+                command = WebMediaCommand.PictureInPictureFailed,
+            )
+            return
+        }
+        pendingWebPictureInPictureRequest = request
+        mainHandler.post {
+            if (pendingWebPictureInPictureRequest != request) return@post
+            val currentChannel = webMediaChannels[request.key]
+            if (
+                currentChannel == null ||
+                !isCurrentWebMediaChannel(currentChannel) ||
+                currentChannel.key.tabId != selectedTabId ||
+                (request.fallbackSession != null &&
+                    fullscreenVideoSession !== request.fallbackSession) ||
+                !isActivityResumed
+            ) {
+                failWebPictureInPictureRequest(request)
+                return@post
+            }
+            val accepted = runCatching(onWebPictureInPictureRequested).getOrDefault(false)
+            if (!accepted) {
+                failWebPictureInPictureRequest(request)
+                return@post
+            }
+            mainHandler.postDelayed(
+                {
+                    if (pendingWebPictureInPictureRequest == request && !isInPictureInPicture) {
+                        runCatching(onWebPictureInPictureRequestTimedOut)
+                        failWebPictureInPictureRequest(request)
+                    }
+                },
+                WEB_PICTURE_IN_PICTURE_REQUEST_TIMEOUT_MILLIS,
+            )
+        }
+    }
+
+    private fun matchingFullscreenVideoSession(
+        channel: WebMediaChannel,
+    ): FullscreenVideoSession? = fullscreenVideoSession?.takeIf { session ->
+        session.tabId == channel.key.tabId &&
+            session.webView === channel.webView &&
+            session.navigationGeneration == channel.key.navigationGeneration &&
+            !session.isPrivate
+    }
+
+    private fun failWebPictureInPictureRequest(request: WebPictureInPictureRequest) {
+        if (pendingWebPictureInPictureRequest != request) return
+        pendingWebPictureInPictureRequest = null
+        sendWebPictureInPictureCommand(
+            request = request,
+            command = WebMediaCommand.PictureInPictureFailed,
+        )
+        scheduleWebPictureInPictureFallbackCleanup(request)
+    }
+
+    private fun scheduleWebPictureInPictureFallbackCleanup(
+        request: WebPictureInPictureRequest,
+    ) {
+        val session = request.fallbackSession ?: return
+        mainHandler.postDelayed(
+            {
+                val sessionStillOwned =
+                    pendingWebPictureInPictureRequest?.fallbackSession === session ||
+                        activeWebPictureInPictureRequest?.fallbackSession === session ||
+                        webPictureInPictureFallbackPendingReturnCleanup === session
+                if (!sessionStillOwned && fullscreenVideoSession === session) {
+                    dismissFullscreenVideo(session, notifyPage = true)
+                }
+            },
+            WEB_PICTURE_IN_PICTURE_FULLSCREEN_CLEANUP_DELAY_MILLIS,
+        )
     }
 
     private fun schedulePictureInPicturePlayRetry(key: WebMediaChannelKey) {
@@ -4786,7 +4960,6 @@ class BrowserController(
         .filter(::isCurrentWebMediaChannel)
         .filter { channel ->
             channel.key.tabId == tabId &&
-                channel.key.isMainFrame &&
                 channel.payload.kind == WebMediaKind.Video &&
                 (
                     channel.payload.isPlaying ||
@@ -4858,7 +5031,6 @@ class BrowserController(
         val tab = tabs.firstOrNull { it.id == channel.key.tabId } ?: return
         if (
             tab.isIncognito ||
-            !channel.key.isMainFrame ||
             channel.payload.kind != WebMediaKind.Video ||
             channel.payload.videoWidth <= 0 ||
             channel.payload.videoHeight <= 0
@@ -4936,6 +5108,7 @@ class BrowserController(
             }
             .keys
         if (backgroundAudioKey in removedKeys) backgroundAudioKey = null
+        clearWebPictureInPictureRequests(removedKeys)
         if (webMediaPresentation?.key in removedKeys) clearWebMediaPresentation()
         removedKeys.forEach(webMediaChannels::remove)
         publishWebMediaState()
@@ -4949,6 +5122,7 @@ class BrowserController(
             }
         }
         if (backgroundAudioKey in removedKeys) backgroundAudioKey = null
+        clearWebPictureInPictureRequests(removedKeys)
         if (webMediaPresentation?.key in removedKeys) clearWebMediaPresentation()
         removedKeys.forEach(webMediaChannels::remove)
         publishWebMediaState()
@@ -5019,12 +5193,67 @@ class BrowserController(
             .filterValues { channel -> channel.webView === webView }
             .keys
         if (backgroundAudioKey in removedKeys) backgroundAudioKey = null
+        clearWebPictureInPictureRequests(removedKeys)
         if (webMediaPresentation?.key in removedKeys) clearWebMediaPresentation()
         removedKeys.forEach(webMediaChannels::remove)
         publishWebMediaState()
     }
 
-    private fun sendWebMediaCommand(channel: WebMediaChannel, command: WebMediaCommand) {
+    private fun clearWebPictureInPictureRequests(removedKeys: Collection<WebMediaChannelKey>) {
+        pendingWebPictureInPictureRequest
+            ?.takeIf { request -> request.key in removedKeys }
+            ?.let { request ->
+                runCatching(onWebPictureInPictureRequestTimedOut)
+                failWebPictureInPictureRequest(request)
+            }
+        activeWebPictureInPictureRequest
+            ?.takeIf { request -> request.key in removedKeys }
+            ?.let { request ->
+                sendWebPictureInPictureCommand(
+                    request = request,
+                    command = WebMediaCommand.PictureInPictureLeft,
+                )
+                activeWebPictureInPictureRequest = null
+                scheduleWebPictureInPictureFallbackCleanup(request)
+            }
+    }
+
+    private fun clearWebPictureInPictureChannel(key: WebMediaChannelKey) {
+        pendingWebPictureInPictureRequest
+            ?.takeIf { request -> request.key == key }
+            ?.let { request ->
+                runCatching(onWebPictureInPictureRequestTimedOut)
+                failWebPictureInPictureRequest(request)
+            }
+        activeWebPictureInPictureRequest
+            ?.takeIf { request -> request.key == key }
+            ?.let { request ->
+                sendWebPictureInPictureCommand(
+                    request = request,
+                    command = WebMediaCommand.PictureInPictureLeft,
+                )
+                activeWebPictureInPictureRequest = null
+                scheduleWebPictureInPictureFallbackCleanup(request)
+            }
+    }
+
+    private fun sendWebPictureInPictureCommand(
+        request: WebPictureInPictureRequest,
+        command: WebMediaCommand,
+    ) {
+        val channel = webMediaChannels[request.key] ?: return
+        sendWebMediaCommand(
+            channel = channel,
+            command = command,
+            requestId = request.requestId,
+        )
+    }
+
+    private fun sendWebMediaCommand(
+        channel: WebMediaChannel,
+        command: WebMediaCommand,
+        requestId: String? = null,
+    ) {
         if (!isCurrentWebMediaChannel(channel)) return
         runCatching {
             channel.replyProxy.postMessage(
@@ -5032,6 +5261,7 @@ class BrowserController(
                     command = command,
                     documentId = channel.key.documentId,
                     mediaId = channel.key.mediaId,
+                    requestId = requestId,
                 ),
             )
         }
@@ -7329,6 +7559,8 @@ class BrowserController(
         const val PICTURE_IN_PICTURE_EXIT_GUARD_DELAY_MILLIS = 350L
         const val PICTURE_IN_PICTURE_PLAY_RETRY_DELAY_MILLIS = 250L
         const val PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS = 2_000L
+        const val WEB_PICTURE_IN_PICTURE_FULLSCREEN_CLEANUP_DELAY_MILLIS = 250L
+        const val WEB_PICTURE_IN_PICTURE_REQUEST_TIMEOUT_MILLIS = 5_000L
         const val WEB_PERMISSION_REQUEST_CODE = 7_041
         const val FILE_CHOOSER_REQUEST_CODE = 7_042
     }

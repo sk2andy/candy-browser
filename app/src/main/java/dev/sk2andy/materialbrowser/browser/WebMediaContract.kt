@@ -11,6 +11,7 @@ internal enum class WebMediaKind {
 internal enum class WebMediaEvent {
     State,
     DocumentGone,
+    PictureInPictureRequested,
 }
 
 internal data class WebMediaPayload(
@@ -31,6 +32,7 @@ internal data class WebMediaPayload(
     val clientWidth: Int,
     val clientHeight: Int,
     val visibleRatio: Float,
+    val requestId: String? = null,
 ) {
     val isPlaying: Boolean
         get() = !paused && !ended
@@ -63,6 +65,9 @@ internal enum class WebMediaCommand {
     AllowPause,
     EnterPresentation,
     ExitPresentation,
+    PictureInPictureEntered,
+    PictureInPictureFailed,
+    PictureInPictureLeft,
 }
 
 internal object WebMediaContract {
@@ -84,6 +89,7 @@ internal object WebMediaContract {
             val event = when (json.optString("event")) {
                 "state" -> WebMediaEvent.State
                 "document-gone" -> WebMediaEvent.DocumentGone
+                "picture-in-picture-request" -> WebMediaEvent.PictureInPictureRequested
                 else -> return null
             }
             val documentId = json.optString("documentId").takeIf(::isSafeId) ?: return null
@@ -107,6 +113,11 @@ internal object WebMediaContract {
                     clientHeight = 0,
                     visibleRatio = 0f,
                 )
+            }
+            val requestId = if (event == WebMediaEvent.PictureInPictureRequested) {
+                json.optString("requestId").takeIf(::isSafeId) ?: return null
+            } else {
+                null
             }
             val mediaId = json.optString("mediaId").takeIf(::isSafeId) ?: return null
             val kind = when (json.optString("kind")) {
@@ -146,6 +157,7 @@ internal object WebMediaContract {
                     ?.coerceIn(0.0, 1.0)
                     ?.toFloat()
                     ?: 0f,
+                requestId = requestId,
             )
         } catch (_: JSONException) {
             null
@@ -157,6 +169,7 @@ internal object WebMediaContract {
         documentId: String,
         mediaId: String,
         positionMillis: Long? = null,
+        requestId: String? = null,
     ): String = JSONObject().apply {
         put("v", 1)
         put("command", when (command) {
@@ -168,11 +181,18 @@ internal object WebMediaContract {
             WebMediaCommand.AllowPause -> "allow-pause"
             WebMediaCommand.EnterPresentation -> "enter-presentation"
             WebMediaCommand.ExitPresentation -> "exit-presentation"
+            WebMediaCommand.PictureInPictureEntered -> "picture-in-picture-entered"
+            WebMediaCommand.PictureInPictureFailed -> "picture-in-picture-failed"
+            WebMediaCommand.PictureInPictureLeft -> "picture-in-picture-left"
         })
         put("documentId", documentId)
         put("mediaId", mediaId)
         positionMillis?.let {
             put("position", it.coerceIn(0L, MAX_MEDIA_TIME_MILLIS) / 1_000.0)
+        }
+        requestId?.let {
+            require(isSafeId(it))
+            put("requestId", it)
         }
     }.toString()
 
@@ -202,6 +222,15 @@ internal object WebMediaContract {
 }
 
 internal object WebMediaRules {
+    fun isPictureInPictureRequestEligible(
+        state: WebMediaState?,
+        isPrivate: Boolean,
+        isMainFrame: Boolean,
+        hasMatchingFullscreenSession: Boolean,
+    ): Boolean =
+        (isMainFrame || hasMatchingFullscreenSession) &&
+            isExternalPresentationEligible(state, isPrivate)
+
     fun isExternalPresentationEligible(state: WebMediaState?, isPrivate: Boolean): Boolean {
         if (state == null || isPrivate || state.kind != WebMediaKind.Video) return false
         val visibleArea = state.clientWidth.toLong() * state.clientHeight
