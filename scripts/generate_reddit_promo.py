@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a short Reddit promo for Candy Browser from repository assets."""
+"""Render the widescreen Candy Browser feature showcase from repository assets."""
 
 from __future__ import annotations
 
@@ -27,11 +27,11 @@ SCREENSHOT_DIR = ROOT / "docs" / "screenshots"
 SOURCE_DIR = OUTPUT_DIR / "source"
 LOGO = ROOT / "app" / "src" / "main" / "res" / "drawable-nodpi" / "ic_launcher_foreground_art.png"
 
-WIDTH = 1080
-HEIGHT = 1350
+WIDTH = 1920
+HEIGHT = 1080
 FPS = 60
 SOURCE_FPS = 30
-DURATION = 22.6
+DURATION = 27.0
 TRANSITION = 0.34
 
 FONT_REGULAR = "/System/Library/Fonts/SFNS.ttf"
@@ -52,20 +52,23 @@ class Scene:
 
 
 SCENES = (
-    Scene(0.0, 1.3, "hook"),
-    Scene(1.3, 3.6, "tabs"),
-    Scene(3.6, 7.8, "peek"),
-    Scene(7.8, 11.0, "privacy"),
-    Scene(11.0, 13.1, "reader"),
-    Scene(13.1, 15.2, "trail"),
-    Scene(15.2, 18.1, "tab_variants"),
-    Scene(18.1, 20.3, "more"),
-    Scene(20.3, 22.6, "end"),
+    Scene(0.0, 1.4, "hook"),
+    Scene(1.4, 3.8, "tabs"),
+    Scene(3.8, 6.8, "peek"),
+    Scene(6.8, 8.8, "topping_intro"),
+    Scene(8.8, 12.3, "spoiler"),
+    Scene(12.3, 15.6, "hackernews"),
+    Scene(15.6, 18.0, "privacy_toppings"),
+    Scene(18.0, 21.6, "privacy"),
+    Scene(21.6, 24.2, "more"),
+    Scene(24.2, 27.0, "end"),
 )
 
 VIDEO_SOURCES = {
     "tabs": SOURCE_DIR / "tab-switcher-live.mp4",
     "peek": SOURCE_DIR / "link-peek-live.mp4",
+    "spoiler": SOURCE_DIR / "spoilerfree-sports-live.mp4",
+    "hackernews": SOURCE_DIR / "hacker-news-comfort-live.mp4",
     "privacy": SOURCE_DIR / "privacy-xray-live.mp4",
 }
 VIDEO_FRAME_PATHS: dict[str, tuple[Path, ...]] = {}
@@ -126,14 +129,14 @@ def background(time: float, *, accent: str = PURPLE) -> Image.Image:
     glow = Image.new("RGBA", glow_size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(glow)
     accent_rgb = tuple(int(accent[index : index + 2], 16) for index in (1, 3, 5))
-    cx = round(180 + 60 * math.sin(time * 0.8))
-    cy = round(260 + 80 * math.cos(time * 0.65))
+    cx = round(280 + 110 * math.sin(time * 0.8))
+    cy = round(210 + 80 * math.cos(time * 0.65))
     draw.ellipse(
         tuple(value // glow_scale for value in (cx - 260, cy - 260, cx + 260, cy + 260)),
         fill=accent_rgb + (70,),
     )
-    cx2 = round(890 + 55 * math.cos(time * 0.7))
-    cy2 = round(1050 + 70 * math.sin(time * 0.55))
+    cx2 = round(1650 + 100 * math.cos(time * 0.7))
+    cy2 = round(850 + 70 * math.sin(time * 0.55))
     draw.ellipse(
         tuple(value // glow_scale for value in (cx2 - 300, cy2 - 300, cx2 + 300, cy2 + 300)),
         fill=(255, 47, 120, 55),
@@ -144,8 +147,8 @@ def background(time: float, *, accent: str = PURPLE) -> Image.Image:
     draw = ImageDraw.Draw(image)
     for index in range(9):
         angle = time * (0.18 + index * 0.012) + index * 0.9
-        x = round(WIDTH / 2 + math.cos(angle) * (410 + index * 13))
-        y = round(HEIGHT / 2 + math.sin(angle * 1.1) * (470 + index * 7))
+        x = round(WIDTH / 2 + math.cos(angle) * (740 + index * 18))
+        y = round(HEIGHT / 2 + math.sin(angle * 1.1) * (390 + index * 7))
         radius = 3 + index % 3
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=(255, 255, 255, 145))
     return image
@@ -160,7 +163,7 @@ def rounded_screen_image(screen: Image.Image, width: int) -> Image.Image:
     return screen
 
 
-def phone_image(screen: Image.Image, *, width: int = 478) -> Image.Image:
+def phone_image(screen: Image.Image, *, width: int = 390) -> Image.Image:
     screen = rounded_screen_image(screen, width)
     bezel = 15
     shadow_padding = 42
@@ -271,9 +274,9 @@ def draw_swipe(canvas: Image.Image, progress: float) -> None:
     if progress <= 0.0 or progress >= 1.0:
         return
     draw = ImageDraw.Draw(canvas)
-    x = 810
-    start_y = 1125
-    end_y = 780
+    x = 1580
+    start_y = 900
+    end_y = 590
     y = round(start_y + (end_y - start_y) * ease_in_out(progress))
     draw.line((x, start_y, x, y), fill=(255, 255, 255, 170), width=9)
     draw.ellipse((x - 17, y - 17, x + 17, y + 17), fill=(255, 255, 255, 230))
@@ -289,7 +292,7 @@ def render_hook(local: float, time: float) -> Image.Image:
     chip_progress = ease_out_quint(local / 0.48)
     draw_chip(
         draw,
-        (round(-465 + 519 * chip_progress), 52),
+        (round(-465 + 575 * chip_progress), 64),
         "MATERIAL 3 EXPRESSIVE  ·  OPEN SOURCE",
         "#ECE8FF",
         PURPLE,
@@ -297,28 +300,28 @@ def render_hook(local: float, time: float) -> Image.Image:
 
     logo = Image.open(LOGO).convert("RGBA")
     logo_scale = 0.86 * ease_out_quint(local / 0.52)
-    logo_size = max(1, round(280 * logo_scale))
+    logo_size = max(1, round(320 * logo_scale))
     logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
-    canvas.alpha_composite(logo, ((WIDTH - logo_size) // 2, 235 + round(18 * math.sin(local * 5.5))))
+    canvas.alpha_composite(logo, (250, 340 + round(18 * math.sin(local * 5.5))))
 
     alpha = round(255 * min(1.0, max(0.0, (local - 0.12) / 0.38)))
     text_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     text_draw = ImageDraw.Draw(text_layer)
-    heading_font = font(78, weight="semibold")
+    heading_font = font(108, weight="semibold")
     heading = "Candy Browser"
     bounds = text_draw.textbbox((0, 0), heading, font=heading_font)
     reveal = ease_out_quint((local - 0.08) / 0.54)
     text_draw.text(
-        ((WIDTH - bounds[2]) // 2, 580 + round(38 * (1.0 - reveal))),
+        (700, 385 + round(38 * (1.0 - reveal))),
         heading,
         font=heading_font,
         fill=(32, 33, 43, alpha),
     )
-    strap = "Packed with features."
-    strap_font = font(36, weight="medium")
+    strap = "Gesture-first. Privacy-first. Yours."
+    strap_font = font(43, weight="medium")
     bounds = text_draw.textbbox((0, 0), strap, font=strap_font)
     text_draw.text(
-        ((WIDTH - bounds[2]) // 2, 683 + round(28 * (1.0 - reveal))),
+        (706, 535 + round(28 * (1.0 - reveal))),
         strap,
         font=strap_font,
         fill=(116, 87, 215, alpha),
@@ -343,19 +346,26 @@ def render_feature(
     canvas = background(time, accent=accent)
     draw = ImageDraw.Draw(canvas)
     chip_progress = ease_out_quint(local / 0.44)
-    draw_chip(draw, (round(-330 + 384 * chip_progress), 52), chip_label, "#FFFFFFD9", accent)
+    chip_x = 110 if side == "right" else 940
+    draw_chip(
+        draw,
+        (round(chip_x - 440 * (1.0 - chip_progress)), 64),
+        chip_label,
+        "#FFFFFFD9",
+        accent,
+    )
 
-    device = phone_image(screen)
+    device = phone_image(screen, width=390)
     entrance = ease_out_quint(local / 0.64)
     bob = math.sin(local * 3.2) * 5
     if side == "right":
-        phone_x = round(530 + (WIDTH + 80 - 530) * (1.0 - entrance))
-        text_x = 54
+        phone_x = round(1280 + (WIDTH + 80 - 1280) * (1.0 - entrance))
+        text_x = 110
     else:
-        phone_x = round(-24 - (580 * (1.0 - entrance)))
-        text_x = 610
-    phone_y = round(164 + bob)
-    paste_scaled(canvas, device, (phone_x, phone_y), 0.91, angle=-1.2 if side == "right" else 1.2)
+        phone_x = round(150 - (580 * (1.0 - entrance)))
+        text_x = 940
+    phone_y = round(38 + bob)
+    paste_scaled(canvas, device, (phone_x, phone_y), 0.96, angle=-1.0 if side == "right" else 1.0)
 
     text_progress = ease_out_quint((local - 0.10) / 0.62)
     text_alpha = round(255 * text_progress)
@@ -363,21 +373,21 @@ def render_feature(
     text_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     text_draw = ImageDraw.Draw(text_layer)
     text_draw.multiline_text(
-        (text_x, 250 + text_offset),
+        (text_x, 230 + text_offset),
         headline,
-        font=font(62, weight="semibold"),
+        font=font(75, weight="semibold"),
         fill=(32, 33, 43, text_alpha),
         spacing=0,
     )
     text_draw.multiline_text(
-        (text_x, 454 + round(text_offset * 0.65)),
+        (text_x, 515 + round(text_offset * 0.65)),
         body,
-        font=font(30, weight="medium"),
+        font=font(35, weight="medium"),
         fill=(85, 87, 103, text_alpha),
         spacing=7,
     )
     accent_width = round(104 * text_progress)
-    text_draw.rounded_rectangle((text_x, 595, text_x + accent_width, 603), radius=4, fill=accent)
+    text_draw.rounded_rectangle((text_x, 690, text_x + accent_width, 700), radius=5, fill=accent)
     canvas.alpha_composite(text_layer)
 
     if touch is not None:
@@ -440,42 +450,151 @@ def render_tab_variants(local: float, time: float) -> Image.Image:
     return canvas
 
 
+def draw_feature_card(
+    canvas: Image.Image,
+    *,
+    xy: tuple[int, int],
+    label: str,
+    detail: str,
+    accent: str,
+    progress: float,
+    delay: float,
+) -> None:
+    reveal = ease_out_quint((progress - delay) / 0.38)
+    if reveal <= 0.0:
+        return
+    x, y = xy
+    y += round(55 * (1.0 - reveal))
+    alpha = round(245 * reveal)
+    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    draw.rounded_rectangle((x, y, x + 510, y + 170), radius=42, fill=(255, 255, 255, alpha))
+    draw.rounded_rectangle((x + 24, y + 25, x + 36, y + 145), radius=6, fill=accent)
+    draw.text((x + 68, y + 35), label, font=font(34, weight="semibold"), fill=(32, 33, 43, alpha))
+    draw.text((x + 68, y + 92), detail, font=font(25, weight="medium"), fill=(85, 87, 103, alpha))
+    canvas.alpha_composite(layer)
+
+
+def render_topping_intro(local: float, time: float) -> Image.Image:
+    canvas = background(time, accent=PURPLE)
+    draw = ImageDraw.Draw(canvas)
+    draw_chip(
+        draw,
+        (round(-360 + 470 * ease_out_quint(local / 0.42)), 64),
+        "TOPPINGS · ONE-TAP EXTENSIONS",
+        "#FFFFFFD9",
+        PURPLE,
+    )
+    reveal = ease_out_quint(local / 0.62)
+    draw.multiline_text(
+        (110, 215 + round(45 * (1.0 - reveal))),
+        "MAKE THE WEB\nTASTE BETTER.",
+        font=font(88, weight="semibold"),
+        fill=INK,
+        spacing=0,
+    )
+    draw.text(
+        (115, 480),
+        "Install focused upgrades. Toggle them anytime.",
+        font=font(37, weight="medium"),
+        fill=MUTED,
+    )
+    draw_feature_card(
+        canvas,
+        xy=(1170, 180),
+        label="Spoilerfree Sports",
+        detail="Hide scores until you choose",
+        accent=PINK,
+        progress=local,
+        delay=0.10,
+    )
+    draw_feature_card(
+        canvas,
+        xy=(1270, 410),
+        label="Hacker News Comfort",
+        detail="Readable cards · bigger targets",
+        accent=PURPLE,
+        progress=local,
+        delay=0.22,
+    )
+    draw_feature_card(
+        canvas,
+        xy=(1170, 640),
+        label="Privacy Toppings",
+        detail="Clean links before you leave",
+        accent="#00A9A5",
+        progress=local,
+        delay=0.34,
+    )
+    return canvas
+
+
+def render_privacy_toppings(local: float, time: float) -> Image.Image:
+    canvas = background(time, accent="#00A9A5")
+    draw = ImageDraw.Draw(canvas)
+    draw_chip(
+        draw,
+        (round(-360 + 470 * ease_out_quint(local / 0.42)), 64),
+        "PRIVACY TOPPINGS",
+        "#FFFFFFD9",
+        "#007F7B",
+    )
+    reveal = ease_out_quint(local / 0.58)
+    draw.text(
+        (110, 190 + round(50 * (1.0 - reveal))),
+        "LESS TRACKING. CLEANER LINKS.",
+        font=font(75, weight="semibold"),
+        fill=INK,
+    )
+    draw.text(
+        (115, 300),
+        "Small upgrades. Visible privacy wins.",
+        font=font(35, weight="medium"),
+        fill=MUTED,
+    )
+    items = (
+        ("LINK TRACKING CLEANER", "Removes known tracking parameters", PINK),
+        ("GOOGLE SEARCH CLEANUP", "Cleans redirects before you tap", PURPLE),
+        ("MEDIUM READING FOCUS", "Drops sticky sign-up chrome", "#00A9A5"),
+    )
+    for index, (label, detail, accent) in enumerate(items):
+        draw_feature_card(
+            canvas,
+            xy=(170 + index * 565, 540 + (index % 2) * 45),
+            label=label,
+            detail=detail,
+            accent=accent,
+            progress=local,
+            delay=0.16 + index * 0.16,
+        )
+    return canvas
+
+
 def render_more(local: float, time: float) -> Image.Image:
     canvas = background(time, accent=PINK)
     draw = ImageDraw.Draw(canvas)
     draw_chip(
         draw,
-        (round(-330 + 384 * ease_out_quint(local / 0.44)), 52),
+        (round(-330 + 440 * ease_out_quint(local / 0.44)), 64),
         "AND THAT'S NOT ALL",
         "#FFFFFFD9",
         PINK,
     )
-
-    text_progress = ease_out_quint(local / 0.62)
-    alpha = round(255 * text_progress)
-    text_offset = round(50 * (1.0 - text_progress))
-    text_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    text_draw = ImageDraw.Draw(text_layer)
-    text_draw.multiline_text(
-        (54, 210 + text_offset),
-        "PROFILES.\nPINS.\nCOMMANDS.",
-        font=font(65, weight="semibold"),
-        fill=(32, 33, 43, alpha),
-        spacing=2,
+    progress = ease_out_quint(local / 0.66)
+    draw.multiline_text(
+        (105, 235 + round(55 * (1.0 - progress))),
+        "READER. TRAILS.\nPROFILES. COMMANDS.",
+        font=font(76, weight="semibold"),
+        fill=INK,
+        spacing=4,
     )
-    text_draw.text(
-        (56, 485 + round(text_offset * 0.65)),
-        "And many more.",
-        font=font(36, weight="semibold"),
-        fill=(116, 87, 215, alpha),
-    )
-    canvas.alpha_composite(text_layer)
+    draw.text((110, 500), "And many more.", font=font(38, weight="semibold"), fill=PURPLE)
 
-    profile = phone_image(static_screen("profile"), width=285)
-    commands = phone_image(static_screen("commands"), width=255)
+    reader = phone_image(static_screen("reader"), width=310)
+    trail = phone_image(static_screen("trail"), width=310)
     entrance = ease_out_quint(local / 0.72)
-    paste_scaled(canvas, commands, (720, round(520 + 900 * (1.0 - entrance))), 0.94, angle=4.0)
-    paste_scaled(canvas, profile, (470, round(555 + 900 * (1.0 - entrance))), 0.98, angle=-3.2)
+    paste_scaled(canvas, reader, (1110, round(45 + 900 * (1.0 - entrance))), 0.96, angle=-3.0)
+    paste_scaled(canvas, trail, (1420, round(30 + 900 * (1.0 - entrance))), 0.99, angle=2.4)
     return canvas
 
 
@@ -486,22 +605,22 @@ def render_end(local: float, time: float) -> Image.Image:
     content_offset = round(46 * (1.0 - progress))
 
     logo = Image.open(LOGO).convert("RGBA")
-    logo_size = max(1, round(230 * progress))
+    logo_size = max(1, round(265 * progress))
     logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
-    canvas.alpha_composite(logo, ((WIDTH - logo_size) // 2, 230 + content_offset))
+    canvas.alpha_composite(logo, (245, 360 + content_offset))
 
-    heading_font = font(80, weight="semibold")
+    heading_font = font(98, weight="semibold")
     heading = "Candy Browser"
     bounds = draw.textbbox((0, 0), heading, font=heading_font)
-    draw.text(((WIDTH - bounds[2]) // 2, 550 + content_offset), heading, font=heading_font, fill=INK)
+    draw.text((650, 310 + content_offset), heading, font=heading_font, fill=INK)
     strap = "Gesture-first. Privacy-first."
-    strap_font = font(35, weight="medium")
+    strap_font = font(39, weight="medium")
     bounds = draw.textbbox((0, 0), strap, font=strap_font)
-    draw.text(((WIDTH - bounds[2]) // 2, 660 + content_offset), strap, font=strap_font, fill=PURPLE)
+    draw.text((656, 450 + content_offset), strap, font=strap_font, fill=PURPLE)
 
-    button_width = 650
-    button_left = (WIDTH - button_width) // 2
-    button_top = 800 + content_offset
+    button_width = 690
+    button_left = 650
+    button_top = 575 + content_offset
     pulse = 1.0 + 0.012 * math.sin(local * 7.0)
     button_height = round(114 * pulse)
     draw.rounded_rectangle(
@@ -513,7 +632,7 @@ def render_end(local: float, time: float) -> Image.Image:
     cta_font = font(32, weight="semibold")
     bounds = draw.textbbox((0, 0), cta, font=cta_font)
     draw.text(
-        ((WIDTH - bounds[2]) // 2, button_top + 36),
+        (button_left + (button_width - bounds[2]) // 2, button_top + 36),
         cta,
         font=cta_font,
         fill="white",
@@ -521,14 +640,14 @@ def render_end(local: float, time: float) -> Image.Image:
     foot = "github.com/sk2andy/candy-browser"
     foot_font = font(25, weight="medium")
     bounds = draw.textbbox((0, 0), foot, font=foot_font)
-    draw.text(((WIDTH - bounds[2]) // 2, 965 + content_offset), foot, font=foot_font, fill=MUTED)
+    draw.text((button_left + (button_width - bounds[2]) // 2, 735 + content_offset), foot, font=foot_font, fill=MUTED)
     chip_label = "ANDROID 14+  ·  PolyForm Noncommercial 1.0.0"
     chip_font = font(22, weight="semibold")
     chip_bounds = draw.textbbox((0, 0), chip_label, font=chip_font)
     chip_width = chip_bounds[2] - chip_bounds[0] + 38
     draw_chip(
         draw,
-        ((WIDTH - chip_width) // 2, 1082 + content_offset),
+        (button_left + (button_width - chip_width) // 2, 835 + content_offset),
         chip_label,
         "#FFFFFFD9",
         PURPLE,
@@ -536,11 +655,65 @@ def render_end(local: float, time: float) -> Image.Image:
     return canvas
 
 
+def camera_move(
+    image: Image.Image,
+    *,
+    scale: float,
+    focus: tuple[float, float],
+    drift: tuple[float, float] = (0.0, 0.0),
+) -> Image.Image:
+    if scale <= 1.0001 and drift == (0.0, 0.0):
+        return image
+    scaled = image.resize(
+        (round(WIDTH * scale), round(HEIGHT * scale)),
+        Image.Resampling.BICUBIC,
+    )
+    focus_x, focus_y = focus
+    left = round(focus_x * (scale - 1.0) + drift[0])
+    top = round(focus_y * (scale - 1.0) + drift[1])
+    left = min(max(0, left), scaled.width - WIDTH)
+    top = min(max(0, top), scaled.height - HEIGHT)
+    return scaled.crop((left, top, left + WIDTH, top + HEIGHT))
+
+
+def apply_scene_camera(kind: str, image: Image.Image, local: float) -> Image.Image:
+    if kind in {"hook", "topping_intro", "privacy_toppings", "end"}:
+        return image
+    camera_progress = ease_in_out((local - 0.55) / 2.35)
+    if kind == "spoiler":
+        return camera_move(
+            image,
+            scale=1.0 + 0.12 * camera_progress,
+            focus=(1000, 550),
+            drift=(-55 * camera_progress, 35 * camera_progress),
+        )
+    if kind == "hackernews":
+        return camera_move(
+            image,
+            scale=1.0 + 0.14 * camera_progress,
+            focus=(410, 525),
+            drift=(48 * camera_progress, -25 * camera_progress),
+        )
+    if kind == "privacy":
+        return camera_move(
+            image,
+            scale=1.0 + 0.12 * camera_progress,
+            focus=(1000, 540),
+            drift=(-45 * camera_progress, -35 * camera_progress),
+        )
+    return camera_move(
+        image,
+        scale=1.0 + 0.07 * camera_progress,
+        focus=(WIDTH / 2, HEIGHT / 2),
+        drift=(25 * math.sin(local * 0.9), 12 * math.cos(local * 0.75)),
+    )
+
+
 def render_scene(scene: Scene, local: float, time: float) -> Image.Image:
     if scene.kind == "hook":
-        return render_hook(local, time)
-    if scene.kind == "tabs":
-        return render_feature(
+        image = render_hook(local, time)
+    elif scene.kind == "tabs":
+        image = render_feature(
             local,
             time,
             screen=video_screen("tabs", local),
@@ -551,8 +724,8 @@ def render_scene(scene: Scene, local: float, time: float) -> Image.Image:
             side="right",
             swipe=True,
         )
-    if scene.kind == "peek":
-        return render_feature(
+    elif scene.kind == "peek":
+        image = render_feature(
             local,
             time,
             screen=video_screen("peek", local),
@@ -561,47 +734,52 @@ def render_scene(scene: Scene, local: float, time: float) -> Image.Image:
             chip_label="LIVE · LINK PEEK",
             accent=PURPLE,
             side="left",
-            touch=(305, 720),
+            touch=(425, 610),
         )
-    if scene.kind == "privacy":
-        return render_feature(
+    elif scene.kind == "topping_intro":
+        image = render_topping_intro(local, time)
+    elif scene.kind == "spoiler":
+        image = render_feature(
             local,
             time,
-            screen=video_screen("privacy", local),
-            headline="OPEN PRIVACY\nX-RAY.",
-            body="See what got blocked,\nright inside the tab.",
-            chip_label="LIVE · PRIVACY X-RAY",
+            screen=video_screen("spoiler", local),
+            headline="SCORES?\nYOUR CALL.",
+            body="Spoilerfree Sports hides\nresults behind one toggle.",
+            chip_label="LIVE · SPOILERFREE SPORTS",
             accent=PINK,
             side="right",
-            touch=(800, 1075),
+            touch=(1690, 145),
         )
-    if scene.kind == "reader":
-        return render_feature(
+    elif scene.kind == "hackernews":
+        image = render_feature(
             local,
             time,
-            screen=static_screen("reader"),
-            headline="READ WITHOUT\nTHE CLUTTER.",
-            body="Reader Mode keeps the\narticle, drops the noise.",
-            chip_label="READER MODE",
+            screen=video_screen("hackernews", local),
+            headline="HACKER NEWS.\nMORE COMFORT.",
+            body="Readable cards, larger type\nand stronger tap targets.",
+            chip_label="LIVE · HACKER NEWS TOPPING",
             accent=PURPLE,
             side="left",
         )
-    if scene.kind == "trail":
-        return render_feature(
+    elif scene.kind == "privacy_toppings":
+        image = render_privacy_toppings(local, time)
+    elif scene.kind == "privacy":
+        image = render_feature(
             local,
             time,
-            screen=static_screen("trail"),
-            headline="FOLLOW EVERY\nBRANCH.",
-            body="Candy Trails maps where\nyour browsing took you.",
-            chip_label="CANDY TRAILS",
+            screen=video_screen("privacy", local),
+            headline="SEE PRIVACY\nIN REAL TIME.",
+            body="The new Privacy X-Ray shows\nblocks, categories and domains.",
+            chip_label="NEW · PRIVACY X-RAY",
             accent=PINK,
             side="right",
+            touch=(1555, 895),
         )
-    if scene.kind == "tab_variants":
-        return render_tab_variants(local, time)
-    if scene.kind == "more":
-        return render_more(local, time)
-    return render_end(local, time)
+    elif scene.kind == "more":
+        image = render_more(local, time)
+    else:
+        image = render_end(local, time)
+    return apply_scene_camera(scene.kind, image, local)
 
 
 def zoom_crop(image: Image.Image, scale: float) -> Image.Image:
@@ -950,7 +1128,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=OUTPUT_DIR / "candy-browser-reddit-4x5.mp4",
+        default=OUTPUT_DIR / "candy-browser-showcase-16x9.mp4",
         help="Destination MP4 path.",
     )
     parser.add_argument(
@@ -962,7 +1140,7 @@ def main() -> None:
     parser.add_argument(
         "--poster",
         type=Path,
-        default=OUTPUT_DIR / "candy-browser-reddit-poster.jpg",
+        default=OUTPUT_DIR / "candy-browser-showcase-16x9-poster.jpg",
         help="Destination poster path.",
     )
     args = parser.parse_args()
@@ -979,11 +1157,16 @@ def main() -> None:
     theme.parent.mkdir(parents=True, exist_ok=True)
     poster.parent.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory(prefix="candy-reddit-promo-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="candy-reddit-promo-") as temporary, tempfile.TemporaryDirectory(
+        prefix=f".{output.stem}-",
+        dir=output.parent,
+    ) as export_temporary:
         extract_video_frames(Path(temporary), ffmpeg=ffmpeg)
         synthesize_theme(theme)
-        render_frame(21.4).save(poster, quality=92, optimize=True)
-        render_video(output, theme, ffmpeg=ffmpeg)
+        render_frame(25.1).save(poster, quality=92, optimize=True)
+        temporary_output = Path(export_temporary) / output.name
+        render_video(temporary_output, theme, ffmpeg=ffmpeg)
+        temporary_output.replace(output)
     print(output)
 
 

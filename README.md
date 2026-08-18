@@ -34,12 +34,13 @@
 https://github.com/user-attachments/assets/cb9b61d4-5047-4b85-b41e-255f9654949f
 
 <p align="center">
-  <a href="docs/promo/video/candy-browser-reddit-4x5.mp4"><strong>Download the 60 fps feature tour (MP4, 4.7 MB)</strong></a>
+  <a href="docs/promo/video/candy-browser-showcase-16x9.mp4"><strong>Download the 16:9 feature showcase (MP4, 60 fps)</strong></a>
 </p>
 
-The tour combines live API 36 emulator footage with repository screenshots to show the gesture-first
-tab switcher, Link Peek, Privacy X-Ray, Reader Studio, Candy Trails, profiles, and every tab layout.
-Its original soundtrack and motion graphics are generated entirely from repository-owned sources.
+The showcase combines live API 36 emulator footage, current Topping scripts, and repository screenshots
+to show the gesture-first tab switcher, Link Peek, Spoilerfree Sports, Hacker News Comfort, Privacy
+Toppings, the current Privacy X-Ray, Reader Studio, Candy Trails, and profiles. Its original soundtrack,
+kinetic typography, and camera motion are generated entirely from repository-owned sources.
 
 ## Why Candy?
 
