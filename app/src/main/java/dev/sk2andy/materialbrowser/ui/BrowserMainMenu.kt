@@ -88,6 +88,8 @@ private data class BrowserMainMenuPresentation(
     val isForceVerticalScrollingEnabled: Boolean,
     val canToggleForcePageZooming: Boolean,
     val isForcePageZoomingEnabled: Boolean,
+    val canToggleForceSafeArea: Boolean,
+    val isForceSafeAreaEnabled: Boolean,
     val canAddSiteCapsule: Boolean,
     val canSnooze: Boolean,
 )
@@ -115,6 +117,8 @@ internal fun BrowserMainMenu(
     isForceVerticalScrollingEnabled: Boolean,
     canToggleForcePageZooming: Boolean,
     isForcePageZoomingEnabled: Boolean,
+    canToggleForceSafeArea: Boolean,
+    isForceSafeAreaEnabled: Boolean,
     canAddSiteCapsule: Boolean,
     canSnooze: Boolean,
     snoozedTabCount: Int,
@@ -131,6 +135,7 @@ internal fun BrowserMainMenu(
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
     onForceVerticalScrollingChange: (Boolean) -> Unit,
     onForcePageZoomingChange: (Boolean) -> Unit,
+    onForceSafeAreaChange: (Boolean) -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     onSummarize: () -> Unit,
@@ -181,6 +186,8 @@ internal fun BrowserMainMenu(
         isForceVerticalScrollingEnabled = isForceVerticalScrollingEnabled,
         canToggleForcePageZooming = canToggleForcePageZooming,
         isForcePageZoomingEnabled = isForcePageZoomingEnabled,
+        canToggleForceSafeArea = canToggleForceSafeArea,
+        isForceSafeAreaEnabled = isForceSafeAreaEnabled,
         canAddSiteCapsule = canAddSiteCapsule,
         canSnooze = canSnooze,
     )
@@ -378,7 +385,8 @@ internal fun BrowserMainMenu(
                 )
                 if (
                     presentation.canToggleForceVerticalScrolling ||
-                    presentation.canToggleForcePageZooming
+                    presentation.canToggleForcePageZooming ||
+                    presentation.canToggleForceSafeArea
                 ) {
                     BrowserMenuToggleItem(
                         label = stringResource(R.string.privacy_cookie_banner_remove),
@@ -423,6 +431,21 @@ internal fun BrowserMainMenu(
                             onCheckedChange = onForcePageZoomingChange,
                             modifier = Modifier.testTag(
                                 BrowserMainMenuTestTags.ForcePageZooming,
+                            ),
+                            shape = innerCorners,
+                        )
+                    }
+                    if (presentation.canToggleForceSafeArea) {
+                        BrowserMenuToggleItem(
+                            label = stringResource(R.string.compatibility_force_safe_area),
+                            supportingText = stringResource(
+                                R.string.compatibility_force_safe_area_description,
+                            ),
+                            checked = presentation.isForceSafeAreaEnabled,
+                            enabled = true,
+                            onCheckedChange = onForceSafeAreaChange,
+                            modifier = Modifier.testTag(
+                                BrowserMainMenuTestTags.ForceSafeArea,
                             ),
                             shape = innerCorners,
                         )
@@ -1002,6 +1025,7 @@ internal object BrowserMainMenuTestTags {
     const val ForceVerticalScrolling = "browser_main_menu_force_vertical_scrolling"
     const val DesktopView = "browser_main_menu_desktop_view"
     const val ForcePageZooming = "browser_main_menu_force_page_zooming"
+    const val ForceSafeArea = "browser_main_menu_force_safe_area"
 }
 
 internal object TabActionsMenuTestTags {

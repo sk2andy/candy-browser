@@ -945,6 +945,7 @@ class BrowserController(
             cookieBannerRemovalDisabled = isCookieBannerRemovalDisabled(tab, host),
             forceVerticalScrolling = isForcedVerticalScrolling(tab, host),
             forcePageZooming = isPageZoomingForced(tab, host),
+            forceSafeArea = isSafeAreaForced(tab, host),
         )
     }
 
@@ -1796,10 +1797,11 @@ class BrowserController(
                 (navigationBars.right > 0 && tappableElements.right > 0) ||
                 (navigationBars.bottom > 0 && tappableElements.bottom > 0)
         val usesGestureNavigation = navigationBars != Insets.NONE && !hasTappableNavigation
-        val topMargin = if (drawsEdgeToEdge) {
-            0
-        } else {
-            (safeArea.top - webView.scrollY).coerceAtLeast(0)
+        val forceSafeArea = isSafeAreaForced(tabId)
+        val topMargin = when {
+            drawsEdgeToEdge -> 0
+            forceSafeArea -> safeArea.top
+            else -> (safeArea.top - webView.scrollY).coerceAtLeast(0)
         }
         val bottomMargin = when {
             drawsEdgeToEdge -> 0
@@ -1849,7 +1851,9 @@ class BrowserController(
     }
 
     private fun drawsEdgeToEdge(tabId: String): Boolean =
-        isWebContentEdgeToEdgeEnabled && edgeToEdgePages[tabId] == true
+        !isSafeAreaForced(tabId) &&
+            isWebContentEdgeToEdgeEnabled &&
+            edgeToEdgePages[tabId] == true
 
     private fun updateScrollAwareInsets(
         tabId: String,
@@ -1857,7 +1861,7 @@ class BrowserController(
         scrollY: Int,
         oldScrollY: Int,
     ) {
-        if (drawsEdgeToEdge(tabId)) return
+        if (drawsEdgeToEdge(tabId) || isSafeAreaForced(tabId)) return
         val insets = ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets ?: return
         val safeTop = insets.getInsets(SAFE_AREA_INSET_TYPES).top
         val topMargin = (safeTop - scrollY).coerceAtLeast(0)
@@ -3701,8 +3705,19 @@ class BrowserController(
             )
         }
 
+    fun setForceSafeArea(tabId: String, enabled: Boolean): Boolean =
+        updateSitePrivacyOverrides(tabId, reloadAffectedPages = false) { current, _ ->
+            current.copy(
+                forceSafeArea = SitePrivacyOverrideRules.overrideForSelection(
+                    enabled = enabled,
+                    bundledDefault = false,
+                ),
+            )
+        }
+
     private fun updateSitePrivacyOverrides(
         tabId: String,
+        reloadAffectedPages: Boolean = true,
         transform: (SitePrivacyOverrides, String) -> SitePrivacyOverrides,
     ): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
@@ -3749,8 +3764,13 @@ class BrowserController(
         }
         siteExceptionRevision++
         affectedTabIds.forEach { affectedTabId ->
-            webViews[affectedTabId]?.let(::cleanupSiteCompatibilityScripts)
-            if (affectedTabId == tabId || affectedTabId in webViews) {
+            webViews[affectedTabId]?.let { webView ->
+                if (reloadAffectedPages) cleanupSiteCompatibilityScripts(webView)
+                (ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets)?.let { insets ->
+                    applyWindowInsets(affectedTabId, webView, insets)
+                }
+            }
+            if (reloadAffectedPages && (affectedTabId == tabId || affectedTabId in webViews)) {
                 reloadTabWithProtection(affectedTabId)
             }
         }
@@ -3855,7 +3875,11 @@ class BrowserController(
             .filter { tab ->
                 val host = PrivacyRequestSanitizer.webHost(pageUrls[tab.id] ?: tab.url)
                 host != null &&
-                    (isForcedVerticalScrolling(tab, host) || isPageZoomingForced(tab, host))
+                    (
+                        isForcedVerticalScrolling(tab, host) ||
+                            isPageZoomingForced(tab, host) ||
+                            isSafeAreaForced(tab, host)
+                    )
             }
             .map(BrowserTab::id)
             .toSet()
@@ -3942,6 +3966,7 @@ class BrowserController(
         regularSiteCompatibilityTabIds.forEach { tabId ->
             webViews[tabId]?.let { webView ->
                 cleanupSiteCompatibilityScripts(webView)
+                lastWindowInsets?.let { insets -> applyWindowInsets(tabId, webView, insets) }
             }
         }
         (regularSiteCompatibilityTabIds + regularDesktopViewTabIds).forEach { tabId ->
@@ -7491,6 +7516,15 @@ class BrowserController(
 
     private fun isPageZoomingForced(tab: BrowserTab, host: String): Boolean =
         SitePrivacyOverrideRules.forcePageZooming(sitePrivacyOverridesFor(tab)[host])
+
+    private fun isSafeAreaForced(tab: BrowserTab, host: String): Boolean =
+        SitePrivacyOverrideRules.forceSafeArea(sitePrivacyOverridesFor(tab)[host])
+
+    private fun isSafeAreaForced(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val host = PrivacyRequestSanitizer.webHost(pageUrls[tabId] ?: tab.url) ?: return false
+        return isSafeAreaForced(tab, host)
+    }
 
     private fun isCookieBannerRemovalEnabled(tabId: String, pageUrl: String?): Boolean {
         if (!workerSettings.hideCookieConsent || isSiteProtectionPaused(tabId, pageUrl)) return false

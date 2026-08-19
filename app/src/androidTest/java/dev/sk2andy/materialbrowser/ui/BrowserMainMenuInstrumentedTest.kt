@@ -50,6 +50,7 @@ class BrowserMainMenuInstrumentedTest {
         val scrollChanges = AtomicInteger()
         val desktopViewChanges = AtomicInteger()
         val zoomChanges = AtomicInteger()
+        val safeAreaChanges = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
@@ -64,6 +65,7 @@ class BrowserMainMenuInstrumentedTest {
                     var forceVerticalScrolling by remember { mutableStateOf(false) }
                     var desktopView by remember { mutableStateOf(false) }
                     var forcePageZooming by remember { mutableStateOf(false) }
+                    var forceSafeArea by remember { mutableStateOf(false) }
                     Box {
                         BrowserMainMenu(
                             expanded = expanded,
@@ -90,6 +92,8 @@ class BrowserMainMenuInstrumentedTest {
                             isForceVerticalScrollingEnabled = forceVerticalScrolling,
                             canToggleForcePageZooming = true,
                             isForcePageZoomingEnabled = forcePageZooming,
+                            canToggleForceSafeArea = true,
+                            isForceSafeAreaEnabled = forceSafeArea,
                             canAddSiteCapsule = true,
                             canSnooze = true,
                             snoozedTabCount = 2,
@@ -118,6 +122,10 @@ class BrowserMainMenuInstrumentedTest {
                                 zoomChanges.incrementAndGet()
                                 forcePageZooming = enabled
                             },
+                            onForceSafeAreaChange = { enabled ->
+                                safeAreaChanges.incrementAndGet()
+                                forceSafeArea = enabled
+                            },
                             onOpenCandyTrail = {},
                             onAddSiteCapsule = {},
                             onSummarize = {},
@@ -144,6 +152,7 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForceVerticalScrolling)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.DesktopView)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForcePageZooming)) and
+                hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForceSafeArea)) and
                 hasAnyDescendant(hasTestTag(DomainMuteMenuTestTags.Item)),
         ).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.action_mute_domain)).assertExists()
@@ -213,11 +222,18 @@ class BrowserMainMenuInstrumentedTest {
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForcePageZooming).assertIsOn()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceSafeArea)
+            .assertIsDisplayed()
+            .assertIsOff()
+            .performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceSafeArea).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
         assertEquals(1, cookieChanges.get())
         assertEquals(1, scrollChanges.get())
         assertEquals(1, desktopViewChanges.get())
         assertEquals(1, zoomChanges.get())
+        assertEquals(1, safeAreaChanges.get())
 
         repeat(3) {
             composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
@@ -271,6 +287,8 @@ class BrowserMainMenuInstrumentedTest {
                     isForceVerticalScrollingEnabled = false,
                     canToggleForcePageZooming = false,
                     isForcePageZoomingEnabled = false,
+                    canToggleForceSafeArea = false,
+                    isForceSafeAreaEnabled = false,
                     canAddSiteCapsule = false,
                     canSnooze = false,
                     snoozedTabCount = 0,
@@ -287,6 +305,7 @@ class BrowserMainMenuInstrumentedTest {
                     onCookieBannerRemovalEnabledChange = {},
                     onForceVerticalScrollingChange = {},
                     onForcePageZoomingChange = {},
+                    onForceSafeAreaChange = {},
                     onOpenCandyTrail = {},
                     onAddSiteCapsule = {},
                     onSummarize = {},

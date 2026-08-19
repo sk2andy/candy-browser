@@ -418,6 +418,8 @@
     <string name="privacy_force_vertical_scrolling_description">Scroll-Sperren der Seite auf dieser Domain überschreiben</string>
     <string name="privacy_force_page_zooming">Zoomen auf der Seite erzwingen</string>
     <string name="privacy_force_page_zooming_description">Zoom-Sperren der Seite auf dieser Domain überschreiben</string>
+    <string name="compatibility_force_safe_area">Safe Area erzwingen</string>
+    <string name="compatibility_force_safe_area_description">Diese Domain auch beim Scrollen unterhalb der Statusleiste halten</string>
     <string name="privacy_site_protection">Schutz für diese Website</string>
     <string name="privacy_site_active">Aktiv</string>
     <string name="privacy_site_paused_temporary">Für diesen Tab pausiert</string>

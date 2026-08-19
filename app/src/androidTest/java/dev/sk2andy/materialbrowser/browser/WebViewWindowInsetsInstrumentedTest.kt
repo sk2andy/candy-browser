@@ -205,6 +205,17 @@ class WebViewWindowInsetsInstrumentedTest {
                 0.1f,
             )
 
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.setForceSafeArea(controller.selectedTabId, true))
+            }
+            awaitWebViewTop(webView, expectedTopPixels.get())
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.setForceSafeArea(controller.selectedTabId, false))
+            }
+            awaitWebViewTop(webView, 0)
+
             evaluate(webView, "window.scrollTo(0, 0)")
             awaitWebViewTop(webView, expectedTopPixels.get())
             assertEquals(expectedTopPixels.get(), previewTopInset(scenario))
@@ -237,6 +248,62 @@ class WebViewWindowInsetsInstrumentedTest {
 
             evaluate(webView, "document.querySelector('meta[name=viewport]').remove()")
             awaitWebViewTop(webView, expectedTopPixels.get())
+        }
+    }
+
+    @Test
+    fun forcedSafeAreaKeepsCoverPageBelowStatusBarWhileScrolling() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().run {
+                    updateWebContentEdgeToEdgeEnabled(true)
+                    submitAddress("https://example.test/")
+                }
+            }
+            val webView = awaitSelectedWebView(scenario)
+            val expectedTopPixels = AtomicInteger()
+            scenario.onActivity { activity ->
+                expectedTopPixels.set(
+                    ViewCompat.getRootWindowInsets(webView)
+                        ?.getInsets(
+                            WindowInsetsCompat.Type.systemBars() or
+                                WindowInsetsCompat.Type.displayCutout(),
+                        )
+                        ?.top
+                        ?: 0,
+                )
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.setForceSafeArea(controller.selectedTabId, true))
+                webView.stopLoading()
+                webView.loadDataWithBaseURL(
+                    "https://example.test/",
+                    """
+                        <!doctype html>
+                        <html>
+                          <head>
+                            <meta name="viewport" content="width=device-width, viewport-fit=cover">
+                          </head>
+                          <body style="min-height:4000px">
+                            <div id="probe" style="position:fixed;top:0">Sticky action</div>
+                          </body>
+                        </html>
+                    """.trimIndent(),
+                    "text/html",
+                    "utf-8",
+                    null,
+                )
+            }
+
+            awaitProbe(webView)
+            awaitWebViewTop(webView, expectedTopPixels.get())
+            evaluate(webView, "window.scrollTo(0, 1000)")
+            awaitWebViewTop(webView, expectedTopPixels.get())
+
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.setForceSafeArea(controller.selectedTabId, false))
+            }
+            awaitWebViewTop(webView, 0)
         }
     }
 

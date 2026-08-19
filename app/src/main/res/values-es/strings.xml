@@ -370,6 +370,8 @@
     <string name="privacy_force_vertical_scrolling_description">Anula los bloqueos de desplazamiento en este dominio</string>
     <string name="privacy_force_page_zooming">Forzar zoom de página</string>
     <string name="privacy_force_page_zooming_description">Anula las restricciones de zoom de la página en este dominio</string>
+    <string name="compatibility_force_safe_area">Forzar área segura</string>
+    <string name="compatibility_force_safe_area_description">Mantener este dominio debajo de la barra de estado al desplazarse</string>
     <string name="privacy_site_protection">Protección de este sitio</string>
     <string name="privacy_site_active">Activa</string>
     <string name="privacy_site_paused_temporary">En pausa para esta pestaña</string>

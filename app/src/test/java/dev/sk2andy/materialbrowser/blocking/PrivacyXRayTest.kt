@@ -40,6 +40,21 @@ class PrivacyXRayTest {
     }
 
     @Test
+    fun `safe area is forced only by explicit override`() {
+        assertFalse(SitePrivacyOverrideRules.forceSafeArea(null))
+        assertFalse(
+            SitePrivacyOverrideRules.forceSafeArea(
+                SitePrivacyOverrides(forceSafeArea = false),
+            ),
+        )
+        assertTrue(
+            SitePrivacyOverrideRules.forceSafeArea(
+                SitePrivacyOverrides(forceSafeArea = true),
+            ),
+        )
+    }
+
+    @Test
     fun `explicit cookie removal override wins over bundled default`() {
         assertTrue(SitePrivacyOverrideRules.cookieBannerRemovalDisabled(null, bundledDefault = true))
         assertFalse(

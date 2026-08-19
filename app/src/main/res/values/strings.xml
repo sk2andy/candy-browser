@@ -431,6 +431,8 @@
     <string name="privacy_force_vertical_scrolling_description">Override page scroll locks on this domain</string>
     <string name="privacy_force_page_zooming">Force page zooming</string>
     <string name="privacy_force_page_zooming_description">Override page zoom restrictions on this domain</string>
+    <string name="compatibility_force_safe_area">Force safe area</string>
+    <string name="compatibility_force_safe_area_description">Keep this domain below the status bar while scrolling</string>
     <string name="privacy_site_protection">Protection for this site</string>
     <string name="privacy_site_active">Active</string>
     <string name="privacy_site_paused_temporary">Paused for this tab</string>

@@ -370,6 +370,8 @@
     <string name="privacy_force_vertical_scrolling_description">Remplace les verrouillages de défilement sur ce domaine</string>
     <string name="privacy_force_page_zooming">Forcer le zoom de la page</string>
     <string name="privacy_force_page_zooming_description">Remplace les restrictions de zoom de la page sur ce domaine</string>
+    <string name="compatibility_force_safe_area">Forcer la zone sûre</string>
+    <string name="compatibility_force_safe_area_description">Maintenir ce domaine sous la barre d’état pendant le défilement</string>
     <string name="privacy_site_protection">Protection de ce site</string>
     <string name="privacy_site_active">Active</string>
     <string name="privacy_site_paused_temporary">Suspendue pour cet onglet</string>

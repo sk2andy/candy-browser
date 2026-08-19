@@ -1456,6 +1456,8 @@ fun BrowserScreen(
             isForceVerticalScrollingEnabled = selectedSiteState.forceVerticalScrolling,
             canToggleForcePageZooming = selectedSiteHasHost,
             isForcePageZoomingEnabled = selectedSiteState.forcePageZooming,
+            canToggleForceSafeArea = selectedSiteHasHost,
+            isForceSafeAreaEnabled = selectedSiteState.forceSafeArea,
             onCookieBannerRemovalEnabledChange = { enabled ->
                 if (controller.setCookieBannerRemovalDisabled(selectedTab.id, !enabled)) {
                     rootView.performConfirmHaptic()
@@ -1468,6 +1470,11 @@ fun BrowserScreen(
             },
             onForcePageZoomingChange = { enabled ->
                 if (controller.setForcePageZooming(selectedTab.id, enabled)) {
+                    rootView.performConfirmHaptic()
+                }
+            },
+            onForceSafeAreaChange = { enabled ->
+                if (controller.setForceSafeArea(selectedTab.id, enabled)) {
                     rootView.performConfirmHaptic()
                 }
             },
@@ -2942,9 +2949,12 @@ private fun BrowserBottomBar(
     isForceVerticalScrollingEnabled: Boolean,
     canToggleForcePageZooming: Boolean,
     isForcePageZoomingEnabled: Boolean,
+    canToggleForceSafeArea: Boolean,
+    isForceSafeAreaEnabled: Boolean,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
     onForceVerticalScrollingChange: (Boolean) -> Unit,
     onForcePageZoomingChange: (Boolean) -> Unit,
+    onForceSafeAreaChange: (Boolean) -> Unit,
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
@@ -3198,11 +3208,14 @@ private fun BrowserBottomBar(
                                     isForceVerticalScrollingEnabled,
                                 canToggleForcePageZooming = canToggleForcePageZooming,
                                 isForcePageZoomingEnabled = isForcePageZoomingEnabled,
+                                canToggleForceSafeArea = canToggleForceSafeArea,
+                                isForceSafeAreaEnabled = isForceSafeAreaEnabled,
                                 onCookieBannerRemovalEnabledChange =
                                     onCookieBannerRemovalEnabledChange,
                                 onForceVerticalScrollingChange =
                                     onForceVerticalScrollingChange,
                                 onForcePageZoomingChange = onForcePageZoomingChange,
+                                onForceSafeAreaChange = onForceSafeAreaChange,
                                 snoozedTabCount = snoozedTabCount,
                                 onSnoozedTabs = onSnoozedTabs,
                                 onSettings = onSettings,
@@ -3619,9 +3632,12 @@ private fun ExpandedBottomBarContent(
     isForceVerticalScrollingEnabled: Boolean,
     canToggleForcePageZooming: Boolean,
     isForcePageZoomingEnabled: Boolean,
+    canToggleForceSafeArea: Boolean,
+    isForceSafeAreaEnabled: Boolean,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
     onForceVerticalScrollingChange: (Boolean) -> Unit,
     onForcePageZoomingChange: (Boolean) -> Unit,
+    onForceSafeAreaChange: (Boolean) -> Unit,
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
@@ -3941,6 +3957,8 @@ private fun ExpandedBottomBarContent(
                                     isForceVerticalScrollingEnabled,
                                 canToggleForcePageZooming = canToggleForcePageZooming,
                                 isForcePageZoomingEnabled = isForcePageZoomingEnabled,
+                                canToggleForceSafeArea = canToggleForceSafeArea,
+                                isForceSafeAreaEnabled = isForceSafeAreaEnabled,
                                 canAddSiteCapsule = tab.url != BLANK_URL &&
                                     !tab.isIncognito &&
                                     (
@@ -3964,6 +3982,7 @@ private fun ExpandedBottomBarContent(
                                 onForceVerticalScrollingChange =
                                     onForceVerticalScrollingChange,
                                 onForcePageZoomingChange = onForcePageZoomingChange,
+                                onForceSafeAreaChange = onForceSafeAreaChange,
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onAddSiteCapsule = onAddSiteCapsule,
                                 onSummarize = onSummarizeWithAssistant,

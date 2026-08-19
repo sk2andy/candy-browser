@@ -59,17 +59,20 @@ data class SiteProtectionState(
     val cookieBannerRemovalDisabled: Boolean = false,
     val forceVerticalScrolling: Boolean = false,
     val forcePageZooming: Boolean = false,
+    val forceSafeArea: Boolean = false,
 )
 
 data class SitePrivacyOverrides(
     val cookieBannerRemovalDisabled: Boolean? = null,
     val forceVerticalScrolling: Boolean? = null,
     val forcePageZooming: Boolean? = null,
+    val forceSafeArea: Boolean? = null,
 ) {
     val isDefault: Boolean
         get() = cookieBannerRemovalDisabled == null &&
             forceVerticalScrolling == null &&
-            forcePageZooming == null
+            forcePageZooming == null &&
+            forceSafeArea == null
 }
 
 object SitePrivacyOverrideRules {
@@ -83,6 +86,9 @@ object SitePrivacyOverrideRules {
 
     fun forcePageZooming(overrides: SitePrivacyOverrides?): Boolean =
         overrides?.forcePageZooming ?: false
+
+    fun forceSafeArea(overrides: SitePrivacyOverrides?): Boolean =
+        overrides?.forceSafeArea ?: false
 
     fun cookieBannerRemovalDisabled(
         overrides: SitePrivacyOverrides?,
