@@ -255,6 +255,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserWebView
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
@@ -1772,6 +1773,7 @@ fun BrowserScreen(
                 profilesEnabled = controller.profilesEnabled,
                 isTabButtonVisible = controller.isTabButtonVisible,
                 isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
+                isScrollBarEnabled = controller.isScrollBarEnabled,
                 isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
                 isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
                 blockedCount = selectedTab.blockedCount,
@@ -1812,6 +1814,7 @@ fun BrowserScreen(
                 onTabButtonVisibleChanged = controller::updateTabButtonVisible,
                 onFullImmersiveModeEnabledChanged =
                     controller::updateFullImmersiveModeEnabled,
+                onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
                 onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
@@ -2277,6 +2280,7 @@ private fun BrowserViewport(
             ),
         )
     }
+    var scrollBarWebView by remember(selectedTab.id) { mutableStateOf<BrowserWebView?>(null) }
     LaunchedEffect(selectedTab.id, selectedTab.error, selectedTab.isLoading) {
         pageErrorFeedback = PageErrorFeedbackRules.observe(
             current = pageErrorFeedback,
@@ -2341,7 +2345,21 @@ private fun BrowserViewport(
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
                 onBlurTargetReleased = onBlurTargetReleased,
+                onWebViewChanged = { scrollBarWebView = it },
             )
+        }
+
+        if (
+            controller.isScrollBarEnabled &&
+            !webViewVideoOnlyPresentation &&
+            !tabOverviewVisible
+        ) {
+            scrollBarWebView?.let { webView ->
+                WebViewScrollBar(
+                    webView = webView,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
+            }
         }
 
         AnimatedVisibility(
@@ -2405,6 +2423,7 @@ private fun ActiveWebView(
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
+    onWebViewChanged: (BrowserWebView?) -> Unit,
 ) {
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
@@ -2416,6 +2435,7 @@ private fun ActiveWebView(
     val currentOnLiveFrame by rememberUpdatedState(onLiveFrame)
     val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
+    val currentOnWebViewChanged by rememberUpdatedState(onWebViewChanged)
     AndroidView(
         factory = { context ->
             StatusBarFrostedGlassHost(context).apply {
@@ -2442,6 +2462,7 @@ private fun ActiveWebView(
                     currentOnLiveFrame(it)
                 }
             }
+            currentOnWebViewChanged(attachedWebView as? BrowserWebView)
         },
         onRelease = { hostView ->
             val hostState = hostView.tag as? WebViewHostState
@@ -2450,6 +2471,7 @@ private fun ActiveWebView(
             hostState?.let { controller.detachWebView(it.container) }
             hostView.release()
             currentOnBlurTargetReleased(hostView.blurTarget)
+            currentOnWebViewChanged(null)
         },
         modifier = Modifier.fillMaxSize(),
     )

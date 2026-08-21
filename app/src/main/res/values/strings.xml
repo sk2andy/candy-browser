@@ -263,6 +263,9 @@
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Full immersive mode</string>
     <string name="settings_full_immersive_mode_subtitle">Hides the status and navigation bars. Swipe from a screen edge to show them temporarily.</string>
+    <string name="settings_scroll_bar_title">Draggable scroll bar</string>
+    <string name="settings_scroll_bar_subtitle">Shows while scrolling, then fades out. Drag it to jump through long pages.</string>
+    <string name="scroll_bar_content_description">Page scroll bar</string>
     <string name="settings_video_autoplay_title">Prevent video autoplay</string>
     <string name="settings_video_autoplay_subtitle">Videos start only when you play them.</string>
     <string name="settings_video_autoplay_unsupported">Requires a newer Android WebView version.</string>

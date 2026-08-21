@@ -115,6 +115,10 @@ internal object ProtectionSettingsTestTags {
     const val UserCaWarning = "protection_settings_user_ca_warning"
 }
 
+internal object BrowserSettingsTestTags {
+    const val ScrollBar = "browser_settings_scroll_bar"
+}
+
 @Composable
 internal fun SettingsScreen(
     destination: SettingsDestination,
@@ -131,6 +135,7 @@ internal fun SettingsScreen(
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
     isFullImmersiveModeEnabled: Boolean,
+    isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
     trustsUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES,
@@ -153,6 +158,7 @@ internal fun SettingsScreen(
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
+    onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
@@ -235,10 +241,12 @@ internal fun SettingsScreen(
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
+                    isScrollBarEnabled = isScrollBarEnabled,
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
                     isDefaultBrowser = isDefaultBrowser,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
+                    onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
                     onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
@@ -796,12 +804,14 @@ private fun TabsAndGesturesSettingsPage(
 }
 
 @Composable
-private fun BrowserSettingsPage(
+internal fun BrowserSettingsPage(
     isFullImmersiveModeEnabled: Boolean,
+    isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
     isDefaultBrowser: Boolean,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
+    onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
@@ -815,6 +825,14 @@ private fun BrowserSettingsPage(
             subtitle = stringResource(R.string.settings_full_immersive_mode_subtitle),
             checked = isFullImmersiveModeEnabled,
             onCheckedChange = onFullImmersiveModeEnabledChanged,
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_scroll_bar_title),
+            subtitle = stringResource(R.string.settings_scroll_bar_subtitle),
+            checked = isScrollBarEnabled,
+            onCheckedChange = onScrollBarEnabledChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.ScrollBar),
         )
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(
@@ -1472,9 +1490,10 @@ internal fun SettingsSwitch(
     checked: Boolean,
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(vertical = 10.dp),
