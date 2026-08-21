@@ -26,7 +26,8 @@
 - Keep activity-result and lifecycle ownership in `MainActivity`; keep browser state in `BrowserController`.
 - Show WebView custom views above browser chrome and enable sensor rotation for their lifetime.
   Web fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
-  the current browser orientation and system-bar policy.
+  the current browser orientation and system-bar policy. Tab overview requests portrait only on
+  compact screens; tablets and other `sw600dp` windows preserve their current orientation.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.

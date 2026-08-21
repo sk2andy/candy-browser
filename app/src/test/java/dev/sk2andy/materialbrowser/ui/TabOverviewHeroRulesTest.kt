@@ -7,6 +7,51 @@ import org.junit.Test
 
 class TabOverviewHeroRulesTest {
     @Test
+    fun `portrait coverflow keeps compact card geometry`() {
+        val layout = TabOverviewHeroRules.coverflowCardLayout(
+            viewportWidth = 400f,
+            viewportHeight = 800f,
+        )
+
+        assertEquals(296f, layout.width, 0.001f)
+        assertEquals(0.45f, layout.aspectRatio, 0f)
+    }
+
+    @Test
+    fun `tablet landscape coverflow uses wide card with room for neighbors`() {
+        val layout = TabOverviewHeroRules.coverflowCardLayout(
+            viewportWidth = 1_067f,
+            viewportHeight = 667f,
+        )
+
+        assertEquals(704.352f, layout.width, 0.001f)
+        assertEquals(1.6f, layout.aspectRatio, 0f)
+        assertTrue(layout.width < 1_067f)
+    }
+
+    @Test
+    fun `short landscape coverflow limits card by viewport height`() {
+        val layout = TabOverviewHeroRules.coverflowCardLayout(
+            viewportWidth = 800f,
+            viewportHeight = 360f,
+        )
+
+        assertEquals(380.16f, layout.width, 0.001f)
+        assertEquals(237.6f, layout.width / layout.aspectRatio, 0.001f)
+    }
+
+    @Test
+    fun `invalid coverflow dimensions collapse to deterministic layout`() {
+        val layout = TabOverviewHeroRules.coverflowCardLayout(
+            viewportWidth = Float.NaN,
+            viewportHeight = Float.POSITIVE_INFINITY,
+        )
+
+        assertEquals(0f, layout.width, 0f)
+        assertEquals(0.45f, layout.aspectRatio, 0f)
+    }
+
+    @Test
     fun `incognito veil crossfades before hero travel`() {
         assertEquals(0f, TabOverviewHeroRules.incognitoVeilAlpha(0f), 0.001f)
         assertEquals(0.5f, TabOverviewHeroRules.incognitoVeilAlpha(0.12f), 0.001f)
@@ -128,13 +173,13 @@ class TabOverviewHeroRulesTest {
         val target = TabOverviewHeroRules.coverflowPreviewLayout(
             rootWidthPx = 2_400f,
             rootHeightPx = 1_080f,
-            targetWidthPx = 600f,
-            targetHeightPx = 1_000f,
+            targetWidthPx = 1_536f,
+            targetHeightPx = 960f,
             cropTopFraction = 0.25f,
         )
 
-        assertEquals(4_000f, target.sourceHeightPx, 0f)
-        assertEquals(-730f, target.sourceTopPx, 0f)
+        assertEquals(1_500f, target.sourceHeightPx, 0f)
+        assertEquals(-105f, target.sourceTopPx, 0f)
         assertTrue(target.sourceTopPx + target.sourceHeightPx >= 1_080f)
     }
 

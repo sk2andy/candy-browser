@@ -3,6 +3,11 @@ package dev.sk2andy.materialbrowser.ui
 internal object TabOverviewHeroRules {
     const val ENTRY_DURATION_MILLIS = 160
 
+    data class CoverflowCardLayout(
+        val width: Float,
+        val aspectRatio: Float,
+    )
+
     data class CoverflowPreviewLayout(
         val sourceTopPx: Float,
         val sourceHeightPx: Float,
@@ -50,6 +55,31 @@ internal object TabOverviewHeroRules {
     fun incognitoVeilAlpha(entryProgress: Float): Float =
         (entryProgress.coerceIn(0f, 1f) / INCOGNITO_VEIL_END).coerceIn(0f, 1f)
 
+    fun coverflowCardLayout(
+        viewportWidth: Float,
+        viewportHeight: Float,
+    ): CoverflowCardLayout {
+        val safeWidth = viewportWidth.takeIf { it.isFinite() && it > 0f } ?: 0f
+        val safeHeight = viewportHeight.takeIf { it.isFinite() && it > 0f } ?: 0f
+        if (safeWidth <= safeHeight) {
+            return CoverflowCardLayout(
+                width = (safeWidth * PORTRAIT_CARD_WIDTH_FRACTION)
+                    .coerceIn(PORTRAIT_CARD_MIN_WIDTH, PORTRAIT_CARD_MAX_WIDTH)
+                    .coerceAtMost(safeWidth),
+                aspectRatio = PORTRAIT_CARD_ASPECT_RATIO,
+            )
+        }
+
+        val widthFromViewport = (safeWidth * LANDSCAPE_CARD_WIDTH_FRACTION)
+            .coerceIn(LANDSCAPE_CARD_MIN_WIDTH, LANDSCAPE_CARD_MAX_WIDTH)
+        val widthFromHeight = safeHeight * LANDSCAPE_CARD_HEIGHT_FRACTION *
+            LANDSCAPE_CARD_ASPECT_RATIO
+        return CoverflowCardLayout(
+            width = minOf(widthFromViewport, widthFromHeight, safeWidth),
+            aspectRatio = LANDSCAPE_CARD_ASPECT_RATIO,
+        )
+    }
+
     fun coverflowPreviewLayout(
         rootWidthPx: Float,
         rootHeightPx: Float,
@@ -87,4 +117,13 @@ internal object TabOverviewHeroRules {
     private const val BLANK_FAVORITES_FADE_START = 0.35f
     private const val BLANK_FAVORITES_FADE_END = 0.78f
     private const val INCOGNITO_VEIL_END = 0.24f
+    private const val PORTRAIT_CARD_WIDTH_FRACTION = 0.74f
+    private const val PORTRAIT_CARD_MIN_WIDTH = 244f
+    private const val PORTRAIT_CARD_MAX_WIDTH = 360f
+    private const val PORTRAIT_CARD_ASPECT_RATIO = 0.45f
+    private const val LANDSCAPE_CARD_WIDTH_FRACTION = 0.68f
+    private const val LANDSCAPE_CARD_HEIGHT_FRACTION = 0.66f
+    private const val LANDSCAPE_CARD_MIN_WIDTH = 360f
+    private const val LANDSCAPE_CARD_MAX_WIDTH = 720f
+    private const val LANDSCAPE_CARD_ASPECT_RATIO = 1.6f
 }

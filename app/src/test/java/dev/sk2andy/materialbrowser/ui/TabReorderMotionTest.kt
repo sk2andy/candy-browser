@@ -102,6 +102,21 @@ class TabReorderMotionTest {
     }
 
     @Test
+    fun `grid destination supports tablet three column layout`() {
+        assertEquals(
+            5,
+            TabReorderMotion.gridDestinationIndex(
+                sourceIndex = 1,
+                dragOffsetPx = Offset(x = 100f, y = 100f),
+                columnPitchPx = 100f,
+                rowPitchPx = 100f,
+                columnCount = 3,
+                allowedRange = 0..8,
+            ),
+        )
+    }
+
+    @Test
     fun `hero viewport offset advances full slots without fractional rounding drift`() {
         assertEquals(
             4,

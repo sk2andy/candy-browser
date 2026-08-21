@@ -4882,17 +4882,20 @@ internal fun TabOverview(
             heroTargetMode == controller.tabOverviewMode && heroTargetTabId == initialTabId
         }
         val isExiting = exitHero != null
-        val tabCardWidth = (maxWidth * COVERFLOW_CARD_WIDTH_FRACTION)
-            .coerceIn(244.dp, 360.dp)
+        val coverflowCardLayout = TabOverviewHeroRules.coverflowCardLayout(
+            viewportWidth = maxWidth.value,
+            viewportHeight = maxHeight.value,
+        )
+        val tabCardWidth = coverflowCardLayout.width.dp
         val pageSlotWidth = tabCardWidth + 12.dp
         val pageSlotWidthPx = with(density) { pageSlotWidth.toPx() }
         val pageHorizontalPadding = ((maxWidth - pageSlotWidth) / 2).coerceAtLeast(0.dp)
-        val gridGapPx = with(density) { 12.dp.toPx() }
-        val gridCardWidthPx = (
-            rootWidthPx - with(density) { 32.dp.toPx() } - gridGapPx
-        ) / 2f
-        val gridColumnPitchPx = gridCardWidthPx + gridGapPx
-        val gridRowPitchPx = with(density) { 60.dp.toPx() } + gridCardWidthPx / 0.72f
+        val gridLayout = TabOverviewGridRules.layout(
+            viewportWidth = maxWidth.value,
+            viewportHeight = maxHeight.value,
+        )
+        val gridColumnPitchPx = with(density) { gridLayout.columnPitch.dp.toPx() }
+        val gridRowPitchPx = with(density) { gridLayout.rowPitch.dp.toPx() }
         val listRowPitchPx = with(density) { 72.dp.toPx() }
         val heroPagerTopOverflow = TAB_OVERVIEW_TOP_SPACING +
             if (controller.profilesEnabled) {
@@ -4912,10 +4915,10 @@ internal fun TabOverview(
                     y = 0f,
                 )
                 TabOverviewMode.Grid -> {
-                    val sourceRow = sourceIndex / 2
-                    val sourceColumn = sourceIndex % 2
-                    val destinationRow = destinationIndex / 2
-                    val destinationColumn = destinationIndex % 2
+                    val sourceRow = sourceIndex / gridLayout.columnCount
+                    val sourceColumn = sourceIndex % gridLayout.columnCount
+                    val destinationRow = destinationIndex / gridLayout.columnCount
+                    val destinationColumn = destinationIndex % gridLayout.columnCount
                     Offset(
                         x = (destinationColumn - sourceColumn) * gridColumnPitchPx,
                         y = (destinationRow - sourceRow) * gridRowPitchPx,
@@ -4999,7 +5002,7 @@ internal fun TabOverview(
                         dragOffsetPx = contentOffset,
                         columnPitchPx = gridColumnPitchPx,
                         rowPitchPx = gridRowPitchPx,
-                        columnCount = 2,
+                        columnCount = gridLayout.columnCount,
                         allowedRange = reorder.allowedRange,
                     )
                     TabOverviewMode.List -> TabReorderMotion.horizontalDestinationIndex(
@@ -5717,6 +5720,7 @@ internal fun TabOverview(
                                 favicon = controller.favicons[tab.id],
                                 favorites = controller.favorites,
                                 cardWidth = tabCardWidth,
+                                cardAspectRatio = coverflowCardLayout.aspectRatio,
                                 modifier = Modifier
                                     .testTag(SnoozeTestTags.overviewTab(tab.id))
                                     .graphicsLayer {
@@ -5763,6 +5767,7 @@ internal fun TabOverview(
                 }
                 }
                 TabOverviewMode.Grid -> CompactTabGrid(
+                    layout = gridLayout,
                     tabs = controller.activeTabs,
                     selectedTabId = controller.selectedTabId,
                     initialTabId = initialTabId,
@@ -7437,13 +7442,14 @@ private fun TabCard(
     favicon: Bitmap?,
     favorites: List<FavoriteEntry>,
     cardWidth: Dp,
+    cardAspectRatio: Float,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier
             .width(cardWidth)
-            .aspectRatio(COVERFLOW_CARD_ASPECT_RATIO)
+            .aspectRatio(cardAspectRatio)
             .then(modifier)
             .clickable(
                 onClick = onClick,
@@ -7478,6 +7484,7 @@ private class TabBoundsHolder {
 
 @Composable
 private fun CompactTabGrid(
+    layout: TabOverviewGridRules.Layout,
     tabs: List<BrowserTab>,
     selectedTabId: String,
     initialTabId: String,
@@ -7550,13 +7557,16 @@ private fun CompactTabGrid(
             .onGloballyPositioned { gridBounds = it.boundsInRoot() },
     ) {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(layout.columnCount),
             state = gridState,
             modifier = Modifier.fillMaxSize(),
             userScrollEnabled = interactionsEnabled,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(
+                horizontal = layout.contentPadding.dp,
+                vertical = 8.dp,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(layout.itemSpacing.dp),
+            verticalArrangement = Arrangement.spacedBy(layout.itemSpacing.dp),
         ) {
             gridItemsIndexed(
                 items = tabs,
@@ -7576,6 +7586,7 @@ private fun CompactTabGrid(
                     exitTarget = tab.id == exitHeroTabId,
                     dismissResistanceFraction = dismissResistanceFraction,
                     interactionsEnabled = interactionsEnabled,
+                    previewAspectRatio = layout.previewAspectRatio,
                     revealDelayMillis = (index % 6) * 24L,
                     onReorderBounds = { bounds -> onReorderBounds(tab, bounds) },
                     onReorderBoundsDisposed = { bounds ->
@@ -7680,6 +7691,7 @@ private fun CompactGridTabItem(
     exitTarget: Boolean,
     dismissResistanceFraction: Float,
     interactionsEnabled: Boolean,
+    previewAspectRatio: Float,
     revealDelayMillis: Long,
     onReorderBounds: (Rect) -> Unit,
     onReorderBoundsDisposed: (Rect?) -> Unit,
@@ -7945,7 +7957,7 @@ private fun CompactGridTabItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.72f)
+                    .aspectRatio(previewAspectRatio)
                     .graphicsLayer {
                         alpha = if (realCardVisible && !heroVisible) 1f else 0f
                     }
@@ -8656,8 +8668,6 @@ internal object ProfileCreationTestTags {
 }
 
 private const val PREVIEW_CROP_TOP_FRACTION = 0.25f
-private const val COVERFLOW_CARD_WIDTH_FRACTION = 0.74f
-private const val COVERFLOW_CARD_ASPECT_RATIO = 0.45f
 private const val PROFILE_CREATION_SHEET_HEIGHT_FRACTION = 0.66f
 private const val NEW_PROFILE_TARGET = "__new_profile__"
 private const val VIDEO_ONLY_WEB_VIEW_Z_INDEX = 100f

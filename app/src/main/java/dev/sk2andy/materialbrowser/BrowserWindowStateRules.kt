@@ -12,15 +12,22 @@ internal data class BrowserWindowState(
 )
 
 internal object BrowserWindowStateRules {
+    const val LARGE_SCREEN_MIN_WIDTH_DP = 600
+
+    fun supportsTabOverviewPortraitLock(smallestScreenWidthDp: Int): Boolean =
+        smallestScreenWidthDp < LARGE_SCREEN_MIN_WIDTH_DP
+
     fun resolve(
         isWebContentFullscreen: Boolean,
         isBrowserFullscreen: Boolean,
         isTabOverviewPortraitLocked: Boolean,
+        supportsTabOverviewPortraitLock: Boolean = true,
     ): BrowserWindowState = BrowserWindowState(
         isImmersive = isWebContentFullscreen || isBrowserFullscreen,
         requestedOrientation = when {
             isWebContentFullscreen -> BrowserRequestedOrientation.Sensor
-            isTabOverviewPortraitLocked -> BrowserRequestedOrientation.Portrait
+            isTabOverviewPortraitLocked && supportsTabOverviewPortraitLock ->
+                BrowserRequestedOrientation.Portrait
             else -> BrowserRequestedOrientation.Unspecified
         },
     )

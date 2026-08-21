@@ -65,7 +65,7 @@ class TabOverviewReorderInstrumentedTest {
     )
 
     @Test
-    fun heroCardMatchesAndroidSwitcherProportions() {
+    fun heroCardMatchesAdaptiveSwitcherProportions() {
         lateinit var browserController: BrowserController
         lateinit var tabId: String
         composeRule.runOnIdle {
@@ -84,13 +84,55 @@ class TabOverviewReorderInstrumentedTest {
             .fetchSemanticsNode()
             .boundsInRoot
         val density = composeRule.activity.resources.displayMetrics.density
-        val expectedWidth = (rootBounds.width * 0.74f)
-            .coerceIn(244f * density, 360f * density)
+        val expectedLayout = TabOverviewHeroRules.coverflowCardLayout(
+            viewportWidth = rootBounds.width / density,
+            viewportHeight = rootBounds.height / density,
+        )
 
-        assertEquals(expectedWidth, cardBounds.width, 8f)
-        assertEquals(0.45f, cardBounds.width / cardBounds.height, 0.001f)
+        assertEquals(expectedLayout.width * density, cardBounds.width, 8f)
+        assertEquals(expectedLayout.aspectRatio, cardBounds.width / cardBounds.height, 0.001f)
         assertTrue(cardBounds.top >= rootBounds.top)
         assertTrue(cardBounds.bottom <= rootBounds.bottom)
+    }
+
+    @Test
+    fun gridCardsMatchAdaptivePreviewProportions() {
+        lateinit var browserController: BrowserController
+        lateinit var tabIds: List<String>
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            tabIds = listOf(
+                browserController.selectedTabId,
+                requireNotNull(browserController.createBackgroundTab("https://grid-two.example")),
+                requireNotNull(browserController.createBackgroundTab("https://grid-three.example")),
+            )
+            browserController.updateTabOverviewMode(TabOverviewMode.Grid)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val cardBounds = tabIds.map { tabId ->
+            composeRule
+                .onNodeWithTag(SnoozeTestTags.overviewTab(tabId))
+                .fetchSemanticsNode()
+                .boundsInRoot
+        }
+        val density = composeRule.activity.resources.displayMetrics.density
+        val isLandscape = rootBounds.width > rootBounds.height
+        val expectedPreviewAspectRatio = if (isLandscape) 1.6f else 0.72f
+        val expectedCardHeight = 48f * density +
+            cardBounds.first().width / expectedPreviewAspectRatio
+        val expectedColumns = if (isLandscape && rootBounds.width / density >= 900f) 3 else 2
+        val firstRowCount = cardBounds.count { bounds ->
+            kotlin.math.abs(bounds.top - cardBounds.first().top) < 2f
+        }
+
+        assertEquals(expectedCardHeight, cardBounds.first().height, 8f)
+        assertEquals(expectedColumns, firstRowCount)
+        assertEquals(isLandscape, cardBounds.first().width > cardBounds.first().height)
     }
 
     @Test

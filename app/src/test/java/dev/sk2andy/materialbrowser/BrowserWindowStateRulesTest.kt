@@ -41,4 +41,29 @@ class BrowserWindowStateRulesTest {
         assertTrue(state.isImmersive)
         assertEquals(BrowserRequestedOrientation.Unspecified, state.requestedOrientation)
     }
+
+    @Test
+    fun `large screen tab overview preserves current orientation`() {
+        val state = BrowserWindowStateRules.resolve(
+            isWebContentFullscreen = false,
+            isBrowserFullscreen = false,
+            isTabOverviewPortraitLocked = true,
+            supportsTabOverviewPortraitLock =
+                BrowserWindowStateRules.supportsTabOverviewPortraitLock(
+                    BrowserWindowStateRules.LARGE_SCREEN_MIN_WIDTH_DP,
+                ),
+        )
+
+        assertFalse(state.isImmersive)
+        assertEquals(BrowserRequestedOrientation.Unspecified, state.requestedOrientation)
+    }
+
+    @Test
+    fun `compact screen tab overview still requests portrait`() {
+        assertTrue(
+            BrowserWindowStateRules.supportsTabOverviewPortraitLock(
+                BrowserWindowStateRules.LARGE_SCREEN_MIN_WIDTH_DP - 1,
+            ),
+        )
+    }
 }

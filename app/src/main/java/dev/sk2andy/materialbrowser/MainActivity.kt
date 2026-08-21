@@ -408,6 +408,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        applyBrowserSystemUi()
         if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
             pictureInPictureSourceRectHint = pictureInPictureSourceRect(
                 maximumWindowContentBounds(),
@@ -545,7 +546,8 @@ class MainActivity : ComponentActivity() {
         reconcilePictureInPictureStateOnResume()
     }
 
-    private fun setTabOverviewPortraitLocked(locked: Boolean) {
+    @VisibleForTesting
+    internal fun setTabOverviewPortraitLocked(locked: Boolean) {
         isTabOverviewPortraitLocked = locked
         applyBrowserSystemUi()
     }
@@ -747,6 +749,10 @@ class MainActivity : ComponentActivity() {
             isWebContentFullscreen = fullscreenVideoExpanded || videoOnlyPresentation,
             isBrowserFullscreen = browserImmersive,
             isTabOverviewPortraitLocked = isTabOverviewPortraitLocked,
+            supportsTabOverviewPortraitLock =
+                BrowserWindowStateRules.supportsTabOverviewPortraitLock(
+                    resources.configuration.smallestScreenWidthDp,
+                ),
         )
         applyFullImmersiveMode(state.isImmersive)
         val orientation = when (state.requestedOrientation) {
