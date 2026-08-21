@@ -1,11 +1,14 @@
 package dev.sk2andy.materialbrowser.blocking
 
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import java.io.ByteArrayInputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -45,6 +48,129 @@ class CandyCosmeticRuleInstrumentedTest {
         assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
         val paused = loadAndRead("https://news.example/", pausedHosts = setOf("news.example"))
         assertEquals("\"block|false\"", paused)
+    }
+
+    @Test
+    fun documentStartCssRunsInMatchingFramesAndCleanupRemovesEveryStyle() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val loaded = CountDownLatch(1)
+        val created = AtomicReference<WebView>()
+        instrumentation.runOnMainSync {
+            created.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    WebViewCompat.addDocumentStartJavaScript(
+                        this,
+                        CandyCosmeticScript.create(listOf(".sponsor")),
+                        setOf("https://news.example"),
+                    )
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) = loaded.countDown()
+                    }
+                    loadDataWithBaseURL(
+                        "https://news.example/",
+                        """
+                            <html><body>
+                              <iframe id="frame" srcdoc="<div class='sponsor'>ad</div>"></iframe>
+                            </body></html>
+                        """.trimIndent(),
+                        "text/html",
+                        "utf-8",
+                        null,
+                    )
+                },
+            )
+        }
+        val view = created.get().also(webView::set)
+        assertTrue(loaded.await(10, TimeUnit.SECONDS))
+
+        assertEquals(
+            "\"none|true\"",
+            evaluate(
+                view,
+                "[getComputedStyle(document.getElementById('frame').contentDocument" +
+                    ".querySelector('.sponsor')).display," +
+                    "document.getElementById('frame').contentDocument" +
+                    ".querySelector('style[data-candy-filter]')!==null].join('|')",
+            ),
+        )
+
+        evaluate(view, CandyCosmeticScript.cleanupScript)
+
+        assertEquals(
+            "\"block|false\"",
+            evaluate(
+                view,
+                "[getComputedStyle(document.getElementById('frame').contentDocument" +
+                    ".querySelector('.sponsor')).display," +
+                    "document.getElementById('frame').contentDocument" +
+                    ".querySelector('style[data-candy-filter]')!==null].join('|')",
+            ),
+        )
+    }
+
+    @Test
+    fun documentStartCssSkipsSameOriginGrandchildBehindCrossOriginFrame() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val pages = mapOf(
+            "news.example/top" to """
+                <html><body>
+                  <script>
+                    window.frameDisplay = 'pending';
+                    addEventListener('message', function(event) {
+                      window.frameDisplay = event.data;
+                    });
+                  </script>
+                  <iframe src="https://other.example/middle"></iframe>
+                </body></html>
+            """.trimIndent(),
+            "other.example/middle" to
+                "<iframe src=\"https://news.example/inner\"></iframe>",
+            "news.example/inner" to """
+                <div class="sponsor">ad</div>
+                <script>
+                  top.postMessage(
+                    getComputedStyle(document.querySelector('.sponsor')).display,
+                    '*'
+                  );
+                </script>
+            """.trimIndent(),
+        )
+        val loaded = CountDownLatch(1)
+        val created = AtomicReference<WebView>()
+        instrumentation.runOnMainSync {
+            created.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    WebViewCompat.addDocumentStartJavaScript(
+                        this,
+                        CandyCosmeticScript.create(listOf(".sponsor")),
+                        setOf("*"),
+                    )
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest,
+                        ): WebResourceResponse? {
+                            val key = "${request.url.host}${request.url.path}"
+                            val html = pages[key] ?: return null
+                            return WebResourceResponse(
+                                "text/html",
+                                "utf-8",
+                                ByteArrayInputStream(html.toByteArray()),
+                            )
+                        }
+
+                        override fun onPageFinished(view: WebView, url: String) = loaded.countDown()
+                    }
+                    loadUrl("https://news.example/top")
+                },
+            )
+        }
+        val view = created.get().also(webView::set)
+        assertTrue(loaded.await(10, TimeUnit.SECONDS))
+
+        assertEquals("\"block\"", awaitEvaluation(view, "window.frameDisplay", "\"pending\""))
     }
 
     @Test
@@ -357,6 +483,28 @@ class CandyCosmeticRuleInstrumentedTest {
         val evaluated = CountDownLatch(1)
         instrumentation.runOnMainSync {
             view.evaluateJavascript(probe) {
+                result.set(it)
+                evaluated.countDown()
+            }
+        }
+        assertTrue(evaluated.await(10, TimeUnit.SECONDS))
+        return result.get()
+    }
+
+    private fun awaitEvaluation(view: WebView, script: String, pending: String): String? {
+        repeat(50) {
+            val result = evaluate(view, script)
+            if (result != pending) return result
+            Thread.sleep(100)
+        }
+        return evaluate(view, script)
+    }
+
+    private fun evaluate(view: WebView, script: String): String? {
+        val result = AtomicReference<String?>()
+        val evaluated = CountDownLatch(1)
+        instrumentation.runOnMainSync {
+            view.evaluateJavascript(script) {
                 result.set(it)
                 evaluated.countDown()
             }

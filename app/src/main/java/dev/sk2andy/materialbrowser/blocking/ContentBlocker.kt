@@ -21,23 +21,7 @@ class ContentBlocker(context: Context) {
             )
         }
     }
-    private val requestBlocker =
-        // Privacy Browser parses allow rules before block rules for the same WebView limitation:
-        // https://www.stoutner.com/privacy-browser-android/filter-lists/
-        RequestBlocker(
-            hostRules = loadLines(
-                "blocked_hosts.txt",
-                "uassets_blocked_hosts.txt",
-            ),
-            indexedHostRules = SortedHostIndex.from(
-                appContext.assets.open("easylist_blocked_hosts.txt").use { it.readBytes() },
-            ),
-            blockedHostPairs = loadLines("uassets_blocked_host_pairs.txt"),
-            allowedHostPairs = loadLines(
-                "easylist_allowed_host_pairs.txt",
-                "uassets_allowed_host_pairs.txt",
-            ),
-        )
+    private val bundledBlockingSnapshot = BundledBlockingSnapshotProvider.get(appContext)
     private val consentCss by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         loadConsentCss(appContext)
     }
@@ -61,6 +45,13 @@ class ContentBlocker(context: Context) {
         compiledCosmeticRulesFuture
     }
 
+    val isBundledBlockingReady: Boolean
+        get() = bundledBlockingSnapshot.isReady
+
+    fun onBundledBlockingReady(action: () -> Unit) {
+        bundledBlockingSnapshot.onReady(action)
+    }
+
     fun consentScriptIfReady(): String? = if (consentScriptFuture.isDone) {
         runCatching { consentScriptFuture.getNow("") }.getOrNull()?.takeIf(String::isNotEmpty)
     } else {
@@ -82,11 +73,47 @@ class ContentBlocker(context: Context) {
         compiledCosmeticRulesFuture.join()
     }
 
-    fun shouldBlock(requestUrl: String, pageUrl: String?): Boolean =
-        requestBlocker.shouldBlock(requestUrl, pageUrl)
+    fun shouldBlock(
+        requestUrl: String,
+        requestHost: String?,
+        pageHost: String?,
+    ): Boolean {
+        if (!requestUrl.startsWith("http://", ignoreCase = true) &&
+            !requestUrl.startsWith("https://", ignoreCase = true)
+        ) return false
+        val snapshot = bundledBlockingSnapshot.snapshot()
+        val advancedDecision = snapshot.advancedRules.decideRequest(
+            requestUrl = requestUrl,
+            requestHost = requestHost,
+            pageHost = pageHost,
+        )
+        return when (advancedDecision) {
+            AdvancedFilterAction.Allow -> false
+            AdvancedFilterAction.Block -> true
+            null -> snapshot.requestBlocker.shouldBlockHosts(requestHost, pageHost)
+        }
+    }
+
+    fun shouldBlock(requestUrl: String, pageUrl: String?): Boolean {
+        val requestHost = runCatching { java.net.URI(requestUrl).host }.getOrNull()
+        val pageHost = runCatching { java.net.URI(pageUrl).host }.getOrNull()
+        return shouldBlock(requestUrl, requestHost, pageHost)
+    }
+
+    fun shouldBlockPopup(targetUrl: String, openerUrl: String?): Boolean =
+        bundledBlockingSnapshot.snapshot().advancedRules.shouldBlockPopup(targetUrl, openerUrl)
+
+    fun shouldBlockPopupWithoutTarget(openerUrl: String?): Boolean =
+        bundledBlockingSnapshot.snapshot().advancedRules.shouldBlockPopupWithoutTarget(openerUrl)
+
+    fun windowOpenDefuserScript(pageUrl: String?): String =
+        CandyWindowOpenDefuserScript.script.takeIf {
+            bundledBlockingSnapshot.snapshotIfReady()?.advancedRules
+                ?.shouldDefuseWindowOpen(pageUrl) == true
+        }.orEmpty()
 
     fun shouldBlockHosts(requestHost: String?, pageHost: String?): Boolean =
-        requestBlocker.shouldBlockHosts(requestHost, pageHost)
+        bundledBlockingSnapshot.snapshot().requestBlocker.shouldBlockHosts(requestHost, pageHost)
 
     fun adCosmeticSelectors(pageUrl: String?): List<String> {
         val compiled = compiledCosmeticRulesIfReady()?.selectors(pageUrl).orEmpty()
@@ -101,18 +128,21 @@ class ContentBlocker(context: Context) {
         pausedHosts = pausedHosts,
     )
 
+    fun adProceduralDocumentStartScript(pageUrl: String?): String =
+        CandyProceduralCosmeticScript.create(
+            bundledBlockingSnapshot.snapshotIfReady()?.proceduralRules
+                ?.matchingRules(pageUrl).orEmpty(),
+        )
+
+    @VisibleForTesting
+    internal fun awaitBundledBlockingForTesting() {
+        bundledBlockingSnapshot.snapshot()
+    }
+
     private fun compiledCosmeticRulesIfReady(): EasyListCosmeticRules? {
         val future = compiledCosmeticRulesFuture
         if (!future.isDone) return null
         return runCatching { future.getNow(null) }.getOrNull()
-    }
-
-    private fun loadLines(vararg assetNames: String): Sequence<String> = sequence {
-        assetNames.forEach { assetName ->
-            appContext.assets.open(assetName).bufferedReader().use { reader ->
-                yieldAll(reader.lineSequence())
-            }
-        }
     }
 
     private fun readAssetOrEmpty(assetName: String): String = runCatching {

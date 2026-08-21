@@ -74,11 +74,16 @@ class TabHistoryRestartInstrumentedTest {
         ) as MainActivity
         activity = launched
         val restoredWebView = selectedWebView(launched)
-        val afterRestart = historySnapshot(restoredWebView)
+        awaitBlockingReady(launched)
+        val afterRestart = awaitHistory(restoredWebView) { snapshot ->
+            snapshot.urls == listOf(ROOT_URL, B_URL, C_URL) && snapshot.currentIndex == 2
+        }
 
         assertEquals(listOf(ROOT_URL, B_URL, C_URL), afterRestart.urls)
         assertEquals(2, afterRestart.currentIndex)
         assertTrue(afterRestart.canGoBack)
+        assertEquals(C_URL, selectedTab(launched).url)
+        assertTrue(stateStore.load(TAB_ID) != null)
 
         instrumentation.runOnMainSync {
             launched.browserControllerForTesting().goBack()
@@ -87,18 +92,24 @@ class TabHistoryRestartInstrumentedTest {
             snapshot.currentIndex == 1 && snapshot.currentUrl == B_URL
         }
         assertEquals(B_URL, afterBack.currentUrl)
+        assertTrue(launched.browserControllerForTesting().flushWebViewStateForTesting())
 
         finishActivity(launched)
         val relaunched = instrumentation.startActivitySync(
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         ) as MainActivity
         activity = relaunched
-        val savedByLifecycle = historySnapshot(selectedWebView(relaunched))
+        val relaunchedWebView = selectedWebView(relaunched)
+        awaitBlockingReady(relaunched)
+        val savedByLifecycle = awaitHistory(relaunchedWebView) { snapshot ->
+            snapshot.urls == listOf(ROOT_URL, B_URL, C_URL) && snapshot.currentIndex == 1
+        }
 
         assertEquals(listOf(ROOT_URL, B_URL, C_URL), savedByLifecycle.urls)
         assertEquals(1, savedByLifecycle.currentIndex)
         assertTrue(savedByLifecycle.canGoBack)
         assertTrue(savedByLifecycle.canGoForward)
+        assertEquals(B_URL, selectedTab(relaunched).url)
     }
 
     private fun createSavedHistory(): Bundle {
@@ -164,6 +175,27 @@ class TabHistoryRestartInstrumentedTest {
             reference.set(activity.browserControllerForTesting().selectedWebViewForTesting())
         }
         return reference.get()
+    }
+
+    private fun selectedTab(activity: MainActivity): BrowserTab {
+        val reference = AtomicReference<BrowserTab>()
+        instrumentation.runOnMainSync {
+            reference.set(activity.browserControllerForTesting().selectedTabForTesting())
+        }
+        return reference.get()
+    }
+
+    private fun awaitBlockingReady(activity: MainActivity) {
+        val deadline = System.currentTimeMillis() + 30_000L
+        while (System.currentTimeMillis() < deadline) {
+            val ready = AtomicReference(false)
+            instrumentation.runOnMainSync {
+                ready.set(activity.browserControllerForTesting().isBundledBlockingReadyForTesting())
+            }
+            if (ready.get()) return
+            Thread.sleep(50L)
+        }
+        throw AssertionError("Bundled blocking snapshot timed out")
     }
 
     private fun awaitHistory(

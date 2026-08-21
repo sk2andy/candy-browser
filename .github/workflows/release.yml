@@ -139,10 +139,38 @@ jobs:
           CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
           CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
         run: |
+          candy_owned_filter_sources=(
+            app/src/main/assets/candy_default_rules.txt
+            app/src/main/assets/cookie_banner_overrides.css
+            app/src/main/java/dev/sk2andy/materialbrowser/blocking/AdvancedFilterRules.kt
+            app/src/main/java/dev/sk2andy/materialbrowser/blocking/BundledBlockingSnapshot.kt
+            app/src/main/java/dev/sk2andy/materialbrowser/blocking/CandyRuleFormat.kt
+            app/src/main/java/dev/sk2andy/materialbrowser/blocking/ProceduralCosmeticRules.kt
+          )
+          candy_owned_filter_hashes="$(sha256sum "${candy_owned_filter_sources[@]}")"
           python3 scripts/test_compile_easylist_cosmetic.py
           python3 scripts/test_compile_uassets_cosmetic.py
+          python3 scripts/test_compile_advanced_filters.py
+          python3 scripts/test_compile_procedural_cosmetic.py
           scripts/update_easylist_cosmetic.sh
+          scripts/update_uassets_filters.sh
+          if [[ "$(sha256sum "${candy_owned_filter_sources[@]}")" != \
+            "$candy_owned_filter_hashes" ]]; then
+            echo "Upstream filter generation modified Candy-owned filter sources." >&2
+            git diff -- "${candy_owned_filter_sources[@]}" >&2
+            exit 1
+          fi
           git diff --exit-code -- app/src/main/assets/easylist_cosmetic_rules.txt
+          git diff --exit-code -- \
+            app/src/main/assets/uassets.LICENSE.txt \
+            app/src/main/assets/uassets_advanced_filters.txt \
+            app/src/main/assets/uassets_advanced_filters_source.txt \
+            app/src/main/assets/uassets_allowed_host_pairs.txt \
+            app/src/main/assets/uassets_blocked_host_pairs.txt \
+            app/src/main/assets/uassets_blocked_hosts.txt \
+            app/src/main/assets/uassets_cosmetic_rules.txt \
+            app/src/main/assets/uassets_procedural_cosmetic_rules.txt \
+            app/src/main/assets/uassets_filters_source.txt
           ./gradlew --no-daemon \
             testDebugUnitTest \
             testUserCaDebugUnitTest \

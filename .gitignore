@@ -10,6 +10,8 @@ captures/
 *.jks
 *.keystore
 keystore.properties
+__pycache__/
+*.pyc
 
 # Local Codex work logs and generated captures
 memory/

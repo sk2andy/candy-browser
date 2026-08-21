@@ -22,10 +22,22 @@
 
 ## Generated assets and audits
 
+| Ownership | Files | Update rule |
+| --- | --- | --- |
+| Upstream-generated | `easylist_*`, `uassets_*` | Replace only through matching pinned `scripts/update_*` generator |
+| Candy-owned rules | `candy_default_rules.txt`, `cookie_banner_overrides.css` | Edit directly with audit evidence; upstream generators must not modify |
+| Candy-owned runtime | `CandyCosmeticScript`, `AdvancedFilterRules`, `BundledBlockingSnapshotProvider`, `BlockingStartGate`, `ProceduralCosmeticRules` | Keep runtime behavior in reviewed Kotlin/JS; never copy upstream scriptlets |
+
+Release builds hash Candy-owned filter sources before and after upstream generation and fail if a
+fetch/compiler changes them. This keeps custom JS/CSS behavior outside replaceable list outputs.
+The uAssets updater validates and compiles the pinned stable include manifest (`filters-general`,
+mobile, yearly archives, and link-shortener rules) into separate advanced URL/popup assets.
+Short-lived `quick-fixes` are not shipped. Candy-owned runtime and curated CSS stay outside outputs.
+
 | Change | Required path |
 | --- | --- |
 | EasyList/uAssets network or cosmetic data | Run matching `scripts/update_*` generator; keep source revision pinned |
-| Compiler behavior | Run `scripts/test_compile_easylist_cosmetic.py` and/or `scripts/test_compile_uassets_cosmetic.py` |
+| Compiler behavior | Run matching `scripts/test_compile_*` tests, including `test_compile_advanced_filters.py` |
 | Site privacy defaults | Update audit CSV, run `generate_site_privacy_defaults.mjs`, run matching `.test.mjs` |
 | Bundled asset shape | Run relevant `blocking/*AssetInstrumentedTest` |
 | Release-facing generated file | Confirm generator produces clean diff on second run |
@@ -33,4 +45,3 @@
 - Generated assets are outputs: edit generator/source/audit evidence, not generated text by hand.
 - Preserve upstream source, pinned revision, license/notice files and transformation script together.
 - Keep audit evidence in [`../audits/`](../audits/); do not replace measured classifications with undocumented exceptions.
-
