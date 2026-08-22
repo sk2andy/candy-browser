@@ -145,7 +145,11 @@ class ContentBlocker(context: Context) {
 
     fun adCosmeticSelectors(pageUrl: String?): List<String> {
         val compiled = compiledCosmeticRulesIfReady()?.rules?.scopedSelectors(pageUrl).orEmpty()
-        return (candyDefaultRules.adCosmeticSelectors(pageUrl) + compiled).distinct()
+        return (
+            HIGH_CONFIDENCE_MEDIA_SELECTORS +
+                candyDefaultRules.adCosmeticSelectors(pageUrl) +
+                compiled
+        ).distinct()
     }
 
     internal fun genericCosmeticPayload(): String =
@@ -207,5 +211,14 @@ class ContentBlocker(context: Context) {
             output.write('\n'.code)
         }
         output.toByteArray()
+    }
+
+    private companion object {
+        val HIGH_CONFIDENCE_MEDIA_SELECTORS = listOf(
+            ":is(img, iframe, embed)[src*=\"/ads_banner.\" i]",
+            ":is(img, iframe, embed)[src*=\"_ads_banner.\" i]",
+            "object[data*=\"/ads_banner.\" i]",
+            "object[data*=\"_ads_banner.\" i]",
+        )
     }
 }

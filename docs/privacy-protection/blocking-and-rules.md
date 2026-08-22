@@ -41,6 +41,9 @@ the cosmetic worker, cached once per top document, and never expanded into thous
 most 8,192 pending nodes, and inject at most 1,024 selectors / 96 KiB per document.
 The data-only WebView bridge requires an unexposed per-WebView token, accepts canonical hosts rather
 than arbitrary URLs, and keeps at most 64 resolved host policies; invalid calls fail closed.
+Four Candy-owned native CSS rules additionally collapse media with a high-confidence `ads_banner`
+filename token. They add no request matching or DOM scanning and require a path or filename boundary
+after the token so ambiguous editorial examples and banner documentation remain visible.
 
 Network host matching combines Candy's curated hosts, the complete supported EasyList/EasyPrivacy
 template graph, uAssets, and a deduplicated HaGeZi Pro delta. Sorted byte indexes keep the larger

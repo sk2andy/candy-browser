@@ -506,6 +506,36 @@ class CandyCosmeticRuleInstrumentedTest {
         assertEquals("\"none|block\"", result)
     }
 
+    @Test
+    fun curatedMediaRulesHideStrongBannerUrlsWithoutHidingAmbiguousImages() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://publisher.example/",
+            html = """
+                <html><body>
+                  <img id="compound" src="/banners/pr_advertising_ads_banner.gif">
+                  <img id="token" src="/images/ads_banner.png">
+                  <img id="advertising" src="/images/advertising-guide.png">
+                  <img id="banner" src="/images/header-banner.png">
+                  <img id="example" src="/docs/no_ads_banner_example.png">
+                  <iframe id="guidelines" src="/docs/advertising/banner-guidelines.html"></iframe>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                [
+                  getComputedStyle(document.getElementById('compound')).display,
+                  getComputedStyle(document.getElementById('token')).display,
+                  getComputedStyle(document.getElementById('advertising')).display,
+                  getComputedStyle(document.getElementById('banner')).display,
+                  getComputedStyle(document.getElementById('example')).display,
+                  getComputedStyle(document.getElementById('guidelines')).display
+                ].join('|')
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|none|inline|inline|inline|inline\"", result)
+    }
+
     private fun loadAndRead(
         baseUrl: String,
         pausedHosts: Set<String>,
