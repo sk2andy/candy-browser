@@ -138,20 +138,21 @@ import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.integration.DefaultBrowserRole
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.browser.integration.ExternalLaunchResult
+import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationPolicy
 import dev.sk2andy.materialbrowser.browser.integration.LinkPeekPreviewNavigationPolicy
 import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
-import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.integration.PageShareRequest
 import dev.sk2andy.materialbrowser.browser.integration.PageShareResult
-import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
 import dev.sk2andy.materialbrowser.browser.permissions.ActivePermissionGrant
 import dev.sk2andy.materialbrowser.browser.permissions.ActivePermissionLedger
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionResponseDelivery
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionPrompt
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionPromptChoice
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarEntry
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarRepository
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarSnapshot
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRequestIdentity
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRequestRules
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRequestState
@@ -547,6 +548,7 @@ class BrowserController(
     private val linkPeekPreviewAssignments = mutableMapOf<WebView, WebViewProfileAssignment>()
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private val externalNavigationGrantExpirations = mutableMapOf<String, Long>()
     private var webContentRequestGeneration = 0L
     private val forcedPageZoomScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
@@ -1950,7 +1952,23 @@ class BrowserController(
         searchMode: SearchMode = SearchMode.Web,
     ) {
         bottomBarCompactStates[selectedTabId] = false
-        val target = AddressResolver.resolve(input, searchEngine, searchMode)
+        val externalUri = BrowserUriPolicy.normalizeExternalUri(input)?.let(Uri::parse)
+        val target = when (val result = externalUri?.let(externalApps::open)) {
+            ExternalLaunchResult.Launched -> {
+                showExternalAppOpenedToast()
+                return
+            }
+            is ExternalLaunchResult.OpenInBrowser -> result.url
+            ExternalLaunchResult.Unsupported -> {
+                Toast.makeText(
+                    activity,
+                    activity.getString(R.string.toast_no_matching_app),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                return
+            }
+            null -> AddressResolver.resolve(input, searchEngine, searchMode)
+        }
         val webView = webViewFor(selectedTabId)
         applyMediaPlaybackPolicy(selectedTabId, webView)
         updateTab(selectedTabId) {
@@ -2768,6 +2786,14 @@ class BrowserController(
     }
 
     fun openSelectedPageExternally() = openPageExternally(selectedTabId)
+
+    private fun showExternalAppOpenedToast() {
+        Toast.makeText(
+            activity,
+            activity.getString(R.string.toast_opening_external_app),
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
 
     fun openPageExternally(tabId: String) {
         val url = tabs.firstOrNull { it.id == tabId }?.url ?: return
@@ -4261,6 +4287,7 @@ class BrowserController(
         pendingConsentCssUrls.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
+        externalNavigationGrantExpirations.clear()
         clearIncognitoProfile()
         if (
             WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) &&
@@ -4537,6 +4564,25 @@ class BrowserController(
                 val capsule = activeCapsuleForTab(tabId)
                     ?.takeIf { request.isForMainFrame }
                 if (capsule == null) {
+                    if (request.isForMainFrame && request.hasGesture()) {
+                        externalNavigationGrantExpirations[tabId] =
+                            SystemClock.elapsedRealtime() + EXTERNAL_NAVIGATION_GRANT_MILLIS
+                    }
+                    val canTryAppLink = ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                        scheme = scheme,
+                        isForMainFrame = request.isForMainFrame,
+                        hasGesture = request.hasGesture(),
+                        isRedirect = request.isRedirect,
+                    )
+                    if (
+                        canTryAppLink &&
+                        externalApps.openWebUrlExternally(request.url.toString()) ==
+                        ExternalLaunchResult.Launched
+                    ) {
+                        externalNavigationGrantExpirations.remove(tabId)
+                        showExternalAppOpenedToast()
+                        return true
+                    }
                     if (request.isForMainFrame) {
                         applySiteProtectionForNavigation(tabId, view, request.url.toString())
                     }
@@ -4556,9 +4602,28 @@ class BrowserController(
                     CapsuleNavigationDecision.UseExistingUriPolicy -> false
                 }
             }
-            if (!request.isForMainFrame || !request.hasGesture()) return true
+            val grantExpiration = externalNavigationGrantExpirations[tabId]
+            val hasUserNavigationGrant = ExternalNavigationPolicy.isUserNavigationGrantActive(
+                expirationElapsedRealtime = grantExpiration,
+                nowElapsedRealtime = SystemClock.elapsedRealtime(),
+            )
+            if (
+                !ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                    scheme = scheme,
+                    isForMainFrame = request.isForMainFrame,
+                    hasGesture = request.hasGesture(),
+                    isRedirect = request.isRedirect,
+                    hasUserNavigationGrant = hasUserNavigationGrant,
+                )
+            ) {
+                return true
+            }
+            externalNavigationGrantExpirations.remove(tabId)
             return when (val result = externalApps.open(request.url)) {
-                ExternalLaunchResult.Launched -> true
+                ExternalLaunchResult.Launched -> {
+                    showExternalAppOpenedToast()
+                    true
+                }
                 is ExternalLaunchResult.OpenInBrowser -> {
                     applyMediaPlaybackPolicy(tabId, view)
                     loadUrlWithProtection(tabId, view, result.url)
@@ -4626,6 +4691,7 @@ class BrowserController(
             removeUserScripts(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
+            externalNavigationGrantExpirations.remove(tabId)
             candyTrailHistoryBindings.remove(tabId)
             pendingCandyTrailTargets.remove(tabId)
             (view.parent as? FrameLayout)?.removeView(view)
@@ -7367,6 +7433,7 @@ class BrowserController(
         webViewProfileKeys.remove(tabId)
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
+        externalNavigationGrantExpirations.remove(tabId)
         pageUrls.remove(tabId)
         bottomBarCompactStates.remove(tabId)
         candyTrailHistoryBindings.remove(tabId)
@@ -8102,6 +8169,7 @@ class BrowserController(
         const val PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS = 2_000L
         const val WEB_PICTURE_IN_PICTURE_FULLSCREEN_CLEANUP_DELAY_MILLIS = 250L
         const val WEB_PICTURE_IN_PICTURE_REQUEST_TIMEOUT_MILLIS = 5_000L
+        const val EXTERNAL_NAVIGATION_GRANT_MILLIS = 15_000L
         const val WEB_PERMISSION_REQUEST_CODE = 7_041
         const val FILE_CHOOSER_REQUEST_CODE = 7_042
     }

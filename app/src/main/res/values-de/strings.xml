@@ -337,6 +337,7 @@
     <string name="toast_already_default_browser">Bereits Standardbrowser</string>
     <string name="toast_default_browser_selection_unavailable">Standardbrowser-Auswahl nicht verfügbar</string>
     <string name="toast_no_external_app">Keine externe App installiert</string>
+    <string name="toast_opening_external_app">Wird in einer anderen App geöffnet</string>
     <string name="toast_assistant_unavailable">Kein kompatibler Assistent eingerichtet</string>
     <string name="toast_no_matching_app">Keine passende App installiert</string>
     <string name="toast_printing_unavailable">Drucken ist auf diesem Gerät nicht verfügbar</string>

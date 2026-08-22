@@ -36,6 +36,134 @@ class BrowserUriPolicyTest {
     }
 
     @Test
+    fun `normalizes safe explicit external addresses`() {
+        assertEquals(
+            "candy-app://callback?code=redacted",
+            BrowserUriPolicy.normalizeExternalUri(" candy-app://callback?code=redacted "),
+        )
+        assertEquals(
+            "mailto:test@example.com",
+            BrowserUriPolicy.normalizeExternalUri("mailto:test@example.com"),
+        )
+        assertNull(BrowserUriPolicy.normalizeExternalUri("https://example.com"))
+        assertNull(BrowserUriPolicy.normalizeExternalUri("javascript:alert(1)"))
+        assertNull(BrowserUriPolicy.normalizeExternalUri("file:///data/local/private"))
+        assertNull(BrowserUriPolicy.normalizeExternalUri("custom app://open"))
+    }
+
+    @Test
+    fun `external navigation accepts user driven app links`() {
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "folo",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation accepts special scheme server redirects`() {
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "folo",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+            ),
+        )
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "intent",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation accepts recent user grant for script redirect`() {
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "candy-app",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = false,
+                hasUserNavigationGrant = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation grant expires at deterministic boundary`() {
+        assertTrue(
+            ExternalNavigationPolicy.isUserNavigationGrantActive(
+                expirationElapsedRealtime = 15_000L,
+                nowElapsedRealtime = 15_000L,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationPolicy.isUserNavigationGrantActive(
+                expirationElapsedRealtime = 15_000L,
+                nowElapsedRealtime = 15_001L,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationPolicy.isUserNavigationGrantActive(
+                expirationElapsedRealtime = null,
+                nowElapsedRealtime = 1L,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation rejects passive web redirects subframes and unsafe schemes`() {
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "folo",
+                isForMainFrame = false,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "javascript",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = false,
+                hasUserNavigationGrant = true,
+            ),
+        )
+    }
+
+    @Test
     fun linkPeekPreviewKeepsNavigationInsideSafeWebSchemes() {
         assertFalse(LinkPeekPreviewNavigationPolicy.shouldBlock("https://example.com/redirect"))
         assertFalse(LinkPeekPreviewNavigationPolicy.shouldBlock("http://localhost:8080/preview"))

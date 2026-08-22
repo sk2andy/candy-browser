@@ -15,7 +15,8 @@
 | --- | --- | --- |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy |
-| Special scheme | `BrowserUriPolicy` → `ExternalAppLauncher` | Block unsafe/internal schemes; require explicit external handling |
+| Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
+| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links to non-browser apps; allow safe main-frame special-scheme redirects; block unsafe/internal schemes and subframes |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
 | Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; apply desktop user agent and viewport before navigation |
@@ -29,6 +30,10 @@
   the current browser orientation and system-bar policy. Tab overview requests portrait only on
   compact screens; tablets and other `sw600dp` windows preserve their current orientation.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
+- Resolve external intents on every handoff attempt so apps installed while Candy remains open are
+  immediately eligible. Show handoff feedback only after Android accepts the external launch.
+- Carry user intent across script-driven handoffs with a short-lived, tab-bound grant after a
+  tapped HTTP(S) navigation. Consume the grant on the first special-scheme launch attempt.
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.

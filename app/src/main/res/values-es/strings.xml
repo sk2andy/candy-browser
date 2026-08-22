@@ -341,6 +341,7 @@
     <string name="toast_already_default_browser">Ya es el navegador predeterminado</string>
     <string name="toast_default_browser_selection_unavailable">La selección del navegador predeterminado no está disponible</string>
     <string name="toast_no_external_app">No hay ninguna aplicación externa instalada</string>
+    <string name="toast_opening_external_app">Abriendo en otra aplicación</string>
     <string name="toast_assistant_unavailable">No hay ningún asistente compatible configurado</string>
     <string name="toast_no_matching_app">No hay ninguna aplicación compatible instalada</string>
     <string name="toast_printing_unavailable">La impresión no está disponible en este dispositivo</string>

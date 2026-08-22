@@ -25,7 +25,6 @@ class ExternalAppLauncher(private val context: Context) {
     fun open(
         uri: Uri,
         browserFallbackUrl: String? = null,
-        chooserTitle: CharSequence? = null,
     ): ExternalLaunchResult {
         val scheme = uri.scheme?.lowercase() ?: return fallback(browserFallbackUrl)
         if (scheme == "http" || scheme == "https") {
@@ -33,7 +32,7 @@ class ExternalAppLauncher(private val context: Context) {
                 ?.let(ExternalLaunchResult::OpenInBrowser)
                 ?: ExternalLaunchResult.Unsupported
         }
-        if (scheme == "intent") return openIntentUri(uri, chooserTitle)
+        if (scheme == "intent") return openIntentUri(uri)
         if (!BrowserUriPolicy.canOpenExternally(scheme)) return fallback(browserFallbackUrl)
 
         val action = when (scheme) {
@@ -42,13 +41,10 @@ class ExternalAppLauncher(private val context: Context) {
             else -> Intent.ACTION_VIEW
         }
         val target = Intent(action, uri).addCategory(Intent.CATEGORY_BROWSABLE)
-        return launchChooser(target, chooserTitle, browserFallbackUrl)
+        return launchDirect(target, browserFallbackUrl)
     }
 
-    private fun openIntentUri(
-        uri: Uri,
-        chooserTitle: CharSequence?,
-    ): ExternalLaunchResult {
+    private fun openIntentUri(uri: Uri): ExternalLaunchResult {
         val parsed = runCatching {
             Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME)
         }.getOrNull() ?: return ExternalLaunchResult.Unsupported
@@ -60,29 +56,7 @@ class ExternalAppLauncher(private val context: Context) {
         val safeIntent = Intent(Intent.ACTION_VIEW, data)
             .addCategory(Intent.CATEGORY_BROWSABLE)
             .apply { parsed.`package`?.let(::setPackage) }
-        return if (safeIntent.`package` != null) {
-            launchDirect(safeIntent, fallbackUrl)
-        } else {
-            launchChooser(safeIntent, chooserTitle, fallbackUrl)
-        }
-    }
-
-    private fun launchChooser(
-        target: Intent,
-        title: CharSequence?,
-        fallbackUrl: String?,
-    ): ExternalLaunchResult {
-        val chooser = Intent.createChooser(target, title).apply {
-            if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        return try {
-            context.startActivity(chooser)
-            ExternalLaunchResult.Launched
-        } catch (_: ActivityNotFoundException) {
-            fallback(fallbackUrl)
-        } catch (_: SecurityException) {
-            fallback(fallbackUrl)
-        }
+        return launchDirect(safeIntent, fallbackUrl)
     }
 
     private fun launchDirect(target: Intent, fallbackUrl: String?): ExternalLaunchResult {
