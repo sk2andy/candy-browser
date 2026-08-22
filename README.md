@@ -50,6 +50,15 @@ kinetic typography, and camera motion are generated entirely from repository-own
 - **Feels at home on Android.** Dynamic color, edge-to-edge content, Predictive Back, Autofill,
   passkeys, downloads, sharing, printing, and default-browser integration.
 
+## Tablet support
+
+Candy adapts its fullscreen browsing and visual tab overviews to larger screens, including
+landscape-oriented previews for cover flow and compact grid layouts.
+
+<p align="center">
+  <img src="docs/screenshots/candy-tablet.png" width="90%" alt="Candy Browser running fullscreen on an Android tablet in landscape">
+</p>
+
 ## Features
 
 ### Browsing and gestures
