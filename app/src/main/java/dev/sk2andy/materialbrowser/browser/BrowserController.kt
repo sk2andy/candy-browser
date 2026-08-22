@@ -4544,7 +4544,6 @@ class BrowserController(
         override fun onPageFinished(view: WebView, url: String) {
             if (isPendingInitialBlank(tabId, url)) return
             if (isQuarantinedPopup(tabId)) return
-            finishMainFrameTlsNavigation(tabId, view)
             if (url != BLANK_URL) suppressedInitialBlankTabIds.remove(tabId)
             pageUrls[tabId] = url
             updateNavigationState(tabId, view)
@@ -7037,15 +7036,6 @@ class BrowserController(
             targetUrls = (navigation.targetUrls.filterNot { it == targetUrl } + targetUrl)
                 .takeLast(MAX_TLS_MAIN_FRAME_TARGETS),
         )
-    }
-
-    private fun finishMainFrameTlsNavigation(tabId: String, view: WebView) {
-        val navigation = mainFrameTlsNavigations[tabId] ?: return
-        if (navigation.webView === view &&
-            navigation.generation == navigationGenerations[tabId]
-        ) {
-            mainFrameTlsNavigations.remove(tabId)
-        }
     }
 
     private fun restoreWebViewState(tab: BrowserTab, webView: WebView): Boolean {
