@@ -51,8 +51,10 @@
   channel and rejects a release that contains only the other channel's asset.
 - User CA trust applies to all app HTTPS connections, not only rendered pages or a selected profile.
   The settings warning must remain visible in User CA builds.
-- `BrowserController.onReceivedSslError` always cancels. Never use `SslErrorHandler.proceed()` to
-  approximate user-CA support; valid user-CA chains are accepted before that callback.
+- `BrowserController.onReceivedSslError` always cancels. Only an error URL matching the current
+  main-frame target becomes a page-level error; failed embedded resources stay local to the page.
+  Never use `SslErrorHandler.proceed()` to approximate user-CA support; valid user-CA chains are
+  accepted before that callback.
 
 ## Domain compatibility overrides
 

@@ -335,6 +335,12 @@ private data class PendingBlockingStart(
     val restoreState: Boolean,
 )
 
+private data class MainFrameTlsNavigation(
+    val webView: WebView,
+    val generation: Int,
+    val targetUrls: List<String>,
+)
+
 class BrowserController(
     private val activity: Activity,
     private val requestRuntimePermissions: (Set<String>) -> Unit = { permissions ->
@@ -568,6 +574,7 @@ class BrowserController(
     private val linkPeekPreviewAssignments = mutableMapOf<WebView, WebViewProfileAssignment>()
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private val mainFrameTlsNavigations = mutableMapOf<String, MainFrameTlsNavigation>()
     private var webContentRequestGeneration = 0L
     private val forcedPageZoomScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
@@ -4282,6 +4289,7 @@ class BrowserController(
         pendingConsentCssUrls.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
+        mainFrameTlsNavigations.clear()
         clearIncognitoProfile()
         if (
             WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) &&
@@ -4347,6 +4355,7 @@ class BrowserController(
         updateProtectionRequestContext(tabId, tab.url)
         edgeToEdgePages[tabId] = false
         navigationGenerations[tabId] = 0
+        mainFrameTlsNavigations.remove(tabId)
         installWebMediaBridge(tabId, this)
         addJavascriptInterface(ViewportFitBridge(tabId, this), PageViewportFit.bridgeName)
         GenericCosmeticBridge().also { bridge ->
@@ -4491,6 +4500,7 @@ class BrowserController(
                 return
             }
             if (handlePendingPopunderOpenerNavigation(tabId, view, url)) return
+            beginMainFrameTlsNavigation(tabId, view, url)
             clearWebMediaForTab(tabId)
             fullscreenVideoSession
                 ?.takeIf { session -> session.tabId == tabId && session.webView === view }
@@ -4509,7 +4519,6 @@ class BrowserController(
             applyDomainMutePolicy(tabId, view, url)
             updateProtectionRequestContext(tabId, url)
             applySiteProtectionForNavigation(tabId, view, url)
-            navigationGenerations[tabId] = (navigationGenerations[tabId] ?: 0) + 1
             suppressedCandyTrailTabIds.remove(tabId)
             setPageEdgeToEdge(tabId, view, false)
             val previousUrl = tabs.firstOrNull { it.id == tabId }?.url
@@ -4535,6 +4544,7 @@ class BrowserController(
         override fun onPageFinished(view: WebView, url: String) {
             if (isPendingInitialBlank(tabId, url)) return
             if (isQuarantinedPopup(tabId)) return
+            finishMainFrameTlsNavigation(tabId, view)
             if (url != BLANK_URL) suppressedInitialBlankTabIds.remove(tabId)
             pageUrls[tabId] = url
             updateNavigationState(tabId, view)
@@ -4596,6 +4606,9 @@ class BrowserController(
             ) return true
             val scheme = request.url.scheme?.lowercase()
             if (scheme == "http" || scheme == "https") {
+                if (request.isForMainFrame) {
+                    recordMainFrameTlsRedirect(tabId, view, request.url.toString())
+                }
                 val capsule = activeCapsuleForTab(tabId)
                     ?.takeIf { request.isForMainFrame }
                 if (capsule == null) {
@@ -4655,6 +4668,16 @@ class BrowserController(
             error: android.net.http.SslError,
         ) {
             handler.cancel()
+            val navigation = mainFrameTlsNavigations[tabId] ?: return
+            if (webViews[tabId] !== view ||
+                navigation.webView !== view ||
+                navigation.generation != navigationGenerations[tabId] ||
+                !TlsErrorRules.isForMainFrame(
+                    errorUrl = error.url,
+                    currentMainFrameUrls = navigation.targetUrls,
+                )
+            ) return
+            mainFrameTlsNavigations.remove(tabId)
             updateTab(tabId) {
                 it.copy(isLoading = false, error = activity.getString(R.string.error_unsafe_tls_blocked))
             }
@@ -4690,6 +4713,7 @@ class BrowserController(
             removeUserScripts(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
+            mainFrameTlsNavigations.remove(tabId)
             candyTrailHistoryBindings.remove(tabId)
             pendingCandyTrailTargets.remove(tabId)
             (view.parent as? FrameLayout)?.removeView(view)
@@ -6994,6 +7018,36 @@ class BrowserController(
         }
     }
 
+    private fun beginMainFrameTlsNavigation(tabId: String, view: WebView, targetUrl: String) {
+        val generation = (navigationGenerations[tabId] ?: 0) + 1
+        navigationGenerations[tabId] = generation
+        mainFrameTlsNavigations[tabId] = MainFrameTlsNavigation(
+            webView = view,
+            generation = generation,
+            targetUrls = listOf(targetUrl),
+        )
+    }
+
+    private fun recordMainFrameTlsRedirect(tabId: String, view: WebView, targetUrl: String) {
+        val navigation = mainFrameTlsNavigations[tabId] ?: return
+        if (navigation.webView !== view ||
+            navigation.generation != navigationGenerations[tabId]
+        ) return
+        mainFrameTlsNavigations[tabId] = navigation.copy(
+            targetUrls = (navigation.targetUrls.filterNot { it == targetUrl } + targetUrl)
+                .takeLast(MAX_TLS_MAIN_FRAME_TARGETS),
+        )
+    }
+
+    private fun finishMainFrameTlsNavigation(tabId: String, view: WebView) {
+        val navigation = mainFrameTlsNavigations[tabId] ?: return
+        if (navigation.webView === view &&
+            navigation.generation == navigationGenerations[tabId]
+        ) {
+            mainFrameTlsNavigations.remove(tabId)
+        }
+    }
+
     private fun restoreWebViewState(tab: BrowserTab, webView: WebView): Boolean {
         if (tab.isIncognito || tab.url == BLANK_URL) return false
         val state = webViewStateRepository.load(tab.id) ?: return false
@@ -7722,6 +7776,7 @@ class BrowserController(
         webViewProfileKeys.remove(tabId)
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
+        mainFrameTlsNavigations.remove(tabId)
         pageUrls.remove(tabId)
         bottomBarCompactStates.remove(tabId)
         candyTrailHistoryBindings.remove(tabId)
@@ -7753,6 +7808,7 @@ class BrowserController(
         webViewProfileKeys.remove(tab.id)
         edgeToEdgePages.remove(tab.id)
         navigationGenerations.remove(tab.id)
+        mainFrameTlsNavigations.remove(tab.id)
         pageUrls.remove(tab.id)
         bottomBarCompactStates.remove(tab.id)
         candyTrailHistoryBindings.remove(tab.id)
@@ -8173,6 +8229,7 @@ class BrowserController(
             webViewProfileKeys.remove(tabId)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
+            mainFrameTlsNavigations.remove(tabId)
             pageUrls.remove(tabId)
         }
         webViewRevision++
@@ -8526,6 +8583,7 @@ class BrowserController(
         const val MAX_GENERIC_POLICY_HOST_LENGTH = 253
         const val MAX_GENERIC_POLICY_CACHE_ENTRIES = 64
         const val MAX_REPORTED_ALLOW_DECISIONS = 64
+        const val MAX_TLS_MAIN_FRAME_TARGETS = 16
         const val MAX_WEB_MEDIA_TITLE_LENGTH = 160
         const val MAX_WEB_MEDIA_ORIGIN_LENGTH = 255
         const val MAX_WEB_MEDIA_CHANNELS_PER_WEBVIEW = 32
