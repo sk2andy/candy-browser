@@ -5,8 +5,8 @@
 # License: GPL-3.0; see hagezi.LICENSE.txt
 # Excluded by existing Candy assets: easylist_blocked_hosts.txt, blocked_hosts.txt, uassets_blocked_hosts.txt
 # Source hosts: 223971
-# Excluded already covered: 57922
-# Generated delta hosts: 166049
+# Excluded already covered: 57893
+# Generated delta hosts: 166078
 0--0.info
 0--4.com
 0--d.com
@@ -13600,6 +13600,7 @@ ads.indystar.com
 ads.infoconcert.com
 ads.informator.ua
 ads.ingoodhealth.co.za
+ads.inmobi.com
 ads.inovativnost.mk
 ads.inpost.pl
 ads.inq.com
@@ -15873,6 +15874,7 @@ advertising.forumexcellence.com
 advertising.foxsports.com
 advertising.freefy.app
 advertising.goldseek.com
+advertising.inmobi.com
 advertising.jdn.co.il
 advertising.jp.msn.com
 advertising.kohls.com
@@ -26831,6 +26833,7 @@ app.harasocial.com
 app.hbbtv.hse24.com
 app.hstatic.net
 app.humblytics.com
+app.inmobi.com
 app.jodoo.com
 app.kamlno.network
 app.kuvio.io
@@ -26947,6 +26950,7 @@ appflood.com
 appfolio-analytics.com
 appgift.sinaapp.com
 appgiftwall.oss-us-west-1.aliyuncs.com
+appgw.inmobi.com
 apphasten.com
 apphomeforbests.com
 appia.com
@@ -35047,6 +35051,7 @@ branche-rendalie-ai.com
 brand-fahrradladen.de
 brand-sdk.kmsmep.com
 brand.ad
+brand.inmobi.com
 brand.zing.vn
 brand8pr.live
 brandadsstatic.vivo.com.cn
@@ -40446,6 +40451,7 @@ ck-kuallian.com.cn
 ck.am-qualitaetsmatratzen.de
 ck.bastardzingaro.com
 ck.deine-massanfertigung.de
+ck.inmobi.com
 ck.ncclick.co.kr
 ck.rinchperjink.shop
 ck.storematch.jp
@@ -43578,6 +43584,7 @@ config.baofeng.net
 config.chsmarttv.com
 config.cmpassport.com
 config.emb-api.com
+config.inmobi.com
 config.toto.zipoapps.com
 config001.cmpassport.com
 config1.cmpassport.com
@@ -45061,6 +45068,7 @@ crash-in.ubmeteo.io
 crash-in.warnwetter.de
 crash-ingress.fivem.net
 crash-jogos.com.br
+crash-metrics.sdk.nc.cname.inmobi.com
 crash-palace.edan.io
 crash-pings.mozilla.org
 crash-report.ascension.gg
@@ -48492,6 +48500,7 @@ de.ht
 de.hypersoftsneakers.com
 de.identitashoes.com
 de.im
+de.inmobi.com
 de.justfashionnow.com
 de.jxsaen.shop
 de.ki
@@ -65612,6 +65621,8 @@ glamsouh.net
 glamstadt.com
 glamtoumpaips.net
 glance-analytics.trafficmanager.net
+glance-internal.inmobi.com
+glance.inmobi.com
 glanceclock.com
 glancediskrebuke.com
 glancetree.top
@@ -73055,6 +73066,7 @@ i-i.lt
 i-in.browser.heytapmobile.com
 i-ksiazka.pl
 i-kvm.com
+i-l-uac-inmobicdnnet-gcp-cdn.geoservice.inmobi.com
 i-loadzone.com
 i-lookup.com
 i-love-bitches.lol
@@ -73767,6 +73779,7 @@ ifddigital.com
 ife2701--3e05fc28fb9511f0bc2942dde27851f2.web.val.run
 ifeishu.com.cn
 ifen.cc
+iff.inmobi.com
 iffcbfgajgfceajjaaej.world
 ifghpydxtabkg.com
 ifindsoul.com
@@ -73880,6 +73893,7 @@ ih1.gamecopyworld.com
 iha-analytics.vercel.app
 ihago.net
 ihais.com
+ihasdsp.inmobi.com
 ihbnext-ads-rescue.mobile.cedacri.it
 ihbov.cycologygear.eu
 ihcfhcebffgbcjaeaafa.world
@@ -77036,6 +77050,7 @@ januaryoperativepollute.com
 janusz-reichelt.de
 jaob.jybaekaqbwlrz.top
 japan-airline.com
+japan.inmobi.com
 japandica.shop
 japandicraft.shop
 japandiliving.shop
@@ -102264,6 +102279,7 @@ ns-zhy.com
 ns.adobe.com
 ns.donneespersonnelles.fr
 ns.hn
+ns.inmobi.com
 ns.sascdn.com
 ns01.us
 ns1.awsnameservers.com
@@ -104401,6 +104417,7 @@ onecognizant.click
 onecozyday.com
 onedrive.su
 onedrivedownload.zoholandingpage.com
+onedsp.inmobi.com
 onedumb.com
 oneecosystem.eu
 oneegrou.net
@@ -107630,6 +107647,7 @@ pbo8y8igrp.com
 pbqgcnweixhafs.com
 pbqkabgdc.cfd
 pbs-eu.getpublica.com
+pbs.inmobi.com
 pbtsjh.xyz
 pbuuzazvrw.com
 pbvc8trk.com
@@ -112959,6 +112977,7 @@ prebid-collector-lb-321145981.eu-west-1.elb.amazonaws.com
 prebid-dev.reworldmediafactory.com
 prebid-log.getpublica.com
 prebid-server-canary.ifunny.co
+prebid.inmobi.com
 prebid.loopmertb.com
 prebid.scope3.com
 prebid.tapatalk.com
@@ -114562,6 +114581,7 @@ publish.ne.cision.com
 publishdomesticstarve.com
 publisher-assets.spot.im
 publisher-network.com
+publisher.inmobi.com
 publisher.outtra.com
 publishperpetualthird.com
 publitweet.com
@@ -114666,6 +114686,7 @@ pulse.burkely.com
 pulse.deurbellen.shop
 pulse.ftools.fluege.de
 pulse.genki.world
+pulse.inmobi.com
 pulse.jandeisolatieman.nl
 pulse.neurostreamlink10.cfd
 pulse.ora.fi
@@ -123614,6 +123635,7 @@ sdk.iad-05.braze.com.cdn.cloudflare.net
 sdk.iad-06.braze.com.cdn.cloudflare.net
 sdk.iad-07.braze.com.cdn.cloudflare.net
 sdk.iad-08.braze.com.cdn.cloudflare.net
+sdk.inmobi.com
 sdk.loveota.net
 sdk.markmedia.com.cn
 sdk.mrf.io
@@ -135297,6 +135319,7 @@ ssp.asiaflix.net
 ssp.emol.com
 ssp.hinet.net
 ssp.igaw.io
+ssp.inmobi.com
 ssp.kdnet.net
 ssp.lbanez.net
 ssp.meba.kr
@@ -140411,6 +140434,7 @@ synaptidtakhtadjysilverrod.monster
 sync-yieldmo-com-tf-1869548451.eu-west-1.elb.amazonaws.com
 sync.3fmediagroup.com
 sync.getpublica.com
+sync.inmobi.com
 sync.omgn-gaming.com
 sync.sharethis.com
 sync960.com
@@ -142131,6 +142155,7 @@ techno-maximus.de
 techno-x.de
 technojoyhaven.com
 technoldefects.cfd
+technology.inmobi.com
 technologykr.com
 technonstop.com
 technoob.info
@@ -142820,6 +142845,7 @@ templatedownloads.org
 templatehelp.com
 templatein13.net
 templates.buscape.com
+templates.inmobi.com
 templatesearch.org
 templemail.info
 tempo-client-metric-prod.s3.amazonaws.com
@@ -147345,6 +147371,7 @@ trafficjunction.com
 traffick-soul.com
 trafficleader.com
 trafficmanager.anyclip.com
+trafficmanager.inmobi.com
 trafficmarketplace.com
 trafficmoon.com
 trafficmp.com
@@ -149281,6 +149308,7 @@ uarxokmu.com
 uasehjnkan.com
 uashop.shop
 uastudioshop.com
+uat-sync.inmobi.com
 uat.analytics.immoscoop.be
 uatu.newsquestdigital.co.uk
 uaudihimmpsh.com
@@ -155631,6 +155659,7 @@ w-wps.com
 w.4kporn.xxx
 w.freespeech.tube
 w.inews.qq.com
+w.inmobi.com
 w.l.qq.com
 w.love4porn.com
 w.pandora.xiaomi.com

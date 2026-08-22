@@ -56,7 +56,7 @@ class CandyDefaultRulesAssetInstrumentedTest {
         val hagezi = SortedHostIndex.from(
             assets.open("hagezi_blocked_hosts.txt").use { it.readBytes() },
         )
-        assertEquals(166_049, hagezi.size)
+        assertEquals(166_078, hagezi.size)
         assertEquals(true, "analyticsengine.s3.amazonaws.com" in hagezi)
         assertEquals(true, "zzzwowosss.com" in hagezi)
         assertEquals(false, "example.com" in hagezi)
@@ -72,15 +72,15 @@ class CandyDefaultRulesAssetInstrumentedTest {
 
         listOf(
             "adjust.com",
-            "analytics.twitter.com",
-            "inmobi.com",
             "kochava.com",
             "xp.apple.com",
         ).forEach { host ->
             assertEquals(host, true, blocker.shouldBlockHosts(host, "publisher.example"))
+            assertEquals(host, false, blocker.shouldBlockHosts(host, host))
         }
         listOf(
             "consent.cookiebot.com",
+            "inmobi.com",
             "graph.facebook.com",
             "redirector.googlevideo.com",
         ).forEach { host ->

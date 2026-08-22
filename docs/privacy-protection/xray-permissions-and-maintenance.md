@@ -45,7 +45,7 @@ Short-lived `quick-fixes` are not shipped. Candy-owned runtime and curated CSS s
 | Change | Required path |
 | --- | --- |
 | EasyList/uAssets network or cosmetic data | Run matching `scripts/update_*` generator; keep source revision pinned |
-| Candy curated host | Require independent maintained-list corroboration; regenerate the HaGeZi delta |
+| Candy curated host | Record evidence in [`../audits/`](../audits/); regenerate the HaGeZi delta |
 | Compiler behavior | Run matching `scripts/test_compile_*` tests, including `test_compile_advanced_filters.py` |
 | Site privacy defaults | Update audit CSV, run `generate_site_privacy_defaults.mjs`, run matching `.test.mjs` |
 | Bundled asset shape | Run relevant `blocking/*AssetInstrumentedTest` |

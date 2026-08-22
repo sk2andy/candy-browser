@@ -10,7 +10,6 @@ adservice.google.com
 adsrvr.org
 adtech.de
 advertising.com
-analytics.twitter.com
 amazon-adsystem.com
 app-measurement.com
 appsflyer.com
@@ -41,7 +40,6 @@ googletagservices.com
 hotjar.com
 hotjar.io
 imrworldwide.com
-inmobi.com
 indexww.com
 inner-active.mobi
 insightexpressai.com
