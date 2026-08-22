@@ -113,6 +113,8 @@ internal object AppearanceSettingsTestTags {
 
 internal object ProtectionSettingsTestTags {
     const val UserCaWarning = "protection_settings_user_ca_warning"
+    const val ExportAppData = "protection_settings_export_app_data"
+    const val ImportAppData = "protection_settings_import_app_data"
 }
 
 internal object BrowserSettingsTestTags {
@@ -173,6 +175,8 @@ internal fun SettingsScreen(
     onUpdateTopping: (id: String) -> Unit,
     onRefreshToppingCatalog: () -> Unit,
     onFilterStudio: () -> Unit,
+    onExportAppData: () -> Unit,
+    onImportAppData: () -> Unit,
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -293,6 +297,8 @@ internal fun SettingsScreen(
                     onPrivacyXRay = onPrivacyXRay,
                     onPermissionRadar = onPermissionRadar,
                     onFilterStudio = onFilterStudio,
+                    onExportAppData = onExportAppData,
+                    onImportAppData = onImportAppData,
                     onClearData = onClearData,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
@@ -1053,6 +1059,8 @@ internal fun ProtectionAndDataSettingsPage(
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
     onFilterStudio: () -> Unit,
+    onExportAppData: () -> Unit = {},
+    onImportAppData: () -> Unit = {},
     onClearData: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -1154,6 +1162,20 @@ internal fun ProtectionAndDataSettingsPage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
+        DataArchiveAction(
+            title = stringResource(R.string.data_archive_export_title),
+            summary = stringResource(R.string.data_archive_export_summary),
+            onClick = onExportAppData,
+            modifier = Modifier.testTag(ProtectionSettingsTestTags.ExportAppData),
+        )
+        Spacer(Modifier.height(8.dp))
+        DataArchiveAction(
+            title = stringResource(R.string.data_archive_import_title),
+            summary = stringResource(R.string.data_archive_import_summary),
+            onClick = onImportAppData,
+            modifier = Modifier.testTag(ProtectionSettingsTestTags.ImportAppData),
+        )
+        Spacer(Modifier.height(16.dp))
         Surface(
             onClick = onClearData,
             modifier = Modifier
@@ -1168,6 +1190,36 @@ internal fun ProtectionAndDataSettingsPage(
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DataArchiveAction(
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .sizeIn(minHeight = 48.dp),
+        shape = MaterialTheme.shapes.large,
+        color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

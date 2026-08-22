@@ -65,6 +65,8 @@ class BrowserSessionStore internal constructor(
     fun saveTabsImmediately(tabs: List<BrowserTab>, selectedTabId: String): Boolean =
         tabsEditor(tabs, selectedTabId).commit()
 
+    fun flush(): Boolean = preferences.edit().commit()
+
     @Synchronized
     fun saveTabsAndSnoozedImmediately(
         tabs: List<BrowserTab>,

@@ -12,6 +12,8 @@
 | Page scroll bar | Persisted opt-in, WebView scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, `BrowserWebView`, `ui/WebViewScrollBar` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
 | Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
+| App data archive | SAF launch and confirmation stay in the activity; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
+| Android backup | Encrypted cloud and device-transfer inclusion policy | `res/xml/data_extraction_rules.xml`, [`app-data-archive.md`](app-data-archive.md#android-auto-backup) |
 
 ## Choices
 

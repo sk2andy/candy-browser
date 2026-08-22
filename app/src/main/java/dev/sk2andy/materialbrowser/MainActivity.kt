@@ -11,7 +11,9 @@ import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Process
 import android.util.Rational
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
@@ -59,10 +61,18 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
+import dev.sk2andy.materialbrowser.data.AppDataArchiveEnvironment
+import dev.sk2andy.materialbrowser.data.AppDataArchiveRules
+import dev.sk2andy.materialbrowser.data.AppDataArchiveRestore
+import dev.sk2andy.materialbrowser.data.AppDataArchiveStaging
+import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
 import dev.sk2andy.materialbrowser.data.UserScriptImportReader
 import dev.sk2andy.materialbrowser.data.UserScriptImportResult
+import dev.sk2andy.materialbrowser.ui.AppDataExportWarningDialog
+import dev.sk2andy.materialbrowser.ui.AppDataImportConfirmationDialog
+import dev.sk2andy.materialbrowser.ui.AppDataImportPreview
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
@@ -75,6 +85,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
     private lateinit var browserController: BrowserController
@@ -89,6 +102,10 @@ class MainActivity : AppCompatActivity() {
     private var pictureInPictureStartedFullscreen = false
     private var pictureInPictureModeEntered = false
     private var isTabOverviewPortraitLocked = false
+    private var appDataExportWarningVisible by mutableStateOf(false)
+    private var pendingAppDataImport by mutableStateOf<AppDataImportPreview?>(null)
+    private var appDataImportLoading = false
+    private var appDataTransferActive = false
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
@@ -109,9 +126,45 @@ class MainActivity : AppCompatActivity() {
     ) { uri ->
         if (uri != null && ::browserController.isInitialized) importUserScript(uri)
     }
+    private val appDataExportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri ->
+        if (uri != null && ::browserController.isInitialized) startAppDataExport(uri)
+    }
+    private val appDataImportLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null && ::browserController.isInitialized) stageAppDataImport(uri)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (AppDataArchiveRestore.hasInterruptedRestore(appDataRestoreRecoveryMarker())) {
+            val lockToken = AppDataTransferLock.activate(this, Process.myPid())
+            if (lockToken != null) {
+                appDataTransferActive = true
+                val started = runCatching {
+                    startActivity(
+                        AppDataTransferContract.recoveryIntent(
+                            context = this,
+                            mainProcessId = Process.myPid(),
+                            lockToken = lockToken,
+                        ),
+                    )
+                }.isSuccess
+                if (!started) AppDataTransferLock.release(this, lockToken)
+            }
+            finish()
+            return
+        }
+        if (AppDataTransferLock.isActive(this)) {
+            finish()
+            return
+        }
+        AppDataArchiveRestore.cleanupOrphanedWorkDirectories(
+            stateDirectory = appDataTransferStateDirectory(),
+            recoveryMarker = appDataRestoreRecoveryMarker(),
+        )
         enableEdgeToEdge()
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
@@ -257,6 +310,22 @@ class MainActivity : AppCompatActivity() {
                                 ),
                             )
                         },
+                        onExportAppData = {
+                            if (!browserController.canExportAppData()) {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    R.string.data_archive_private_tabs_error,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            } else {
+                                appDataExportWarningVisible = true
+                            }
+                        },
+                        onImportAppData = {
+                            appDataImportLauncher.launch(
+                                arrayOf("application/zip", "application/octet-stream"),
+                            )
+                        },
                     )
                     if (videoOnlyPresentation && !webViewVideoOnlyPresentation) {
                         Box(modifier = Modifier.fillMaxSize().background(Color.Black))
@@ -316,17 +385,50 @@ class MainActivity : AppCompatActivity() {
                         },
                     )
                 }
+                if (appDataExportWarningVisible) {
+                    AppDataExportWarningDialog(
+                        onDismiss = { appDataExportWarningVisible = false },
+                        onConfirm = {
+                            appDataExportWarningVisible = false
+                            appDataExportLauncher.launch(defaultAppDataArchiveFileName())
+                        },
+                    )
+                }
+                pendingAppDataImport?.let { pending ->
+                    AppDataImportConfirmationDialog(
+                        pending = pending,
+                        onDismiss = {
+                            deleteStagedAppDataArchive(pending.staged.fileName)
+                            pendingAppDataImport = null
+                        },
+                        onConfirm = {
+                            pendingAppDataImport = null
+                            startAppDataTransfer(R.string.data_archive_import_failed) { lockToken ->
+                                AppDataTransferContract.importIntent(
+                                    context = this,
+                                    stagedFileName = pending.staged.fileName,
+                                    mainProcessId = Process.myPid(),
+                                    lockToken = lockToken,
+                                )
+                            }
+                        },
+                    )
+                }
             }
         }
+        showAppDataTransferResult(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (appDataTransferActive) return
         setIntent(intent)
+        showAppDataTransferResult(intent)
         openIntent(intent)
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (appDataTransferActive) return true
         val hadWindowFocus = window.decorView.hasWindowFocus()
         val focusedView = currentFocus
         val handled = super.dispatchTouchEvent(event)
@@ -339,38 +441,51 @@ class MainActivity : AppCompatActivity() {
         return handled
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+        if (appDataTransferActive) true else super.dispatchKeyEvent(event)
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         BrowserInputDiagnostics.activityWindowFocus(hasFocus, currentFocus)
-        if (hasFocus && ::browserController.isInitialized) {
+        if (hasFocus &&
+            ::browserController.isInitialized &&
+            !appDataTransferActive
+        ) {
             applyBrowserSystemUi()
         }
     }
 
     override fun onPause() {
+        if (!::browserController.isInitialized || appDataTransferActive) {
+            super.onPause()
+            return
+        }
         prepareForPictureInPictureTransition()
         browserController.onPause()
         super.onPause()
     }
 
     override fun onUserLeaveHint() {
-        prepareForPictureInPictureTransition()
+        if (!appDataTransferActive) prepareForPictureInPictureTransition()
         super.onUserLeaveHint()
     }
 
     override fun onStart() {
         super.onStart()
-        if (::browserController.isInitialized) browserController.onStart()
+        if (::browserController.isInitialized && !appDataTransferActive) {
+            browserController.onStart()
+        }
     }
 
     override fun onStop() {
-        if (::browserController.isInitialized) {
+        if (::browserController.isInitialized && !appDataTransferActive) {
             browserController.onStop(isInPictureInPictureMode)
         }
         super.onStop()
     }
 
     override fun onPictureInPictureRequested(): Boolean {
+        if (appDataTransferActive) return false
         if (!canEnterPictureInPicture()) return false
         prepareForPictureInPictureTransition()
         val entered = enterPictureInPictureMode(
@@ -388,6 +503,7 @@ class MainActivity : AppCompatActivity() {
         newConfig: Configuration,
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (appDataTransferActive) return
         if (isInPictureInPictureMode) {
             pictureInPictureModeEntered = true
             videoOnlyPresentation = true
@@ -411,6 +527,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPictureInPictureUiStateChanged(pipState: PictureInPictureUiState) {
         super.onPictureInPictureUiStateChanged(pipState)
+        if (appDataTransferActive) return
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM &&
             pipState.isTransitioningToPip
@@ -421,6 +538,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        if (appDataTransferActive) return
         applyBrowserSystemUi()
         if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
             pictureInPictureSourceRectHint = pictureInPictureSourceRect(
@@ -432,6 +550,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (appDataTransferActive) return
         reconcilePictureInPictureStateOnResume()
         if (::browserController.isInitialized) browserController.onResume()
         updatePictureInPictureParams()
@@ -449,6 +568,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (appDataTransferActive) {
+            super.onDestroy()
+            return
+        }
         cancelPictureInPictureReturnLayoutWait()
         if (::castSessionController.isInitialized) castSessionController.release()
         if (::browserController.isInitialized) browserController.destroy()
@@ -457,6 +580,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        if (!::browserController.isInitialized || appDataTransferActive) {
+            super.onSaveInstanceState(outState)
+            return
+        }
         browserController.activeCapsuleId?.let { outState.putString(STATE_CAPSULE_ID, it) }
         browserController.activeCapsuleTabId?.let { outState.putString(STATE_CAPSULE_TAB_ID, it) }
         super.onSaveInstanceState(outState)
@@ -568,6 +695,140 @@ class MainActivity : AppCompatActivity() {
             R.string.userscript_import_error_save_failed,
         )
     }
+
+    private fun startAppDataExport(destination: Uri) {
+        if (!browserController.canExportAppData()) {
+            Toast.makeText(
+                this,
+                R.string.data_archive_private_tabs_error,
+                Toast.LENGTH_SHORT,
+            ).show()
+            return
+        }
+        startAppDataTransfer(
+            failureMessage = R.string.data_archive_export_failed,
+            canStartFailureMessage = R.string.data_archive_private_tabs_error,
+            canStart = browserController::canExportAppData,
+        ) { lockToken ->
+            AppDataTransferContract.exportIntent(
+                context = this,
+                destination = destination,
+                mainProcessId = Process.myPid(),
+                lockToken = lockToken,
+            )
+        }
+    }
+
+    private fun startAppDataTransfer(
+        failureMessage: Int,
+        canStartFailureMessage: Int = failureMessage,
+        canStart: () -> Boolean = { true },
+        intent: (String) -> Intent,
+    ) {
+        val lockToken = AppDataTransferLock.activate(this, Process.myPid())
+        if (lockToken == null) {
+            Toast.makeText(this, failureMessage, Toast.LENGTH_SHORT).show()
+            return
+        }
+        appDataTransferActive = true
+        val preparing = runCatching {
+            browserController.prepareForAppDataTransfer { ready ->
+                val canStartNow = ready && canStart()
+                val started = canStartNow && runCatching {
+                    startActivity(intent(lockToken))
+                }.isSuccess
+                if (!started) {
+                    appDataTransferActive = false
+                    AppDataTransferLock.release(this, lockToken)
+                    Toast.makeText(
+                        this,
+                        if (ready && !canStartNow) canStartFailureMessage else failureMessage,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
+        }.isSuccess
+        if (!preparing) {
+            appDataTransferActive = false
+            AppDataTransferLock.release(this, lockToken)
+            Toast.makeText(this, failureMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun stageAppDataImport(uri: Uri) {
+        if (appDataImportLoading) return
+        appDataImportLoading = true
+        Toast.makeText(this, R.string.data_archive_preparing, Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val staged = withContext(Dispatchers.IO) {
+                runCatching {
+                    val input = checkNotNull(contentResolver.openInputStream(uri))
+                    input.use { stream ->
+                        AppDataArchiveStaging.stage(stream, appDataArchiveStagingDirectory())
+                    }
+                }.getOrNull()
+            }
+            appDataImportLoading = false
+            if (staged == null) {
+                Toast.makeText(
+                    this@MainActivity,
+                    R.string.data_archive_import_invalid,
+                    Toast.LENGTH_SHORT,
+                ).show()
+                return@launch
+            }
+            pendingAppDataImport = AppDataImportPreview(
+                staged = staged,
+                compatibility = AppDataArchiveRules.compatibility(
+                    current = currentAppDataArchiveEnvironment(),
+                    archive = staged.inspection.manifest,
+                ),
+            )
+        }
+    }
+
+    private fun currentAppDataArchiveEnvironment() = AppDataArchiveEnvironment(
+        packageName = packageName,
+        appVersionName = BuildConfig.VERSION_NAME,
+        appVersionCode = BuildConfig.VERSION_CODE.toLong(),
+        webViewVersion = currentWebViewIdentity(),
+        sdkInt = Build.VERSION.SDK_INT,
+    )
+
+    private fun appDataArchiveStagingDirectory() =
+        File(cacheDir, AppDataTransferContract.STAGING_DIRECTORY_NAME)
+
+    private fun deleteStagedAppDataArchive(fileName: String) {
+        AppDataArchiveStaging.resolve(appDataArchiveStagingDirectory(), fileName)?.delete()
+    }
+
+    private fun showAppDataTransferResult(intent: Intent) {
+        val message = when (
+            intent.getStringExtra(AppDataTransferContract.RESULT_EXTRA)
+        ) {
+            AppDataTransferContract.RESULT_EXPORTED -> R.string.data_archive_export_success
+            AppDataTransferContract.RESULT_IMPORTED -> R.string.data_archive_import_restored
+            AppDataTransferContract.RESULT_EXPORT_FAILED -> R.string.data_archive_export_failed
+            AppDataTransferContract.RESULT_IMPORT_FAILED -> R.string.data_archive_import_failed
+            AppDataTransferContract.RESULT_IMPORT_RECOVERED ->
+                R.string.data_archive_import_recovered
+            else -> return
+        }
+        intent.removeExtra(AppDataTransferContract.RESULT_EXTRA)
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    private fun defaultAppDataArchiveFileName(): String =
+        "candy-browser-${LocalDate.now().format(DateTimeFormatter.ISO_DATE)}.zip"
+
+    private fun appDataRestoreRecoveryMarker() =
+        File(
+            appDataTransferStateDirectory(),
+            AppDataTransferContract.RESTORE_MARKER_FILE_NAME,
+        )
+
+    private fun appDataTransferStateDirectory() =
+        File(applicationInfo.dataDir, AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME)
 
     private fun openIntent(intent: Intent) {
         if (intent.action == SnoozeWakeNotifier.ACTION_OPEN_RESTORED_TAB) {

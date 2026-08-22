@@ -10,6 +10,7 @@ import android.media.session.MediaSession
 import android.os.IBinder
 import androidx.core.content.ContextCompat
 import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 
 class WebMediaPlaybackService : Service() {
     private var sessionToken: MediaSession.Token? = null
@@ -17,6 +18,10 @@ class WebMediaPlaybackService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (AppDataTransferLock.isActive(this)) {
+            stopPlayback()
+            return START_NOT_STICKY
+        }
         if (intent?.action != ACTION_START) {
             stopPlayback()
             return START_NOT_STICKY

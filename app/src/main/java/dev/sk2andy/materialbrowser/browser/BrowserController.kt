@@ -221,6 +221,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
+import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import java.util.ArrayDeque
 import java.util.UUID
 import java.util.WeakHashMap
@@ -569,7 +570,8 @@ class BrowserController(
     private val temporarySiteExceptions = ConcurrentHashMap<String, Set<String>>()
     private val temporarySitePrivacyOverrides =
         ConcurrentHashMap<String, Map<String, SitePrivacyOverrides>>()
-    private val permissionRepository = PermissionRadarRepository(PermissionRadarStore(activity))
+    private val permissionStore = PermissionRadarStore(activity)
+    private val permissionRepository = PermissionRadarRepository(permissionStore)
     private val activePermissions = ActivePermissionLedger()
     private var pendingPermissionAccess: PendingPermissionAccess? = null
     private var pendingFileChooser: PendingFileChooser? = null
@@ -3901,6 +3903,17 @@ class BrowserController(
     fun setSelectedDesktopView(enabled: Boolean): Boolean =
         setDesktopView(selectedTabId, enabled)
 
+    fun canExportAppData(): Boolean {
+        if (tabs.any(BrowserTab::isIncognito)) return false
+        if (!isProfileIsolationSupported) return true
+        val profileNames = runCatching { ProfileStore.getInstance().allProfileNames }
+            .getOrNull()
+            ?: return false
+        return profileNames.none { profileName ->
+            profileName.startsWith(INCOGNITO_WEBVIEW_PROFILE_PREFIX)
+        }
+    }
+
     fun setDesktopView(tabId: String, enabled: Boolean): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         val pageUrl = pageUrls[tabId] ?: tab.url
@@ -4060,11 +4073,48 @@ class BrowserController(
         persistWebViewStates()
         webViews.values.forEach(::pauseWebView)
         linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
+        flushCookieStores()
+        persist()
+    }
+
+    fun prepareForAppDataTransfer(onReady: (Boolean) -> Unit) {
+        ReaderLibraryRepository.get(activity).awaitIdle {
+            webViews.values.forEach(::pauseWebView)
+            linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
+            persistWebViewStates()
+            flushCookieStores()
+            persist()
+            val persistentWritersReady = listOf(
+                webViewStateRepository.flush(),
+                previewRepository.flush(),
+                faviconRepository.flush(),
+                candyTrailRepository.flush(),
+                candyRuleRepository.flush(),
+                userScriptRepository.flush(),
+                store.flush(),
+                permissionStore.flush(),
+            ).all { ready -> ready }
+            if (!persistentWritersReady) resumeWebViewsAfterTransferPreparationFailure()
+            onReady(persistentWritersReady)
+        }
+    }
+
+    private fun resumeWebViewsAfterTransferPreparationFailure() {
+        webViews[selectedTabId]?.let { webView -> resumeWebView(selectedTabId, webView) }
+        fullscreenVideoSession
+            ?.takeIf { session -> session.tabId != selectedTabId }
+            ?.let(::resumeFullscreenVideoWebView)
+        presentedWebMediaChannel()
+            ?.takeIf { channel -> channel.key.tabId != selectedTabId }
+            ?.let { channel -> resumeWebView(channel.key.tabId, channel.webView) }
+        linkPeekPreviewAssignments.keys.forEach(WebView::onResume)
+    }
+
+    private fun flushCookieStores() {
         CookieManager.getInstance().flush()
         (webViews.values + linkPeekPreviewAssignments.keys).forEach { webView ->
             if (isProfileIsolationSupported) cookieManagerFor(webView).flush()
         }
-        persist()
     }
 
     fun onResume() {
