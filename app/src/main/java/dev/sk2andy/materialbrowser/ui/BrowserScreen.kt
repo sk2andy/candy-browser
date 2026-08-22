@@ -5515,12 +5515,14 @@ internal fun TabOverview(
                         rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         emojiPickerTargetId = NEW_PROFILE_TARGET
                     },
-                    modifier = Modifier.graphicsLayer {
-                        val chromeProgress =
-                            ((heroProgress.value - 0.34f) / 0.66f).coerceIn(0f, 1f)
-                        alpha = chromeProgress
-                        translationY = (1f - chromeProgress) * -18f
-                    },
+                    modifier = Modifier
+                        .zIndex(1f)
+                        .graphicsLayer {
+                            val chromeProgress =
+                                ((heroProgress.value - 0.34f) / 0.66f).coerceIn(0f, 1f)
+                            alpha = chromeProgress
+                            translationY = (1f - chromeProgress) * -18f
+                        },
                 )
                 Spacer(Modifier.height(TAB_OVERVIEW_PROFILE_SPACING))
             }

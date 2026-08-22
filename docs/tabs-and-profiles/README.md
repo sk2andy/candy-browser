@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Tab state, ordering, retention, persistence | [`lifecycle-and-persistence.md`](lifecycle-and-persistence.md) | `BrowserTab`, `data/Tab*Rules`, `BrowserSessionStore` |
 | Previews, snoozing, profiles, WebView isolation | [`previews-snooze-and-isolation.md`](previews-snooze-and-isolation.md) | `TabPreview*`, `SnoozedTab*`, `WebViewProfileRules` |
-| Tab overview modes, hero layout and gestures | Hero and grid previews stay compact in portrait and switch to 16:10 in landscape. Tablet-width grids use three columns; smaller grids use two. Hero cards remain height-bounded with room for neighbors. The pager draw area extends behind profile chrome, so upward dismiss drags remain visible up to the system-bar boundary. Profile controls remain interactive while the entry hero blocks tab-content touches. Address chrome stays above both entry and exit hero animations. | `ui/BrowserScreen.kt`, `ui/TabOverviewHeroRules.kt`, `ui/TabOverviewGridRules.kt`, `ui/TabDismissPhysics.kt` |
+| Tab overview modes, hero layout and gestures | Hero and grid previews stay compact in portrait and switch to 16:10 in landscape. Tablet-width grids use three columns; smaller grids use two. Hero cards remain height-bounded with room for neighbors. The pager draw area extends behind profile chrome, so upward dismiss drags remain visible up to the system-bar boundary; profile chrome stays above that overflow for drawing and touch input. Profile controls remain interactive while the entry hero blocks tab-content touches. Address chrome stays above both entry and exit hero animations. | `ui/BrowserScreen.kt`, `ui/TabOverviewHeroRules.kt`, `ui/TabOverviewGridRules.kt`, `ui/TabDismissPhysics.kt` |
 
 ## Test lookup
 
