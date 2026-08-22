@@ -33,13 +33,15 @@ internal object UserScriptParser {
             values.getOrPut(key, ::mutableListOf).add(value)
         }
 
-        if (REMOTE_DIRECTIVES.any(values::containsKey)) {
-            return rejected(UserScriptRejectionReason.RemoteDependency)
-        }
         if (values.containsKey("connect")) {
             return rejected(UserScriptRejectionReason.PrivilegedGrant)
         }
-        if (values["grant"].orEmpty().any { grant -> !grant.equals("none", ignoreCase = true) }) {
+        val grantValues = values["grant"].orEmpty()
+        val hasNoGrant = grantValues.any { grant -> grant.equals("none", ignoreCase = true) }
+        val grants = grantValues
+            .filterNot { grant -> grant.equals("none", ignoreCase = true) }
+            .map { grant -> UserScriptGrant.fromMetadata(grant) }
+        if ((hasNoGrant && grants.isNotEmpty()) || grants.any { grant -> grant == null }) {
             return rejected(UserScriptRejectionReason.PrivilegedGrant)
         }
 
@@ -77,6 +79,35 @@ internal object UserScriptParser {
             else -> return rejected(UserScriptRejectionReason.InvalidRunAt)
         }
 
+        val requireValues = values["require"].orEmpty()
+        val resourceValues = values["resource"].orEmpty()
+        if (requireValues.size > UserScriptDependencyRules.MAX_REQUIRES ||
+            resourceValues.size > UserScriptDependencyRules.MAX_RESOURCES
+        ) {
+            return rejected(UserScriptRejectionReason.TooManyDependencies)
+        }
+        val requires = requireValues.map { value ->
+            val dependency = UserScriptDependencyRules.parseUrl(value)
+                ?: return rejected(UserScriptRejectionReason.InvalidRequire)
+            UserScriptRequire(url = dependency.url, sha256 = dependency.sha256)
+        }
+        val resources = resourceValues.map { value ->
+            val parts = value.split(RESOURCE_SEPARATOR, limit = 2)
+            if (parts.size != 2 || !UserScriptDependencyRules.isValidResourceName(parts[0])) {
+                return rejected(UserScriptRejectionReason.InvalidResource)
+            }
+            val dependency = UserScriptDependencyRules.parseUrl(parts[1])
+                ?: return rejected(UserScriptRejectionReason.InvalidResource)
+            UserScriptResource(
+                name = parts[0],
+                url = dependency.url,
+                sha256 = dependency.sha256,
+            )
+        }
+        if (resources.map(UserScriptResource::name).distinct().size != resources.size) {
+            return rejected(UserScriptRejectionReason.InvalidResource)
+        }
+
         return UserScriptParseResult.Accepted(
             UserScript(
                 id = id,
@@ -86,7 +117,10 @@ internal object UserScriptParser {
                 matchPatterns = matches,
                 includePatterns = includes,
                 excludePatterns = excludes,
+                grants = grants.filterNotNull().toSet(),
                 runAt = runAt,
+                requires = requires,
+                resources = resources,
                 updatedAtMillis = updatedAtMillis,
             ),
         )
@@ -170,7 +204,7 @@ internal object UserScriptParser {
     private val METADATA_END = Regex("""^\s*//\s*==/UserScript==\s*$""")
     private val METADATA_LINE = Regex("""^\s*//\s*@([A-Za-z][A-Za-z0-9_-]*)\s*(.*?)\s*$""")
     private val MATCH_PATTERN = Regex("""^(http|https|\*)://([^/]+)(/.*)$""", RegexOption.IGNORE_CASE)
-    private val REMOTE_DIRECTIVES = setOf("require", "resource", "downloadurl", "updateurl")
+    private val RESOURCE_SEPARATOR = Regex("\\s+")
 }
 
 internal data class ParsedUserScriptMatchPattern(

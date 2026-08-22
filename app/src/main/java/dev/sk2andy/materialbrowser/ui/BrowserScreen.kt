@@ -286,6 +286,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogRules
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingVerifier
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRunAt
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
@@ -1275,6 +1276,8 @@ internal fun BrowserScreen(
             showTabButton = controller.isTabButtonVisible,
             showCastButton = controller.castMediaCandidate != null || castUiState.isConnected,
             tabCount = controller.activeTabs.size,
+            userScriptMenuCommands = controller.selectedUserScriptMenuCommands,
+            onUserScriptMenuCommand = controller::invokeUserScriptMenuCommand,
             commandFeedback = commandFeedback,
             blurTarget = webContentBlurTarget,
             blurSourceVisible = selectedTab.url != BLANK_URL && !tabOverviewVisible,
@@ -1877,6 +1880,7 @@ internal fun BrowserScreen(
                                 UserScriptSaveOutcome.Missing,
                                 UserScriptSaveOutcome.PersistenceFailed,
                                 is UserScriptSaveOutcome.Rejected,
+                                is UserScriptSaveOutcome.DependencyFailed,
                                 -> context.getString(R.string.userscript_error_generic)
                             },
                         )
@@ -2934,6 +2938,8 @@ private fun BrowserBottomBar(
     showTabButton: Boolean,
     showCastButton: Boolean,
     tabCount: Int,
+    userScriptMenuCommands: List<UserScriptMenuCommand>,
+    onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     commandFeedback: AddressCommandFeedback?,
     blurTarget: BlurTarget?,
     blurSourceVisible: Boolean,
@@ -3192,6 +3198,8 @@ private fun BrowserBottomBar(
                                 showTabButton = showTabButton,
                                 showCastButton = showCastButton,
                                 tabCount = tabCount,
+                                userScriptMenuCommands = userScriptMenuCommands,
+                                onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 menuExpanded = menuExpanded,
                                 onMenuExpandedChange = { menuExpanded = it },
                                 onBack = onBack,
@@ -3622,6 +3630,8 @@ private fun ExpandedBottomBarContent(
     showTabButton: Boolean,
     showCastButton: Boolean,
     tabCount: Int,
+    userScriptMenuCommands: List<UserScriptMenuCommand>,
+    onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     menuExpanded: Boolean,
     onMenuExpandedChange: (Boolean) -> Unit,
     onBack: () -> Unit,
@@ -4006,6 +4016,8 @@ private fun ExpandedBottomBarContent(
                                         ),
                                 canSnooze = !tab.isIncognito,
                                 snoozedTabCount = snoozedTabCount,
+                                userScriptMenuCommands = userScriptMenuCommands,
+                                onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 onBack = onBack,
                                 onForward = onForward,
                                 onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },

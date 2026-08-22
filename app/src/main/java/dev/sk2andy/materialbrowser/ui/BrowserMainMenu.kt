@@ -60,6 +60,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
@@ -122,6 +123,7 @@ internal fun BrowserMainMenu(
     canAddSiteCapsule: Boolean,
     canSnooze: Boolean,
     snoozedTabCount: Int,
+    userScriptMenuCommands: List<UserScriptMenuCommand> = emptyList(),
     onBack: () -> Unit,
     onForward: () -> Unit,
     onReloadOrStop: () -> Unit,
@@ -141,6 +143,7 @@ internal fun BrowserMainMenu(
     onSummarize: () -> Unit,
     onSnooze: () -> Unit,
     onSnoozedTabs: () -> Unit,
+    onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit = {},
     onDockAddressBar: () -> Unit,
     onSettings: () -> Unit,
 ) {
@@ -466,6 +469,40 @@ internal fun BrowserMainMenu(
                     onMutedChange = onDomainMutedChange,
                     shape = lastItemShape,
                 )
+            }
+
+            if (userScriptMenuCommands.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.browser_menu_toppings_group),
+                    modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colors.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Column(
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.ToppingsGroup),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    userScriptMenuCommands.forEachIndexed { index, command ->
+                        val shape = when {
+                            userScriptMenuCommands.size == 1 -> outerCorners
+                            index == 0 -> firstItemShape
+                            index == userScriptMenuCommands.lastIndex -> lastItemShape
+                            else -> innerCorners
+                        }
+                        MenuRow(
+                            label = command.caption,
+                            iconRes = R.drawable.ic_symbol_extension,
+                            shape = shape,
+                            supportingText = command.scriptName,
+                            modifier = Modifier.testTag(
+                                BrowserMainMenuTestTags.userScriptCommand(command.commandId),
+                            ),
+                            onClick = { dismissThen { onUserScriptMenuCommand(command) } },
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -1016,6 +1053,7 @@ internal object BrowserMainMenuTestTags {
     const val Toolbar = "browser_main_menu_toolbar"
     const val PageGroup = "browser_main_menu_page_group"
     const val CandyGroup = "browser_main_menu_candy_group"
+    const val ToppingsGroup = "browser_main_menu_toppings_group"
     const val BrowserGroup = "browser_main_menu_browser_group"
     const val Settings = "browser_main_menu_settings"
     const val Snooze = "browser_main_menu_snooze"
@@ -1026,6 +1064,9 @@ internal object BrowserMainMenuTestTags {
     const val DesktopView = "browser_main_menu_desktop_view"
     const val ForcePageZooming = "browser_main_menu_force_page_zooming"
     const val ForceSafeArea = "browser_main_menu_force_safe_area"
+
+    fun userScriptCommand(commandId: String): String =
+        "browser_main_menu_topping_command_$commandId"
 }
 
 internal object TabActionsMenuTestTags {

@@ -49,7 +49,6 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
-import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
@@ -479,34 +478,94 @@ class MainActivity : AppCompatActivity() {
                         id = null,
                         source = importResult.source,
                     ) { outcome ->
-                        val message = when (outcome) {
-                            UserScriptSaveOutcome.Saved -> getString(
-                                R.string.userscript_import_success,
-                                parsedName ?: getString(R.string.userscript_title),
-                            )
-                            UserScriptSaveOutcome.LimitReached -> getString(
-                                R.string.userscript_error_limit,
-                                UserScriptParser.MAX_SCRIPTS,
-                            )
-                            UserScriptSaveOutcome.Missing,
-                            UserScriptSaveOutcome.PersistenceFailed,
-                            is UserScriptSaveOutcome.Rejected,
-                            -> getString(R.string.userscript_import_error)
-                        }
+                        val message = userScriptImportMessage(
+                            feedback = UserScriptImportFeedbackRules.from(outcome),
+                            importedName = parsedName,
+                        )
                         Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
                     }
                 }
-                UserScriptImportResult.Empty,
-                UserScriptImportResult.InvalidUtf8,
-                UserScriptImportResult.TooLarge,
-                UserScriptImportResult.Unreadable,
-                -> Toast.makeText(
-                    this@MainActivity,
-                    getString(R.string.userscript_import_error),
-                    Toast.LENGTH_SHORT,
-                ).show()
+                else -> UserScriptImportFeedbackRules.from(importResult)?.let { feedback ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        userScriptImportMessage(feedback),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
             }
         }
+    }
+
+    private fun userScriptImportMessage(
+        feedback: UserScriptImportFeedback,
+        importedName: String? = null,
+    ): String = when (feedback) {
+        UserScriptImportFeedback.Imported -> getString(
+            R.string.userscript_import_success,
+            importedName ?: getString(R.string.userscript_title),
+        )
+        UserScriptImportFeedback.LimitReached -> getString(
+            R.string.userscript_error_limit,
+            UserScriptParser.MAX_SCRIPTS,
+        )
+        UserScriptImportFeedback.EmptyFile -> getString(R.string.userscript_import_error_empty)
+        UserScriptImportFeedback.FileTooLarge -> getString(
+            R.string.userscript_import_error_too_large,
+            UserScriptParser.MAX_SOURCE_BYTES / 1_024,
+        )
+        UserScriptImportFeedback.InvalidUtf8 -> getString(
+            R.string.userscript_import_error_invalid_utf8,
+        )
+        UserScriptImportFeedback.UnreadableFile -> getString(
+            R.string.userscript_import_error_unreadable,
+        )
+        UserScriptImportFeedback.InvalidMetadata -> getString(
+            R.string.userscript_import_error_invalid_metadata,
+        )
+        UserScriptImportFeedback.MissingName -> getString(
+            R.string.userscript_import_error_missing_name,
+        )
+        UserScriptImportFeedback.NameTooLong -> getString(
+            R.string.userscript_import_error_name_too_long,
+            UserScriptParser.MAX_NAME_CHARS,
+        )
+        UserScriptImportFeedback.MissingScope -> getString(
+            R.string.userscript_import_error_missing_scope,
+        )
+        UserScriptImportFeedback.TooManyMetadataValues -> getString(
+            R.string.userscript_import_error_too_many_metadata_values,
+            UserScriptParser.MAX_PATTERNS_PER_KIND,
+        )
+        UserScriptImportFeedback.InvalidScope -> getString(
+            R.string.userscript_import_error_invalid_scope,
+        )
+        UserScriptImportFeedback.InvalidRunAt -> getString(
+            R.string.userscript_import_error_invalid_run_at,
+        )
+        UserScriptImportFeedback.UnsupportedGrant -> getString(
+            R.string.userscript_import_error_unsupported_grant,
+        )
+        UserScriptImportFeedback.InvalidDependency -> getString(
+            R.string.userscript_import_error_invalid_dependency,
+        )
+        UserScriptImportFeedback.TooManyDependencies -> getString(
+            R.string.userscript_import_error_too_many_dependencies,
+        )
+        UserScriptImportFeedback.DependencyUnavailable -> getString(
+            R.string.userscript_import_error_dependency_unavailable,
+        )
+        UserScriptImportFeedback.DependencyTooLarge -> getString(
+            R.string.userscript_import_error_dependency_too_large,
+        )
+        UserScriptImportFeedback.DependencyInvalidUtf8 -> getString(
+            R.string.userscript_import_error_dependency_invalid_utf8,
+        )
+        UserScriptImportFeedback.DependencyIntegrityMismatch -> getString(
+            R.string.userscript_import_error_dependency_integrity,
+        )
+        UserScriptImportFeedback.SaveFailed -> getString(
+            R.string.userscript_import_error_save_failed,
+        )
     }
 
     private fun openIntent(intent: Intent) {

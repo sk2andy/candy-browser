@@ -25,7 +25,8 @@ internal class UserScriptStore(context: Context) {
                 return emptyList()
             }
             val root = JSONObject(bytes.toString(StandardCharsets.UTF_8))
-            check(root.optInt("version", -1) == FORMAT_VERSION)
+            val version = root.optInt("version", -1)
+            check(version == LEGACY_FORMAT_VERSION || version == FORMAT_VERSION)
             val values = root.getJSONArray("scripts")
             check(values.length() <= UserScriptParser.MAX_SCRIPTS)
             val scripts = buildList {
@@ -37,7 +38,12 @@ internal class UserScriptStore(context: Context) {
                         enabled = item.getBoolean("enabled"),
                         updatedAtMillis = item.getLong("updatedAtMillis"),
                     )
-                    add((result as UserScriptParseResult.Accepted).script)
+                    val parsed = (result as UserScriptParseResult.Accepted).script
+                    if (
+                        version == LEGACY_FORMAT_VERSION &&
+                        (parsed.requires.isNotEmpty() || parsed.resources.isNotEmpty())
+                    ) continue
+                    add(if (version == FORMAT_VERSION) parsed.withDependencies(item) else parsed)
                 }
             }
             check(UserScriptRules.isWithinCollectionBounds(scripts))
@@ -54,15 +60,8 @@ internal class UserScriptStore(context: Context) {
     fun save(input: List<UserScript>): Boolean {
         if (!UserScriptRules.isWithinCollectionBounds(input)) return false
         val scripts = input.map { script ->
-            val result = UserScriptParser.parse(
-                id = script.id,
-                source = script.source,
-                enabled = script.enabled,
-                updatedAtMillis = script.updatedAtMillis,
-            )
-            val parsed = (result as? UserScriptParseResult.Accepted)?.script ?: return false
-            if (parsed != script) return false
-            parsed
+            if (!UserScriptRules.isCanonical(script)) return false
+            script
         }
         val root = JSONObject()
             .put("version", FORMAT_VERSION)
@@ -75,7 +74,35 @@ internal class UserScriptStore(context: Context) {
                                 .put("id", script.id)
                                 .put("source", script.source)
                                 .put("enabled", script.enabled)
-                                .put("updatedAtMillis", script.updatedAtMillis),
+                                .put("updatedAtMillis", script.updatedAtMillis)
+                                .put(
+                                    "requires",
+                                    JSONArray().also { requires ->
+                                        script.requires.forEach { dependency ->
+                                            requires.put(
+                                                JSONObject()
+                                                    .put("url", dependency.url)
+                                                    .put("sha256", dependency.sha256)
+                                                    .put("source", dependency.source),
+                                            )
+                                        }
+                                    },
+                                )
+                                .put(
+                                    "resources",
+                                    JSONArray().also { resources ->
+                                        script.resources.forEach { dependency ->
+                                            resources.put(
+                                                JSONObject()
+                                                    .put("name", dependency.name)
+                                                    .put("url", dependency.url)
+                                                    .put("sha256", dependency.sha256)
+                                                    .put("content", dependency.encodedContent)
+                                                    .put("mimeType", dependency.mimeType),
+                                            )
+                                        }
+                                    },
+                                ),
                         )
                     }
                 },
@@ -97,9 +124,37 @@ internal class UserScriptStore(context: Context) {
     @Synchronized
     fun clear() = atomicFile.delete()
 
+    private fun UserScript.withDependencies(item: JSONObject): UserScript {
+        val storedRequires = item.getJSONArray("requires")
+        check(storedRequires.length() == requires.size)
+        val hydratedRequires = requires.mapIndexed { index, declaration ->
+            val stored = storedRequires.getJSONObject(index)
+            check(stored.getString("url") == declaration.url)
+            check(stored.optNullableString("sha256") == declaration.sha256)
+            declaration.copy(source = stored.getString("source"))
+        }
+        val storedResources = item.getJSONArray("resources")
+        check(storedResources.length() == resources.size)
+        val hydratedResources = resources.mapIndexed { index, declaration ->
+            val stored = storedResources.getJSONObject(index)
+            check(stored.getString("name") == declaration.name)
+            check(stored.getString("url") == declaration.url)
+            check(stored.optNullableString("sha256") == declaration.sha256)
+            declaration.copy(
+                encodedContent = stored.getString("content"),
+                mimeType = stored.getString("mimeType"),
+            )
+        }
+        return copy(requires = hydratedRequires, resources = hydratedResources)
+    }
+
+    private fun JSONObject.optNullableString(name: String): String? =
+        if (isNull(name)) null else getString(name)
+
     internal companion object {
         const val FILE_NAME = "user_scripts.json"
-        const val FORMAT_VERSION = 1
+        const val FORMAT_VERSION = 2
+        private const val LEGACY_FORMAT_VERSION = 1
         // Keeps synchronous startup recovery bounded; unusually escape-heavy JSON fails closed.
         const val MAX_FILE_BYTES = 8 * 1_024 * 1_024
     }
