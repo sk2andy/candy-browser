@@ -114,6 +114,16 @@ Agent implementation, security and debugging guide:
   deliberately hostile players and site-specific visibility policies can still prevent control or
   continued playback.
 
+## Google Cast
+
+Implementation, privacy and compatibility guide: [`google-cast.md`](google-cast.md).
+
+Direct HTTP(S) MP4, WebM, HLS and DASH sources from the selected regular tab can be loaded into
+Google's Default Media Receiver. The Cast SDK owns device discovery and selection; Candy owns the
+post-connection mini-controller. Private tabs never create Cast candidates. Authenticated, DRM,
+blob and MSE playback remains best effort or unsupported because the receiver cannot inherit
+WebView request state.
+
 ## Verification
 
 | Change | Check |

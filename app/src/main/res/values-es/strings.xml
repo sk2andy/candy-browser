@@ -642,4 +642,13 @@
     <string name="reader_delete_snapshot">Eliminar artículo sin conexión</string>
     <string name="media_notification_channel_name">Reproducción multimedia</string>
     <string name="media_notification_channel_description">Controla los medios que se reproducen en Candy</string>
+    <string name="cd_cast_video">Transmitir vídeo</string>
+    <string name="cd_cast_play">Reproducir en el dispositivo Cast</string>
+    <string name="cd_cast_pause">Pausar en el dispositivo Cast</string>
+    <string name="cd_cast_stop">Detener transmisión</string>
+    <string name="cast_playing_on">Reproduciendo en %1$s</string>
+    <string name="cast_unknown_title">Vídeo web</string>
+    <string name="cast_unknown_device">Dispositivo Cast</string>
+    <string name="cast_position">%1$s / %2$s</string>
+    <string name="cast_volume">Volumen del dispositivo</string>
 </resources>

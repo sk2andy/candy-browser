@@ -32,6 +32,9 @@ internal data class WebMediaPayload(
     val clientWidth: Int,
     val clientHeight: Int,
     val visibleRatio: Float,
+    val sourceUrl: String?,
+    val contentType: String?,
+    val posterUrl: String?,
     val requestId: String? = null,
 ) {
     val isPlaying: Boolean
@@ -54,6 +57,9 @@ internal data class WebMediaState(
     val clientWidth: Int,
     val clientHeight: Int,
     val visibleRatio: Float,
+    val sourceUrl: String?,
+    val contentType: String?,
+    val posterUrl: String?,
 )
 
 internal enum class WebMediaCommand {
@@ -72,8 +78,10 @@ internal enum class WebMediaCommand {
 
 internal object WebMediaContract {
     const val BRIDGE_NAME = "CandyWebMediaBridge"
-    const val MAX_MESSAGE_BYTES = 4_096
+    const val MAX_MESSAGE_BYTES = 8_192
     private const val MAX_ID_LENGTH = 80
+    private const val MAX_URL_LENGTH = 2_048
+    private const val MAX_CONTENT_TYPE_LENGTH = 120
     private const val MAX_MEDIA_TIME_SECONDS = 604_800.0
     private const val MAX_MEDIA_TIME_MILLIS = 604_800_000L
     private val safeId = Regex("[A-Za-z0-9_-]{1,$MAX_ID_LENGTH}")
@@ -112,6 +120,9 @@ internal object WebMediaContract {
                     clientWidth = 0,
                     clientHeight = 0,
                     visibleRatio = 0f,
+                    sourceUrl = null,
+                    contentType = null,
+                    posterUrl = null,
                 )
             }
             val requestId = if (event == WebMediaEvent.PictureInPictureRequested) {
@@ -157,6 +168,9 @@ internal object WebMediaContract {
                     ?.coerceIn(0.0, 1.0)
                     ?.toFloat()
                     ?: 0f,
+                sourceUrl = json.boundedString("sourceUrl", MAX_URL_LENGTH),
+                contentType = json.boundedString("contentType", MAX_CONTENT_TYPE_LENGTH),
+                posterUrl = json.boundedString("posterUrl", MAX_URL_LENGTH),
                 requestId = requestId,
             )
         } catch (_: JSONException) {
@@ -219,6 +233,11 @@ internal object WebMediaContract {
 
     private fun JSONObject.boundedDimension(name: String): Int =
         optInt(name, 0).coerceIn(0, 16_384)
+
+    private fun JSONObject.boundedString(name: String, maxLength: Int): String? =
+        optString(name)
+            .trim()
+            .takeIf { it.isNotEmpty() && it.length <= maxLength }
 }
 
 internal object WebMediaRules {

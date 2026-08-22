@@ -642,4 +642,13 @@
     <string name="reader_delete_snapshot">Supprimer l’article hors ligne</string>
     <string name="media_notification_channel_name">Lecture multimédia</string>
     <string name="media_notification_channel_description">Contrôle les médias lus dans Candy</string>
+    <string name="cd_cast_video">Caster la vidéo</string>
+    <string name="cd_cast_play">Lire sur l’appareil Cast</string>
+    <string name="cd_cast_pause">Mettre en pause sur l’appareil Cast</string>
+    <string name="cd_cast_stop">Arrêter la diffusion</string>
+    <string name="cast_playing_on">Lecture sur %1$s</string>
+    <string name="cast_unknown_title">Vidéo web</string>
+    <string name="cast_unknown_device">Appareil Cast</string>
+    <string name="cast_position">%1$s / %2$s</string>
+    <string name="cast_volume">Volume de l’appareil</string>
 </resources>

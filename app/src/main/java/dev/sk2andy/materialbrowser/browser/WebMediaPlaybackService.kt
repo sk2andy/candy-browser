@@ -79,6 +79,9 @@ class WebMediaPlaybackService : Service() {
             clientWidth = 0,
             clientHeight = 0,
             visibleRatio = 0f,
+            sourceUrl = null,
+            contentType = null,
+            posterUrl = null,
         )
     }
 

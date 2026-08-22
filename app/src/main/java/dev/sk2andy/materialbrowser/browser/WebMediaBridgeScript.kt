@@ -197,7 +197,18 @@ internal object WebMediaBridgeScript {
                   videoHeight: video ? media.videoHeight : 0,
                   clientWidth: media.clientWidth || 0,
                   clientHeight: media.clientHeight || 0,
-                  visibleRatio: removed ? 0 : visibleRatio(media) * ancestorVisibleRatio
+                  visibleRatio: removed ? 0 : visibleRatio(media) * ancestorVisibleRatio,
+                  sourceUrl: removed ? '' : String(media.currentSrc || '').slice(0, 2048),
+                  contentType: removed ? '' : String(
+                    media.getAttribute('type') ||
+                    nativeArrayFrom(media.querySelectorAll('source')).find(source =>
+                      source.src === media.currentSrc
+                    )?.type ||
+                    ''
+                  ).slice(0, 120),
+                  posterUrl: !removed && video
+                    ? String(media.poster || '').slice(0, 2048)
+                    : ''
                 });
               };
               const domError = (message, name) => {

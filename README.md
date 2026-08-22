@@ -131,6 +131,7 @@ kinetic typography, and camera motion are generated entirely from repository-own
 - Native fullscreen support for HTML5 and YouTube video, including rotation-aware Android system UI
 - Automatic Android picture-in-picture when leaving Candy with an active regular-tab video
 - Website picture-in-picture buttons for eligible top-level and fullscreen-capable embedded HTML5 video
+- Google Cast playback for compatible direct HTML5 MP4, WebM, HLS and DASH video in regular tabs
 - Seamless PiP entry and return without pausing or recreating the decoder surface, even when a site
   replaces or restyles its video element
 - Draggable in-app mini-player when switching tabs, plus background audio playback where supported
@@ -293,6 +294,11 @@ those navigations receive the existing page-commit fallback and can show a brief
 Privacy X-Ray includes only blocked requests that WebView can reliably attribute to one tab.
 Service-worker requests are filtered but excluded from per-tab telemetry when no reliable tab ID
 is available.
+
+Google Cast is used only after explicit device selection for compatible regular-tab video. Media
+URLs and metadata are sent to the selected Cast device and remain memory-only in Candy. Google's
+Cast Sender SDK can send Cast-device interaction activity to Google's logging service; release Data
+Safety disclosures must account for the current SDK behavior.
 
 <details>
 <summary><strong>Candy Rules and filter-source details</strong></summary>

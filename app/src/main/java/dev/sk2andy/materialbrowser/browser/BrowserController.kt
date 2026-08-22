@@ -119,6 +119,9 @@ import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.actions.PendingDownloadChoice
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
+import dev.sk2andy.materialbrowser.browser.cast.CastMediaCandidate
+import dev.sk2andy.materialbrowser.browser.cast.CastMediaIdentity
+import dev.sk2andy.materialbrowser.browser.cast.CastMediaRules
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionComposer
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionItem
 import dev.sk2andy.materialbrowser.browser.commands.AndroidCommandCatalog
@@ -424,6 +427,8 @@ class BrowserController(
     internal var fullscreenVideoState by mutableStateOf<FullscreenVideoState?>(null)
         private set
     internal var webMediaState by mutableStateOf<WebMediaState?>(null)
+        private set
+    internal var castMediaCandidate by mutableStateOf<CastMediaCandidate?>(null)
         private set
     val isProfileIsolationSupported: Boolean =
         WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
@@ -4143,6 +4148,7 @@ class BrowserController(
         webMediaChannels.clear()
         activeWebMediaKey = null
         webMediaState = null
+        castMediaCandidate = null
         pendingConsentCssUrls.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
@@ -5284,6 +5290,12 @@ class BrowserController(
         )
         activeWebMediaKey = active?.key
         webMediaState = active?.toState()
+        castMediaCandidate = validChannels
+            .asSequence()
+            .filter { it.key.tabId == selectedTabId }
+            .sortedByDescending(WebMediaChannel::receivedAtMillis)
+            .mapNotNull { channel -> channel.toCastCandidate() }
+            .firstOrNull()
         onWebMediaStateChanged()
     }
 
@@ -5306,8 +5318,41 @@ class BrowserController(
             clientWidth = payload.clientWidth,
             clientHeight = payload.clientHeight,
             visibleRatio = payload.visibleRatio,
+            sourceUrl = payload.sourceUrl,
+            contentType = payload.contentType,
+            posterUrl = payload.posterUrl,
         )
     }
+
+    private fun WebMediaChannel.toCastCandidate(): CastMediaCandidate? {
+        val tab = tabs.firstOrNull { it.id == key.tabId } ?: return null
+        val source = CastMediaRules.source(
+            state = toState(),
+            isPrivate = tab.isIncognito,
+            isSelectedTab = key.tabId == selectedTabId,
+        ) ?: return null
+        return CastMediaCandidate(
+            identity = castIdentity(),
+            source = source,
+        )
+    }
+
+    internal fun pauseCastMedia(candidate: CastMediaCandidate): Boolean {
+        val channel = webMediaChannels.values.firstOrNull { it.castIdentity() == candidate.identity }
+            ?.takeIf(::isCurrentWebMediaChannel)
+            ?: return false
+        if (channel.toCastCandidate()?.source?.url != candidate.source.url) return false
+        sendWebMediaCommand(channel, WebMediaCommand.Pause)
+        return true
+    }
+
+    private fun WebMediaChannel.castIdentity(): CastMediaIdentity = CastMediaIdentity(
+        tabId = key.tabId,
+        navigationGeneration = key.navigationGeneration,
+        documentId = key.documentId,
+        mediaId = key.mediaId,
+        origin = key.origin,
+    )
 
     private fun activeWebMediaChannel(): WebMediaChannel? =
         activeWebMediaKey?.let(webMediaChannels::get)?.takeIf(::isCurrentWebMediaChannel)

@@ -15,11 +15,11 @@ import android.util.Rational
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.VisibleForTesting
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
@@ -52,6 +52,7 @@ import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
+import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
@@ -76,9 +77,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private lateinit var browserController: BrowserController
     private lateinit var webMediaSystemSession: WebMediaSystemSession
+    private lateinit var castSessionController: CastSessionController
     private var videoOnlyPresentation by mutableStateOf(false)
     private var fullscreenVideoBounds: Rect? = null
     private var pictureInPictureSourceRectHint: Rect? = null
@@ -131,11 +133,18 @@ class MainActivity : ComponentActivity() {
                 if (::webMediaSystemSession.isInitialized) {
                     webMediaSystemSession.publish(browserController.systemWebMediaState)
                 }
+                if (::castSessionController.isInitialized) {
+                    castSessionController.updateCandidate(browserController.castMediaCandidate)
+                }
                 updatePictureInPictureParams()
             },
             onWebPictureInPictureRequested = ::onPictureInPictureRequested,
             onWebPictureInPictureRequestTimedOut = ::cancelPictureInPictureTransition,
         )
+        castSessionController = CastSessionController(
+            context = this,
+            onMediaLoaded = { candidate -> browserController.pauseCastMedia(candidate) },
+        ).also { it.updateCandidate(browserController.castMediaCandidate) }
         webMediaSystemSession = WebMediaSystemSession(
             context = this,
             onPlay = browserController::playActiveWebMedia,
@@ -233,6 +242,11 @@ class MainActivity : ComponentActivity() {
                 Box(modifier = Modifier.fillMaxSize()) {
                     BrowserScreen(
                         controller = browserController,
+                        castUiState = castSessionController.state,
+                        onToggleCastPlayback = castSessionController::togglePlayback,
+                        onSeekCast = castSessionController::seekTo,
+                        onCastVolumeChange = castSessionController::setDeviceVolume,
+                        onDisconnectCast = castSessionController::disconnect,
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
                         onImportUserScript = {
@@ -436,6 +450,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         cancelPictureInPictureReturnLayoutWait()
+        if (::castSessionController.isInitialized) castSessionController.release()
         if (::browserController.isInitialized) browserController.destroy()
         if (::webMediaSystemSession.isInitialized) webMediaSystemSession.release()
         super.onDestroy()

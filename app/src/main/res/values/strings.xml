@@ -651,4 +651,13 @@
     <string name="reader_delete_snapshot">Delete offline article</string>
     <string name="media_notification_channel_name">Media playback</string>
     <string name="media_notification_channel_description">Controls media playing in Candy</string>
+    <string name="cd_cast_video">Cast video</string>
+    <string name="cd_cast_play">Play on Cast device</string>
+    <string name="cd_cast_pause">Pause on Cast device</string>
+    <string name="cd_cast_stop">Stop casting</string>
+    <string name="cast_playing_on">Playing on %1$s</string>
+    <string name="cast_unknown_title">Web video</string>
+    <string name="cast_unknown_device">Cast device</string>
+    <string name="cast_position">%1$s / %2$s</string>
+    <string name="cast_volume">Device volume</string>
 </resources>

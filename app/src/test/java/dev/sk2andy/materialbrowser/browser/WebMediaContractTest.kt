@@ -30,7 +30,10 @@ class WebMediaContractTest {
               "videoHeight":1080,
               "clientWidth":960,
               "clientHeight":540,
-              "visibleRatio":0.9
+              "visibleRatio":0.9,
+              "sourceUrl":"https://media.example/video.m3u8",
+              "contentType":"application/x-mpegURL",
+              "posterUrl":"https://media.example/poster.jpg"
             }
             """.trimIndent(),
             expectedBridgeToken = "native_token",
@@ -42,6 +45,9 @@ class WebMediaContractTest {
         assertEquals(12_500L, payload.currentPositionMillis)
         assertEquals(180_250L, payload.durationMillis)
         assertEquals(0.9f, payload.visibleRatio)
+        assertEquals("https://media.example/video.m3u8", payload.sourceUrl)
+        assertEquals("application/x-mpegURL", payload.contentType)
+        assertEquals("https://media.example/poster.jpg", payload.posterUrl)
     }
 
     @Test
@@ -244,6 +250,9 @@ class WebMediaContractTest {
         clientWidth = 960,
         clientHeight = 540,
         visibleRatio = 1f,
+        sourceUrl = "https://media.example/video.mp4",
+        contentType = "video/mp4",
+        posterUrl = "https://media.example/poster.jpg",
     )
 
     private fun videoState(): WebMediaState = WebMediaState(
@@ -262,5 +271,8 @@ class WebMediaContractTest {
         clientWidth = 960,
         clientHeight = 540,
         visibleRatio = 1f,
+        sourceUrl = "https://media.example/video.mp4",
+        contentType = "video/mp4",
+        posterUrl = "https://media.example/poster.jpg",
     )
 }
