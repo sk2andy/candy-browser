@@ -507,7 +507,7 @@ class CandyCosmeticRuleInstrumentedTest {
     }
 
     @Test
-    fun curatedMediaRulesHideStrongBannerUrlsWithoutHidingAmbiguousImages() {
+    fun curatedAdRulesHideStrongMediaAndAdjacentFallbackWithoutBroadFalsePositives() {
         assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
         val result = loadFixtureAndEvaluate(
             baseUrl = "https://publisher.example/",
@@ -519,6 +519,9 @@ class CandyCosmeticRuleInstrumentedTest {
                   <img id="banner" src="/images/header-banner.png">
                   <img id="example" src="/docs/no_ads_banner_example.png">
                   <iframe id="guidelines" src="/docs/advertising/banner-guidelines.html"></iframe>
+                  <div id="ad_banner"></div>
+                  <div id="AlternateMessage"><a href="https://shop.example/product">fallback</a></div>
+                  <div id="alternate-message-guide">alternate content guide</div>
                 </body></html>
             """.trimIndent(),
             probe = """
@@ -528,12 +531,14 @@ class CandyCosmeticRuleInstrumentedTest {
                   getComputedStyle(document.getElementById('advertising')).display,
                   getComputedStyle(document.getElementById('banner')).display,
                   getComputedStyle(document.getElementById('example')).display,
-                  getComputedStyle(document.getElementById('guidelines')).display
+                  getComputedStyle(document.getElementById('guidelines')).display,
+                  getComputedStyle(document.getElementById('AlternateMessage')).display,
+                  getComputedStyle(document.getElementById('alternate-message-guide')).display
                 ].join('|')
             """.trimIndent(),
         )
 
-        assertEquals("\"none|none|inline|inline|inline|inline\"", result)
+        assertEquals("\"none|none|inline|inline|inline|inline|none|block\"", result)
     }
 
     private fun loadAndRead(
