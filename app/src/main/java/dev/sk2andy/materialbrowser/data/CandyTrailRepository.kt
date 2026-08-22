@@ -52,6 +52,8 @@ class CandyTrailRepository private constructor(context: Context) {
         executor.execute(store::clear)
     }
 
+    fun flush(): Boolean = executor.awaitIdle()
+
     companion object {
         @Volatile
         private var instance: CandyTrailRepository? = null

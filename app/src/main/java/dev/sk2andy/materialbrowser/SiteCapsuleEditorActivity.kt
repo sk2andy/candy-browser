@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorContract
+import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.SiteCapsuleEditorScreen
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -17,6 +18,10 @@ class SiteCapsuleEditorActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (AppDataTransferLock.isActive(this)) {
+            finish()
+            return
+        }
         enableEdgeToEdge()
         isFullImmersiveModeEnabled =
             BrowserSessionStore(this).loadFullImmersiveModeEnabled()

@@ -72,6 +72,8 @@ class PermissionRadarStore(context: Context) : PermissionDecisionPersistence {
         preferences.edit().putString(KEY_DECISIONS, values.toString()).apply()
     }
 
+    fun flush(): Boolean = preferences.edit().commit()
+
     internal companion object {
         const val PREFERENCES_NAME = "permission_radar_v1"
         const val KEY_DECISIONS = "decisions"

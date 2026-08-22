@@ -1,7 +1,6 @@
 package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
-import android.util.AtomicFile
 import dev.sk2andy.materialbrowser.blocking.CANDY_RULE_FORMAT_VERSION
 import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
@@ -10,12 +9,15 @@ import dev.sk2andy.materialbrowser.blocking.CandyRuleOrigin
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidator
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
 class CandyRuleStore(context: Context) {
-    private val atomicFile = AtomicFile(File(context.noBackupFilesDir, FILE_NAME))
+    private val atomicFile = BackedUpAtomicFileMigration.fromNoBackupDirectory(
+        context = context,
+        fileName = FILE_NAME,
+        maxBytes = MAX_FILE_BYTES,
+    )
 
     @Synchronized
     fun load(): List<CandyRule> {

@@ -390,6 +390,8 @@ internal fun BrowserScreen(
     webViewVideoOnlyPresentation: Boolean = false,
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
     onImportUserScript: () -> Unit = {},
+    onExportAppData: () -> Unit = {},
+    onImportAppData: () -> Unit = {},
 ) {
     val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
         onTabOverviewPortraitLockChanged,
@@ -1918,6 +1920,8 @@ internal fun BrowserScreen(
                     filterStudioSelectedRuleId = null
                     filterStudioVisible = true
                 },
+                onExportAppData = onExportAppData,
+                onImportAppData = onImportAppData,
                 onClearData = { clearDialogVisible = true },
                 onOpenLegalUrl = { url ->
                     settingsVisible = false
