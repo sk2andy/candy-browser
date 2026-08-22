@@ -50,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,6 +73,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.BrowserWebView
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.capsule.CapsuleChromeMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
@@ -99,6 +101,7 @@ fun SiteCapsuleBrowserScreen(
     webViewVideoOnlyPresentation: Boolean = false,
 ) {
     val tab = controller.selectedTab
+    var scrollBarWebView by remember(tab.id) { mutableStateOf<BrowserWebView?>(null) }
     val entrance = remember(capsule.id) { Animatable(0f) }
     LaunchedEffect(capsule.id) {
         entrance.animateTo(1f, spring(dampingRatio = 0.84f, stiffness = 520f))
@@ -125,7 +128,16 @@ fun SiteCapsuleBrowserScreen(
             controller = controller,
             statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
             showStatusBarFrostedGlass = !webViewVideoOnlyPresentation,
+            onWebViewChanged = { scrollBarWebView = it },
         )
+        if (controller.isScrollBarEnabled && !webViewVideoOnlyPresentation) {
+            scrollBarWebView?.let { webView ->
+                WebViewScrollBar(
+                    webView = webView,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
+            }
+        }
         tab.error?.takeIf {
             !webViewVideoOnlyPresentation && capsule.chromeMode.showsControls
         }?.let { error ->
@@ -166,6 +178,7 @@ private fun CapsuleWebViewHost(
     controller: BrowserController,
     statusBarTint: Int,
     showStatusBarFrostedGlass: Boolean,
+    onWebViewChanged: (BrowserWebView?) -> Unit,
 ) {
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
@@ -174,6 +187,7 @@ private fun CapsuleWebViewHost(
     )
     val selectedTabId = controller.selectedTabId
     val webViewRevision = controller.webViewRevision
+    val currentOnWebViewChanged by rememberUpdatedState(onWebViewChanged)
     AndroidView(
         factory = { context -> StatusBarFrostedGlassHost(context) },
         update = { host ->
@@ -184,10 +198,12 @@ private fun CapsuleWebViewHost(
                 visible = showStatusBarFrostedGlass,
             )
             controller.attachSelectedWebView(host.blurTarget)
+            currentOnWebViewChanged(host.blurTarget.getChildAt(0) as? BrowserWebView)
         },
         onRelease = { host ->
             controller.detachWebView(host.blurTarget)
             host.release()
+            currentOnWebViewChanged(null)
         },
         modifier = Modifier
             .fillMaxSize()

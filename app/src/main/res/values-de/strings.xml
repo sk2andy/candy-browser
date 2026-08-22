@@ -253,6 +253,9 @@
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>
     <string name="settings_full_immersive_mode_subtitle">Blendet Status- und Navigationsleiste aus. Vom Bildschirmrand wischen, um sie kurz einzublenden.</string>
+    <string name="settings_scroll_bar_title">Ziehbare Scrollleiste</string>
+    <string name="settings_scroll_bar_subtitle">Erscheint beim Scrollen und blendet sich danach aus. Ziehen, um lange Seiten direkt zu durchlaufen.</string>
+    <string name="scroll_bar_content_description">Scrollleiste der Seite</string>
     <string name="settings_video_autoplay_title">Automatische Videowiedergabe verhindern</string>
     <string name="settings_video_autoplay_subtitle">Videos starten nur, wenn du sie selbst abspielst.</string>
     <string name="settings_video_autoplay_unsupported">Erfordert eine neuere Android-WebView-Version.</string>
@@ -638,4 +641,13 @@
     <string name="reader_delete_snapshot">Offline-Artikel löschen</string>
     <string name="media_notification_channel_name">Medienwiedergabe</string>
     <string name="media_notification_channel_description">Steuert Medien, die in Candy abgespielt werden</string>
+    <string name="cd_cast_video">Video übertragen</string>
+    <string name="cd_cast_play">Auf Cast-Gerät wiedergeben</string>
+    <string name="cd_cast_pause">Wiedergabe auf Cast-Gerät pausieren</string>
+    <string name="cd_cast_stop">Übertragung beenden</string>
+    <string name="cast_playing_on">Wiedergabe auf %1$s</string>
+    <string name="cast_unknown_title">Webvideo</string>
+    <string name="cast_unknown_device">Cast-Gerät</string>
+    <string name="cast_position">%1$s / %2$s</string>
+    <string name="cast_volume">Gerätelautstärke</string>
 </resources>

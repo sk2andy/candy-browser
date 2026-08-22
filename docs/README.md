@@ -17,6 +17,7 @@
 | --- | --- |
 | Agent onboarding | [`../AGENTS.md`](../AGENTS.md) |
 | Picture-in-picture agent guide | [`browsing/picture-in-picture.md`](browsing/picture-in-picture.md) |
+| Google Cast agent guide | [`browsing/google-cast.md`](browsing/google-cast.md) |
 | Project coding conventions | [`../.agents/skills/coding-style/SKILL.md`](../.agents/skills/coding-style/SKILL.md) |
 | Product overview and build commands | [`../README.md`](../README.md) |
 | Privacy and compatibility audits | [`audits/`](audits/) |

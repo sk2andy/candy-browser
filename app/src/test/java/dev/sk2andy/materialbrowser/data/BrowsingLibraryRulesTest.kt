@@ -78,6 +78,19 @@ class BrowsingLibraryRulesTest {
     }
 
     @Test
+    fun `suggestions show canonical reload history only once`() {
+        val history = listOf(
+            HistoryEntry("https://Example.com:443/page#first", "First load", 1),
+            HistoryEntry("https://example.com/page#second", "Latest reload", 3),
+            HistoryEntry("https://other.example/", "Other", 2),
+        )
+
+        val suggestions = BrowsingLibraryRules.suggestions(history, query = "", limit = 8)
+
+        assertEquals(listOf("Latest reload", "Other"), suggestions.map(HistoryEntry::title))
+    }
+
+    @Test
     fun `address suggestions mark and prioritize multiple matching open tabs`() {
         val tabs = listOf(
             browserTab(id = "current", url = BLANK_URL, lastAccessedAt = 30),

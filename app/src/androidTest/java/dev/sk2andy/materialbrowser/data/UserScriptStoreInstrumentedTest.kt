@@ -35,6 +35,126 @@ class UserScriptStoreInstrumentedTest {
     }
 
     @Test
+    fun atomicallyRoundTripsResolvedDependencies() {
+        val store = UserScriptStore(context)
+        store.clear()
+        val source = """
+            // ==UserScript==
+            // @name Dependency
+            // @match https://example.com/*
+            // @require https://cdn.example/library.js
+            // @resource icon https://cdn.example/icon.png
+            // @grant GM_getResourceURL
+            // ==/UserScript==
+            window.main = true;
+        """.trimIndent()
+        val parsed = (UserScriptParser.parse("dependency", source) as UserScriptParseResult.Accepted).script
+        val resolved = parsed.copy(
+            requires = parsed.requires.map { it.copy(source = "window.library = true;") },
+            resources = parsed.resources.map {
+                it.copy(encodedContent = "AAEC", mimeType = "image/png")
+            },
+        )
+
+        assertTrue(store.save(listOf(resolved)))
+        assertEquals(listOf(resolved), store.load())
+        store.clear()
+    }
+
+    @Test
+    fun loadsLegacySnapshotWithoutDependencies() {
+        val store = UserScriptStore(context)
+        store.clear()
+        val legacy = script(id = "legacy", runAt = "document-end", enabled = true)
+        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        target.writeText(
+            JSONObject()
+                .put("version", 1)
+                .put(
+                    "scripts",
+                    JSONArray().put(
+                        JSONObject()
+                            .put("id", legacy.id)
+                            .put("source", legacy.source)
+                            .put("enabled", legacy.enabled)
+                            .put("updatedAtMillis", legacy.updatedAtMillis),
+                    ),
+                ).toString(),
+        )
+
+        assertEquals(listOf(legacy), store.load())
+        store.clear()
+    }
+
+    @Test
+    fun legacyDependencyEntryCannotDeleteOtherStoredScripts() {
+        val store = UserScriptStore(context)
+        store.clear()
+        val stable = script(id = "stable", runAt = "document-end", enabled = true)
+        val unresolvedSource = """
+            // ==UserScript==
+            // @name Legacy unresolved
+            // @match https://example.com/*
+            // @require https://raw.githubusercontent.com/example/library.js
+            // ==/UserScript==
+            window.main = true;
+        """.trimIndent()
+        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        target.writeText(
+            JSONObject()
+                .put("version", 1)
+                .put(
+                    "scripts",
+                    JSONArray()
+                        .put(
+                            JSONObject()
+                                .put("id", "unresolved")
+                                .put("source", unresolvedSource)
+                                .put("enabled", true)
+                                .put("updatedAtMillis", 0L),
+                        )
+                        .put(
+                            JSONObject()
+                                .put("id", stable.id)
+                                .put("source", stable.source)
+                                .put("enabled", stable.enabled)
+                                .put("updatedAtMillis", stable.updatedAtMillis),
+                        ),
+                ).toString(),
+        )
+
+        assertEquals(listOf(stable), store.load())
+        store.clear()
+    }
+
+    @Test
+    fun rejectsTamperedDependencyPayload() {
+        val store = UserScriptStore(context)
+        store.clear()
+        val digest = "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"
+        val source = """
+            // ==UserScript==
+            // @name Integrity
+            // @match https://example.com/*
+            // @require https://cdn.example/library.js#sha256=$digest
+            // ==/UserScript==
+            window.main = true;
+        """.trimIndent()
+        val parsed = (UserScriptParser.parse("integrity", source) as UserScriptParseResult.Accepted).script
+        val resolved = parsed.copy(requires = parsed.requires.map { it.copy(source = "hi") })
+        assertTrue(store.save(listOf(resolved)))
+        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        val root = JSONObject(target.readText())
+        root.getJSONArray("scripts").getJSONObject(0)
+            .getJSONArray("requires").getJSONObject(0)
+            .put("source", "tampered")
+        target.writeText(root.toString())
+
+        assertTrue(store.load().isEmpty())
+        assertFalse(target.exists())
+    }
+
+    @Test
     fun recoversLastCommittedSnapshotAfterInterruptedWrite() {
         val store = UserScriptStore(context)
         store.clear()

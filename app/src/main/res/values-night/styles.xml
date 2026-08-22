@@ -1,9 +1,16 @@
 <resources>
-    <style name="Theme.MaterialBrowser" parent="android:style/Theme.Material.NoActionBar">
+    <style name="Theme.MaterialBrowser" parent="Theme.AppCompat.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowActionModeOverlay">true</item>
+        <item name="colorPrimary">#D0BCFF</item>
+        <item name="colorPrimaryDark">#D0BCFF</item>
+        <item name="colorAccent">#D0BCFF</item>
+    </style>
+
+    <style name="Theme.MaterialBrowser.MediaRouteButton" parent="Theme.MaterialBrowser">
+        <item name="android:colorBackground">@android:color/black</item>
     </style>
 </resources>

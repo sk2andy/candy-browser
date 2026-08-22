@@ -122,6 +122,19 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun scrollBarDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadScrollBarEnabled())
+
+        store.saveScrollBarEnabled(true)
+        assertTrue(store.loadScrollBarEnabled())
+
+        store.saveScrollBarEnabled(false)
+        assertFalse(store.loadScrollBarEnabled())
+    }
+
+    @Test
     fun aiModeToggleDefaultsToHiddenAndRoundTripsVisibleState() {
         val store = BrowserSessionStore(context)
 

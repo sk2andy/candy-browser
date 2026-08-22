@@ -51,7 +51,6 @@ import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
-import androidx.webkit.JavaScriptExecutionWorld
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProfileStore
 import androidx.webkit.ScriptHandler
@@ -119,6 +118,9 @@ import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.actions.PendingDownloadChoice
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
+import dev.sk2andy.materialbrowser.browser.cast.CastMediaCandidate
+import dev.sk2andy.materialbrowser.browser.cast.CastMediaIdentity
+import dev.sk2andy.materialbrowser.browser.cast.CastMediaRules
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionComposer
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionItem
 import dev.sk2andy.materialbrowser.browser.commands.AndroidCommandCatalog
@@ -161,13 +163,16 @@ import dev.sk2andy.materialbrowser.browser.permissions.runtimePermissions
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogEntry
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogRules
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
-import dev.sk2andy.materialbrowser.browser.userscript.UserScriptInjection
-import dev.sk2andy.materialbrowser.browser.userscript.UserScriptInjectionSources
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyFailureReason
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyResolution
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptGrant
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptOpenTabRequest
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRejectionReason
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRuntime
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
-import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRunAt
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
@@ -211,6 +216,7 @@ import dev.sk2andy.materialbrowser.data.ToppingCatalogRefreshResult
 import dev.sk2andy.materialbrowser.data.ToppingCatalogRepository
 import dev.sk2andy.materialbrowser.data.ToppingDownloadResult
 import dev.sk2andy.materialbrowser.data.UserScriptRepository
+import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
@@ -265,6 +271,9 @@ internal sealed interface UserScriptSaveOutcome {
     data object Missing : UserScriptSaveOutcome
     data object PersistenceFailed : UserScriptSaveOutcome
     data class Rejected(val reason: UserScriptRejectionReason) : UserScriptSaveOutcome
+    data class DependencyFailed(
+        val reason: UserScriptDependencyFailureReason,
+    ) : UserScriptSaveOutcome
 }
 
 private class FullscreenVideoSession(
@@ -284,13 +293,6 @@ private data class WebMediaChannelKey(
     val mediaId: String,
     val origin: String,
     val isMainFrame: Boolean,
-)
-
-private data class UserScriptRegistration(
-    val script: UserScript,
-    val allowedOrigins: Set<String>,
-    val sources: UserScriptInjectionSources,
-    val executionWorld: JavaScriptExecutionWorld,
 )
 
 private class WebMediaChannel(
@@ -403,6 +405,8 @@ class BrowserController(
         private set
     var isFullImmersiveModeEnabled by mutableStateOf(false)
         private set
+    var isScrollBarEnabled by mutableStateOf(false)
+        private set
     var isVideoAutoplayBlocked by mutableStateOf(false)
         private set
     var appearanceSettings by mutableStateOf(AppearanceSettings())
@@ -424,6 +428,8 @@ class BrowserController(
     internal var fullscreenVideoState by mutableStateOf<FullscreenVideoState?>(null)
         private set
     internal var webMediaState by mutableStateOf<WebMediaState?>(null)
+        private set
+    internal var castMediaCandidate by mutableStateOf<CastMediaCandidate?>(null)
         private set
     val isProfileIsolationSupported: Boolean =
         WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
@@ -545,7 +551,6 @@ class BrowserController(
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
     private val videoAutoplayScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
-    private val userScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
     private var userScriptMutationPending = false
     private var toppingCatalogRefreshGeneration = 0
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
@@ -622,6 +627,18 @@ class BrowserController(
     private val capsuleShortcuts = CapsuleShortcutPublisher(activity)
     private val candyRuleRepository = CandyRuleRepository.get(activity)
     private val userScriptRepository = UserScriptRepository.get(activity)
+    private val userScriptCommandsByTab = mutableStateMapOf<String, List<UserScriptMenuCommand>>()
+    private val userScriptRuntime = UserScriptRuntime(
+        valueStore = UserScriptValueStore(activity),
+        onMenuCommandsChanged = { tabId, commands ->
+            if (commands.isEmpty()) {
+                userScriptCommandsByTab.remove(tabId)
+            } else {
+                userScriptCommandsByTab[tabId] = commands
+            }
+        },
+        onOpenTab = ::openUserScriptTab,
+    )
     private val toppingCatalogRepository = ToppingCatalogRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
     private val bundledSitePrivacyDefaults = BundledSitePrivacyDefaults.load(activity)
@@ -648,6 +665,14 @@ class BrowserController(
         get() = tabs.firstOrNull { it.id == selectedTabId }
             ?: activeTabs.firstOrNull()
             ?: tabs.first()
+
+    internal val selectedUserScriptMenuCommands: List<UserScriptMenuCommand>
+        get() = userScriptCommandsByTab[selectedTabId].orEmpty()
+
+    internal fun invokeUserScriptMenuCommand(command: UserScriptMenuCommand) {
+        if (command.tabId != selectedTabId) return
+        userScriptRuntime.invokeMenuCommand(command)
+    }
 
     val activeTabs: List<BrowserTab>
         get() = tabs.filter { it.profileId == activeProfileId }
@@ -1196,6 +1221,7 @@ class BrowserController(
         isAddressBarDocked = store.loadAddressBarDocked()
         isTabButtonVisible = store.loadTabButtonVisible()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
+        isScrollBarEnabled = store.loadScrollBarEnabled()
         isVideoAutoplayBlocked =
             isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
         appearanceSettings = store.loadAppearanceSettings()
@@ -2206,17 +2232,28 @@ class BrowserController(
             val script = downloaded.copy(
                 enabled = if (preserveEnabled) existing?.enabled ?: true else true,
             )
-            val proposed = userScripts.toMutableList()
-            val index = proposed.indexOfFirst { candidate -> candidate.id == script.id }
-            if (index >= 0) proposed[index] = script else proposed += script
-            if (!UserScriptRules.isWithinCollectionBounds(proposed)) {
-                busyToppingIds.remove(entry.id)
-                onComplete(false)
-                return@download
-            }
-            commitUserScripts(proposed) { persisted ->
-                busyToppingIds.remove(entry.id)
-                onComplete(persisted)
+            userScriptRepository.resolveDependencies(script) { resolution ->
+                mainHandler.post {
+                    if (destroyed) return@post
+                    val resolved = (resolution as? UserScriptDependencyResolution.Resolved)?.script
+                    if (resolved == null) {
+                        busyToppingIds.remove(entry.id)
+                        onComplete(false)
+                        return@post
+                    }
+                    val proposed = userScripts.toMutableList()
+                    val index = proposed.indexOfFirst { candidate -> candidate.id == resolved.id }
+                    if (index >= 0) proposed[index] = resolved else proposed += resolved
+                    if (!UserScriptRules.isWithinCollectionBounds(proposed)) {
+                        busyToppingIds.remove(entry.id)
+                        onComplete(false)
+                        return@post
+                    }
+                    commitUserScripts(proposed) { persisted ->
+                        busyToppingIds.remove(entry.id)
+                        onComplete(persisted)
+                    }
+                }
             }
         }
     }
@@ -2248,21 +2285,33 @@ class BrowserController(
                 return
             }
         }
-        val proposed = userScripts.toMutableList()
-        val index = proposed.indexOfFirst { it.id == script.id }
-        if (index >= 0) proposed[index] = script else proposed += script
-        if (!UserScriptRules.isWithinCollectionBounds(proposed)) {
-            onComplete(UserScriptSaveOutcome.LimitReached)
-            return
-        }
-        commitUserScripts(proposed) { persisted ->
-            onComplete(
-                if (persisted) {
-                    UserScriptSaveOutcome.Saved
-                } else {
-                    UserScriptSaveOutcome.PersistenceFailed
-                },
-            )
+        userScriptRepository.resolveDependencies(script) { resolution ->
+            mainHandler.post {
+                if (destroyed) return@post
+                val resolved = when (resolution) {
+                    is UserScriptDependencyResolution.Resolved -> resolution.script
+                    is UserScriptDependencyResolution.Failed -> {
+                        onComplete(UserScriptSaveOutcome.DependencyFailed(resolution.reason))
+                        return@post
+                    }
+                }
+                val proposed = userScripts.toMutableList()
+                val index = proposed.indexOfFirst { it.id == resolved.id }
+                if (index >= 0) proposed[index] = resolved else proposed += resolved
+                if (!UserScriptRules.isWithinCollectionBounds(proposed)) {
+                    onComplete(UserScriptSaveOutcome.LimitReached)
+                    return@post
+                }
+                commitUserScripts(proposed) { persisted ->
+                    onComplete(
+                        if (persisted) {
+                            UserScriptSaveOutcome.Saved
+                        } else {
+                            UserScriptSaveOutcome.PersistenceFailed
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -2285,7 +2334,7 @@ class BrowserController(
             onComplete(false)
             return
         }
-        commitUserScripts(proposed, onComplete)
+        commitUserScripts(proposed = proposed, onComplete = onComplete)
     }
 
     internal fun deleteUserScript(id: String, onComplete: (Boolean) -> Unit = {}) {
@@ -2293,11 +2342,16 @@ class BrowserController(
             onComplete(false)
             return
         }
-        commitUserScripts(userScripts.filterNot { it.id == id }, onComplete)
+        commitUserScripts(
+            proposed = userScripts.filterNot { it.id == id },
+            onComplete = onComplete,
+            onPersisted = { userScriptRuntime.clearValues(id) },
+        )
     }
 
     private fun commitUserScripts(
         proposed: List<UserScript>,
+        onPersisted: () -> Unit = {},
         onComplete: (Boolean) -> Unit,
     ) {
         if (userScriptMutationPending) {
@@ -2307,6 +2361,7 @@ class BrowserController(
         userScriptMutationPending = true
         val snapshot = proposed.toList()
         userScriptRepository.save(snapshot) { persisted ->
+            if (persisted) onPersisted()
             mainHandler.post {
                 if (destroyed) return@post
                 userScriptMutationPending = false
@@ -2399,7 +2454,11 @@ class BrowserController(
         return tab.id
     }
 
-    fun createBackgroundTab(initialUrl: String, openerTabId: String? = null): String? {
+    fun createBackgroundTab(
+        initialUrl: String,
+        openerTabId: String? = null,
+        isIncognito: Boolean = selectedTab.isIncognito,
+    ): String? {
         pruneStaleTabs()
         if (tabs.size >= MAX_TABS) {
             Toast.makeText(
@@ -2413,7 +2472,7 @@ class BrowserController(
         val tab = newTabState(
             url = resolvedUrl,
             nowMillis = System.currentTimeMillis(),
-            isIncognito = selectedTab.isIncognito,
+            isIncognito = isIncognito,
             openerTabId = openerTabId,
         )
         tabs += tab
@@ -3493,6 +3552,12 @@ class BrowserController(
         onFullImmersiveModeChanged(enabled)
     }
 
+    fun updateScrollBarEnabled(enabled: Boolean) {
+        if (isScrollBarEnabled == enabled) return
+        isScrollBarEnabled = enabled
+        store.saveScrollBarEnabled(enabled)
+    }
+
     fun updateVideoAutoplayBlocked(blocked: Boolean) {
         if (blocked && !isVideoAutoplayBlockingSupported) return
         if (isVideoAutoplayBlocked == blocked) return
@@ -4136,13 +4201,13 @@ class BrowserController(
         forcedVerticalScrollScriptHandlers.clear()
         cosmeticScriptHandlers.clear()
         videoAutoplayScriptHandlers.clear()
-        userScriptHandlers.clear()
         webMediaScriptHandlers.clear()
         webMediaBridgeTokens.clear()
         retiredWebMediaDocumentIds.clear()
         webMediaChannels.clear()
         activeWebMediaKey = null
         webMediaState = null
+        castMediaCandidate = null
         pendingConsentCssUrls.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
@@ -4329,6 +4394,7 @@ class BrowserController(
 
     private fun browserWebViewClient(tabId: String) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+            userScriptRuntime.clearMenuCommands(view)
             clearWebMediaForTab(tabId)
             fullscreenVideoSession
                 ?.takeIf { session -> session.tabId == tabId && session.webView === view }
@@ -4744,78 +4810,45 @@ class BrowserController(
     }
 
     private fun installUserScripts(tabId: String, view: WebView) {
-        removeUserScripts(view)
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD)) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: run {
+            removeUserScripts(view)
             return
         }
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val registrations = UserScriptRules.selectForRegistration(
+        userScriptRuntime.install(
+            tabId = tabId,
+            webView = view,
             scripts = userScripts,
             isPrivate = tab.isIncognito,
-        ).map { script ->
-            val allowedOrigins = UserScriptRules.allowedOriginRules(script)
-            val sources = UserScriptInjection.sources(script)
-            if (allowedOrigins.isEmpty() || sources == null) return
-            val executionWorld = runCatching {
-                WebViewCompat.getExecutionWorld(
-                    view,
-                    UserScriptInjection.executionWorldName(script.id),
-                )
-            }.getOrNull() ?: return
-            UserScriptRegistration(
-                script = script,
-                allowedOrigins = allowedOrigins,
-                sources = sources,
-                executionWorld = executionWorld,
-            )
-        }
-        val handlers = mutableListOf<ScriptHandler>()
-        fun rollbackHandlers() {
-            handlers.forEach { handler -> runCatching(handler::remove) }
-            handlers.clear()
-        }
-        registrations.forEach { registration ->
-            val guardHandler = runCatching {
-                WebViewCompat.addJavaScriptOnEvent(
-                    view,
-                    registration.sources.guardSource,
-                    WebViewCompat.INJECTION_EVENT_DOCUMENT_START,
-                    registration.allowedOrigins,
-                    registration.executionWorld,
-                )
-            }.getOrNull()
-            if (guardHandler == null) {
-                rollbackHandlers()
-                return
-            }
-            handlers += guardHandler
-        }
-        registrations.forEach { registration ->
-            val injectionEvent = when (registration.script.runAt) {
-                UserScriptRunAt.DocumentStart -> WebViewCompat.INJECTION_EVENT_DOCUMENT_START
-                UserScriptRunAt.DocumentEnd -> WebViewCompat.INJECTION_EVENT_DOCUMENT_END
-            }
-            val sourceHandler = runCatching {
-                WebViewCompat.addJavaScriptOnEvent(
-                    view,
-                    registration.sources.userSource,
-                    injectionEvent,
-                    registration.allowedOrigins,
-                    registration.executionWorld,
-                )
-            }.getOrNull()
-            if (sourceHandler == null) {
-                rollbackHandlers()
-                return
-            }
-            handlers += sourceHandler
-        }
-        if (handlers.isNotEmpty()) userScriptHandlers[view] = handlers
+        )
     }
 
-    private fun removeUserScripts(view: WebView) {
-        userScriptHandlers.remove(view).orEmpty().forEach { handler ->
-            runCatching(handler::remove)
+    private fun removeUserScripts(view: WebView) = userScriptRuntime.remove(view)
+
+    private fun openUserScriptTab(request: UserScriptOpenTabRequest) {
+        val sourceTab = tabs.firstOrNull { tab -> tab.id == request.tabId } ?: return
+        if (
+            sourceTab.isIncognito ||
+            sourceTab.profileId != activeProfileId ||
+            webViews[sourceTab.id] == null ||
+            userScripts.none { script ->
+                script.id == request.scriptId &&
+                    script.enabled &&
+                    UserScriptGrant.OpenInTab in script.grants
+            }
+        ) return
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(request.url) ?: return
+        if (request.active) {
+            createTab(
+                initialUrl = safeUrl,
+                isIncognito = false,
+                openerTabId = sourceTab.id,
+            )
+        } else {
+            createBackgroundTab(
+                initialUrl = safeUrl,
+                openerTabId = sourceTab.id,
+                isIncognito = false,
+            )
         }
     }
 
@@ -5284,6 +5317,12 @@ class BrowserController(
         )
         activeWebMediaKey = active?.key
         webMediaState = active?.toState()
+        castMediaCandidate = validChannels
+            .asSequence()
+            .filter { it.key.tabId == selectedTabId }
+            .sortedByDescending(WebMediaChannel::receivedAtMillis)
+            .mapNotNull { channel -> channel.toCastCandidate() }
+            .firstOrNull()
         onWebMediaStateChanged()
     }
 
@@ -5306,8 +5345,41 @@ class BrowserController(
             clientWidth = payload.clientWidth,
             clientHeight = payload.clientHeight,
             visibleRatio = payload.visibleRatio,
+            sourceUrl = payload.sourceUrl,
+            contentType = payload.contentType,
+            posterUrl = payload.posterUrl,
         )
     }
+
+    private fun WebMediaChannel.toCastCandidate(): CastMediaCandidate? {
+        val tab = tabs.firstOrNull { it.id == key.tabId } ?: return null
+        val source = CastMediaRules.source(
+            state = toState(),
+            isPrivate = tab.isIncognito,
+            isSelectedTab = key.tabId == selectedTabId,
+        ) ?: return null
+        return CastMediaCandidate(
+            identity = castIdentity(),
+            source = source,
+        )
+    }
+
+    internal fun pauseCastMedia(candidate: CastMediaCandidate): Boolean {
+        val channel = webMediaChannels.values.firstOrNull { it.castIdentity() == candidate.identity }
+            ?.takeIf(::isCurrentWebMediaChannel)
+            ?: return false
+        if (channel.toCastCandidate()?.source?.url != candidate.source.url) return false
+        sendWebMediaCommand(channel, WebMediaCommand.Pause)
+        return true
+    }
+
+    private fun WebMediaChannel.castIdentity(): CastMediaIdentity = CastMediaIdentity(
+        tabId = key.tabId,
+        navigationGeneration = key.navigationGeneration,
+        documentId = key.documentId,
+        mediaId = key.mediaId,
+        origin = key.origin,
+    )
 
     private fun activeWebMediaChannel(): WebMediaChannel? =
         activeWebMediaKey?.let(webMediaChannels::get)?.takeIf(::isCurrentWebMediaChannel)

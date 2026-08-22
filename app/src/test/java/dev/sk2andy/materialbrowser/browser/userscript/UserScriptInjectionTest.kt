@@ -81,6 +81,52 @@ class UserScriptInjectionTest {
         assertNull(UserScriptInjection.sources(valid.copy(name = "forged")))
     }
 
+    @Test
+    fun `resolved requires execute after api and before main source`() {
+        val parsed = script(body = "window.main = true;")
+        val resolved = parsed.copy(
+            requires = listOf(
+                UserScriptRequire(
+                    url = "https://cdn.example/one.js",
+                    source = "window.requiredOne = typeof GM_info !== 'undefined';",
+                ),
+                UserScriptRequire(
+                    url = "https://cdn.example/two.js",
+                    source = "window.requiredTwo = true;",
+                ),
+            ),
+            source = parsed.source.replace(
+                "// @run-at document-start",
+                """
+                // @run-at document-start
+                // @require https://cdn.example/one.js
+                // @require https://cdn.example/two.js
+                """.trimIndent(),
+            ),
+        )
+        val sources = requireNotNull(UserScriptInjection.sources(resolved))
+
+        val apiIndex = sources.userSource.indexOf("GM_info")
+        val firstIndex = sources.userSource.indexOf("window.requiredOne")
+        val secondIndex = sources.userSource.indexOf("window.requiredTwo")
+        val mainIndex = sources.userSource.indexOf("window.main")
+        assertTrue(apiIndex in 0 until firstIndex)
+        assertTrue(firstIndex in 0 until secondIndex)
+        assertTrue(secondIndex in 0 until mainIndex)
+    }
+
+    @Test
+    fun `unresolved dependency produces no injectable sources`() {
+        val parsed = script(body = "window.main = true;")
+        val source = parsed.source.replace(
+            "// @run-at document-start",
+            "// @run-at document-start\n// @require https://cdn.example/a.js",
+        )
+        val unresolved = (UserScriptParser.parse("script-id", source) as UserScriptParseResult.Accepted).script
+
+        assertNull(UserScriptInjection.sources(unresolved))
+    }
+
     private fun script(
         body: String,
         name: String = "Injection test",

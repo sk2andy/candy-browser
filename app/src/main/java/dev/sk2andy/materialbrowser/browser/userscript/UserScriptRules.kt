@@ -22,7 +22,7 @@ internal object UserScriptRules {
         var storedSourceBytes = 0L
         var enabledSourceBytes = 0L
         scripts.forEach { script ->
-            val sourceBytes = script.source.toByteArray(Charsets.UTF_8).size.toLong()
+            val sourceBytes = script.storedBytes()
             storedSourceBytes += sourceBytes
             if (storedSourceBytes > MAX_STORED_SOURCE_BYTES) return false
             if (script.enabled) enabledSourceBytes += sourceBytes
@@ -71,12 +71,31 @@ internal object UserScriptRules {
         script.excludePatterns.map(::globJavascriptRegex)
 
     internal fun isCanonical(script: UserScript): Boolean =
-        (UserScriptParser.parse(
+        hasCanonicalMetadata(script) && UserScriptDependencyRules.isResolved(script)
+
+    internal fun hasCanonicalMetadata(script: UserScript): Boolean {
+        val parsed = (UserScriptParser.parse(
             id = script.id,
             source = script.source,
             enabled = script.enabled,
             updatedAtMillis = script.updatedAtMillis,
-        ) as? UserScriptParseResult.Accepted)?.script == script
+        ) as? UserScriptParseResult.Accepted)?.script ?: return false
+        return parsed == script.copy(
+            requires = script.requires.map { dependency -> dependency.copy(source = null) },
+            resources = script.resources.map { dependency ->
+                dependency.copy(encodedContent = null, mimeType = null)
+            },
+        )
+    }
+
+    private fun UserScript.storedBytes(): Long =
+        source.toByteArray(Charsets.UTF_8).size.toLong() +
+            requires.sumOf { dependency ->
+                dependency.source?.toByteArray(Charsets.UTF_8)?.size?.toLong() ?: 0L
+            } +
+            resources.sumOf { dependency ->
+                UserScriptDependencyRules.decodeBase64(dependency.encodedContent)?.size?.toLong() ?: 0L
+            }
 
     private fun ParsedUserScriptMatchPattern.matches(url: ParsedWebUrl): Boolean {
         if (scheme != "*" && scheme != url.scheme) return false

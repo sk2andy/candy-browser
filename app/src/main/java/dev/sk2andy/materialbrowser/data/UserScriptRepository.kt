@@ -3,11 +3,14 @@ package dev.sk2andy.materialbrowser.data
 import android.content.Context
 import android.util.Log
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyResolution
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyResolver
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 internal class UserScriptRepository private constructor(context: Context) {
     private val store = UserScriptStore(context.applicationContext)
+    private val dependencyResolver = UserScriptDependencyResolver(UserScriptDependencyClient())
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { task ->
         Thread(task, "userscript-io")
     }
@@ -26,6 +29,13 @@ internal class UserScriptRepository private constructor(context: Context) {
             if (!saved) Log.e(TAG, "Userscript snapshot could not be persisted")
             onComplete(saved)
         }
+    }
+
+    fun resolveDependencies(
+        script: UserScript,
+        onComplete: (UserScriptDependencyResolution) -> Unit,
+    ) {
+        executor.execute { onComplete(dependencyResolver.resolve(script)) }
     }
 
     fun clear() {

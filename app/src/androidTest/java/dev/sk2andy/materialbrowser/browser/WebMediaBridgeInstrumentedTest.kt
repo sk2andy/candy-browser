@@ -43,6 +43,42 @@ class WebMediaBridgeInstrumentedTest {
     }
 
     @Test
+    fun oversizedPosterIsBoundedWithoutDroppingMediaState() {
+        activityRule.scenario.onActivity { activity ->
+            clearSession(activity)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(
+                controller.isVideoAutoplayBlockingSupported &&
+                    androidx.webkit.WebViewFeature.isFeatureSupported(
+                        androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER,
+                    ),
+            )
+            controller.onResume()
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            controller.attachSelectedWebView(container)
+            controller.selectedWebViewForTesting().loadDataWithBaseURL(
+                "https://media.example/",
+                OVERSIZED_POSTER_VIDEO_HTML,
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        awaitCondition {
+            var hasBoundedState = false
+            activityRule.scenario.onActivity {
+                val state = controller?.webMediaState
+                hasBoundedState = state?.sourceUrl == "https://media.example/video.mp4" &&
+                    state.posterUrl?.length == 2_048 &&
+                    controller?.castMediaCandidate != null
+            }
+            hasBoundedState
+        }
+    }
+
+    @Test
     fun playingVideoPublishesStateAndBecomesPipPresentation() {
         lateinit var webView: WebView
         activityRule.scenario.onActivity { activity ->
@@ -1627,6 +1663,19 @@ class WebMediaBridgeInstrumentedTest {
                   >PiP</button>
                 """.trimIndent(),
             )
+
+        val OVERSIZED_POSTER_VIDEO_HTML = PLAYING_VIDEO_HTML.replace(
+            "Object.defineProperty(video, 'readyState', { value: 4, configurable: true });",
+            """
+            Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
+            Object.defineProperty(video, 'currentSrc', {
+              value: 'https://media.example/video.mp4', configurable: true
+            });
+            Object.defineProperty(video, 'poster', {
+              value: 'data:image/png;base64,' + 'x'.repeat(20000), configurable: true
+            });
+            """.trimIndent(),
+        )
             .replace(
                 "const video = document.querySelector('video');",
                 """

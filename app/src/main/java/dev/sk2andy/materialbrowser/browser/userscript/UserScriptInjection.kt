@@ -8,14 +8,17 @@ internal data class UserScriptInjectionSources(
 )
 
 internal object UserScriptInjection {
-    fun sources(script: UserScript): UserScriptInjectionSources? {
+    fun sources(
+        script: UserScript,
+        encodedValues: Map<String, String> = emptyMap(),
+    ): UserScriptInjectionSources? {
         if (!script.enabled || !UserScriptRules.isCanonical(script)) return null
-        return buildSources(script)
+        return buildSources(script, encodedValues)
     }
 
     internal fun estimatedInjectedBytes(script: UserScript): Long {
         if (!script.enabled || !UserScriptRules.isCanonical(script)) return 0L
-        val sources = buildSources(script)
+        val sources = buildSources(script, emptyMap())
         return sources.guardSource.toByteArray(Charsets.UTF_8).size.toLong() +
             sources.userSource.toByteArray(Charsets.UTF_8).size.toLong()
     }
@@ -27,7 +30,10 @@ internal object UserScriptInjection {
         return "candy.topping.$digest"
     }
 
-    private fun buildSources(script: UserScript): UserScriptInjectionSources {
+    private fun buildSources(
+        script: UserScript,
+        encodedValues: Map<String, String>,
+    ): UserScriptInjectionSources {
         val matchPatterns = UserScriptRules.matchJavascriptRegexes(script)
         val includePatterns = UserScriptRules.includeJavascriptRegexes(script)
         val excludePatterns = UserScriptRules.excludeJavascriptRegexes(script)
@@ -55,10 +61,20 @@ internal object UserScriptInjection {
                 });
             })();
         """.trimIndent()
-        val userSource = buildString(script.source.length + 96) {
+        val apiSource = UserScriptApi.bootstrap(script, encodedValues)
+        val requiredSource = script.requires.joinToString(separator = "\n") { dependency ->
+            checkNotNull(dependency.source)
+        }
+        val userSource = buildString(
+            script.source.length + apiSource.length + requiredSource.length + 128,
+        ) {
             append("if (this[")
                 .append(marker)
                 .append("] !== true) throw 0;\n")
+                .append(apiSource)
+                .append('\n')
+                .append(requiredSource)
+                .append('\n')
                 .append(script.source)
         }
         return UserScriptInjectionSources(guardSource = guardSource, userSource = userSource)

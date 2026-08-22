@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="browser_menu_toppings_group">Toppings</string>
     <string name="userscript_title">Toppings</string>
     <string name="userscript_subtitle">Pequenas melhorias para páginas correspondentes</string>
     <string name="settings_home_userscripts_summary">Personalizar páginas correspondentes com Toppings</string>
@@ -39,6 +40,25 @@
     <string name="userscript_error_generic">Não foi possível salvar este Topping.</string>
     <string name="userscript_error_limit">Você pode salvar até %1$d Toppings.</string>
     <string name="userscript_import_error">Não foi possível importar este Topping.</string>
+    <string name="userscript_import_error_empty">Este arquivo está vazio.</string>
+    <string name="userscript_import_error_too_large">Este arquivo excede o limite de %1$d KB para Toppings.</string>
+    <string name="userscript_import_error_invalid_utf8">Este arquivo não é um texto UTF-8 válido.</string>
+    <string name="userscript_import_error_unreadable">O Candy não conseguiu ler este arquivo.</string>
+    <string name="userscript_import_error_invalid_metadata">O bloco de metadados do userscript está ausente ou inválido.</string>
+    <string name="userscript_import_error_missing_name">O bloco de metadados precisa de exatamente uma entrada @name.</string>
+    <string name="userscript_import_error_name_too_long">@name deve ter no máximo %1$d caracteres e não conter caracteres de controle.</string>
+    <string name="userscript_import_error_missing_scope">Adicione pelo menos um padrão de URL @match ou @include.</string>
+    <string name="userscript_import_error_too_many_metadata_values">Use no máximo %1$d padrões de URL de cada tipo.</string>
+    <string name="userscript_import_error_invalid_scope">Um dos padrões de URL @match, @include ou @exclude é inválido.</string>
+    <string name="userscript_import_error_invalid_run_at">@run-at deve ser document-start ou document-end.</string>
+    <string name="userscript_import_error_unsupported_grant">Este Topping solicita uma permissão @grant ou @connect incompatível.</string>
+    <string name="userscript_import_error_invalid_dependency">Uma dependência @require ou @resource tem nome, URL HTTPS ou hash de integridade inválido.</string>
+    <string name="userscript_import_error_too_many_dependencies">Este Topping declara dependências @require ou @resource demais.</string>
+    <string name="userscript_import_error_dependency_unavailable">O Candy não conseguiu baixar com segurança uma dependência @require ou @resource.</string>
+    <string name="userscript_import_error_dependency_too_large">Uma dependência @require ou @resource excede o limite de download.</string>
+    <string name="userscript_import_error_dependency_invalid_utf8">Uma dependência @require não é um texto UTF-8 válido.</string>
+    <string name="userscript_import_error_dependency_integrity">Uma dependência @require ou @resource não corresponde ao hash de integridade.</string>
+    <string name="userscript_import_error_save_failed">O Candy leu este Topping, mas não conseguiu salvá-lo.</string>
     <string name="userscript_import_success">%1$s foi importado.</string>
     <string name="topping_discover">Descobrir Toppings</string>
     <string name="topping_catalog_title">Descobrir Toppings</string>

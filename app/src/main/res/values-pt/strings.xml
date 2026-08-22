@@ -255,6 +255,9 @@
     <string name="settings_section_browser">Navegador</string>
     <string name="settings_full_immersive_mode_title">Modo imersivo em ecrã inteiro</string>
     <string name="settings_full_immersive_mode_subtitle">Oculta as barras de estado e navegação. Deslize a partir de uma margem para as mostrar temporariamente.</string>
+    <string name="settings_scroll_bar_title">Barra de deslocamento arrastável</string>
+    <string name="settings_scroll_bar_subtitle">Aparece ao deslocar e depois desaparece. Arraste-a para percorrer páginas longas.</string>
+    <string name="scroll_bar_content_description">Barra de deslocamento da página</string>
     <string name="settings_video_autoplay_title">Impedir a reprodução automática de vídeos</string>
     <string name="settings_video_autoplay_subtitle">Os vídeos só começam quando você os reproduz.</string>
     <string name="settings_video_autoplay_unsupported">Requer uma versão mais recente do Android WebView.</string>
@@ -642,4 +645,13 @@
     <string name="reader_delete_snapshot">Eliminar artigo offline</string>
     <string name="media_notification_channel_name">Reprodução de multimédia</string>
     <string name="media_notification_channel_description">Controla os conteúdos reproduzidos no Candy</string>
+    <string name="cd_cast_video">Transmitir vídeo</string>
+    <string name="cd_cast_play">Reproduzir no dispositivo Cast</string>
+    <string name="cd_cast_pause">Pausar no dispositivo Cast</string>
+    <string name="cd_cast_stop">Parar transmissão</string>
+    <string name="cast_playing_on">A reproduzir em %1$s</string>
+    <string name="cast_unknown_title">Vídeo da Web</string>
+    <string name="cast_unknown_device">Dispositivo Cast</string>
+    <string name="cast_position">%1$s / %2$s</string>
+    <string name="cast_volume">Volume do dispositivo</string>
 </resources>

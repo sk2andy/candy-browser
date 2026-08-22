@@ -29,6 +29,7 @@ import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
@@ -263,6 +264,14 @@ class BrowserMainMenuInstrumentedTest {
     @Test
     fun disablesReaderForUnsupportedPage() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val invocations = AtomicInteger()
+        val command = UserScriptMenuCommand(
+            tabId = "tab",
+            scriptId = "script",
+            scriptName = "Password helper",
+            commandId = "reveal",
+            caption = "Reveal passwords",
+        )
         composeRule.setContent {
             MaterialBrowserTheme {
                 BrowserMainMenu(
@@ -292,6 +301,7 @@ class BrowserMainMenuInstrumentedTest {
                     canAddSiteCapsule = false,
                     canSnooze = false,
                     snoozedTabCount = 0,
+                    userScriptMenuCommands = listOf(command),
                     onBack = {},
                     onForward = {},
                     onReloadOrStop = {},
@@ -311,6 +321,9 @@ class BrowserMainMenuInstrumentedTest {
                     onSummarize = {},
                     onSnooze = {},
                     onSnoozedTabs = {},
+                    onUserScriptMenuCommand = { selected ->
+                        if (selected == command) invocations.incrementAndGet()
+                    },
                     onDockAddressBar = {},
                     onSettings = {},
                 )
@@ -328,5 +341,10 @@ class BrowserMainMenuInstrumentedTest {
             .assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForcePageZooming)
             .assertDoesNotExist()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.ToppingsGroup).assertExists()
+        composeRule.onNodeWithText("Password helper").assertExists()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.userScriptCommand("reveal"))
+            .performClick()
+        assertEquals(1, invocations.get())
     }
 }

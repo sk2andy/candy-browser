@@ -37,6 +37,9 @@
 - Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
 - Keep browser content edge-to-edge. The top safe area redraws a blurred content layer with a
   surface-tinted fade so status-bar icons stay legible without adding WebView padding.
+- Read page-scroll range, extent and offset through `BrowserWebView`. The optional Compose scroll
+  thumb observes scroll changes without replacing the controller's WebView scroll listener and is
+  removed from fullscreen/video-only presentation.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
 ## TLS trust channels
@@ -114,6 +117,16 @@ Agent implementation, security and debugging guide:
 - Compatibility is best effort for HTML5 media. DRM restrictions, canvas-only rendering,
   deliberately hostile players and site-specific visibility policies can still prevent control or
   continued playback.
+
+## Google Cast
+
+Implementation, privacy and compatibility guide: [`google-cast.md`](google-cast.md).
+
+Direct HTTP(S) MP4, WebM, HLS and DASH sources from the selected regular tab can be loaded into
+Google's Default Media Receiver. The Cast SDK owns device discovery and selection; Candy owns the
+post-connection mini-controller. Private tabs never create Cast candidates. Authenticated, DRM,
+blob and MSE playback remains best effort or unsupported because the receiver cannot inherit
+WebView request state.
 
 ## Verification
 

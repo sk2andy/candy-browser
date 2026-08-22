@@ -255,8 +255,10 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserWebView
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
@@ -285,6 +287,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogRules
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingVerifier
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRunAt
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
@@ -379,8 +382,13 @@ private enum class BrowserBackTarget {
 }
 
 @Composable
-fun BrowserScreen(
+internal fun BrowserScreen(
     controller: BrowserController,
+    castUiState: CastUiState = CastUiState(),
+    onToggleCastPlayback: () -> Unit = {},
+    onSeekCast: (Long) -> Unit = {},
+    onCastVolumeChange: (Float) -> Unit = {},
+    onDisconnectCast: () -> Unit = {},
     webViewVideoOnlyPresentation: Boolean = false,
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
     onImportUserScript: () -> Unit = {},
@@ -1267,7 +1275,10 @@ fun BrowserScreen(
             docked = controller.isAddressBarDocked && !linkPeekAddressBarExpanded,
             editing = addressEditorVisible,
             showTabButton = controller.isTabButtonVisible,
+            showCastButton = controller.castMediaCandidate != null || castUiState.isConnected,
             tabCount = controller.activeTabs.size,
+            userScriptMenuCommands = controller.selectedUserScriptMenuCommands,
+            onUserScriptMenuCommand = controller::invokeUserScriptMenuCommand,
             commandFeedback = commandFeedback,
             blurTarget = webContentBlurTarget,
             blurSourceVisible = selectedTab.url != BLANK_URL && !tabOverviewVisible,
@@ -1555,6 +1566,29 @@ fun BrowserScreen(
                 },
         )
 
+        if (
+            !selectedTab.isIncognito &&
+            !tabOverviewVisible &&
+            !addressEditorVisible &&
+            !settingsVisible &&
+            !webViewVideoOnlyPresentation
+        ) {
+            CastControls(
+                state = castUiState,
+                onTogglePlayback = onToggleCastPlayback,
+                onSeek = onSeekCast,
+                onVolumeChange = onCastVolumeChange,
+                onDisconnect = onDisconnectCast,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(
+                        bottom = if (controller.isAddressBarDocked) 12.dp else 88.dp,
+                    )
+                    .zIndex(10f),
+            )
+        }
+
         readerStudioSession?.let { session ->
             ReaderStudioScreen(
                 result = readerStudioResult,
@@ -1772,6 +1806,7 @@ fun BrowserScreen(
                 profilesEnabled = controller.profilesEnabled,
                 isTabButtonVisible = controller.isTabButtonVisible,
                 isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
+                isScrollBarEnabled = controller.isScrollBarEnabled,
                 isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
                 isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
                 blockedCount = selectedTab.blockedCount,
@@ -1812,6 +1847,7 @@ fun BrowserScreen(
                 onTabButtonVisibleChanged = controller::updateTabButtonVisible,
                 onFullImmersiveModeEnabledChanged =
                     controller::updateFullImmersiveModeEnabled,
+                onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
                 onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
                 onPrivacyXRay = {
@@ -1847,6 +1883,7 @@ fun BrowserScreen(
                                 UserScriptSaveOutcome.Missing,
                                 UserScriptSaveOutcome.PersistenceFailed,
                                 is UserScriptSaveOutcome.Rejected,
+                                is UserScriptSaveOutcome.DependencyFailed,
                                 -> context.getString(R.string.userscript_error_generic)
                             },
                         )
@@ -2277,6 +2314,7 @@ private fun BrowserViewport(
             ),
         )
     }
+    var scrollBarWebView by remember(selectedTab.id) { mutableStateOf<BrowserWebView?>(null) }
     LaunchedEffect(selectedTab.id, selectedTab.error, selectedTab.isLoading) {
         pageErrorFeedback = PageErrorFeedbackRules.observe(
             current = pageErrorFeedback,
@@ -2341,7 +2379,21 @@ private fun BrowserViewport(
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
                 onBlurTargetReleased = onBlurTargetReleased,
+                onWebViewChanged = { scrollBarWebView = it },
             )
+        }
+
+        if (
+            controller.isScrollBarEnabled &&
+            !webViewVideoOnlyPresentation &&
+            !tabOverviewVisible
+        ) {
+            scrollBarWebView?.let { webView ->
+                WebViewScrollBar(
+                    webView = webView,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
+            }
         }
 
         AnimatedVisibility(
@@ -2405,6 +2457,7 @@ private fun ActiveWebView(
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
+    onWebViewChanged: (BrowserWebView?) -> Unit,
 ) {
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
@@ -2416,6 +2469,7 @@ private fun ActiveWebView(
     val currentOnLiveFrame by rememberUpdatedState(onLiveFrame)
     val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
+    val currentOnWebViewChanged by rememberUpdatedState(onWebViewChanged)
     AndroidView(
         factory = { context ->
             StatusBarFrostedGlassHost(context).apply {
@@ -2442,6 +2496,7 @@ private fun ActiveWebView(
                     currentOnLiveFrame(it)
                 }
             }
+            currentOnWebViewChanged(attachedWebView as? BrowserWebView)
         },
         onRelease = { hostView ->
             val hostState = hostView.tag as? WebViewHostState
@@ -2450,6 +2505,7 @@ private fun ActiveWebView(
             hostState?.let { controller.detachWebView(it.container) }
             hostView.release()
             currentOnBlurTargetReleased(hostView.blurTarget)
+            currentOnWebViewChanged(null)
         },
         modifier = Modifier.fillMaxSize(),
     )
@@ -2902,7 +2958,10 @@ private fun BrowserBottomBar(
     docked: Boolean,
     editing: Boolean,
     showTabButton: Boolean,
+    showCastButton: Boolean,
     tabCount: Int,
+    userScriptMenuCommands: List<UserScriptMenuCommand>,
+    onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     commandFeedback: AddressCommandFeedback?,
     blurTarget: BlurTarget?,
     blurSourceVisible: Boolean,
@@ -3029,7 +3088,7 @@ private fun BrowserBottomBar(
             text = domain,
             style = MaterialTheme.typography.labelMedium,
             maxLines = 1,
-        ).size.width.toDp() + 84.dp
+        ).size.width.toDp() + 84.dp + if (showCastButton) 48.dp else 0.dp
     }
     val feedbackWidth = with(density) {
         textMeasurer.measure(
@@ -3140,6 +3199,9 @@ private fun BrowserBottomBar(
                                             textAlign = TextAlign.Center,
                                             style = MaterialTheme.typography.labelMedium,
                                         )
+                                        if (showCastButton) {
+                                            CastRouteButton()
+                                        }
                                         IconButton(onClick = onDock) {
                                             Icon(
                                                 imageVector = Icons.AutoMirrored.Filled
@@ -3156,7 +3218,10 @@ private fun BrowserBottomBar(
                                 tab = tab,
                                 blurTarget = blurTarget.takeIf { blurSourceVisible },
                                 showTabButton = showTabButton,
+                                showCastButton = showCastButton,
                                 tabCount = tabCount,
+                                userScriptMenuCommands = userScriptMenuCommands,
+                                onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 menuExpanded = menuExpanded,
                                 onMenuExpandedChange = { menuExpanded = it },
                                 onBack = onBack,
@@ -3585,7 +3650,10 @@ private fun ExpandedBottomBarContent(
     tab: BrowserTab,
     blurTarget: BlurTarget?,
     showTabButton: Boolean,
+    showCastButton: Boolean,
     tabCount: Int,
+    userScriptMenuCommands: List<UserScriptMenuCommand>,
+    onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     menuExpanded: Boolean,
     onMenuExpandedChange: (Boolean) -> Unit,
     onBack: () -> Unit,
@@ -3885,6 +3953,9 @@ private fun ExpandedBottomBarContent(
                 exit = fadeOut(tween(80)) + shrinkHorizontally(tween(180)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (!editing && showCastButton) {
+                        CastRouteButton()
+                    }
                     if (editing && tab.url == BLANK_URL) {
                         Spacer(Modifier.width(8.dp))
                         BlankTabIncognitoModeButton(
@@ -3967,6 +4038,8 @@ private fun ExpandedBottomBarContent(
                                         ),
                                 canSnooze = !tab.isIncognito,
                                 snoozedTabCount = snoozedTabCount,
+                                userScriptMenuCommands = userScriptMenuCommands,
+                                onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 onBack = onBack,
                                 onForward = onForward,
                                 onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
@@ -6044,6 +6117,12 @@ internal fun TabOverview(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        top = TAB_OVERVIEW_TOP_SPACING +
+                            PROFILE_SWITCHER_LAYOUT_HEIGHT +
+                            TAB_OVERVIEW_PROFILE_SPACING,
+                    )
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {

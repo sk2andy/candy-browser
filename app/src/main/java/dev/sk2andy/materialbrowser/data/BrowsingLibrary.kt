@@ -70,6 +70,7 @@ internal object BrowsingLibraryRules {
                 compareByDescending<ScoredHistory> { it.score }
                     .thenByDescending { it.entry.lastVisitedAt },
             )
+            .distinctBy { scored -> urlKey(scored.entry.url) }
             .map(ScoredHistory::entry)
             .take(limit.coerceAtLeast(0))
             .toList()
