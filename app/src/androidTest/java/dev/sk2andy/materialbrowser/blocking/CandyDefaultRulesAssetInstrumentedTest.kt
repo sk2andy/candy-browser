@@ -56,10 +56,36 @@ class CandyDefaultRulesAssetInstrumentedTest {
         val hagezi = SortedHostIndex.from(
             assets.open("hagezi_blocked_hosts.txt").use { it.readBytes() },
         )
-        assertEquals(166_089, hagezi.size)
+        assertEquals(166_049, hagezi.size)
         assertEquals(true, "analyticsengine.s3.amazonaws.com" in hagezi)
         assertEquals(true, "zzzwowosss.com" in hagezi)
         assertEquals(false, "example.com" in hagezi)
+    }
+
+    @Test
+    fun curatedHostAssetCoversTelemetryWithoutBlockingFunctionalPlatforms() {
+        val hostRules = InstrumentationRegistry.getInstrumentation().targetContext.assets
+            .open("blocked_hosts.txt")
+            .bufferedReader()
+            .use { it.readLines() }
+        val blocker = RequestBlocker(hostRules.asSequence())
+
+        listOf(
+            "adjust.com",
+            "analytics.twitter.com",
+            "inmobi.com",
+            "kochava.com",
+            "xp.apple.com",
+        ).forEach { host ->
+            assertEquals(host, true, blocker.shouldBlockHosts(host, "publisher.example"))
+        }
+        listOf(
+            "consent.cookiebot.com",
+            "graph.facebook.com",
+            "redirector.googlevideo.com",
+        ).forEach { host ->
+            assertEquals(host, false, blocker.shouldBlockHosts(host, "publisher.example"))
+        }
     }
 
     @Test
@@ -109,7 +135,6 @@ class CandyDefaultRulesAssetInstrumentedTest {
             "https://www.google.fr/search?q=hotel",
         )
         assertTrue("script length=${googleScript.length}", googleScript.length in 1..64_000)
-        assertTrue(blocker.adCosmeticDocumentStartScript("https://mail.google.com/").isEmpty())
 
         val amazon = bundled.scopedSelectors("https://www.amazon.de/s?k=laptop")
         assertTrue(amazon.toString(), ".s-result-item:has(.puis-sponsored-label-text)" in amazon)

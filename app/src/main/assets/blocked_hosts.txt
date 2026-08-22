@@ -1,5 +1,6 @@
 # Curated offline rules for common ad, tracking, telemetry and consent vendors.
 2mdn.net
+adjust.com
 adform.net
 adnxs.com
 adroll.com
@@ -9,6 +10,7 @@ adservice.google.com
 adsrvr.org
 adtech.de
 advertising.com
+analytics.twitter.com
 amazon-adsystem.com
 app-measurement.com
 appsflyer.com
@@ -39,10 +41,12 @@ googletagservices.com
 hotjar.com
 hotjar.io
 imrworldwide.com
+inmobi.com
 indexww.com
 inner-active.mobi
 insightexpressai.com
 intentiq.com
+kochava.com
 krxd.net
 lijit.com
 mathtag.com
@@ -80,6 +84,7 @@ trafficjunky.com
 tribalfusion.com
 turn.com
 unityads.unity3d.com
+xp.apple.com
 yieldlab.net
 yieldmo.com
 zedo.com
