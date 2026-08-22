@@ -483,6 +483,12 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_FULL_IMMERSIVE_MODE_ENABLED, enabled).apply()
     }
 
+    fun loadScrollBarEnabled(): Boolean = preferences.getBoolean(KEY_SCROLL_BAR_ENABLED, false)
+
+    fun saveScrollBarEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_SCROLL_BAR_ENABLED, enabled).apply()
+    }
+
     fun loadVideoAutoplayBlocked(): Boolean =
         preferences.getBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, false)
 
@@ -628,6 +634,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
+        const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
         const val KEY_COLOR_PALETTE = "color_palette"

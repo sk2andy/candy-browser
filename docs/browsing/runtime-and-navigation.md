@@ -36,6 +36,9 @@
 - Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
 - Keep browser content edge-to-edge. The top safe area redraws a blurred content layer with a
   surface-tinted fade so status-bar icons stay legible without adding WebView padding.
+- Read page-scroll range, extent and offset through `BrowserWebView`. The optional Compose scroll
+  thumb observes scroll changes without replacing the controller's WebView scroll listener and is
+  removed from fullscreen/video-only presentation.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
 ## TLS trust channels

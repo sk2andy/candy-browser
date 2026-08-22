@@ -253,6 +253,9 @@
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>
     <string name="settings_full_immersive_mode_subtitle">Blendet Status- und Navigationsleiste aus. Vom Bildschirmrand wischen, um sie kurz einzublenden.</string>
+    <string name="settings_scroll_bar_title">Ziehbare Scrollleiste</string>
+    <string name="settings_scroll_bar_subtitle">Erscheint beim Scrollen und blendet sich danach aus. Ziehen, um lange Seiten direkt zu durchlaufen.</string>
+    <string name="scroll_bar_content_description">Scrollleiste der Seite</string>
     <string name="settings_video_autoplay_title">Automatische Videowiedergabe verhindern</string>
     <string name="settings_video_autoplay_subtitle">Videos starten nur, wenn du sie selbst abspielst.</string>
     <string name="settings_video_autoplay_unsupported">Erfordert eine neuere Android-WebView-Version.</string>

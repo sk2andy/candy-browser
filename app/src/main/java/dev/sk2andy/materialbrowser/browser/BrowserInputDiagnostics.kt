@@ -129,6 +129,20 @@ internal class BrowserWebView(
     fun acceptsPointerSession(captured: BrowserPointerSessionSnapshot): Boolean =
         pointerSessions.accepts(captured)
 
+    fun scrollMetricsSnapshot(): BrowserWebViewScrollMetrics = BrowserWebViewScrollMetrics(
+        offsetPx = computeVerticalScrollOffset().coerceAtLeast(0),
+        extentPx = computeVerticalScrollExtent().coerceAtLeast(0),
+        rangePx = computeVerticalScrollRange().coerceAtLeast(0),
+    )
+
+    fun scrollToVerticalOffset(offsetPx: Int) {
+        val metrics = scrollMetricsSnapshot()
+        scrollTo(
+            scrollX,
+            offsetPx.coerceIn(0, (metrics.rangePx - metrics.extentPx).coerceAtLeast(0)),
+        )
+    }
+
     override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
         if (!hasWindowFocus) pointerSessions.end()
         super.onWindowFocusChanged(hasWindowFocus)
@@ -140,6 +154,12 @@ internal class BrowserWebView(
         super.onDetachedFromWindow()
     }
 }
+
+internal data class BrowserWebViewScrollMetrics(
+    val offsetPx: Int,
+    val extentPx: Int,
+    val rangePx: Int,
+)
 
 internal class BrowserPointerSessionState {
     private var generation = 0L

@@ -255,6 +255,9 @@
     <string name="settings_section_browser">Navegador</string>
     <string name="settings_full_immersive_mode_title">Modo inmersivo a pantalla completa</string>
     <string name="settings_full_immersive_mode_subtitle">Oculta las barras de estado y navegación. Desliza desde un borde para mostrarlas temporalmente.</string>
+    <string name="settings_scroll_bar_title">Barra de desplazamiento arrastrable</string>
+    <string name="settings_scroll_bar_subtitle">Aparece al desplazarte y luego se desvanece. Arrástrala para recorrer páginas largas.</string>
+    <string name="scroll_bar_content_description">Barra de desplazamiento de la página</string>
     <string name="settings_video_autoplay_title">Impedir la reproducción automática de vídeos</string>
     <string name="settings_video_autoplay_subtitle">Los vídeos solo se inician cuando los reproduces.</string>
     <string name="settings_video_autoplay_unsupported">Requiere una versión más reciente de Android WebView.</string>

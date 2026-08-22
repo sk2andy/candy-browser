@@ -405,6 +405,8 @@ class BrowserController(
         private set
     var isFullImmersiveModeEnabled by mutableStateOf(false)
         private set
+    var isScrollBarEnabled by mutableStateOf(false)
+        private set
     var isVideoAutoplayBlocked by mutableStateOf(false)
         private set
     var appearanceSettings by mutableStateOf(AppearanceSettings())
@@ -1219,6 +1221,7 @@ class BrowserController(
         isAddressBarDocked = store.loadAddressBarDocked()
         isTabButtonVisible = store.loadTabButtonVisible()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
+        isScrollBarEnabled = store.loadScrollBarEnabled()
         isVideoAutoplayBlocked =
             isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
         appearanceSettings = store.loadAppearanceSettings()
@@ -3547,6 +3550,12 @@ class BrowserController(
         isFullImmersiveModeEnabled = enabled
         store.saveFullImmersiveModeEnabled(enabled)
         onFullImmersiveModeChanged(enabled)
+    }
+
+    fun updateScrollBarEnabled(enabled: Boolean) {
+        if (isScrollBarEnabled == enabled) return
+        isScrollBarEnabled = enabled
+        store.saveScrollBarEnabled(enabled)
     }
 
     fun updateVideoAutoplayBlocked(blocked: Boolean) {
