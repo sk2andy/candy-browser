@@ -41,16 +41,25 @@ class CandyDefaultRulesAssetInstrumentedTest {
 
     @Test
     fun networkHostAssetBuildsAllocationLightSortedIndex() {
-        val bytes = InstrumentationRegistry.getInstrumentation().targetContext.assets
+        val assets = InstrumentationRegistry.getInstrumentation().targetContext.assets
+        val bytes = assets
             .open("easylist_blocked_hosts.txt")
             .use { it.readBytes() }
 
         val index = SortedHostIndex.from(bytes)
 
-        assertEquals(55_004, index.size)
-        assertEquals(true, "0.0.0.1" in index)
+        assertEquals(100_377, index.size)
+        assertEquals(true, "0.myikas.com" in index)
         assertEquals(true, "zzzmjfixezere.site" in index)
         assertEquals(false, "example.com" in index)
+
+        val hagezi = SortedHostIndex.from(
+            assets.open("hagezi_blocked_hosts.txt").use { it.readBytes() },
+        )
+        assertEquals(166_089, hagezi.size)
+        assertEquals(true, "analyticsengine.s3.amazonaws.com" in hagezi)
+        assertEquals(true, "zzzwowosss.com" in hagezi)
+        assertEquals(false, "example.com" in hagezi)
     }
 
     @Test
@@ -59,30 +68,35 @@ class CandyDefaultRulesAssetInstrumentedTest {
             .open("easylist_cosmetic_rules.txt")
             .bufferedReader()
             .use { it.readText() }
-        val bundled = EasyListCosmeticRules.parse(text)
+        val bundled = EasyListCosmeticRules.parse(
+            text,
+            EasyListCosmeticRules.EASYLIST_V2_HEADER,
+        )
 
-        assertEquals(17_149, bundled.size)
-        assertEquals(16_497, bundled.hidingRules.size)
+        assertEquals(30_945, bundled.size)
+        assertEquals(30_139, bundled.hidingRules.size)
         assertEquals(652, bundled.exceptionRules.size)
+        assertEquals(154, bundled.genericHideExceptions.size)
+        assertEquals(13_642, bundled.genericSelectors().size)
         assertEquals(34, bundled.hidingRules.count { it.hostPattern == "www.google.*" })
         assertTrue(bundled.exceptionRules.any {
             it.hostPattern == "ads.google.com" && it.selector == ".video-ads"
         })
-        val google = bundled.selectors("https://www.google.com/search?q=hotel")
+        val google = bundled.scopedSelectors("https://www.google.com/search?q=hotel")
         assertTrue(google.toString(), "#tads[aria-label]" in google)
         assertTrue(google.toString(), "#google-s-ad" in google)
         assertTrue(google.toString(), "div[data-is-ad=\"1\"]" in google)
-        assertTrue(bundled.selectors("https://www.google.de/search?q=hotel").isNotEmpty())
-        assertTrue(bundled.selectors("https://www.google.fr/search?q=hotel").isNotEmpty())
-        assertTrue(bundled.selectors("https://www.google.co.kr/search?q=hotel").isNotEmpty())
-        assertTrue(bundled.selectors("https://www.google.com.sg/search?q=hotel").isNotEmpty())
-        assertTrue(bundled.selectors("https://www.google.evil.com/search?q=hotel").isEmpty())
-        assertTrue(bundled.selectors("https://www.google.com.de/search?q=hotel").isEmpty())
-        assertTrue(bundled.selectors("https://mail.google.com/").isEmpty())
-        assertTrue(bundled.selectors("https://maps.google.com/").isEmpty())
-        assertTrue(bundled.selectors("https://accounts.google.com/").isEmpty())
+        assertTrue(bundled.scopedSelectors("https://www.google.de/search?q=hotel").isNotEmpty())
+        assertTrue(bundled.scopedSelectors("https://www.google.fr/search?q=hotel").isNotEmpty())
+        assertTrue(bundled.scopedSelectors("https://www.google.co.kr/search?q=hotel").isNotEmpty())
+        assertTrue(bundled.scopedSelectors("https://www.google.com.sg/search?q=hotel").isNotEmpty())
+        assertTrue(bundled.scopedSelectors("https://www.google.evil.com/search?q=hotel").isEmpty())
+        assertTrue(bundled.scopedSelectors("https://www.google.com.de/search?q=hotel").isEmpty())
+        assertTrue(bundled.scopedSelectors("https://mail.google.com/").isEmpty())
+        assertTrue(bundled.scopedSelectors("https://maps.google.com/").isEmpty())
+        assertTrue(bundled.scopedSelectors("https://accounts.google.com/").isEmpty())
 
-        val reddit = bundled.selectors("https://www.reddit.com/r/popular/")
+        val reddit = bundled.scopedSelectors("https://www.reddit.com/r/popular/")
         assertTrue(reddit.toString(), "shreddit-ad-post" in reddit)
         assertTrue(reddit.toString(), "div[data-before-content=\"advertisement\"]" in reddit)
         assertTrue(reddit.toString(), reddit.any {
@@ -97,23 +111,23 @@ class CandyDefaultRulesAssetInstrumentedTest {
         assertTrue("script length=${googleScript.length}", googleScript.length in 1..64_000)
         assertTrue(blocker.adCosmeticDocumentStartScript("https://mail.google.com/").isEmpty())
 
-        val amazon = bundled.selectors("https://www.amazon.de/s?k=laptop")
+        val amazon = bundled.scopedSelectors("https://www.amazon.de/s?k=laptop")
         assertTrue(amazon.toString(), ".s-result-item:has(.puis-sponsored-label-text)" in amazon)
         assertTrue(
             amazon.toString(),
             "div[cel_widget_id^=\"MAIN-FEATURED_ASINS_LIST-\"]" in amazon,
         )
-        assertTrue(bundled.selectors("https://www.amazon.co.jp/s?k=laptop").isNotEmpty())
-        assertTrue(bundled.selectors("https://amazon.evil.com/s?k=laptop").isEmpty())
-        assertTrue(bundled.selectors("https://amazon.com.de/s?k=laptop").isEmpty())
+        assertTrue(bundled.scopedSelectors("https://www.amazon.co.jp/s?k=laptop").isNotEmpty())
+        assertTrue(bundled.scopedSelectors("https://amazon.evil.com/s?k=laptop").isEmpty())
+        assertTrue(bundled.scopedSelectors("https://amazon.com.de/s?k=laptop").isEmpty())
 
         val maximumHost = text.declaredValue("# Maximum resolved host:")
         val declaredMaximum = text.declaredValue("# Maximum resolved hide selectors:").toInt()
-        val maximumSelectors = bundled.selectors("https://$maximumHost/")
+        val maximumSelectors = bundled.scopedSelectors("https://$maximumHost/")
         val worstScript = CandyCosmeticScript.create(maximumSelectors)
         assertTrue(
             "host=$maximumHost, selectors=${maximumSelectors.size}, declared=$declaredMaximum",
-            maximumSelectors.size <= declaredMaximum && declaredMaximum <= 256,
+            maximumSelectors.size <= 256 && declaredMaximum >= bundled.genericSelectors().size,
         )
         assertTrue(
             "host=$maximumHost, script length=${worstScript.length}",
@@ -126,6 +140,7 @@ class CandyDefaultRulesAssetInstrumentedTest {
         val assets = InstrumentationRegistry.getInstrumentation().targetContext.assets
         val easyList = EasyListCosmeticRules.parse(
             assets.open("easylist_cosmetic_rules.txt").bufferedReader().use { it.readText() },
+            EasyListCosmeticRules.EASYLIST_V2_HEADER,
         )
         val uAssets = EasyListCosmeticRules.parse(
             assets.open("uassets_cosmetic_rules.txt").bufferedReader().use { it.readText() },
@@ -133,12 +148,25 @@ class CandyDefaultRulesAssetInstrumentedTest {
         )
         val merged = EasyListCosmeticRules.merge(easyList, uAssets)
 
-        assertEquals(2_002, uAssets.hidingRules.size)
-        assertEquals(50, uAssets.exceptionRules.size)
-        assertEquals(2_052, uAssets.size)
-        assertEquals(18_487, merged.hidingRules.size)
-        assertEquals(702, merged.exceptionRules.size)
-        assertEquals(19_189, merged.size)
+        assertEquals(8_630, uAssets.hidingRules.size)
+        assertEquals(467, uAssets.exceptionRules.size)
+        assertEquals(1_168, uAssets.genericHideExceptions.size)
+        assertEquals(10_265, uAssets.size)
+        assertEquals(38_725, merged.hidingRules.size)
+        assertEquals(1_119, merged.exceptionRules.size)
+        assertEquals(1_322, merged.genericHideExceptions.size)
+        assertEquals(41_166, merged.size)
+        val genericPayload = GenericCosmeticPayload.create(merged.genericSelectors())
+        assertEquals(13_864, genericPayload.selectorCount)
+        assertEquals(13_152, genericPayload.simpleSelectorCount)
+        assertEquals(712, genericPayload.complexSelectorCount)
+        assertTrue(genericPayload.encoded.length <= GenericCosmeticPayload.MAX_ENCODED_BYTES)
+        assertTrue(".ad-space" in merged.genericSelectors())
+        assertTrue(".ad-unit" in merged.genericSelectors())
+        assertEquals(
+            GenericCosmeticPolicy(disabled = true),
+            merged.genericPolicy("https://adblockplus.org/"),
+        )
 
         assertTrue(".ad-wrapper" in merged.selectors("https://www.bild.de/"))
         assertTrue(".Bloque-anuncios" in merged.selectors("https://www.elmundo.es/"))

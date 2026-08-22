@@ -1,14 +1,15 @@
-candy-advanced-filter:1
-# Generated uAssets URL-path, wildcard, and popup subset. Do not edit by hand.
+candy-advanced-filter:2
+# Generated uAssets URL-path, wildcard, popup, and popunder subset. Do not edit by hand.
 # Source: https://github.com/uBlockOrigin/uAssets
 # Source revision: 05bc031ad40c2270223f068f052970201ca1bf14
 # License: GPL-3.0; see uassets.LICENSE.txt
-# Rules: 1450
+# Rules: 1474
 # Request rules: 747
 # Popup rules: 703
+# Popunder rules: 24
 # Allow rules: 89
 # Maximum candidate bucket: target:st.pussyspace.com 13
-# Skipped unsupported rules: 5295
+# Skipped unsupported rules: 5271
 # Skipped conditional lines: 1016
 A	N	adtech.de	fC9kdC9jb21tb24vREFDLmpz	ekstrabladet.dk	-	*	-
 A	N	alwingulla.com	fC84OC90YWcubWluLmpz	darkino.*	-	*	-
@@ -1460,3 +1461,27 @@ B	P	x-ozwpiqlb.rocks	fF4	-	-	*	-
 B	P	xdgeslibgbim.icu	fF4	-	-	*	-
 B	P	yewfjsdi.it.com	fF4	-	-	*	-
 B	P	youweepingt.org	fF4	-	-	*	-
+B	U	*	Kg	acortalo.*,acortar.*	-	*	-
+B	U	*	Kg	alemannia-aachen.de	-	3	-
+B	U	*	Kg	bs.to,burningseries.*	-	3	-
+B	U	*	Kg	cambro.tv	-	*	-
+B	U	*	Kg	convert2mp3.tv	-	3	-
+B	U	*	Kg	drivelinks.me,hackshort.me	-	*	-
+B	U	*	Kg	h-flash.com	-	*	-
+B	U	*	Kg	hotpornfile.org	-	*	-
+B	U	*	Kg	illicoporno.com	-	*	-
+B	U	*	Kg	imgtorrnt.in	-	3	-
+B	U	*	Kg	jacquieetmichelelite.com	-	*	-
+B	U	*	Kg	m.pornoxo.com	-	3	-
+B	U	*	Kg	mp4porn.space	-	3	-
+B	U	*	Kg	multiup.eu,multiup.io,multiup.org	-	3	-
+B	U	*	Kg	new.lewd.ninja	-	*	-
+B	U	*	Kg	ouo.io	-	*	-
+B	U	*	Kg	pornclassic.tube,tubepornclassic.com	-	3	-
+B	U	*	Kg	proappapk.com	-	*	-
+B	U	*	Kg	r18hub.com	-	3	-
+B	U	*	Kg	realgfporn.com	-	*	-
+B	U	*	Kg	smutr.com	-	3	-
+B	U	*	Kg	txxx.*	-	3	-
+B	U	*	Kg	zbporn.com	-	*	-
+B	U	booking.com	fF4	viamichelin.*	-	*	-

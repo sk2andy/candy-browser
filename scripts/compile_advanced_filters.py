@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-FORMAT_HEADER = "candy-advanced-filter:1"
+FORMAT_HEADER = "candy-advanced-filter:2"
 SAFE_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 HOST_ANCHORED = re.compile(
     r"^\|\|([a-z0-9-]+(?:\.[a-z0-9-]+)*(?:\.\*)?)(.*)$",
@@ -46,6 +46,7 @@ class CompileStats:
     source_lines: int = 0
     request_rules: int = 0
     popup_rules: int = 0
+    popunder_rules: int = 0
     allow_rules: int = 0
     unsupported_rules: int = 0
     conditional_lines: int = 0
@@ -122,10 +123,13 @@ def parse_line(value: str, disabled: set[str]) -> AdvancedRecord | None:
     action = "A" if value.startswith("@@") else "B"
     body = value.removeprefix("@@")
     pattern, options = split_options(body)
-    if "badfilter" in options or "popunder" in options:
+    if "badfilter" in options:
         return None
-    scope = "P" if "popup" in options else "N"
-    accepted = {"popup", "doc", "document"} if scope == "P" else set()
+    popup_options = {option for option in options if option in ("popup", "popunder")}
+    if len(popup_options) > 1:
+        return None
+    scope = "P" if "popup" in popup_options else "U" if "popunder" in popup_options else "N"
+    accepted = popup_options | {"doc", "document"} if scope in ("P", "U") else set()
     accepted.update(SUPPORTED_PASSIVE_OPTIONS)
     party = "*"
     domain_option: str | None = None
@@ -210,12 +214,7 @@ def parse_native_popup_scriptlet(value: str) -> AdvancedRecord | None:
 
 def compile_sources(source_paths: list[Path]) -> tuple[list[AdvancedRecord], CompileStats]:
     stats = CompileStats()
-    source_lines = [
-        line
-        for source_path in source_paths
-        for line in source_path.read_text(encoding="utf-8").splitlines()
-    ]
-    disabled = badfilter_targets(source_lines)
+    active_lines: list[str] = []
     records: set[AdvancedRecord] = set()
     for source_path in source_paths:
         conditional_depth = 0
@@ -230,28 +229,32 @@ def compile_sources(source_paths: list[Path]) -> tuple[list[AdvancedRecord], Com
             if conditional_depth:
                 stats.conditional_lines += 1
                 continue
-            if not value or value.startswith(("!", "[")):
-                continue
-            native_popup = parse_native_popup_scriptlet(value)
-            if native_popup is not None:
-                records.add(native_popup)
-                continue
-            if any(marker in value for marker in ("##", "#@#", "#?#", "#$#", "#%#")):
-                continue
-            stats.source_lines += 1
-            if "$badfilter" in value or ",badfilter" in value:
-                stats.badfilter_rules += 1
-                continue
-            record = parse_line(value, disabled)
-            if record is None:
-                stats.unsupported_rules += 1
-                continue
-            records.add(record)
+            active_lines.append(value)
         if conditional_depth:
             raise ValueError(f"Unclosed conditional section in {source_path}")
+    disabled = badfilter_targets(active_lines)
+    for value in active_lines:
+        if not value or value.startswith(("!", "[")):
+            continue
+        native_popup = parse_native_popup_scriptlet(value)
+        if native_popup is not None:
+            records.add(native_popup)
+            continue
+        if any(marker in value for marker in ("##", "#@#", "#?#", "#$#", "#%#")):
+            continue
+        stats.source_lines += 1
+        if "$badfilter" in value or ",badfilter" in value:
+            stats.badfilter_rules += 1
+            continue
+        record = parse_line(value, disabled)
+        if record is None:
+            stats.unsupported_rules += 1
+            continue
+        records.add(record)
     ordered = sorted(records)
     stats.request_rules = sum(record.scope == "N" for record in ordered)
     stats.popup_rules = sum(record.scope == "P" for record in ordered)
+    stats.popunder_rules = sum(record.scope == "U" for record in ordered)
     stats.allow_rules = sum(record.action == "A" for record in ordered)
     return ordered, stats
 
@@ -281,13 +284,14 @@ def write_asset(
 ) -> None:
     lines = [
         FORMAT_HEADER,
-        "# Generated uAssets URL-path, wildcard, and popup subset. Do not edit by hand.",
+        "# Generated uAssets URL-path, wildcard, popup, and popunder subset. Do not edit by hand.",
         "# Source: https://github.com/uBlockOrigin/uAssets",
         f"# Source revision: {revision}",
         "# License: GPL-3.0; see uassets.LICENSE.txt",
         f"# Rules: {len(records)}",
         f"# Request rules: {stats.request_rules}",
         f"# Popup rules: {stats.popup_rules}",
+        f"# Popunder rules: {stats.popunder_rules}",
         f"# Allow rules: {stats.allow_rules}",
         f"# Maximum candidate bucket: {maximum_bucket(records)[0]} {maximum_bucket(records)[1]}",
         f"# Skipped unsupported rules: {stats.unsupported_rules}",
@@ -318,12 +322,18 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--min-request-rules", type=int, default=100)
     parser.add_argument("--min-popup-rules", type=int, default=10)
+    parser.add_argument("--min-popunder-rules", type=int, default=10)
     args = parser.parse_args()
     records, stats = compile_sources(args.source_file)
-    if stats.request_rules < args.min_request_rules or stats.popup_rules < args.min_popup_rules:
+    if (
+        stats.request_rules < args.min_request_rules
+        or stats.popup_rules < args.min_popup_rules
+        or stats.popunder_rules < args.min_popunder_rules
+    ):
         raise SystemExit(
             "Refusing advanced update: only "
-            f"{stats.request_rules} request / {stats.popup_rules} popup rules found"
+            f"{stats.request_rules} request / {stats.popup_rules} popup / "
+            f"{stats.popunder_rules} popunder rules found"
         )
     bucket_name, bucket_size = maximum_bucket(records)
     if len(records) > 5_000 or bucket_size > 64:
@@ -333,7 +343,8 @@ def main() -> None:
         )
     write_asset(args.output, args.revision, records, stats)
     print(
-        f"Wrote {stats.request_rules} request and {stats.popup_rules} popup rules; "
+        f"Wrote {stats.request_rules} request, {stats.popup_rules} popup, and "
+        f"{stats.popunder_rules} popunder rules; "
         f"skipped {stats.unsupported_rules} unsupported"
     )
 

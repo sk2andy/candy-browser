@@ -651,4 +651,6 @@
     <string name="reader_delete_snapshot">Delete offline article</string>
     <string name="media_notification_channel_name">Media playback</string>
     <string name="media_notification_channel_description">Controls media playing in Candy</string>
+    <string name="popup_blocked">Popup blocked</string>
+    <string name="action_open_popup">Open</string>
 </resources>

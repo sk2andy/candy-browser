@@ -642,4 +642,6 @@
     <string name="reader_delete_snapshot">Eliminar artículo sin conexión</string>
     <string name="media_notification_channel_name">Reproducción multimedia</string>
     <string name="media_notification_channel_description">Controla los medios que se reproducen en Candy</string>
+    <string name="popup_blocked">Ventana emergente bloqueada</string>
+    <string name="action_open_popup">Abrir</string>
 </resources>

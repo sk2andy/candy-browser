@@ -1,0 +1,3 @@
+# Curated owner-family exceptions for broad built-in host rules.
+# Format: request-host<TAB>page-host-pattern
+adservice.google.com	google.*

@@ -1,11 +1,42 @@
 package dev.sk2andy.materialbrowser.blocking
 
 import java.util.Base64
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AdvancedFilterRulesTest {
+    @Test
+    fun `popunder rules evaluate redirected opener against surviving child`() {
+        val rules = parse(
+            rule("B", "U", "*", "*", pages = "movies.example", party = "3"),
+            rule("A", "U", "safe.ads.example", "|/login", pages = "movies.example"),
+        )
+
+        assertEquals(
+            AdvancedFilterAction.Block,
+            rules.decidePopunder(
+                "https://ads.example/landing",
+                "https://movies.example/watch",
+            ),
+        )
+        assertEquals(
+            AdvancedFilterAction.Allow,
+            rules.decidePopunder(
+                "https://safe.ads.example/login",
+                "https://movies.example/watch",
+            ),
+        )
+        assertNull(
+            rules.decidePopunder(
+                "https://ads.example/landing",
+                "https://other.example/watch",
+            ),
+        )
+    }
+
     @Test
     fun `request rules match host paths and wildcards`() {
         val rules = parse(

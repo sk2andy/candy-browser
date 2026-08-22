@@ -5,8 +5,10 @@ import java.net.URI
 internal class RequestBlocker(
     hostRules: Sequence<String>,
     private val indexedHostRules: SortedHostIndex = SortedHostIndex.Empty,
+    private val additionalIndexedHostRules: List<SortedHostIndex> = emptyList(),
     blockedHostPairs: Sequence<String> = emptySequence(),
     allowedHostPairs: Sequence<String> = emptySequence(),
+    allowedFirstPartyFamilyPairs: Sequence<String> = emptySequence(),
 ) {
     private val blockedHosts = hostRules
         .map(String::trim)
@@ -17,6 +19,8 @@ internal class RequestBlocker(
         .toHashSet()
     private val blockedPageHostsByRequestHost = parseHostPairs(blockedHostPairs)
     private val allowedPageHostsByRequestHost = parseHostPairs(allowedHostPairs)
+    private val allowedPageHostPatternsByRequestHost =
+        parseHostPatternPairs(allowedFirstPartyFamilyPairs)
 
     private fun parseHostPairs(lines: Sequence<String>): Map<String, List<String>> = lines
         .map(String::trim)
@@ -30,6 +34,20 @@ internal class RequestBlocker(
                 return@mapNotNull null
             }
             requestHost to pageHost
+        }
+        .groupBy({ it.first }, { it.second })
+
+    private fun parseHostPatternPairs(lines: Sequence<String>): Map<String, List<String>> = lines
+        .map(String::trim)
+        .filter { it.isNotEmpty() && !it.startsWith('#') }
+        .mapNotNull { line ->
+            val fields = line.lowercase().split('\t', limit = 2)
+            if (fields.size != 2) return@mapNotNull null
+            val requestHost = fields[0].trim('.')
+            val pageHostPattern = CosmeticHostPattern.canonicalize(fields[1])
+                ?: return@mapNotNull null
+            if (!requestHost.isHostRule()) return@mapNotNull null
+            requestHost to pageHostPattern
         }
         .groupBy({ it.first }, { it.second })
 
@@ -55,11 +73,16 @@ internal class RequestBlocker(
             isSameHostOrSubdomain(normalizedRequestHost, normalizedPageHost)
         ) return false
         if (isAllowedByFilterException(normalizedRequestHost, normalizedPageHost)) return false
+        if (isAllowedByFirstPartyFamily(normalizedRequestHost, normalizedPageHost)) return false
         if (isBlockedByFilterPair(normalizedRequestHost, normalizedPageHost)) return true
 
         var candidate = normalizedRequestHost
         while (true) {
-            if (candidate in blockedHosts || candidate in indexedHostRules) return true
+            if (
+                candidate in blockedHosts ||
+                candidate in indexedHostRules ||
+                additionalIndexedHostRules.any { index -> candidate in index }
+            ) return true
             val dot = candidate.indexOf('.')
             if (dot < 0) return false
             candidate = candidate.substring(dot + 1)
@@ -96,6 +119,25 @@ internal class RequestBlocker(
             ) {
                 return true
             }
+
+            val dot = candidate.indexOf('.')
+            if (dot < 0) return false
+            candidate = candidate.substring(dot + 1)
+        }
+    }
+
+    private fun isAllowedByFirstPartyFamily(
+        requestHost: String,
+        pageHost: String?,
+    ): Boolean {
+        if (pageHost == null) return false
+        var candidate = requestHost
+        while (true) {
+            val allowedPatterns = allowedPageHostPatternsByRequestHost[candidate]
+            if (allowedPatterns != null && allowedPatterns.any { pattern ->
+                    CosmeticHostPattern.matches(pageHost, pattern)
+                }
+            ) return true
 
             val dot = candidate.indexOf('.')
             if (dot < 0) return false

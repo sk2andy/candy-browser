@@ -91,6 +91,12 @@ class UassetsFilterAssetInstrumentedTest {
                 "https://eurogamer.net/file",
             ),
         )
+        assertTrue(
+            blocker.shouldBlockPopup(
+                "https://displayendpointstarring.com/",
+                "https://canyoublockit.com/extreme-test/",
+            ),
+        )
         assertTrue(blocker.windowOpenDefuserScript("https://dailyuploads.net/file").isNotEmpty())
         val proceduralScript = blocker.adProceduralDocumentStartScript(
             "https://aranzulla.it/article",

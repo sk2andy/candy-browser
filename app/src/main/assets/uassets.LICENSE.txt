@@ -9,8 +9,8 @@ License: GNU General Public License version 3
 
 Modification notice:
 - Exact host and positive site-to-host rules supported by Candy are compiled into plain lists.
-- Domain-specific standard CSS rules and their exceptions are compiled separately.
-- Bounded host-anchored URL-path/wildcard and popup rules are compiled separately.
+- Domain-specific and bounded generic CSS rules, #@# exceptions, and $ghide sites are compiled separately.
+- Bounded host-anchored URL-path/wildcard, popup, and popunder rules are compiled separately.
 - Literal :has-text and :remove rules use Candy-owned bounded declarative runtime.
 - +js(nowoif) is translated into Candy-owned window.open policy; no upstream JavaScript is shipped.
 - Regexes, redirects, arbitrary scriptlets, and trusted JavaScript are excluded.

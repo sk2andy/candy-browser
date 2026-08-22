@@ -75,10 +75,104 @@ class EasyListCosmeticRulesTest {
         assertEquals(4, merged.size)
     }
 
+    @Test
+    fun `generic rules respect selector exceptions and generic hide exceptions`() {
+        val rules = EasyListCosmeticRules.parse(
+            asset(
+                "H\t*\t-\t${encode(".generic-ad")}",
+                "H\texample.com\t-\t${encode(".specific-ad")}",
+                "A\tnews.example.com\t-\t${encode(".generic-ad")}",
+                "D\tshop.example.com\t-\t-",
+                "D\tstream.*\tsafe.stream.de\t-",
+                header = EasyListCosmeticRules.UASSETS_HEADER,
+            ),
+            EasyListCosmeticRules.UASSETS_HEADER,
+        )
+
+        assertEquals(
+            listOf(".generic-ad", ".specific-ad"),
+            rules.selectors("https://example.com/"),
+        )
+        assertEquals(
+            listOf(".specific-ad"),
+            rules.selectors("https://news.example.com/"),
+        )
+        assertEquals(
+            listOf(".specific-ad"),
+            rules.selectors("https://shop.example.com/"),
+        )
+        assertTrue(rules.selectors("https://video.stream.de/").isEmpty())
+        assertEquals(
+            listOf(".generic-ad"),
+            rules.selectors("https://safe.stream.de/"),
+        )
+    }
+
+    @Test
+    fun `easylist v2 resolves generic policy without entering scoped payload`() {
+        val rules = EasyListCosmeticRules.parse(
+            asset(
+                "H\t*\t-\t${encode(".generic-ad")}",
+                "H\t*\tnews.example.com\t${encode("#conditional-ad")}",
+                "H\texample.com\t-\t${encode(".scoped-ad")}",
+                "A\tnews.example.com\t-\t${encode(".generic-ad")}",
+                header = EasyListCosmeticRules.EASYLIST_V2_HEADER,
+            ),
+            EasyListCosmeticRules.EASYLIST_V2_HEADER,
+        )
+
+        assertEquals(listOf(".scoped-ad"), rules.scopedSelectors("https://news.example.com/"))
+        assertEquals(
+            GenericCosmeticPolicy(
+                disabled = false,
+                deniedSelectors = listOf("#conditional-ad", ".generic-ad"),
+            ),
+            rules.genericPolicy("https://news.example.com/"),
+        )
+        assertEquals(
+            GenericCosmeticPolicy(disabled = false),
+            rules.genericPolicy("https://shop.example.com/"),
+        )
+        assertEquals(
+            GenericCosmeticPolicy(disabled = false),
+            rules.genericPolicyForHost("SHOP.EXAMPLE.COM."),
+        )
+        assertEquals(
+            GenericCosmeticPolicy(disabled = true),
+            rules.genericPolicyForHost("not a host"),
+        )
+    }
+
+    @Test
+    fun `generic hide exception disables generics but preserves scoped selectors`() {
+        val rules = EasyListCosmeticRules.parse(
+            asset(
+                "H\t*\t-\t${encode(".generic-ad")}",
+                "H\texample.com\t-\t${encode(".scoped-ad")}",
+                "D\tnews.example.com\t-\t-",
+                header = EasyListCosmeticRules.EASYLIST_V2_HEADER,
+            ),
+            EasyListCosmeticRules.EASYLIST_V2_HEADER,
+        )
+
+        assertEquals(listOf(".scoped-ad"), rules.scopedSelectors("https://news.example.com/"))
+        assertEquals(
+            GenericCosmeticPolicy(disabled = true),
+            rules.genericPolicy("https://news.example.com/"),
+        )
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun `parser rejects wrong source header`() {
         EasyListCosmeticRules.parse(
             asset(header = EasyListCosmeticRules.UASSETS_HEADER),
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `easylist v1 parser rejects generic grammar`() {
+        EasyListCosmeticRules.parse(
+            asset("H\t*\t-\t${encode(".generic-ad")}"),
         )
     }
 
@@ -91,6 +185,7 @@ class EasyListCosmeticRulesTest {
                 header,
                 "# Hide rules: ${lines.count { it.startsWith("H\t") }}",
                 "# Exception rules: ${lines.count { it.startsWith("A\t") }}",
+                "# Generic hide exceptions: ${lines.count { it.startsWith("D\t") }}",
             ) + lines
         ).joinToString("\n")
 

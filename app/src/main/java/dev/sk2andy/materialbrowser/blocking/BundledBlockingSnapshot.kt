@@ -23,10 +23,22 @@ internal class BundledBlockingSnapshotProvider private constructor(context: Cont
                         appContext.assets.open("easylist_blocked_hosts.txt").use { it.readBytes() },
                     )
                 }.getOrDefault(SortedHostIndex.Empty),
+                additionalIndexedHostRules = listOf(
+                    runCatching {
+                        SortedHostIndex.from(
+                            appContext.assets.open("hagezi_blocked_hosts.txt").use {
+                                it.readBytes()
+                            },
+                        )
+                    }.getOrDefault(SortedHostIndex.Empty),
+                ),
                 blockedHostPairs = loadLinesOrEmpty("uassets_blocked_host_pairs.txt"),
                 allowedHostPairs = loadLinesOrEmpty(
                     "easylist_allowed_host_pairs.txt",
                     "uassets_allowed_host_pairs.txt",
+                ),
+                allowedFirstPartyFamilyPairs = loadLinesOrEmpty(
+                    "first_party_family_allowed_host_pairs.txt",
                 ),
             )
         }.getOrElse { EMPTY_SNAPSHOT.requestBlocker }

@@ -619,6 +619,8 @@ fun BrowserScreen(
     val favoriteRemovedMessage = stringResource(R.string.favorite_removed_confirmation)
     val snoozeConfirmationMessage = stringResource(R.string.snooze_confirmation)
     val undoLabel = stringResource(R.string.action_undo)
+    val popupBlockedMessage = stringResource(R.string.popup_blocked)
+    val openPopupLabel = stringResource(R.string.action_open_popup)
     val toggleFavoriteWithFeedback: (String) -> Unit = { tabId ->
         controller.toggleFavorite(tabId)?.let { mutation ->
             rootView.performConfirmHaptic()
@@ -643,6 +645,25 @@ fun BrowserScreen(
                     controller.undoFavorite(mutation)
                 }
             }
+        }
+    }
+    val blockedPopupOffer = controller.blockedPopupOffer
+    LaunchedEffect(blockedPopupOffer?.token) {
+        val offer = blockedPopupOffer ?: return@LaunchedEffect
+        var opened = false
+        try {
+            val result = feedbackSnackbarHostState.showSnackbar(
+                message = popupBlockedMessage,
+                actionLabel = openPopupLabel,
+                withDismissAction = true,
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                opened = true
+                controller.openBlockedPopup(offer.token)
+            }
+        } finally {
+            if (!opened) controller.dismissBlockedPopup(offer.token)
         }
     }
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }

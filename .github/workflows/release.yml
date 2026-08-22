@@ -140,27 +140,41 @@ jobs:
           CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
         run: |
           candy_owned_filter_sources=(
+            app/src/main/assets/blocked_hosts.txt
             app/src/main/assets/candy_default_rules.txt
             app/src/main/assets/cookie_banner_overrides.css
+            app/src/main/assets/first_party_family_allowed_host_pairs.txt
             app/src/main/java/dev/sk2andy/materialbrowser/blocking/AdvancedFilterRules.kt
             app/src/main/java/dev/sk2andy/materialbrowser/blocking/BundledBlockingSnapshot.kt
             app/src/main/java/dev/sk2andy/materialbrowser/blocking/CandyRuleFormat.kt
+            app/src/main/java/dev/sk2andy/materialbrowser/blocking/EasyListCosmeticRules.kt
+            app/src/main/java/dev/sk2andy/materialbrowser/blocking/GenericCosmeticRuntime.kt
             app/src/main/java/dev/sk2andy/materialbrowser/blocking/ProceduralCosmeticRules.kt
+            app/src/main/java/dev/sk2andy/materialbrowser/blocking/RequestBlocker.kt
           )
           candy_owned_filter_hashes="$(sha256sum "${candy_owned_filter_sources[@]}")"
+          python3 scripts/test_compile_easylist_hosts.py
           python3 scripts/test_compile_easylist_cosmetic.py
+          python3 scripts/test_compile_hagezi_hosts.py
           python3 scripts/test_compile_uassets_cosmetic.py
           python3 scripts/test_compile_advanced_filters.py
           python3 scripts/test_compile_procedural_cosmetic.py
-          scripts/update_easylist_cosmetic.sh
+          scripts/update_content_filter_hosts.sh
           scripts/update_uassets_filters.sh
+          scripts/update_hagezi_hosts.sh
+          scripts/update_easylist_cosmetic.sh
           if [[ "$(sha256sum "${candy_owned_filter_sources[@]}")" != \
             "$candy_owned_filter_hashes" ]]; then
             echo "Upstream filter generation modified Candy-owned filter sources." >&2
             git diff -- "${candy_owned_filter_sources[@]}" >&2
             exit 1
           fi
-          git diff --exit-code -- app/src/main/assets/easylist_cosmetic_rules.txt
+          git diff --exit-code -- \
+            app/src/main/assets/easylist_allowed_host_pairs.txt \
+            app/src/main/assets/easylist_blocked_hosts.txt \
+            app/src/main/assets/easylist_cosmetic_rules.txt \
+            app/src/main/assets/hagezi.LICENSE.txt \
+            app/src/main/assets/hagezi_blocked_hosts.txt
           git diff --exit-code -- \
             app/src/main/assets/uassets.LICENSE.txt \
             app/src/main/assets/uassets_advanced_filters.txt \

@@ -642,4 +642,6 @@
     <string name="reader_delete_snapshot">Eliminar artigo offline</string>
     <string name="media_notification_channel_name">Reprodução de multimédia</string>
     <string name="media_notification_channel_description">Controla os conteúdos reproduzidos no Candy</string>
+    <string name="popup_blocked">Pop-up bloqueado</string>
+    <string name="action_open_popup">Abrir</string>
 </resources>

@@ -6,18 +6,30 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.CompletableFuture
 
 class ContentBlocker(context: Context) {
+    private data class CompiledCosmeticRules(
+        val rules: EasyListCosmeticRules,
+        val genericPayload: GenericCosmeticPayload,
+    )
+
     private val appContext = context.applicationContext
     private val candyDefaultRules by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         BundledCandyRules.parseOrEmpty(readAssetOrEmpty("candy_default_rules.txt"))
     }
     private val compiledCosmeticRulesFuture by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         CompletableFuture.supplyAsync {
-            EasyListCosmeticRules.merge(
-                EasyListCosmeticRules.parse(readAssetOrEmpty("easylist_cosmetic_rules.txt")),
+            val rules = EasyListCosmeticRules.merge(
+                EasyListCosmeticRules.parse(
+                    readAssetOrEmpty("easylist_cosmetic_rules.txt"),
+                    EasyListCosmeticRules.EASYLIST_V2_HEADER,
+                ),
                 EasyListCosmeticRules.parse(
                     readAssetOrEmpty("uassets_cosmetic_rules.txt"),
                     EasyListCosmeticRules.UASSETS_HEADER,
                 ),
+            )
+            CompiledCosmeticRules(
+                rules = rules,
+                genericPayload = GenericCosmeticPayload.create(rules.genericSelectors()),
             )
         }
     }
@@ -101,7 +113,23 @@ class ContentBlocker(context: Context) {
     }
 
     fun shouldBlockPopup(targetUrl: String, openerUrl: String?): Boolean =
-        bundledBlockingSnapshot.snapshot().advancedRules.shouldBlockPopup(targetUrl, openerUrl)
+        decidePopup(targetUrl, openerUrl) == AdvancedFilterAction.Block
+
+    internal fun decidePopup(targetUrl: String, openerUrl: String?): AdvancedFilterAction? {
+        val snapshot = bundledBlockingSnapshot.snapshot()
+        snapshot.advancedRules.decidePopup(targetUrl, openerUrl)?.let { return it }
+        val targetHost = runCatching { java.net.URI(targetUrl).host }.getOrNull()
+        val openerHost = runCatching { java.net.URI(openerUrl).host }.getOrNull()
+        return AdvancedFilterAction.Block.takeIf {
+            snapshot.requestBlocker.shouldBlockHosts(targetHost, openerHost)
+        }
+    }
+
+    internal fun decidePopunder(
+        openerTargetUrl: String,
+        childUrl: String?,
+    ): AdvancedFilterAction? = bundledBlockingSnapshot.snapshot().advancedRules
+        .decidePopunder(openerTargetUrl, childUrl)
 
     fun shouldBlockPopupWithoutTarget(openerUrl: String?): Boolean =
         bundledBlockingSnapshot.snapshot().advancedRules.shouldBlockPopupWithoutTarget(openerUrl)
@@ -116,9 +144,33 @@ class ContentBlocker(context: Context) {
         bundledBlockingSnapshot.snapshot().requestBlocker.shouldBlockHosts(requestHost, pageHost)
 
     fun adCosmeticSelectors(pageUrl: String?): List<String> {
-        val compiled = compiledCosmeticRulesIfReady()?.selectors(pageUrl).orEmpty()
+        val compiled = compiledCosmeticRulesIfReady()?.rules?.scopedSelectors(pageUrl).orEmpty()
         return (candyDefaultRules.adCosmeticSelectors(pageUrl) + compiled).distinct()
     }
+
+    internal fun genericCosmeticPayload(): String =
+        compiledCosmeticRulesFuture.join().genericPayload.encoded
+
+    internal fun genericCosmeticPolicyForHost(host: String?): String = runCatching {
+        GenericCosmeticPolicyEncoding.encode(
+            compiledCosmeticRulesFuture.join().rules.genericPolicyForHost(host),
+        )
+    }.getOrDefault(GenericCosmeticPolicyEncoding.DISABLED)
+
+    fun genericCosmeticDocumentStartScript(
+        pausedHosts: Collection<String> = emptyList(),
+        bridgeToken: String,
+    ): String = if (compiledCosmeticRulesIfReady() == null) {
+        ""
+    } else {
+        GenericCosmeticScript.create(
+            pausedHosts = pausedHosts,
+            bridgeToken = bridgeToken,
+        )
+    }
+
+    val genericCosmeticCleanupScript: String
+        get() = GenericCosmeticScript.cleanupScript
 
     fun adCosmeticDocumentStartScript(
         pageUrl: String?,
@@ -139,7 +191,7 @@ class ContentBlocker(context: Context) {
         bundledBlockingSnapshot.snapshot()
     }
 
-    private fun compiledCosmeticRulesIfReady(): EasyListCosmeticRules? {
+    private fun compiledCosmeticRulesIfReady(): CompiledCosmeticRules? {
         val future = compiledCosmeticRulesFuture
         if (!future.isDone) return null
         return runCatching { future.getNow(null) }.getOrNull()

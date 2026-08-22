@@ -48,18 +48,23 @@ for source_name in $ADVANCED_SOURCE_NAMES; do
 done > "$TEMP_DIR/uassets_advanced_filters_source.txt"
 
 python3 "$PROJECT_DIR/scripts/compile_easylist_cosmetic.py" \
-    --source-file "$TEMP_DIR/source.txt" \
+    --source-file "$TEMP_DIR/uassets_advanced_filters_source.txt" \
     --asset-kind uassets \
+    --include-generics \
     --revision "$SOURCE_REVISION" \
     --output "$TEMP_DIR/uassets_cosmetic_rules.txt" \
-    --min-hide-rules 1500
+    --min-hide-rules 8000 \
+    --min-exception-rules 400 \
+    --min-generic-rules 200 \
+    --min-generic-hide-exceptions 1000
 
 python3 "$PROJECT_DIR/scripts/compile_advanced_filters.py" \
     --source-file "$TEMP_DIR/uassets_advanced_filters_source.txt" \
     --revision "$SOURCE_REVISION" \
     --output "$TEMP_DIR/uassets_advanced_filters.txt" \
     --min-request-rules 250 \
-    --min-popup-rules 25
+    --min-popup-rules 25 \
+    --min-popunder-rules 20
 
 python3 "$PROJECT_DIR/scripts/compile_procedural_cosmetic.py" \
     --source-file "$TEMP_DIR/uassets_advanced_filters_source.txt" \
@@ -185,8 +190,8 @@ write_header() {
     printf '%s\n' ''
     printf '%s\n' 'Modification notice:'
     printf '%s\n' '- Exact host and positive site-to-host rules supported by Candy are compiled into plain lists.'
-    printf '%s\n' '- Domain-specific standard CSS rules and their exceptions are compiled separately.'
-    printf '%s\n' '- Bounded host-anchored URL-path/wildcard and popup rules are compiled separately.'
+    printf '%s\n' '- Domain-specific and bounded generic CSS rules, #@# exceptions, and $ghide sites are compiled separately.'
+    printf '%s\n' '- Bounded host-anchored URL-path/wildcard, popup, and popunder rules are compiled separately.'
     printf '%s\n' '- Literal :has-text and :remove rules use Candy-owned bounded declarative runtime.'
     printf '%s\n' '- +js(nowoif) is translated into Candy-owned window.open policy; no upstream JavaScript is shipped.'
     printf '%s\n' '- Regexes, redirects, arbitrary scriptlets, and trusted JavaScript are excluded.'

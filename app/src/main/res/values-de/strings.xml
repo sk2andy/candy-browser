@@ -638,4 +638,6 @@
     <string name="reader_delete_snapshot">Offline-Artikel löschen</string>
     <string name="media_notification_channel_name">Medienwiedergabe</string>
     <string name="media_notification_channel_description">Steuert Medien, die in Candy abgespielt werden</string>
+    <string name="popup_blocked">Pop-up blockiert</string>
+    <string name="action_open_popup">Öffnen</string>
 </resources>

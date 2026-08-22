@@ -63,6 +63,7 @@ import androidx.webkit.WebStorageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.blocking.AdvancedFilterAction
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.BundledSitePrivacyDefaults
 import dev.sk2andy.materialbrowser.blocking.CandyCosmeticScript
@@ -91,6 +92,8 @@ import dev.sk2andy.materialbrowser.blocking.ContentBlocker
 import dev.sk2andy.materialbrowser.blocking.ConsentRequestRules
 import dev.sk2andy.materialbrowser.blocking.ForcedPageZoomScript
 import dev.sk2andy.materialbrowser.blocking.ForcedVerticalScrollScript
+import dev.sk2andy.materialbrowser.blocking.GenericCosmeticPolicyCache
+import dev.sk2andy.materialbrowser.blocking.GenericCosmeticScript
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestSanitizer
 import dev.sk2andy.materialbrowser.blocking.PrivacyPolicyRules
 import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
@@ -494,6 +497,14 @@ class BrowserController(
     fun isBundledBlockingReadyForTesting(): Boolean = blockingStartGate.isReady
 
     @VisibleForTesting
+    val pendingPopupCountForTesting: Int
+        get() = pendingPopupNavigations.size
+
+    @VisibleForTesting
+    val transientPopupCountForTesting: Int
+        get() = transientPopupTabIds.size
+
+    @VisibleForTesting
     fun selectedTabForTesting(): BrowserTab = selectedTab
 
     @VisibleForTesting
@@ -561,12 +572,18 @@ class BrowserController(
     private val forcedPageZoomScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
+    private val genericCosmeticBridges = mutableMapOf<WebView, GenericCosmeticBridge>()
     private val videoAutoplayScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val userScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
     private var userScriptMutationPending = false
     private var toppingCatalogRefreshGeneration = 0
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
     private val pendingPopupNavigations = mutableMapOf<String, PendingPopupNavigation>()
+    private val pendingPopunderNavigations = mutableMapOf<String, PendingPopunderNavigation>()
+    private val transientPopupTabIds = mutableSetOf<String>()
+    private var blockedPopupSequence = 0L
+    internal var blockedPopupOffer by mutableStateOf<BlockedPopupOffer?>(null)
+        private set
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val webViewProfileKeys = ConcurrentHashMap<String, String>()
     private val configuredServiceWorkerProfiles = mutableSetOf<String>()
@@ -670,7 +687,9 @@ class BrowserController(
             ?: tabs.first()
 
     val activeTabs: List<BrowserTab>
-        get() = tabs.filter { it.profileId == activeProfileId }
+        get() = tabs.filter { tab ->
+            tab.profileId == activeProfileId && tab.id !in transientPopupTabIds
+        }
 
     val canToggleSelectedDomainMute: Boolean
         get() = canToggleDomainMute(selectedTabId)
@@ -1289,7 +1308,7 @@ class BrowserController(
         touchTab(selectedTabId, nowMillis)
         if (initialSnoozeRestore.completedTabIds.isNotEmpty()) {
             val snapshotPersisted = store.saveTabsAndSnoozedImmediately(
-                tabs = tabs.toList(),
+                tabs = persistableTabs(tabs),
                 selectedTabId = selectedTabId,
                 snoozedTabs = snoozedTabs,
             )
@@ -1937,6 +1956,30 @@ class BrowserController(
         }
     }
 
+    private inner class GenericCosmeticBridge {
+        val token: String = UUID.randomUUID().toString()
+        private val policyCache = GenericCosmeticPolicyCache(
+            maxEntries = MAX_GENERIC_POLICY_CACHE_ENTRIES,
+            resolve = contentBlocker::genericCosmeticPolicyForHost,
+        )
+
+        @JavascriptInterface
+        fun payload(candidateToken: String): String = if (candidateToken == token) {
+            contentBlocker.genericCosmeticPayload()
+        } else {
+            ""
+        }
+
+        @JavascriptInterface
+        fun policy(candidateToken: String, rawHost: String): String {
+            if (candidateToken != token || rawHost.length !in 1..MAX_GENERIC_POLICY_HOST_LENGTH) {
+                return "!"
+            }
+            val host = CandyHostCanonicalizer.canonicalHost(rawHost) ?: return "!"
+            return policyCache.get(host)
+        }
+    }
+
     private fun setPageEdgeToEdge(
         tabId: String,
         webView: WebView,
@@ -2433,7 +2476,11 @@ class BrowserController(
         return tab.id
     }
 
-    fun createBackgroundTab(initialUrl: String, openerTabId: String? = null): String? {
+    fun createBackgroundTab(
+        initialUrl: String,
+        openerTabId: String? = null,
+        transientPopup: Boolean = false,
+    ): String? {
         pruneStaleTabs()
         if (tabs.size >= MAX_TABS) {
             Toast.makeText(
@@ -2444,7 +2491,11 @@ class BrowserController(
             return null
         }
         val openerTab = openerTabId?.let { id -> tabs.firstOrNull { tab -> tab.id == id } }
-        val resolvedUrl = AddressResolver.resolve(initialUrl, searchEngine)
+        val resolvedUrl = if (initialUrl == BLANK_URL) {
+            BLANK_URL
+        } else {
+            AddressResolver.resolve(initialUrl, searchEngine)
+        }
         val tab = newTabState(
             url = resolvedUrl,
             nowMillis = System.currentTimeMillis(),
@@ -2453,11 +2504,41 @@ class BrowserController(
             profileId = openerTab?.profileId ?: activeProfileId,
         )
         tabs += tab
+        if (transientPopup) transientPopupTabIds += tab.id
         persist()
         pauseWebView(webViewFor(tab.id))
-        contentActions.requestAddressBarPulse()
-        contentActions.dismiss()
+        if (!transientPopup) {
+            contentActions.requestAddressBarPulse()
+            contentActions.dismiss()
+        }
         return tab.id
+    }
+
+    fun openBlockedPopup(token: Long) {
+        val offer = blockedPopupOffer?.takeIf { it.token == token } ?: return
+        val tab = tabs.firstOrNull { it.id == offer.popupTabId } ?: run {
+            blockedPopupOffer = null
+            return
+        }
+        val view = webViews[tab.id] ?: run {
+            blockedPopupOffer = null
+            closeTab(tab.id)
+            return
+        }
+        blockedPopupOffer = null
+        transientPopupTabIds.remove(tab.id)
+        if (tab.profileId != activeProfileId && profilesEnabled) selectProfile(tab.profileId)
+        updateTab(tab.id) { current ->
+            current.copy(url = offer.targetUrl, isLoading = true, progress = 0, error = null)
+        }
+        loadUrlWithProtection(tab.id, view, offer.targetUrl)
+        selectTab(tab.id)
+    }
+
+    fun dismissBlockedPopup(token: Long) {
+        val offer = blockedPopupOffer?.takeIf { it.token == token } ?: return
+        blockedPopupOffer = null
+        closeTab(offer.popupTabId)
     }
 
     fun createProfile(emoji: String, isolationEnabled: Boolean = false): String? {
@@ -3009,7 +3090,7 @@ class BrowserController(
             }
         }
         if (!store.saveTabsAndSnoozedImmediately(
-                tabs = updatedTabs,
+                tabs = persistableTabs(updatedTabs),
                 selectedTabId = updatedSelection,
                 snoozedTabs = updatedSnoozed,
             )
@@ -3055,7 +3136,7 @@ class BrowserController(
         ) ?: return false
         if (!profilesEnabled && result.restoredTab.profileId != profiles.first().id) return false
         if (!store.saveTabsAndSnoozedImmediately(
-                tabs = result.tabs,
+                tabs = persistableTabs(result.tabs),
                 selectedTabId = result.selectedTabId,
                 snoozedTabs = result.snoozedTabs,
             )
@@ -3114,7 +3195,7 @@ class BrowserController(
         val previousWebView = webViews[selectedTabId]
         val remaining = SnoozeMutationRules.deleted(snoozedTabs, tabId) ?: return false
         if (!store.saveTabsAndSnoozedImmediately(
-                tabs = result.tabs,
+                tabs = persistableTabs(result.tabs),
                 selectedTabId = tabId,
                 snoozedTabs = remaining,
             )
@@ -3635,7 +3716,9 @@ class BrowserController(
         }
         if (requestFilterSettingChanged) {
             webViews.forEach { (tabId, webView) ->
+                if (tabId in transientPopupTabIds) return@forEach
                 webView.evaluateJavascript(CandyCosmeticScript.cleanupScript, null)
+                webView.evaluateJavascript(contentBlocker.genericCosmeticCleanupScript, null)
                 webView.evaluateJavascript(CandyProceduralCosmeticScript.cleanupScript, null)
                 webView.evaluateJavascript(CandyWindowOpenDefuserScript.cleanupScript, null)
                 if (settings.blockAdsAndTrackers) {
@@ -3648,11 +3731,13 @@ class BrowserController(
         }
         if (cookieConsentSettingChanged && !settings.hideCookieConsent) {
             webViews.forEach { (tabId, webView) ->
+                if (tabId in transientPopupTabIds) return@forEach
                 updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
                 webView.reload()
             }
         } else if (requestFilterSettingChanged) {
             webViews.forEach { (tabId, webView) ->
+                if (tabId in transientPopupTabIds) return@forEach
                 updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
                 webView.reload()
             }
@@ -4151,7 +4236,11 @@ class BrowserController(
             request.timeout?.let(mainHandler::removeCallbacks)
         }
         pendingPreviewCaptures.clear()
+        transientPopupTabIds.toList().forEach(::discardTransientPopup)
         pendingPopupNavigations.clear()
+        pendingPopunderNavigations.clear()
+        transientPopupTabIds.clear()
+        blockedPopupOffer = null
         cancelAllPendingBlockingStarts()
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
@@ -4185,6 +4274,7 @@ class BrowserController(
         userScriptHandlers.clear()
         webMediaScriptHandlers.clear()
         webMediaBridgeTokens.clear()
+        genericCosmeticBridges.clear()
         retiredWebMediaDocumentIds.clear()
         webMediaChannels.clear()
         activeWebMediaKey = null
@@ -4259,6 +4349,10 @@ class BrowserController(
         navigationGenerations[tabId] = 0
         installWebMediaBridge(tabId, this)
         addJavascriptInterface(ViewportFitBridge(tabId, this), PageViewportFit.bridgeName)
+        GenericCosmeticBridge().also { bridge ->
+            genericCosmeticBridges[this] = bridge
+            addJavascriptInterface(bridge, GenericCosmeticScript.BRIDGE_NAME)
+        }
         val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         setBackgroundColor(if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE)
         with(settings) {
@@ -4389,9 +4483,14 @@ class BrowserController(
     private fun browserWebViewClient(tabId: String) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             if (isPendingInitialBlank(tabId, url)) return
-            if (handlePendingPopupNavigation(tabId, view, url) == PopupNavigationDecision.Block) {
+            if (isQuarantinedPopup(tabId)) {
+                view.stopLoading()
                 return
             }
+            if (handlePendingPopupNavigation(tabId, view, url).isBlocked) {
+                return
+            }
+            if (handlePendingPopunderOpenerNavigation(tabId, view, url)) return
             clearWebMediaForTab(tabId)
             fullscreenVideoSession
                 ?.takeIf { session -> session.tabId == tabId && session.webView === view }
@@ -4425,6 +4524,7 @@ class BrowserController(
         }
 
         override fun onPageCommitVisible(view: WebView, url: String) {
+            if (isQuarantinedPopup(tabId)) return
             detectPageEdgeToEdge(tabId, view)
             injectCookieConsentCss(tabId, view, url)
             injectForcedVerticalScrollFallback(tabId, view, url)
@@ -4434,6 +4534,7 @@ class BrowserController(
 
         override fun onPageFinished(view: WebView, url: String) {
             if (isPendingInitialBlank(tabId, url)) return
+            if (isQuarantinedPopup(tabId)) return
             if (url != BLANK_URL) suppressedInitialBlankTabIds.remove(tabId)
             pageUrls[tabId] = url
             updateNavigationState(tabId, view)
@@ -4455,6 +4556,7 @@ class BrowserController(
         }
 
         override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+            if (isQuarantinedPopup(tabId)) return
             val visibleUrl = url?.takeIf(String::isNotBlank)
                 ?: view.url?.takeIf(String::isNotBlank)
             if (visibleUrl != null && isPendingInitialBlank(tabId, visibleUrl)) return
@@ -4482,9 +4584,15 @@ class BrowserController(
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            if (request.isForMainFrame && isQuarantinedPopup(tabId)) {
+                view.stopLoading()
+                return true
+            }
             if (request.isForMainFrame &&
-                handlePendingPopupNavigation(tabId, view, request.url.toString()) ==
-                PopupNavigationDecision.Block
+                handlePendingPopupNavigation(tabId, view, request.url.toString()).isBlocked
+            ) return true
+            if (request.isForMainFrame &&
+                handlePendingPopunderOpenerNavigation(tabId, view, request.url.toString())
             ) return true
             val scheme = request.url.scheme?.lowercase()
             if (scheme == "http" || scheme == "https") {
@@ -4575,6 +4683,7 @@ class BrowserController(
             webViews.remove(tabId)
             webViewProfileKeys.remove(tabId)
             removeWebMediaBridge(view)
+            genericCosmeticBridges.remove(view)
             removeSiteCompatibilityDocumentStartScripts(view)
             removeCosmeticDocumentStartScripts(view)
             removeVideoAutoplayDocumentStartScript(view)
@@ -4750,6 +4859,14 @@ class BrowserController(
             .mapNotNull(CandyRule::cosmeticSelector)
         val script = CandyCosmeticScript.create(selectors)
         if (script.isNotEmpty()) view.evaluateJavascript(script, null)
+        genericCosmeticBridges[view]?.let { genericBridge ->
+            contentBlocker.genericCosmeticDocumentStartScript(
+                pausedHosts = siteExceptionHostsForTab(tabId),
+                bridgeToken = genericBridge.token,
+            )
+                .takeIf(String::isNotEmpty)
+                ?.let { genericScript -> view.evaluateJavascript(genericScript, null) }
+        }
         contentBlocker.adProceduralDocumentStartScript(pageUrl)
             .takeIf(String::isNotEmpty)
             ?.let { proceduralScript -> view.evaluateJavascript(proceduralScript, null) }
@@ -4772,6 +4889,21 @@ class BrowserController(
         val targetOrigin = CandyDocumentStartOrigin.fromUrl(targetUrl) ?: return
         if (isSiteProtectionPaused(tabId, targetUrl)) return
         val handlers = buildList {
+            genericCosmeticBridges[view]?.let { genericBridge ->
+                val genericScript = contentBlocker.genericCosmeticDocumentStartScript(
+                    pausedHosts = siteExceptionHostsForTab(tabId),
+                    bridgeToken = genericBridge.token,
+                )
+                if (genericScript.isNotEmpty()) {
+                    runCatching {
+                        WebViewCompat.addDocumentStartJavaScript(
+                            view,
+                            genericScript,
+                            ALL_WEB_ORIGINS,
+                        )
+                    }.getOrNull()?.let(::add)
+                }
+            }
             val bundledScript = contentBlocker.adCosmeticDocumentStartScript(
                 pageUrl = targetUrl,
                 pausedHosts = siteExceptionHostsForTab(tabId),
@@ -6507,8 +6639,12 @@ class BrowserController(
             !isSiteProtectionPaused(openerTabId, openerUrl) &&
             contentBlocker.shouldBlockPopupWithoutTarget(openerUrl)
         ) return false
-        val popupTabId = createBackgroundTab(BLANK_URL, openerTabId = openerTabId) ?: return false
-        pendingPopupNavigations[popupTabId] = PendingPopupNavigation(
+        val popupTabId = createBackgroundTab(
+            initialUrl = BLANK_URL,
+            openerTabId = openerTabId,
+            transientPopup = true,
+        ) ?: return false
+        val pendingPopup = PendingPopupNavigation(
             openerTabId = openerTabId,
             openerUrl = openerUrl,
             profileId = openerTab.profileId,
@@ -6516,19 +6652,58 @@ class BrowserController(
             sitePaused = isSiteProtectionPaused(openerTabId, openerUrl),
             hadUserGesture = true,
         )
-        transport.webView = webViewFor(popupTabId)
+        pendingPopupNavigations[popupTabId] = pendingPopup
+        val sitePaused = isSiteProtectionPaused(openerTabId, openerUrl)
+        if (workerSettings.blockAdsAndTrackers && !sitePaused) {
+            val candidate = PendingPopunderNavigation(
+                openerTabId = openerTabId,
+                popupTabId = popupTabId,
+                originalOpenerUrl = openerUrl,
+                createdAtMillis = SystemClock.elapsedRealtime(),
+                sitePaused = false,
+            )
+            pendingPopunderNavigations[openerTabId] = candidate
+            mainHandler.postDelayed(
+                {
+                    val current = pendingPopunderNavigations[openerTabId]
+                    if (current?.popupTabId == candidate.popupTabId &&
+                        current.createdAtMillis == candidate.createdAtMillis
+                    ) {
+                        pendingPopunderNavigations.remove(openerTabId)
+                    }
+                },
+                PopunderNavigationRules.WINDOW_MILLIS,
+            )
+        }
+        val popupWebView = webViewFor(popupTabId)
+        transport.webView = popupWebView
         resultMsg.sendToTarget()
-        captureVisiblePreview(
-            tabId = openerTabId,
-            onComplete = {
-                if (!destroyed && tabs.any { tab -> tab.id == popupTabId }) {
-                    leaveSiteCapsule()
-                    selectTab(popupTabId)
+        mainHandler.postDelayed(
+            {
+                if (pendingPopupNavigations[popupTabId] === pendingPopup &&
+                    webViews[popupTabId] === popupWebView &&
+                    popupTabId in transientPopupTabIds
+                ) {
+                    pendingPopupNavigations.remove(popupTabId)
+                    discardTransientPopup(popupTabId)
                 }
             },
-            acceptAfterDeparture = true,
+            PopupNavigationRules.PENDING_TIMEOUT_MILLIS,
         )
         return true
+    }
+
+    private fun isQuarantinedPopup(tabId: String): Boolean =
+        blockedPopupOffer?.popupTabId == tabId
+
+    private fun discardTransientPopup(tabId: String) {
+        val index = tabs.indexOfFirst { tab -> tab.id == tabId }
+        if (index < 0) {
+            transientPopupTabIds.remove(tabId)
+            return
+        }
+        removeTabResources(tabId)
+        tabs.removeAt(index)
     }
 
     private fun handlePendingPopupNavigation(
@@ -6542,17 +6717,168 @@ class BrowserController(
             pending = pending,
             targetUrl = targetUrl,
             blockerEnabled = workerSettings.blockAdsAndTrackers,
-            shouldBlock = contentBlocker::shouldBlockPopup,
+            filterDecision = { popupUrl, openerUrl ->
+                val candyDecision = matcherFor(pending.isIncognito).decideHosts(
+                    requestHost = CandyHostCanonicalizer.webHost(popupUrl),
+                    pageHost = CandyHostCanonicalizer.webHost(openerUrl),
+                    profileId = pending.profileId,
+                    isForMainFrame = false,
+                )
+                when (candyDecision?.action) {
+                    CandyDecisionAction.Block -> PopupFilterDecision.Block
+                    CandyDecisionAction.Allow -> PopupFilterDecision.Allow
+                    null -> when (contentBlocker.decidePopup(popupUrl, openerUrl)) {
+                        AdvancedFilterAction.Block -> PopupFilterDecision.Block
+                        AdvancedFilterAction.Allow -> PopupFilterDecision.Allow
+                        null -> PopupFilterDecision.NoMatch
+                    }
+                }
+            },
         )
         if (decision == PopupNavigationDecision.KeepPending) return decision
-        pendingPopupNavigations.remove(tabId)
-        if (decision == PopupNavigationDecision.Block) {
+        if (decision != PopupNavigationDecision.AllowSameSite) {
+            pendingPopupNavigations.remove(tabId)
+        }
+        if (decision == PopupNavigationDecision.AllowSameSite) {
+            recordPopunderChildNavigation(pending, tabId, targetUrl)
+            promoteTransientPopup(pending, tabId)
+        } else if (decision == PopupNavigationDecision.Allow ||
+            decision == PopupNavigationDecision.AllowListed
+        ) {
+            if (decision == PopupNavigationDecision.AllowListed) {
+                pendingPopunderNavigations[pending.openerTabId]
+                    ?.takeIf { candidate -> candidate.popupTabId == tabId }
+                    ?.let { candidate ->
+                        pendingPopunderNavigations.remove(candidate.openerTabId)
+                    }
+            } else {
+                recordPopunderChildNavigation(pending, tabId, targetUrl)
+            }
+            promoteTransientPopup(pending, tabId)
+        } else if (decision == PopupNavigationDecision.BlockListed) {
             view.stopLoading()
             mainHandler.post {
                 if (!destroyed && webViews[tabId] === view) closeTab(tabId)
             }
+        } else if (decision == PopupNavigationDecision.BlockCrossSite) {
+            view.stopLoading()
+            transientPopupTabIds += tabId
+            offerBlockedPopup(tabId, targetUrl)
+            if (selectedTabId == tabId && tabs.any { tab -> tab.id == pending.openerTabId }) {
+                selectTab(pending.openerTabId)
+            }
+            persist()
         }
         return decision
+    }
+
+    private fun promoteTransientPopup(pending: PendingPopupNavigation, tabId: String) {
+        if (!transientPopupTabIds.remove(tabId)) return
+        captureVisiblePreview(
+            tabId = pending.openerTabId,
+            onComplete = {
+                if (!destroyed &&
+                    tabId !in transientPopupTabIds &&
+                    !isQuarantinedPopup(tabId) &&
+                    tabs.any { tab -> tab.id == tabId }
+                ) {
+                    leaveSiteCapsule()
+                    selectTab(tabId)
+                }
+            },
+            acceptAfterDeparture = true,
+        )
+        persist()
+    }
+
+    private fun offerBlockedPopup(tabId: String, targetUrl: String) {
+        blockedPopupOffer?.let { previous ->
+            blockedPopupOffer = null
+            if (previous.popupTabId != tabId) closeTab(previous.popupTabId)
+        }
+        blockedPopupSequence++
+        blockedPopupOffer = BlockedPopupOffer(
+            token = blockedPopupSequence,
+            popupTabId = tabId,
+            targetUrl = targetUrl,
+        )
+    }
+
+    private fun recordPopunderChildNavigation(
+        popup: PendingPopupNavigation,
+        popupTabId: String,
+        targetUrl: String,
+    ) {
+        val candidate = pendingPopunderNavigations[popup.openerTabId]
+            ?.takeIf { it.popupTabId == popupTabId }
+            ?: return
+        evaluatePopunder(
+            PopunderNavigationRules.withChildUrl(candidate, targetUrl),
+            openerView = webViews[popup.openerTabId],
+        )
+    }
+
+    private fun handlePendingPopunderOpenerNavigation(
+        openerTabId: String,
+        openerView: WebView,
+        targetUrl: String,
+    ): Boolean {
+        val candidate = pendingPopunderNavigations[openerTabId] ?: return false
+        return evaluatePopunder(
+            PopunderNavigationRules.withOpenerTarget(candidate, targetUrl),
+            openerView = openerView,
+        )
+    }
+
+    private fun evaluatePopunder(
+        candidate: PendingPopunderNavigation,
+        openerView: WebView?,
+    ): Boolean {
+        val decision = PopunderNavigationRules.decide(
+            pending = candidate,
+            nowMillis = SystemClock.elapsedRealtime(),
+            blockerEnabled = workerSettings.blockAdsAndTrackers,
+            filterDecision = { openerTargetUrl, childUrl ->
+                when (contentBlocker.decidePopunder(openerTargetUrl, childUrl)) {
+                    AdvancedFilterAction.Block -> PopupFilterDecision.Block
+                    AdvancedFilterAction.Allow -> PopupFilterDecision.Allow
+                    null -> PopupFilterDecision.NoMatch
+                }
+            },
+        )
+        if (decision == PopunderNavigationDecision.KeepPending) {
+            pendingPopunderNavigations[candidate.openerTabId] = candidate
+            return false
+        }
+        if (pendingPopunderNavigations[candidate.openerTabId]?.popupTabId == candidate.popupTabId) {
+            pendingPopunderNavigations.remove(candidate.openerTabId)
+        }
+        if (decision != PopunderNavigationDecision.Block) return false
+        openerView?.stopLoading()
+        mainHandler.post {
+            if (destroyed || tabs.none { tab -> tab.id == candidate.popupTabId }) return@post
+            transientPopupTabIds.remove(candidate.popupTabId)
+            val child = tabs.first { tab -> tab.id == candidate.popupTabId }
+            if (child.profileId != activeProfileId && profilesEnabled) selectProfile(child.profileId)
+            selectTab(candidate.popupTabId)
+            val opener = tabs.firstOrNull { tab -> tab.id == candidate.openerTabId }
+            if (opener?.isPinned == true) {
+                openerView?.let { view ->
+                    updateTab(opener.id) { tab ->
+                        tab.copy(
+                            url = candidate.originalOpenerUrl,
+                            isLoading = true,
+                            progress = 0,
+                            error = null,
+                        )
+                    }
+                    loadUrlWithProtection(opener.id, view, candidate.originalOpenerUrl)
+                }
+            } else {
+                closeTab(candidate.openerTabId)
+            }
+        }
+        return true
     }
 
     private fun downloadListener(tabId: String = selectedTabId) =
@@ -7285,10 +7611,13 @@ class BrowserController(
     }
 
     private fun persist() {
-        store.saveTabs(tabs.toList(), selectedTabId)
+        store.saveTabs(persistableTabs(tabs), selectedTabId)
         store.saveProfiles(profiles.toList(), activeProfileId)
         savePersistentFilterRules()
     }
+
+    private fun persistableTabs(source: Collection<BrowserTab>): List<BrowserTab> =
+        source.filterNot { tab -> tab.id in transientPopupTabIds }
 
     private fun savePersistentFilterRules() {
         candyRuleRepository.save(filterRules.filterNot { it.id in ephemeralRuleIds })
@@ -7398,6 +7727,11 @@ class BrowserController(
         candyTrailHistoryBindings.remove(tabId)
         pendingCandyTrailTargets.remove(tabId)
         pendingPopupNavigations.remove(tabId)
+        pendingPopunderNavigations.entries.removeAll { (_, pending) ->
+            pending.openerTabId == tabId || pending.popupTabId == tabId
+        }
+        transientPopupTabIds.remove(tabId)
+        if (blockedPopupOffer?.popupTabId == tabId) blockedPopupOffer = null
         cancelPendingBlockingStart(tabId)
         pendingCandyTrailRestoreIds.remove(tabId)
         suppressedCandyTrailTabIds.remove(tabId)
@@ -7423,6 +7757,12 @@ class BrowserController(
         bottomBarCompactStates.remove(tab.id)
         candyTrailHistoryBindings.remove(tab.id)
         pendingCandyTrailTargets.remove(tab.id)
+        pendingPopupNavigations.remove(tab.id)
+        pendingPopunderNavigations.entries.removeAll { (_, pending) ->
+            pending.openerTabId == tab.id || pending.popupTabId == tab.id
+        }
+        transientPopupTabIds.remove(tab.id)
+        if (blockedPopupOffer?.popupTabId == tab.id) blockedPopupOffer = null
         cancelPendingBlockingStart(tab.id)
         pendingCandyTrailRestoreIds.remove(tab.id)
         suppressedCandyTrailTabIds.remove(tab.id)
@@ -7452,7 +7792,7 @@ class BrowserController(
             ?: result.tabs.first().id
         val remaining = snoozedTabs.filterNot { it.tab.id in result.completedTabIds }
         if (!store.saveTabsAndSnoozedImmediately(
-                tabs = result.tabs,
+                tabs = persistableTabs(result.tabs),
                 selectedTabId = validSelection,
                 snoozedTabs = remaining,
             )
@@ -7811,8 +8151,18 @@ class BrowserController(
 
     private fun recreateWebViews(tabIds: Set<String>) {
         if (tabIds.isEmpty()) return
-        clearServiceWorkerClientsLosingLastWebView(tabIds)
-        tabIds.forEach { tabId ->
+        val transientIds = tabIds.filterTo(mutableSetOf()) { tabId ->
+            tabId in transientPopupTabIds ||
+                tabId in pendingPopupNavigations ||
+                blockedPopupOffer?.popupTabId == tabId
+        }
+        transientIds.forEach(::discardTransientPopup)
+        val retainedTabIds = tabIds - transientIds
+        pendingPopunderNavigations.entries.removeAll { (_, pending) ->
+            pending.openerTabId in tabIds || pending.popupTabId in tabIds
+        }
+        clearServiceWorkerClientsLosingLastWebView(retainedTabIds)
+        retainedTabIds.forEach { tabId ->
             cancelPendingBlockingStart(tabId)
             clearPermissionActivity(tabId)
             clearPrivacyDataForTab(tabId)
@@ -7962,6 +8312,7 @@ class BrowserController(
             ?.takeIf { session -> session.webView === webView }
             ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
         removeWebMediaBridge(webView)
+        genericCosmeticBridges.remove(webView)
         removeSiteCompatibilityDocumentStartScripts(webView)
         removeCosmeticDocumentStartScripts(webView)
         removeVideoAutoplayDocumentStartScript(webView)
@@ -8172,6 +8523,8 @@ class BrowserController(
         const val PREVIEW_NEAR_BLACK_CHANNEL_MAX = 16
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
         const val MAX_COSMETIC_DOCUMENT_START_RULES = 64
+        const val MAX_GENERIC_POLICY_HOST_LENGTH = 253
+        const val MAX_GENERIC_POLICY_CACHE_ENTRIES = 64
         const val MAX_REPORTED_ALLOW_DECISIONS = 64
         const val MAX_WEB_MEDIA_TITLE_LENGTH = 160
         const val MAX_WEB_MEDIA_ORIGIN_LENGTH = 255

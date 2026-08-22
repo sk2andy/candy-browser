@@ -14,6 +14,17 @@ REVISION = "05bc031ad40c2270223f068f052970201ca1bf14"
 
 
 class AdvancedFilterCompilerTest(unittest.TestCase):
+    def test_badfilter_in_skipped_conditional_cannot_disable_active_rule(self):
+        records, stats = self.compile(
+            "||ads.example/path*$3p\n"
+            "!#if cap_html_filtering\n"
+            "||ads.example/path*$3p,badfilter\n"
+            "!#endif"
+        )
+
+        self.assertEqual(1, len(records))
+        self.assertEqual(1, stats.conditional_lines)
+
     def compile(self, source: str):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "filters.txt"
@@ -27,11 +38,13 @@ class AdvancedFilterCompilerTest(unittest.TestCase):
             ||popup.example^$popup,domain=stream.example
             *$popup,domain=movies.example,3p
             @@||popup.example/account/*$popup,domain=stream.example
+            *$popunder,domain=movies.example,3p
             """
         )
 
         self.assertEqual(1, stats.request_rules)
         self.assertEqual(3, stats.popup_rules)
+        self.assertEqual(1, stats.popunder_rules)
         self.assertEqual(1, stats.allow_rules)
         self.assertEqual(
             "|/assets/*/ad.js^",
@@ -51,6 +64,12 @@ class AdvancedFilterCompilerTest(unittest.TestCase):
 
         self.assertEqual([], records)
         self.assertEqual(5, stats.unsupported_rules)
+
+    def test_rejects_conflicting_popup_types(self):
+        records, stats = self.compile("*$popup,popunder,domain=movies.example")
+
+        self.assertEqual([], records)
+        self.assertEqual(1, stats.unsupported_rules)
 
     def test_badfilter_disables_exact_rule_across_order(self):
         records, stats = self.compile(
@@ -95,6 +114,7 @@ class AdvancedFilterCompilerTest(unittest.TestCase):
         records, stats = compile_sources([PINNED_SOURCE])
         self.assertEqual(747, stats.request_rules)
         self.assertEqual(703, stats.popup_rules)
+        self.assertEqual(24, stats.popunder_rules)
         self.assertEqual(89, stats.allow_rules)
         self.assertEqual(("target:st.pussyspace.com", 13), maximum_bucket(records))
         with tempfile.TemporaryDirectory() as directory:

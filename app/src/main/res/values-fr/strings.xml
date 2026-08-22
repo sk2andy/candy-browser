@@ -642,4 +642,6 @@
     <string name="reader_delete_snapshot">Supprimer l’article hors ligne</string>
     <string name="media_notification_channel_name">Lecture multimédia</string>
     <string name="media_notification_channel_description">Contrôle les médias lus dans Candy</string>
+    <string name="popup_blocked">Fenêtre pop-up bloquée</string>
+    <string name="action_open_popup">Ouvrir</string>
 </resources>

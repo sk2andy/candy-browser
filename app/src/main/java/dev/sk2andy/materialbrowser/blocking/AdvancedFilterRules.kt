@@ -5,7 +5,7 @@ import java.util.Base64
 import java.util.Collections
 import java.util.LinkedHashMap
 
-internal enum class AdvancedFilterScope { Request, Popup }
+internal enum class AdvancedFilterScope { Request, Popup, Popunder }
 
 internal enum class AdvancedFilterAction { Block, Allow }
 
@@ -28,6 +28,9 @@ internal class AdvancedFilterRules private constructor(
     private val requestRules = RuleIndex(rules.filter { it.scope == AdvancedFilterScope.Request })
     private val popupRules = RuleIndex(
         rules.filter { it.scope == AdvancedFilterScope.Popup && !it.windowOpenDefuser },
+    )
+    private val popunderRules = RuleIndex(
+        rules.filter { it.scope == AdvancedFilterScope.Popunder },
     )
     private val windowOpenDefuserRules = rules.filter(AdvancedUrlRule::windowOpenDefuser)
     private val windowOpenDefuserIndex = PageRuleIndex(windowOpenDefuserRules)
@@ -60,7 +63,13 @@ internal class AdvancedFilterRules private constructor(
     )
 
     fun shouldBlockPopup(targetUrl: String, openerUrl: String?): Boolean =
-        popupRules.decide(targetUrl, openerUrl) == AdvancedFilterAction.Block
+        decidePopup(targetUrl, openerUrl) == AdvancedFilterAction.Block
+
+    fun decidePopup(targetUrl: String, openerUrl: String?): AdvancedFilterAction? =
+        popupRules.decide(targetUrl, openerUrl)
+
+    fun decidePopunder(openerTargetUrl: String, childUrl: String?): AdvancedFilterAction? =
+        popunderRules.decide(openerTargetUrl, childUrl)
 
     fun shouldBlockPopupWithoutTarget(openerUrl: String?): Boolean =
         popupRules.decideWithoutTarget(ParsedWebUrl.parse(openerUrl)) ==
@@ -207,7 +216,7 @@ internal class AdvancedFilterRules private constructor(
     }
 
     companion object {
-        const val HEADER = "candy-advanced-filter:1"
+        const val HEADER = "candy-advanced-filter:2"
         private const val MAX_BYTES = 8 * 1_024 * 1_024
         private const val MAX_LINES = 100_000
         private const val MAX_PATTERN_LENGTH = 512
@@ -252,6 +261,7 @@ internal class AdvancedFilterRules private constructor(
             val scope = when (fields[1]) {
                 "N" -> AdvancedFilterScope.Request
                 "P" -> AdvancedFilterScope.Popup
+                "U" -> AdvancedFilterScope.Popunder
                 else -> error("Invalid advanced scope at line $lineNumber")
             }
             val targetHost = fields[2].takeUnless { it == "*" }?.let { value ->
