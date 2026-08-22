@@ -406,6 +406,27 @@ class CandyRuleFormatTest {
     }
 
     @Test
+    fun `extended cosmetic operator families always fail closed`() {
+        val operators = listOf(
+            ":matches-css(color: red)",
+            ":matches-attr(data-ad)",
+            ":remove-attr(class)",
+            ":remove-class(ad)",
+            ":watch-attr(class)",
+            ":if(.ad)",
+            ":if-not(.content)",
+        )
+        val preview = CandyRuleImport.parse(
+            operators.joinToString("\n") { operator ->
+                "news.example##.sponsor$operator"
+            },
+        )
+
+        assertTrue(preview.rules.isEmpty())
+        assertEquals(operators.size, preview.skippedCount)
+    }
+
+    @Test
     fun `global exception preserves adblock precedence across host boundaries`() {
         val preview = CandyRuleImport.parse(
             """

@@ -13,7 +13,7 @@ from compile_easylist_cosmetic import (
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
-SOURCE = PROJECT_DIR / "app/src/main/assets/uassets_filters_source.txt"
+SOURCE = PROJECT_DIR / "app/src/main/assets/uassets_advanced_filters_source.txt"
 ASSET = PROJECT_DIR / "app/src/main/assets/uassets_cosmetic_rules.txt"
 REVISION = "05bc031ad40c2270223f068f052970201ca1bf14"
 
@@ -21,16 +21,17 @@ REVISION = "05bc031ad40c2270223f068f052970201ca1bf14"
 class UassetsCosmeticCompilerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.records, cls.stats = compile_sources([SOURCE])
+        cls.records, cls.stats = compile_sources([SOURCE], include_generics=True)
 
     def test_pinned_snapshot_counts(self):
-        self.assertEqual(2_002, self.stats.hide_rules)
-        self.assertEqual(50, self.stats.exception_rules)
-        self.assertEqual(51, self.stats.generic_rules)
-        self.assertEqual(2_679, self.stats.unsupported_rules)
-        self.assertEqual(89, self.stats.conditional_lines)
-        self.assertEqual(1_124, len({record[1] for record in self.records}))
-        self.assertEqual(("pornhub.*", 25, 620), maximum_pattern_load(self.records))
+        self.assertEqual(8_630, self.stats.hide_rules)
+        self.assertEqual(467, self.stats.exception_rules)
+        self.assertEqual(272, self.stats.generic_rules)
+        self.assertEqual(1_168, self.stats.generic_hide_exceptions)
+        self.assertEqual(10_394, self.stats.unsupported_rules)
+        self.assertEqual(899, self.stats.conditional_lines)
+        self.assertEqual(4_949, len({record[1] for record in self.records}))
+        self.assertEqual(("*", 222, 9_608), maximum_pattern_load(self.records))
 
     def test_representative_localized_rules_and_procedural_exclusions(self):
         selectors = {
@@ -67,7 +68,9 @@ class UassetsCosmeticCompilerTest(unittest.TestCase):
             if not line or line.startswith("#") or line.startswith("candy-"):
                 continue
             action, host, exclusions, encoded = line.split("\t")
-            selector = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)).decode()
+            selector = "-" if action == "D" else base64.urlsafe_b64decode(
+                encoded + "=" * (-len(encoded) % 4)
+            ).decode()
             rows.append((action, host, () if exclusions == "-" else tuple(exclusions.split(",")), selector))
 
         self.assertEqual(self.records, rows)

@@ -71,6 +71,40 @@ class UassetsFilterAssetInstrumentedTest {
         )
     }
 
+    @Test
+    fun advancedSnapshotBlocksPathsPopupsAndBuildsProceduralScript() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val blocker = ContentBlocker(context)
+        blocker.awaitBundledBlockingForTesting()
+        assertTrue(blocker.isBundledBlockingReady)
+        assertTrue(ContentBlocker(context).isBundledBlockingReady)
+
+        assertTrue(
+            blocker.shouldBlock(
+                "https://9anime.vip/banner/top.jpg",
+                "https://9anime.vip/watch",
+            ),
+        )
+        assertTrue(
+            blocker.shouldBlockPopup(
+                "https://bit.ly/click",
+                "https://eurogamer.net/file",
+            ),
+        )
+        assertTrue(
+            blocker.shouldBlockPopup(
+                "https://displayendpointstarring.com/",
+                "https://canyoublockit.com/extreme-test/",
+            ),
+        )
+        assertTrue(blocker.windowOpenDefuserScript("https://dailyuploads.net/file").isNotEmpty())
+        val proceduralScript = blocker.adProceduralDocumentStartScript(
+            "https://aranzulla.it/article",
+        )
+        assertTrue(":remove" !in proceduralScript)
+        assertTrue("node.remove()" in proceduralScript)
+    }
+
     private fun assetLines(name: String): List<String> {
         val assets = InstrumentationRegistry.getInstrumentation().targetContext.assets
         return assets.open(name).bufferedReader().useLines { lines ->

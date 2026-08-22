@@ -1,11 +1,15 @@
 package dev.sk2andy.materialbrowser.blocking
 
+import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import java.io.ByteArrayInputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -45,6 +49,221 @@ class CandyCosmeticRuleInstrumentedTest {
         assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
         val paused = loadAndRead("https://news.example/", pausedHosts = setOf("news.example"))
         assertEquals("\"block|false\"", paused)
+    }
+
+    @Test
+    fun documentStartCssRunsInMatchingFramesAndCleanupRemovesEveryStyle() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val loaded = CountDownLatch(1)
+        val created = AtomicReference<WebView>()
+        instrumentation.runOnMainSync {
+            created.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    WebViewCompat.addDocumentStartJavaScript(
+                        this,
+                        CandyCosmeticScript.create(listOf(".sponsor")),
+                        setOf("https://news.example"),
+                    )
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) = loaded.countDown()
+                    }
+                    loadDataWithBaseURL(
+                        "https://news.example/",
+                        """
+                            <html><body>
+                              <iframe id="frame" srcdoc="<div class='sponsor'>ad</div>"></iframe>
+                            </body></html>
+                        """.trimIndent(),
+                        "text/html",
+                        "utf-8",
+                        null,
+                    )
+                },
+            )
+        }
+        val view = created.get().also(webView::set)
+        assertTrue(loaded.await(10, TimeUnit.SECONDS))
+
+        assertEquals(
+            "\"none|true\"",
+            evaluate(
+                view,
+                "[getComputedStyle(document.getElementById('frame').contentDocument" +
+                    ".querySelector('.sponsor')).display," +
+                    "document.getElementById('frame').contentDocument" +
+                    ".querySelector('style[data-candy-filter]')!==null].join('|')",
+            ),
+        )
+
+        evaluate(view, CandyCosmeticScript.cleanupScript)
+
+        assertEquals(
+            "\"block|false\"",
+            evaluate(
+                view,
+                "[getComputedStyle(document.getElementById('frame').contentDocument" +
+                    ".querySelector('.sponsor')).display," +
+                    "document.getElementById('frame').contentDocument" +
+                    ".querySelector('style[data-candy-filter]')!==null].join('|')",
+            ),
+        )
+    }
+
+    @Test
+    fun bundledGenericRuntimeHidesStaticAndDynamicAdsAndCleansUpIdempotently() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val blocker = ContentBlocker(instrumentation.targetContext)
+        blocker.awaitCosmeticRulesForTesting()
+        val result = loadGenericFixtureAndEvaluate(
+            baseUrl = "https://generic.example/",
+            html = """
+                <html><body>
+                  <div id="static" class="ad-space">ad</div>
+                  <main id="organic">organic</main>
+                </body></html>
+            """.trimIndent(),
+            payload = blocker.genericCosmeticPayload(),
+            policy = blocker.genericCosmeticPolicyForHost("generic.example"),
+            expected = "\"none|none|block\"",
+            probe = """
+                (() => {
+                  let dynamic = document.getElementById('dynamic');
+                  if (!dynamic) {
+                    dynamic = document.createElement('div');
+                    dynamic.id = 'dynamic';
+                    dynamic.className = 'ad-unit';
+                    document.body.appendChild(dynamic);
+                  }
+                  return [
+                    getComputedStyle(document.getElementById('static')).display,
+                    getComputedStyle(dynamic).display,
+                    getComputedStyle(document.getElementById('organic')).display
+                  ].join('|');
+                })()
+            """.trimIndent(),
+        )
+
+        val view = webView.get()
+        val styleCount = evaluate(
+            view,
+            "String(document.querySelectorAll('style[data-candy-generic-filter]').length)",
+        )
+        evaluate(
+            view,
+            GenericCosmeticScript.create(bridgeToken = GENERIC_BRIDGE_TOKEN),
+        )
+
+        assertEquals("\"none|none|block\"", result)
+        assertEquals(
+            styleCount,
+            evaluate(
+                view,
+                "String(document.querySelectorAll('style[data-candy-generic-filter]').length)",
+            ),
+        )
+
+        evaluate(view, GenericCosmeticScript.cleanupScript)
+
+        assertEquals(
+            "\"block|block|0\"",
+            evaluate(
+                view,
+                "[getComputedStyle(document.getElementById('static')).display," +
+                    "getComputedStyle(document.getElementById('dynamic')).display," +
+                    "document.querySelectorAll('style[data-candy-generic-filter]').length].join('|')",
+            ),
+        )
+    }
+
+    @Test
+    fun bundledGenericRuntimeHonorsUpstreamExceptionAndGenericHide() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val blocker = ContentBlocker(instrumentation.targetContext)
+        blocker.awaitCosmeticRulesForTesting()
+        val excepted = loadGenericFixtureAndEvaluate(
+            baseUrl = "https://1cloudfile.com/",
+            html = "<div id='candidate' class='advert-wrapper'>organic download</div>",
+            payload = blocker.genericCosmeticPayload(),
+            policy = blocker.genericCosmeticPolicyForHost("1cloudfile.com"),
+            expected = "\"block\"",
+            probe = "getComputedStyle(document.getElementById('candidate')).display",
+        )
+        val disabled = loadGenericFixtureAndEvaluate(
+            baseUrl = "https://adblockplus.org/",
+            html = "<div id='candidate' class='ad-space'>documented example</div>",
+            payload = blocker.genericCosmeticPayload(),
+            policy = blocker.genericCosmeticPolicyForHost("adblockplus.org"),
+            expected = "\"block\"",
+            probe = "getComputedStyle(document.getElementById('candidate')).display",
+        )
+
+        assertEquals("\"block\"", excepted)
+        assertEquals("\"block\"", disabled)
+    }
+
+    @Test
+    fun documentStartCssSkipsSameOriginGrandchildBehindCrossOriginFrame() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val pages = mapOf(
+            "news.example/top" to """
+                <html><body>
+                  <script>
+                    window.frameDisplay = 'pending';
+                    addEventListener('message', function(event) {
+                      window.frameDisplay = event.data;
+                    });
+                  </script>
+                  <iframe src="https://other.example/middle"></iframe>
+                </body></html>
+            """.trimIndent(),
+            "other.example/middle" to
+                "<iframe src=\"https://news.example/inner\"></iframe>",
+            "news.example/inner" to """
+                <div class="sponsor">ad</div>
+                <script>
+                  top.postMessage(
+                    getComputedStyle(document.querySelector('.sponsor')).display,
+                    '*'
+                  );
+                </script>
+            """.trimIndent(),
+        )
+        val loaded = CountDownLatch(1)
+        val created = AtomicReference<WebView>()
+        instrumentation.runOnMainSync {
+            created.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    WebViewCompat.addDocumentStartJavaScript(
+                        this,
+                        CandyCosmeticScript.create(listOf(".sponsor")),
+                        setOf("*"),
+                    )
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest,
+                        ): WebResourceResponse? {
+                            val key = "${request.url.host}${request.url.path}"
+                            val html = pages[key] ?: return null
+                            return WebResourceResponse(
+                                "text/html",
+                                "utf-8",
+                                ByteArrayInputStream(html.toByteArray()),
+                            )
+                        }
+
+                        override fun onPageFinished(view: WebView, url: String) = loaded.countDown()
+                    }
+                    loadUrl("https://news.example/top")
+                },
+            )
+        }
+        val view = created.get().also(webView::set)
+        assertTrue(loaded.await(10, TimeUnit.SECONDS))
+
+        assertEquals("\"block\"", awaitEvaluation(view, "window.frameDisplay", "\"pending\""))
     }
 
     @Test
@@ -287,6 +506,41 @@ class CandyCosmeticRuleInstrumentedTest {
         assertEquals("\"none|block\"", result)
     }
 
+    @Test
+    fun curatedAdRulesHideStrongMediaAndAdjacentFallbackWithoutBroadFalsePositives() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+        val result = loadFixtureAndEvaluate(
+            baseUrl = "https://publisher.example/",
+            html = """
+                <html><body>
+                  <img id="compound" src="/banners/pr_advertising_ads_banner.gif">
+                  <img id="token" src="/images/ads_banner.png">
+                  <img id="advertising" src="/images/advertising-guide.png">
+                  <img id="banner" src="/images/header-banner.png">
+                  <img id="example" src="/docs/no_ads_banner_example.png">
+                  <iframe id="guidelines" src="/docs/advertising/banner-guidelines.html"></iframe>
+                  <div id="ad_banner"></div>
+                  <div id="AlternateMessage"><a href="https://shop.example/product">fallback</a></div>
+                  <div id="alternate-message-guide">alternate content guide</div>
+                </body></html>
+            """.trimIndent(),
+            probe = """
+                [
+                  getComputedStyle(document.getElementById('compound')).display,
+                  getComputedStyle(document.getElementById('token')).display,
+                  getComputedStyle(document.getElementById('advertising')).display,
+                  getComputedStyle(document.getElementById('banner')).display,
+                  getComputedStyle(document.getElementById('example')).display,
+                  getComputedStyle(document.getElementById('guidelines')).display,
+                  getComputedStyle(document.getElementById('AlternateMessage')).display,
+                  getComputedStyle(document.getElementById('alternate-message-guide')).display
+                ].join('|')
+            """.trimIndent(),
+        )
+
+        assertEquals("\"none|none|inline|inline|inline|inline|none|block\"", result)
+    }
+
     private fun loadAndRead(
         baseUrl: String,
         pausedHosts: Set<String>,
@@ -363,5 +617,102 @@ class CandyCosmeticRuleInstrumentedTest {
         }
         assertTrue(evaluated.await(10, TimeUnit.SECONDS))
         return result.get()
+    }
+
+    private fun loadGenericFixtureAndEvaluate(
+        baseUrl: String,
+        html: String,
+        payload: String,
+        policy: String,
+        expected: String,
+        probe: String,
+    ): String? {
+        webView.getAndSet(null)?.let { previous ->
+            instrumentation.runOnMainSync { previous.destroy() }
+        }
+        val loaded = CountDownLatch(1)
+        val created = AtomicReference<WebView>()
+        instrumentation.runOnMainSync {
+            created.set(
+                WebView(instrumentation.targetContext).apply {
+                    settings.javaScriptEnabled = true
+                    addJavascriptInterface(
+                        GenericFixtureBridge(
+                            token = GENERIC_BRIDGE_TOKEN,
+                            payload = payload,
+                            policy = policy,
+                        ),
+                        GenericCosmeticScript.BRIDGE_NAME,
+                    )
+                    WebViewCompat.addDocumentStartJavaScript(
+                        this,
+                        GenericCosmeticScript.create(bridgeToken = GENERIC_BRIDGE_TOKEN),
+                        setOf("*"),
+                    )
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) = loaded.countDown()
+                    }
+                    loadDataWithBaseURL(
+                        baseUrl,
+                        html,
+                        "text/html",
+                        "utf-8",
+                        null,
+                    )
+                },
+            )
+        }
+        assertTrue(loaded.await(10, TimeUnit.SECONDS))
+        val view = created.get().also(webView::set)
+        return awaitExpected(view, probe, expected)
+    }
+
+    private class GenericFixtureBridge(
+        private val token: String,
+        private val payload: String,
+        private val policy: String,
+    ) {
+        @JavascriptInterface
+        fun payload(candidateToken: String): String =
+            payload.takeIf { candidateToken == token }.orEmpty()
+
+        @JavascriptInterface
+        fun policy(candidateToken: String, rawHost: String): String =
+            policy.takeIf { candidateToken == token && rawHost.isNotBlank() }.orEmpty()
+    }
+
+    private fun awaitEvaluation(view: WebView, script: String, pending: String): String? {
+        repeat(50) {
+            val result = evaluate(view, script)
+            if (result != pending) return result
+            Thread.sleep(100)
+        }
+        return evaluate(view, script)
+    }
+
+    private fun awaitExpected(view: WebView, script: String, expected: String): String? {
+        repeat(50) {
+            val result = evaluate(view, script)
+            if (result == expected) return result
+            Thread.sleep(100)
+        }
+        return evaluate(view, script)
+    }
+
+    private fun evaluate(view: WebView, script: String): String? {
+        val result = AtomicReference<String?>()
+        val evaluated = CountDownLatch(1)
+        instrumentation.runOnMainSync {
+            view.evaluateJavascript(script) {
+                result.set(it)
+                evaluated.countDown()
+            }
+        }
+        assertTrue(evaluated.await(10, TimeUnit.SECONDS))
+        return result.get()
+    }
+
+    private companion object {
+        const val GENERIC_BRIDGE_TOKEN = "01234567-89ab-cdef-0123-456789abcdef"
     }
 }

@@ -45,6 +45,20 @@ class RequestBlockerTest {
     }
 
     @Test
+    fun `request blocker checks suffixes across additional sorted indexes`() {
+        val indexed = RequestBlocker(
+            hostRules = emptySequence(),
+            indexedHostRules = SortedHostIndex.from("easy.example\n".toByteArray()),
+            additionalIndexedHostRules = listOf(
+                SortedHostIndex.from("hagezi.example\n".toByteArray()),
+            ),
+        )
+
+        assertTrue(indexed.shouldBlockHosts("cdn.hagezi.example", "news.example"))
+        assertFalse(indexed.shouldBlockHosts("hagezi.example.com", "news.example"))
+    }
+
+    @Test
     fun `does not suffix-match unrelated host`() {
         assertFalse(blocker.shouldBlock("https://notdoubleclick.net/app.js", "https://news.example"))
     }
@@ -153,5 +167,22 @@ class RequestBlockerTest {
                 "https://other.example/article",
             ),
         )
+    }
+
+    @Test
+    fun `owner family exception allows real google registries but rejects lookalikes`() {
+        val familyAware = RequestBlocker(
+            hostRules = sequenceOf("adservice.google.com"),
+            allowedHostPairs = sequenceOf("adservice.google.com\tpartner.example"),
+            allowedFirstPartyFamilyPairs = sequenceOf("adservice.google.com\tgoogle.*"),
+        )
+
+        assertFalse(familyAware.shouldBlockHosts("adservice.google.com", "google.com"))
+        assertFalse(familyAware.shouldBlockHosts("adservice.google.com", "google.de"))
+        assertFalse(familyAware.shouldBlockHosts("adservice.google.com", "maps.google.com"))
+        assertFalse(familyAware.shouldBlockHosts("adservice.google.com", "partner.example"))
+        assertTrue(familyAware.shouldBlockHosts("adservice.google.com", "news.example"))
+        assertTrue(familyAware.shouldBlockHosts("adservice.google.com", "google.evil.com"))
+        assertTrue(familyAware.shouldBlockHosts("adservice.google.com", "google.com.evil"))
     }
 }

@@ -376,8 +376,11 @@ object AdblockRuleFormat {
     private fun hasExtendedCosmeticSyntax(selector: String): Boolean {
         val lower = selector.lowercase(Locale.ROOT)
         return selector.startsWith('^') || listOf(
-            "+js(", ":has-text(", ":matches-path(", ":upward(", ":remove(",
-            ":style(", ":xpath(", ":-abp-",
+            "+js(", ":has-text(", ":matches-css(", ":matches-css-before(",
+            ":matches-css-after(", ":matches-attr(", ":matches-path(",
+            ":min-text-length(", ":others(", ":remove(", ":remove-attr(",
+            ":remove-class(", ":style(", ":upward(", ":watch-attr(", ":xpath(",
+            ":if(", ":if-not(", ":-abp-",
         ).any(lower::contains)
     }
 

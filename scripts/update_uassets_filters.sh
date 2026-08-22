@@ -7,6 +7,7 @@ set -eu
 SOURCE_REVISION="05bc031ad40c2270223f068f052970201ca1bf14"
 SOURCE_ROOT="https://raw.githubusercontent.com/uBlockOrigin/uAssets/$SOURCE_REVISION"
 SOURCE_URL="$SOURCE_ROOT/filters/filters.txt"
+ADVANCED_SOURCE_NAMES="filters.txt filters-general.txt filters-mobile.txt filters-2020.txt filters-2021.txt filters-2022.txt filters-2023.txt filters-2024.txt filters-2025.txt filters-2026.txt ubo-link-shorteners.txt"
 LICENSE_URL="$SOURCE_ROOT/LICENSE"
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 ASSET_DIR="$PROJECT_DIR/app/src/main/assets"
@@ -16,12 +17,60 @@ trap 'rm -rf "$TEMP_DIR"' EXIT HUP INT TERM
 curl --fail --location --silent --show-error "$SOURCE_URL" > "$TEMP_DIR/source.txt"
 curl --fail --location --silent --show-error "$LICENSE_URL" > "$TEMP_DIR/license.txt"
 
+for source_name in $ADVANCED_SOURCE_NAMES; do
+    curl --fail --location --silent --show-error \
+        "$SOURCE_ROOT/filters/$source_name" > "$TEMP_DIR/$source_name"
+done
+
+EXPECTED_INCLUDES="filters-2020.txt
+filters-2021.txt
+filters-2022.txt
+filters-2023.txt
+filters-2024.txt
+filters-2025.txt
+filters-2026.txt
+filters-general.txt
+filters-mobile.txt
+ubo-link-shorteners.txt"
+ACTUAL_INCLUDES=$(sed -n 's/^!#include //p' "$TEMP_DIR/source.txt" | LC_ALL=C sort -u)
+if [ "$ACTUAL_INCLUDES" != "$EXPECTED_INCLUDES" ]; then
+    echo "Refusing uAssets update: filters.txt include manifest changed" >&2
+    printf '%s\n' "$ACTUAL_INCLUDES" >&2
+    exit 1
+fi
+
+for source_name in $ADVANCED_SOURCE_NAMES; do
+    printf '! Candy source file: filters/%s\n' "$source_name"
+    printf '! Candy source SHA-256: %s\n' \
+        "$(sha256sum "$TEMP_DIR/$source_name" | cut -d ' ' -f 1)"
+    cat "$TEMP_DIR/$source_name"
+    printf '\n'
+done > "$TEMP_DIR/uassets_advanced_filters_source.txt"
+
 python3 "$PROJECT_DIR/scripts/compile_easylist_cosmetic.py" \
-    --source-file "$TEMP_DIR/source.txt" \
+    --source-file "$TEMP_DIR/uassets_advanced_filters_source.txt" \
     --asset-kind uassets \
+    --include-generics \
     --revision "$SOURCE_REVISION" \
     --output "$TEMP_DIR/uassets_cosmetic_rules.txt" \
-    --min-hide-rules 1500
+    --min-hide-rules 8000 \
+    --min-exception-rules 400 \
+    --min-generic-rules 200 \
+    --min-generic-hide-exceptions 1000
+
+python3 "$PROJECT_DIR/scripts/compile_advanced_filters.py" \
+    --source-file "$TEMP_DIR/uassets_advanced_filters_source.txt" \
+    --revision "$SOURCE_REVISION" \
+    --output "$TEMP_DIR/uassets_advanced_filters.txt" \
+    --min-request-rules 250 \
+    --min-popup-rules 25 \
+    --min-popunder-rules 20
+
+python3 "$PROJECT_DIR/scripts/compile_procedural_cosmetic.py" \
+    --source-file "$TEMP_DIR/uassets_advanced_filters_source.txt" \
+    --revision "$SOURCE_REVISION" \
+    --output "$TEMP_DIR/uassets_procedural_cosmetic_rules.txt" \
+    --min-rules 20
 
 # Match Candy's deliberately small ABP/uBlock network subset:
 #   ||request-host^
@@ -141,9 +190,13 @@ write_header() {
     printf '%s\n' ''
     printf '%s\n' 'Modification notice:'
     printf '%s\n' '- Exact host and positive site-to-host rules supported by Candy are compiled into plain lists.'
-    printf '%s\n' '- Domain-specific standard CSS rules and their exceptions are compiled separately.'
-    printf '%s\n' '- Generic/procedural CSS, paths, modifiers, regexes, redirects, scriptlets, and JavaScript are excluded.'
+    printf '%s\n' '- Domain-specific and bounded generic CSS rules, #@# exceptions, and $ghide sites are compiled separately.'
+    printf '%s\n' '- Bounded host-anchored URL-path/wildcard, popup, and popunder rules are compiled separately.'
+    printf '%s\n' '- Literal :has-text and :remove rules use Candy-owned bounded declarative runtime.'
+    printf '%s\n' '- +js(nowoif) is translated into Candy-owned window.open policy; no upstream JavaScript is shipped.'
+    printf '%s\n' '- Regexes, redirects, arbitrary scriptlets, and trusted JavaScript are excluded.'
     printf '%s\n' '- The complete pinned input is shipped as uassets_filters_source.txt.'
+    printf '%s\n' '- Additional advanced inputs are shipped as uassets_advanced_filters_source.txt.'
     printf '%s\n' '- scripts/update_uassets_filters.sh is the corresponding transformation source.'
     printf '%s\n' ''
     cat "$TEMP_DIR/license.txt"
@@ -154,6 +207,11 @@ mv "$TEMP_DIR/uassets_blocked_hosts.txt" "$ASSET_DIR/uassets_blocked_hosts.txt"
 mv "$TEMP_DIR/uassets_blocked_host_pairs.txt" "$ASSET_DIR/uassets_blocked_host_pairs.txt"
 mv "$TEMP_DIR/uassets_allowed_host_pairs.txt" "$ASSET_DIR/uassets_allowed_host_pairs.txt"
 mv "$TEMP_DIR/uassets_cosmetic_rules.txt" "$ASSET_DIR/uassets_cosmetic_rules.txt"
+mv "$TEMP_DIR/uassets_advanced_filters.txt" "$ASSET_DIR/uassets_advanced_filters.txt"
+mv "$TEMP_DIR/uassets_advanced_filters_source.txt" \
+    "$ASSET_DIR/uassets_advanced_filters_source.txt"
+mv "$TEMP_DIR/uassets_procedural_cosmetic_rules.txt" \
+    "$ASSET_DIR/uassets_procedural_cosmetic_rules.txt"
 mv "$TEMP_DIR/uassets.LICENSE.txt" "$ASSET_DIR/uassets.LICENSE.txt"
 mv "$TEMP_DIR/source.txt" "$ASSET_DIR/uassets_filters_source.txt"
 

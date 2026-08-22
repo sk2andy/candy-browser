@@ -2,8 +2,9 @@
 # Format: request-host<TAB>page-host
 # Source: https://github.com/easylist/easylist
 # Source revision: 54849f55642f155a67649b46fe3b87c39607c1c5
+# Source graph: easylist.template + easyprivacy.template
 # License: CC BY-SA 3.0 or later; see content_filter.LICENSE.txt
-# Generated host pairs: 52
+# Generated host pairs: 115
 ad.linksynergy.com	extrarebates.com
 ads-static.conde.digital	wired.com
 adsninja.ca	androidpolice.com
@@ -37,13 +38,69 @@ adsninja.ca	xda-developers.com
 adtraction.com	ebjudande.se
 browser-intake-datadoghq.com	grubhub.com
 browser-intake-datadoghq.com	mightyape.co.nz
+bugsnag.com	app.bugsnag.com
+cdn.ex.co	mm-watch.com
+cdn.ex.co	theautopian.com
 clouderrorreporting.googleapis.com	waze.com
+cqcounter.com	cqcounter.com
+datadoghq-browser-agent.com	bbcgoodfood.com
+datadoghq-browser-agent.com	cdn.spatialbuzz.com
+datadoghq-browser-agent.com	dashboard.getdriven.app
+datadoghq-browser-agent.com	espn.com
+datadoghq-browser-agent.com	goindigo.in
+datadoghq-browser-agent.com	hungryroot.com
+datadoghq-browser-agent.com	usa.experian.com
+embed.ex.co	espncricinfo.com
+ev.tpocdm.com	wowma.jp
+extreme-ip-lookup.com	bulkbarn.ca
+f-tra.com	pokemoncenter-online.com
 forexprostools.com	fx-rashinban.com
+fpt.microsoft.com	account.microsoft.com
+fpt.microsoft.com	fpt.microsoft.com
+friendbuy.com	butcherbox.com
+go-mpulse.net	costcobusinessdelivery.com
+h-cast.jp	bookoffonline.co.jp
+heatmap.it	heatmap.com
+heatmap.it	heatmap.it
+heatmap.it	heatmap.me
+heatmap.it	heatmap.org
 howsmyssl.com	trenitalia.fr
+leanplum.com	arkadium.com
+live.primis.tech	eurogamer.net
+live.primis.tech	gbnews.com
+live.primis.tech	independent.co.uk
+live.primis.tech	klaq.com
+live.primis.tech	loudwire.com
+live.primis.tech	screencrush.com
+live.primis.tech	the-independent.com
+live.primis.tech	vg247.com
+live.primis.tech	xxlmag.com
 moatads.com	imsa.com
 moatads.com	nascar.com
+mxpnl.com	mixpanel.com
+online-metrix.net	eki-net.com
+optimove.net	app.touchnote.com
+outbrainimg.com	computerbild.de
+outbrainimg.com	fitbook.de
+outbrainimg.com	metal-hammer.de
+outbrainimg.com	rollingstone.de
+outbrainimg.com	stylebook.de
+player.avplayer.com	explosm.net
+player.avplayer.com	gamingbible.co.uk
+player.avplayer.com	justthenews.com
+player.avplayer.com	ladbible.com
+player.avplayer.com	tiz-cycling-live.io
 public.profitwell.com	adblockplus.org
 public.profitwell.com	getadblock.com
+pvtag.yahoo.co.jp	paypaymall.yahoo.co.jp
+relevant-digital.com	20min.ch
+rtoaster.jp	cecile.co.jp
+rtoaster.jp	ec-store.net
+rtoaster.jp	jreastmall.com
+rtoaster.jp	lexus.jp
+rtoaster.jp	melonbooks.co.jp
+simpleanalyticsexternal.com	inleo.io
+siteapps.com	netcombo.com.br
 snowplow.swm.digital	7plus.com.au
 tag.aticdn.net	gouv.fr
 tag.aticdn.net	openservices.enedis.fr
@@ -52,6 +109,13 @@ tag.aticdn.net	tv5monde.com
 tag.aticdn.net	uktvplay.co.uk
 tag.aticdn.net	visaconcierge.eu
 tag.aticdn.net	yourstory.com
+taplytics.com	royalbank.com
+team-rec.jp	search-voi.0101.co.jp
+team-rec.jp	voi.0101.co.jp
+technical-service.net	n-tv.de
+technical-service.net	rtl.de
+technical-service.net	vip.de
+tpc.googlesyndication.com	ads.google.com
 try.abtasty.com	tickpick.com
 valuecommerce.com	pointtown.com
 wf.typesquare.com	app.studio.design

@@ -149,8 +149,8 @@ landscape-oriented previews for cover flow and compact grid layouts.
 
 ### Local protection
 
-- EasyList/EasyPrivacy hosts and domain-scoped cosmetic CSS plus a pinned, safely representable
-  uAssets subset
+- EasyList/EasyPrivacy hosts and cosmetics, a pinned safely representable uAssets subset, and a
+  pinned HaGeZi Pro host delta
 - Third-party-cookie blocking and cosmetic cookie-banner hiding
 - **Privacy X-Ray:** live per-tab block counts, categories, domains, and exceptions
 - **Permission Radar:** per-site camera, microphone, location, and other WebView permission activity
@@ -336,8 +336,10 @@ fetch, show a diff, and require confirmation. Private-profile imports remain in 
 
 EasyList, EasyPrivacy, and EasyList Cookie data are distributed under CC BY-SA 3.0 or later. The
 uAssets-derived network and cosmetic subsets are generated from one pinned revision of the official
-uBlock Origin Ads source and distributed under GPL-3.0. Exact sources, revisions, transformations,
-and notices ship in `app/src/main/assets/`; maintenance entry points live in `scripts/update_*.sh`.
+uBlock Origin Ads source and distributed under GPL-3.0. The HaGeZi Pro host delta is generated from
+a pinned official revision and distributed under GPL-3.0. Exact sources, revisions,
+transformations, and notices ship in `app/src/main/assets/`; maintenance entry points live in
+`scripts/update_*.sh`.
 
 </details>
 

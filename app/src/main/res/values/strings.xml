@@ -687,4 +687,6 @@
     <string name="cast_unknown_device">Cast device</string>
     <string name="cast_position">%1$s / %2$s</string>
     <string name="cast_volume">Device volume</string>
+    <string name="popup_blocked">Popup blocked</string>
+    <string name="action_open_popup">Open</string>
 </resources>

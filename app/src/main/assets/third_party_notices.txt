@@ -35,6 +35,9 @@ documented in content_filter.LICENSE.txt.
 uBlock Origin uAssets network/cosmetic attribution, modification notice, pinned source, and the
 complete GPL-3.0 license are provided in uassets.LICENSE.txt.
 
+HaGeZi Pro network-filter attribution, pinned source and revision, modification notice, and the
+complete GPL-3.0 license are provided in hagezi.LICENSE.txt.
+
 
                                  Apache License
                            Version 2.0, January 2004

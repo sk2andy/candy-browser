@@ -9,9 +9,13 @@ License: GNU General Public License version 3
 
 Modification notice:
 - Exact host and positive site-to-host rules supported by Candy are compiled into plain lists.
-- Domain-specific standard CSS rules and their exceptions are compiled separately.
-- Generic/procedural CSS, paths, modifiers, regexes, redirects, scriptlets, and JavaScript are excluded.
+- Domain-specific and bounded generic CSS rules, #@# exceptions, and $ghide sites are compiled separately.
+- Bounded host-anchored URL-path/wildcard, popup, and popunder rules are compiled separately.
+- Literal :has-text and :remove rules use Candy-owned bounded declarative runtime.
+- +js(nowoif) is translated into Candy-owned window.open policy; no upstream JavaScript is shipped.
+- Regexes, redirects, arbitrary scriptlets, and trusted JavaScript are excluded.
 - The complete pinned input is shipped as uassets_filters_source.txt.
+- Additional advanced inputs are shipped as uassets_advanced_filters_source.txt.
 - scripts/update_uassets_filters.sh is the corresponding transformation source.
 
                     GNU GENERAL PUBLIC LICENSE

@@ -253,7 +253,8 @@ object CandySubscriptionRules {
 
 object CandyCosmeticScript {
     const val cleanupScript =
-        "document.querySelectorAll('style[data-candy-filter]').forEach(function(s){s.remove()})"
+        "(function c(w){try{w.document.querySelectorAll('style[data-candy-filter]')" +
+            ".forEach(function(s){s.remove()});Array.from(w.frames).forEach(c)}catch(e){}})(window)"
 
     fun create(selectors: List<String>, pausedHosts: Collection<String> = emptyList()): String {
         val encodedSelectors = selectors.asSequence()
@@ -268,7 +269,8 @@ object CandyCosmeticScript {
             .distinct()
             .take(64)
             .joinToString(",") { "'$it'" }
-        return "(function(){if(top!==self)return;var h=location.hostname.toLowerCase();" +
+        return "(function(){for(var w=self;w!==top;){w=w.parent;try{void w.document}" +
+            "catch(e){return}}var h=location.hostname.toLowerCase();" +
             "if([$pauses].some(function(x){return h===x||h.endsWith('.'+x)}))return;" +
             "var d=function(v){var b=atob(v);var a=Uint8Array.from(b,function(c){" +
             "return c.charCodeAt(0)});return new TextDecoder('utf-8').decode(a)};" +
@@ -304,7 +306,11 @@ object CandyCosmeticScript {
             .joinToString(",") { "'$it'" }
         return """
             (function(){
-              if(top!==self)return;
+              for(var frame=self;frame!==top;){
+                frame=frame.parent;
+                try { void frame.document; }
+                catch(ignored) { return; }
+              }
               var h=location.hostname.toLowerCase().replace(/\.$/,'');
               if([$pauses].some(function(x){return h===x||h.endsWith('.'+x)}))return;
               var decode=function(value){

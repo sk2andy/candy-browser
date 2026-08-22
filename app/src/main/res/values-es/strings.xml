@@ -678,4 +678,6 @@
     <string name="cast_unknown_device">Dispositivo Cast</string>
     <string name="cast_position">%1$s / %2$s</string>
     <string name="cast_volume">Volumen del dispositivo</string>
+    <string name="popup_blocked">Ventana emergente bloqueada</string>
+    <string name="action_open_popup">Abrir</string>
 </resources>
