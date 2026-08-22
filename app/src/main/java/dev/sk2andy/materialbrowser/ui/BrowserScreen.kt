@@ -6078,6 +6078,12 @@ internal fun TabOverview(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        top = TAB_OVERVIEW_TOP_SPACING +
+                            PROFILE_SWITCHER_LAYOUT_HEIGHT +
+                            TAB_OVERVIEW_PROFILE_SPACING,
+                    )
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
