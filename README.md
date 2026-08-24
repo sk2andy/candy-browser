@@ -67,7 +67,7 @@ landscape-oriented previews for cover flow and compact grid layouts.
   edge mode
 - Pull to refresh, direct URL navigation, QR scanning, local domain completion, and optional
   provider-backed search suggestions (disabled in private tabs)
-- Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, and Qwant search
+- Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, Qwant, Kagi, Perplexity, ChatGPT, and configurable SearXNG search
 - Optional Google AI Mode routing through a toggleable address-bar logo, enabled from search settings
 - Address commands with `>` for tab, profile, cache, cookie, and navigation actions
 - Background tabs, sharing, printing, external apps, assistant summaries, and built-in or external

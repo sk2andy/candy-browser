@@ -410,6 +410,8 @@ class BrowserController(
         private set
     var searchEngine by mutableStateOf(SearchEngine.Google)
         private set
+    var searxngSettings by mutableStateOf(SearxngSettings())
+        private set
     var isAiModeToggleVisible by mutableStateOf(false)
         private set
     var searchSuggestionProvider by mutableStateOf(SearchSuggestionProvider.DuckDuckGo)
@@ -1263,6 +1265,7 @@ class BrowserController(
         snoozedTabs += snoozedTabStore.load()
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
+        searxngSettings = store.loadSearxngSettings()
         searchEngine = store.loadSearchEngine()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
@@ -2049,7 +2052,26 @@ class BrowserController(
                 ).show()
                 return
             }
-            null -> AddressResolver.resolve(input, searchEngine, searchMode)
+            null -> {
+                if (
+                    searchEngine == SearchEngine.SearXNG &&
+                    AddressResolver.isSearchQuery(input) &&
+                    SearxngRules.normalizedInstanceUrl(searxngSettings.instanceUrl) == null
+                ) {
+                    Toast.makeText(
+                        activity,
+                        activity.getString(R.string.toast_searxng_instance_required),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    return
+                }
+                AddressResolver.resolve(
+                    input = input,
+                    searchEngine = searchEngine,
+                    searchMode = searchMode,
+                    searxngInstanceUrl = searxngSettings.instanceUrl,
+                )
+            }
         }
         val webView = webViewFor(selectedTabId)
         applyMediaPlaybackPolicy(selectedTabId, webView)
@@ -2543,7 +2565,11 @@ class BrowserController(
         val resolvedUrl = if (initialUrl == BLANK_URL) {
             BLANK_URL
         } else {
-            AddressResolver.resolve(initialUrl, searchEngine)
+            AddressResolver.resolve(
+                input = initialUrl,
+                searchEngine = searchEngine,
+                searxngInstanceUrl = searxngSettings.instanceUrl,
+            )
         }
         val tab = newTabState(
             url = resolvedUrl,
@@ -2577,7 +2603,11 @@ class BrowserController(
         val resolvedUrl = if (initialUrl == BLANK_URL) {
             BLANK_URL
         } else {
-            AddressResolver.resolve(initialUrl, searchEngine)
+            AddressResolver.resolve(
+                input = initialUrl,
+                searchEngine = searchEngine,
+                searxngInstanceUrl = searxngSettings.instanceUrl,
+            )
         }
         val tab = newTabState(
             url = resolvedUrl,
@@ -4012,6 +4042,11 @@ class BrowserController(
     fun updateSearchEngine(engine: SearchEngine) {
         searchEngine = engine
         store.saveSearchEngine(engine)
+    }
+
+    fun updateSearxngSettings(settings: SearxngSettings) {
+        searxngSettings = SearxngRules.sanitize(settings)
+        store.saveSearxngSettings(searxngSettings)
     }
 
     fun updateAiModeToggleVisible(visible: Boolean) {

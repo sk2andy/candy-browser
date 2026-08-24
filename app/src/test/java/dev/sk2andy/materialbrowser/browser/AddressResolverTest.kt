@@ -57,6 +57,18 @@ class AddressResolverTest {
     }
 
     @Test
+    fun `uses configured searxng instance for plain text`() {
+        assertEquals(
+            "http://localhost:8080/searxng/search?q=privacy%20browser",
+            AddressResolver.resolve(
+                input = "privacy browser",
+                searchEngine = SearchEngine.SearXNG,
+                searxngInstanceUrl = "http://localhost:8080/searxng",
+            ),
+        )
+    }
+
+    @Test
     fun `ai mode changes only search query resolution`() {
         assertEquals(
             "https://www.google.com/ai?q=why%20is%20the%20sky%20blue",

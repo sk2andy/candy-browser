@@ -755,6 +755,7 @@ internal fun BrowserScreen(
         addressEditorVisible,
         addressValue.text,
         controller.searchSuggestionProvider,
+        controller.searxngSettings,
         selectedTab.id,
         selectedTab.isIncognito,
     ) {
@@ -765,6 +766,7 @@ internal fun BrowserScreen(
                 query = addressValue.text,
                 provider = controller.searchSuggestionProvider,
                 isIncognito = selectedTab.isIncognito,
+                searxngInstanceUrl = controller.searxngSettings.instanceUrl,
             )
         ) {
             return@LaunchedEffect
@@ -773,6 +775,7 @@ internal fun BrowserScreen(
         remoteSearchSuggestions = searchSuggestionClient.suggestions(
             provider = controller.searchSuggestionProvider,
             query = addressValue.text.trim(),
+            searxngSettings = controller.searxngSettings,
         )
     }
     val suggestionItems by remember {
@@ -1822,6 +1825,7 @@ internal fun BrowserScreen(
                 blockerSettings = controller.blockerSettings,
                 inactiveTabLifetime = controller.inactiveTabLifetime,
                 searchEngine = controller.searchEngine,
+                searxngSettings = controller.searxngSettings,
                 isAiModeToggleVisible = controller.isAiModeToggleVisible,
                 searchSuggestionProvider = controller.searchSuggestionProvider,
                 tabOverviewMode = controller.tabOverviewMode,
@@ -1862,6 +1866,7 @@ internal fun BrowserScreen(
                 onBlockerSettingsChanged = controller::updateBlockerSettings,
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onSearchEngineChanged = controller::updateSearchEngine,
+                onSearxngSettingsChanged = controller::updateSearxngSettings,
                 onAiModeToggleVisibleChanged = controller::updateAiModeToggleVisible,
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,

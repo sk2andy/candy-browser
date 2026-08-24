@@ -16,10 +16,15 @@ object AddressResolver {
         input: String,
         searchEngine: SearchEngine,
         searchMode: SearchMode = SearchMode.Web,
+        searxngInstanceUrl: String = "",
     ): String = when (val target = classify(input)) {
         AddressTarget.Blank -> BLANK_URL
         is AddressTarget.Url -> target.value
-        is AddressTarget.Search -> searchEngine.buildSearchUrl(target.query, searchMode)
+        is AddressTarget.Search -> searchEngine.buildSearchUrl(
+            query = target.query,
+            mode = searchMode,
+            searxngInstanceUrl = searxngInstanceUrl,
+        )
     }
 
     fun isSearchQuery(input: String): Boolean = classify(input) is AddressTarget.Search

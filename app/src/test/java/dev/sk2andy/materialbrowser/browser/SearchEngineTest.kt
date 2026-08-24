@@ -28,14 +28,34 @@ class SearchEngineTest {
             SearchEngine.Ecosia to "https://www.ecosia.org/search?q=candy%20%26%20browser",
             SearchEngine.Startpage to "https://www.startpage.com/sp/search?query=candy%20%26%20browser",
             SearchEngine.Qwant to "https://www.qwant.com/?q=candy%20%26%20browser",
+            SearchEngine.Kagi to "https://kagi.com/search?q=candy%20%26%20browser",
             SearchEngine.Perplexity to "https://www.perplexity.ai/search?q=candy%20%26%20browser",
             SearchEngine.ChatGPT to "https://chatgpt.com/?q=candy%20%26%20browser",
         )
 
-        assertEquals(SearchEngine.entries.toSet(), expected.keys)
+        assertEquals(SearchEngine.entries.toSet() - SearchEngine.SearXNG, expected.keys)
         expected.forEach { (engine, url) ->
             assertEquals(url, engine.buildSearchUrl("candy & browser"))
         }
+    }
+
+    @Test
+    fun `searxng builds search url from configured instance`() {
+        assertEquals(
+            "https://search.example/searxng/search?q=candy%20%26%20browser",
+            SearchEngine.SearXNG.buildSearchUrl(
+                query = "candy & browser",
+                searxngInstanceUrl = "https://search.example/searxng/",
+            ),
+        )
+    }
+
+    @Test
+    fun `searxng with invalid instance does not leak query to another provider`() {
+        assertEquals(
+            BLANK_URL,
+            SearchEngine.SearXNG.buildSearchUrl("candy browser"),
+        )
     }
 
     @Test

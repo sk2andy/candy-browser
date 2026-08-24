@@ -284,6 +284,13 @@
     <string name="settings_search_suggestions_summary">After three characters, typed search text is sent to this provider. Disabled in private tabs.</string>
     <string name="settings_search_suggestions_none_summary">Suggestions stay local. No typed text is sent to a suggestion provider.</string>
     <string name="search_suggestion_provider_none">None</string>
+    <string name="settings_searxng_instance_url">SearXNG instance URL</string>
+    <string name="settings_searxng_instance_url_summary">Base URL, including an optional path. HTTPS is recommended.</string>
+    <string name="settings_searxng_instance_url_invalid">Enter a valid HTTP or HTTPS URL without credentials, query, or fragment.</string>
+    <string name="settings_searxng_search_suggestions_summary">After four characters, typed search text is sent to this SearXNG instance. Disabled in private tabs.</string>
+    <string name="settings_searxng_suggestion_fallback">Suggestion fallback</string>
+    <string name="settings_searxng_suggestion_fallback_summary">Used only if the SearXNG suggestion request fails. This sends the typed query to the fallback provider too. Disabled in private tabs.</string>
+    <string name="toast_searxng_instance_required">Set a valid SearXNG instance URL first</string>
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Full immersive mode</string>
     <string name="settings_full_immersive_mode_subtitle">Hides the status and navigation bars. Swipe from a screen edge to show them temporarily.</string>
