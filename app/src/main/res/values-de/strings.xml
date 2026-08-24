@@ -254,6 +254,11 @@
     <string name="tab_overview_mode_grid">Kompaktes Raster</string>
     <string name="tab_overview_mode_list">Liste ohne Vorschauen</string>
     <string name="settings_auto_close_tabs">Tabs automatisch schließen</string>
+    <string name="settings_resident_tab_limit">Geladene Tabs</string>
+    <plurals name="settings_resident_tab_limit_summary">
+        <item quantity="one">Den zuletzt verwendeten Tab geladen halten. Andere behalten ihre Vorschau und laden beim Öffnen neu.</item>
+        <item quantity="other">Die %1$d zuletzt verwendeten Tabs geladen halten. Andere behalten ihre Vorschau und laden beim Öffnen neu.</item>
+    </plurals>
     <string name="settings_profiles_title">Profile aktivieren</string>
     <string name="settings_profiles_subtitle">Separate Tab-Gruppen beibehalten und Steuerelemente zum Profilwechsel anzeigen.</string>
     <string name="tab_lifetime_never">Nie</string>

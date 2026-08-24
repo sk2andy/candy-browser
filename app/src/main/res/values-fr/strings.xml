@@ -254,6 +254,12 @@
     <string name="tab_overview_mode_grid">Grille compacte</string>
     <string name="tab_overview_mode_list">Liste sans aperçus</string>
     <string name="settings_auto_close_tabs">Fermer automatiquement les onglets</string>
+    <string name="settings_resident_tab_limit">Onglets gardés chargés</string>
+    <plurals name="settings_resident_tab_limit_summary">
+        <item quantity="one">Garder chargé %1$d onglet récemment utilisé. Les autres conservent leur aperçu et se rechargent à l’ouverture.</item>
+        <item quantity="many">Garder chargés les %1$d derniers onglets utilisés. Les autres conservent leur aperçu et se rechargent à l’ouverture.</item>
+        <item quantity="other">Garder chargés les %1$d derniers onglets utilisés. Les autres conservent leur aperçu et se rechargent à l’ouverture.</item>
+    </plurals>
     <string name="settings_profiles_title">Activer les profils</string>
     <string name="settings_profiles_subtitle">Conserver des groupes d’onglets séparés et afficher les commandes de changement de profil.</string>
     <string name="tab_lifetime_never">Jamais</string>

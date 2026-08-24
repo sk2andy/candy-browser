@@ -77,6 +77,7 @@ import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
@@ -132,6 +133,10 @@ internal object SearchSettingsTestTags {
     const val SearxngFallback = "search_settings_searxng_fallback"
 }
 
+internal object TabSettingsTestTags {
+    const val ResidentTabLimit = "tab_settings_resident_limit"
+}
+
 @Composable
 internal fun SettingsScreen(
     destination: SettingsDestination,
@@ -140,6 +145,7 @@ internal fun SettingsScreen(
     externalDownloadManagers: List<ExternalDownloadManagerApp>,
     blockerSettings: BlockerSettings,
     inactiveTabLifetime: InactiveTabLifetime,
+    residentTabLimit: Int,
     searchEngine: SearchEngine,
     searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
@@ -164,6 +170,7 @@ internal fun SettingsScreen(
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
+    onResidentTabLimitChanged: (Int) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
@@ -240,11 +247,13 @@ internal fun SettingsScreen(
 
                 SettingsDestination.TabsAndGestures -> TabsAndGesturesSettingsPage(
                     inactiveTabLifetime = inactiveTabLifetime,
+                    residentTabLimit = residentTabLimit,
                     tabOverviewMode = tabOverviewMode,
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
                     isTabButtonVisible = isTabButtonVisible,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
+                    onResidentTabLimitChanged = onResidentTabLimitChanged,
                     onTabOverviewModeChanged = onTabOverviewModeChanged,
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
@@ -797,13 +806,15 @@ internal fun SearchSettingsPage(
 }
 
 @Composable
-private fun TabsAndGesturesSettingsPage(
+internal fun TabsAndGesturesSettingsPage(
     inactiveTabLifetime: InactiveTabLifetime,
+    residentTabLimit: Int,
     tabOverviewMode: TabOverviewMode,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
+    onResidentTabLimitChanged: (Int) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
@@ -814,6 +825,9 @@ private fun TabsAndGesturesSettingsPage(
     var overviewModeMenuExpanded by remember { mutableStateOf(false) }
     var resistancePercent by remember(dismissResistancePercent) {
         mutableFloatStateOf(dismissResistancePercent.toFloat())
+    }
+    var residentLimit by remember(residentTabLimit) {
+        mutableFloatStateOf(residentTabLimit.toFloat())
     }
     SettingsPage(
         title = stringResource(R.string.settings_tabs_gestures_title),
@@ -842,6 +856,40 @@ private fun TabsAndGesturesSettingsPage(
                         },
                     )
                 }
+            }
+        }
+        SettingsPageSpacer()
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                Text(
+                    stringResource(R.string.settings_resident_tab_limit),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    pluralStringResource(
+                        R.plurals.settings_resident_tab_limit_summary,
+                        residentLimit.roundToInt(),
+                        residentLimit.roundToInt(),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Slider(
+                    value = residentLimit,
+                    onValueChange = { residentLimit = it },
+                    onValueChangeFinished = {
+                        onResidentTabLimitChanged(residentLimit.roundToInt())
+                    },
+                    modifier = Modifier.testTag(TabSettingsTestTags.ResidentTabLimit),
+                    valueRange = TabWebViewResidencyRules.MIN_LIMIT.toFloat()..
+                        TabWebViewResidencyRules.MAX_LIMIT.toFloat(),
+                    steps = TabWebViewResidencyRules.MAX_LIMIT -
+                        TabWebViewResidencyRules.MIN_LIMIT - 1,
+                )
             }
         }
         SettingsPageSpacer()

@@ -408,6 +408,8 @@ class BrowserController(
         private set
     var inactiveTabLifetime by mutableStateOf(InactiveTabLifetime.Never)
         private set
+    var residentTabLimit by mutableIntStateOf(TabWebViewResidencyRules.DEFAULT_LIMIT)
+        private set
     var searchEngine by mutableStateOf(SearchEngine.Google)
         private set
     var searxngSettings by mutableStateOf(SearxngSettings())
@@ -524,6 +526,9 @@ class BrowserController(
     fun selectedTabForTesting(): BrowserTab = selectedTab
 
     @VisibleForTesting
+    fun residentTabIdsForTesting(): Set<String> = webViews.keys.toSet()
+
+    @VisibleForTesting
     fun flushWebViewStateForTesting(): Boolean = webViewStateRepository.flush()
 
     @VisibleForTesting
@@ -553,6 +558,9 @@ class BrowserController(
         get() = backgroundAudioKey?.tabId
 
     private val webViews = mutableMapOf<String, WebView>()
+    private val residentWebViewAccessOrder = mutableMapOf<String, Long>()
+    private var residentWebViewAccessSequence = 0L
+    private var residentWebViewTrimScheduled = false
     private var fullscreenVideoSession: FullscreenVideoSession? = null
     private var fullscreenVideoSourceRevision = 0
     private var webMediaPresentation: WebMediaPresentation? = null
@@ -926,6 +934,7 @@ class BrowserController(
         if (!isFileChooserCurrent(pending.identity)) {
             pendingFileChooser = null
             pending.delivery.complete(null)
+            scheduleResidentWebViewTrim()
             return
         }
         val parsed = WebChromeClient.FileChooserParams.parseResult(resultCode, data)
@@ -945,15 +954,18 @@ class BrowserController(
                     ) {
                         if (pendingFileChooser === pending) pendingFileChooser = null
                         pending.delivery.complete(null)
+                        scheduleResidentWebViewTrim()
                     } else {
                         pendingFileChooser = null
                         pending.delivery.complete(safeUris)
+                        scheduleResidentWebViewTrim()
                     }
                 }
             }
         }.onFailure {
             if (pendingFileChooser === pending) pendingFileChooser = null
             pending.delivery.complete(null)
+            scheduleResidentWebViewTrim()
         }
     }
 
@@ -1266,6 +1278,7 @@ class BrowserController(
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
         searxngSettings = store.loadSearxngSettings()
+        residentTabLimit = store.loadResidentTabLimit()
         searchEngine = store.loadSearchEngine()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
@@ -1642,6 +1655,7 @@ class BrowserController(
         pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
         pictureInPicturePlayRetryPending = false
+        scheduleResidentWebViewTrim()
     }
 
     fun onPictureInPictureModeChanged(inPictureInPicture: Boolean) {
@@ -1708,6 +1722,7 @@ class BrowserController(
                 ?.takeIf { session -> fullscreenVideoSession === session }
                 ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
         }
+        scheduleResidentWebViewTrim()
     }
 
     fun completePictureInPictureReturn() {
@@ -1726,6 +1741,7 @@ class BrowserController(
             )
         }
         releasePictureInPictureExitGuardWhenResumed()
+        scheduleResidentWebViewTrim()
     }
 
     /**
@@ -3059,6 +3075,8 @@ class BrowserController(
         val nowMillis = System.currentTimeMillis()
         touchTab(selectedTabId, nowMillis)
         touchTab(tabId, nowMillis)
+        markResidentWebViewAccess(tabId)
+        scheduleResidentWebViewTrim()
         pruneStaleTabs(nowMillis)
         if (tabId == selectedTabId) {
             persist()
@@ -4048,6 +4066,12 @@ class BrowserController(
         pruneStaleTabs()
     }
 
+    fun updateResidentTabLimit(limit: Int) {
+        residentTabLimit = TabWebViewResidencyRules.normalizedLimit(limit)
+        store.saveResidentTabLimit(residentTabLimit)
+        scheduleResidentWebViewTrim()
+    }
+
     fun updateSearchEngine(engine: SearchEngine) {
         searchEngine = engine
         store.saveSearchEngine(engine)
@@ -4465,6 +4489,7 @@ class BrowserController(
         configuredServiceWorkerProfiles.toList().forEach(::clearProfileServiceWorkerClient)
         webViews.values.forEach(::destroyWebView)
         webViews.clear()
+        residentWebViewAccessOrder.clear()
         webViewProfileKeys.clear()
         forcedPageZoomScriptHandlers.clear()
         forcedVerticalScrollScriptHandlers.clear()
@@ -4506,29 +4531,125 @@ class BrowserController(
         candyTrailGenerations.clear()
     }
 
-    private fun webViewFor(tabId: String, initialUrlOverride: String? = null): WebView =
-        webViews.getOrPut(tabId) {
-        val tab = tabs.first { it.id == tabId }
-        createWebView(tabId).also { webView ->
-            val initialUrl = initialUrlOverride ?: tab.url
-            if (initialUrl != BLANK_URL && !blockingStartGate.isReady) {
-                updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                enqueueBlockingStart(
-                    tabId,
-                    PendingBlockingStart(
-                        webView = webView,
-                        pageUrl = initialUrl,
-                        restoreState = initialUrlOverride == null,
-                    ),
-                )
-            } else {
-                val restored = initialUrlOverride == null && initialUrl != BLANK_URL &&
-                    restoreWebViewStateWithProtection(tab, webView)
-                if (!restored && initialUrl != BLANK_URL) {
+    private fun webViewFor(tabId: String, initialUrlOverride: String? = null): WebView {
+        val webView = webViews.getOrPut(tabId) {
+            val tab = tabs.first { it.id == tabId }
+            createWebView(tabId).also { webView ->
+                val initialUrl = initialUrlOverride ?: tab.url
+                if (initialUrl != BLANK_URL && !blockingStartGate.isReady) {
                     updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                    loadUrlWithProtection(tabId, webView, initialUrl)
+                    enqueueBlockingStart(
+                        tabId,
+                        PendingBlockingStart(
+                            webView = webView,
+                            pageUrl = initialUrl,
+                            restoreState = initialUrlOverride == null,
+                        ),
+                    )
+                } else {
+                    val restored = initialUrlOverride == null && initialUrl != BLANK_URL &&
+                        restoreWebViewStateWithProtection(tab, webView)
+                    if (!restored && initialUrl != BLANK_URL) {
+                        updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
+                        loadUrlWithProtection(tabId, webView, initialUrl)
+                    }
                 }
             }
+        }
+        markResidentWebViewAccess(tabId)
+        scheduleResidentWebViewTrim()
+        return webView
+    }
+
+    private fun markResidentWebViewAccess(tabId: String) {
+        if (tabId !in webViews) return
+        residentWebViewAccessSequence++
+        residentWebViewAccessOrder[tabId] = residentWebViewAccessSequence
+    }
+
+    private fun scheduleResidentWebViewTrim() {
+        if (residentWebViewTrimScheduled || destroyed) return
+        residentWebViewTrimScheduled = true
+        mainHandler.post {
+            residentWebViewTrimScheduled = false
+            if (!destroyed) trimResidentWebViews()
+        }
+    }
+
+    private fun trimResidentWebViews() {
+        residentWebViewAccessOrder.keys.retainAll(webViews.keys)
+        val evictionIds = TabWebViewResidencyRules.evictionOrder(
+            residentTabIds = webViews.keys,
+            accessOrder = residentWebViewAccessOrder,
+            protectedTabIds = protectedResidentTabIds(),
+            limit = residentTabLimit,
+        )
+        if (evictionIds.isEmpty()) return
+        clearServiceWorkerClientsLosingLastWebView(evictionIds.toSet())
+        evictionIds.forEach(::evictResidentWebView)
+        webViewRevision++
+    }
+
+    private fun protectedResidentTabIds(): Set<String> = buildSet {
+        selectedTabId.takeIf(String::isNotBlank)?.let(::add)
+        fullscreenVideoSession?.tabId?.let(::add)
+        fullscreenVideoHiddenDuringPictureInPicture?.tabId?.let(::add)
+        webMediaPresentation?.key?.tabId?.let(::add)
+        backgroundAudioKey?.tabId?.let(::add)
+        pictureInPictureOwnerTabId?.let(::add)
+        pictureInPicturePresentationPendingReturnCleanupKey?.tabId?.let(::add)
+        pictureInPicturePresentationRetryKey?.tabId?.let(::add)
+        pictureInPictureExitGuardKey?.tabId?.let(::add)
+        pendingWebPictureInPictureRequest?.key?.tabId?.let(::add)
+        activeWebPictureInPictureRequest?.key?.tabId?.let(::add)
+        pendingPermissionAccess?.identity?.tabId?.let(::add)
+        pendingFileChooser?.identity?.tabId?.let(::add)
+        addAll(pendingPreviewCaptures.keys)
+        addAll(transientPopupTabIds)
+        blockedPopupOffer?.popupTabId?.let(::add)
+        pendingPopupNavigations.forEach { (popupTabId, pending) ->
+            add(popupTabId)
+            add(pending.openerTabId)
+        }
+        pendingPopunderNavigations.values.forEach { pending ->
+            add(pending.openerTabId)
+            add(pending.popupTabId)
+        }
+        webViews.keys.filterTo(this) { tabId -> hasPermissionActivity(tabId) }
+    }
+
+    private fun evictResidentWebView(tabId: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val webView = webViews[tabId] ?: return
+        if (tab.isIncognito) {
+            webViewStateRepository.delete(tabId)
+        } else {
+            persistWebViewState(tabId, webView)
+        }
+        cancelPendingBlockingStart(tabId)
+        webViews.remove(tabId)
+        residentWebViewAccessOrder.remove(tabId)
+        webViewProfileKeys.remove(tabId)
+        edgeToEdgePages.remove(tabId)
+        navigationGenerations.remove(tabId)
+        externalNavigationGrantExpirations.remove(tabId)
+        mainFrameTlsNavigations.remove(tabId)
+        pageUrls.remove(tabId)
+        bottomBarCompactStates.remove(tabId)
+        candyTrailHistoryBindings.remove(tabId)
+        pendingCandyTrailTargets.remove(tabId)
+        pendingConsentCssUrls.remove(tabId)
+        synchronized(privacyEventLock) {
+            reportedAllowedDecisions.remove(tabId)
+            protectionRequestContexts.remove(tabId)?.let(::flushPendingFilterHits)
+        }
+        destroyWebView(webView)
+        updateTab(tabId) { current ->
+            current.copy(
+                isLoading = false,
+                canGoBack = if (current.isIncognito) false else current.canGoBack,
+                canGoForward = if (current.isIncognito) false else current.canGoForward,
+            )
         }
     }
 
@@ -4935,6 +5056,7 @@ class BrowserController(
             clearPermissionActivity(tabId)
             clearServiceWorkerClientsLosingLastWebView(setOf(tabId))
             webViews.remove(tabId)
+            residentWebViewAccessOrder.remove(tabId)
             webViewProfileKeys.remove(tabId)
             removeWebMediaBridge(view)
             genericCosmeticBridges.remove(view)
@@ -5712,6 +5834,7 @@ class BrowserController(
     private fun cancelPictureInPicturePresentationRetry() {
         pictureInPicturePresentationRetryGeneration++
         pictureInPicturePresentationRetryKey = null
+        scheduleResidentWebViewTrim()
     }
 
     private fun publishWebMediaState() {
@@ -5747,6 +5870,7 @@ class BrowserController(
             .mapNotNull { channel -> channel.toCastCandidate() }
             .firstOrNull()
         onWebMediaStateChanged()
+        scheduleResidentWebViewTrim()
     }
 
     private fun WebMediaChannel.toState(): WebMediaState {
@@ -5964,6 +6088,7 @@ class BrowserController(
                     sendWebMediaCommand(channel, WebMediaCommand.ReconcilePlaying)
                 }
                 pictureInPictureExitGuardKey = null
+                scheduleResidentWebViewTrim()
             },
             PICTURE_IN_PICTURE_EXIT_GUARD_DELAY_MILLIS,
         )
@@ -6396,6 +6521,7 @@ class BrowserController(
                 .onFailure { activePermissions.drop(pending.requestToken) }
         }
         permissionRevision++
+        scheduleResidentWebViewTrim()
     }
 
     private fun cancelPendingPermissionAccess(tabId: String? = null) {
@@ -6405,6 +6531,7 @@ class BrowserController(
         permissionPrompt = null
         runCatching { pending.delivery.deny() }
         permissionRevision++
+        scheduleResidentWebViewTrim()
     }
 
     private fun dropCanceledPermissionAccess(requestToken: Any) {
@@ -6414,6 +6541,7 @@ class BrowserController(
         permissionPrompt = null
         pending.delivery.drop()
         permissionRevision++
+        scheduleResidentWebViewTrim()
     }
 
     private fun clearPermissionActivity(tabId: String) {
@@ -6424,7 +6552,10 @@ class BrowserController(
 
     private fun removeActivePermissionsForTab(tabId: String) {
         val removed = activePermissions.dropTab(tabId)
-        if (removed) permissionRevision++
+        if (removed) {
+            permissionRevision++
+            scheduleResidentWebViewTrim()
+        }
     }
 
     private fun permissionRequestIdentity(
@@ -6560,6 +6691,7 @@ class BrowserController(
         if (tabId != null && pending.identity.tabId != tabId) return
         pendingFileChooser = null
         pending.delivery.complete(null)
+        scheduleResidentWebViewTrim()
     }
 
     private fun browserChromeClient(
@@ -6757,6 +6889,7 @@ class BrowserController(
             )
             else -> null
         }
+        scheduleResidentWebViewTrim()
     }
 
     private fun dismissFullscreenVideo(
@@ -6932,6 +7065,7 @@ class BrowserController(
                         current.createdAtMillis == candidate.createdAtMillis
                     ) {
                         pendingPopunderNavigations.remove(openerTabId)
+                        scheduleResidentWebViewTrim()
                     }
                 },
                 PopunderNavigationRules.WINDOW_MILLIS,
@@ -6943,11 +7077,11 @@ class BrowserController(
         mainHandler.postDelayed(
             {
                 if (pendingPopupNavigations[popupTabId] === pendingPopup &&
-                    webViews[popupTabId] === popupWebView &&
-                    popupTabId in transientPopupTabIds
+                    webViews[popupTabId] === popupWebView
                 ) {
                     pendingPopupNavigations.remove(popupTabId)
-                    discardTransientPopup(popupTabId)
+                    if (popupTabId in transientPopupTabIds) discardTransientPopup(popupTabId)
+                    scheduleResidentWebViewTrim()
                 }
             },
             PopupNavigationRules.PENDING_TIMEOUT_MILLIS,
@@ -7000,6 +7134,7 @@ class BrowserController(
         if (decision == PopupNavigationDecision.KeepPending) return decision
         if (decision != PopupNavigationDecision.AllowSameSite) {
             pendingPopupNavigations.remove(tabId)
+            scheduleResidentWebViewTrim()
         }
         if (decision == PopupNavigationDecision.AllowSameSite) {
             recordPopunderChildNavigation(pending, tabId, targetUrl)
@@ -7012,6 +7147,7 @@ class BrowserController(
                     ?.takeIf { candidate -> candidate.popupTabId == tabId }
                     ?.let { candidate ->
                         pendingPopunderNavigations.remove(candidate.openerTabId)
+                        scheduleResidentWebViewTrim()
                     }
             } else {
                 recordPopunderChildNavigation(pending, tabId, targetUrl)
@@ -7036,6 +7172,7 @@ class BrowserController(
 
     private fun promoteTransientPopup(pending: PendingPopupNavigation, tabId: String) {
         if (!transientPopupTabIds.remove(tabId)) return
+        scheduleResidentWebViewTrim()
         captureVisiblePreview(
             tabId = pending.openerTabId,
             onComplete = {
@@ -7114,6 +7251,7 @@ class BrowserController(
         }
         if (pendingPopunderNavigations[candidate.openerTabId]?.popupTabId == candidate.popupTabId) {
             pendingPopunderNavigations.remove(candidate.openerTabId)
+            scheduleResidentWebViewTrim()
         }
         if (decision != PopunderNavigationDecision.Block) return false
         openerView?.stopLoading()
@@ -7354,23 +7492,22 @@ class BrowserController(
         expectedContext: ProtectionRequestContext,
         decision: CandyRuleDecision,
     ) {
-        if (destroyed || protectionRequestContexts[tabId] !== expectedContext) return
-        expectedContext.pendingFilterHits
-            .computeIfAbsent(decision.ruleId) { AtomicInteger() }
-            .incrementAndGet()
-        if (decision.action == CandyDecisionAction.Allow) {
-            val requestHost = CandyHostCanonicalizer.webHost(requestUrl).orEmpty()
-            val reported = reportedAllowedDecisions.computeIfAbsent(tabId) {
-                ConcurrentHashMap.newKeySet()
-            }
-            val key = "$requestHost\u0000${decision.ruleId}"
-            if (reported.size >= MAX_REPORTED_ALLOW_DECISIONS || !reported.add(key)) {
-                scheduleBlockerFlush()
-                return
-            }
-        }
         synchronized(privacyEventLock) {
             if (destroyed || protectionRequestContexts[tabId] !== expectedContext) return
+            expectedContext.pendingFilterHits
+                .computeIfAbsent(decision.ruleId) { AtomicInteger() }
+                .incrementAndGet()
+            if (decision.action == CandyDecisionAction.Allow) {
+                val requestHost = CandyHostCanonicalizer.webHost(requestUrl).orEmpty()
+                val reported = reportedAllowedDecisions.computeIfAbsent(tabId) {
+                    ConcurrentHashMap.newKeySet()
+                }
+                val key = "$requestHost\u0000${decision.ruleId}"
+                if (reported.size >= MAX_REPORTED_ALLOW_DECISIONS || !reported.add(key)) {
+                    scheduleBlockerFlush()
+                    return
+                }
+            }
             val wasBlocked = decision.action == CandyDecisionAction.Block
             privacyXRayRepository.recordDecision(
                 tabId = tabId,
@@ -7620,6 +7757,7 @@ class BrowserController(
         val callbacks = request.completionCallbacks.toList()
         request.completionCallbacks.clear()
         callbacks.forEach { callback -> callback() }
+        scheduleResidentWebViewTrim()
     }
 
     private fun isCurrentPreviewCapture(request: PendingPreviewCapture): Boolean =
@@ -7856,27 +7994,7 @@ class BrowserController(
                 }
                 pendingPrivacyTabs.remove(tabId)
             }
-            protectionRequestContexts.values.forEach { context ->
-                context.pendingFilterHits.forEach { (ruleId, count) ->
-                    val delta = count.getAndSet(0)
-                    if (delta > 0) {
-                        val index = filterRules.indexOfFirst { it.id == ruleId }
-                        if (context.isIncognito) {
-                            incognitoRuleHits[ruleId] = (
-                                incognitoRuleHits.getOrDefault(ruleId, 0).toLong() + delta
-                                ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-                        } else if (index >= 0) {
-                            val current = filterRules[index]
-                            filterRules[index] = current.copy(
-                                hitCount = (current.hitCount.toLong() + delta)
-                                    .coerceAtMost(Int.MAX_VALUE.toLong())
-                                    .toInt(),
-                            )
-                        }
-                    }
-                }
-                context.pendingFilterHits.entries.removeAll { (_, count) -> count.get() == 0 }
-            }
+            protectionRequestContexts.values.forEach(::flushPendingFilterHits)
             blockerFlushScheduled.set(false)
             if (!destroyed &&
                 (
@@ -7891,6 +8009,28 @@ class BrowserController(
                 mainHandler.postDelayed(this, BLOCKER_COUNT_FLUSH_DELAY_MS)
             }
         }
+    }
+
+    private fun flushPendingFilterHits(context: ProtectionRequestContext) {
+        context.pendingFilterHits.forEach { (ruleId, count) ->
+            val delta = count.getAndSet(0)
+            if (delta > 0) {
+                val index = filterRules.indexOfFirst { it.id == ruleId }
+                if (context.isIncognito) {
+                    incognitoRuleHits[ruleId] = (
+                        incognitoRuleHits.getOrDefault(ruleId, 0).toLong() + delta
+                        ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                } else if (index >= 0) {
+                    val current = filterRules[index]
+                    filterRules[index] = current.copy(
+                        hitCount = (current.hitCount.toLong() + delta)
+                            .coerceAtMost(Int.MAX_VALUE.toLong())
+                            .toInt(),
+                    )
+                }
+            }
+        }
+        context.pendingFilterHits.entries.removeAll { (_, count) -> count.get() == 0 }
     }
 
     private fun persist() {
@@ -8042,6 +8182,7 @@ class BrowserController(
         clearPermissionActivity(tabId)
         clearPrivacyDataForTab(tabId)
         webViews.remove(tabId)?.let(::destroyWebView)
+        residentWebViewAccessOrder.remove(tabId)
         webViewProfileKeys.remove(tabId)
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
@@ -8075,6 +8216,7 @@ class BrowserController(
         webViews[tab.id]?.let { webView -> persistWebViewState(tab.id, webView) }
         clearPrivacyDataForTab(tab.id)
         webViews.remove(tab.id)?.let(::destroyWebView)
+        residentWebViewAccessOrder.remove(tab.id)
         webViewProfileKeys.remove(tab.id)
         edgeToEdgePages.remove(tab.id)
         navigationGenerations.remove(tab.id)
@@ -8499,6 +8641,7 @@ class BrowserController(
             pendingCandyTrailTargets.remove(tabId)
             webViews[tabId]?.let { webView -> persistWebViewState(tabId, webView) }
             webViews.remove(tabId)?.let(::destroyWebView)
+            residentWebViewAccessOrder.remove(tabId)
             webViewProfileKeys.remove(tabId)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)

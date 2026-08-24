@@ -254,6 +254,12 @@
     <string name="tab_overview_mode_grid">Cuadrícula compacta</string>
     <string name="tab_overview_mode_list">Lista sin vistas previas</string>
     <string name="settings_auto_close_tabs">Cerrar pestañas automáticamente</string>
+    <string name="settings_resident_tab_limit">Pestañas cargadas</string>
+    <plurals name="settings_resident_tab_limit_summary">
+        <item quantity="one">Mantener cargada la última pestaña usada. Las demás conservan su vista previa y se recargan al abrirlas.</item>
+        <item quantity="many">Mantener cargadas las %1$d pestañas usadas más recientemente. Las demás conservan su vista previa y se recargan al abrirlas.</item>
+        <item quantity="other">Mantener cargadas las %1$d pestañas usadas más recientemente. Las demás conservan su vista previa y se recargan al abrirlas.</item>
+    </plurals>
     <string name="settings_profiles_title">Activar perfiles</string>
     <string name="settings_profiles_subtitle">Mantén grupos de pestañas separados y muestra los controles para cambiar de perfil.</string>
     <string name="tab_lifetime_never">Nunca</string>

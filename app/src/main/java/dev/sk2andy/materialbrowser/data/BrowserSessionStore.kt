@@ -15,6 +15,7 @@ import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import org.json.JSONArray
 import org.json.JSONObject
@@ -420,6 +421,20 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_INACTIVE_TAB_LIFETIME, lifetime.wireValue).apply()
     }
 
+    fun loadResidentTabLimit(): Int = runCatching {
+        preferences.getInt(
+            KEY_RESIDENT_TAB_LIMIT,
+            TabWebViewResidencyRules.DEFAULT_LIMIT,
+        )
+    }.getOrDefault(TabWebViewResidencyRules.DEFAULT_LIMIT)
+        .let(TabWebViewResidencyRules::normalizedLimit)
+
+    fun saveResidentTabLimit(limit: Int) {
+        preferences.edit()
+            .putInt(KEY_RESIDENT_TAB_LIMIT, TabWebViewResidencyRules.normalizedLimit(limit))
+            .apply()
+    }
+
     fun loadSearchEngine(): SearchEngine =
         SearchEngine.fromStableId(preferences.getString(KEY_SEARCH_ENGINE, null))
 
@@ -651,6 +666,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_HISTORY = "history"
         const val KEY_FAVORITES = "favorites"
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
+        const val KEY_RESIDENT_TAB_LIMIT = "resident_tab_limit"
         const val KEY_SEARCH_ENGINE = "search_engine"
         const val KEY_SEARXNG_INSTANCE_URL = "searxng_instance_url"
         const val KEY_SEARXNG_SUGGESTION_FALLBACK = "searxng_suggestion_fallback"
