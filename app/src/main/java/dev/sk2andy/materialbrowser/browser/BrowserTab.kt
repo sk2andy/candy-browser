@@ -40,4 +40,4 @@ internal val BrowserTab.isFreshBlankTab: Boolean
         error == null
 
 const val BLANK_URL = "about:blank"
-const val MAX_TABS = 12
+const val MAX_TABS = 50

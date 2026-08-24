@@ -254,6 +254,12 @@
     <string name="tab_overview_mode_grid">Grelha compacta</string>
     <string name="tab_overview_mode_list">Lista sem pré-visualizações</string>
     <string name="settings_auto_close_tabs">Fechar separadores automaticamente</string>
+    <string name="settings_resident_tab_limit">Separadores carregados</string>
+    <plurals name="settings_resident_tab_limit_summary">
+        <item quantity="one">Manter carregado %1$d separador utilizado recentemente. Os restantes mantêm a pré-visualização e recarregam ao abrir.</item>
+        <item quantity="many">Manter carregados os %1$d separadores utilizados mais recentemente. Os restantes mantêm a pré-visualização e recarregam ao abrir.</item>
+        <item quantity="other">Manter carregados os %1$d separadores utilizados mais recentemente. Os restantes mantêm a pré-visualização e recarregam ao abrir.</item>
+    </plurals>
     <string name="settings_profiles_title">Ativar perfis</string>
     <string name="settings_profiles_subtitle">Manter grupos de separadores distintos e mostrar os controlos de mudança de perfil.</string>
     <string name="tab_lifetime_never">Nunca</string>

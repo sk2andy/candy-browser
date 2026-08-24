@@ -4,7 +4,8 @@
 
 | Concern | Source | Current invariant |
 | --- | --- | --- |
-| Tab model | [`BrowserTab.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserTab.kt) | Maximum 12 open tabs; runtime fields stay on immutable copies |
+| Tab model | [`BrowserTab.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserTab.kt) | Maximum 50 open tab records; runtime fields stay on immutable copies |
+| Live WebViews | `TabWebViewResidencyRules`, `BrowserController` | Keep 10 recently used tabs loaded by default; user limit is 1–20 and applies globally across profiles |
 | Pin/order | `TabPinningRules`, `TabReorderingRules` | Pinned ordering is normalized after mutations |
 | Delete/duplicate | `TabDeletionRules`, `TabDuplicateRules` | Policy chooses valid targets before controller side effects |
 | Retention | `TabRetentionRules`, `InactiveTabLifetime` | Never expire selected/protected or non-deletable tabs |
@@ -19,6 +20,18 @@
 | WebView history state | `TabWebViewStateStore`/`Repository` | Persist separately from the tab summary and prune orphan files |
 | Deletion side data | Controller + repositories | Remove preview, favicon, WebView state and trail consistently |
 | Fullscreen video session | Memory only | Protect the owning regular tab's WebView while its custom view is expanded, floating or in system PiP; never restore the session or mini-player position |
+
+## WebView residency
+
+- Tab records, previews, favicons and Candy Trails remain available in the tab overview when a
+  WebView is evicted.
+- Selecting or otherwise using a resident WebView makes it most recently used. When the configured
+  limit is exceeded, the least-recently-used eligible WebView is persisted and destroyed.
+- The selected tab, active media/PiP owners, pending permission/file flows, preview captures and
+  managed popup transitions are protected. The limit may be exceeded temporarily while they remain
+  protected.
+- Regular tabs restore their persisted WebView history on demand. Private tabs never write WebView
+  state to disk and therefore reload their current URL after eviction.
 
 ## Mutation checklist
 

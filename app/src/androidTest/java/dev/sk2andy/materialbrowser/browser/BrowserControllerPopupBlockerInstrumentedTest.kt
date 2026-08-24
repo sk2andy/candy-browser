@@ -208,6 +208,55 @@ class BrowserControllerPopupBlockerInstrumentedTest {
     }
 
     @Test
+    fun sameSitePopupProtectionExpiresAfterTimeout() {
+        var openerTabId = ""
+        activityRule.scenario.onActivity { activity ->
+            val browserController = freshController(activity)
+            openerTabId = browserController.selectedTabId
+            browserController.selectedWebViewForTesting().loadDataWithBaseURL(
+                "https://news.example/article",
+                "<html><body>opener</body></html>",
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        awaitDocumentHost("news.example")
+        await { controller?.isBundledBlockingReadyForTesting() == true }
+
+        activityRule.scenario.onActivity {
+            val browserController = requireNotNull(controller)
+            val source = browserController.selectedWebViewForTesting()
+            val transport = source.WebViewTransport()
+            val message = Message.obtain(Handler(Looper.getMainLooper())).apply {
+                obj = transport
+            }
+            assertTrue(
+                requireNotNull(source.webChromeClient)
+                    .onCreateWindow(source, false, true, message),
+            )
+            requireNotNull(transport.webView).loadDataWithBaseURL(
+                "https://news.example/popup",
+                "<html><body>popup</body></html>",
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        await {
+            controller?.selectedTabId != openerTabId &&
+                controller?.pendingPopupCountForTesting == 1
+        }
+        Thread.sleep(PopupNavigationRules.PENDING_TIMEOUT_MILLIS + 500L)
+        activityRule.scenario.onActivity {
+            val browserController = requireNotNull(controller)
+            assertEquals(0, browserController.pendingPopupCountForTesting)
+            assertEquals(2, browserController.tabs.size)
+        }
+    }
+
+    @Test
     fun targetIndependentNowoifRuleProvidesSynchronousDocumentDefuser() {
         activityRule.scenario.onActivity { activity ->
             val browserController = freshController(activity)
