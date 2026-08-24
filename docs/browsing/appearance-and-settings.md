@@ -7,7 +7,7 @@
 | Model | Stable, persisted appearance choices and safe fallback values | `data/AppearanceSettings.kt` |
 | Persistence | Global appearance preference round trips | `data/BrowserSessionStore.kt` |
 | State | Observable selection and update wiring | `browser/BrowserController.kt` |
-| Theme | Color schemes, surface treatment, shape tokens and AMOLED surfaces | `ui/theme/MaterialBrowserTheme.kt` |
+| Theme | Color schemes, Android night resources, website color-scheme preference, surface treatment, shape tokens and AMOLED surfaces | `MainActivity`, `ui/theme/MaterialBrowserTheme.kt` |
 | UI | Appearance destination and live selection controls | `ui/SettingsScreen.kt` |
 | Page scroll bar | Persisted opt-in, WebView scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, `BrowserWebView`, `ui/WebViewScrollBar` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
@@ -51,6 +51,11 @@ Frosted exposes three persisted controls while selected:
 - The main `…` menu shares the visible WebView blur source; its rows remain translucent so the effect stays visible.
 - Bottom sheets use the general Frosted transparency setting; Clear and AMOLED sheets remain opaque.
 - Forced light, dark and AMOLED modes update system-bar icon contrast independently from system night mode.
+- Appearance mode also selects Android's activity night resources. WebView therefore exposes the
+  same effective light or dark mode to websites through `prefers-color-scheme`; AMOLED is dark,
+  while System follows the device setting. Live changes reload active pages against the new Android
+  theme without replacing the browser controller or persisting its in-memory private tabs. An open
+  Link Peek closes before its ephemeral preview WebView is released.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
 - Each top-level settings destination has a distinct leading icon on the settings home page.
 - The Browser setting for the draggable page scroll bar is global and defaults off. When enabled,

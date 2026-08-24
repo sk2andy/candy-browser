@@ -3764,6 +3764,15 @@ class BrowserController(
         store.saveAppearanceSettings(normalized)
     }
 
+    fun onAppearanceConfigurationChanged() {
+        if (linkPeekPreviewAssignments.isNotEmpty()) contentActions.dismiss()
+        destroyLinkPeekPreviewWebViews()
+        recreateWebViews(
+            tabIds = webViews.keys.toSet(),
+            reloadImmediately = true,
+        )
+    }
+
     fun updateDownloadSettings(settings: BrowserDownloadSettings) {
         val normalized = settings.normalized()
         if (downloadSettings == normalized) return
@@ -8466,7 +8475,10 @@ class BrowserController(
             incognitoProfileName = incognitoWebViewProfileName,
         )
 
-    private fun recreateWebViews(tabIds: Set<String>) {
+    private fun recreateWebViews(
+        tabIds: Set<String>,
+        reloadImmediately: Boolean = false,
+    ) {
         if (tabIds.isEmpty()) return
         val transientIds = tabIds.filterTo(mutableSetOf()) { tabId ->
             tabId in transientPopupTabIds ||
@@ -8494,6 +8506,13 @@ class BrowserController(
             pageUrls.remove(tabId)
         }
         webViewRevision++
+        if (reloadImmediately) {
+            retainedTabIds.forEach { tabId ->
+                tabs.firstOrNull { tab -> tab.id == tabId }?.let { tab ->
+                    webViewFor(tabId, initialUrlOverride = tab.url)
+                }
+            }
+        }
     }
 
     private fun tryDeleteNamedWebViewProfile(profileName: String): Boolean {

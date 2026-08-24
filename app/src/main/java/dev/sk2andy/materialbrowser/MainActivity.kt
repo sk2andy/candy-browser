@@ -22,6 +22,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
@@ -66,6 +67,8 @@ import dev.sk2andy.materialbrowser.data.AppDataArchiveRules
 import dev.sk2andy.materialbrowser.data.AppDataArchiveRestore
 import dev.sk2andy.materialbrowser.data.AppDataArchiveStaging
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
+import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
+import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
 import dev.sk2andy.materialbrowser.data.UserScriptImportReader
@@ -106,6 +109,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingAppDataImport by mutableStateOf<AppDataImportPreview?>(null)
     private var appDataImportLoading = false
     private var appDataTransferActive = false
+    private var appliedNightConfiguration = Configuration.UI_MODE_NIGHT_UNDEFINED
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
@@ -138,7 +142,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        applyAppearanceNightMode(
+            BrowserSessionStore(this).loadAppearanceSettings().appearanceMode,
+        )
         super.onCreate(savedInstanceState)
+        appliedNightConfiguration = resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK
         if (AppDataArchiveRestore.hasInterruptedRestore(appDataRestoreRecoveryMarker())) {
             val lockToken = AppDataTransferLock.activate(this, Process.myPid())
             if (lockToken != null) {
@@ -219,11 +228,15 @@ class MainActivity : AppCompatActivity() {
             openIntent(intent)
         }
         setContent {
-            val appearanceDark = browserController.appearanceSettings.usesDarkColors(
+            val appearanceSettings = browserController.appearanceSettings
+            val appearanceDark = appearanceSettings.usesDarkColors(
                 isSystemInDarkTheme(),
             )
-            SideEffect { applyAppearanceSystemBars(appearanceDark) }
-            MaterialBrowserTheme(settings = browserController.appearanceSettings) {
+            SideEffect {
+                applyAppearanceNightMode(appearanceSettings.appearanceMode)
+                applyAppearanceSystemBars(appearanceDark)
+            }
+            MaterialBrowserTheme(settings = appearanceSettings) {
                 var onboardingVisible by rememberSaveable {
                     mutableStateOf(onboardingRequired)
                 }
@@ -537,8 +550,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
+        val previousNightConfiguration = appliedNightConfiguration
         super.onConfigurationChanged(newConfig)
         if (appDataTransferActive) return
+        appliedNightConfiguration = newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        if (
+            previousNightConfiguration != Configuration.UI_MODE_NIGHT_UNDEFINED &&
+            previousNightConfiguration != appliedNightConfiguration &&
+            ::browserController.isInitialized
+        ) {
+            browserController.onAppearanceConfigurationChanged()
+        }
         applyBrowserSystemUi()
         if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
             pictureInPictureSourceRectHint = pictureInPictureSourceRect(
@@ -863,6 +885,17 @@ class MainActivity : AppCompatActivity() {
 
     @VisibleForTesting
     fun browserControllerForTesting(): BrowserController = browserController
+
+    private fun applyAppearanceNightMode(appearanceMode: BrowserAppearanceMode) {
+        val nightMode = when (appearanceMode) {
+            BrowserAppearanceMode.System -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            BrowserAppearanceMode.Light -> AppCompatDelegate.MODE_NIGHT_NO
+            BrowserAppearanceMode.Dark,
+            BrowserAppearanceMode.Amoled,
+            -> AppCompatDelegate.MODE_NIGHT_YES
+        }
+        if (delegate.localNightMode != nightMode) delegate.localNightMode = nightMode
+    }
 
     @VisibleForTesting
     fun prepareForPictureInPictureTransitionForTesting() {
