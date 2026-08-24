@@ -15,7 +15,7 @@ class TabOverviewGridRulesTest {
         assertEquals(0.72f, layout.previewAspectRatio, 0f)
         assertEquals(178f, layout.cardWidth, 0f)
         assertEquals(190f, layout.columnPitch, 0f)
-        assertEquals(307.22223f, layout.rowPitch, 0.001f)
+        assertEquals(259.22223f, layout.rowPitch, 0.001f)
     }
 
     @Test
@@ -29,7 +29,7 @@ class TabOverviewGridRulesTest {
         assertEquals(1.6f, layout.previewAspectRatio, 0f)
         assertEquals(337f, layout.cardWidth, 0f)
         assertEquals(349f, layout.columnPitch, 0f)
-        assertEquals(270.625f, layout.rowPitch, 0.001f)
+        assertEquals(222.625f, layout.rowPitch, 0.001f)
     }
 
     @Test
@@ -42,7 +42,7 @@ class TabOverviewGridRulesTest {
         assertEquals(2, layout.columnCount)
         assertEquals(1.6f, layout.previewAspectRatio, 0f)
         assertEquals(378f, layout.cardWidth, 0f)
-        assertEquals(296.25f, layout.rowPitch, 0.001f)
+        assertEquals(248.25f, layout.rowPitch, 0.001f)
     }
 
     @Test

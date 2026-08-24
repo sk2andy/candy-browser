@@ -83,6 +83,35 @@ class TabOverviewHeroRulesTest {
     }
 
     @Test
+    fun `grid neighbor preview follows card fade while hero remains visible`() {
+        assertTrue(
+            TabOverviewHeroRules.isGridPreviewVisible(
+                isInitialCard = false,
+                isCardVisible = true,
+                isHeroVisible = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `initial grid preview waits for hero handoff`() {
+        assertFalse(
+            TabOverviewHeroRules.isGridPreviewVisible(
+                isInitialCard = true,
+                isCardVisible = true,
+                isHeroVisible = true,
+            ),
+        )
+        assertTrue(
+            TabOverviewHeroRules.isGridPreviewVisible(
+                isInitialCard = true,
+                isCardVisible = true,
+                isHeroVisible = false,
+            ),
+        )
+    }
+
+    @Test
     fun `exit target card is replaced by hero immediately`() {
         assertFalse(
             TabOverviewHeroRules.isCardVisible(
@@ -150,27 +179,27 @@ class TabOverviewHeroRulesTest {
 
     @Test
     fun `coverflow preview uses one continuously moving frame`() {
-        val target = TabOverviewHeroRules.CoverflowPreviewLayout(
+        val target = TabOverviewHeroRules.CardPreviewLayout(
             sourceTopPx = 300f,
             sourceHeightPx = 1_200f,
         )
         assertEquals(
-            TabOverviewHeroRules.CoverflowPreviewLayout(72f, 2_000f),
-            TabOverviewHeroRules.coverflowPreviewFrame(72f, 2_000f, target, 0f),
+            TabOverviewHeroRules.CardPreviewLayout(72f, 2_000f),
+            TabOverviewHeroRules.cardPreviewFrame(72f, 2_000f, target, 0f),
         )
         assertEquals(
-            TabOverviewHeroRules.CoverflowPreviewLayout(186f, 1_600f),
-            TabOverviewHeroRules.coverflowPreviewFrame(72f, 2_000f, target, 0.5f),
+            TabOverviewHeroRules.CardPreviewLayout(186f, 1_600f),
+            TabOverviewHeroRules.cardPreviewFrame(72f, 2_000f, target, 0.5f),
         )
         assertEquals(
             target,
-            TabOverviewHeroRules.coverflowPreviewFrame(72f, 2_000f, target, 1f),
+            TabOverviewHeroRules.cardPreviewFrame(72f, 2_000f, target, 1f),
         )
     }
 
     @Test
     fun `landscape coverflow keeps full oversized source frame`() {
-        val target = TabOverviewHeroRules.coverflowPreviewLayout(
+        val target = TabOverviewHeroRules.cardPreviewLayout(
             rootWidthPx = 2_400f,
             rootHeightPx = 1_080f,
             targetWidthPx = 1_536f,
@@ -220,7 +249,7 @@ class TabOverviewHeroRulesTest {
         val targetWidth = 660f
         val targetHeight = 1245f
         val targetScale = targetWidth / rootWidth
-        val layout = TabOverviewHeroRules.coverflowPreviewLayout(
+        val layout = TabOverviewHeroRules.cardPreviewLayout(
             rootWidthPx = rootWidth,
             rootHeightPx = rootHeight,
             targetWidthPx = targetWidth,
@@ -236,6 +265,45 @@ class TabOverviewHeroRulesTest {
         assertEquals(
             targetTop,
             layout.sourceTopPx * targetScale + heroTranslationY,
+            0.001f,
+        )
+    }
+
+    @Test
+    fun `grid preview frame ends on card crop`() {
+        val rootWidth = 1080f
+        val rootHeight = 2400f
+        val targetLeft = 556f
+        val targetTop = 472f
+        val targetWidth = 508f
+        val targetHeight = targetWidth / 0.72f
+        val targetScale = targetWidth / rootWidth
+        val target = TabOverviewHeroRules.cardPreviewLayout(
+            rootWidthPx = rootWidth,
+            rootHeightPx = rootHeight,
+            targetWidthPx = targetWidth,
+            targetHeightPx = targetHeight,
+            cropTopFraction = 0.25f,
+        )
+        val midpoint = TabOverviewHeroRules.cardPreviewFrame(
+            startTopPx = 96f,
+            startHeightPx = 2_050f,
+            targetLayout = target,
+            targetFraction = 0.5f,
+        )
+        val heroTranslationX = targetLeft
+        val heroTranslationY = targetTop - target.sourceTopPx * targetScale
+
+        assertEquals(225f, target.sourceTopPx, 0.001f)
+        assertEquals(1_500f, target.sourceHeightPx, 0.001f)
+        assertEquals(160.5f, midpoint.sourceTopPx, 0.001f)
+        assertEquals(1_775f, midpoint.sourceHeightPx, 0.001f)
+        assertEquals(targetWidth, rootWidth * targetScale, 0.001f)
+        assertEquals(targetHeight, target.sourceHeightPx * targetScale, 0.001f)
+        assertEquals(targetLeft, heroTranslationX, 0.001f)
+        assertEquals(
+            targetTop,
+            target.sourceTopPx * targetScale + heroTranslationY,
             0.001f,
         )
     }

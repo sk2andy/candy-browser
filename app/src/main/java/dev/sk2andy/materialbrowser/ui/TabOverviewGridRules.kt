@@ -36,7 +36,7 @@ internal object TabOverviewGridRules {
             previewAspectRatio = previewAspectRatio,
             cardWidth = cardWidth,
             columnPitch = cardWidth + ITEM_SPACING,
-            rowPitch = CARD_HEADER_HEIGHT + cardWidth / previewAspectRatio + ITEM_SPACING,
+            rowPitch = cardWidth / previewAspectRatio + ITEM_SPACING,
             contentPadding = CONTENT_PADDING,
             itemSpacing = ITEM_SPACING,
         )
@@ -49,5 +49,4 @@ internal object TabOverviewGridRules {
     private const val PORTRAIT_PREVIEW_ASPECT_RATIO = 0.72f
     private const val CONTENT_PADDING = 16f
     private const val ITEM_SPACING = 12f
-    private const val CARD_HEADER_HEIGHT = 48f
 }
