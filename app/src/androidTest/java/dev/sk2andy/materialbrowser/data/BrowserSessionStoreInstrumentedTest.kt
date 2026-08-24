@@ -7,6 +7,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.SearxngRules
+import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -332,6 +335,38 @@ class BrowserSessionStoreInstrumentedTest {
 
         preferences.edit().putString("search_engine", "unknown").commit()
         assertEquals(SearchEngine.Google, store.loadSearchEngine())
+    }
+
+    @Test
+    fun searxngSettingsRoundTripAndCorruptFallbackIsDisabled() {
+        val store = BrowserSessionStore(context)
+        store.saveSearxngSettings(
+            SearxngSettings(
+                instanceUrl = " https://search.example/searxng/ ",
+                suggestionFallback = SearchSuggestionProvider.Brave,
+            ),
+        )
+        assertEquals(
+            SearxngSettings(
+                instanceUrl = "https://search.example/searxng",
+                suggestionFallback = SearchSuggestionProvider.Brave,
+            ),
+            store.loadSearxngSettings(),
+        )
+
+        preferences.edit()
+            .putString("searxng_instance_url", "x".repeat(SearxngRules.MAX_INSTANCE_URL_LENGTH + 20))
+            .putString("searxng_suggestion_fallback", SearchSuggestionProvider.SearXNG.stableId)
+            .commit()
+
+        val corrupt = store.loadSearxngSettings()
+        assertEquals("", corrupt.instanceUrl)
+        assertEquals(SearchSuggestionProvider.None, corrupt.suggestionFallback)
+
+        preferences.edit()
+            .putString("searxng_instance_url", "https://alice:secret@search.example?token=secret")
+            .commit()
+        assertEquals("", store.loadSearxngSettings().instanceUrl)
     }
 
     @Test

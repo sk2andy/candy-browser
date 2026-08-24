@@ -11,6 +11,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -43,6 +44,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -63,6 +65,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -71,6 +75,8 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.SearxngRules
+import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
@@ -121,6 +127,11 @@ internal object BrowserSettingsTestTags {
     const val ScrollBar = "browser_settings_scroll_bar"
 }
 
+internal object SearchSettingsTestTags {
+    const val SearxngInstanceUrl = "search_settings_searxng_instance_url"
+    const val SearxngFallback = "search_settings_searxng_fallback"
+}
+
 @Composable
 internal fun SettingsScreen(
     destination: SettingsDestination,
@@ -130,6 +141,7 @@ internal fun SettingsScreen(
     blockerSettings: BlockerSettings,
     inactiveTabLifetime: InactiveTabLifetime,
     searchEngine: SearchEngine,
+    searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
     tabOverviewMode: TabOverviewMode,
@@ -153,6 +165,7 @@ internal fun SettingsScreen(
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
+    onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
@@ -215,9 +228,11 @@ internal fun SettingsScreen(
 
                 SettingsDestination.Search -> SearchSettingsPage(
                     searchEngine = searchEngine,
+                    searxngSettings = searxngSettings,
                     isAiModeToggleVisible = isAiModeToggleVisible,
                     searchSuggestionProvider = searchSuggestionProvider,
                     onSearchEngineChanged = onSearchEngineChanged,
+                    onSearxngSettingsChanged = onSearxngSettingsChanged,
                     onAiModeToggleVisibleChanged = onAiModeToggleVisibleChanged,
                     onSearchSuggestionProviderChanged = onSearchSuggestionProviderChanged,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
@@ -602,17 +617,21 @@ private fun AppearanceSlider(
 }
 
 @Composable
-private fun SearchSettingsPage(
+internal fun SearchSettingsPage(
     searchEngine: SearchEngine,
+    searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
     onSearchEngineChanged: (SearchEngine) -> Unit,
+    onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onBack: () -> Unit,
 ) {
     var searchEngineMenuExpanded by remember { mutableStateOf(false) }
     var searchSuggestionMenuExpanded by remember { mutableStateOf(false) }
+    var fallbackMenuExpanded by remember { mutableStateOf(false) }
+    var instanceUrlDraft by remember { mutableStateOf(searxngSettings.instanceUrl) }
     SettingsPage(
         title = stringResource(R.string.settings_section_search),
         onBack = onBack,
@@ -649,6 +668,56 @@ private fun SearchSettingsPage(
                 onCheckedChange = onAiModeToggleVisibleChanged,
             )
         }
+        if (
+            searchEngine == SearchEngine.SearXNG ||
+            searchSuggestionProvider == SearchSuggestionProvider.SearXNG
+        ) {
+            SettingsPageSpacer()
+            val normalizedInstanceUrl = SearxngRules.normalizedInstanceUrl(
+                instanceUrlDraft,
+            )
+            OutlinedTextField(
+                value = instanceUrlDraft,
+                onValueChange = { value ->
+                    val boundedValue = value.take(SearxngRules.MAX_INSTANCE_URL_LENGTH)
+                    val normalizedValue = SearxngRules.normalizedInstanceUrl(boundedValue)
+                    instanceUrlDraft = boundedValue
+                    when {
+                        boundedValue.isBlank() -> onSearxngSettingsChanged(
+                            searxngSettings.copy(instanceUrl = ""),
+                        )
+                        normalizedValue != null -> onSearxngSettingsChanged(
+                            searxngSettings.copy(instanceUrl = normalizedValue),
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(SearchSettingsTestTags.SearxngInstanceUrl),
+                label = { Text(stringResource(R.string.settings_searxng_instance_url)) },
+                supportingText = {
+                    Text(
+                        stringResource(
+                            if (
+                                instanceUrlDraft.isNotBlank() &&
+                                normalizedInstanceUrl == null
+                            ) {
+                                R.string.settings_searxng_instance_url_invalid
+                            } else {
+                                R.string.settings_searxng_instance_url_summary
+                            },
+                        ),
+                    )
+                },
+                isError = instanceUrlDraft.isNotBlank() &&
+                    normalizedInstanceUrl == null,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Done,
+                ),
+                singleLine = true,
+            )
+        }
         SettingsPageSpacer()
         Box {
             SettingsChoice(
@@ -677,6 +746,8 @@ private fun SearchSettingsPage(
             stringResource(
                 if (searchSuggestionProvider == SearchSuggestionProvider.None) {
                     R.string.settings_search_suggestions_none_summary
+                } else if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
+                    R.string.settings_searxng_search_suggestions_summary
                 } else {
                     R.string.settings_search_suggestions_summary
                 },
@@ -685,6 +756,43 @@ private fun SearchSettingsPage(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
+            SettingsPageSpacer()
+            Box {
+                SettingsChoice(
+                    title = stringResource(R.string.settings_searxng_suggestion_fallback),
+                    value = searxngSettings.suggestionFallback.displayName(),
+                    expanded = fallbackMenuExpanded,
+                    onClick = { fallbackMenuExpanded = true },
+                    modifier = Modifier.testTag(SearchSettingsTestTags.SearxngFallback),
+                )
+                SettingsDropdown(
+                    expanded = fallbackMenuExpanded,
+                    onDismissRequest = { fallbackMenuExpanded = false },
+                ) {
+                    SearchSuggestionProvider.entries
+                        .filterNot { it == SearchSuggestionProvider.SearXNG }
+                        .forEach { provider ->
+                            SettingsDropdownItem(
+                                label = provider.displayName(),
+                                selected = provider == searxngSettings.suggestionFallback,
+                                onClick = {
+                                    fallbackMenuExpanded = false
+                                    onSearxngSettingsChanged(
+                                        searxngSettings.copy(suggestionFallback = provider),
+                                    )
+                                },
+                            )
+                        }
+                }
+            }
+            Text(
+                stringResource(R.string.settings_searxng_suggestion_fallback_summary),
+                modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -1363,6 +1471,8 @@ private fun SearchSuggestionProvider.displayName(): String = when (this) {
     SearchSuggestionProvider.Ecosia -> "Ecosia"
     SearchSuggestionProvider.Qwant -> "Qwant"
     SearchSuggestionProvider.Startpage -> "Startpage"
+    SearchSuggestionProvider.Kagi -> "Kagi"
+    SearchSuggestionProvider.SearXNG -> "SearXNG"
 }
 
 @Composable

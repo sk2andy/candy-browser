@@ -275,6 +275,13 @@
     <string name="settings_search_suggestions_summary">A partir de tres caracteres, el texto se envía a este proveedor. Desactivado en pestañas privadas.</string>
     <string name="settings_search_suggestions_none_summary">Las sugerencias permanecen locales. No se envía texto a ningún proveedor.</string>
     <string name="search_suggestion_provider_none">Ninguna</string>
+    <string name="settings_searxng_instance_url">URL de la instancia SearXNG</string>
+    <string name="settings_searxng_instance_url_summary">URL base, incluida una ruta opcional. Se recomienda HTTPS.</string>
+    <string name="settings_searxng_instance_url_invalid">Introduce una URL HTTP o HTTPS válida sin credenciales, consulta ni fragmento.</string>
+    <string name="settings_searxng_search_suggestions_summary">A partir de cuatro caracteres, el texto se envía a esta instancia SearXNG. Desactivado en pestañas privadas.</string>
+    <string name="settings_searxng_suggestion_fallback">Proveedor alternativo de sugerencias</string>
+    <string name="settings_searxng_suggestion_fallback_summary">Solo se usa si falla la solicitud de sugerencias de SearXNG. La consulta también se enviará al proveedor alternativo. Desactivado en pestañas privadas.</string>
+    <string name="toast_searxng_instance_required">Primero configura una URL de instancia SearXNG válida</string>
     <string name="settings_section_browser">Navegador</string>
     <string name="settings_full_immersive_mode_title">Modo inmersivo a pantalla completa</string>
     <string name="settings_full_immersive_mode_subtitle">Oculta las barras de estado y navegación. Desliza desde un borde para mostrarlas temporalmente.</string>

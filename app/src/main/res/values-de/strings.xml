@@ -273,6 +273,13 @@
     <string name="settings_search_suggestions_summary">Ab drei Zeichen wird der eingegebene Suchtext an diesen Anbieter gesendet. In privaten Tabs deaktiviert.</string>
     <string name="settings_search_suggestions_none_summary">Vorschläge bleiben lokal. Es wird kein eingegebener Text an einen Vorschlagsanbieter gesendet.</string>
     <string name="search_suggestion_provider_none">Keine</string>
+    <string name="settings_searxng_instance_url">SearXNG-Instanz-URL</string>
+    <string name="settings_searxng_instance_url_summary">Basis-URL, optional mit Pfad. HTTPS wird empfohlen.</string>
+    <string name="settings_searxng_instance_url_invalid">Gib eine gültige HTTP- oder HTTPS-URL ohne Zugangsdaten, Abfrage oder Fragment ein.</string>
+    <string name="settings_searxng_search_suggestions_summary">Ab vier Zeichen wird der eingegebene Suchtext an diese SearXNG-Instanz gesendet. In privaten Tabs deaktiviert.</string>
+    <string name="settings_searxng_suggestion_fallback">Vorschlags-Fallback</string>
+    <string name="settings_searxng_suggestion_fallback_summary">Wird nur genutzt, wenn die SearXNG-Vorschlagsanfrage fehlschlägt. Die Eingabe geht dann auch an den Fallback-Anbieter. In privaten Tabs deaktiviert.</string>
+    <string name="toast_searxng_instance_required">Lege zuerst eine gültige SearXNG-Instanz-URL fest</string>
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>
     <string name="settings_full_immersive_mode_subtitle">Blendet Status- und Navigationsleiste aus. Vom Bildschirmrand wischen, um sie kurz einzublenden.</string>

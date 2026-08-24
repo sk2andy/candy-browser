@@ -13,6 +13,8 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.SearxngRules
+import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import org.json.JSONArray
 import org.json.JSONObject
@@ -425,6 +427,27 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_SEARCH_ENGINE, searchEngine.stableId).apply()
     }
 
+    fun loadSearxngSettings(): SearxngSettings = SearxngRules.sanitize(
+        SearxngSettings(
+            instanceUrl = preferences.getString(KEY_SEARXNG_INSTANCE_URL, null).orEmpty(),
+            suggestionFallback = SearchSuggestionProvider.fromStableId(
+                preferences.getString(KEY_SEARXNG_SUGGESTION_FALLBACK, null),
+                fallback = SearchSuggestionProvider.None,
+            ),
+        ),
+    )
+
+    fun saveSearxngSettings(settings: SearxngSettings) {
+        val safeSettings = SearxngRules.sanitize(settings)
+        preferences.edit()
+            .putString(KEY_SEARXNG_INSTANCE_URL, safeSettings.instanceUrl)
+            .putString(
+                KEY_SEARXNG_SUGGESTION_FALLBACK,
+                safeSettings.suggestionFallback.stableId,
+            )
+            .apply()
+    }
+
     fun loadAiModeToggleVisible(): Boolean =
         preferences.getBoolean(KEY_AI_MODE_TOGGLE_VISIBLE, false)
 
@@ -629,6 +652,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_FAVORITES = "favorites"
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
         const val KEY_SEARCH_ENGINE = "search_engine"
+        const val KEY_SEARXNG_INSTANCE_URL = "searxng_instance_url"
+        const val KEY_SEARXNG_SUGGESTION_FALLBACK = "searxng_suggestion_fallback"
         const val KEY_AI_MODE_TOGGLE_VISIBLE = "ai_mode_toggle_visible"
         const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"

@@ -1,8 +1,5 @@
 package dev.sk2andy.materialbrowser.browser
 
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-
 enum class SearchMode {
     Web,
     Ai,
@@ -11,7 +8,7 @@ enum class SearchMode {
 enum class SearchEngine(
     val stableId: String,
     val displayName: String,
-    private val searchUrl: String,
+    private val searchUrl: String?,
     private val aiSearchUrl: String? = null,
 ) {
     Google(
@@ -50,6 +47,11 @@ enum class SearchEngine(
         displayName = "Qwant",
         searchUrl = "https://www.qwant.com/?q=%s",
     ),
+    Kagi(
+        stableId = "kagi",
+        displayName = "Kagi",
+        searchUrl = "https://kagi.com/search?q=%s",
+    ),
     Perplexity(
         stableId = "perplexity",
         displayName = "Perplexity",
@@ -60,6 +62,11 @@ enum class SearchEngine(
         displayName = "ChatGPT",
         searchUrl = "https://chatgpt.com/?q=%s",
     ),
+    SearXNG(
+        stableId = "searxng",
+        displayName = "SearXNG",
+        searchUrl = null,
+    ),
     ;
 
     val supportsAiSearch: Boolean
@@ -68,8 +75,14 @@ enum class SearchEngine(
     fun buildSearchUrl(
         query: String,
         mode: SearchMode = SearchMode.Web,
+        searxngInstanceUrl: String = "",
     ): String {
+        if (this == SearXNG) {
+            return SearxngRules.buildSearchUrl(searxngInstanceUrl, query)
+                ?: BLANK_URL
+        }
         val template = if (mode == SearchMode.Ai) aiSearchUrl ?: searchUrl else searchUrl
+        checkNotNull(template)
         return template.format(query.urlEncoded())
     }
 
@@ -78,6 +91,3 @@ enum class SearchEngine(
             entries.firstOrNull { it.stableId == stableId } ?: Google
     }
 }
-
-private fun String.urlEncoded(): String =
-    URLEncoder.encode(this, StandardCharsets.UTF_8.toString()).replace("+", "%20")
