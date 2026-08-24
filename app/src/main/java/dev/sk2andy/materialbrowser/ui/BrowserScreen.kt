@@ -391,6 +391,7 @@ internal fun BrowserScreen(
     onCastVolumeChange: (Float) -> Unit = {},
     onDisconnectCast: () -> Unit = {},
     webViewVideoOnlyPresentation: Boolean = false,
+    incomingBrowserNavigationRequestId: Int = 0,
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
     onImportUserScript: () -> Unit = {},
     onExportAppData: () -> Unit = {},
@@ -715,6 +716,9 @@ internal fun BrowserScreen(
         overviewExitHeroVisible = false
         tabOverviewOpening = false
         tabOverviewVisible = false
+    }
+    LaunchedEffect(incomingBrowserNavigationRequestId) {
+        if (incomingBrowserNavigationRequestId != 0) closeTabOverview()
     }
     val openAddressEditor: () -> Unit = {
         if (activeCommandExecutionId == null) {

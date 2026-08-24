@@ -14,7 +14,7 @@
 | Input | Path | Boundary |
 | --- | --- | --- |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
-| Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy |
+| Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy, open them in a new active tab and dismiss the tab overview |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links to non-browser apps; allow safe main-frame special-scheme redirects; block unsafe/internal schemes and subframes |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |

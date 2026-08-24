@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.content.Context
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -11,7 +12,9 @@ import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -23,12 +26,14 @@ class BrowserRootBackInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     private var controller: BrowserController? = null
+    private val incomingBrowserNavigationRequestId = mutableIntStateOf(0)
 
     @After
     fun tearDown() {
         composeRule.runOnIdle {
             controller?.destroy()
             controller = null
+            incomingBrowserNavigationRequestId.intValue = 0
             clearSession()
         }
     }
@@ -76,6 +81,37 @@ class BrowserRootBackInstrumentedTest {
         }
     }
 
+    @Test
+    fun incomingBrowserNavigationOpensNewTabAndClosesOverview() {
+        val browserController = createController()
+        setBrowserContent(browserController)
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertExists()
+
+        val existingTab = browserController.selectedTab
+        val existingTabCount = browserController.tabs.size
+        composeRule.runOnIdle {
+            browserController.openUrl(TARGET_URL, inNewTab = true)
+            incomingBrowserNavigationRequestId.intValue++
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.tabs.size == existingTabCount + 1 &&
+                browserController.selectedTab.url == TARGET_URL
+        }
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(
+                existingTab.url,
+                browserController.tabs.single { it.id == existingTab.id }.url,
+            )
+            assertNotEquals(existingTab.id, browserController.selectedTabId)
+        }
+    }
+
     private fun createController(): BrowserController {
         lateinit var browserController: BrowserController
         composeRule.runOnIdle {
@@ -94,6 +130,8 @@ class BrowserRootBackInstrumentedTest {
             MaterialBrowserTheme {
                 BrowserScreen(
                     controller = browserController,
+                    incomingBrowserNavigationRequestId =
+                        incomingBrowserNavigationRequestId.intValue,
                     onTabOverviewPortraitLockChanged = onTabOverviewPortraitLockChanged,
                 )
             }
@@ -106,5 +144,9 @@ class BrowserRootBackInstrumentedTest {
             BrowserSessionStore.PREFERENCES_NAME,
             Context.MODE_PRIVATE,
         ).edit().clear().commit()
+    }
+
+    private companion object {
+        const val TARGET_URL = "https://incoming.example.test/path"
     }
 }

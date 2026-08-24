@@ -38,6 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
@@ -105,6 +106,7 @@ class MainActivity : AppCompatActivity() {
     private var pictureInPictureStartedFullscreen = false
     private var pictureInPictureModeEntered = false
     private var isTabOverviewPortraitLocked = false
+    private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
     private var appDataExportWarningVisible by mutableStateOf(false)
     private var pendingAppDataImport by mutableStateOf<AppDataImportPreview?>(null)
     private var appDataImportLoading = false
@@ -313,6 +315,8 @@ class MainActivity : AppCompatActivity() {
                         onCastVolumeChange = castSessionController::setDeviceVolume,
                         onDisconnectCast = castSessionController::disconnect,
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
+                        incomingBrowserNavigationRequestId =
+                            incomingBrowserNavigationRequestId,
                         onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
                         onImportUserScript = {
                             userScriptImportLauncher.launch(
@@ -879,7 +883,8 @@ class MainActivity : AppCompatActivity() {
         }
         if (intent.action == Intent.ACTION_MAIN) browserController.leaveSiteCapsule()
         IncomingBrowserIntent.from(intent)?.let { request ->
-            browserController.openUrl(request.url)
+            browserController.openUrl(request.url, inNewTab = true)
+            incomingBrowserNavigationRequestId++
         }
     }
 
