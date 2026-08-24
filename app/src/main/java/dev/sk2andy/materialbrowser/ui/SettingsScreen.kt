@@ -1341,6 +1341,7 @@ internal fun PrivacyXRaySettingsCounter(
 @Composable
 private fun InactiveTabLifetime.displayName(): String = when (this) {
     InactiveTabLifetime.Never -> stringResource(R.string.tab_lifetime_never)
+    InactiveTabLifetime.Immediately -> stringResource(R.string.tab_lifetime_immediately)
     InactiveTabLifetime.SixHours -> pluralStringResource(R.plurals.tab_lifetime_hours, 6, 6)
     InactiveTabLifetime.OneDay -> pluralStringResource(R.plurals.tab_lifetime_days, 1, 1)
     InactiveTabLifetime.ThreeDays -> pluralStringResource(R.plurals.tab_lifetime_days, 3, 3)

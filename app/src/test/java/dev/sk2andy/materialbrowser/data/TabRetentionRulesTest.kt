@@ -14,6 +14,31 @@ class TabRetentionRulesTest {
     }
 
     @Test
+    fun immediateClosesEveryTabOnBackground() {
+        val selected = tab("selected", now)
+        val private = oldTab("private").copy(isIncognito = true)
+        val pinned = oldTab("pinned").copy(isPinned = true)
+
+        assertEquals(
+            setOf(selected.id, private.id, pinned.id),
+            TabRetentionRules.tabIdsToCloseOnBackground(
+                tabs = listOf(selected, private, pinned),
+                lifetime = InactiveTabLifetime.Immediately,
+            ),
+        )
+    }
+
+    @Test
+    fun timedLifetimeDoesNotCloseTabsMerelyForBackgrounding() {
+        assertTrue(
+            TabRetentionRules.tabIdsToCloseOnBackground(
+                tabs = listOf(oldTab()),
+                lifetime = InactiveTabLifetime.SixHours,
+            ).isEmpty(),
+        )
+    }
+
+    @Test
     fun exactBoundaryRemainsAndOneMillisecondOlderExpires() {
         val boundary = tab("boundary", now - InactiveTabLifetime.SixHours.maxAgeMillis!!)
         val expired = tab("expired", boundary.lastAccessedAt - 1)

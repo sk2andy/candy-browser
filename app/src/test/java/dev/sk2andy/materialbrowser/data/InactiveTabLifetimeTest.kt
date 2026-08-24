@@ -8,6 +8,7 @@ class InactiveTabLifetimeTest {
     @Test
     fun durationsUseLongMillisecondValues() {
         assertNull(InactiveTabLifetime.Never.maxAgeMillis)
+        assertNull(InactiveTabLifetime.Immediately.maxAgeMillis)
         assertEquals(21_600_000L, InactiveTabLifetime.SixHours.maxAgeMillis)
         assertEquals(86_400_000L, InactiveTabLifetime.OneDay.maxAgeMillis)
         assertEquals(259_200_000L, InactiveTabLifetime.ThreeDays.maxAgeMillis)
@@ -19,5 +20,13 @@ class InactiveTabLifetimeTest {
     fun unknownPersistedValueFallsBackToNever() {
         assertEquals(InactiveTabLifetime.Never, InactiveTabLifetime.fromWireValue("future_value"))
         assertEquals(InactiveTabLifetime.Never, InactiveTabLifetime.fromWireValue(null))
+    }
+
+    @Test
+    fun immediateWireValueRoundTrips() {
+        assertEquals(
+            InactiveTabLifetime.Immediately,
+            InactiveTabLifetime.fromWireValue(InactiveTabLifetime.Immediately.wireValue),
+        )
     }
 }

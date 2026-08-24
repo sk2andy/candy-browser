@@ -267,6 +267,7 @@
     <string name="settings_profiles_title">Enable profiles</string>
     <string name="settings_profiles_subtitle">Keep separate tab groups and show profile switching controls.</string>
     <string name="tab_lifetime_never">Never</string>
+    <string name="tab_lifetime_immediately">Immediately</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">After %1$d hour</item>
         <item quantity="other">After %1$d hours</item>

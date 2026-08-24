@@ -5,6 +5,7 @@ enum class InactiveTabLifetime(
     val maxAgeMillis: Long?,
 ) {
     Never("never", null),
+    Immediately("immediately", null),
     SixHours("6_hours", 21_600_000L),
     OneDay("1_day", 86_400_000L),
     ThreeDays("3_days", 259_200_000L),

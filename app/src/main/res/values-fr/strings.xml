@@ -257,6 +257,7 @@
     <string name="settings_profiles_title">Activer les profils</string>
     <string name="settings_profiles_subtitle">Conserver des groupes d’onglets séparés et afficher les commandes de changement de profil.</string>
     <string name="tab_lifetime_never">Jamais</string>
+    <string name="tab_lifetime_immediately">Immédiatement</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Après %1$d heure</item>
         <item quantity="many">Après %1$d heures</item>

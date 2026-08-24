@@ -257,6 +257,7 @@
     <string name="settings_profiles_title">Profile aktivieren</string>
     <string name="settings_profiles_subtitle">Separate Tab-Gruppen beibehalten und Steuerelemente zum Profilwechsel anzeigen.</string>
     <string name="tab_lifetime_never">Nie</string>
+    <string name="tab_lifetime_immediately">Sofort</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Nach %1$d Stunde</item>
         <item quantity="other">Nach %1$d Stunden</item>

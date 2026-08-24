@@ -4307,6 +4307,8 @@ class BrowserController(
     }
 
     fun onStop(isInPictureInPictureMode: Boolean = false) {
+        val wasActivityStarted = isActivityStarted
+        val shouldCloseTabsWhenHidden = wasActivityStarted && !activity.isChangingConfigurations
         isActivityStarted = false
         val keepsPictureInPictureMedia = isInPictureInPictureMode ||
             isInPictureInPicture ||
@@ -4321,13 +4323,21 @@ class BrowserController(
                         pictureInPictureTransitionGeneration == transitionGeneration &&
                         !isActivityStarted &&
                         !isInPictureInPicture &&
-                        !activity.isInPictureInPictureMode
+                        !activity.isInPictureInPictureMode &&
+                        !destroyed
                     ) {
                         stopPictureInPictureMedia()
+                        if (shouldCloseTabsWhenHidden) closeTabsOnBackground()
                     }
                 },
                 PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS,
             )
+        }
+        if (
+            shouldCloseTabsWhenHidden &&
+            !keepsPictureInPictureMedia
+        ) {
+            closeTabsOnBackground()
         }
         if (pendingPermissionAccess?.awaitingRuntime != true) cancelPendingPermissionAccess()
         activePermissions.clear()
@@ -7918,16 +7928,40 @@ class BrowserController(
             lifetime = inactiveTabLifetime,
             nowMillis = nowMillis,
         )
-        if (expiredIds.isEmpty()) return false
-        val removedIncognitoTab = tabs.any { it.id in expiredIds && it.isIncognito }
+        return removeTabs(
+            tabIds = expiredIds,
+            nowMillis = nowMillis,
+            persistChanges = persistChanges,
+        )
+    }
+
+    private fun closeTabsOnBackground(
+        nowMillis: Long = System.currentTimeMillis(),
+    ): Boolean = removeTabs(
+        tabIds = TabRetentionRules.tabIdsToCloseOnBackground(
+            tabs = tabs,
+            lifetime = inactiveTabLifetime,
+        ),
+        nowMillis = nowMillis,
+        persistChanges = true,
+    )
+
+    private fun removeTabs(
+        tabIds: Set<String>,
+        nowMillis: Long,
+        persistChanges: Boolean,
+    ): Boolean {
+        if (tabIds.isEmpty()) return false
+        if (activeCapsuleTabId in tabIds) leaveSiteCapsule()
+        val removedIncognitoTab = tabs.any { it.id in tabIds && it.isIncognito }
         if (
             removedIncognitoTab &&
-            tabs.none { it.isIncognito && it.id !in expiredIds }
+            tabs.none { it.isIncognito && it.id !in tabIds }
         ) {
             prepareIncognitoProfileForRemoval()
         }
-        expiredIds.forEach(::removeTabResources)
-        tabs.removeAll { it.id in expiredIds }
+        tabIds.forEach(::removeTabResources)
+        tabs.removeAll { it.id in tabIds }
         reconcileCandyTrailForks(nowMillis)
         if (removedIncognitoTab && tabs.none(BrowserTab::isIncognito)) {
             clearIncognitoProfile()
@@ -7935,8 +7969,24 @@ class BrowserController(
         if (activeTabs.isEmpty()) {
             tabs += newTabState(nowMillis = nowMillis)
             updateSelectedTabId(activeTabs.first().id)
-            rememberSelectedTab(activeProfileId, selectedTabId)
+        } else if (tabs.none { it.id == selectedTabId }) {
+            updateSelectedTabId(activeTabs.maxByOrNull(BrowserTab::lastAccessedAt)!!.id)
         }
+        profiles.indices.forEach { index ->
+            val profile = profiles[index]
+            val selection = profile.selectedTabId
+                ?.takeIf { selectedId ->
+                    tabs.any { tab -> tab.id == selectedId && tab.profileId == profile.id }
+                }
+                ?: tabs.asSequence()
+                    .filter { tab -> tab.profileId == profile.id }
+                    .maxByOrNull(BrowserTab::lastAccessedAt)
+                    ?.id
+            if (selection != profile.selectedTabId) {
+                profiles[index] = profile.copy(selectedTabId = selection)
+            }
+        }
+        rememberSelectedTab(activeProfileId, selectedTabId)
         if (persistChanges) persist()
         return true
     }

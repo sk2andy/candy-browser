@@ -3,6 +3,15 @@ package dev.sk2andy.materialbrowser.data
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 
 internal object TabRetentionRules {
+    fun tabIdsToCloseOnBackground(
+        tabs: List<BrowserTab>,
+        lifetime: InactiveTabLifetime,
+    ): Set<String> {
+        if (lifetime != InactiveTabLifetime.Immediately) return emptySet()
+        return tabs.asSequence()
+            .mapTo(linkedSetOf(), BrowserTab::id)
+    }
+
     fun expiredTabIds(
         tabs: List<BrowserTab>,
         selectedTabId: String?,
