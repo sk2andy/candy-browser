@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +43,7 @@ class TabOverviewReorderInstrumentedTest {
 
     @After
     fun tearDown() {
+        composeRule.mainClock.autoAdvance = true
         composeRule.runOnIdle {
             controller?.destroy()
             controller = null
@@ -123,16 +125,170 @@ class TabOverviewReorderInstrumentedTest {
         val density = composeRule.activity.resources.displayMetrics.density
         val isLandscape = rootBounds.width > rootBounds.height
         val expectedPreviewAspectRatio = if (isLandscape) 1.6f else 0.72f
-        val expectedCardHeight = 48f * density +
-            cardBounds.first().width / expectedPreviewAspectRatio
+        val expectedCardHeight = cardBounds.first().width / expectedPreviewAspectRatio
         val expectedColumns = if (isLandscape && rootBounds.width / density >= 900f) 3 else 2
         val firstRowCount = cardBounds.count { bounds ->
             kotlin.math.abs(bounds.top - cardBounds.first().top) < 2f
         }
+        val titleBounds = composeRule
+            .onNodeWithTag(
+                SnoozeTestTags.overviewTitle(tabIds.first()),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val closeBounds = composeRule
+            .onNodeWithTag(
+                SnoozeTestTags.overviewClose(tabIds.first()),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNode()
+            .boundsInRoot
 
         assertEquals(expectedCardHeight, cardBounds.first().height, 8f)
         assertEquals(expectedColumns, firstRowCount)
         assertEquals(isLandscape, cardBounds.first().width > cardBounds.first().height)
+        assertTrue(titleBounds.left >= cardBounds.first().left)
+        assertTrue(titleBounds.top >= cardBounds.first().top)
+        assertTrue(closeBounds.right <= cardBounds.first().right)
+        assertTrue(closeBounds.top >= cardBounds.first().top)
+        assertTrue(titleBounds.right <= closeBounds.left + 1f)
+        assertTrue(closeBounds.width >= 48f * density)
+        assertTrue(closeBounds.height >= 48f * density)
+    }
+
+    @Test
+    fun gridFloatingCloseClosesOnlyUnpinnedTab() {
+        lateinit var browserController: BrowserController
+        lateinit var closeTabId: String
+        lateinit var pinnedTabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            closeTabId = requireNotNull(
+                browserController.createBackgroundTab("https://grid-close.example"),
+            )
+            pinnedTabId = requireNotNull(
+                browserController.createBackgroundTab("https://grid-pinned.example"),
+            )
+            browserController.setTabPinned(pinnedTabId, true)
+            browserController.updateTabOverviewMode(TabOverviewMode.Grid)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithTag(
+                SnoozeTestTags.overviewClose(pinnedTabId),
+                useUnmergedTree = true,
+            )
+            .assertDoesNotExist()
+        composeRule
+            .onNodeWithTag(
+                SnoozeTestTags.overviewClose(closeTabId),
+                useUnmergedTree = true,
+            )
+            .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 12_000L) {
+            browserController.activeTabs.none { it.id == closeTabId }
+        }
+        assertTrue(browserController.activeTabs.any { it.id == pinnedTabId })
+    }
+
+    @Test
+    fun gridNeighborPreviewFadesInBeforeEntryHeroCompletes() {
+        lateinit var browserController: BrowserController
+        lateinit var neighborTabId: String
+        val entryCompleted = AtomicBoolean()
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            neighborTabId = requireNotNull(
+                browserController.createBackgroundTab("https://grid-neighbor.example"),
+            )
+            browserController.previews[browserController.selectedTabId] = solidPreview(
+                android.graphics.Color.RED,
+            )
+            browserController.previews[neighborTabId] = solidPreview(
+                android.graphics.Color.GREEN,
+            )
+            browserController.updateTabOverviewMode(TabOverviewMode.Grid)
+        }
+        composeRule.mainClock.autoAdvance = false
+        setOverviewContent(
+            browserController = browserController,
+            onEntryHeroCompleted = { entryCompleted.set(true) },
+        )
+        repeat(2) { composeRule.mainClock.advanceTimeByFrame() }
+        composeRule.mainClock.advanceTimeBy(112L)
+
+        assertFalse(entryCompleted.get())
+        val neighborBounds = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(neighborTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val previewCenterX = neighborBounds.center.x.toInt()
+        val previewCenterY = neighborBounds.center.y.toInt()
+        val pixel = composeRule.onRoot().captureToImage().toPixelMap()[
+            previewCenterX,
+            previewCenterY,
+        ]
+
+        assertTrue(
+            "Neighbor preview did not fade during entry: $pixel",
+            pixel.green > pixel.red + 0.12f && pixel.green > pixel.blue + 0.12f,
+        )
+    }
+
+    @Test
+    fun gridSelectedPreviewKeepsCropAtHeroHandoff() {
+        lateinit var browserController: BrowserController
+        lateinit var selectedTabId: String
+        val entryCompleted = AtomicBoolean()
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            selectedTabId = requireNotNull(
+                browserController.createBackgroundTab("https://grid-crop.example"),
+            )
+            browserController.selectTab(selectedTabId)
+            browserController.previews[selectedTabId] = verticalGradientPreview()
+            browserController.updateTabOverviewMode(TabOverviewMode.Grid)
+        }
+        composeRule.mainClock.autoAdvance = false
+        setOverviewContent(
+            browserController = browserController,
+            onEntryHeroCompleted = { entryCompleted.set(true) },
+        )
+        var frameCount = 0
+        while (!entryCompleted.get() && frameCount < 20) {
+            composeRule.mainClock.advanceTimeByFrame()
+            frameCount++
+        }
+        assertTrue("Entry hero did not complete after $frameCount frames", entryCompleted.get())
+
+        val cardBounds = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val previewTop = cardBounds.top
+        val beforeHandoff = composeRule.onRoot().captureToImage().toPixelMap()
+        composeRule.mainClock.advanceTimeByFrame()
+        val afterHandoff = composeRule.onRoot().captureToImage().toPixelMap()
+        val sampleDistances = listOf(0.35f, 0.5f, 0.65f, 0.8f).map { fraction ->
+            val x = cardBounds.center.x.toInt()
+            val y = (previewTop + (cardBounds.bottom - previewTop) * fraction).toInt()
+            colorDistance(beforeHandoff[x, y], afterHandoff[x, y])
+        }
+
+        assertTrue(
+            "Grid preview crop changed at hero handoff: $sampleDistances",
+            sampleDistances.all { it < 0.08f },
+        )
     }
 
     @Test
@@ -288,6 +444,7 @@ class TabOverviewReorderInstrumentedTest {
 
     private fun setOverviewContent(
         browserController: BrowserController,
+        onEntryHeroCompleted: () -> Unit = {},
         onExitHeroVisibilityChanged: (Boolean) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -302,7 +459,7 @@ class TabOverviewReorderInstrumentedTest {
                     onNewTab = {},
                     destinationChromeVisible = true,
                     onEntryHeroStarted = {},
-                    onEntryHeroCompleted = {},
+                    onEntryHeroCompleted = onEntryHeroCompleted,
                     onExitHeroVisibilityChanged = onExitHeroVisibilityChanged,
                     candyTrailTabId = null,
                     candyTrailSourceBounds = null,
@@ -325,6 +482,27 @@ class TabOverviewReorderInstrumentedTest {
             .edit()
             .clear()
             .commit()
+    }
+
+    private fun solidPreview(color: Int): Bitmap =
+        Bitmap.createBitmap(120, 240, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(color)
+        }
+
+    private fun verticalGradientPreview(): Bitmap {
+        val width = 120
+        val height = 300
+        val pixels = IntArray(width * height) { index ->
+            val fraction = (index / width).toFloat() / (height - 1)
+            android.graphics.Color.rgb(
+                (255f * (1f - fraction)).toInt(),
+                0,
+                (255f * fraction).toInt(),
+            )
+        }
+        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+            setPixels(pixels, 0, width, 0, 0, width, height)
+        }
     }
 
     private fun colorDistance(first: Color, second: Color): Float =

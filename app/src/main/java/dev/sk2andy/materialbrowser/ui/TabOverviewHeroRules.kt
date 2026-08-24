@@ -8,7 +8,7 @@ internal object TabOverviewHeroRules {
         val aspectRatio: Float,
     )
 
-    data class CoverflowPreviewLayout(
+    data class CardPreviewLayout(
         val sourceTopPx: Float,
         val sourceHeightPx: Float,
     )
@@ -23,6 +23,12 @@ internal object TabOverviewHeroRules {
         progress: Float,
         isExitTarget: Boolean = false,
     ): Boolean = !isExitTarget && (!isInitialCard || progress >= COMPLETION_THRESHOLD)
+
+    fun isGridPreviewVisible(
+        isInitialCard: Boolean,
+        isCardVisible: Boolean,
+        isHeroVisible: Boolean,
+    ): Boolean = isCardVisible && (!isInitialCard || !isHeroVisible)
 
     fun backgroundAlpha(entryProgress: Float, isExiting: Boolean): Float =
         if (isExiting) 1f else entryProgress
@@ -80,29 +86,29 @@ internal object TabOverviewHeroRules {
         )
     }
 
-    fun coverflowPreviewLayout(
+    fun cardPreviewLayout(
         rootWidthPx: Float,
         rootHeightPx: Float,
         targetWidthPx: Float,
         targetHeightPx: Float,
         cropTopFraction: Float,
-    ): CoverflowPreviewLayout {
+    ): CardPreviewLayout {
         val targetScale = (targetWidthPx / rootWidthPx).coerceAtLeast(0.01f)
         val sourceHeightPx = targetHeightPx / targetScale
-        return CoverflowPreviewLayout(
+        return CardPreviewLayout(
             sourceTopPx = (rootHeightPx - sourceHeightPx) * cropTopFraction,
             sourceHeightPx = sourceHeightPx,
         )
     }
 
-    fun coverflowPreviewFrame(
+    fun cardPreviewFrame(
         startTopPx: Float,
         startHeightPx: Float,
-        targetLayout: CoverflowPreviewLayout,
+        targetLayout: CardPreviewLayout,
         targetFraction: Float,
-    ): CoverflowPreviewLayout {
+    ): CardPreviewLayout {
         val fraction = targetFraction.coerceIn(0f, 1f)
-        return CoverflowPreviewLayout(
+        return CardPreviewLayout(
             sourceTopPx = startTopPx +
                 (targetLayout.sourceTopPx - startTopPx) * fraction,
             sourceHeightPx = startHeightPx +

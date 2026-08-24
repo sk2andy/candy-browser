@@ -538,5 +538,7 @@ internal object SnoozeTestTags {
     const val TabActionsSnooze = "tab_actions_snooze"
     const val Management = "snoozed_tabs_management"
     fun overviewTab(tabId: String) = "overview_tab:$tabId"
+    fun overviewTitle(tabId: String) = "overview_title:$tabId"
+    fun overviewClose(tabId: String) = "overview_close:$tabId"
     fun card(tabId: String) = "snoozed_tab:$tabId"
 }
