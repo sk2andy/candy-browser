@@ -4,18 +4,22 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.down
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -59,6 +63,21 @@ class TabOverviewReorderInstrumentedTest {
 
     @Test
     fun listTabsReorderAfterLongPressDrag() = verifyReorder(TabOverviewMode.List)
+
+    @Test
+    fun heroOverviewReopensAtSelectedTab() = verifyOverviewReopensAtSelectedTab(
+        TabOverviewMode.Hero,
+    )
+
+    @Test
+    fun gridOverviewReopensAtSelectedTab() = verifyOverviewReopensAtSelectedTab(
+        TabOverviewMode.Grid,
+    )
+
+    @Test
+    fun listOverviewReopensAtSelectedTab() = verifyOverviewReopensAtSelectedTab(
+        TabOverviewMode.List,
+    )
 
     @Test
     fun quickReleaseAfterLongPressStillCommits() = verifyReorder(
@@ -442,8 +461,52 @@ class TabOverviewReorderInstrumentedTest {
         }
     }
 
+    private fun verifyOverviewReopensAtSelectedTab(mode: TabOverviewMode) {
+        lateinit var browserController: BrowserController
+        lateinit var selectedTabId: String
+        lateinit var lastTabId: String
+        val overviewVisible = mutableStateOf(true)
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            selectedTabId = browserController.selectedTabId
+            repeat(14) { index ->
+                lastTabId = requireNotNull(
+                    browserController.createBackgroundTab(
+                        "https://reopen-$index-${mode.wireValue}.example",
+                    ),
+                )
+            }
+            browserController.updateTabOverviewMode(mode)
+        }
+        setOverviewContent(
+            browserController = browserController,
+            visible = { overviewVisible.value },
+        )
+        composeRule.waitForIdle()
+
+        val scrollContainerTag = when (mode) {
+            TabOverviewMode.Hero -> TabOverviewChromeTestTags.HeroPager
+            TabOverviewMode.Grid -> TabOverviewChromeTestTags.Grid
+            TabOverviewMode.List -> TabOverviewChromeTestTags.List
+        }
+        composeRule
+            .onNodeWithTag(scrollContainerTag)
+            .performScrollToNode(hasTestTag(SnoozeTestTags.overviewTab(lastTabId)))
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(lastTabId)).assertIsDisplayed()
+
+        composeRule.runOnIdle { overviewVisible.value = false }
+        composeRule.runOnIdle { overviewVisible.value = true }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).assertIsDisplayed()
+    }
+
     private fun setOverviewContent(
         browserController: BrowserController,
+        visible: () -> Boolean = { true },
         onEntryHeroCompleted: () -> Unit = {},
         onExitHeroVisibilityChanged: (Boolean) -> Unit = {},
     ) {
@@ -452,7 +515,7 @@ class TabOverviewReorderInstrumentedTest {
             MaterialBrowserTheme {
                 TabOverview(
                     controller = browserController,
-                    visible = true,
+                    visible = visible(),
                     bottomBarTopPx = bottomBarTop,
                     onClose = {},
                     onSelect = {},

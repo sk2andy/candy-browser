@@ -3404,6 +3404,8 @@ internal object AddressBarDockTestTags {
 internal object TabOverviewChromeTestTags {
     const val Root = "tab_overview_root"
     const val HeroPager = "tab_overview_hero_pager"
+    const val Grid = "tab_overview_grid"
+    const val List = "tab_overview_list"
     const val Bar = "tab_overview_address_bar"
     const val NewTab = "tab_overview_new_tab"
     const val More = "tab_overview_more"
@@ -5882,6 +5884,7 @@ internal fun TabOverview(
                 TabOverviewMode.Grid -> CompactTabGrid(
                     layout = gridLayout,
                     tabs = controller.activeTabs,
+                    visible = visible,
                     selectedTabId = controller.selectedTabId,
                     initialTabId = initialTabId,
                     previews = controller.previews,
@@ -5965,6 +5968,7 @@ internal fun TabOverview(
                 )
                 TabOverviewMode.List -> CompactTabList(
                     tabs = controller.activeTabs,
+                    visible = visible,
                     selectedTabId = controller.selectedTabId,
                     initialTabId = initialTabId,
                     favicons = controller.favicons,
@@ -7640,6 +7644,7 @@ private class TabBoundsHolder {
 private fun CompactTabGrid(
     layout: TabOverviewGridRules.Layout,
     tabs: List<BrowserTab>,
+    visible: Boolean,
     selectedTabId: String,
     initialTabId: String,
     previews: Map<String, Bitmap>,
@@ -7671,8 +7676,8 @@ private fun CompactTabGrid(
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
     val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = selectedIndex)
-    LaunchedEffect(initialTabId, selectedTabId) {
-        if (tabs.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(visible, initialTabId, selectedTabId, tabs.size) {
+        if (!visible || tabs.isEmpty()) return@LaunchedEffect
         withFrameNanos { }
         if (gridState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
             gridState.scrollToItem(selectedIndex)
@@ -7713,7 +7718,9 @@ private fun CompactTabGrid(
         LazyVerticalGrid(
             columns = GridCells.Fixed(layout.columnCount),
             state = gridState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag(TabOverviewChromeTestTags.Grid),
             userScrollEnabled = interactionsEnabled,
             contentPadding = PaddingValues(
                 horizontal = layout.contentPadding.dp,
@@ -8097,6 +8104,7 @@ private fun CompactGridTabItem(
 @Composable
 private fun CompactTabList(
     tabs: List<BrowserTab>,
+    visible: Boolean,
     selectedTabId: String,
     initialTabId: String,
     favicons: Map<String, Bitmap>,
@@ -8131,8 +8139,8 @@ private fun CompactTabList(
         scrollBy = { delta -> listState.scrollBy(delta) },
         onScrolled = onReorderAutoScroll,
     )
-    LaunchedEffect(initialTabId, selectedTabId) {
-        if (tabs.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(visible, initialTabId, selectedTabId, tabs.size) {
+        if (!visible || tabs.isEmpty()) return@LaunchedEffect
         withFrameNanos { }
         if (listState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
             listState.scrollToItem(selectedIndex)
@@ -8142,6 +8150,7 @@ private fun CompactTabList(
         state = listState,
         modifier = modifier
             .fillMaxSize()
+            .testTag(TabOverviewChromeTestTags.List)
             .onGloballyPositioned { listBounds = it.boundsInRoot() },
         userScrollEnabled = interactionsEnabled,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
