@@ -3,10 +3,16 @@ package dev.sk2andy.materialbrowser.ui
 import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -79,6 +85,42 @@ class BrowserRootBackInstrumentedTest {
         composeRule.runOnIdle {
             assertFalse(portraitLocked.get())
         }
+    }
+
+    @Test
+    fun settingsFromOverviewReturnsToOverviewOnBack() {
+        val browserController = createController()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        setBrowserContent(browserController)
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+        val settingsBounds = composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.Settings)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        composeRule.onRoot().performTouchInput { click(settingsBounds.center) }
+        composeRule.onNodeWithText(context.getString(R.string.settings_title)).assertIsDisplayed()
+        composeRule
+            .onNodeWithText(context.getString(R.string.settings_tabs_gestures_title))
+            .performTouchInput { click(center) }
+        composeRule.onNodeWithTag(TabSettingsTestTags.ResidentTabLimit).assertExists()
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(context.getString(R.string.settings_title)).assertIsDisplayed()
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(context.getString(R.string.settings_title)).assertDoesNotExist()
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertExists()
     }
 
     @Test

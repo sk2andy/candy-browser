@@ -263,6 +263,11 @@
     <string name="tab_overview_mode_hero">Cover flow</string>
     <string name="tab_overview_mode_grid">Compact grid</string>
     <string name="tab_overview_mode_list">List without previews</string>
+    <string name="settings_tab_list_starts_at_bottom_title">Start tab list at the bottom</string>
+    <string name="settings_tab_list_starts_at_bottom_subtitle">Opens the list at the newest tabs and anchors short lists near your thumb.</string>
+    <string name="settings_automatic_tab_sorting_title">Sort tabs by recent use</string>
+    <string name="settings_automatic_tab_sorting_subtitle">Least recently used first, most recent last. Pins stay first; manual sorting is disabled.</string>
+    <string name="cd_scroll_to_pinned_tabs">Show pinned tabs</string>
     <string name="settings_auto_close_tabs">Automatically close tabs</string>
     <string name="settings_resident_tab_limit">Tabs kept loaded</string>
     <plurals name="settings_resident_tab_limit_summary">

@@ -77,6 +77,7 @@ private data class BrowserMainMenuPresentation(
     val isLoading: Boolean,
     val canToggleFavorite: Boolean,
     val isFavorite: Boolean,
+    val isPinned: Boolean,
     val canUsePageActions: Boolean,
     val canOpenReader: Boolean,
     val canToggleDomainMute: Boolean,
@@ -106,6 +107,7 @@ internal fun BrowserMainMenu(
     isLoading: Boolean,
     canToggleFavorite: Boolean,
     isFavorite: Boolean,
+    isPinned: Boolean,
     canUsePageActions: Boolean,
     canOpenReader: Boolean,
     canToggleDomainMute: Boolean,
@@ -128,6 +130,7 @@ internal fun BrowserMainMenu(
     onForward: () -> Unit,
     onReloadOrStop: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onTogglePinned: () -> Unit,
     onShare: () -> Unit,
     onOpenExternal: () -> Unit,
     onPrint: () -> Unit,
@@ -166,7 +169,8 @@ internal fun BrowserMainMenu(
     )
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val menuWidth = minOf(360.dp, screenWidth - 32.dp)
+    val menuWidth = minOf(400.dp, screenWidth - 24.dp)
+    val compactToolbar = menuWidth < 340.dp
     val menuMaxHeight = screenHeight * BROWSER_MAIN_MENU_MAX_HEIGHT_FRACTION
     val menuScrollState = rememberScrollState()
     val popupOffset = with(LocalDensity.current) { IntOffset(0, (-10).dp.roundToPx()) }
@@ -177,6 +181,7 @@ internal fun BrowserMainMenu(
         isLoading = isLoading,
         canToggleFavorite = canToggleFavorite,
         isFavorite = isFavorite,
+        isPinned = isPinned,
         canUsePageActions = canUsePageActions,
         canOpenReader = canOpenReader,
         canToggleDomainMute = canToggleDomainMute,
@@ -289,61 +294,70 @@ internal fun BrowserMainMenu(
             )
 
             Spacer(Modifier.height(10.dp))
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(BrowserMainMenuTestTags.Toolbar),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                MenuToolbarAction(
-                    label = stringResource(R.string.action_back),
-                    iconRes = R.drawable.ic_symbol_arrow_back,
-                    enabled = presentation.canGoBack,
-                    onClick = { dismissThen(onBack) },
-                    modifier = Modifier.weight(1f),
-                )
-                MenuToolbarAction(
-                    label = stringResource(R.string.action_forward),
-                    iconRes = R.drawable.ic_symbol_arrow_forward,
-                    enabled = presentation.canGoForward,
-                    onClick = { dismissThen(onForward) },
-                    modifier = Modifier.weight(1f),
-                )
-                MenuToolbarAction(
-                    label = stringResource(
-                        if (presentation.isLoading) {
-                            R.string.action_stop_loading
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    MenuToolbarAction(
+                        label = stringResource(R.string.action_back),
+                        iconRes = R.drawable.ic_symbol_arrow_back,
+                        enabled = presentation.canGoBack,
+                        onClick = { dismissThen(onBack) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    MenuToolbarAction(
+                        label = stringResource(R.string.action_forward),
+                        iconRes = R.drawable.ic_symbol_arrow_forward,
+                        enabled = presentation.canGoForward,
+                        onClick = { dismissThen(onForward) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    MenuToolbarAction(
+                        label = stringResource(
+                            if (presentation.isLoading) {
+                                R.string.action_stop_loading
+                            } else {
+                                R.string.action_reload
+                            },
+                        ),
+                        iconRes = if (presentation.isLoading) {
+                            R.drawable.ic_symbol_close
                         } else {
-                            R.string.action_reload
+                            R.drawable.ic_symbol_refresh
                         },
-                    ),
-                    iconRes = if (presentation.isLoading) {
-                        R.drawable.ic_symbol_close
-                    } else {
-                        R.drawable.ic_symbol_refresh
-                    },
-                    onClick = { dismissThen(onReloadOrStop) },
-                    modifier = Modifier.weight(1f),
-                )
-                MenuToolbarAction(
-                    label = stringResource(R.string.action_favorite),
-                    iconRes = if (presentation.isFavorite) {
-                        R.drawable.ic_symbol_favorite_filled
-                    } else {
-                        R.drawable.ic_symbol_favorite
-                    },
-                    accessibilityLabel = stringResource(
-                        if (presentation.isFavorite) {
-                            R.string.action_remove_favorite
-                        } else {
-                            R.string.action_add_favorite
-                        },
-                    ),
-                    enabled = presentation.canToggleFavorite,
-                    selected = presentation.isFavorite,
-                    onClick = { dismissThen(onToggleFavorite) },
-                    modifier = Modifier.weight(1f),
-                )
+                        onClick = { dismissThen(onReloadOrStop) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (!compactToolbar) {
+                        BrowserMainMenuFavoriteAction(
+                            presentation = presentation,
+                            onClick = { dismissThen(onToggleFavorite) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        BrowserMainMenuPinAction(
+                            isPinned = presentation.isPinned,
+                            onClick = { dismissThen(onTogglePinned) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+                if (compactToolbar) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        BrowserMainMenuFavoriteAction(
+                            presentation = presentation,
+                            onClick = { dismissThen(onToggleFavorite) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        BrowserMainMenuPinAction(
+                            isPinned = presentation.isPinned,
+                            onClick = { dismissThen(onTogglePinned) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -617,6 +631,53 @@ internal fun BrowserMainMenu(
 }
 
 @Composable
+private fun BrowserMainMenuFavoriteAction(
+    presentation: BrowserMainMenuPresentation,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    MenuToolbarAction(
+        label = stringResource(R.string.action_favorite),
+        iconRes = if (presentation.isFavorite) {
+            R.drawable.ic_symbol_favorite_filled
+        } else {
+            R.drawable.ic_symbol_favorite
+        },
+        accessibilityLabel = stringResource(
+            if (presentation.isFavorite) {
+                R.string.action_remove_favorite
+            } else {
+                R.string.action_add_favorite
+            },
+        ),
+        enabled = presentation.canToggleFavorite,
+        selected = presentation.isFavorite,
+        onClick = onClick,
+        modifier = modifier.testTag(BrowserMainMenuTestTags.Favorite),
+    )
+}
+
+@Composable
+private fun BrowserMainMenuPinAction(
+    isPinned: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    MenuToolbarAction(
+        label = stringResource(
+            if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
+        ),
+        iconRes = R.drawable.ic_push_pin,
+        accessibilityLabel = stringResource(
+            if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
+        ),
+        selected = isPinned,
+        onClick = onClick,
+        modifier = modifier.testTag(BrowserMainMenuTestTags.Pin),
+    )
+}
+
+@Composable
 internal fun TabActionsMenuContent(
     pageSubtitle: String,
     canToggleFavorite: Boolean,
@@ -638,6 +699,7 @@ internal fun TabActionsMenuContent(
     onSummarize: () -> Unit,
     onSnooze: () -> Unit,
     modifier: Modifier = Modifier,
+    compactToolbar: Boolean = false,
     profileContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
@@ -689,7 +751,7 @@ internal fun TabActionsMenuContent(
                 ),
                 enabled = canToggleFavorite,
                 selected = isFavorite,
-                horizontalContent = true,
+                horizontalContent = !compactToolbar,
                 onClick = onToggleFavorite,
                 modifier = Modifier
                     .weight(1f)
@@ -704,7 +766,7 @@ internal fun TabActionsMenuContent(
                     if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
                 ),
                 selected = isPinned,
-                horizontalContent = true,
+                horizontalContent = !compactToolbar,
                 onClick = onTogglePinned,
                 modifier = Modifier
                     .weight(1f)
@@ -1051,6 +1113,8 @@ internal fun DomainMuteMenuItem(
 internal object BrowserMainMenuTestTags {
     const val Menu = "browser_main_menu"
     const val Toolbar = "browser_main_menu_toolbar"
+    const val Favorite = "browser_main_menu_favorite"
+    const val Pin = "browser_main_menu_pin"
     const val PageGroup = "browser_main_menu_page_group"
     const val CandyGroup = "browser_main_menu_candy_group"
     const val ToppingsGroup = "browser_main_menu_toppings_group"

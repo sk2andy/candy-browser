@@ -253,6 +253,11 @@
     <string name="tab_overview_mode_hero">Défilement de couvertures</string>
     <string name="tab_overview_mode_grid">Grille compacte</string>
     <string name="tab_overview_mode_list">Liste sans aperçus</string>
+    <string name="settings_tab_list_starts_at_bottom_title">Commencer la liste des onglets en bas</string>
+    <string name="settings_tab_list_starts_at_bottom_subtitle">Ouvre la liste sur les onglets récents et place les listes courtes près du pouce.</string>
+    <string name="settings_automatic_tab_sorting_title">Trier par utilisation récente</string>
+    <string name="settings_automatic_tab_sorting_subtitle">Les moins récents d’abord, le plus récent à la fin. Les épinglés restent devant ; le tri manuel est désactivé.</string>
+    <string name="cd_scroll_to_pinned_tabs">Afficher les onglets épinglés</string>
     <string name="settings_auto_close_tabs">Fermer automatiquement les onglets</string>
     <string name="settings_resident_tab_limit">Onglets gardés chargés</string>
     <plurals name="settings_resident_tab_limit_summary">

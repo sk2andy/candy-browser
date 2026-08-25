@@ -253,6 +253,11 @@
     <string name="tab_overview_mode_hero">Coverflow</string>
     <string name="tab_overview_mode_grid">Kompaktes Raster</string>
     <string name="tab_overview_mode_list">Liste ohne Vorschauen</string>
+    <string name="settings_tab_list_starts_at_bottom_title">Tab-Liste unten beginnen</string>
+    <string name="settings_tab_list_starts_at_bottom_subtitle">Öffnet die Liste bei den neuesten Tabs und verankert kurze Listen in Daumennähe.</string>
+    <string name="settings_automatic_tab_sorting_title">Tabs nach letzter Nutzung sortieren</string>
+    <string name="settings_automatic_tab_sorting_subtitle">Am längsten ungenutzte zuerst, zuletzt genutzte ganz hinten. Pins bleiben vorn; manuelles Sortieren ist aus.</string>
+    <string name="cd_scroll_to_pinned_tabs">Angepinnte Tabs anzeigen</string>
     <string name="settings_auto_close_tabs">Tabs automatisch schließen</string>
     <string name="settings_resident_tab_limit">Geladene Tabs</string>
     <plurals name="settings_resident_tab_limit_summary">

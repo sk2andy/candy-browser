@@ -64,6 +64,32 @@ class BrowserControllerTabReorderInstrumentedTest {
         }
     }
 
+    @Test
+    fun automaticSortingKeepsPinsFirstAndDisablesManualReorder() {
+        activityRule.scenario.onActivity { activity ->
+            clear(activity)
+            val store = BrowserSessionStore(activity)
+            store.saveTabs(
+                tabs = listOf(
+                    tab("pin", pinned = true),
+                    tab("regular-a"),
+                    tab("regular-b"),
+                ),
+                selectedTabId = "regular-b",
+            )
+            store.saveAutomaticTabSortingEnabled(true)
+            val browserController = BrowserController(activity).also { controller = it }
+
+            browserController.selectTab("regular-a")
+
+            assertEquals(
+                listOf("pin", "regular-b", "regular-a"),
+                browserController.activeTabs.map(BrowserTab::id),
+            )
+            assertFalse(browserController.reorderTab("regular-a", 1))
+        }
+    }
+
     private fun tab(id: String, pinned: Boolean = false) = BrowserTab(
         id = id,
         lastAccessedAt = 1L,

@@ -413,6 +413,19 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun tabOrderingPreferencesDefaultOffAndRoundTrip() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadTabListStartsAtBottom())
+        assertFalse(store.loadAutomaticTabSortingEnabled())
+
+        store.saveTabListStartsAtBottom(true)
+        store.saveAutomaticTabSortingEnabled(true)
+
+        assertTrue(store.loadTabListStartsAtBottom())
+        assertTrue(store.loadAutomaticTabSortingEnabled())
+    }
+
+    @Test
     fun addressBarDockPreferenceDefaultsToCenterAndRoundTrips() {
         val store = BrowserSessionStore(context)
         assertFalse(store.loadAddressBarDocked())

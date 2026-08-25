@@ -80,6 +80,7 @@ class ProfileCreationFlowInstrumentedTest {
                     onClose = {},
                     onSelect = {},
                     onNewTab = {},
+                    onOpenSettings = {},
                     destinationChromeVisible = true,
                     onEntryHeroStarted = {},
                     onEntryHeroCompleted = {},

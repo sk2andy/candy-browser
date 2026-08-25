@@ -96,9 +96,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -121,6 +123,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -297,6 +300,7 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorRequest
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
+import dev.sk2andy.materialbrowser.data.TabAutoSortingRules
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.data.TabPinningRules
@@ -1485,6 +1489,12 @@ internal fun BrowserScreen(
             onIncognitoControlCenterChanged = { blankTabModeRevealOrigin = it },
             isFavorite = controller.isSelectedTabFavorite,
             onToggleFavorite = { toggleFavoriteWithFeedback(selectedTab.id) },
+            isPinned = selectedTab.isPinned,
+            onTogglePinned = {
+                if (controller.setTabPinned(selectedTab.id, !selectedTab.isPinned)) {
+                    rootView.performConfirmHaptic()
+                }
+            },
             canToggleDomainMute = controller.canToggleSelectedDomainMute,
             isDomainMuted = controller.isSelectedDomainMuted,
             onDomainMutedChange = controller::setSelectedDomainMuted,
@@ -1679,6 +1689,10 @@ internal fun BrowserScreen(
                 openNewTabAndEdit()
                 if (controller.selectedTabId != previousTabId) closeTabOverview()
             },
+            onOpenSettings = {
+                settingsDestination = SettingsDestination.Home
+                settingsVisible = true
+            },
             destinationChromeVisible = overviewDestinationChromeVisible,
             onEntryHeroStarted = { animated ->
                 overviewMorphJob?.cancel()
@@ -1798,6 +1812,7 @@ internal fun BrowserScreen(
 
         AnimatedVisibility(
             visible = settingsVisible,
+            modifier = Modifier.zIndex(20f),
             enter = slideInHorizontally(
                 initialOffsetX = { width ->
                     PredictiveBackMotion.entryTranslation(
@@ -1835,6 +1850,8 @@ internal fun BrowserScreen(
                 isAiModeToggleVisible = controller.isAiModeToggleVisible,
                 searchSuggestionProvider = controller.searchSuggestionProvider,
                 tabOverviewMode = controller.tabOverviewMode,
+                tabListStartsAtBottom = controller.tabListStartsAtBottom,
+                automaticTabSortingEnabled = controller.automaticTabSortingEnabled,
                 dismissResistancePercent = controller.dismissResistancePercent,
                 profilesEnabled = controller.profilesEnabled,
                 isTabButtonVisible = controller.isTabButtonVisible,
@@ -1877,6 +1894,9 @@ internal fun BrowserScreen(
                 onAiModeToggleVisibleChanged = controller::updateAiModeToggleVisible,
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
+                onTabListStartsAtBottomChanged = controller::updateTabListStartsAtBottom,
+                onAutomaticTabSortingEnabledChanged =
+                    controller::updateAutomaticTabSortingEnabled,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onProfilesEnabledChanged = controller::updateProfilesEnabled,
                 onTabButtonVisibleChanged = controller::updateTabButtonVisible,
@@ -3033,6 +3053,8 @@ private fun BrowserBottomBar(
     onIncognitoControlCenterChanged: (Offset) -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
+    isPinned: Boolean,
+    onTogglePinned: () -> Unit,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
@@ -3294,6 +3316,8 @@ private fun BrowserBottomBar(
                                     onIncognitoControlCenterChanged,
                                 isFavorite = isFavorite,
                                 onToggleFavorite = onToggleFavorite,
+                                isPinned = isPinned,
+                                onTogglePinned = onTogglePinned,
                                 canToggleDomainMute = canToggleDomainMute,
                                 isDomainMuted = isDomainMuted,
                                 onDomainMutedChange = onDomainMutedChange,
@@ -3409,6 +3433,8 @@ internal object TabOverviewChromeTestTags {
     const val Bar = "tab_overview_address_bar"
     const val NewTab = "tab_overview_new_tab"
     const val More = "tab_overview_more"
+    const val PinnedTabsJump = "tab_overview_pinned_tabs_jump"
+    const val Settings = "tab_overview_settings"
 }
 
 @Composable
@@ -3727,6 +3753,8 @@ private fun ExpandedBottomBarContent(
     onIncognitoControlCenterChanged: (Offset) -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
+    isPinned: Boolean,
+    onTogglePinned: () -> Unit,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     onDomainMutedChange: (Boolean) -> Unit,
@@ -4051,6 +4079,7 @@ private fun ExpandedBottomBarContent(
                                 isLoading = tab.isLoading,
                                 canToggleFavorite = tab.url != BLANK_URL && !tab.isIncognito,
                                 isFavorite = isFavorite,
+                                isPinned = isPinned,
                                 canUsePageActions = tab.url != BLANK_URL,
                                 canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
                                 canToggleDomainMute = canToggleDomainMute,
@@ -4083,6 +4112,7 @@ private fun ExpandedBottomBarContent(
                                 onForward = onForward,
                                 onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
                                 onToggleFavorite = onToggleFavorite,
+                                onTogglePinned = onTogglePinned,
                                 onShare = onShare,
                                 onOpenExternal = onOpenExternal,
                                 onPrint = onPrint,
@@ -4708,6 +4738,7 @@ internal fun TabOverview(
     onClose: () -> Unit,
     onSelect: (String) -> Unit,
     onNewTab: () -> Unit,
+    onOpenSettings: () -> Unit,
     destinationChromeVisible: Boolean,
     onEntryHeroStarted: (Boolean) -> Unit,
     onEntryHeroCompleted: () -> Unit,
@@ -4732,6 +4763,14 @@ internal fun TabOverview(
     val pagerState = rememberPagerState(
         initialPage = initialPage,
         pageCount = { controller.activeTabs.size },
+    )
+    val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = initialPage)
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = if (controller.tabListStartsAtBottom) {
+            overviewTabs.lastIndex.coerceAtLeast(0)
+        } else {
+            initialPage
+        },
     )
     val pagerFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
@@ -4798,6 +4837,22 @@ internal fun TabOverview(
         )
     }
     val exitHeroProgress = remember { Animatable(0f) }
+    val pinnedTabsVisible by remember(controller.tabOverviewMode, controller.activeProfileId) {
+        derivedStateOf {
+            val activeTabs = controller.activeTabs
+            when (controller.tabOverviewMode) {
+                TabOverviewMode.Hero -> pagerState.layoutInfo.visiblePagesInfo.any { page ->
+                    activeTabs.getOrNull(page.index)?.isPinned == true
+                }
+                TabOverviewMode.Grid -> gridState.layoutInfo.visibleItemsInfo.any { item ->
+                    activeTabs.getOrNull(item.index)?.isPinned == true
+                }
+                TabOverviewMode.List -> listState.layoutInfo.visibleItemsInfo.any { item ->
+                    activeTabs.getOrNull(item.index)?.isPinned == true
+                }
+            }
+        }
+    }
     DisposableEffect(Unit) {
         onDispose { currentOnExitHeroVisibilityChanged(false) }
     }
@@ -5396,6 +5451,7 @@ internal fun TabOverview(
                 .fillMaxSize()
                 .longPressTabOverviewReorder(
                     enabled = visible &&
+                        !controller.automaticTabSortingEnabled &&
                         heroCompleted &&
                         !heroVisible &&
                         dismissingTabId == null &&
@@ -5882,6 +5938,7 @@ internal fun TabOverview(
                 }
                 }
                 TabOverviewMode.Grid -> CompactTabGrid(
+                    gridState = gridState,
                     layout = gridLayout,
                     tabs = controller.activeTabs,
                     visible = visible,
@@ -5967,7 +6024,9 @@ internal fun TabOverview(
                         },
                 )
                 TabOverviewMode.List -> CompactTabList(
+                    listState = listState,
                     tabs = controller.activeTabs,
+                    startsAtBottom = controller.tabListStartsAtBottom,
                     visible = visible,
                     selectedTabId = controller.selectedTabId,
                     initialTabId = initialTabId,
@@ -6032,7 +6091,7 @@ internal fun TabOverview(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 val actionTargetId = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
@@ -6051,6 +6110,70 @@ internal fun TabOverview(
                 val overviewChromeTokens = browserChromeSurfaceTokens(
                     BrowserChromeSurfaceRole.AddressBar,
                 )
+                val pinnedTabsJumpVisible = destinationChromeVisible &&
+                    controller.activeTabs.any(BrowserTab::isPinned) &&
+                    !pinnedTabsVisible
+                TabOverviewEdgeAction(
+                    visible = pinnedTabsJumpVisible,
+                    enabled = chromeEnabled,
+                    contentDescription = stringResource(R.string.cd_scroll_to_pinned_tabs),
+                    testTag = TabOverviewChromeTestTags.PinnedTabsJump,
+                    animationLabel = "pinned-tabs-jump-alpha",
+                    onClick = {
+                        overviewScope.launch {
+                            when (controller.tabOverviewMode) {
+                                TabOverviewMode.Hero ->
+                                    pagerState.animateScrollToPage(
+                                        page = 0,
+                                        animationSpec = spring(
+                                            dampingRatio = 0.86f,
+                                            stiffness = 720f,
+                                        ),
+                                    )
+                                TabOverviewMode.Grid -> gridState.animateScrollToItem(0)
+                                TabOverviewMode.List -> listState.animateScrollToItem(0)
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .zIndex(1f),
+                ) {
+                    Icon(
+                        imageVector = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                        } else {
+                            Icons.Default.KeyboardArrowUp
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(17.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.ic_push_pin),
+                        contentDescription = null,
+                        modifier = Modifier.size(17.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                    )
+                }
+                TabOverviewEdgeAction(
+                    visible = destinationChromeVisible,
+                    enabled = chromeEnabled,
+                    contentDescription = stringResource(R.string.action_settings),
+                    testTag = TabOverviewChromeTestTags.Settings,
+                    animationLabel = "tab-overview-settings-alpha",
+                    onClick = onOpenSettings,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .zIndex(1f),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_settings),
+                        contentDescription = null,
+                        modifier = Modifier.size(17.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                    )
+                }
                 Surface(
                     modifier = Modifier
                         .width(AddressBarMotion.OVERVIEW_WIDTH)
@@ -6414,11 +6537,19 @@ internal fun TabOverview(
                 tabActionsTabId = null
                 overviewScope.launch {
                     val oldOrder = controller.activeTabs.map(BrowserTab::id)
-                    val newOrder = TabPinningRules.withPinnedState(
+                    val tabsWithUpdatedPin = TabPinningRules.withPinnedState(
                         tabs = controller.activeTabs,
                         tabId = target.id,
                         isPinned = !target.isPinned,
-                    ).map(BrowserTab::id)
+                    )
+                    val newOrder = if (controller.automaticTabSortingEnabled) {
+                        TabAutoSortingRules.orderedTabs(
+                            tabs = tabsWithUpdatedPin,
+                            selectedTabId = controller.selectedTabId,
+                        )
+                    } else {
+                        tabsWithUpdatedPin
+                    }.map(BrowserTab::id)
                     if (controller.tabOverviewMode != TabOverviewMode.Hero) {
                         if (controller.setTabPinned(target.id, !target.isPinned)) {
                             rootView.performConfirmHaptic()
@@ -6612,6 +6743,51 @@ internal fun TabOverview(
         )
     }
 
+}
+
+@Composable
+private fun TabOverviewEdgeAction(
+    visible: Boolean,
+    enabled: Boolean,
+    contentDescription: String,
+    testTag: String,
+    animationLabel: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val rootView = LocalView.current
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = if (visible) 180 else 140),
+        label = animationLabel,
+    )
+    IconButton(
+        onClick = {
+            rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            onClick()
+        },
+        enabled = visible && enabled,
+        modifier = modifier
+            .graphicsLayer { alpha = animatedAlpha }
+            .then(
+                if (visible) {
+                    Modifier
+                        .testTag(testTag)
+                        .semantics { this.contentDescription = contentDescription }
+                } else {
+                    Modifier.clearAndSetSemantics { }
+                },
+            )
+            .size(48.dp),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            content()
+        }
+    }
 }
 
 internal object ProfileSwitcherTestTags {
@@ -7642,6 +7818,7 @@ private class TabBoundsHolder {
 
 @Composable
 private fun CompactTabGrid(
+    gridState: LazyGridState,
     layout: TabOverviewGridRules.Layout,
     tabs: List<BrowserTab>,
     visible: Boolean,
@@ -7675,7 +7852,6 @@ private fun CompactTabGrid(
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
-    val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = selectedIndex)
     LaunchedEffect(visible, initialTabId, selectedTabId, tabs.size) {
         if (!visible || tabs.isEmpty()) return@LaunchedEffect
         withFrameNanos { }
@@ -8103,7 +8279,9 @@ private fun CompactGridTabItem(
 
 @Composable
 private fun CompactTabList(
+    listState: LazyListState,
     tabs: List<BrowserTab>,
+    startsAtBottom: Boolean,
     visible: Boolean,
     selectedTabId: String,
     initialTabId: String,
@@ -8127,7 +8305,6 @@ private fun CompactTabList(
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
     var listBounds by remember { mutableStateOf<Rect?>(null) }
     TabReorderEdgeAutoScroll(
         sessionId = reorderSessionId,
@@ -8139,11 +8316,12 @@ private fun CompactTabList(
         scrollBy = { delta -> listState.scrollBy(delta) },
         onScrolled = onReorderAutoScroll,
     )
-    LaunchedEffect(visible, initialTabId, selectedTabId, tabs.size) {
+    LaunchedEffect(visible, initialTabId, selectedTabId, tabs.size, startsAtBottom) {
         if (!visible || tabs.isEmpty()) return@LaunchedEffect
         withFrameNanos { }
-        if (listState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
-            listState.scrollToItem(selectedIndex)
+        val targetIndex = if (startsAtBottom) tabs.lastIndex else selectedIndex
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == targetIndex }) {
+            listState.scrollToItem(targetIndex)
         }
     }
     LazyColumn(
@@ -8154,7 +8332,10 @@ private fun CompactTabList(
             .onGloballyPositioned { listBounds = it.boundsInRoot() },
         userScrollEnabled = interactionsEnabled,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(
+            space = 8.dp,
+            alignment = if (startsAtBottom) Alignment.Bottom else Alignment.Top,
+        ),
     ) {
         itemsIndexed(
             items = tabs,
@@ -8419,7 +8600,8 @@ internal fun TabActionsFloatingMenu(
     BackHandler(enabled = tab != null, onBack = onDismiss)
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val menuWidth = minOf(360.dp, screenWidth - 32.dp)
+    val menuWidth = minOf(400.dp, screenWidth - 24.dp)
+    val compactToolbar = menuWidth < 340.dp
     val chromeTokens = browserChromeSurfaceTokens().copy(
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
         tonalElevation = 0.dp,
@@ -8543,6 +8725,7 @@ internal fun TabActionsFloatingMenu(
                             onAddSiteCapsule = onAddSiteCapsule,
                             onSummarize = onSummarize,
                             onSnooze = onSnooze,
+                            compactToolbar = compactToolbar,
                             profileContent = {
                                 val targetProfiles = profiles.filter {
                                     it.id != presentedTab.profileId

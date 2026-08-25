@@ -208,6 +208,7 @@ import dev.sk2andy.materialbrowser.data.SnoozeUndoToken
 import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
 import dev.sk2andy.materialbrowser.data.SnoozedTab
 import dev.sk2andy.materialbrowser.data.SnoozedTabStore
+import dev.sk2andy.materialbrowser.data.TabAutoSortingRules
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
@@ -421,6 +422,10 @@ class BrowserController(
     var dismissResistancePercent by mutableIntStateOf(40)
         private set
     var tabOverviewMode by mutableStateOf(TabOverviewMode.Hero)
+        private set
+    var tabListStartsAtBottom by mutableStateOf(false)
+        private set
+    var automaticTabSortingEnabled by mutableStateOf(false)
         private set
     var isAddressBarDocked by mutableStateOf(false)
         private set
@@ -735,6 +740,12 @@ class BrowserController(
     val activeTabs: List<BrowserTab>
         get() = tabs.filter { tab ->
             tab.profileId == activeProfileId && tab.id !in transientPopupTabIds
+        }.let { activeTabs ->
+            if (automaticTabSortingEnabled) {
+                TabAutoSortingRules.orderedTabs(activeTabs, selectedTabId)
+            } else {
+                activeTabs
+            }
         }
 
     val canToggleSelectedDomainMute: Boolean
@@ -1284,6 +1295,8 @@ class BrowserController(
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
+        tabListStartsAtBottom = store.loadTabListStartsAtBottom()
+        automaticTabSortingEnabled = store.loadAutomaticTabSortingEnabled()
         isAddressBarDocked = store.loadAddressBarDocked()
         isTabButtonVisible = store.loadTabButtonVisible()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
@@ -3381,6 +3394,7 @@ class BrowserController(
     }
 
     fun reorderTab(tabId: String, destinationIndex: Int): Boolean {
+        if (automaticTabSortingEnabled) return false
         val updatedTabs = TabReorderingRules.move(
             tabs = activeTabs,
             tabId = tabId,
@@ -4100,6 +4114,17 @@ class BrowserController(
     fun updateTabOverviewMode(mode: TabOverviewMode) {
         tabOverviewMode = mode
         store.saveTabOverviewMode(mode)
+    }
+
+    fun updateTabListStartsAtBottom(enabled: Boolean) {
+        tabListStartsAtBottom = enabled
+        store.saveTabListStartsAtBottom(enabled)
+    }
+
+    fun updateAutomaticTabSortingEnabled(enabled: Boolean) {
+        automaticTabSortingEnabled = enabled
+        store.saveAutomaticTabSortingEnabled(enabled)
+        persist()
     }
 
     fun setSelectedDomainMuted(muted: Boolean): Boolean = setDomainMuted(selectedTabId, muted)
