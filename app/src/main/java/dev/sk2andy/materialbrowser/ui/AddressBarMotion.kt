@@ -16,16 +16,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
 @Immutable
 internal data class AddressBarMotionState(
     val width: Dp,
     val height: Dp,
-    val dockOffset: Dp,
+    val dockOffset: DpOffset,
 )
 
 internal object AddressBarMotion {
@@ -42,6 +43,18 @@ internal object AddressBarMotion {
         get() = spring(
             dampingRatio = CONTAINER_DAMPING_RATIO,
             stiffness = CONTAINER_STIFFNESS,
+        )
+
+    val dockProgressAnimationSpec: SpringSpec<Float>
+        get() = spring(
+            dampingRatio = CONTAINER_DAMPING_RATIO,
+            stiffness = CONTAINER_STIFFNESS,
+        )
+
+    val dockBreakawayAnimationSpec: SpringSpec<Float>
+        get() = spring(
+            dampingRatio = 0.46f,
+            stiffness = 520f,
         )
 
     fun widthTarget(
@@ -71,15 +84,29 @@ internal object AddressBarMotion {
         AddressBarPresentation.CommandFeedback -> 46.dp
     }
 
-    fun dockOffsetTarget(
-        presentation: AddressBarPresentation,
+    fun dockOffsetForPosition(
+        position: Offset,
         maxWidth: Dp,
-        edgeTabWidth: Dp,
-        layoutDirection: LayoutDirection,
-    ): Dp {
-        if (presentation != AddressBarPresentation.Docked) return 0.dp
-        val distance = ((maxWidth - edgeTabWidth) / 2f + 12.dp).coerceAtLeast(0.dp)
-        return if (layoutDirection == LayoutDirection.Ltr) distance else -distance
+        barWidth: Dp,
+        verticalTravel: Dp,
+    ): DpOffset {
+        val horizontalPosition = position.x
+            .takeIf(Float::isFinite)
+            ?.coerceIn(-1f, 1f)
+            ?: 0f
+        val verticalPosition = position.y
+            .takeIf(Float::isFinite)
+            ?.coerceIn(0f, 1f)
+            ?: 0f
+        val horizontalTravel = ((maxWidth - barWidth) / 2f + 12.dp).coerceAtLeast(0.dp)
+        return DpOffset(
+            x = horizontalTravel * horizontalPosition,
+            y = if (verticalPosition == 0f) {
+                0.dp
+            } else {
+                -verticalTravel.coerceAtLeast(0.dp) * verticalPosition
+            },
+        )
     }
 
     fun usesFadeThrough(
@@ -117,7 +144,8 @@ internal fun rememberAddressBarMotionState(
     maxWidth: Dp,
     feedbackWidth: Dp,
     edgeTabWidth: Dp,
-    layoutDirection: LayoutDirection,
+    verticalTravel: Dp,
+    dockPosition: Offset,
 ): AddressBarMotionState {
     val width by animateDpAsState(
         targetValue = AddressBarMotion.widthTarget(
@@ -135,15 +163,11 @@ internal fun rememberAddressBarMotionState(
         animationSpec = AddressBarMotion.containerAnimationSpec,
         label = "Adressleistenhöhe beim Parken",
     )
-    val dockOffset by animateDpAsState(
-        targetValue = AddressBarMotion.dockOffsetTarget(
-            presentation = presentation,
-            maxWidth = maxWidth,
-            edgeTabWidth = edgeTabWidth,
-            layoutDirection = layoutDirection,
-        ),
-        animationSpec = AddressBarMotion.containerAnimationSpec,
-        label = "Adressleiste am Bildschirmrand",
+    val dockOffset = AddressBarMotion.dockOffsetForPosition(
+        position = dockPosition,
+        maxWidth = maxWidth,
+        barWidth = width,
+        verticalTravel = verticalTravel,
     )
     return AddressBarMotionState(width = width, height = height, dockOffset = dockOffset)
 }

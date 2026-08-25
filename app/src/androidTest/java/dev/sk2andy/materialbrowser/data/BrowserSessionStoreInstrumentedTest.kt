@@ -15,6 +15,7 @@ import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -151,6 +152,19 @@ class BrowserSessionStoreInstrumentedTest {
         store.saveAiModeToggleVisible(false)
 
         assertFalse(store.loadAiModeToggleVisible())
+    }
+
+    @Test
+    fun addressBarDockingDefaultsToEnabledAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertTrue(store.loadAddressBarDockingEnabled())
+
+        store.saveAddressBarDockingEnabled(false)
+        assertFalse(store.loadAddressBarDockingEnabled())
+
+        store.saveAddressBarDockingEnabled(true)
+        assertTrue(store.loadAddressBarDockingEnabled())
     }
 
     @Test
@@ -413,15 +427,39 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
-    fun addressBarDockPreferenceDefaultsToCenterAndRoundTrips() {
+    fun addressBarDockPlacementDefaultsMigratesAndRoundTrips() {
         val store = BrowserSessionStore(context)
-        assertFalse(store.loadAddressBarDocked())
+        assertNull(store.loadAddressBarDockPlacement())
 
         store.saveAddressBarDocked(true)
-        assertEquals(true, store.loadAddressBarDocked())
+        assertEquals(AddressBarDockPlacement.Default, store.loadAddressBarDockPlacement())
 
-        store.saveAddressBarDocked(false)
-        assertFalse(store.loadAddressBarDocked())
+        val placement = AddressBarDockPlacement(
+            edge = AddressBarDockEdge.Left,
+            verticalFraction = 0.42f,
+        )
+        store.saveAddressBarDockPlacement(placement)
+        assertEquals(placement, store.loadAddressBarDockPlacement())
+        assertEquals(placement, store.loadLastAddressBarDockPlacement())
+
+        store.saveAddressBarDockPlacement(null)
+        assertNull(store.loadAddressBarDockPlacement())
+        assertEquals(placement, store.loadLastAddressBarDockPlacement())
+
+        store.saveAddressBarDockPlacement(placement)
+
+        preferences.edit()
+            .putInt("address_bar_dock_edge", 7)
+            .putString("address_bar_dock_vertical_fraction", "broken")
+            .commit()
+        assertEquals(AddressBarDockPlacement.Default, store.loadAddressBarDockPlacement())
+
+        store.saveAddressBarDockPlacement(null)
+        assertNull(store.loadAddressBarDockPlacement())
+        assertEquals(AddressBarDockPlacement.Default, store.loadLastAddressBarDockPlacement())
+
+        preferences.edit().putString("address_bar_docked", "broken").commit()
+        assertNull(store.loadAddressBarDockPlacement())
     }
 
     @Test

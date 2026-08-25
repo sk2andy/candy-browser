@@ -180,10 +180,12 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRejectionReason
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRuntime
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
+import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
@@ -422,7 +424,14 @@ class BrowserController(
         private set
     var tabOverviewMode by mutableStateOf(TabOverviewMode.Hero)
         private set
-    var isAddressBarDocked by mutableStateOf(false)
+    var addressBarDockPlacement by mutableStateOf<AddressBarDockPlacement?>(null)
+        private set
+    private var lastAddressBarDockPlacement = AddressBarDockPlacement.Default
+    val lastAddressBarDockEdge: AddressBarDockEdge
+        get() = lastAddressBarDockPlacement.edge
+    val isAddressBarDocked: Boolean
+        get() = addressBarDockPlacement != null
+    var isAddressBarDockingEnabled by mutableStateOf(true)
         private set
     var isTabButtonVisible by mutableStateOf(true)
         private set
@@ -1284,7 +1293,16 @@ class BrowserController(
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
-        isAddressBarDocked = store.loadAddressBarDocked()
+        isAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
+        val storedAddressBarDockPlacement = store.loadAddressBarDockPlacement()
+        lastAddressBarDockPlacement = store.loadLastAddressBarDockPlacement()
+            ?: storedAddressBarDockPlacement
+            ?: AddressBarDockPlacement.Default
+        addressBarDockPlacement = storedAddressBarDockPlacement
+            .takeIf { isAddressBarDockingEnabled }
+        if (!isAddressBarDockingEnabled && storedAddressBarDockPlacement != null) {
+            store.saveAddressBarDockPlacement(null)
+        }
         isTabButtonVisible = store.loadTabButtonVisible()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
@@ -3732,9 +3750,30 @@ class BrowserController(
     }
 
     fun updateAddressBarDocked(docked: Boolean) {
+        if (docked && !isAddressBarDockingEnabled) return
+        val placement = if (docked) {
+            addressBarDockPlacement ?: lastAddressBarDockPlacement
+        } else {
+            null
+        }
+        updateAddressBarDockPlacement(placement)
+    }
+
+    fun updateAddressBarDockPlacement(placement: AddressBarDockPlacement?) {
+        val normalized = placement?.normalized()
+        if (normalized != null && !isAddressBarDockingEnabled) return
+        if (addressBarDockPlacement == normalized) return
         collapseBottomBar()
-        isAddressBarDocked = docked
-        store.saveAddressBarDocked(docked)
+        addressBarDockPlacement = normalized
+        if (normalized != null) lastAddressBarDockPlacement = normalized
+        store.saveAddressBarDockPlacement(normalized)
+    }
+
+    fun updateAddressBarDockingEnabled(enabled: Boolean) {
+        if (isAddressBarDockingEnabled == enabled) return
+        isAddressBarDockingEnabled = enabled
+        store.saveAddressBarDockingEnabled(enabled)
+        if (!enabled) updateAddressBarDocked(false)
     }
 
     fun updateTabButtonVisible(visible: Boolean) {

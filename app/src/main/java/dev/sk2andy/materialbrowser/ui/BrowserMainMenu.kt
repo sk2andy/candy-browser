@@ -144,6 +144,7 @@ internal fun BrowserMainMenu(
     onSnooze: () -> Unit,
     onSnoozedTabs: () -> Unit,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit = {},
+    canDockAddressBar: Boolean = true,
     onDockAddressBar: () -> Unit,
     onSettings: () -> Unit,
 ) {
@@ -566,17 +567,19 @@ internal fun BrowserMainMenu(
                 modifier = Modifier.testTag(BrowserMainMenuTestTags.BrowserGroup),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                MenuRow(
-                    label = stringResource(R.string.action_dock_address_bar),
-                    iconRes = R.drawable.ic_symbol_chevron_right,
-                    shape = firstItemShape,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.DockAddressBar),
-                    onClick = { dismissThen(onDockAddressBar) },
-                )
+                if (canDockAddressBar) {
+                    MenuRow(
+                        label = stringResource(R.string.action_dock_address_bar),
+                        iconRes = R.drawable.ic_symbol_chevron_right,
+                        shape = firstItemShape,
+                        modifier = Modifier.testTag(BrowserMainMenuTestTags.DockAddressBar),
+                        onClick = { dismissThen(onDockAddressBar) },
+                    )
+                }
                 MenuRow(
                     label = stringResource(R.string.snoozed_tabs_title),
                     iconRes = R.drawable.ic_snooze,
-                    shape = innerCorners,
+                    shape = if (canDockAddressBar) innerCorners else firstItemShape,
                     modifier = Modifier.testTag(BrowserMainMenuTestTags.SnoozedTabs),
                     supportingText = if (snoozedTabCount == 0) {
                         stringResource(R.string.snoozed_tabs_settings_summary)

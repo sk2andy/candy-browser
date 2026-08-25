@@ -311,6 +311,8 @@
     <string name="settings_section_gestures">Gestures</string>
     <string name="settings_tab_button_title">Show tab button</string>
     <string name="settings_tab_button_subtitle">Shows the tab counter in addition to the swipe-up gesture.</string>
+    <string name="settings_address_bar_docking_title">Move the parked address pill</string>
+    <string name="settings_address_bar_docking_subtitle">Drag the parked pill and release it at any height to snap it to the nearest screen edge. Turn off to keep the address bar centered.</string>
     <string name="settings_tab_dismiss_resistance">Tab dismissal resistance</string>
     <string name="settings_tab_dismiss_resistance_summary">Resistance phase: %1$d%% of the closing distance</string>
     <string name="settings_section_protection">Protection &amp; cookies</string>
