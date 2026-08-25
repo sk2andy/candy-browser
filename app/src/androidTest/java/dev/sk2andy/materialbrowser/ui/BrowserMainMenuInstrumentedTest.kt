@@ -59,7 +59,10 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.setContent {
             val configuration = LocalConfiguration.current
             val shortConfiguration = remember(configuration) {
-                Configuration(configuration).apply { screenHeightDp = 450 }
+                Configuration(configuration).apply {
+                    screenWidthDp = 320
+                    screenHeightDp = 450
+                }
             }
             CompositionLocalProvider(LocalConfiguration provides shortConfiguration) {
                 MaterialBrowserTheme {
@@ -84,6 +87,7 @@ class BrowserMainMenuInstrumentedTest {
                             isLoading = false,
                             canToggleFavorite = true,
                             isFavorite = false,
+                            isPinned = false,
                             canUsePageActions = true,
                             canOpenReader = true,
                             canToggleDomainMute = true,
@@ -107,6 +111,7 @@ class BrowserMainMenuInstrumentedTest {
                             onForward = {},
                             onReloadOrStop = {},
                             onToggleFavorite = {},
+                            onTogglePinned = {},
                             onShare = {},
                             onOpenExternal = {},
                             onPrint = {},
@@ -151,6 +156,17 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.mainClock.advanceTimeBy(200L)
 
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
+        val menuBounds = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
+            .fetchSemanticsNode().boundsInRoot
+        val favoriteBounds = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Favorite)
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val pinBounds = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Pin)
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(favoriteBounds.left >= menuBounds.left)
+        assertTrue(pinBounds.left >= favoriteBounds.right)
+        assertTrue(pinBounds.right <= menuBounds.right)
         val pageGroup = hasTestTag(BrowserMainMenuTestTags.PageGroup)
         composeRule.onNode(
             pageGroup and
@@ -212,30 +228,35 @@ class BrowserMainMenuInstrumentedTest {
         }
 
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
+            .performScrollTo()
             .assertIsDisplayed()
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling)
+            .performScrollTo()
             .assertIsDisplayed()
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView)
+            .performScrollTo()
             .assertIsDisplayed()
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForcePageZooming)
+            .performScrollTo()
             .assertIsDisplayed()
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForcePageZooming).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceSafeArea)
+            .performScrollTo()
             .assertIsDisplayed()
             .assertIsOff()
             .performClick()
@@ -305,6 +326,7 @@ class BrowserMainMenuInstrumentedTest {
                     isLoading = false,
                     canToggleFavorite = false,
                     isFavorite = false,
+                    isPinned = false,
                     canUsePageActions = false,
                     canOpenReader = false,
                     canToggleDomainMute = false,
@@ -329,6 +351,7 @@ class BrowserMainMenuInstrumentedTest {
                     onForward = {},
                     onReloadOrStop = {},
                     onToggleFavorite = {},
+                    onTogglePinned = {},
                     onShare = {},
                     onOpenExternal = {},
                     onPrint = {},

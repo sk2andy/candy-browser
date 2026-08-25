@@ -154,6 +154,46 @@ class SnoozeScreensInstrumentedTest {
     }
 
     @Test
+    fun tabActionsPinFitsAndTogglesOnNarrowScreens() {
+        val pinCalls = AtomicInteger()
+        composeRule.setContent {
+            val configuration = LocalConfiguration.current
+            val narrowConfiguration = remember(configuration) {
+                Configuration(configuration).apply { screenWidthDp = 320 }
+            }
+            CompositionLocalProvider(LocalConfiguration provides narrowConfiguration) {
+                MaterialBrowserTheme {
+                    TestTabActionsMenu(
+                        tab = BrowserTab("tab", 1L, title = "Example"),
+                        onTogglePinned = { pinCalls.incrementAndGet() },
+                    )
+                }
+            }
+        }
+
+        val menuBounds = composeRule
+            .onNodeWithTag(SnoozeTestTags.TabActions)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val favoriteBounds = composeRule
+            .onNodeWithTag(TabActionsMenuTestTags.Favorite)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val pinNode = composeRule
+            .onNodeWithTag(TabActionsMenuTestTags.Pin)
+            .assertIsDisplayed()
+        val pinBounds = pinNode.fetchSemanticsNode().boundsInRoot
+
+        assertTrue(favoriteBounds.left >= menuBounds.left)
+        assertTrue(pinBounds.right <= menuBounds.right)
+        assertTrue(pinBounds.left >= favoriteBounds.right)
+        pinNode.performClick()
+        assertEquals(1, pinCalls.get())
+    }
+
+    @Test
     fun tabActionsMenuKeepsOutgoingContentUntilExitMotionCompletes() {
         val menuTab = mutableStateOf<BrowserTab?>(null)
         composeRule.mainClock.autoAdvance = false
@@ -340,6 +380,7 @@ class SnoozeScreensInstrumentedTest {
                         onClose = {},
                         onSelect = {},
                         onNewTab = {},
+                        onOpenSettings = {},
                         destinationChromeVisible = true,
                         onEntryHeroStarted = {},
                         onEntryHeroCompleted = {},
@@ -385,6 +426,12 @@ class SnoozeScreensInstrumentedTest {
         val menuBounds = composeRule.onNodeWithTag(SnoozeTestTags.TabActions)
             .fetchSemanticsNode().boundsInRoot
         assertTrue(menuBounds.bottom <= chromeBounds.top)
+        composeRule.onNodeWithTag(TabActionsMenuTestTags.Pin).performClick()
+        composeRule.runOnIdle {
+            assertTrue(browserController.activeTabs.first { it.id == tabId }.isPinned)
+        }
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.More).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.action_remove_pin)).assertExists()
         composeRule.onNodeWithTag(DomainMuteMenuTestTags.Item).performClick()
         composeRule.runOnIdle {
             assertTrue(browserController.isDomainMuted(tabId))
@@ -412,6 +459,7 @@ class SnoozeScreensInstrumentedTest {
         tab: BrowserTab?,
         isFavorite: Boolean = false,
         onToggleFavorite: () -> Unit = {},
+        onTogglePinned: () -> Unit = {},
         onSnooze: () -> Unit = {},
     ) {
         TabActionsFloatingMenu(
@@ -422,7 +470,7 @@ class SnoozeScreensInstrumentedTest {
             isDomainMuted = false,
             onToggleFavorite = onToggleFavorite,
             onOpenCandyTrail = {},
-            onTogglePinned = {},
+            onTogglePinned = onTogglePinned,
             onMoveToProfile = {},
             onShare = {},
             onOpenExternal = {},

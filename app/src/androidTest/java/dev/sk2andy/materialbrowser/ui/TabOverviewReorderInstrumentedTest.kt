@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.down
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -78,6 +79,69 @@ class TabOverviewReorderInstrumentedTest {
     fun listOverviewReopensAtSelectedTab() = verifyOverviewReopensAtSelectedTab(
         TabOverviewMode.List,
     )
+
+    @Test
+    fun heroPinnedTabsJumpScrollsToPins() = verifyPinnedTabsJump(TabOverviewMode.Hero)
+
+    @Test
+    fun gridPinnedTabsJumpScrollsToPins() = verifyPinnedTabsJump(TabOverviewMode.Grid)
+
+    @Test
+    fun listPinnedTabsJumpScrollsToPins() = verifyPinnedTabsJump(TabOverviewMode.List)
+
+    @Test
+    fun settingsActionOpensSettingsFromOverview() {
+        lateinit var browserController: BrowserController
+        val settingsCalls = AtomicInteger()
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+        }
+        setOverviewContent(
+            browserController = browserController,
+            onOpenSettings = settingsCalls::incrementAndGet,
+        )
+        composeRule.waitForIdle()
+
+        val settingsBounds = composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.Settings)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        composeRule.onRoot().performTouchInput { click(settingsBounds.center) }
+
+        composeRule.runOnIdle { assertEquals(1, settingsCalls.get()) }
+    }
+
+    @Test
+    fun listCanAnchorNewestTabsAtBottom() {
+        lateinit var browserController: BrowserController
+        lateinit var newestTabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            newestTabId = requireNotNull(
+                browserController.createBackgroundTab("https://newest.example"),
+            )
+            browserController.updateTabOverviewMode(TabOverviewMode.List)
+            browserController.updateTabListStartsAtBottom(true)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        val listBounds = composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.List)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val newestBounds = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(newestTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(newestBounds.bottom > listBounds.center.y)
+    }
 
     @Test
     fun quickReleaseAfterLongPressStillCommits() = verifyReorder(
@@ -504,10 +568,48 @@ class TabOverviewReorderInstrumentedTest {
         composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).assertIsDisplayed()
     }
 
+    private fun verifyPinnedTabsJump(mode: TabOverviewMode) {
+        lateinit var browserController: BrowserController
+        lateinit var pinnedTabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            pinnedTabId = browserController.selectedTabId
+            assertTrue(browserController.setTabPinned(pinnedTabId, true))
+            var newestTabId = pinnedTabId
+            repeat(14) { index ->
+                newestTabId = requireNotNull(
+                    browserController.createBackgroundTab(
+                        "https://pin-jump-$index-${mode.wireValue}.example",
+                    ),
+                )
+            }
+            browserController.selectTab(newestTabId)
+            browserController.updateTabOverviewMode(mode)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        val pinnedJumpBounds = composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.PinnedTabsJump)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        composeRule.onRoot().performTouchInput { click(pinnedJumpBounds.center) }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(pinnedTabId)).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.PinnedTabsJump)
+            .assertDoesNotExist()
+    }
+
     private fun setOverviewContent(
         browserController: BrowserController,
         visible: () -> Boolean = { true },
         onEntryHeroCompleted: () -> Unit = {},
+        onOpenSettings: () -> Unit = {},
         onExitHeroVisibilityChanged: (Boolean) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -520,6 +622,7 @@ class TabOverviewReorderInstrumentedTest {
                     onClose = {},
                     onSelect = {},
                     onNewTab = {},
+                    onOpenSettings = onOpenSettings,
                     destinationChromeVisible = true,
                     onEntryHeroStarted = {},
                     onEntryHeroCompleted = onEntryHeroCompleted,

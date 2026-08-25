@@ -255,6 +255,11 @@
     <string name="tab_overview_mode_hero">Flujo de portadas</string>
     <string name="tab_overview_mode_grid">Cuadrícula compacta</string>
     <string name="tab_overview_mode_list">Lista sin vistas previas</string>
+    <string name="settings_tab_list_starts_at_bottom_title">Iniciar la lista de pestañas abajo</string>
+    <string name="settings_tab_list_starts_at_bottom_subtitle">Abre la lista en las pestañas más recientes y coloca las listas cortas cerca del pulgar.</string>
+    <string name="settings_automatic_tab_sorting_title">Ordenar por uso reciente</string>
+    <string name="settings_automatic_tab_sorting_subtitle">Las menos recientes primero y la más reciente al final. Las fijadas permanecen delante; se desactiva el orden manual.</string>
+    <string name="cd_scroll_to_pinned_tabs">Mostrar pestañas fijadas</string>
     <string name="settings_auto_close_tabs">Cerrar pestañas automáticamente</string>
     <string name="settings_resident_tab_limit">Pestañas cargadas</string>
     <plurals name="settings_resident_tab_limit_summary">

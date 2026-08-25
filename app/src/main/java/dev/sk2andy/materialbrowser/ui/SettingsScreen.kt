@@ -136,6 +136,8 @@ internal object SearchSettingsTestTags {
 
 internal object TabSettingsTestTags {
     const val ResidentTabLimit = "tab_settings_resident_limit"
+    const val ListStartsAtBottom = "tab_settings_list_starts_at_bottom"
+    const val AutomaticSorting = "tab_settings_automatic_sorting"
 }
 
 @Composable
@@ -152,6 +154,8 @@ internal fun SettingsScreen(
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
     tabOverviewMode: TabOverviewMode,
+    tabListStartsAtBottom: Boolean,
+    automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
@@ -178,6 +182,8 @@ internal fun SettingsScreen(
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
+    onTabListStartsAtBottomChanged: (Boolean) -> Unit,
+    onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
@@ -252,12 +258,17 @@ internal fun SettingsScreen(
                     inactiveTabLifetime = inactiveTabLifetime,
                     residentTabLimit = residentTabLimit,
                     tabOverviewMode = tabOverviewMode,
+                    tabListStartsAtBottom = tabListStartsAtBottom,
+                    automaticTabSortingEnabled = automaticTabSortingEnabled,
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
                     isTabButtonVisible = isTabButtonVisible,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
                     onTabOverviewModeChanged = onTabOverviewModeChanged,
+                    onTabListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
+                    onAutomaticTabSortingEnabledChanged =
+                        onAutomaticTabSortingEnabledChanged,
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onTabButtonVisibleChanged = onTabButtonVisibleChanged,
@@ -816,12 +827,16 @@ internal fun TabsAndGesturesSettingsPage(
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
     tabOverviewMode: TabOverviewMode,
+    tabListStartsAtBottom: Boolean,
+    automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
+    onTabListStartsAtBottomChanged: (Boolean) -> Unit,
+    onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
@@ -864,6 +879,23 @@ internal fun TabsAndGesturesSettingsPage(
                 }
             }
         }
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.settings_tab_list_starts_at_bottom_title),
+            subtitle = stringResource(R.string.settings_tab_list_starts_at_bottom_subtitle),
+            checked = tabListStartsAtBottom,
+            enabled = tabOverviewMode == TabOverviewMode.List,
+            onCheckedChange = onTabListStartsAtBottomChanged,
+            modifier = Modifier.testTag(TabSettingsTestTags.ListStartsAtBottom),
+        )
+        Spacer(Modifier.height(2.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_automatic_tab_sorting_title),
+            subtitle = stringResource(R.string.settings_automatic_tab_sorting_subtitle),
+            checked = automaticTabSortingEnabled,
+            onCheckedChange = onAutomaticTabSortingEnabledChanged,
+            modifier = Modifier.testTag(TabSettingsTestTags.AutomaticSorting),
+        )
         SettingsPageSpacer()
         Surface(
             modifier = Modifier.fillMaxWidth(),

@@ -505,6 +505,20 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_TAB_OVERVIEW_MODE, mode.wireValue).apply()
     }
 
+    fun loadTabListStartsAtBottom(): Boolean =
+        preferences.getBoolean(KEY_TAB_LIST_STARTS_AT_BOTTOM, false)
+
+    fun saveTabListStartsAtBottom(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_TAB_LIST_STARTS_AT_BOTTOM, enabled).apply()
+    }
+
+    fun loadAutomaticTabSortingEnabled(): Boolean =
+        preferences.getBoolean(KEY_AUTOMATIC_TAB_SORTING_ENABLED, false)
+
+    fun saveAutomaticTabSortingEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_AUTOMATIC_TAB_SORTING_ENABLED, enabled).apply()
+    }
+
     fun loadAddressBarDocked(): Boolean = preferences.getBoolean(KEY_ADDRESS_BAR_DOCKED, false)
 
     fun saveAddressBarDocked(docked: Boolean) {
@@ -700,6 +714,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
+        const val KEY_TAB_LIST_STARTS_AT_BOTTOM = "tab_list_starts_at_bottom"
+        const val KEY_AUTOMATIC_TAB_SORTING_ENABLED = "automatic_tab_sorting_enabled"
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
         const val KEY_ALWAYS_PARK_ADDRESS_BAR_AFTER_LOAD =
             "always_park_address_bar_after_load"
