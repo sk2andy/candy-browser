@@ -13,6 +13,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.HapticFeedbackConstants
 import android.view.View
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityManager
 import android.webkit.WebView
 import android.widget.FrameLayout
@@ -83,8 +84,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -453,6 +455,7 @@ internal fun BrowserScreen(
     val browserDragOffset = remember { mutableFloatStateOf(0f) }
     var browserWidthPx by remember { mutableFloatStateOf(1f) }
     var browserHeightPx by remember { mutableFloatStateOf(1f) }
+    var browserRootBottomInWindowPx by remember { mutableIntStateOf(0) }
     val bottomBarTopPx = remember { mutableFloatStateOf(Float.NaN) }
     var addressNewTabButtonBounds by remember { mutableStateOf<Rect?>(null) }
     var keepLinkPeekAddressBarExpanded by remember { mutableStateOf(false) }
@@ -1233,6 +1236,9 @@ internal fun BrowserScreen(
                 browserWidthPx = it.width.toFloat()
                 browserHeightPx = it.height.toFloat()
             }
+            .onGloballyPositioned { coordinates ->
+                browserRootBottomInWindowPx = coordinates.boundsInWindow().bottom.roundToInt()
+            }
             .background(MaterialTheme.colorScheme.surfaceContainerHighest),
     ) {
         Box(
@@ -1467,6 +1473,7 @@ internal fun BrowserScreen(
             overviewGestureProgress = overviewGestureProgress,
             showingTabOverview = tabOverviewVisible,
             visualOnly = addressBarMorphInFront,
+            rootBottomInWindowPx = browserRootBottomInWindowPx,
             onOverviewGestureProgress = { progress ->
                 overviewGestureSettleJob?.cancel()
                 overviewGestureProgress.floatValue = progress.coerceIn(0f, 1f)
@@ -3072,6 +3079,7 @@ private fun BrowserBottomBar(
     overviewGestureProgress: FloatState,
     showingTabOverview: Boolean,
     visualOnly: Boolean,
+    rootBottomInWindowPx: Int,
     onOverviewGestureProgress: (Float) -> Unit,
     onOverviewGestureStarted: () -> Unit,
     onOverviewGestureCancelled: () -> Unit,
@@ -3095,6 +3103,11 @@ private fun BrowserBottomBar(
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
+    val fullWindowHeightPx = LocalContext.current
+        .getSystemService(WindowManager::class.java)
+        .currentWindowMetrics
+        .bounds
+        .height()
     val chromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
     LaunchedEffect(addressBarPulseNonce) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
@@ -3145,9 +3158,13 @@ private fun BrowserBottomBar(
     )
     BoxWithConstraints(
         modifier = modifier
+            .addressBarWindowInsetsPadding(
+                fullWindowHeightPx = fullWindowHeightPx,
+                rootBottomInWindowPx = rootBottomInWindowPx,
+                imeInsets = WindowInsets.ime,
+                navigationBarInsets = WindowInsets.navigationBars,
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .navigationBarsPadding()
-            .imePadding()
             .fillMaxWidth()
             .then(if (visualOnly) Modifier.clearAndSetSemantics { } else Modifier),
         contentAlignment = Alignment.Center,
