@@ -93,8 +93,6 @@
     <string name="action_stop_loading">Parar carregamento</string>
     <string name="action_reload">Recarregar</string>
     <string name="action_dock_address_bar">Fixar a barra de endereço na margem</string>
-    <string name="action_always_park_address_bar_for_domain">Fixar automaticamente à direita em %1$s</string>
-    <string name="action_always_park_address_bar_for_domain_description">Fixa a barra de endereço quando as páginas deste site terminam de carregar</string>
     <string name="action_mute_domain">Silenciar este site</string>
     <string name="action_desktop_view">Vista para computador</string>
     <string name="action_desktop_view_description">Pedir a versão para computador neste domínio</string>
@@ -298,8 +296,6 @@
     <string name="toast_searxng_instance_required">Defina primeiro um URL de instância SearXNG válido</string>
     <string name="settings_section_browser">Navegador</string>
     <string name="settings_full_immersive_mode_title">Modo imersivo em ecrã inteiro</string>
-    <string name="settings_always_park_address_bar_title">Fixar à direita após carregar</string>
-    <string name="settings_always_park_address_bar_subtitle">Fixa automaticamente a barra de endereço quando a página atual termina de carregar</string>
     <string name="settings_full_immersive_mode_subtitle">Oculta as barras de estado e navegação. Deslize a partir de uma margem para as mostrar temporariamente.</string>
     <string name="settings_scroll_bar_title">Barra de deslocamento arrastável</string>
     <string name="settings_scroll_bar_subtitle">Aparece ao deslocar e depois desaparece. Arraste-a para percorrer páginas longas.</string>

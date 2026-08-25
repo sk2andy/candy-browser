@@ -23,7 +23,6 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeUp
@@ -53,7 +52,6 @@ class BrowserMainMenuInstrumentedTest {
         val desktopViewChanges = AtomicInteger()
         val zoomChanges = AtomicInteger()
         val safeAreaChanges = AtomicInteger()
-        val parkingChanges = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
@@ -72,7 +70,6 @@ class BrowserMainMenuInstrumentedTest {
                     var desktopView by remember { mutableStateOf(false) }
                     var forcePageZooming by remember { mutableStateOf(false) }
                     var forceSafeArea by remember { mutableStateOf(false) }
-                    var alwaysParkAddressBar by remember { mutableStateOf(false) }
                     Box {
                         BrowserMainMenu(
                             expanded = expanded,
@@ -102,8 +99,6 @@ class BrowserMainMenuInstrumentedTest {
                             isForcePageZoomingEnabled = forcePageZooming,
                             canToggleForceSafeArea = true,
                             isForceSafeAreaEnabled = forceSafeArea,
-                            addressBarParkingDomain = "developer.android.com",
-                            isAddressBarAlwaysParked = alwaysParkAddressBar,
                             canAddSiteCapsule = true,
                             canSnooze = true,
                             snoozedTabCount = 2,
@@ -136,10 +131,6 @@ class BrowserMainMenuInstrumentedTest {
                             onForceSafeAreaChange = { enabled ->
                                 safeAreaChanges.incrementAndGet()
                                 forceSafeArea = enabled
-                            },
-                            onAddressBarAlwaysParkedChange = { enabled ->
-                                parkingChanges.incrementAndGet()
-                                alwaysParkAddressBar = enabled
                             },
                             onOpenCandyTrail = {},
                             onAddSiteCapsule = {},
@@ -179,9 +170,6 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.DesktopView)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForcePageZooming)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForceSafeArea)) and
-                hasAnyDescendant(
-                    hasTestTag(BrowserMainMenuTestTags.AlwaysParkAddressBarForDomain),
-                ) and
                 hasAnyDescendant(hasTestTag(DomainMuteMenuTestTags.Item)),
         ).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.action_mute_domain)).assertExists()
@@ -262,21 +250,12 @@ class BrowserMainMenuInstrumentedTest {
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceSafeArea).assertIsOn()
-        composeRule.onNodeWithTag(BrowserMainMenuTestTags.AlwaysParkAddressBarForDomain)
-            .performScrollTo()
-            .assertIsDisplayed()
-            .assertIsOff()
-            .performClick()
-        composeRule.mainClock.advanceTimeByFrame()
-        composeRule.onNodeWithTag(BrowserMainMenuTestTags.AlwaysParkAddressBarForDomain)
-            .assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
         assertEquals(1, cookieChanges.get())
         assertEquals(1, scrollChanges.get())
         assertEquals(1, desktopViewChanges.get())
         assertEquals(1, zoomChanges.get())
         assertEquals(1, safeAreaChanges.get())
-        assertEquals(1, parkingChanges.get())
 
         repeat(3) {
             composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
@@ -341,8 +320,6 @@ class BrowserMainMenuInstrumentedTest {
                     isForcePageZoomingEnabled = false,
                     canToggleForceSafeArea = false,
                     isForceSafeAreaEnabled = false,
-                    addressBarParkingDomain = null,
-                    isAddressBarAlwaysParked = false,
                     canAddSiteCapsule = false,
                     canSnooze = false,
                     snoozedTabCount = 0,
@@ -362,7 +339,6 @@ class BrowserMainMenuInstrumentedTest {
                     onForceVerticalScrollingChange = {},
                     onForcePageZoomingChange = {},
                     onForceSafeAreaChange = {},
-                    onAddressBarAlwaysParkedChange = {},
                     onOpenCandyTrail = {},
                     onAddSiteCapsule = {},
                     onSummarize = {},

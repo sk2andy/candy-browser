@@ -92,8 +92,6 @@ private data class BrowserMainMenuPresentation(
     val isForcePageZoomingEnabled: Boolean,
     val canToggleForceSafeArea: Boolean,
     val isForceSafeAreaEnabled: Boolean,
-    val addressBarParkingDomain: String?,
-    val isAddressBarAlwaysParked: Boolean,
     val canAddSiteCapsule: Boolean,
     val canSnooze: Boolean,
 )
@@ -124,8 +122,6 @@ internal fun BrowserMainMenu(
     isForcePageZoomingEnabled: Boolean,
     canToggleForceSafeArea: Boolean,
     isForceSafeAreaEnabled: Boolean,
-    addressBarParkingDomain: String?,
-    isAddressBarAlwaysParked: Boolean,
     canAddSiteCapsule: Boolean,
     canSnooze: Boolean,
     snoozedTabCount: Int,
@@ -145,7 +141,6 @@ internal fun BrowserMainMenu(
     onForceVerticalScrollingChange: (Boolean) -> Unit,
     onForcePageZoomingChange: (Boolean) -> Unit,
     onForceSafeAreaChange: (Boolean) -> Unit,
-    onAddressBarAlwaysParkedChange: (Boolean) -> Unit,
     onOpenCandyTrail: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     onSummarize: () -> Unit,
@@ -201,8 +196,6 @@ internal fun BrowserMainMenu(
         isForcePageZoomingEnabled = isForcePageZoomingEnabled,
         canToggleForceSafeArea = canToggleForceSafeArea,
         isForceSafeAreaEnabled = isForceSafeAreaEnabled,
-        addressBarParkingDomain = addressBarParkingDomain,
-        isAddressBarAlwaysParked = isAddressBarAlwaysParked,
         canAddSiteCapsule = canAddSiteCapsule,
         canSnooze = canSnooze,
     )
@@ -488,30 +481,8 @@ internal fun BrowserMainMenu(
                     enabled = presentation.canToggleDomainMute,
                     muted = presentation.isDomainMuted,
                     onMutedChange = onDomainMutedChange,
-                    shape = if (presentation.addressBarParkingDomain == null) {
-                        lastItemShape
-                    } else {
-                        innerCorners
-                    },
+                    shape = lastItemShape,
                 )
-                presentation.addressBarParkingDomain?.let { domain ->
-                    BrowserMenuToggleItem(
-                        label = stringResource(
-                            R.string.action_always_park_address_bar_for_domain,
-                            domain,
-                        ),
-                        supportingText = stringResource(
-                            R.string.action_always_park_address_bar_for_domain_description,
-                        ),
-                        checked = presentation.isAddressBarAlwaysParked,
-                        enabled = true,
-                        onCheckedChange = onAddressBarAlwaysParkedChange,
-                        modifier = Modifier.testTag(
-                            BrowserMainMenuTestTags.AlwaysParkAddressBarForDomain,
-                        ),
-                        shape = lastItemShape,
-                    )
-                }
             }
 
             if (userScriptMenuCommands.isNotEmpty()) {
@@ -1152,8 +1123,6 @@ internal object BrowserMainMenuTestTags {
     const val Snooze = "browser_main_menu_snooze"
     const val SnoozedTabs = "browser_main_menu_snoozed_tabs"
     const val DockAddressBar = "browser_main_menu_dock_address_bar"
-    const val AlwaysParkAddressBarForDomain =
-        "browser_main_menu_always_park_address_bar_for_domain"
     const val CookieBannerRemoval = "browser_main_menu_cookie_banner_removal"
     const val ForceVerticalScrolling = "browser_main_menu_force_vertical_scrolling"
     const val DesktopView = "browser_main_menu_desktop_view"

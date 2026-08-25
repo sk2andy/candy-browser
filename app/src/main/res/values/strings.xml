@@ -99,8 +99,6 @@
     <string name="action_stop_loading">Stop loading</string>
     <string name="action_reload">Reload</string>
     <string name="action_dock_address_bar">Park address bar at edge</string>
-    <string name="action_always_park_address_bar_for_domain">Automatically park right on %1$s</string>
-    <string name="action_always_park_address_bar_for_domain_description">Parks the address pill after pages on this site finish loading</string>
     <string name="action_mute_domain">Mute this site</string>
     <string name="action_desktop_view">Desktop view</string>
     <string name="action_desktop_view_description">Request the desktop version for this domain</string>
@@ -305,8 +303,6 @@
     <string name="toast_searxng_instance_required">Set a valid SearXNG instance URL first</string>
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Full immersive mode</string>
-    <string name="settings_always_park_address_bar_title">Park right after loading</string>
-    <string name="settings_always_park_address_bar_subtitle">Automatically parks the address pill when the current page finishes loading</string>
     <string name="settings_full_immersive_mode_subtitle">Hides the status and navigation bars. Swipe from a screen edge to show them temporarily.</string>
     <string name="settings_scroll_bar_title">Draggable scroll bar</string>
     <string name="settings_scroll_bar_subtitle">Shows while scrolling, then fades out. Drag it to jump through long pages.</string>

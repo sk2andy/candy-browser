@@ -6,7 +6,6 @@ import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
-import dev.sk2andy.materialbrowser.browser.AddressBarParkingRules
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
@@ -525,31 +524,6 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKED, docked).apply()
     }
 
-    fun loadAlwaysParkAddressBarAfterLoad(): Boolean =
-        preferences.getBoolean(KEY_ALWAYS_PARK_ADDRESS_BAR_AFTER_LOAD, false)
-
-    fun saveAlwaysParkAddressBarAfterLoad(enabled: Boolean) {
-        preferences.edit().putBoolean(KEY_ALWAYS_PARK_ADDRESS_BAR_AFTER_LOAD, enabled).apply()
-    }
-
-    @Synchronized
-    fun loadAlwaysParkedAddressBarDomains(): Map<String, Set<String>> =
-        loadProfileHosts(
-            key = KEY_ALWAYS_PARKED_ADDRESS_BAR_DOMAINS,
-            normalizeHost = AddressBarParkingRules::normalizedDomain,
-            limit = AddressBarParkingRules.MAX_PER_PROFILE,
-        )
-
-    @Synchronized
-    fun saveAlwaysParkedAddressBarDomains(domainsByProfile: Map<String, Set<String>>) {
-        saveProfileHosts(
-            key = KEY_ALWAYS_PARKED_ADDRESS_BAR_DOMAINS,
-            hostsByProfile = domainsByProfile,
-            normalizeHost = AddressBarParkingRules::normalizedDomain,
-            limit = AddressBarParkingRules.MAX_PER_PROFILE,
-        )
-    }
-
     fun loadTabButtonVisible(): Boolean = preferences.getBoolean(KEY_TAB_BUTTON_VISIBLE, true)
 
     fun saveTabButtonVisible(visible: Boolean) {
@@ -717,10 +691,6 @@ class BrowserSessionStore internal constructor(
         const val KEY_TAB_LIST_STARTS_AT_BOTTOM = "tab_list_starts_at_bottom"
         const val KEY_AUTOMATIC_TAB_SORTING_ENABLED = "automatic_tab_sorting_enabled"
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
-        const val KEY_ALWAYS_PARK_ADDRESS_BAR_AFTER_LOAD =
-            "always_park_address_bar_after_load"
-        const val KEY_ALWAYS_PARKED_ADDRESS_BAR_DOMAINS =
-            "always_parked_address_bar_domains"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"

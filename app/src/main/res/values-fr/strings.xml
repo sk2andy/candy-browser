@@ -93,8 +93,6 @@
     <string name="action_stop_loading">Arrêter le chargement</string>
     <string name="action_reload">Actualiser</string>
     <string name="action_dock_address_bar">Placer la barre d’adresse sur le bord</string>
-    <string name="action_always_park_address_bar_for_domain">Placer automatiquement à droite sur %1$s</string>
-    <string name="action_always_park_address_bar_for_domain_description">Place la barre d’adresse à droite lorsque les pages de ce site sont chargées</string>
     <string name="action_mute_domain">Couper le son de ce site</string>
     <string name="action_desktop_view">Version pour ordinateur</string>
     <string name="action_desktop_view_description">Demander la version pour ordinateur pour ce domaine</string>
@@ -298,8 +296,6 @@
     <string name="toast_searxng_instance_required">Configurez d’abord une URL d’instance SearXNG valide</string>
     <string name="settings_section_browser">Navigateur</string>
     <string name="settings_full_immersive_mode_title">Mode immersif plein écran</string>
-    <string name="settings_always_park_address_bar_title">Placer à droite après le chargement</string>
-    <string name="settings_always_park_address_bar_subtitle">Place automatiquement la barre d’adresse à droite lorsque la page actuelle est chargée</string>
     <string name="settings_full_immersive_mode_subtitle">Masque les barres d’état et de navigation. Balayez depuis un bord pour les afficher temporairement.</string>
     <string name="settings_scroll_bar_title">Barre de défilement déplaçable</string>
     <string name="settings_scroll_bar_subtitle">Apparaît pendant le défilement puis disparaît. Faites-la glisser pour parcourir rapidement les longues pages.</string>

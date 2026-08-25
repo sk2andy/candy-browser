@@ -93,8 +93,6 @@
     <string name="action_stop_loading">Laden stoppen</string>
     <string name="action_reload">Neu laden</string>
     <string name="action_dock_address_bar">Pille rechts parken</string>
-    <string name="action_always_park_address_bar_for_domain">Bei %1$s automatisch rechts parken</string>
-    <string name="action_always_park_address_bar_for_domain_description">Parkt die Adresspille, sobald Seiten dieser Website fertig geladen sind</string>
     <string name="action_mute_domain">Diese Website stummschalten</string>
     <string name="action_desktop_view">Desktop-Ansicht</string>
     <string name="action_desktop_view_description">Desktop-Version für diese Domain anfordern</string>
@@ -295,8 +293,6 @@
     <string name="toast_searxng_instance_required">Lege zuerst eine gültige SearXNG-Instanz-URL fest</string>
     <string name="settings_section_browser">Browser</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>
-    <string name="settings_always_park_address_bar_title">Nach dem Laden rechts parken</string>
-    <string name="settings_always_park_address_bar_subtitle">Parkt die Adresspille automatisch, sobald die aktuelle Seite fertig geladen ist</string>
     <string name="settings_full_immersive_mode_subtitle">Blendet Status- und Navigationsleiste aus. Vom Bildschirmrand wischen, um sie kurz einzublenden.</string>
     <string name="settings_scroll_bar_title">Ziehbare Scrollleiste</string>
     <string name="settings_scroll_bar_subtitle">Erscheint beim Scrollen und blendet sich danach aus. Ziehen, um lange Seiten direkt zu durchlaufen.</string>

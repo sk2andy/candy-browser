@@ -1517,8 +1517,6 @@ internal fun BrowserScreen(
             isForcePageZoomingEnabled = selectedSiteState.forcePageZooming,
             canToggleForceSafeArea = selectedSiteHasHost,
             isForceSafeAreaEnabled = selectedSiteState.forceSafeArea,
-            addressBarParkingDomain = controller.selectedAddressBarParkingDomain,
-            isAddressBarAlwaysParked = controller.isSelectedAddressBarAlwaysParked,
             onCookieBannerRemovalEnabledChange = { enabled ->
                 if (controller.setCookieBannerRemovalDisabled(selectedTab.id, !enabled)) {
                     rootView.performConfirmHaptic()
@@ -1536,11 +1534,6 @@ internal fun BrowserScreen(
             },
             onForceSafeAreaChange = { enabled ->
                 if (controller.setForceSafeArea(selectedTab.id, enabled)) {
-                    rootView.performConfirmHaptic()
-                }
-            },
-            onAddressBarAlwaysParkedChange = { enabled ->
-                if (controller.setSelectedAddressBarAlwaysParked(enabled)) {
                     rootView.performConfirmHaptic()
                 }
             },
@@ -1869,7 +1862,6 @@ internal fun BrowserScreen(
                 dismissResistancePercent = controller.dismissResistancePercent,
                 profilesEnabled = controller.profilesEnabled,
                 isTabButtonVisible = controller.isTabButtonVisible,
-                alwaysParkAddressBarAfterLoad = controller.alwaysParkAddressBarAfterLoad,
                 isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
                 isScrollBarEnabled = controller.isScrollBarEnabled,
                 isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
@@ -1915,8 +1907,6 @@ internal fun BrowserScreen(
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onProfilesEnabledChanged = controller::updateProfilesEnabled,
                 onTabButtonVisibleChanged = controller::updateTabButtonVisible,
-                onAlwaysParkAddressBarAfterLoadChanged =
-                    controller::updateAlwaysParkAddressBarAfterLoad,
                 onFullImmersiveModeEnabledChanged =
                     controller::updateFullImmersiveModeEnabled,
                 onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
@@ -3086,13 +3076,10 @@ private fun BrowserBottomBar(
     isForcePageZoomingEnabled: Boolean,
     canToggleForceSafeArea: Boolean,
     isForceSafeAreaEnabled: Boolean,
-    addressBarParkingDomain: String?,
-    isAddressBarAlwaysParked: Boolean,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
     onForceVerticalScrollingChange: (Boolean) -> Unit,
     onForcePageZoomingChange: (Boolean) -> Unit,
     onForceSafeAreaChange: (Boolean) -> Unit,
-    onAddressBarAlwaysParkedChange: (Boolean) -> Unit,
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
@@ -3366,16 +3353,12 @@ private fun BrowserBottomBar(
                                 isForcePageZoomingEnabled = isForcePageZoomingEnabled,
                                 canToggleForceSafeArea = canToggleForceSafeArea,
                                 isForceSafeAreaEnabled = isForceSafeAreaEnabled,
-                                addressBarParkingDomain = addressBarParkingDomain,
-                                isAddressBarAlwaysParked = isAddressBarAlwaysParked,
                                 onCookieBannerRemovalEnabledChange =
                                     onCookieBannerRemovalEnabledChange,
                                 onForceVerticalScrollingChange =
                                     onForceVerticalScrollingChange,
                                 onForcePageZoomingChange = onForcePageZoomingChange,
                                 onForceSafeAreaChange = onForceSafeAreaChange,
-                                onAddressBarAlwaysParkedChange =
-                                    onAddressBarAlwaysParkedChange,
                                 snoozedTabCount = snoozedTabCount,
                                 onSnoozedTabs = onSnoozedTabs,
                                 onSettings = onSettings,
@@ -3803,13 +3786,10 @@ private fun ExpandedBottomBarContent(
     isForcePageZoomingEnabled: Boolean,
     canToggleForceSafeArea: Boolean,
     isForceSafeAreaEnabled: Boolean,
-    addressBarParkingDomain: String?,
-    isAddressBarAlwaysParked: Boolean,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
     onForceVerticalScrollingChange: (Boolean) -> Unit,
     onForcePageZoomingChange: (Boolean) -> Unit,
     onForceSafeAreaChange: (Boolean) -> Unit,
-    onAddressBarAlwaysParkedChange: (Boolean) -> Unit,
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
     onSettings: () -> Unit,
@@ -4135,8 +4115,6 @@ private fun ExpandedBottomBarContent(
                                 isForcePageZoomingEnabled = isForcePageZoomingEnabled,
                                 canToggleForceSafeArea = canToggleForceSafeArea,
                                 isForceSafeAreaEnabled = isForceSafeAreaEnabled,
-                                addressBarParkingDomain = addressBarParkingDomain,
-                                isAddressBarAlwaysParked = isAddressBarAlwaysParked,
                                 canAddSiteCapsule = tab.url != BLANK_URL &&
                                     !tab.isIncognito &&
                                     (
@@ -4164,8 +4142,6 @@ private fun ExpandedBottomBarContent(
                                     onForceVerticalScrollingChange,
                                 onForcePageZoomingChange = onForcePageZoomingChange,
                                 onForceSafeAreaChange = onForceSafeAreaChange,
-                                onAddressBarAlwaysParkedChange =
-                                    onAddressBarAlwaysParkedChange,
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onAddSiteCapsule = onAddSiteCapsule,
                                 onSummarize = onSummarizeWithAssistant,
