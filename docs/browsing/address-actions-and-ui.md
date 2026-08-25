@@ -17,6 +17,7 @@
 | --- | --- | --- |
 | Horizontal tab switch | `AddressBarGestureRules`, `AddressBarTabSwitchRules` | Pure distance/velocity decision; controller changes selection |
 | Upward overview morph | `AddressBarOverviewGestureRules`, `AddressBarMotion` | Pure progress/motion math; Compose owns pointer input and animation |
+| Address-bar parking | `AddressBarDockingRules`, `AddressBarMotion` | The existing park action creates an edge pill. Its single physical chevron points toward the last parked edge and sits on that same side of the centered address text. The parked pill can be dragged in two dimensions and snaps to the nearest physical edge at the released height. The normal-height anchor visibly stretches the pill under resistance, then releases it with a spring. Live movement haptics stop when movement pauses; edge snaps and anchor breakaway use confirm feedback. Parked, centered and overview positions share one spring path. |
 | Link Peek | [`LinkPeek.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/LinkPeek.kt), `WebContentActionState` | Temporary preview; commit/open behavior remains explicit |
 | Long-press page content | [`WebContentActions.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/WebContentActions.kt) | Normalize link/image URLs before background open or download |
 | Share/download/assistant/external app | [`browser/integration/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/integration/), [`browser/actions/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/) | Construct bounded requests, then let Android adapters launch them |
@@ -28,3 +29,10 @@
 3. Wire controller state/actions.
 4. Render and animate in focused Compose functions.
 5. Add instrumentation only for Android, WebView, semantics, or gesture integration.
+
+Address-bar parking is enabled by default under Tabs & gestures. Disabling it immediately restores
+the centered pill, hides the park action, and prevents a persisted parked state from returning
+after restart. Active docking and the last edge/height are stored separately: restoring or disabling
+the pill centers it without forgetting where the next park action should place it. The normalized
+position survives window-size changes and restart. Clicking a parked pill restores it and focuses
+address input. Blank new tabs keep parking unavailable so address entry remains directly accessible.

@@ -2,8 +2,9 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.animation.core.TargetBasedAnimation
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -65,12 +66,12 @@ class AddressBarMotionTest {
         )
         assertEquals(56.dp, AddressBarMotion.heightTarget(AddressBarPresentation.Overview))
         assertEquals(
-            0.dp,
-            AddressBarMotion.dockOffsetTarget(
-                presentation = AddressBarPresentation.Overview,
+            DpOffset.Zero,
+            AddressBarMotion.dockOffsetForPosition(
+                position = Offset.Zero,
                 maxWidth = 328.dp,
-                edgeTabWidth = 52.dp,
-                layoutDirection = LayoutDirection.Ltr,
+                barWidth = 52.dp,
+                verticalTravel = 400.dp,
             ),
         )
     }
@@ -144,30 +145,51 @@ class AddressBarMotionTest {
     }
 
     @Test
-    fun `docked offset mirrors in rtl and clears for other presentations`() {
-        val ltr = AddressBarMotion.dockOffsetTarget(
-            presentation = AddressBarPresentation.Docked,
+    fun `docked offset supports physical edges and vertical placement`() {
+        val right = AddressBarMotion.dockOffsetForPosition(
+            position = Offset(1f, 0.5f),
             maxWidth = 328.dp,
-            edgeTabWidth = 52.dp,
-            layoutDirection = LayoutDirection.Ltr,
+            barWidth = 52.dp,
+            verticalTravel = 400.dp,
         )
-        val rtl = AddressBarMotion.dockOffsetTarget(
-            presentation = AddressBarPresentation.Docked,
+        val left = AddressBarMotion.dockOffsetForPosition(
+            position = Offset(-1f, 0.5f),
             maxWidth = 328.dp,
-            edgeTabWidth = 52.dp,
-            layoutDirection = LayoutDirection.Rtl,
+            barWidth = 52.dp,
+            verticalTravel = 400.dp,
         )
 
-        assertEquals(150.dp, ltr)
-        assertEquals(-ltr, rtl)
+        assertEquals(DpOffset(150.dp, -200.dp), right)
+        assertEquals(DpOffset(-150.dp, -200.dp), left)
+    }
+
+    @Test
+    fun `dock position keeps drag and overview transitions on one path`() {
         assertEquals(
-            0.dp,
-            AddressBarMotion.dockOffsetTarget(
-                presentation = AddressBarPresentation.Compact,
+            DpOffset(75.dp, -100.dp),
+            AddressBarMotion.dockOffsetForPosition(
+                position = Offset(0.5f, 0.25f),
                 maxWidth = 328.dp,
-                edgeTabWidth = 52.dp,
-                layoutDirection = LayoutDirection.Ltr,
+                barWidth = 52.dp,
+                verticalTravel = 400.dp,
             ),
         )
+    }
+
+    @Test
+    fun `dock progress spring has intermediate frames toward overview and back`() {
+        listOf(0f to 1f, 1f to 0f).forEach { (start, end) ->
+            val animation = TargetBasedAnimation(
+                animationSpec = AddressBarMotion.dockProgressAnimationSpec,
+                typeConverter = Float.VectorConverter,
+                initialValue = start,
+                targetValue = end,
+            )
+            val firstFrame = animation.getValueFromNanos(16_000_000L)
+
+            assertTrue(firstFrame > minOf(start, end))
+            assertTrue(firstFrame < maxOf(start, end))
+            assertEquals(end, animation.getValueFromNanos(animation.durationNanos))
+        }
     }
 }

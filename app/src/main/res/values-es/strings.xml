@@ -309,6 +309,8 @@
     <string name="settings_section_gestures">Gestos</string>
     <string name="settings_tab_button_title">Mostrar botón de pestañas</string>
     <string name="settings_tab_button_subtitle">Muestra el contador además del gesto de deslizar hacia arriba.</string>
+    <string name="settings_address_bar_docking_title">Mover la píldora de dirección aparcada</string>
+    <string name="settings_address_bar_docking_subtitle">Arrastra la píldora aparcada y suéltala a cualquier altura para fijarla al borde de pantalla más cercano. Desactívalo para mantener la barra centrada.</string>
     <string name="settings_tab_dismiss_resistance">Resistencia al cerrar pestañas</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistencia: %1$d%% del recorrido de cierre</string>
     <string name="settings_section_protection">Protección y cookies</string>

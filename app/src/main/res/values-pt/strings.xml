@@ -309,6 +309,8 @@
     <string name="settings_section_gestures">Gestos</string>
     <string name="settings_tab_button_title">Mostrar botão de separadores</string>
     <string name="settings_tab_button_subtitle">Mostra o contador além do gesto de deslizar para cima.</string>
+    <string name="settings_address_bar_docking_title">Mover a pílula de endereço fixada</string>
+    <string name="settings_address_bar_docking_subtitle">Arraste a pílula fixada e solte-a em qualquer altura para a encaixar na margem mais próxima. Desative para manter a barra centrada.</string>
     <string name="settings_tab_dismiss_resistance">Resistência ao fechar separadores</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistência: %1$d%% do percurso de fecho</string>
     <string name="settings_section_protection">Proteção e cookies</string>

@@ -518,10 +518,57 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_AUTOMATIC_TAB_SORTING_ENABLED, enabled).apply()
     }
 
-    fun loadAddressBarDocked(): Boolean = preferences.getBoolean(KEY_ADDRESS_BAR_DOCKED, false)
+    fun loadAddressBarDocked(): Boolean =
+        runCatching { preferences.getBoolean(KEY_ADDRESS_BAR_DOCKED, false) }.getOrDefault(false)
 
     fun saveAddressBarDocked(docked: Boolean) {
         preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKED, docked).apply()
+    }
+
+    fun loadAddressBarDockPlacement(): AddressBarDockPlacement? {
+        if (!loadAddressBarDocked()) return null
+        return loadLastAddressBarDockPlacement() ?: AddressBarDockPlacement.Default
+    }
+
+    fun loadLastAddressBarDockPlacement(): AddressBarDockPlacement? {
+        if (
+            !preferences.contains(KEY_ADDRESS_BAR_DOCK_EDGE) &&
+            !preferences.contains(KEY_ADDRESS_BAR_DOCK_VERTICAL_FRACTION)
+        ) {
+            return null
+        }
+        return AddressBarDockPlacement(
+            edge = AddressBarDockEdge.fromWireValue(
+                runCatching { preferences.getString(KEY_ADDRESS_BAR_DOCK_EDGE, null) }
+                    .getOrNull(),
+            ),
+            verticalFraction = runCatching {
+                preferences.getFloat(KEY_ADDRESS_BAR_DOCK_VERTICAL_FRACTION, 0f)
+            }.getOrDefault(0f),
+        ).normalized()
+    }
+
+    fun saveAddressBarDockPlacement(placement: AddressBarDockPlacement?) {
+        val normalized = placement?.normalized()
+        preferences.edit()
+            .putBoolean(KEY_ADDRESS_BAR_DOCKED, normalized != null)
+            .apply {
+                if (normalized != null) {
+                    putString(KEY_ADDRESS_BAR_DOCK_EDGE, normalized.edge.wireValue)
+                    putFloat(
+                        KEY_ADDRESS_BAR_DOCK_VERTICAL_FRACTION,
+                        normalized.verticalFraction,
+                    )
+                }
+            }
+            .apply()
+    }
+
+    fun loadAddressBarDockingEnabled(): Boolean =
+        preferences.getBoolean(KEY_ADDRESS_BAR_DOCKING_ENABLED, true)
+
+    fun saveAddressBarDockingEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKING_ENABLED, enabled).apply()
     }
 
     fun loadTabButtonVisible(): Boolean = preferences.getBoolean(KEY_TAB_BUTTON_VISIBLE, true)
@@ -691,6 +738,10 @@ class BrowserSessionStore internal constructor(
         const val KEY_TAB_LIST_STARTS_AT_BOTTOM = "tab_list_starts_at_bottom"
         const val KEY_AUTOMATIC_TAB_SORTING_ENABLED = "automatic_tab_sorting_enabled"
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
+        const val KEY_ADDRESS_BAR_DOCK_EDGE = "address_bar_dock_edge"
+        const val KEY_ADDRESS_BAR_DOCK_VERTICAL_FRACTION =
+            "address_bar_dock_vertical_fraction"
+        const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"

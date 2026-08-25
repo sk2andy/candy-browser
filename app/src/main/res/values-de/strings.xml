@@ -92,7 +92,7 @@
     <string name="cd_make_blank_tab_regular">Leeren Tab als normalen Tab verwenden</string>
     <string name="action_stop_loading">Laden stoppen</string>
     <string name="action_reload">Neu laden</string>
-    <string name="action_dock_address_bar">Pille rechts parken</string>
+    <string name="action_dock_address_bar">Pille Parken</string>
     <string name="action_mute_domain">Diese Website stummschalten</string>
     <string name="action_desktop_view">Desktop-Ansicht</string>
     <string name="action_desktop_view_description">Desktop-Version für diese Domain anfordern</string>
@@ -306,6 +306,8 @@
     <string name="settings_section_gestures">Gesten</string>
     <string name="settings_tab_button_title">Tab-Schaltfläche anzeigen</string>
     <string name="settings_tab_button_subtitle">Zeigt den Tab-Zähler zusätzlich zur Wischgeste nach oben.</string>
+    <string name="settings_address_bar_docking_title">Geparkte Adresspille verschieben</string>
+    <string name="settings_address_bar_docking_subtitle">Die geparkte Pille ziehen und auf beliebiger Höhe loslassen. Sie rastet am nächsten Bildschirmrand ein. Deaktivieren, um die Adressleiste mittig zu halten.</string>
     <string name="settings_tab_dismiss_resistance">Widerstand beim Schließen von Tabs</string>
     <string name="settings_tab_dismiss_resistance_summary">Widerstandsphase: %1$d%% des Schließwegs</string>
     <string name="settings_section_protection">Schutz &amp; Cookies</string>

@@ -137,6 +137,7 @@ internal object TabSettingsTestTags {
     const val ResidentTabLimit = "tab_settings_resident_limit"
     const val ListStartsAtBottom = "tab_settings_list_starts_at_bottom"
     const val AutomaticSorting = "tab_settings_automatic_sorting"
+    const val AddressBarDocking = "tab_settings_address_bar_docking"
 }
 
 @Composable
@@ -158,6 +159,7 @@ internal fun SettingsScreen(
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
+    isAddressBarDockingEnabled: Boolean,
     isFullImmersiveModeEnabled: Boolean,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
@@ -185,6 +187,7 @@ internal fun SettingsScreen(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
+    onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
@@ -260,6 +263,7 @@ internal fun SettingsScreen(
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
                     isTabButtonVisible = isTabButtonVisible,
+                    isAddressBarDockingEnabled = isAddressBarDockingEnabled,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
                     onTabOverviewModeChanged = onTabOverviewModeChanged,
@@ -269,6 +273,7 @@ internal fun SettingsScreen(
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onTabButtonVisibleChanged = onTabButtonVisibleChanged,
+                    onAddressBarDockingEnabledChanged = onAddressBarDockingEnabledChanged,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 
@@ -826,6 +831,7 @@ internal fun TabsAndGesturesSettingsPage(
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
+    isAddressBarDockingEnabled: Boolean,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
@@ -834,6 +840,7 @@ internal fun TabsAndGesturesSettingsPage(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
+    onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
@@ -963,6 +970,14 @@ internal fun TabsAndGesturesSettingsPage(
             subtitle = stringResource(R.string.settings_tab_button_subtitle),
             checked = isTabButtonVisible,
             onCheckedChange = onTabButtonVisibleChanged,
+        )
+        Spacer(Modifier.height(2.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_address_bar_docking_title),
+            subtitle = stringResource(R.string.settings_address_bar_docking_subtitle),
+            checked = isAddressBarDockingEnabled,
+            onCheckedChange = onAddressBarDockingEnabledChanged,
+            modifier = Modifier.testTag(TabSettingsTestTags.AddressBarDocking),
         )
         Spacer(Modifier.height(2.dp))
         Surface(

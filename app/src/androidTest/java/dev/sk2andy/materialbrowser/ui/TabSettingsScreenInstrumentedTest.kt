@@ -1,5 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsEnabled
@@ -41,6 +44,7 @@ class TabSettingsScreenInstrumentedTest {
                     dismissResistancePercent = 40,
                     profilesEnabled = true,
                     isTabButtonVisible = true,
+                    isAddressBarDockingEnabled = true,
                     onInactiveTabLifetimeChanged = {},
                     onResidentTabLimitChanged = {},
                     onTabOverviewModeChanged = {},
@@ -49,6 +53,7 @@ class TabSettingsScreenInstrumentedTest {
                     onDismissResistancePercentChanged = {},
                     onProfilesEnabledChanged = {},
                     onTabButtonVisibleChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
                     onBack = {},
                 )
             }
@@ -89,6 +94,7 @@ class TabSettingsScreenInstrumentedTest {
                     dismissResistancePercent = 40,
                     profilesEnabled = true,
                     isTabButtonVisible = true,
+                    isAddressBarDockingEnabled = true,
                     onInactiveTabLifetimeChanged = {},
                     onResidentTabLimitChanged = {},
                     onTabOverviewModeChanged = {},
@@ -97,6 +103,7 @@ class TabSettingsScreenInstrumentedTest {
                     onDismissResistancePercentChanged = {},
                     onProfilesEnabledChanged = {},
                     onTabButtonVisibleChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
                     onBack = {},
                 )
             }
@@ -110,5 +117,39 @@ class TabSettingsScreenInstrumentedTest {
 
         assertTrue(automaticSorting.get())
         assertFalse(listStartsAtBottom.get())
+    }
+
+    @Test
+    fun addressBarDockingSwitchCanDisableParking() {
+        var enabled by mutableStateOf(true)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsAndGesturesSettingsPage(
+                    inactiveTabLifetime = InactiveTabLifetime.Never,
+                    residentTabLimit = 10,
+                    tabOverviewMode = TabOverviewMode.Hero,
+                    tabListStartsAtBottom = false,
+                    automaticTabSortingEnabled = false,
+                    dismissResistancePercent = 40,
+                    profilesEnabled = true,
+                    isTabButtonVisible = true,
+                    isAddressBarDockingEnabled = enabled,
+                    onInactiveTabLifetimeChanged = {},
+                    onResidentTabLimitChanged = {},
+                    onTabOverviewModeChanged = {},
+                    onTabListStartsAtBottomChanged = {},
+                    onAutomaticTabSortingEnabledChanged = {},
+                    onDismissResistancePercentChanged = {},
+                    onProfilesEnabledChanged = {},
+                    onTabButtonVisibleChanged = {},
+                    onAddressBarDockingEnabledChanged = { enabled = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TabSettingsTestTags.AddressBarDocking).performClick()
+
+        assertFalse(enabled)
     }
 }

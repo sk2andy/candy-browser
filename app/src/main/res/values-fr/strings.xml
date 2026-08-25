@@ -309,6 +309,8 @@
     <string name="settings_section_gestures">Gestes</string>
     <string name="settings_tab_button_title">Afficher le bouton des onglets</string>
     <string name="settings_tab_button_subtitle">Affiche le compteur en plus du balayage vers le haut.</string>
+    <string name="settings_address_bar_docking_title">Déplacer la pilule d’adresse ancrée</string>
+    <string name="settings_address_bar_docking_subtitle">Faites glisser la pilule ancrée et relâchez-la à la hauteur voulue pour la fixer au bord le plus proche. Désactivez cette option pour garder la barre centrée.</string>
     <string name="settings_tab_dismiss_resistance">Résistance à la fermeture des onglets</string>
     <string name="settings_tab_dismiss_resistance_summary">Phase de résistance : %1$d%% de la distance de fermeture</string>
     <string name="settings_section_protection">Protection et cookies</string>
