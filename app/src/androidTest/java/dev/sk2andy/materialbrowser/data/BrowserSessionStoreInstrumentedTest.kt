@@ -425,6 +425,19 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun automaticAddressBarParkingDefaultsToFalseAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadAlwaysParkAddressBarAfterLoad())
+
+        store.saveAlwaysParkAddressBarAfterLoad(true)
+        assertTrue(store.loadAlwaysParkAddressBarAfterLoad())
+
+        store.saveAlwaysParkAddressBarAfterLoad(false)
+        assertFalse(store.loadAlwaysParkAddressBarAfterLoad())
+    }
+
+    @Test
     fun tabButtonPreferenceDefaultsVisibleAndRoundTrips() {
         val store = BrowserSessionStore(context)
         assertTrue(store.loadTabButtonVisible())
@@ -536,6 +549,31 @@ class BrowserSessionStoreInstrumentedTest {
 
         preferences.edit().putString("desktop_view_domains", "not-json").commit()
         assertEquals(emptyMap<String, Set<String>>(), store.loadDesktopViewDomains())
+    }
+
+    @Test
+    fun parkedAddressBarDomainsRoundTripByProfileAsRegistrableDomains() {
+        val store = BrowserSessionStore(context)
+        store.saveAlwaysParkedAddressBarDomains(
+            mapOf(
+                "candy" to setOf("Mobile.News.Example.co.uk", "unsafe host"),
+                "work" to setOf("docs.example"),
+                "" to setOf("ignored.example"),
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "candy" to setOf("example.co.uk"),
+                "work" to setOf("docs.example"),
+            ),
+            store.loadAlwaysParkedAddressBarDomains(),
+        )
+
+        preferences.edit()
+            .putString("always_parked_address_bar_domains", "not-json")
+            .commit()
+        assertEquals(emptyMap<String, Set<String>>(), store.loadAlwaysParkedAddressBarDomains())
     }
 
     @Test

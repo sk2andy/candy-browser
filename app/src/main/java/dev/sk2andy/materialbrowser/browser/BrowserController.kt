@@ -424,6 +424,10 @@ class BrowserController(
         private set
     var isAddressBarDocked by mutableStateOf(false)
         private set
+    private var isAddressBarManuallyDocked = false
+    private var isAddressBarAutomaticallyDocked = false
+    var alwaysParkAddressBarAfterLoad by mutableStateOf(false)
+        private set
     var isTabButtonVisible by mutableStateOf(true)
         private set
     var isFullImmersiveModeEnabled by mutableStateOf(false)
@@ -671,6 +675,11 @@ class BrowserController(
         putAll(store.loadDesktopViewDomains())
     }
     private val temporaryDesktopViewDomains = mutableStateMapOf<String, Set<String>>()
+    private val permanentAlwaysParkedAddressBarDomains =
+        mutableStateMapOf<String, Set<String>>().apply {
+            putAll(store.loadAlwaysParkedAddressBarDomains())
+        }
+    private val temporaryAlwaysParkedAddressBarDomains = mutableStateMapOf<String, Set<String>>()
     private val defaultUserAgentMetadataBySettings = WeakHashMap<WebSettings, UserAgentMetadata>()
     private val profileDeletionCoordinator =
         WebViewProfileDeletionCoordinator(store, ::tryDeleteNamedWebViewProfile)
@@ -749,6 +758,12 @@ class BrowserController(
     val isSelectedDesktopView: Boolean
         get() = isDesktopView(selectedTabId)
 
+    val selectedAddressBarParkingDomain: String?
+        get() = addressBarParkingDomain(selectedTabId)
+
+    val isSelectedAddressBarAlwaysParked: Boolean
+        get() = isAddressBarAlwaysParked(selectedTabId)
+
     fun canToggleDomainMute(tabId: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         val pageUrl = pageUrls[tabId] ?: tab.url
@@ -770,6 +785,16 @@ class BrowserController(
     fun isDesktopView(tabId: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         return isDesktopView(tab, pageUrls[tabId] ?: tab.url)
+    }
+
+    fun addressBarParkingDomain(tabId: String): String? {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return null
+        return AddressBarParkingRules.domainForUrl(pageUrls[tabId] ?: tab.url)
+    }
+
+    fun isAddressBarAlwaysParked(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return isAddressBarAlwaysParked(tab, pageUrls[tabId] ?: tab.url)
     }
 
     fun permissionRadarSnapshot(
@@ -1284,7 +1309,9 @@ class BrowserController(
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
-        isAddressBarDocked = store.loadAddressBarDocked()
+        isAddressBarManuallyDocked = store.loadAddressBarDocked()
+        isAddressBarDocked = isAddressBarManuallyDocked
+        alwaysParkAddressBarAfterLoad = store.loadAlwaysParkAddressBarAfterLoad()
         isTabButtonVisible = store.loadTabButtonVisible()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
@@ -1319,6 +1346,10 @@ class BrowserController(
         store.saveMutedDomains(permanentMutedDomains.toMap())
         permanentDesktopViewDomains.keys.retainAll(restoredProfileIds)
         store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
+        permanentAlwaysParkedAddressBarDomains.keys.retainAll(restoredProfileIds)
+        store.saveAlwaysParkedAddressBarDomains(
+            permanentAlwaysParkedAddressBarDomains.toMap(),
+        )
         activeProfileId = if (profilesEnabled) {
             restoredActiveProfileId.takeIf { id -> profiles.any { it.id == id } }
         } else {
@@ -2794,6 +2825,12 @@ class BrowserController(
             store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
         }
         temporaryDesktopViewDomains.remove(profileId)
+        if (permanentAlwaysParkedAddressBarDomains.remove(profileId) != null) {
+            store.saveAlwaysParkedAddressBarDomains(
+                permanentAlwaysParkedAddressBarDomains.toMap(),
+            )
+        }
+        temporaryAlwaysParkedAddressBarDomains.remove(profileId)
         permissionRepository.removeProfile(profileId)
         permissionRevision++
         val webViewProfileName = WebViewProfileRules.isolatedProfileName(profileId)
@@ -3085,8 +3122,10 @@ class BrowserController(
         prepareMediaForTabDeparture(selectedTabId)
         clearPermissionActivity(selectedTabId)
         webViews[selectedTabId]?.let(::pauseWebView)
+        updateAddressBarAutomaticallyDocked(false)
         updateSelectedTabId(tabId)
         rememberSelectedTab(activeProfileId, tabId)
+        refreshAutomaticAddressBarParking()
         publishWebMediaState()
         persist()
     }
@@ -3733,8 +3772,17 @@ class BrowserController(
 
     fun updateAddressBarDocked(docked: Boolean) {
         collapseBottomBar()
+        isAddressBarAutomaticallyDocked = false
+        isAddressBarManuallyDocked = docked
         isAddressBarDocked = docked
         store.saveAddressBarDocked(docked)
+    }
+
+    fun updateAlwaysParkAddressBarAfterLoad(enabled: Boolean) {
+        if (alwaysParkAddressBarAfterLoad == enabled) return
+        alwaysParkAddressBarAfterLoad = enabled
+        store.saveAlwaysParkAddressBarAfterLoad(enabled)
+        refreshAutomaticAddressBarParking()
     }
 
     fun updateTabButtonVisible(visible: Boolean) {
@@ -4169,6 +4217,35 @@ class BrowserController(
         return true
     }
 
+    fun setSelectedAddressBarAlwaysParked(enabled: Boolean): Boolean =
+        setAddressBarAlwaysParked(selectedTabId, enabled)
+
+    fun setAddressBarAlwaysParked(tabId: String, enabled: Boolean): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        val domain = AddressBarParkingRules.domainForUrl(pageUrl) ?: return false
+        if (isAddressBarAlwaysParked(tab, pageUrl) == enabled) return false
+        val domainsByProfile = if (tab.isIncognito) {
+            temporaryAlwaysParkedAddressBarDomains
+        } else {
+            permanentAlwaysParkedAddressBarDomains
+        }
+        val updated = AddressBarParkingRules.withAlwaysParkedState(
+            current = domainsByProfile[tab.profileId].orEmpty(),
+            domain = domain,
+            enabled = enabled,
+        )
+        if (updated.isEmpty()) domainsByProfile.remove(tab.profileId)
+        else domainsByProfile[tab.profileId] = updated
+        if (!tab.isIncognito) {
+            store.saveAlwaysParkedAddressBarDomains(
+                permanentAlwaysParkedAddressBarDomains.toMap(),
+            )
+        }
+        if (tabId == selectedTabId) refreshAutomaticAddressBarParking()
+        return true
+    }
+
     fun clearBrowsingData() {
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
@@ -4225,6 +4302,9 @@ class BrowserController(
         temporaryDesktopViewDomains.clear()
         permanentDesktopViewDomains.clear()
         store.saveDesktopViewDomains(emptyMap())
+        temporaryAlwaysParkedAddressBarDomains.clear()
+        permanentAlwaysParkedAddressBarDomains.clear()
+        store.saveAlwaysParkedAddressBarDomains(emptyMap())
         siteExceptionRevision++
         webViews.forEach { (tabId, webView) ->
             val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
@@ -4482,6 +4562,7 @@ class BrowserController(
         temporarySitePrivacyOverrides.clear()
         temporaryMutedDomains.clear()
         temporaryDesktopViewDomains.clear()
+        temporaryAlwaysParkedAddressBarDomains.clear()
         savePersistentFilterRules()
         persist()
         destroyLinkPeekPreviewWebViews()
@@ -4830,6 +4911,7 @@ class BrowserController(
                 openCapsuleTargetInFullCandy(tabId, view, url)
                 return
             }
+            if (tabId == selectedTabId) updateAddressBarAutomaticallyDocked(false)
             pageUrls[tabId] = url
             applyDomainMutePolicy(tabId, view, url)
             updateProtectionRequestContext(tabId, url)
@@ -4859,6 +4941,7 @@ class BrowserController(
         override fun onPageFinished(view: WebView, url: String) {
             if (isPendingInitialBlank(tabId, url)) return
             if (isQuarantinedPopup(tabId)) return
+            val finishedNavigationGeneration = navigationGenerations[tabId] ?: return
             if (url != BLANK_URL) suppressedInitialBlankTabIds.remove(tabId)
             pageUrls[tabId] = url
             updateNavigationState(tabId, view)
@@ -4874,6 +4957,22 @@ class BrowserController(
             recordHistory(tabId, url, title)
             if (view.url == url && pageUrls[tabId] == url) {
                 updateCandyTrailPage(tabId, url, title)
+                mainHandler.post {
+                    if (
+                        AddressBarParkingRules.isCurrentPageCompletion(
+                            controllerDestroyed = destroyed,
+                            isCurrentWebView = webViews[tabId] === view,
+                            finishedNavigationGeneration = finishedNavigationGeneration,
+                            currentNavigationGeneration = navigationGenerations[tabId],
+                            callbackUrl = url,
+                            currentWebViewUrl = view.url,
+                            currentProgress = view.progress,
+                            currentPageUrl = pageUrls[tabId],
+                        )
+                    ) {
+                        parkAddressBarAfterSuccessfulLoad(tabId, url)
+                    }
+                }
             }
             detectPageEdgeToEdge(tabId, view)
             persist()
@@ -8707,6 +8806,7 @@ class BrowserController(
         incognitoRuleHits.clear()
         temporaryMutedDomains.clear()
         temporaryDesktopViewDomains.clear()
+        temporaryAlwaysParkedAddressBarDomains.clear()
         permissionRepository.clearPrivateSession()
         permissionRevision++
         if (ephemeralRuleIds.isNotEmpty()) {
@@ -8900,6 +9000,64 @@ class BrowserController(
             permanentDesktopViewDomains[tab.profileId]
         }
         return DesktopSiteRules.isDesktopView(pageUrl, desktopDomains.orEmpty())
+    }
+
+    private fun isAddressBarAlwaysParked(tab: BrowserTab, pageUrl: String?): Boolean {
+        val parkedDomains = if (tab.isIncognito) {
+            temporaryAlwaysParkedAddressBarDomains[tab.profileId]
+        } else {
+            permanentAlwaysParkedAddressBarDomains[tab.profileId]
+        }
+        return AddressBarParkingRules.isAlwaysParked(pageUrl, parkedDomains.orEmpty())
+    }
+
+    private fun parkAddressBarAfterSuccessfulLoad(tabId: String, pageUrl: String) {
+        if (tabId != selectedTabId) return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (tab.isLoading || tab.error != null) return
+        val parkedDomains = if (tab.isIncognito) {
+            temporaryAlwaysParkedAddressBarDomains[tab.profileId]
+        } else {
+            permanentAlwaysParkedAddressBarDomains[tab.profileId]
+        }
+        if (
+            AddressBarParkingRules.shouldParkAfterLoad(
+                alwaysParkAfterLoad = alwaysParkAddressBarAfterLoad,
+                url = pageUrl,
+                alwaysParkedDomains = parkedDomains.orEmpty(),
+            )
+        ) {
+            updateAddressBarAutomaticallyDocked(true)
+        }
+    }
+
+    private fun refreshAutomaticAddressBarParking() {
+        val tab = selectedTab
+        val pageUrl = pageUrls[tab.id] ?: tab.url
+        if (tab.isLoading || tab.error != null) {
+            updateAddressBarAutomaticallyDocked(false)
+            return
+        }
+        val parkedDomains = if (tab.isIncognito) {
+            temporaryAlwaysParkedAddressBarDomains[tab.profileId]
+        } else {
+            permanentAlwaysParkedAddressBarDomains[tab.profileId]
+        }
+        updateAddressBarAutomaticallyDocked(
+            AddressBarParkingRules.shouldParkAfterLoad(
+                alwaysParkAfterLoad = alwaysParkAddressBarAfterLoad,
+                url = pageUrl,
+                alwaysParkedDomains = parkedDomains.orEmpty(),
+            ),
+        )
+    }
+
+    private fun updateAddressBarAutomaticallyDocked(docked: Boolean) {
+        if (isAddressBarAutomaticallyDocked == docked) return
+        isAddressBarAutomaticallyDocked = docked
+        val effectiveDocked = isAddressBarManuallyDocked || docked
+        if (effectiveDocked) collapseBottomBar()
+        isAddressBarDocked = effectiveDocked
     }
 
     private fun reloadDesktopViewDomain(

@@ -24,11 +24,13 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.setContent {
             MaterialBrowserTheme {
                 BrowserSettingsPage(
+                    alwaysParkAddressBarAfterLoad = false,
                     isFullImmersiveModeEnabled = false,
                     isScrollBarEnabled = enabled,
                     isVideoAutoplayBlocked = false,
                     isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
+                    onAlwaysParkAddressBarAfterLoadChanged = {},
                     onFullImmersiveModeEnabledChanged = {},
                     onScrollBarEnabledChanged = { enabled = it },
                     onVideoAutoplayBlockedChanged = {},
@@ -39,6 +41,34 @@ class BrowserSettingsScreenInstrumentedTest {
         }
 
         composeRule.onNodeWithTag(BrowserSettingsTestTags.ScrollBar).performClick()
+
+        assertTrue(enabled)
+    }
+
+    @Test
+    fun automaticAddressBarParkingSwitchUpdatesSetting() {
+        var enabled by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    alwaysParkAddressBarAfterLoad = enabled,
+                    isFullImmersiveModeEnabled = false,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onAlwaysParkAddressBarAfterLoadChanged = { enabled = it },
+                    onFullImmersiveModeEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.AlwaysParkAddressBar)
+            .performClick()
 
         assertTrue(enabled)
     }

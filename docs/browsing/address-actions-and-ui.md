@@ -9,6 +9,7 @@
 | Commands | [`browser/commands/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/commands/) | Build commands from current context, match deterministically, dispatch through actions |
 | Search suggestions | [`SearchSuggestionProvider.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/suggestions/SearchSuggestionProvider.kt), [`searxng.md`](searxng.md) | Bound reads, isolate caches by provider configuration, and keep every provider and fallback call disabled for private tabs |
 | Presentation | [`ui/AddressBarPresentationRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarPresentationRules.kt), [`ui/AddressBarInsetRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarInsetRules.kt) | Resolve UI mode with pure rules before composing; subtract any platform-applied IME resize before padding bottom chrome |
+| Automatic parking | [`AddressBarParkingRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/AddressBarParkingRules.kt) | The global browser setting parks the selected address pill after each successful page load. The page menu can enable the same behavior per registrable domain and profile; private-domain choices remain memory-only. |
 | Blank-tab editor | `ui/BrowserScreen.kt` | Keep regular-tab favorites visible and actionable while address input is focused; hide them in private mode |
 
 ## Gestures and actions

@@ -125,6 +125,7 @@ internal object ProtectionSettingsTestTags {
 }
 
 internal object BrowserSettingsTestTags {
+    const val AlwaysParkAddressBar = "browser_settings_always_park_address_bar"
     const val ScrollBar = "browser_settings_scroll_bar"
 }
 
@@ -154,6 +155,7 @@ internal fun SettingsScreen(
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isTabButtonVisible: Boolean,
+    alwaysParkAddressBarAfterLoad: Boolean,
     isFullImmersiveModeEnabled: Boolean,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
@@ -179,6 +181,7 @@ internal fun SettingsScreen(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onTabButtonVisibleChanged: (Boolean) -> Unit,
+    onAlwaysParkAddressBarAfterLoadChanged: (Boolean) -> Unit,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
@@ -268,11 +271,14 @@ internal fun SettingsScreen(
                 )
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
+                    alwaysParkAddressBarAfterLoad = alwaysParkAddressBarAfterLoad,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
                     isScrollBarEnabled = isScrollBarEnabled,
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
                     isDefaultBrowser = isDefaultBrowser,
+                    onAlwaysParkAddressBarAfterLoadChanged =
+                        onAlwaysParkAddressBarAfterLoadChanged,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
@@ -967,11 +973,13 @@ internal fun TabsAndGesturesSettingsPage(
 
 @Composable
 internal fun BrowserSettingsPage(
+    alwaysParkAddressBarAfterLoad: Boolean,
     isFullImmersiveModeEnabled: Boolean,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
     isDefaultBrowser: Boolean,
+    onAlwaysParkAddressBarAfterLoadChanged: (Boolean) -> Unit,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
@@ -982,6 +990,14 @@ internal fun BrowserSettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
     ) {
+        SettingsSwitch(
+            title = stringResource(R.string.settings_always_park_address_bar_title),
+            subtitle = stringResource(R.string.settings_always_park_address_bar_subtitle),
+            checked = alwaysParkAddressBarAfterLoad,
+            onCheckedChange = onAlwaysParkAddressBarAfterLoadChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.AlwaysParkAddressBar),
+        )
+        Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_full_immersive_mode_title),
             subtitle = stringResource(R.string.settings_full_immersive_mode_subtitle),
