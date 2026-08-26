@@ -130,6 +130,24 @@ class CandyTrailHistoryReconcilerTest {
         assertEquals(targetId, jumped.binding.entries.last().nodeId)
     }
 
+    @Test
+    fun `removed trail nodes are detached from web history binding`() {
+        val binding = CandyTrailHistoryBinding(
+            entries = listOf(
+                CandyTrailHistoryEntry(A, "n0"),
+                CandyTrailHistoryEntry(B, "n1"),
+            ),
+            currentIndex = 1,
+        )
+
+        assertEquals(
+            listOf("n0", null),
+            CandyTrailHistoryReconciler.retainNodeIds(binding, setOf("n0"))
+                .entries
+                .map(CandyTrailHistoryEntry::nodeId),
+        )
+    }
+
     private fun reconcile(
         trail: CandyTrail?,
         binding: CandyTrailHistoryBinding,

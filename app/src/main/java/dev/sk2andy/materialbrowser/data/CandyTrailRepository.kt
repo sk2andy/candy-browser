@@ -3,11 +3,20 @@ package dev.sk2andy.materialbrowser.data
 import android.content.Context
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.CandyTrail
+import dev.sk2andy.materialbrowser.browser.CandyTrailRules
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+internal data class PendingCandyTrailRedaction(
+    val id: String,
+    val tabIds: Set<String>,
+    val sinceInclusiveMillis: Long,
+    val untilExclusiveMillis: Long,
+)
+
 class CandyTrailRepository private constructor(context: Context) {
     private val store = CandyTrailStore(context.applicationContext)
+    private val sessionStore = BrowserSessionStore(context.applicationContext)
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { task ->
         Thread(task, "candy-trail-io")
     }
@@ -50,6 +59,29 @@ class CandyTrailRepository private constructor(context: Context) {
 
     fun clear() {
         executor.execute(store::clear)
+    }
+
+    fun processPendingRedactions(acknowledge: Boolean = true) {
+        executor.execute {
+            sessionStore.loadPendingCandyTrailRedactions().forEach { redaction ->
+                val complete = redaction.tabIds.all { tabId ->
+                    val trail = store.load(tabId) ?: return@all true
+                    val retained = CandyTrailRules.removeVisitedRange(
+                        trail = trail,
+                        sinceInclusiveMillis = redaction.sinceInclusiveMillis,
+                        untilExclusiveMillis = redaction.untilExclusiveMillis,
+                    )
+                    when {
+                        retained == trail -> true
+                        retained.nodes.isEmpty() -> store.delete(tabId)
+                        else -> store.save(tabId, retained)
+                    }
+                }
+                if (complete && acknowledge) {
+                    sessionStore.removePendingCandyTrailRedaction(redaction.id)
+                }
+            }
+        }
     }
 
     fun flush(): Boolean = executor.awaitIdle()

@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser
 
 import android.Manifest
+import android.app.Activity
 import android.app.PictureInPictureParams
 import android.app.PictureInPictureUiState
 import android.content.Intent
@@ -58,6 +59,7 @@ import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
+import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
@@ -142,8 +144,24 @@ class MainActivity : AppCompatActivity() {
     ) { uri ->
         if (uri != null && ::browserController.isInitialized) stageAppDataImport(uri)
     }
+    private val historyLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (!::browserController.isInitialized) return@registerForActivityResult
+        browserController.reloadHistory()
+        browserController.applyHistoryClearRequests(
+            HistoryActivityContract.clearRequestsFrom(result.data),
+        )
+        if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+        HistoryActivityContract.navigationRequestFrom(result.data)?.let { request ->
+            if (browserController.openHistoryEntry(request.url, request.profileId)) {
+                incomingBrowserNavigationRequestId++
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        BrowsingHistoryLifecycle.install(application)
         applyAppearanceNightMode(
             BrowserSessionStore(this).loadAppearanceSettings().appearanceMode,
         )
@@ -318,6 +336,11 @@ class MainActivity : AppCompatActivity() {
                         incomingBrowserNavigationRequestId =
                             incomingBrowserNavigationRequestId,
                         onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
+                        onOpenHistory = {
+                            historyLauncher.launch(
+                                HistoryActivityContract.launchIntent(this@MainActivity),
+                            )
+                        },
                         onImportUserScript = {
                             userScriptImportLauncher.launch(
                                 arrayOf(

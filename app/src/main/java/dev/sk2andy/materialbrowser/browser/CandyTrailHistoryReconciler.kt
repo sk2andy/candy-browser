@@ -97,4 +97,13 @@ object CandyTrailHistoryReconciler {
             entry.copy(nodeId = entry.nodeId?.let(nodeIds::get))
         },
     )
+
+    fun retainNodeIds(
+        binding: CandyTrailHistoryBinding,
+        retainedNodeIds: Set<String>,
+    ): CandyTrailHistoryBinding = binding.copy(
+        entries = binding.entries.map { entry ->
+            entry.copy(nodeId = entry.nodeId?.takeIf(retainedNodeIds::contains))
+        },
+    )
 }

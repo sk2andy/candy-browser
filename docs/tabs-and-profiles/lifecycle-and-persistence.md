@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | Tabs and selection | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Exclude incognito tabs; fall back to most recently accessed persistent tab |
 | Overview ordering preferences | `BrowserSessionStore` | Persist list-bottom anchoring and automatic recent-use sorting; both default off |
-| History and favorites | `BrowserSessionStore`, `BrowsingLibrary` | Keep local, bounded, canonicalized records |
+| History and favorites | `BrowsingHistoryRepository`, `BrowserSessionStore`, `BrowsingLibrary` | Keep local, bounded, canonicalized records; history is owned by a regular profile and can be viewed across a user-selected profile set |
 | WebView history state | `TabWebViewStateStore`/`Repository` | Persist separately from the tab summary and prune orphan files |
 | Deletion side data | Controller + repositories | Remove preview, favicon, WebView state and trail consistently |
 | Fullscreen video session | Memory only | Protect the owning regular tab's WebView while its custom view is expanded, floating or in system PiP; never restore the session or mini-player position |
@@ -44,3 +44,5 @@
   first and reject manual reorder mutations.
 - End an owning fullscreen-video session before its tab or WebView is removed. Private sessions end
   when selection leaves their tab; regular sessions may remain transiently attached as a mini-player.
+- Never reassign history when deleting a profile; delete that profile's rows. Private tabs never
+  enter history, and address suggestions only consume history for the selected tab's profile.

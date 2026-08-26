@@ -313,6 +313,51 @@ object CandyTrailRules {
         )
     }
 
+    fun removeVisitedRange(
+        trail: CandyTrail,
+        sinceInclusiveMillis: Long,
+        untilExclusiveMillis: Long,
+    ): CandyTrail {
+        if (sinceInclusiveMillis >= untilExclusiveMillis) return trail
+        val nodesById = trail.nodes.associateBy(CandyTrailNode::id)
+        val removedIds = trail.nodes.asSequence()
+            .filter { node ->
+                node.visitedAt >= sinceInclusiveMillis &&
+                    node.visitedAt < untilExclusiveMillis
+            }
+            .mapTo(mutableSetOf(), CandyTrailNode::id)
+        if (removedIds.isEmpty()) return trail
+
+        fun retainedAncestor(nodeId: String?): String? {
+            var cursor = nodeId
+            val visited = mutableSetOf<String>()
+            while (cursor != null && cursor in removedIds && visited.add(cursor)) {
+                cursor = nodesById[cursor]?.parentId
+            }
+            return cursor?.takeIf(nodesById::containsKey)
+        }
+
+        val retainedNodes = trail.nodes.asSequence()
+            .filterNot { node -> node.id in removedIds }
+            .map { node -> node.copy(parentId = retainedAncestor(node.parentId)) }
+            .toList()
+        val retainedIds = retainedNodes.mapTo(mutableSetOf(), CandyTrailNode::id)
+        val currentNodeId = trail.currentNodeId?.let { currentId ->
+            if (currentId in removedIds) {
+                retainedAncestor(nodesById[currentId]?.parentId)
+            } else {
+                currentId.takeIf(retainedIds::contains)
+            }
+        }
+        return normalized(
+            trail.copy(
+                nodes = retainedNodes,
+                currentNodeId = currentNodeId,
+                forks = trail.forks.filter { fork -> fork.originNodeId in retainedIds },
+            ),
+        )
+    }
+
     fun isJourneyUrl(url: String): Boolean =
         url.startsWith("https://", ignoreCase = true) ||
             url.startsWith("http://", ignoreCase = true)

@@ -151,6 +151,71 @@ class CandyTrailRulesTest {
         assertEquals("b", normalized.currentNodeId)
     }
 
+    @Test
+    fun `range removal rebuilds ancestry selection and forks idempotently`() {
+        val trail = CandyTrail(
+            tabId = TAB_ID,
+            nodes = listOf(
+                node("n0", null, "https://root.example", 1L),
+                node("n1", "n0", "https://removed.example", 5L),
+                node("n2", "n1", "https://child.example", 10L),
+            ),
+            currentNodeId = "n1",
+            nextOrdinal = 3L,
+            forks = listOf(
+                CandyTrailFork(
+                    id = "f0",
+                    originTabId = TAB_ID,
+                    originNodeId = "n1",
+                    destinationTabId = "00000000-0000-0000-0000-000000000002",
+                    profileId = "personal",
+                    isIncognito = false,
+                    url = "https://removed.example",
+                    title = "Removed",
+                    createdAt = 5L,
+                    updatedAt = 5L,
+                    lifecycle = CandyTrailForkLifecycle.Open,
+                ),
+            ),
+            nextForkOrdinal = 1L,
+        )
+
+        val retained = CandyTrailRules.removeVisitedRange(
+            trail = trail,
+            sinceInclusiveMillis = 5L,
+            untilExclusiveMillis = 6L,
+        )
+
+        assertEquals(listOf("n0", "n2"), retained.nodes.map(CandyTrailNode::id))
+        assertEquals("n0", retained.nodes.single { it.id == "n2" }.parentId)
+        assertEquals("n0", retained.currentNodeId)
+        assertTrue(retained.forks.isEmpty())
+        assertEquals(3L, retained.nextOrdinal)
+        assertEquals(1L, retained.nextForkOrdinal)
+        assertEquals(
+            retained,
+            CandyTrailRules.removeVisitedRange(retained, 5L, 6L),
+        )
+    }
+
+    @Test
+    fun `range removal keeps exclusive boundary node`() {
+        val trail = CandyTrail(
+            tabId = TAB_ID,
+            nodes = listOf(
+                node("n0", null, "https://removed.example", 5L),
+                node("n1", "n0", "https://retained.example", 6L),
+            ),
+            currentNodeId = "n1",
+            nextOrdinal = 2L,
+        )
+
+        val retained = CandyTrailRules.removeVisitedRange(trail, 5L, 6L)
+
+        assertEquals(listOf("n1"), retained.nodes.map(CandyTrailNode::id))
+        assertNull(retained.nodes.single().parentId)
+    }
+
     private fun record(current: CandyTrail?, url: String, at: Long) =
         CandyTrailRules.recordNavigation(current, TAB_ID, url, url, at)
 

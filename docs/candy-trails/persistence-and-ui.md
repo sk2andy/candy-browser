@@ -9,6 +9,7 @@
 | File | [`CandyTrailStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/CandyTrailStore.kt) | Versioned, atomic JSON in `noBackupFilesDir`; max 256 KiB |
 | Restore | Repository + controller | Merge early runtime nodes with restored graph and remap history bindings |
 | Cleanup | Store/repository | Prune files whose tab IDs are no longer retained |
+| History redaction | History store + repository | Persist an idempotent tab/range job with history deletion, rewrite trail files in executor order, then acknowledge; retry interrupted jobs on foreground/startup |
 
 ## UI flow
 
@@ -22,4 +23,3 @@
 - Never write private trails to disk.
 - Preserve format-version migration and bounds when changing encoded fields.
 - Test layout/motion on JVM; test Compose interaction and WebView traversal with instrumentation.
-

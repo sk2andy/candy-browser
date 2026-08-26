@@ -168,8 +168,13 @@ class CandyTrailStore(context: Context) {
         }
     }
 
-    fun delete(tabId: String) {
-        fileFor(tabId)?.let { target -> AtomicFile(target).delete() }
+    fun delete(tabId: String): Boolean {
+        val target = fileFor(tabId) ?: return false
+        val artifacts = listOf(target, File("${target.path}.new"), File("${target.path}.bak"))
+        return runCatching {
+            AtomicFile(target).delete()
+            artifacts.none(File::exists)
+        }.getOrDefault(false)
     }
 
     fun prune(validTabIds: Set<String>) {

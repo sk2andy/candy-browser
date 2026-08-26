@@ -2,13 +2,29 @@ package dev.sk2andy.materialbrowser.data
 
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import java.net.URI
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Locale
 
 data class HistoryEntry(
     val url: String,
     val title: String,
     val lastVisitedAt: Long,
+    val profileId: String = DEFAULT_PROFILE_ID,
+)
+
+internal data class HistoryDaySection(
+    val date: LocalDate,
+    val entries: List<HistoryEntry>,
+)
+
+internal data class HistoryClearRequest(
+    val profileIds: Set<String>,
+    val sinceInclusiveMillis: Long,
+    val untilExclusiveMillis: Long,
 )
 
 data class FavoriteEntry(
@@ -32,12 +48,13 @@ internal object BrowsingLibraryRules {
         entry: HistoryEntry,
         limit: Int = MAX_HISTORY_ENTRIES,
     ): List<HistoryEntry> {
-        val key = urlKey(entry.url) ?: return current
+        val key = historyKey(entry) ?: return current
+        if (entry.profileId.isBlank()) return current
         val safeTitle = entry.title.trim().ifEmpty { displayHost(entry.url) }
         return buildList {
             add(entry.copy(title = safeTitle))
             current.forEach { existing ->
-                if (urlKey(existing.url) != key) add(existing)
+                if (historyKey(existing) != key) add(existing)
             }
         }.sortedByDescending(HistoryEntry::lastVisitedAt).take(limit.coerceAtLeast(0))
     }
@@ -185,6 +202,9 @@ internal object BrowsingLibraryRules {
 
     private fun urlKey(url: String): String? = CanonicalWebUrl.key(url)
 
+    private fun historyKey(entry: HistoryEntry): String? =
+        urlKey(entry.url)?.let { key -> "${entry.profileId}\u0000$key" }
+
     private fun displayHost(url: String): String = runCatching {
         URI(url).host?.removePrefix("www.")
     }.getOrNull().orEmpty().ifEmpty { url }
@@ -197,4 +217,91 @@ internal object BrowsingLibraryRules {
         val entry: HistoryEntry,
         val score: Int,
     )
+}
+
+internal object BrowsingHistoryRules {
+    fun visibleEntries(
+        history: List<HistoryEntry>,
+        selectedProfileIds: Set<String>,
+        query: String,
+    ): List<HistoryEntry> {
+        if (selectedProfileIds.isEmpty()) return emptyList()
+        val normalizedQuery = query.trim().lowercase(Locale.ROOT)
+        return history.asSequence()
+            .filter { entry ->
+                entry.profileId in selectedProfileIds &&
+                    CanonicalWebUrl.key(entry.url) != null
+            }
+            .filter { entry ->
+                normalizedQuery.isEmpty() ||
+                    entry.title.lowercase(Locale.ROOT).contains(normalizedQuery) ||
+                    entry.url.lowercase(Locale.ROOT).contains(normalizedQuery) ||
+                    displayHost(entry.url).lowercase(Locale.ROOT).contains(normalizedQuery)
+            }
+            .sortedWith(
+                compareByDescending(HistoryEntry::lastVisitedAt)
+                    .thenBy(HistoryEntry::profileId)
+                    .thenBy(HistoryEntry::url),
+            )
+            .toList()
+    }
+
+    fun sections(
+        entries: List<HistoryEntry>,
+        zoneId: ZoneId,
+    ): List<HistoryDaySection> = entries
+        .groupBy { entry ->
+            Instant.ofEpochMilli(entry.lastVisitedAt).atZone(zoneId).toLocalDate()
+        }
+        .entries
+        .sortedByDescending(Map.Entry<LocalDate, *>::key)
+        .map { (date, dayEntries) ->
+            HistoryDaySection(
+                date = date,
+                entries = dayEntries.sortedByDescending(HistoryEntry::lastVisitedAt),
+            )
+        }
+
+    fun removeEntries(
+        history: List<HistoryEntry>,
+        entries: Collection<HistoryEntry>,
+    ): List<HistoryEntry> {
+        val removedKeys = entries.mapTo(hashSetOf(), ::entryKey)
+        if (removedKeys.isEmpty()) return history
+        return history.filterNot { entry -> entryKey(entry) in removedKeys }
+    }
+
+    fun removeProfiles(
+        history: List<HistoryEntry>,
+        profileIds: Set<String>,
+    ): List<HistoryEntry> = history.filterNot { entry -> entry.profileId in profileIds }
+
+    fun removeRange(
+        history: List<HistoryEntry>,
+        request: HistoryClearRequest,
+    ): List<HistoryEntry> {
+        if (
+            request.profileIds.isEmpty() ||
+            request.sinceInclusiveMillis >= request.untilExclusiveMillis
+        ) {
+            return history
+        }
+        return history.filterNot { entry ->
+            entry.profileId in request.profileIds &&
+                entry.lastVisitedAt >= request.sinceInclusiveMillis &&
+                entry.lastVisitedAt < request.untilExclusiveMillis
+        }
+    }
+
+    fun entryKey(entry: HistoryEntry): String = buildString {
+        append(entry.profileId)
+        append('\u0000')
+        append(CanonicalWebUrl.key(entry.url).orEmpty())
+        append('\u0000')
+        append(entry.lastVisitedAt)
+    }
+
+    private fun displayHost(url: String): String = runCatching {
+        URI(url).host?.removePrefix("www.")
+    }.getOrNull().orEmpty()
 }

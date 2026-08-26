@@ -188,16 +188,19 @@ import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
+import dev.sk2andy.materialbrowser.data.BrowsingHistoryRepository
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
 import dev.sk2andy.materialbrowser.data.CandyRuleRepository
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.data.FavoriteUndoRules
 import dev.sk2andy.materialbrowser.data.FaviconRepository
+import dev.sk2andy.materialbrowser.data.HistoryClearRequest
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
+import dev.sk2andy.materialbrowser.data.PendingCandyTrailRedaction
 import dev.sk2andy.materialbrowser.data.SiteCapsuleIconStore
 import dev.sk2andy.materialbrowser.data.SiteCapsuleStore
 import dev.sk2andy.materialbrowser.data.SnoozeRestoreRules
@@ -668,8 +671,11 @@ class BrowserController(
         private set
     private val pendingCandyTrailRestoreIds = mutableSetOf<String>()
     private val suppressedCandyTrailTabIds = mutableSetOf<String>()
+    private val candyTrailRedactionsDuringRestore = mutableListOf<PendingCandyTrailRedaction>()
+    private var isCandyTrailRestoreInProgress = false
     private var candyTrailEpoch = 0
     private val store = BrowserSessionStore(activity)
+    private val historyRepository = BrowsingHistoryRepository.get(activity)
     private val snoozedTabStore = SnoozedTabStore(activity)
     private val snoozeScheduler = SnoozeScheduler(activity)
     private val snoozeRestoreCallback: (Long) -> Unit = { nowMillis ->
@@ -1295,6 +1301,7 @@ class BrowserController(
         rebuildCandyMatcher()
         val nowMillis = System.currentTimeMillis()
         snoozedTabs += snoozedTabStore.load()
+        candyTrailRepository.processPendingRedactions()
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
         searxngSettings = store.loadSearxngSettings()
@@ -1356,7 +1363,7 @@ class BrowserController(
             null
         } ?: profiles.first().id
         val (restoredTabs, restoredSelection) = store.loadTabs(nowMillis)
-        history += store.loadHistory()
+        history += historyRepository.snapshot()
         favorites += store.loadFavorites()
         val profileIds = profiles.mapTo(mutableSetOf(), BrowserProfile::id)
         tabs += restoredTabs.take(MAX_TABS).map { tab ->
@@ -2146,6 +2153,78 @@ class BrowserController(
         }
     }
 
+    fun openHistoryEntry(url: String, profileId: String): Boolean {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        val targetProfileId = profileId.takeIf { id -> profiles.any { it.id == id } }
+            ?: return false
+        if (profilesEnabled && targetProfileId != activeProfileId) {
+            selectProfile(targetProfileId)
+        }
+        if (selectedTab.isIncognito) {
+            createTab(initialUrl = safeUrl, isIncognito = false)
+        } else {
+            openUrl(safeUrl)
+        }
+        return true
+    }
+
+    internal fun applyHistoryClearRequests(requests: List<HistoryClearRequest>) {
+        if (requests.isEmpty()) return
+        val tabsById = (tabs + snoozedTabs.map { snoozed -> snoozed.tab })
+            .associateBy(BrowserTab::id)
+        val redactions = requests.mapIndexedNotNull { index, request ->
+            val tabIds = tabsById.values.asSequence()
+                .filterNot(BrowserTab::isIncognito)
+                .filter { tab -> tab.profileId in request.profileIds }
+                .mapTo(linkedSetOf(), BrowserTab::id)
+            if (tabIds.isEmpty()) return@mapIndexedNotNull null
+            PendingCandyTrailRedaction(
+                id = "activity-result-$index",
+                tabIds = tabIds,
+                sinceInclusiveMillis = request.sinceInclusiveMillis,
+                untilExclusiveMillis = request.untilExclusiveMillis,
+            )
+        }
+        applyCandyTrailRedactions(redactions, tabsById)
+    }
+
+    private fun applyCandyTrailRedactions(
+        redactions: List<PendingCandyTrailRedaction>,
+        tabsById: Map<String, BrowserTab> =
+            (tabs + snoozedTabs.map { snoozed -> snoozed.tab }).associateBy(BrowserTab::id),
+    ) {
+        if (redactions.isEmpty()) return
+        if (isCandyTrailRestoreInProgress) candyTrailRedactionsDuringRestore += redactions
+        var changed = false
+        candyTrails.toMap().forEach { (tabId, trail) ->
+            val tab = tabsById[tabId]?.takeUnless(BrowserTab::isIncognito) ?: return@forEach
+            val matchingRedactions = redactions.filter { redaction -> tabId in redaction.tabIds }
+            if (matchingRedactions.isEmpty()) return@forEach
+            val retained = matchingRedactions.fold(trail) { current, redaction ->
+                CandyTrailRules.removeVisitedRange(
+                    trail = current,
+                    sinceInclusiveMillis = redaction.sinceInclusiveMillis,
+                    untilExclusiveMillis = redaction.untilExclusiveMillis,
+                )
+            }
+            if (retained == trail) return@forEach
+            changed = true
+            val retainedNodeIds = retained.nodes.mapTo(mutableSetOf(), CandyTrailNode::id)
+            candyTrailHistoryBindings[tabId]?.let { binding ->
+                candyTrailHistoryBindings[tabId] = CandyTrailHistoryReconciler.retainNodeIds(
+                    binding = binding,
+                    retainedNodeIds = retainedNodeIds,
+                )
+            }
+            pendingCandyTrailTargets[tabId]?.takeUnless(retainedNodeIds::contains)?.let {
+                pendingCandyTrailTargets.remove(tabId)
+            }
+            if (trail.currentNodeId !in retainedNodeIds) suppressedCandyTrailTabIds += tabId
+            setCandyTrail(tab, retained)
+        }
+        if (changed) reconcileCandyTrailForks(System.currentTimeMillis())
+    }
+
     fun resolveCapsuleLaunch(action: String?, capsuleId: String?): CapsuleLaunchResolution =
         CapsuleIntentRules.resolve(action, capsuleId, siteCapsules)
 
@@ -2798,6 +2877,20 @@ class BrowserController(
         } else {
             profiles.first { it.id == activeProfileId }
         }
+        val removedProfileTrailTabIds = (
+            tabs.asSequence() + snoozedTabs.asSequence().map { snoozed -> snoozed.tab }
+        )
+            .filter { tab -> tab.profileId == profileId && !tab.isIncognito }
+            .mapTo(linkedSetOf(), BrowserTab::id)
+        val historyMutation = historyRepository.clearProfiles(
+            profileIds = setOf(profileId),
+            trailTabIds = removedProfileTrailTabIds,
+        )
+        if (!historyMutation.committed) return false
+        if (historyMutation.history.size != history.size) {
+            history.clear()
+            history += historyMutation.history
+        }
         reassignSiteCapsules(profileId, fallbackProfile, excludedCapsuleId)
         val movedTabIds = WebViewProfileRules.tabIdsForProfileDeletion(tabs, profileId)
         movedTabIds.forEach(::clearPrivacyDataForTab)
@@ -2866,6 +2959,11 @@ class BrowserController(
             }
         }
         profiles.removeAt(profileIndex)
+        val profileTrailRedactions = store.loadPendingCandyTrailRedactions().filter { redaction ->
+            redaction.tabIds.any(removedProfileTrailTabIds::contains)
+        }
+        applyCandyTrailRedactions(profileTrailRedactions)
+        candyTrailRepository.processPendingRedactions()
         if (profileId == activeProfileId) activeProfileId = fallbackProfile.id
         val fallbackTabs = tabs.filter { it.profileId == fallbackProfile.id }
         replaceProfileTabs(fallbackProfile.id, TabPinningRules.orderedTabs(fallbackTabs))
@@ -3695,7 +3793,7 @@ class BrowserController(
 
     fun addressSuggestions(query: String, limit: Int = 8): List<AddressSuggestion> =
         BrowsingLibraryRules.addressSuggestions(
-            history = history,
+            history = history.filter { entry -> entry.profileId == selectedTab.profileId },
             tabs = activeTabs,
             selectedTabId = selectedTabId,
             isIncognito = selectedTab.isIncognito,
@@ -3704,7 +3802,7 @@ class BrowserController(
         )
 
     fun addressDomainCompletion(query: String): String? = BrowsingLibraryRules.domainCompletion(
-        history = history,
+        history = history.filter { entry -> entry.profileId == selectedTab.profileId },
         favorites = favorites,
         tabs = activeTabs,
         selectedTabId = selectedTabId,
@@ -4311,7 +4409,7 @@ class BrowserController(
         }
         tabs.indices.forEach { index -> tabs[index] = tabs[index].copy(blockedCount = 0) }
         history.clear()
-        store.saveHistory(emptyList())
+        historyRepository.clear()
         snoozedTabs.clear()
         snoozedTabStore.save(emptyList())
         snoozeScheduler.schedule(emptyList())
@@ -4327,6 +4425,8 @@ class BrowserController(
         candyTrailHistoryBindings.clear()
         pendingCandyTrailTargets.clear()
         pendingCandyTrailRestoreIds.clear()
+        candyTrailRedactionsDuringRestore.clear()
+        isCandyTrailRestoreInProgress = false
         suppressedCandyTrailTabIds += tabs.map(BrowserTab::id)
         candyTrails.clear()
         candyTrailRepository.clear()
@@ -4409,6 +4509,9 @@ class BrowserController(
     }
 
     fun onResume() {
+        reloadHistory()
+        applyCandyTrailRedactions(store.loadPendingCandyTrailRedactions())
+        candyTrailRepository.processPendingRedactions()
         isActivityResumed = true
         if (!isInPictureInPicture) {
             cancelPictureInPictureTransition()
@@ -4590,6 +4693,8 @@ class BrowserController(
         candyTrailHistoryBindings.clear()
         pendingCandyTrailTargets.clear()
         pendingCandyTrailRestoreIds.clear()
+        candyTrailRedactionsDuringRestore.clear()
+        isCandyTrailRestoreInProgress = false
         suppressedCandyTrailTabIds.clear()
         candyTrails.clear()
         candyTrailGenerations.clear()
@@ -7673,19 +7778,26 @@ class BrowserController(
     }
 
     private fun recordHistory(tabId: String, url: String, title: String) {
-        if (tabs.firstOrNull { it.id == tabId }?.isIncognito != false) return
-        val updated = BrowsingLibraryRules.addHistory(
-            current = history,
-            entry = HistoryEntry(
+        val tab = tabs.firstOrNull { it.id == tabId }?.takeUnless(BrowserTab::isIncognito)
+            ?: return
+        val updated = historyRepository.record(
+            HistoryEntry(
                 url = url,
                 title = title,
                 lastVisitedAt = System.currentTimeMillis(),
+                profileId = tab.profileId,
             ),
         )
         if (updated == history) return
         history.clear()
         history += updated
-        store.saveHistory(updated)
+    }
+
+    internal fun reloadHistory() {
+        val restored = historyRepository.snapshot()
+        if (restored == history) return
+        history.clear()
+        history += restored
     }
 
     private fun updateTab(tabId: String, transform: (BrowserTab) -> BrowserTab) {
@@ -7965,6 +8077,7 @@ class BrowserController(
     }
 
     private fun restorePersistedCandyTrails() {
+        isCandyTrailRestoreInProgress = true
         pendingCandyTrailRestoreIds += tabs.asSequence()
             .filterNot(BrowserTab::isIncognito)
             .map(BrowserTab::id)
@@ -7985,13 +8098,23 @@ class BrowserController(
                     candyTrailEpoch == restoreEpoch &&
                     tab != null
                 ) {
+                    val safeRestoredTrail = candyTrailRedactionsDuringRestore
+                        .asSequence()
+                        .filter { redaction -> tabId in redaction.tabIds }
+                        .fold(restoredTrail) { current, redaction ->
+                            CandyTrailRules.removeVisitedRange(
+                                trail = current,
+                                sinceInclusiveMillis = redaction.sinceInclusiveMillis,
+                                untilExclusiveMillis = redaction.untilExclusiveMillis,
+                            )
+                        }
                     val runtimeBinding = candyTrailHistoryBindings[tabId]
                     val mergeResult = if (!generationUnchanged && runtimeTrail != null) {
-                        CandyTrailRules.mergeRestoredWithRuntime(restoredTrail, runtimeTrail)
+                        CandyTrailRules.mergeRestoredWithRuntime(safeRestoredTrail, runtimeTrail)
                     } else {
                         null
                     }
-                    val mergedTrail = mergeResult?.trail ?: restoredTrail
+                    val mergedTrail = mergeResult?.trail ?: safeRestoredTrail
                     val reconciledTrail = CandyTrailForkRules.reconcile(
                         trail = mergedTrail,
                         originTab = tab.toCandyTrailForkTab(),
@@ -8014,6 +8137,8 @@ class BrowserController(
                 }
             } },
             onComplete = { mainHandler.post {
+                isCandyTrailRestoreInProgress = false
+                candyTrailRedactionsDuringRestore.clear()
                 val unresolvedIds = pendingCandyTrailRestoreIds.toList()
                 pendingCandyTrailRestoreIds.clear()
                 unresolvedIds.forEach { tabId ->

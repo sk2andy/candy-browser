@@ -401,6 +401,7 @@ internal fun BrowserScreen(
     webViewVideoOnlyPresentation: Boolean = false,
     incomingBrowserNavigationRequestId: Int = 0,
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
+    onOpenHistory: () -> Unit = {},
     onImportUserScript: () -> Unit = {},
     onExportAppData: () -> Unit = {},
     onImportAppData: () -> Unit = {},
@@ -1554,6 +1555,10 @@ internal fun BrowserScreen(
             onSnoozedTabs = {
                 addressEditorVisible = false
                 snoozedTabsVisible = true
+            },
+            onHistory = {
+                addressEditorVisible = false
+                onOpenHistory()
             },
             onSettings = {
                 addressEditorVisible = false
@@ -3098,6 +3103,7 @@ private fun BrowserBottomBar(
     onForceSafeAreaChange: (Boolean) -> Unit,
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
+    onHistory: () -> Unit,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     permissionActivityVisible: Boolean,
@@ -3441,6 +3447,7 @@ private fun BrowserBottomBar(
                                 onForceSafeAreaChange = onForceSafeAreaChange,
                                 snoozedTabCount = snoozedTabCount,
                                 onSnoozedTabs = onSnoozedTabs,
+                                onHistory = onHistory,
                                 onSettings = onSettings,
                                 onPrivacyXRay = onPrivacyXRay,
                                 permissionActivityVisible = permissionActivityVisible,
@@ -3983,6 +3990,7 @@ private fun ExpandedBottomBarContent(
     onForceSafeAreaChange: (Boolean) -> Unit,
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
+    onHistory: () -> Unit,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     permissionActivityVisible: Boolean,
@@ -4342,6 +4350,7 @@ private fun ExpandedBottomBarContent(
                                 onSnoozedTabs = onSnoozedTabs,
                                 canDockAddressBar = canDock,
                                 onDockAddressBar = onDock,
+                                onHistory = onHistory,
                                 onSettings = onSettings,
                             )
                         }

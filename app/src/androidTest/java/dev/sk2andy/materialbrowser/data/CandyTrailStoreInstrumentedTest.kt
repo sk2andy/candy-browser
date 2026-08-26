@@ -28,13 +28,23 @@ class CandyTrailStoreInstrumentedTest {
 
     @Before
     fun setUp() {
+        CandyTrailRepository.get(context).flush()
         store = CandyTrailStore(context)
         store.clear()
+        context.getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, 0)
+            .edit()
+            .remove(BrowserSessionStore.KEY_PENDING_CANDY_TRAIL_REDACTIONS)
+            .commit()
     }
 
     @After
     fun tearDown() {
+        CandyTrailRepository.get(context).flush()
         store.clear()
+        context.getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, 0)
+            .edit()
+            .remove(BrowserSessionStore.KEY_PENDING_CANDY_TRAIL_REDACTIONS)
+            .commit()
     }
 
     @Test
@@ -170,6 +180,89 @@ class CandyTrailStoreInstrumentedTest {
 
         assertTrue("Repository operation timed out", completed.await(10, TimeUnit.SECONDS))
         assertFalse(store.fileFor(tabId)!!.exists())
+    }
+
+    @Test
+    fun repositoryProcessesPendingRangeRedactionAfterQueuedSave() {
+        val tabId = UUID.randomUUID().toString()
+        val tab = BrowserTab(id = tabId, profileId = "personal", lastAccessedAt = 1L)
+        val trail = CandyTrail(
+            tabId = tabId,
+            nodes = listOf(
+                node("n0", null, "https://root.example", 1L),
+                node("n1", "n0", "https://removed.example", 5L),
+                node("n2", "n1", "https://child.example", 10L),
+            ),
+            currentNodeId = "n2",
+            nextOrdinal = 3L,
+        )
+        val redaction = PendingCandyTrailRedaction(
+            id = UUID.randomUUID().toString(),
+            tabIds = setOf(tabId),
+            sinceInclusiveMillis = 5L,
+            untilExclusiveMillis = 6L,
+        )
+        val sessionStore = BrowserSessionStore(context)
+        assertTrue(sessionStore.saveHistoryAndTrailRedaction(emptyList(), redaction))
+        val repository = CandyTrailRepository.get(context)
+
+        repository.save(tab, trail)
+        repository.processPendingRedactions()
+
+        assertTrue(repository.flush())
+        assertEquals(listOf("n0", "n2"), store.load(tabId)?.nodes?.map(CandyTrailNode::id))
+        assertEquals("n0", store.load(tabId)?.nodes?.single { it.id == "n2" }?.parentId)
+        assertTrue(sessionStore.loadPendingCandyTrailRedactions().isEmpty())
+    }
+
+    @Test
+    fun repositoryCanRewriteWithoutAcknowledgingUntilRuntimeCatchesUp() {
+        val tabId = UUID.randomUUID().toString()
+        val tab = BrowserTab(id = tabId, profileId = "personal", lastAccessedAt = 1L)
+        val trail = CandyTrail(
+            tabId = tabId,
+            nodes = listOf(node("n0", null, "https://removed.example", 5L)),
+            currentNodeId = "n0",
+            nextOrdinal = 1L,
+        )
+        val redaction = PendingCandyTrailRedaction(
+            id = UUID.randomUUID().toString(),
+            tabIds = setOf(tabId),
+            sinceInclusiveMillis = 5L,
+            untilExclusiveMillis = 6L,
+        )
+        val sessionStore = BrowserSessionStore(context)
+        assertTrue(sessionStore.saveHistoryAndTrailRedaction(emptyList(), redaction))
+        val repository = CandyTrailRepository.get(context)
+        repository.save(tab, trail)
+
+        repository.processPendingRedactions(acknowledge = false)
+
+        assertTrue(repository.flush())
+        assertNull(store.load(tabId))
+        assertEquals(listOf(redaction), sessionStore.loadPendingCandyTrailRedactions())
+
+        repository.processPendingRedactions()
+
+        assertTrue(repository.flush())
+        assertTrue(sessionStore.loadPendingCandyTrailRedactions().isEmpty())
+    }
+
+    @Test
+    fun deleteRemovesAtomicFileSidecars() {
+        val tabId = UUID.randomUUID().toString()
+        val baseFile = store.fileFor(tabId)!!
+        val newFile = java.io.File("${baseFile.path}.new")
+        val backupFile = java.io.File("${baseFile.path}.bak")
+        baseFile.writeText("base")
+        newFile.writeText("new")
+        backupFile.writeText("backup")
+
+        assertTrue(store.delete(tabId))
+
+        assertFalse(baseFile.exists())
+        assertFalse(newFile.exists())
+        assertFalse(backupFile.exists())
     }
 
     private fun node(id: String, parentId: String?, url: String, at: Long) = CandyTrailNode(

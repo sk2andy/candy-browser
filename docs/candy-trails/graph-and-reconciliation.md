@@ -15,6 +15,7 @@
 | --- | --- | --- |
 | Record/select/update | [`CandyTrail.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/CandyTrail.kt) | Accept only HTTP(S); cap URL/title; reuse traversal targets |
 | Normalize/retain | `CandyTrailRules` | Repair missing/cyclic parents; retain bounded graph and protected ancestry |
+| History redaction | `CandyTrailRules` | Remove profile/time-matched nodes, reconnect children to the nearest retained ancestor and discard forks whose origin was removed |
 | Reconcile | [`CandyTrailHistoryReconciler.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/CandyTrailHistoryReconciler.kt) | Bind WebView back/forward/reload to existing nodes when identity is known |
 | Fork | [`CandyTrailFork.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/CandyTrailFork.kt) | Origin/destination differ but share profile and privacy mode |
 
@@ -28,4 +29,3 @@
 | Title | 160 characters |
 
 Test new graph behavior as pure rules first. Add WebView instrumentation when history-index timing is part of the behavior.
-

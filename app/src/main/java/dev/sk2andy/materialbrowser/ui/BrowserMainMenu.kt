@@ -149,6 +149,7 @@ internal fun BrowserMainMenu(
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit = {},
     canDockAddressBar: Boolean = true,
     onDockAddressBar: () -> Unit,
+    onHistory: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -605,6 +606,20 @@ internal fun BrowserMainMenu(
                         )
                     },
                     onClick = { dismissThen(onSnoozedTabs) },
+                    trailingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_symbol_chevron_right),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                )
+                MenuRow(
+                    label = stringResource(R.string.action_history),
+                    iconRes = R.drawable.ic_history,
+                    shape = innerCorners,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.History),
+                    onClick = { dismissThen(onHistory) },
                     trailingContent = {
                         Icon(
                             painter = painterResource(R.drawable.ic_symbol_chevron_right),
@@ -1122,6 +1137,7 @@ internal object BrowserMainMenuTestTags {
     const val CandyGroup = "browser_main_menu_candy_group"
     const val ToppingsGroup = "browser_main_menu_toppings_group"
     const val BrowserGroup = "browser_main_menu_browser_group"
+    const val History = "browser_main_menu_history"
     const val Settings = "browser_main_menu_settings"
     const val Snooze = "browser_main_menu_snooze"
     const val SnoozedTabs = "browser_main_menu_snoozed_tabs"

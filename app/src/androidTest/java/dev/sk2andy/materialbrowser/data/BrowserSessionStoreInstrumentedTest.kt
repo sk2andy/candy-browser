@@ -287,6 +287,85 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun historyProfileAndRecordingModeRoundTrip() {
+        val store = BrowserSessionStore(context)
+        val entry = HistoryEntry(
+            url = "https://work.example/",
+            title = "Work",
+            lastVisitedAt = 42L,
+            profileId = "work",
+        )
+
+        store.saveHistory(listOf(entry))
+        store.saveHistoryRecordingMode(HistoryRecordingMode.ClearOnExit)
+
+        assertEquals(listOf(entry), store.loadHistory())
+        assertEquals(HistoryRecordingMode.ClearOnExit, store.loadHistoryRecordingMode())
+        assertEquals(
+            "clear_on_exit",
+            preferences.getString("history_recording_mode", null),
+        )
+    }
+
+    @Test
+    fun legacyHistoryDefaultsToCandyProfileAndInvalidModeDisablesRecording() {
+        preferences.edit()
+            .putString(
+                "history",
+                """[{"url":"https://legacy.example/","title":"Legacy","lastVisitedAt":7}]""",
+            )
+            .putString("history_recording_mode", "unknown")
+            .commit()
+
+        val store = BrowserSessionStore(context)
+
+        assertEquals(DEFAULT_PROFILE_ID, store.loadHistory().single().profileId)
+        assertEquals(HistoryRecordingMode.Disabled, store.loadHistoryRecordingMode())
+    }
+
+    @Test
+    fun legacyRecordingModeNamesRemainReadable() {
+        val store = BrowserSessionStore(context)
+
+        preferences.edit().putString("history_recording_mode", "ClearOnExit").commit()
+
+        assertEquals(HistoryRecordingMode.ClearOnExit, store.loadHistoryRecordingMode())
+    }
+
+    @Test
+    fun historyAndTrailRedactionCommitAndAcknowledgeTogether() {
+        val store = BrowserSessionStore(context)
+        val history = listOf(HistoryEntry("https://retained.example/", "Retained", 1L))
+        val redaction = PendingCandyTrailRedaction(
+            id = "redaction-id",
+            tabIds = setOf("tab-a", "tab-b"),
+            sinceInclusiveMillis = 10L,
+            untilExclusiveMillis = 20L,
+        )
+
+        assertTrue(store.saveHistoryAndTrailRedaction(history, redaction))
+        assertEquals(history, store.loadHistory())
+        assertEquals(listOf(redaction), store.loadPendingCandyTrailRedactions())
+
+        assertTrue(store.removePendingCandyTrailRedaction(redaction.id))
+        assertTrue(store.loadPendingCandyTrailRedactions().isEmpty())
+    }
+
+    @Test
+    fun acknowledgingOneRedactionRetainsNewerJournalEntries() {
+        val firstStore = BrowserSessionStore(context)
+        val secondStore = BrowserSessionStore(context)
+        val first = PendingCandyTrailRedaction("first", setOf("tab-a"), 1L, 2L)
+        val second = PendingCandyTrailRedaction("second", setOf("tab-b"), 3L, 4L)
+
+        assertTrue(firstStore.saveHistoryAndTrailRedaction(emptyList(), first))
+        assertTrue(secondStore.saveHistoryAndTrailRedaction(emptyList(), second))
+        assertTrue(firstStore.removePendingCandyTrailRedaction(first.id))
+
+        assertEquals(listOf(second), secondStore.loadPendingCandyTrailRedactions())
+    }
+
+    @Test
     fun pendingWebViewProfileDeletionsRoundTrip() {
         val store = BrowserSessionStore(context)
 

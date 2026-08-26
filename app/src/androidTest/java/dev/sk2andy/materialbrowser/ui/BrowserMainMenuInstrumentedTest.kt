@@ -139,6 +139,7 @@ class BrowserMainMenuInstrumentedTest {
                             onSnooze = {},
                             onSnoozedTabs = {},
                             onDockAddressBar = dockActions::incrementAndGet,
+                            onHistory = {},
                             onSettings = {},
                         )
                     }
@@ -192,11 +193,12 @@ class BrowserMainMenuInstrumentedTest {
             hasTestTag(BrowserMainMenuTestTags.BrowserGroup) and
                 hasAnyDescendant(hasText(context.getString(R.string.snoozed_tabs_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_dock_address_bar))) and
+                hasAnyDescendant(hasText(context.getString(R.string.action_history))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_settings))),
         ).assertExists()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.BrowserGroup)
             .onChildren()
-            .assertCountEquals(3)
+            .assertCountEquals(4)
 
         val menuHeight = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
             .fetchSemanticsNode().boundsInRoot.height
@@ -262,6 +264,13 @@ class BrowserMainMenuInstrumentedTest {
             composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
                 .performTouchInput { swipeUp() }
         }
+        val historyTop = composeRule.onNodeWithTag(BrowserMainMenuTestTags.History)
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot.top
+        val settingsTop = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings)
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot.top
+        assertTrue(historyTop < settingsTop)
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings).assertIsDisplayed()
         composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DockAddressBar)
@@ -349,6 +358,7 @@ class BrowserMainMenuInstrumentedTest {
                         if (selected == command) invocations.incrementAndGet()
                     },
                     onDockAddressBar = {},
+                    onHistory = {},
                     onSettings = {},
                 )
             }

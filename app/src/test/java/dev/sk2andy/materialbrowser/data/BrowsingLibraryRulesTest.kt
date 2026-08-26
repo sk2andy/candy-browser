@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.data
 
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import java.time.LocalDate
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,6 +18,142 @@ class BrowsingLibraryRulesTest {
         val history = BrowsingLibraryRules.addHistory(listOf(old), latest)
 
         assertEquals(listOf(latest), history)
+    }
+
+    @Test
+    fun `same canonical URL is retained once per profile`() {
+        val personal = HistoryEntry(
+            "https://example.com/page#personal",
+            "Personal",
+            10,
+            profileId = "personal",
+        )
+        val work = HistoryEntry(
+            "https://Example.com:443/page#work",
+            "Work",
+            20,
+            profileId = "work",
+        )
+
+        val history = BrowsingLibraryRules.addHistory(listOf(personal), work)
+
+        assertEquals(listOf(work, personal), history)
+    }
+
+    @Test
+    fun `visible history unions selected profiles and matches title host or URL`() {
+        val history = listOf(
+            HistoryEntry("https://personal.example/", "Home", 10, "personal"),
+            HistoryEntry("https://work.example/docs", "Guide", 30, "work"),
+            HistoryEntry("https://other.example/", "Work notes", 20, "other"),
+        )
+
+        assertEquals(
+            listOf("work", "personal"),
+            BrowsingHistoryRules.visibleEntries(
+                history = history,
+                selectedProfileIds = setOf("personal", "work"),
+                query = "example",
+            ).map(HistoryEntry::profileId),
+        )
+        assertEquals(
+            listOf("https://work.example/docs"),
+            BrowsingHistoryRules.visibleEntries(
+                history = history,
+                selectedProfileIds = setOf("work"),
+                query = "guide",
+            ).map(HistoryEntry::url),
+        )
+    }
+
+    @Test
+    fun `history sections use local dates and newest day first`() {
+        val berlin = ZoneId.of("Europe/Berlin")
+        val older = LocalDate.of(2026, 8, 25).atTime(23, 30).atZone(berlin).toInstant()
+        val newer = LocalDate.of(2026, 8, 26).atTime(0, 30).atZone(berlin).toInstant()
+
+        val sections = BrowsingHistoryRules.sections(
+            entries = listOf(
+                HistoryEntry("https://old.example/", "Old", older.toEpochMilli()),
+                HistoryEntry("https://new.example/", "New", newer.toEpochMilli()),
+            ),
+            zoneId = berlin,
+        )
+
+        assertEquals(
+            listOf(LocalDate.of(2026, 8, 26), LocalDate.of(2026, 8, 25)),
+            sections.map(HistoryDaySection::date),
+        )
+    }
+
+    @Test
+    fun `history deletion removes only selected visit identity`() {
+        val personal = HistoryEntry("https://example.com/", "Personal", 10, "personal")
+        val work = HistoryEntry("https://example.com/", "Work", 10, "work")
+
+        assertEquals(
+            listOf(work),
+            BrowsingHistoryRules.removeEntries(listOf(personal, work), listOf(personal)),
+        )
+    }
+
+    @Test
+    fun `history range deletion intersects profiles and inclusive local days`() {
+        val berlin = ZoneId.of("Europe/Berlin")
+        val since = LocalDate.of(2026, 3, 28)
+        val until = LocalDate.of(2026, 3, 29)
+        val request = HistoryClearRequest(
+            profileIds = setOf("personal"),
+            sinceInclusiveMillis = since.atStartOfDay(berlin).toInstant().toEpochMilli(),
+            untilExclusiveMillis = until.plusDays(1)
+                .atStartOfDay(berlin)
+                .toInstant()
+                .toEpochMilli(),
+        )
+        val before = HistoryEntry(
+            "https://before.example/",
+            "Before",
+            since.minusDays(1).atTime(23, 59).atZone(berlin).toInstant().toEpochMilli(),
+            "personal",
+        )
+        val sinceBoundary = HistoryEntry(
+            "https://since.example/",
+            "Since",
+            since.atStartOfDay(berlin).toInstant().toEpochMilli(),
+            "personal",
+        )
+        val untilBoundary = HistoryEntry(
+            "https://until.example/",
+            "Until",
+            until.atTime(23, 59).atZone(berlin).toInstant().toEpochMilli(),
+            "personal",
+        )
+        val atExclusiveBoundary = HistoryEntry(
+            "https://after.example/",
+            "After",
+            until.plusDays(1).atStartOfDay(berlin).toInstant().toEpochMilli(),
+            "personal",
+        )
+        val otherProfile = HistoryEntry(
+            "https://work.example/",
+            "Work",
+            since.atTime(12, 0).atZone(berlin).toInstant().toEpochMilli(),
+            "work",
+        )
+
+        assertEquals(
+            listOf(before, atExclusiveBoundary, otherProfile),
+            BrowsingHistoryRules.removeRange(
+                listOf(
+                    before,
+                    sinceBoundary,
+                    untilBoundary,
+                    atExclusiveBoundary,
+                    otherProfile,
+                ),
+                request,
+            ),
+        )
     }
 
     @Test

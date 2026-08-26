@@ -203,18 +203,94 @@ class BrowserSessionStore internal constructor(
             url = item.getString("url"),
             title = item.optString("title"),
             lastVisitedAt = item.optLong("lastVisitedAt"),
+            profileId = item.optString("profileId", DEFAULT_PROFILE_ID)
+                .takeIf(String::isNotBlank)
+                ?: DEFAULT_PROFILE_ID,
         )
     }
 
     @Synchronized
     fun saveHistory(history: List<HistoryEntry>) {
-        saveArray(KEY_HISTORY, history) { entry ->
-            JSONObject()
-                .put("url", entry.url)
-                .put("title", entry.title)
-                .put("lastVisitedAt", entry.lastVisitedAt)
-        }
+        preferences.edit().putString(KEY_HISTORY, encodeHistory(history)).apply()
     }
+
+    internal fun commitHistory(history: List<HistoryEntry>): Boolean =
+        preferences.edit().putString(KEY_HISTORY, encodeHistory(history)).commit()
+
+    internal fun saveHistoryAndSessionState(
+        history: List<HistoryEntry>,
+        sessionActive: Boolean,
+    ): Boolean = preferences.edit()
+        .putString(KEY_HISTORY, encodeHistory(history))
+        .putBoolean(KEY_HISTORY_SESSION_ACTIVE, sessionActive)
+        .commit()
+
+    internal fun saveHistoryAndTrailRedaction(
+        history: List<HistoryEntry>,
+        redaction: PendingCandyTrailRedaction,
+        sessionActive: Boolean? = null,
+    ): Boolean = synchronized(HISTORY_TRAIL_JOURNAL_LOCK) {
+        val pending = loadPendingCandyTrailRedactions()
+            .filterNot { existing -> existing.id == redaction.id } + redaction
+        preferences.edit()
+            .putString(KEY_HISTORY, encodeHistory(history))
+            .putString(KEY_PENDING_CANDY_TRAIL_REDACTIONS, encodeTrailRedactions(pending))
+            .apply {
+                if (sessionActive != null) {
+                    putBoolean(KEY_HISTORY_SESSION_ACTIVE, sessionActive)
+                }
+            }
+            .commit()
+    }
+
+    @Synchronized
+    internal fun loadPendingCandyTrailRedactions(): List<PendingCandyTrailRedaction> =
+        loadArray(KEY_PENDING_CANDY_TRAIL_REDACTIONS) { item ->
+            PendingCandyTrailRedaction(
+                id = item.getString("id"),
+                tabIds = buildSet {
+                    val values = item.getJSONArray("tabIds")
+                    repeat(values.length()) { index ->
+                        values.optString(index).takeIf(String::isNotBlank)?.let(::add)
+                    }
+                },
+                sinceInclusiveMillis = item.getLong("sinceInclusiveMillis"),
+                untilExclusiveMillis = item.getLong("untilExclusiveMillis"),
+            )
+        }.filter { redaction ->
+            redaction.id.isNotBlank() &&
+                redaction.tabIds.isNotEmpty() &&
+                redaction.sinceInclusiveMillis < redaction.untilExclusiveMillis
+        }
+
+    internal fun removePendingCandyTrailRedaction(id: String): Boolean =
+        synchronized(HISTORY_TRAIL_JOURNAL_LOCK) {
+            val retained = loadPendingCandyTrailRedactions().filterNot { redaction ->
+                redaction.id == id
+            }
+            preferences.edit()
+                .putString(KEY_PENDING_CANDY_TRAIL_REDACTIONS, encodeTrailRedactions(retained))
+                .commit()
+        }
+
+    internal fun loadHistoryRecordingMode(): HistoryRecordingMode =
+        HistoryRecordingMode.fromStoredValue(
+            preferences.getString(KEY_HISTORY_RECORDING_MODE, null),
+        )
+
+    internal fun saveHistoryRecordingMode(
+        mode: HistoryRecordingMode,
+        sessionActive: Boolean = mode == HistoryRecordingMode.ClearOnExit,
+    ): Boolean = preferences.edit()
+        .putString(KEY_HISTORY_RECORDING_MODE, mode.storedId)
+        .putBoolean(KEY_HISTORY_SESSION_ACTIVE, sessionActive)
+        .commit()
+
+    internal fun loadHistorySessionActive(): Boolean =
+        preferences.getBoolean(KEY_HISTORY_SESSION_ACTIVE, false)
+
+    internal fun saveHistorySessionActive(active: Boolean): Boolean =
+        preferences.edit().putBoolean(KEY_HISTORY_SESSION_ACTIVE, active).commit()
 
     @Synchronized
     fun loadFavorites(): List<FavoriteEntry> = loadArray(KEY_FAVORITES) { item ->
@@ -709,7 +785,36 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(key, array.toString()).apply()
     }
 
+    private fun encodeHistory(history: List<HistoryEntry>): String {
+        val array = JSONArray()
+        history.forEach { entry ->
+            array.put(
+                JSONObject()
+                    .put("url", entry.url)
+                    .put("title", entry.title)
+                    .put("lastVisitedAt", entry.lastVisitedAt)
+                    .put("profileId", entry.profileId),
+            )
+        }
+        return array.toString()
+    }
+
+    private fun encodeTrailRedactions(redactions: List<PendingCandyTrailRedaction>): String {
+        val array = JSONArray()
+        redactions.forEach { redaction ->
+            array.put(
+                JSONObject()
+                    .put("id", redaction.id)
+                    .put("tabIds", JSONArray(redaction.tabIds.toList()))
+                    .put("sinceInclusiveMillis", redaction.sinceInclusiveMillis)
+                    .put("untilExclusiveMillis", redaction.untilExclusiveMillis),
+            )
+        }
+        return array.toString()
+    }
+
     internal companion object {
+        private val HISTORY_TRAIL_JOURNAL_LOCK = Any()
         const val PREFERENCES_NAME = "browser_session"
         const val KEY_TABS = "tabs"
         const val KEY_SELECTED_TAB = "selected_tab"
@@ -725,6 +830,9 @@ class BrowserSessionStore internal constructor(
         const val KEY_DESKTOP_VIEW_DOMAINS = "desktop_view_domains"
         const val KEY_SITE_PRIVACY_OVERRIDES = "site_privacy_overrides"
         const val KEY_HISTORY = "history"
+        const val KEY_HISTORY_RECORDING_MODE = "history_recording_mode"
+        const val KEY_HISTORY_SESSION_ACTIVE = "history_session_active"
+        const val KEY_PENDING_CANDY_TRAIL_REDACTIONS = "pending_candy_trail_redactions"
         const val KEY_FAVORITES = "favorites"
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
         const val KEY_RESIDENT_TAB_LIMIT = "resident_tab_limit"
