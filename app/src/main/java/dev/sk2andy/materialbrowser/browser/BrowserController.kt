@@ -2144,13 +2144,14 @@ class BrowserController(
         }
     }
 
-    fun openUrl(url: String, inNewTab: Boolean = false) {
+    fun openUrl(url: String, inNewTab: Boolean = false): Boolean {
         leaveSiteCapsule()
         if (inNewTab) {
-            createTab(url, openerTabId = selectedTabId)
-        } else {
-            submitAddress(url)
+            val previousTabId = selectedTabId
+            return createTab(url, openerTabId = previousTabId) != previousTabId
         }
+        submitAddress(url)
+        return true
     }
 
     fun openHistoryEntry(url: String, profileId: String): Boolean {

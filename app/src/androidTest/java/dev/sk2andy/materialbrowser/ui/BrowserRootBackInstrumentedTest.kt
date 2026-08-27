@@ -17,6 +17,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -58,6 +59,29 @@ class BrowserRootBackInstrumentedTest {
             browserController.tabs.none { it.id == closingTabId }
         }
         composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertExists()
+    }
+
+    @Test
+    fun systemBackOnExternallyOpenedRootTabReturnsWithoutClosingTab() {
+        val browserController = createController()
+        val externalTabId = browserController.selectedTabId
+        val returnCalls = AtomicInteger(0)
+        setBrowserContent(
+            browserController = browserController,
+            externalLaunchTabId = externalTabId,
+            onReturnToExternalApp = { returnCalls.incrementAndGet() },
+        )
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(1, returnCalls.get())
+            assertTrue(browserController.tabs.any { it.id == externalTabId })
+        }
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertDoesNotExist()
     }
 
     @Test
@@ -166,6 +190,8 @@ class BrowserRootBackInstrumentedTest {
 
     private fun setBrowserContent(
         browserController: BrowserController,
+        externalLaunchTabId: String? = null,
+        onReturnToExternalApp: () -> Unit = {},
         onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -174,6 +200,8 @@ class BrowserRootBackInstrumentedTest {
                     controller = browserController,
                     incomingBrowserNavigationRequestId =
                         incomingBrowserNavigationRequestId.intValue,
+                    externalLaunchTabId = externalLaunchTabId,
+                    onReturnToExternalApp = onReturnToExternalApp,
                     onTabOverviewPortraitLockChanged = onTabOverviewPortraitLockChanged,
                 )
             }

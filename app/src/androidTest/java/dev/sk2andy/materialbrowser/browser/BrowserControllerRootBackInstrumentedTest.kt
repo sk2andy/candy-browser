@@ -102,6 +102,26 @@ class BrowserControllerRootBackInstrumentedTest {
         }
     }
 
+    @Test
+    fun newTabNavigationReportsFailureAtTabLimit() {
+        activityRule.scenario.onActivity { activity ->
+            val browserController = freshController(activity)
+            repeat(MAX_TABS - browserController.tabs.size) {
+                browserController.createTab()
+            }
+            val selectedTabId = browserController.selectedTabId
+
+            val opened = browserController.openUrl(
+                url = "https://example.com/from-another-app",
+                inNewTab = true,
+            )
+
+            assertFalse(opened)
+            assertEquals(selectedTabId, browserController.selectedTabId)
+            assertEquals(MAX_TABS, browserController.tabs.size)
+        }
+    }
+
     private fun freshController(activity: ComponentActivity): BrowserController {
         activity.getSharedPreferences(
             BrowserSessionStore.PREFERENCES_NAME,

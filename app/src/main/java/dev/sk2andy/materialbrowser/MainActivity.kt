@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
     private var pictureInPictureModeEntered = false
     private var isTabOverviewPortraitLocked = false
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
+    private var externalLaunchTabId by mutableStateOf<String?>(null)
     private var appDataExportWarningVisible by mutableStateOf(false)
     private var pendingAppDataImport by mutableStateOf<AppDataImportPreview?>(null)
     private var appDataImportLoading = false
@@ -239,6 +240,9 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         val restoredCapsuleId = savedInstanceState?.getString(STATE_CAPSULE_ID)
+        externalLaunchTabId = savedInstanceState
+            ?.getString(STATE_EXTERNAL_LAUNCH_TAB_ID)
+            ?.takeIf { tabId -> browserController.tabs.any { it.id == tabId } }
         if (restoredCapsuleId != null) {
             val restoredTabId = savedInstanceState.getString(STATE_CAPSULE_TAB_ID)
             if (!browserController.restoreSiteCapsule(restoredCapsuleId, restoredTabId)) {
@@ -335,6 +339,11 @@ class MainActivity : AppCompatActivity() {
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         incomingBrowserNavigationRequestId =
                             incomingBrowserNavigationRequestId,
+                        externalLaunchTabId = externalLaunchTabId,
+                        onReturnToExternalApp = {
+                            externalLaunchTabId = null
+                            moveTaskToBack(true)
+                        },
                         onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
                         onOpenHistory = {
                             historyLauncher.launch(
@@ -635,6 +644,7 @@ class MainActivity : AppCompatActivity() {
         }
         browserController.activeCapsuleId?.let { outState.putString(STATE_CAPSULE_ID, it) }
         browserController.activeCapsuleTabId?.let { outState.putString(STATE_CAPSULE_TAB_ID, it) }
+        externalLaunchTabId?.let { outState.putString(STATE_EXTERNAL_LAUNCH_TAB_ID, it) }
         super.onSaveInstanceState(outState)
     }
 
@@ -880,6 +890,7 @@ class MainActivity : AppCompatActivity() {
         File(applicationInfo.dataDir, AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME)
 
     private fun openIntent(intent: Intent) {
+        externalLaunchTabId = null
         if (intent.action == SnoozeWakeNotifier.ACTION_OPEN_RESTORED_TAB) {
             intent.getStringExtra(SnoozeWakeNotifier.EXTRA_TAB_ID)?.let { tabId ->
                 browserController.openSnoozedWakeTab(tabId)
@@ -906,7 +917,8 @@ class MainActivity : AppCompatActivity() {
         }
         if (intent.action == Intent.ACTION_MAIN) browserController.leaveSiteCapsule()
         IncomingBrowserIntent.from(intent)?.let { request ->
-            browserController.openUrl(request.url, inNewTab = true)
+            if (!browserController.openUrl(request.url, inNewTab = true)) return
+            externalLaunchTabId = browserController.selectedTabId
             incomingBrowserNavigationRequestId++
         }
     }
@@ -1163,6 +1175,7 @@ class MainActivity : AppCompatActivity() {
         const val SPLASH_DURATION_MILLIS = 1_050L
         const val STATE_CAPSULE_ID = "active_site_capsule_id"
         const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
+        const val STATE_EXTERNAL_LAUNCH_TAB_ID = "external_launch_tab_id"
         const val VIDEO_ASPECT_WIDTH = 16
         const val VIDEO_ASPECT_HEIGHT = 9
         const val PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP = 8

@@ -387,6 +387,7 @@ private enum class BrowserBackTarget {
     CandyTrail,
     TabOverview,
     WebHistory,
+    ExternalApp,
     RootTab,
 }
 
@@ -400,6 +401,8 @@ internal fun BrowserScreen(
     onDisconnectCast: () -> Unit = {},
     webViewVideoOnlyPresentation: Boolean = false,
     incomingBrowserNavigationRequestId: Int = 0,
+    externalLaunchTabId: String? = null,
+    onReturnToExternalApp: () -> Unit = {},
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onImportUserScript: () -> Unit = {},
@@ -1095,6 +1098,7 @@ internal fun BrowserScreen(
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
             tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
+            selectedTab.id == externalLaunchTabId -> BrowserBackTarget.ExternalApp
             else -> BrowserBackTarget.RootTab
         },
     )
@@ -1158,6 +1162,7 @@ internal fun BrowserScreen(
                 }
                 BrowserBackTarget.TabOverview -> closeTabOverview()
                 BrowserBackTarget.WebHistory -> controller.goBack()
+                BrowserBackTarget.ExternalApp -> onReturnToExternalApp()
                 BrowserBackTarget.RootTab -> {
                     if (controller.closeSelectedRootTab() == RootTabBackResult.ShowTabOverview) {
                         openTabOverview()
