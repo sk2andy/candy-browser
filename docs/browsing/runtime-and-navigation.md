@@ -47,6 +47,10 @@
 - Read page-scroll range, extent and offset through `BrowserWebView`. The optional Compose scroll
   thumb observes scroll changes without replacing the controller's WebView scroll listener and is
   removed from fullscreen/video-only presentation.
+- Preserve rapid reverse-flick momentum at the `BrowserWebView` boundary. Keep healthy native
+  WebView flings; only replace a fast reverse fling after three consecutive stalled frames while
+  a decaying reference fling still expects fast movement.
+  Programmatic scroll-bar jumps clear transient momentum state before changing the offset.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
 ## TLS trust channels
@@ -143,6 +147,7 @@ WebView request state.
 | --- | --- |
 | Input/URL policy | Matching JVM rule test |
 | WebView settings or callbacks | Focused browser instrumented test |
+| WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Web media, fullscreen and PiP policy | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` on API 34+ |
 | Android intent routing | Integration unit test plus launch instrumented test when lifecycle matters |
 | TLS trust channels | `./gradlew testDebugUnitTest testUserCaDebugUnitTest assembleDebug assembleUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
