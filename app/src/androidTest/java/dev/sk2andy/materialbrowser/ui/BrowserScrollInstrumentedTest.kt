@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import android.view.InputDevice
@@ -9,6 +10,7 @@ import android.view.ViewConfiguration
 import android.view.ViewTreeObserver
 import android.view.VelocityTracker
 import android.webkit.WebView
+import android.widget.FrameLayout
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -32,6 +34,59 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class BrowserScrollInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+    @Test
+    fun browserWebViewRetainsTouchStreamFromInterceptingParent() {
+        val actions = mutableListOf<Int>()
+        instrumentation.runOnMainSync {
+            val parent = MoveInterceptingFrameLayout(instrumentation.targetContext)
+            val webView = BrowserWebView(instrumentation.targetContext, "touch-ownership-test")
+            parent.addView(webView)
+            parent.layout(0, 0, 1_080, 2_000)
+            webView.layout(0, 0, 1_080, 2_000)
+            webView.setOnTouchListener { _, event ->
+                actions += event.actionMasked
+                true
+            }
+            repeat(TOUCH_OWNERSHIP_STREAMS) {
+                val downTime = SystemClock.uptimeMillis()
+                listOf(
+                    MotionEvent.ACTION_DOWN to 1_400f,
+                    MotionEvent.ACTION_MOVE to 1_200f,
+                    MotionEvent.ACTION_UP to 1_000f,
+                ).forEachIndexed { index, (action, y) ->
+                    MotionEvent.obtain(
+                        downTime,
+                        downTime + index * 16L,
+                        action,
+                        540f,
+                        y,
+                        0,
+                    ).also { event ->
+                        event.source = InputDevice.SOURCE_TOUCHSCREEN
+                        try {
+                            parent.dispatchTouchEvent(event)
+                        } finally {
+                            event.recycle()
+                        }
+                    }
+                }
+            }
+            parent.removeView(webView)
+            webView.destroy()
+        }
+
+        assertTrue(
+            "Parent cancelled WebView touch ownership: $actions",
+            actions == List(TOUCH_OWNERSHIP_STREAMS) {
+                listOf(
+                    MotionEvent.ACTION_DOWN,
+                    MotionEvent.ACTION_MOVE,
+                    MotionEvent.ACTION_UP,
+                )
+            }.flatten(),
+        )
+    }
 
     @Test
     fun tabPreviewCaptureRunsOutsideTheScrollPath() {
@@ -197,6 +252,90 @@ class BrowserScrollInstrumentedTest {
 
             scenario.onActivity { activity ->
                 activity.browserControllerForTesting().closeTab(testTabId)
+            }
+        }
+    }
+
+    @Test
+    fun fullBrowserWindowKeepsWebViewTouchStreamsComplete() {
+        GestureOnboardingStore(instrumentation.targetContext).markCompleted()
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val testTabId = scenario.readActivity { activity ->
+                activity.browserControllerForTesting().createTab("https://example.test/")
+            }
+            val webView = awaitAttachedWebView(scenario)
+            val touchEvents = Collections.synchronizedList(mutableListOf<TouchStreamEvent>())
+            val touchListener = View.OnTouchListener { _, event ->
+                touchEvents += TouchStreamEvent(
+                    action = event.actionMasked,
+                    downTimeMs = event.downTime,
+                )
+                false
+            }
+            try {
+                instrumentation.runOnMainSync {
+                    webView.loadDataWithBaseURL(
+                        "https://example.test/",
+                        """
+                            <!doctype html>
+                            <html>
+                              <head>
+                                <meta name="viewport"
+                                    content="width=device-width, initial-scale=1">
+                              </head>
+                              <body style="min-height:24000px">
+                                <div id="probe">touch stream test</div>
+                              </body>
+                            </html>
+                        """.trimIndent(),
+                        "text/html",
+                        "utf-8",
+                        null,
+                    )
+                    webView.setOnTouchListener(touchListener)
+                }
+                awaitProbe(webView)
+                val maximum = awaitMaximumScrollY(webView)
+                val location = IntArray(2)
+                instrumentation.runOnMainSync { webView.getLocationOnScreen(location) }
+                val x = location[0] + webView.width * 0.42f
+
+                repeat(TOUCH_STREAM_ATTEMPTS) { attempt ->
+                    val startScroll = maximum / 2
+                    instrumentation.runOnMainSync {
+                        checkNotNull(webView as? BrowserWebView)
+                            .scrollToVerticalOffset(startScroll)
+                    }
+                    awaitScrollNear(webView, startScroll)
+                    val upward = attempt % 2 == 0
+                    val startY = location[1] + webView.height *
+                        (if (upward) 0.68f else 0.32f)
+                    val travelY = webView.height * (if (upward) -0.30f else 0.30f)
+                    sendGesture(x = x, startY = startY, travelY = travelY)
+                }
+
+                awaitTerminalTouchStreams(touchEvents, TOUCH_STREAM_ATTEMPTS)
+                val streams = touchEvents.snapshot().groupBy(TouchStreamEvent::downTimeMs)
+                assertTrue(
+                    "Expected $TOUCH_STREAM_ATTEMPTS touch streams, got ${streams.size}: $streams",
+                    streams.size == TOUCH_STREAM_ATTEMPTS,
+                )
+                streams.forEach { (downTimeMs, events) ->
+                    val actions = events.map(TouchStreamEvent::action)
+                    assertTrue(
+                        "Touch stream $downTimeMs was incomplete: $actions",
+                        actions.firstOrNull() == MotionEvent.ACTION_DOWN &&
+                            actions.lastOrNull() == MotionEvent.ACTION_UP &&
+                            actions.count { it == MotionEvent.ACTION_MOVE } >= 1 &&
+                            MotionEvent.ACTION_CANCEL !in actions,
+                    )
+                }
+            } finally {
+                instrumentation.runOnMainSync { webView.setOnTouchListener(null) }
+                scenario.onActivity { activity ->
+                    activity.browserControllerForTesting().closeTab(testTabId)
+                }
             }
         }
     }
@@ -687,6 +826,22 @@ class BrowserScrollInstrumentedTest {
             SystemClock.sleep(2)
         }
         return touchSamples.snapshot().filter { it.downTimeMs == downTime }
+    }
+
+    private fun awaitTerminalTouchStreams(
+        touchEvents: MutableList<TouchStreamEvent>,
+        expectedCount: Int,
+    ) {
+        repeat(250) {
+            val terminalCount = touchEvents.snapshot().count {
+                it.action == MotionEvent.ACTION_UP || it.action == MotionEvent.ACTION_CANCEL
+            }
+            if (terminalCount >= expectedCount) return
+            SystemClock.sleep(2)
+        }
+        throw AssertionError(
+            "Expected $expectedCount terminal touch events: ${touchEvents.snapshot()}",
+        )
     }
 
     private fun awaitActiveMomentum(
@@ -1410,6 +1565,11 @@ class BrowserScrollInstrumentedTest {
         }
     }
 
+    private class MoveInterceptingFrameLayout(context: Context) : FrameLayout(context) {
+        override fun onInterceptTouchEvent(event: MotionEvent): Boolean =
+            event.actionMasked == MotionEvent.ACTION_MOVE
+    }
+
     private data class SparseComparison(
         val firstSwipeStarted: Int,
         val firstReverseMoveFollowed: Int,
@@ -1427,6 +1587,11 @@ class BrowserScrollInstrumentedTest {
         val pointerCount: Int,
         val source: Int,
         val scrollY: Int,
+    )
+
+    private data class TouchStreamEvent(
+        val action: Int,
+        val downTimeMs: Long,
     )
 
     private data class TouchPoint(
@@ -1588,6 +1753,8 @@ class BrowserScrollInstrumentedTest {
     private companion object {
         const val TEST_LOG_TAG = "CandyScrollStrategy"
         const val SPARSE_ATTEMPTS = 20
+        const val TOUCH_OWNERSHIP_STREAMS = 100
+        const val TOUCH_STREAM_ATTEMPTS = 20
         const val TOUCH_SLOP_PX = 8f
         const val LOCAL_STRESS_SESSIONS = 5
         const val LIVE_STRESS_SESSIONS = 3

@@ -7,6 +7,7 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewParent
 import android.view.VelocityTracker
 import android.webkit.WebView
 import android.widget.OverScroller
@@ -129,6 +130,7 @@ internal class BrowserWebView(
     private var gestureVelocityTracker: VelocityTracker? = null
     private var gestureGeneration = 0L
     private var touchActive = false
+    private var touchStreamParent: ViewParent? = null
     private var expectedFlingDirection = 0
     private var expectedFlingAtMs = Long.MIN_VALUE
     private var confirmedFlingDirection = 0
@@ -149,6 +151,9 @@ internal class BrowserWebView(
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            retainParentTouchStreamOwnership()
+        }
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 gestureGeneration++
@@ -185,6 +190,9 @@ internal class BrowserWebView(
             -> gestureVelocityTracker?.addMovement(event)
         }
         val handled = super.dispatchTouchEvent(event)
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && !handled) {
+            releaseParentTouchStreamOwnership()
+        }
         if (event.actionMasked == MotionEvent.ACTION_MOVE) interruptMomentumScroll(event)
         BrowserInputDiagnostics.webViewDispatch(tabId, this, event, handled)
         if (event.actionMasked == MotionEvent.ACTION_UP) {
@@ -206,8 +214,20 @@ internal class BrowserWebView(
                 clearConfirmedFling()
             }
             pointerSessions.end()
+            releaseParentTouchStreamOwnership()
         }
         return handled
+    }
+
+    private fun retainParentTouchStreamOwnership() {
+        releaseParentTouchStreamOwnership()
+        touchStreamParent = parent
+        touchStreamParent?.requestDisallowInterceptTouchEvent(true)
+    }
+
+    private fun releaseParentTouchStreamOwnership() {
+        touchStreamParent?.requestDisallowInterceptTouchEvent(false)
+        touchStreamParent = null
     }
 
     private fun momentumInterruptionFor(event: MotionEvent): BrowserMomentumInterruption? {
@@ -510,6 +530,7 @@ internal class BrowserWebView(
 
     override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
         if (!hasWindowFocus) {
+            releaseParentTouchStreamOwnership()
             gestureGeneration++
             gestureCanFling = false
             touchActive = false
@@ -524,6 +545,7 @@ internal class BrowserWebView(
     }
 
     override fun onDetachedFromWindow() {
+        releaseParentTouchStreamOwnership()
         gestureGeneration++
         gestureCanFling = false
         touchActive = false
