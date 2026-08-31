@@ -77,6 +77,7 @@ import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.data.HistoryRecallRules
 import dev.sk2andy.materialbrowser.recall.RecallMatch
+import dev.sk2andy.materialbrowser.recall.RecallRules
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -231,7 +232,7 @@ internal fun HistoryScreen(
                 item(key = "search") {
                     OutlinedTextField(
                         value = query,
-                        onValueChange = { query = it },
+                        onValueChange = { query = it.take(RecallRules.MAX_QUERY_CHARS) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)

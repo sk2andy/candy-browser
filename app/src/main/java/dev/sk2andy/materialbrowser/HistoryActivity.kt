@@ -100,17 +100,26 @@ class HistoryActivity : ComponentActivity() {
                         val previous = history
                         lifecycleScope.launch {
                             try {
-                                history = withContext(Dispatchers.IO) {
+                                val mutation = withContext(Dispatchers.IO) {
                                     historyRepository.remove(entries)
                                 }
-                                hasHistoryMutations = hasHistoryMutations || history != previous
-                                val deletedKeys = entries.mapNotNullTo(hashSetOf()) { entry ->
-                                    RecallRules.canonicalUrl(entry.url)?.let { url ->
-                                        "${entry.profileId}\u0000$url"
+                                history = mutation.history
+                                if (!mutation.committed) {
+                                    Toast.makeText(
+                                        this@HistoryActivity,
+                                        R.string.history_clear_failed,
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                } else {
+                                    hasHistoryMutations = hasHistoryMutations || history != previous
+                                    val deletedKeys = entries.mapNotNullTo(hashSetOf()) { entry ->
+                                        RecallRules.canonicalUrl(entry.url)?.let { url ->
+                                            "${entry.profileId}\u0000$url"
+                                        }
                                     }
-                                }
-                                recallMatches = recallMatches.filterNot { match ->
-                                    "${match.profileId}\u0000${match.url}" in deletedKeys
+                                    recallMatches = recallMatches.filterNot { match ->
+                                        "${match.profileId}\u0000${match.url}" in deletedKeys
+                                    }
                                 }
                             } finally {
                                 isMutationInProgress = false

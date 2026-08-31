@@ -46,7 +46,8 @@ class BrowsingHistoryRepositoryInstrumentedTest {
             HistoryEntry("https://new.example/", "New", 2L, "personal"),
         )
 
-        assertEquals(listOf(existing), result)
+        assertEquals(listOf(existing), result.history)
+        assertTrue(!result.recorded)
         assertEquals(listOf(existing), repository.snapshot())
     }
 
@@ -60,7 +61,8 @@ class BrowsingHistoryRepositoryInstrumentedTest {
 
         val retained = repository.remove(listOf(personal))
 
-        assertEquals(listOf(work), retained)
+        assertTrue(retained.committed)
+        assertEquals(listOf(work), retained.history)
     }
 
     @Test
@@ -108,6 +110,25 @@ class BrowsingHistoryRepositoryInstrumentedTest {
             selectedTabId = tabId,
         )
         store.saveHistory(listOf(previousSession))
+        RecallRepository.get(context).index(
+            RecallDocument(
+                previousSession.profileId,
+                previousSession.url,
+                previousSession.title,
+                "old session phrase",
+                previousSession.lastVisitedAt,
+            ),
+        )
+        RecallRepository.get(context).index(
+            RecallDocument(
+                newSession.profileId,
+                newSession.url,
+                newSession.title,
+                "new session phrase",
+                newSession.lastVisitedAt,
+            ),
+        )
+        assertTrue(RecallRepository.get(context).awaitIdleForTesting())
         repository.setRecordingMode(HistoryRecordingMode.ClearOnExit)
         var sessionChecks = 0
 
@@ -126,6 +147,8 @@ class BrowsingHistoryRepositoryInstrumentedTest {
         )
 
         assertEquals(listOf(newSession), repository.snapshot())
+        assertTrue(searchRecall(previousSession.profileId, "old session").isEmpty())
+        assertEquals(1, searchRecall(newSession.profileId, "new session").size)
         assertTrue(store.loadHistorySessionActive())
         assertEquals(
             15L,
@@ -156,11 +179,16 @@ class BrowsingHistoryRepositoryInstrumentedTest {
     fun unfinishedClearOnExitSessionIsClearedOnNextStart() {
         val entry = HistoryEntry("https://crash.example/", "Crash", 1L)
         BrowserSessionStore(context).saveHistory(listOf(entry))
+        RecallRepository.get(context).index(
+            RecallDocument(entry.profileId, entry.url, entry.title, "crash session phrase", 1L),
+        )
+        assertTrue(RecallRepository.get(context).awaitIdleForTesting())
         repository.setRecordingMode(HistoryRecordingMode.ClearOnExit)
 
         repository.beginSession()
 
         assertTrue(repository.snapshot().isEmpty())
+        assertTrue(searchRecall(entry.profileId, "crash session").isEmpty())
     }
 
     @Test
@@ -187,6 +215,43 @@ class BrowsingHistoryRepositoryInstrumentedTest {
         repository.remove(listOf(entry))
 
         assertTrue(searchRecall("personal", "sensitive page").isEmpty())
+    }
+
+    @Test
+    fun historyRetentionEvictionAlsoDeletesRecallContent() {
+        val history = (0 until BrowsingLibraryRules.MAX_HISTORY_ENTRIES).map { index ->
+            HistoryEntry(
+                url = "https://example.com/$index",
+                title = "Page $index",
+                lastVisitedAt = index.toLong(),
+                profileId = "personal",
+            )
+        }
+        val evicted = history.first()
+        BrowserSessionStore(context).saveHistory(history)
+        RecallRepository.get(context).index(
+            RecallDocument(
+                evicted.profileId,
+                evicted.url,
+                evicted.title,
+                "evicted sensitive phrase",
+                evicted.lastVisitedAt,
+            ),
+        )
+        assertTrue(RecallRepository.get(context).awaitIdleForTesting())
+
+        val result = repository.record(
+            HistoryEntry(
+                url = "https://example.com/new",
+                title = "New",
+                lastVisitedAt = 1_000L,
+                profileId = "personal",
+            ),
+        )
+
+        assertTrue(result.recorded)
+        assertTrue(result.history.none { entry -> entry.url == evicted.url })
+        assertTrue(searchRecall("personal", "evicted sensitive").isEmpty())
     }
 
     private fun searchRecall(profileId: String, query: String): List<RecallMatch> {

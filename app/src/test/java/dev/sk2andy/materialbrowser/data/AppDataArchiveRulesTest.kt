@@ -48,6 +48,7 @@ class AppDataArchiveRulesTest {
             "candy_recall.db-journal",
             "candy_recall.db-shm",
             "candy_recall.db-wal",
+            "candy_recall.db-mj0123456789",
         ).forEach { fileName ->
             assertFalse(
                 AppDataArchiveRules.shouldExportRelativePath("no_backup/$fileName"),

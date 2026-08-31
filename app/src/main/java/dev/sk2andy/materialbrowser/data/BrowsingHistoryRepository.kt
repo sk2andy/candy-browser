@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import java.util.UUID
 
@@ -25,6 +26,11 @@ internal data class HistoryMutationResult(
     val committed: Boolean,
 )
 
+internal data class HistoryRecordResult(
+    val history: List<HistoryEntry>,
+    val recorded: Boolean,
+)
+
 internal class BrowsingHistoryRepository private constructor(context: Context) {
     private val appContext = context.applicationContext
     private val store = BrowserSessionStore(appContext)
@@ -34,19 +40,34 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
     fun snapshot(): List<HistoryEntry> = store.loadHistory()
 
     @Synchronized
-    fun record(entry: HistoryEntry): List<HistoryEntry> {
+    fun record(entry: HistoryEntry): HistoryRecordResult {
         val current = store.loadHistory()
-        if (recordingMode() == HistoryRecordingMode.Disabled) return current
+        if (recordingMode() == HistoryRecordingMode.Disabled) {
+            return HistoryRecordResult(history = current, recorded = false)
+        }
         val updated = BrowsingLibraryRules.addHistory(current, entry)
-        if (updated != current) store.saveHistory(updated)
-        return updated
+        if (updated == current) return HistoryRecordResult(history = current, recorded = false)
+        val retainedKeys = updated.mapNotNullTo(hashSetOf(), ::documentKey)
+        val evicted = current.filter { existing -> documentKey(existing) !in retainedKeys }
+        if (evicted.isNotEmpty() && !recallRepository.deleteEntries(evicted)) {
+            return HistoryRecordResult(history = current, recorded = false)
+        }
+        val committed = store.commitHistory(updated)
+        return HistoryRecordResult(
+            history = if (committed) updated else current,
+            recorded = committed,
+        )
     }
 
     @Synchronized
-    fun remove(entries: Collection<HistoryEntry>): List<HistoryEntry> {
+    fun remove(entries: Collection<HistoryEntry>): HistoryMutationResult {
         val current = store.loadHistory()
-        if (!recallRepository.deleteEntries(entries)) return current
-        return mutate(current) { history -> BrowsingHistoryRules.removeEntries(history, entries) }
+        if (!recallRepository.deleteEntries(entries)) {
+            return HistoryMutationResult(history = current, committed = false)
+        }
+        return mutateResult(current) { history ->
+            BrowsingHistoryRules.removeEntries(history, entries)
+        }
     }
 
     @Synchronized
@@ -81,10 +102,12 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
     }
 
     @Synchronized
-    fun clear(): List<HistoryEntry> {
+    fun clear(): HistoryMutationResult {
         val current = store.loadHistory()
-        if (!recallRepository.clear()) return current
-        return mutate(current) { emptyList() }
+        if (!recallRepository.clear()) {
+            return HistoryMutationResult(history = current, committed = false)
+        }
+        return mutateResult(current) { emptyList() }
     }
 
     @Synchronized
@@ -101,10 +124,8 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
     fun beginSession() {
         val clearsOnExit = recordingMode() == HistoryRecordingMode.ClearOnExit
         if (clearsOnExit && store.loadHistorySessionActive()) {
-            recallRepository.clearAsync()
             saveClearedHistoryWithTrailRedaction(
                 sessionActive = true,
-                clearRecall = false,
             )
         } else {
             store.saveHistorySessionActive(clearsOnExit)
@@ -128,7 +149,19 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
         val shouldClear = synchronized(this) {
             recordingMode() == HistoryRecordingMode.ClearOnExit && isSessionCurrent()
         }
-        if (!shouldClear || !recallRepository.clear()) return false
+        if (!shouldClear) return false
+        val recallCleared = if (untilExclusiveMillis == Long.MAX_VALUE) {
+            recallRepository.clear()
+        } else {
+            recallRepository.deleteRange(
+                HistoryClearRequest(
+                    profileIds = regularProfileIds(),
+                    sinceInclusiveMillis = Long.MIN_VALUE,
+                    untilExclusiveMillis = untilExclusiveMillis,
+                ),
+            )
+        }
+        if (!recallCleared) return false
         return synchronized(this) {
             val sessionStillCurrent = isSessionCurrent()
             val retainedHistory = if (sessionStillCurrent) {
@@ -148,12 +181,16 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
         }
     }
 
-    private fun mutate(
+    private fun mutateResult(
         current: List<HistoryEntry> = store.loadHistory(),
         transform: (List<HistoryEntry>) -> List<HistoryEntry>,
-    ): List<HistoryEntry> {
+    ): HistoryMutationResult {
         val updated = transform(current)
-        return if (updated == current || store.commitHistory(updated)) updated else current
+        val committed = updated == current || store.commitHistory(updated)
+        return HistoryMutationResult(
+            history = if (committed) updated else current,
+            committed = committed,
+        )
     }
 
     private fun mutateWithTrailRedaction(
@@ -214,6 +251,14 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
             .map { snoozed -> snoozed.tab.id }
             .forEach(::add)
     }
+
+    private fun regularProfileIds(): Set<String> = buildSet {
+        store.loadProfiles().first.mapTo(this, BrowserProfile::id)
+        store.loadHistory().mapTo(this, HistoryEntry::profileId)
+    }
+
+    private fun documentKey(entry: HistoryEntry): String? =
+        CanonicalWebUrl.key(entry.url)?.let { canonical -> "${entry.profileId}\u0000$canonical" }
 
     private fun trailRedaction(
         tabIds: Set<String>,

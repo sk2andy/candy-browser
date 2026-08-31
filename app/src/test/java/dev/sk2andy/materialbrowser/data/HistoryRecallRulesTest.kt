@@ -31,7 +31,7 @@ class HistoryRecallRulesTest {
     }
 
     @Test
-    fun `recall-only document becomes actionable history row and blank query removes it`() {
+    fun `orphan recall document stays hidden after source history is gone`() {
         val match = RecallMatch(
             profileId = "personal",
             url = "https://example.com/remembered",
@@ -44,7 +44,7 @@ class HistoryRecallRulesTest {
         val found = HistoryRecallRules.merge(emptyList(), setOf("personal"), "matching", listOf(match))
         val cleared = HistoryRecallRules.merge(emptyList(), setOf("personal"), "", listOf(match))
 
-        assertEquals(match.url, found.entries.single().url)
+        assertTrue(found.entries.isEmpty())
         assertTrue(cleared.entries.isEmpty())
         assertTrue(cleared.excerptsByEntryKey.isEmpty())
     }

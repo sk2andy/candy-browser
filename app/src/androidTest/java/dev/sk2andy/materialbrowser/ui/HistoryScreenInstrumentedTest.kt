@@ -105,7 +105,14 @@ class HistoryScreenInstrumentedTest {
                 HistoryScreen(
                     profiles = listOf(BrowserProfile(id = "personal", emoji = "🏠")),
                     activeProfileId = "personal",
-                    history = emptyList(),
+                    history = listOf(
+                        HistoryEntry(
+                            url = match.url,
+                            title = match.title,
+                            lastVisitedAt = match.visitedAt,
+                            profileId = match.profileId,
+                        ),
+                    ),
                     recallMatches = listOf(match),
                     recordingMode = HistoryRecordingMode.Enabled,
                     onRecordingModeChange = {},

@@ -269,13 +269,13 @@ internal class RecallRepository private constructor(context: Context) {
                 if (values.remaining() < 3) return score
                 val rowHits = values.get()
                 values.get()
-                val documentsWithHits = values.get()
+                values.get()
                 val weight = when (column) {
                     2 -> TITLE_WEIGHT
                     3 -> BODY_WEIGHT
                     else -> 0.0
                 }
-                score += rowHits * weight / (documentsWithHits + 1.0)
+                score += rowHits * weight
             }
         }
         return score
@@ -316,15 +316,11 @@ internal class RecallRepository private constructor(context: Context) {
 
     private fun resetDatabase(): Boolean = runCatching {
         helper.close()
-        if (databaseFiles().none(File::exists)) true else SQLiteDatabase.deleteDatabase(databaseFile)
+        if (databaseFiles().any(File::exists)) SQLiteDatabase.deleteDatabase(databaseFile)
+        databaseFiles().none(File::exists)
     }.getOrDefault(false)
 
-    private fun databaseFiles(): List<File> = listOf(
-        databaseFile,
-        File(databaseFile.path + "-journal"),
-        File(databaseFile.path + "-shm"),
-        File(databaseFile.path + "-wal"),
-    )
+    private fun databaseFiles(): List<File> = filesForDatabase(databaseFile)
 
     private class RecallDatabaseHelper(context: Context, path: String) :
         SQLiteOpenHelper(context, path, null, DATABASE_VERSION) {
@@ -363,14 +359,17 @@ internal class RecallRepository private constructor(context: Context) {
                 return repository.runCleanupSerialized(repository::resetDatabase)
             }
             val database = File(context.noBackupFilesDir, DATABASE_NAME)
-            val files = listOf(
-                database,
-                File(database.path + "-journal"),
-                File(database.path + "-shm"),
-                File(database.path + "-wal"),
-            )
+            val files = filesForDatabase(database)
             if (files.none(File::exists)) return true
-            return SQLiteDatabase.deleteDatabase(database)
+            SQLiteDatabase.deleteDatabase(database)
+            return filesForDatabase(database).none(File::exists)
+        }
+
+        private fun filesForDatabase(database: File): List<File> = buildList {
+            add(database)
+            database.parentFile?.listFiles()?.asSequence()
+                ?.filter { candidate -> candidate.name.startsWith("${database.name}-") }
+                ?.forEach(::add)
         }
 
         private const val DATABASE_NAME = "candy_recall.db"

@@ -45,6 +45,31 @@ class RecallRepositoryInstrumentedTest {
     }
 
     @Test
+    fun anotherProfileCannotChangeRankingScores() {
+        repository.index(document("personal", "https://one.example", "Candy browser", "words", 1L))
+        repository.index(document("personal", "https://two.example", "Other", "candy browser", 2L))
+        assertTrue(repository.awaitIdleForTesting())
+        val before = search(setOf("personal"), "candy browser", 10)
+
+        repeat(40) { index ->
+            repository.index(
+                document(
+                    "work",
+                    "https://work.example/$index",
+                    "Candy browser",
+                    "candy browser",
+                    index.toLong(),
+                ),
+            )
+        }
+        assertTrue(repository.awaitIdleForTesting())
+        val after = search(setOf("personal"), "candy browser", 10)
+
+        assertEquals(before.map(RecallMatch::url), after.map(RecallMatch::url))
+        assertEquals(before.map(RecallMatch::score), after.map(RecallMatch::score))
+    }
+
+    @Test
     fun ranksAllBoundedCandidatesBeforeApplyingResultLimit() {
         repeat(120) { index ->
             repository.index(
@@ -107,7 +132,7 @@ class RecallRepositoryInstrumentedTest {
 
     @Test
     fun prunesOldestDocumentAtGlobalEntryBound() {
-        repeat(501) { index ->
+        repeat(251) { index ->
             repository.index(
                 document(
                     profileId = "personal",
@@ -121,7 +146,7 @@ class RecallRepositoryInstrumentedTest {
         assertTrue(repository.awaitIdleForTesting())
 
         assertTrue(search(setOf("personal"), "marker0", 10).isEmpty())
-        assertEquals("https://example.com/500", search(setOf("personal"), "marker500", 10).single().url)
+        assertEquals("https://example.com/250", search(setOf("personal"), "marker250", 10).single().url)
     }
 
     @Test
