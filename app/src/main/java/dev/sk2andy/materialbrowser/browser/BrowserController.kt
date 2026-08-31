@@ -662,6 +662,8 @@ class BrowserController(
     private val protectionRequestContexts = ConcurrentHashMap<String, ProtectionRequestContext>()
     private var isActivityResumed = false
     private var isActivityStarted = false
+    private var recallDisablePending = false
+    private var browsingDataClearPending = false
     @Volatile
     private var destroyed = false
     private var previewContentBottomInWindowPx: Int? = null
@@ -3882,7 +3884,10 @@ class BrowserController(
         } else {
             RecallRules.addressQuery(query)
         }
-        if (!isRecallEnabled || tab.isIncognito || recallQuery == null) {
+        if (
+            !isRecallEnabled || recallDisablePending || browsingDataClearPending ||
+            tab.isIncognito || recallQuery == null
+        ) {
             onComplete(emptyList())
             return
         }
@@ -3900,7 +3905,7 @@ class BrowserController(
             limit = limit,
         ) { matches ->
             val current = tabs.firstOrNull { candidate -> candidate.id == expectedTabId }
-            val accepted = isRecallEnabled &&
+            val accepted = isRecallEnabled && !recallDisablePending && !browsingDataClearPending &&
                 !destroyed &&
                 selectedTabId == expectedTabId &&
                 current?.isIncognito == false &&
@@ -4370,10 +4375,23 @@ class BrowserController(
     }
 
     fun updateRecallEnabled(enabled: Boolean) {
-        if (isRecallEnabled == enabled) return
-        isRecallEnabled = enabled
-        store.saveRecallEnabled(enabled)
-        if (!enabled) recallRepository.clearAsync()
+        if (recallDisablePending || isRecallEnabled == enabled) return
+        if (enabled) {
+            isRecallEnabled = true
+            store.saveRecallEnabled(true)
+            return
+        }
+        recallDisablePending = true
+        historyMutationExecutor.execute {
+            val cleared = recallRepository.clear()
+            mainHandler.post {
+                if (!destroyed && cleared) {
+                    isRecallEnabled = false
+                    store.saveRecallEnabled(false)
+                }
+                recallDisablePending = false
+            }
+        }
     }
 
     fun updateSearchSuggestionProvider(provider: SearchSuggestionProvider) {
@@ -4470,6 +4488,8 @@ class BrowserController(
     }
 
     fun clearBrowsingData() {
+        if (browsingDataClearPending) return
+        browsingDataClearPending = true
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
         activePermissions.clear()
@@ -4546,8 +4566,28 @@ class BrowserController(
             it.clearHistory()
         }
         tabs.indices.forEach { index -> tabs[index] = tabs[index].copy(blockedCount = 0) }
-        history.clear()
-        historyMutationExecutor.execute(historyRepository::clear)
+        historyMutationExecutor.execute {
+            val mutation = historyRepository.clear()
+            mainHandler.post {
+                if (!destroyed) {
+                    if (mutation.committed) {
+                        history.clear()
+                        Toast.makeText(
+                            activity,
+                            activity.getString(R.string.toast_browsing_data_cleared),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            activity,
+                            activity.getString(R.string.history_clear_failed),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                    browsingDataClearPending = false
+                }
+            }
+        }
         snoozedTabs.clear()
         snoozedTabStore.save(emptyList())
         snoozeScheduler.schedule(emptyList())
@@ -4579,11 +4619,6 @@ class BrowserController(
         (regularSiteCompatibilityTabIds + regularDesktopViewTabIds).forEach { tabId ->
             if (webViews[tabId] != null) reloadTabWithProtection(tabId)
         }
-        Toast.makeText(
-            activity,
-            activity.getString(R.string.toast_browsing_data_cleared),
-            Toast.LENGTH_SHORT,
-        ).show()
     }
 
     fun onPause() {
@@ -5183,8 +5218,7 @@ class BrowserController(
                     progress = 100,
                 )
             }
-            recordHistory(tabId, url, title)
-            capturePageForRecall(tabId, view, url)
+            if (recordHistory(tabId, url, title)) capturePageForRecall(tabId, view, url)
             if (view.url == url && pageUrls[tabId] == url) {
                 updateCandyTrailPage(tabId, url, title)
             }
@@ -7887,7 +7921,6 @@ class BrowserController(
     }
 
     private fun updateCandyTrailPage(tabId: String, url: String, title: String) {
-        if (!isActivityStarted) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (tabId in suppressedCandyTrailTabIds || pageUrls[tabId] != url) return
         val nowMillis = System.currentTimeMillis()
@@ -7923,11 +7956,10 @@ class BrowserController(
         if (tab.id !in pendingCandyTrailRestoreIds) candyTrailRepository.save(tab, trail)
     }
 
-    private fun recordHistory(tabId: String, url: String, title: String) {
-        if (!isActivityStarted) return
+    private fun recordHistory(tabId: String, url: String, title: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId }?.takeUnless(BrowserTab::isIncognito)
-            ?: return
-        val updated = historyRepository.record(
+            ?: return false
+        val result = historyRepository.record(
             HistoryEntry(
                 url = url,
                 title = title,
@@ -7935,13 +7967,18 @@ class BrowserController(
                 profileId = tab.profileId,
             ),
         )
-        if (updated == history) return
+        val updated = result.history
+        if (updated == history) return result.recorded
         history.clear()
         history += updated
+        return result.recorded
     }
 
     private fun capturePageForRecall(tabId: String, view: WebView, url: String) {
-        if (!isActivityStarted || !isRecallEnabled) return
+        if (
+            !isActivityStarted || !isRecallEnabled || recallDisablePending ||
+            browsingDataClearPending
+        ) return
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
             ?.takeUnless(BrowserTab::isIncognito)
             ?: return

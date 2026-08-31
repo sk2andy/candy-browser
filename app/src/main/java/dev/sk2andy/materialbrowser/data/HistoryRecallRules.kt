@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.data
 
 import dev.sk2andy.materialbrowser.recall.RecallMatch
+import dev.sk2andy.materialbrowser.recall.RecallRules
 
 internal data class HistoryRecallSnapshot(
     val entries: List<HistoryEntry>,
@@ -14,12 +15,13 @@ internal object HistoryRecallRules {
         query: String,
         recallMatches: List<RecallMatch>,
     ): HistoryRecallSnapshot {
+        val boundedQuery = query.take(RecallRules.MAX_QUERY_CHARS)
         val metadataMatches = BrowsingHistoryRules.visibleEntries(
             history = history,
             selectedProfileIds = selectedProfileIds,
-            query = query,
+            query = boundedQuery,
         )
-        if (query.isBlank() || selectedProfileIds.isEmpty()) {
+        if (boundedQuery.isBlank() || selectedProfileIds.isEmpty()) {
             return HistoryRecallSnapshot(metadataMatches, emptyMap())
         }
         val historyByDocument = history.associateBy(::documentKey)
@@ -27,12 +29,7 @@ internal object HistoryRecallRules {
             .filter { match -> match.profileId in selectedProfileIds }
             .mapNotNull { match ->
                 val key = documentKey(match.profileId, match.url) ?: return@mapNotNull null
-                val entry = historyByDocument[key] ?: HistoryEntry(
-                    url = match.url,
-                    title = match.title,
-                    lastVisitedAt = match.visitedAt,
-                    profileId = match.profileId,
-                )
+                val entry = historyByDocument[key] ?: return@mapNotNull null
                 entry to match.excerpt
             }
             .toList()

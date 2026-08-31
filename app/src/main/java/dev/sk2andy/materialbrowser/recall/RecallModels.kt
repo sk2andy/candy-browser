@@ -34,7 +34,7 @@ internal object RecallRules {
     const val MAX_PROFILE_ID_CHARS = 128
     const val MAX_URL_CHARS = 4_096
     const val MAX_QUERY_CHARS = 160
-    const val MAX_ENTRIES = 500
+    const val MAX_ENTRIES = 250
     const val MAX_ADDRESS_RESULTS = 2
     const val MAX_HISTORY_RESULTS = 50
     const val MAX_COMMAND_RESULTS = 20

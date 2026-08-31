@@ -53,7 +53,8 @@ internal object AppDataArchiveRules {
         name.isNotEmpty() && name !in excludedTopLevelNames
 
     fun shouldExportRelativePath(path: String): Boolean =
-        path !in excludedRelativePaths
+        path != RECALL_DATABASE_RELATIVE_PATH &&
+            !path.startsWith("$RECALL_DATABASE_RELATIVE_PATH-")
 
     fun persistentRootNames(dataDirectory: File): Set<String> =
         dataDirectory.list()
@@ -118,10 +119,5 @@ internal object AppDataArchiveRules {
     }
 
     private val WINDOWS_ABSOLUTE_PATH_PATTERN = Regex("[A-Za-z]:($|/.*)")
-    private val excludedRelativePaths = setOf(
-        "no_backup/candy_recall.db",
-        "no_backup/candy_recall.db-journal",
-        "no_backup/candy_recall.db-shm",
-        "no_backup/candy_recall.db-wal",
-    )
+    private const val RECALL_DATABASE_RELATIVE_PATH = "no_backup/candy_recall.db"
 }

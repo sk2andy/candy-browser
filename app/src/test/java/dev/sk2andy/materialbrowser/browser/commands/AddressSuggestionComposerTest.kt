@@ -122,4 +122,19 @@ class AddressSuggestionComposerTest {
 
         assertEquals(listOf(AddressSuggestionItem.Recall(recall)), result)
     }
+
+    @Test
+    fun `recall replaces duplicate canonical navigation row`() {
+        val overlappingRecall = recall.copy(url = "https://reload.example/#section")
+
+        val result = AddressSuggestionComposer.compose(
+            query = "reload docs",
+            navigation = navigation,
+            commands = emptyList(),
+            recallMatches = listOf(overlappingRecall),
+            limit = 6,
+        )
+
+        assertEquals(listOf(AddressSuggestionItem.Recall(overlappingRecall)), result)
+    }
 }

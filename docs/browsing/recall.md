@@ -44,7 +44,7 @@ Link Peek never enter it.
 
 | Value | Limit |
 | --- | ---: |
-| Stored documents | 500 total |
+| Stored documents | 250 total, matching browsing-history retention |
 | Normalized document text | 64,000 characters |
 | Title | 512 characters |
 | Profile ID | 128 characters |
