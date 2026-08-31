@@ -199,6 +199,9 @@ internal object AppDataArchiveCodec {
                         ) {
                             return FileVisitResult.CONTINUE
                         }
+                        if (!AppDataArchiveRules.shouldExportRelativePath(relativePath.toString())) {
+                            return FileVisitResult.CONTINUE
+                        }
                         rejectSymbolicLink(file, attributes)
                         if (!attributes.isRegularFile) {
                             throw AppDataArchiveException(

@@ -140,6 +140,10 @@
     <string name="history_save_summary">Manter visitas de navegação normal neste dispositivo</string>
     <string name="history_clear_on_exit_title">Limpar ao fechar o Candy</string>
     <string name="history_clear_on_exit_summary">Eliminar o histórico guardado quando toda a aplicação sair do ecrã</string>
+    <string name="recall_from_history">Do seu histórico</string>
+    <string name="recall_settings_title">Candy Recall</string>
+    <string name="recall_settings_summary">Guardar localmente texto legível de páginas normais para o poder pesquisar. Os separadores privados e o Link Peek nunca são incluídos.</string>
+    <string name="recall_excerpt_content_description">Texto correspondente da página: %1$s</string>
     <string name="action_clear_browsing_data">Limpar dados de navegação</string>
     <string name="clear_data_title">Limpar dados de navegação?</string>
     <string name="clear_data_message">Os cookies, o armazenamento dos sites, a cache e o histórico desta sessão serão eliminados.</string>

@@ -122,6 +122,7 @@ internal object ProtectionSettingsTestTags {
     const val UserCaWarning = "protection_settings_user_ca_warning"
     const val ExportAppData = "protection_settings_export_app_data"
     const val ImportAppData = "protection_settings_import_app_data"
+    const val Recall = "protection_settings_recall"
 }
 
 internal object BrowserSettingsTestTags {
@@ -153,6 +154,7 @@ internal fun SettingsScreen(
     searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
+    isRecallEnabled: Boolean,
     tabOverviewMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
     automaticTabSortingEnabled: Boolean,
@@ -181,6 +183,7 @@ internal fun SettingsScreen(
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
+    onRecallEnabledChanged: (Boolean) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
@@ -332,8 +335,10 @@ internal fun SettingsScreen(
                 SettingsDestination.ProtectionAndData -> ProtectionAndDataSettingsPage(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
+                    isRecallEnabled = isRecallEnabled,
                     trustsUserCertificates = trustsUserCertificates,
                     onBlockerSettingsChanged = onBlockerSettingsChanged,
+                    onRecallEnabledChanged = onRecallEnabledChanged,
                     onPrivacyXRay = onPrivacyXRay,
                     onPermissionRadar = onPermissionRadar,
                     onFilterStudio = onFilterStudio,
@@ -1257,8 +1262,10 @@ private fun SiteCapsulesSettingsPage(
 internal fun ProtectionAndDataSettingsPage(
     blockerSettings: BlockerSettings,
     blockedCount: Int,
+    isRecallEnabled: Boolean = false,
     trustsUserCertificates: Boolean,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
+    onRecallEnabledChanged: (Boolean) -> Unit = {},
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
     onFilterStudio: () -> Unit,
@@ -1363,6 +1370,14 @@ internal fun ProtectionAndDataSettingsPage(
             stringResource(R.string.settings_protection_disclaimer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.recall_settings_title),
+            subtitle = stringResource(R.string.recall_settings_summary),
+            checked = isRecallEnabled,
+            onCheckedChange = onRecallEnabledChanged,
+            modifier = Modifier.testTag(ProtectionSettingsTestTags.Recall),
         )
         Spacer(Modifier.height(16.dp))
         DataArchiveAction(

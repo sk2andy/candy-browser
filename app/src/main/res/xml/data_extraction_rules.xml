@@ -11,6 +11,7 @@
         <include domain="file" path="site_capsule_icons" />
     </cloud-backup>
     <device-transfer>
+        <!-- no_backup is intentionally outside this allowlist; Recall stays device-local. -->
         <include domain="sharedpref" path="." />
         <include domain="file" path="." />
         <include domain="database" path="." />

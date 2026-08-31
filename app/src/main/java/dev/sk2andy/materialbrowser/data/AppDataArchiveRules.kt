@@ -52,6 +52,9 @@ internal object AppDataArchiveRules {
     fun shouldExportTopLevel(name: String): Boolean =
         name.isNotEmpty() && name !in excludedTopLevelNames
 
+    fun shouldExportRelativePath(path: String): Boolean =
+        path !in excludedRelativePaths
+
     fun persistentRootNames(dataDirectory: File): Set<String> =
         dataDirectory.list()
             ?.asSequence()
@@ -97,6 +100,7 @@ internal object AppDataArchiveRules {
             return null
         }
         if (!shouldExportTopLevel(segments.first())) return null
+        if (!shouldExportRelativePath(relativePath)) return null
         return relativePath
     }
 
@@ -114,4 +118,10 @@ internal object AppDataArchiveRules {
     }
 
     private val WINDOWS_ABSOLUTE_PATH_PATTERN = Regex("[A-Za-z]:($|/.*)")
+    private val excludedRelativePaths = setOf(
+        "no_backup/candy_recall.db",
+        "no_backup/candy_recall.db-journal",
+        "no_backup/candy_recall.db-shm",
+        "no_backup/candy_recall.db-wal",
+    )
 }

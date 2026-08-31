@@ -33,6 +33,19 @@ class AppDataArchiveCodecTest {
         )
         Files.createDirectories(dataDirectory.resolve("databases/empty"))
         Files.write(dataDirectory.resolve("databases/browser.db"), byteArrayOf(0, 1, 2, 3))
+        Files.createDirectories(dataDirectory.resolve("no_backup/candy_trails"))
+        Files.write(
+            dataDirectory.resolve("no_backup/candy_trails/trail.json"),
+            "trail".toByteArray(StandardCharsets.UTF_8),
+        )
+        Files.write(
+            dataDirectory.resolve("no_backup/candy_recall.db"),
+            "sensitive recall text".toByteArray(StandardCharsets.UTF_8),
+        )
+        Files.write(
+            dataDirectory.resolve("no_backup/candy_recall.db-wal"),
+            "sensitive recall wal".toByteArray(StandardCharsets.UTF_8),
+        )
         Files.createDirectories(dataDirectory.resolve("cache"))
         Files.write(
             dataDirectory.resolve("cache/disposable"),
@@ -62,9 +75,11 @@ class AppDataArchiveCodecTest {
 
         val inspection = AppDataArchiveCodec.inspect(ByteArrayInputStream(archiveBytes))
         assertEquals(manifest(), inspection.manifest)
-        assertEquals(setOf("databases", "shared_prefs"), inspection.archivedRootNames)
+        assertEquals(setOf("databases", "no_backup", "shared_prefs"), inspection.archivedRootNames)
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("cache") })
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("app_textures") })
+        assertFalse(inspection.entries.any { entry -> entry.relativePath.contains("candy_recall.db") })
+        assertTrue(inspection.entries.any { entry -> entry.relativePath.endsWith("trail.json") })
 
         val target = temporaryFolder.newFolder("target").toPath()
         val extraction = AppDataArchiveCodec.extract(ByteArrayInputStream(archiveBytes), target)
@@ -78,6 +93,14 @@ class AppDataArchiveCodecTest {
         )
         assertArrayEquals(byteArrayOf(0, 1, 2, 3), Files.readAllBytes(target.resolve("databases/browser.db")))
         assertTrue(Files.isDirectory(target.resolve("databases/empty")))
+        assertEquals(
+            "trail",
+            String(
+                Files.readAllBytes(target.resolve("no_backup/candy_trails/trail.json")),
+                StandardCharsets.UTF_8,
+            ),
+        )
+        assertFalse(Files.exists(target.resolve("no_backup/candy_recall.db")))
         assertFalse(Files.exists(target.resolve("cache")))
     }
 
@@ -184,7 +207,7 @@ class AppDataArchiveCodecTest {
         val marker = "unique-payload-for-crc".toByteArray()
         val validArchive = storedZipOf(
             AppDataArchiveRules.MANIFEST_ENTRY_NAME to manifestJson(),
-            "data/no_backup/value.bin" to marker,
+            "data/files/value.bin" to marker,
         )
         val markerOffset = validArchive.indexOf(marker)
         assertTrue(markerOffset >= 0)

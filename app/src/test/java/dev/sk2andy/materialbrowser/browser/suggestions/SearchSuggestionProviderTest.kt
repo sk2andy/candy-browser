@@ -58,6 +58,7 @@ class SearchSuggestionProviderTest {
         assertTrue(request("candy browser"))
         assertFalse(request("example.com"))
         assertFalse(request("> reload"))
+        assertFalse(request(">recall candy browser"))
         assertFalse(request("candy", isIncognito = true))
         assertFalse(request("candy", provider = SearchSuggestionProvider.None))
         assertFalse(request("can", provider = SearchSuggestionProvider.SearXNG))

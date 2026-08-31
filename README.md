@@ -70,6 +70,8 @@ landscape-oriented previews for cover flow and compact grid layouts.
 - Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, Qwant, Kagi, Perplexity, ChatGPT, and configurable SearXNG search
 - Optional Google AI Mode routing through a toggleable address-bar logo, enabled from search settings
 - Address commands with `>` for tab, profile, cache, cookie, and navigation actions
+- **Candy Recall:** optional, profile-scoped local full-text search across visited pages from the
+  normal address input, History, or `>recall`, with no private-tab or cloud indexing
 - Background tabs, sharing, printing, external apps, assistant summaries, and built-in or external
   download managers
 - **Link Peek:** long-press a link to inspect it in a live, disposable preview without creating a

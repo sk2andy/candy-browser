@@ -22,6 +22,7 @@ import dev.sk2andy.materialbrowser.data.HistoryClearRequest
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import dev.sk2andy.materialbrowser.recall.RecallMatch
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -87,6 +88,40 @@ class HistoryScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(HistoryScreenTestTags.Search).performClick()
         composeRule.onNodeWithText("Personal page").assertIsDisplayed()
+    }
+
+    @Test
+    fun fullTextOnlyRecallMatchAppearsWithExcerpt() {
+        val match = RecallMatch(
+            profileId = "personal",
+            url = "https://example.com/remembered",
+            title = "Remembered page",
+            excerpt = "A matching excerpt from readable page text",
+            visitedAt = System.currentTimeMillis(),
+            score = 2.0,
+        )
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                HistoryScreen(
+                    profiles = listOf(BrowserProfile(id = "personal", emoji = "🏠")),
+                    activeProfileId = "personal",
+                    history = emptyList(),
+                    recallMatches = listOf(match),
+                    recordingMode = HistoryRecordingMode.Enabled,
+                    onRecordingModeChange = {},
+                    onDeleteEntries = {},
+                    onClearHistory = {},
+                    onOpenEntry = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HistoryScreenTestTags.Search).performClick()
+        composeRule.onNodeWithTag(HistoryScreenTestTags.SearchField).performTextInput("matching")
+
+        composeRule.onNodeWithText("Remembered page").assertIsDisplayed()
+        composeRule.onNodeWithText(match.excerpt).assertIsDisplayed()
     }
 
     @Test

@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.commands
 
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
+import dev.sk2andy.materialbrowser.recall.RecallMatch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -12,6 +13,9 @@ class AddressSubmissionRulesTest {
             "Reload",
             "Reloads this tab",
         ),
+    )
+    private val recall = AddressSuggestionItem.Recall(
+        RecallMatch("personal", "https://example.com", "Example", "match", 1L, 1.0),
     )
 
     @Test
@@ -48,6 +52,18 @@ class AddressSubmissionRulesTest {
         assertEquals(
             AddressSubmission.Select(navigation),
             AddressSubmissionRules.resolve("example", suggestions, 0),
+        )
+    }
+
+    @Test
+    fun `explicit recall submit selects local result and never navigates`() {
+        assertEquals(
+            AddressSubmission.Select(recall),
+            AddressSubmissionRules.resolve(">recall candy", listOf(recall), -1),
+        )
+        assertSame(
+            AddressSubmission.None,
+            AddressSubmissionRules.resolve(">recall missing", emptyList(), -1),
         )
     }
 }

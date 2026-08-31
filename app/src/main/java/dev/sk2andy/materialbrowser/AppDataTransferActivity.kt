@@ -21,6 +21,7 @@ import dev.sk2andy.materialbrowser.data.AppDataArchiveRestoreResult
 import dev.sk2andy.materialbrowser.data.AppDataArchiveRules
 import dev.sk2andy.materialbrowser.data.AppDataArchiveStaging
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
+import dev.sk2andy.materialbrowser.data.RecallRepository
 import java.io.File
 import java.io.FileInputStream
 import java.util.UUID
@@ -207,6 +208,9 @@ class AppDataTransferActivity : Activity() {
                     failure.failure == AppDataArchiveRestoreFailure.RollbackFailed
                 throw failure
             }
+            check(RecallRepository.deleteStorage(this)) {
+                "Imported data but could not clear excluded Recall storage"
+            }
             restoreApplied = true
             stagedFile.delete()
         } finally {
@@ -225,6 +229,9 @@ class AppDataTransferActivity : Activity() {
                 recoveryMarker = restoreRecoveryMarker(),
             ),
         )
+        check(RecallRepository.deleteStorage(this)) {
+            "Could not clear excluded Recall storage after import recovery"
+        }
     }
 
     private fun restoreRecoveryMarker() =

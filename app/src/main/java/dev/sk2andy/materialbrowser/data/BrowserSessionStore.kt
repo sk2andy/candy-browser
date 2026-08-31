@@ -546,6 +546,12 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_AI_MODE_TOGGLE_VISIBLE, visible).apply()
     }
 
+    fun loadRecallEnabled(): Boolean = preferences.getBoolean(KEY_RECALL_ENABLED, false)
+
+    fun saveRecallEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_RECALL_ENABLED, enabled).apply()
+    }
+
     fun loadSearchSuggestionProvider(): SearchSuggestionProvider =
         SearchSuggestionProvider.fromStableId(
             preferences.getString(KEY_SEARCH_SUGGESTION_PROVIDER, null),
@@ -840,6 +846,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_SEARXNG_INSTANCE_URL = "searxng_instance_url"
         const val KEY_SEARXNG_SUGGESTION_FALLBACK = "searxng_suggestion_fallback"
         const val KEY_AI_MODE_TOGGLE_VISIBLE = "ai_mode_toggle_visible"
+        const val KEY_RECALL_ENABLED = "recall_enabled"
         const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"

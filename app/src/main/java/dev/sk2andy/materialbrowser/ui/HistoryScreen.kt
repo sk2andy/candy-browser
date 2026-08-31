@@ -51,6 +51,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +75,8 @@ import dev.sk2andy.materialbrowser.data.BrowsingHistoryRules
 import dev.sk2andy.materialbrowser.data.HistoryClearRequest
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
+import dev.sk2andy.materialbrowser.data.HistoryRecallRules
+import dev.sk2andy.materialbrowser.recall.RecallMatch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -89,7 +92,9 @@ internal fun HistoryScreen(
     profiles: List<BrowserProfile>,
     activeProfileId: String,
     history: List<HistoryEntry>,
+    recallMatches: List<RecallMatch> = emptyList(),
     recordingMode: HistoryRecordingMode,
+    onRecallCriteriaChanged: (String, Set<String>) -> Unit = { _, _ -> },
     onRecordingModeChange: (HistoryRecordingMode) -> Unit,
     onDeleteEntries: (List<HistoryEntry>) -> Unit,
     onClearHistory: (HistoryClearRequest) -> Unit,
@@ -114,15 +119,29 @@ internal fun HistoryScreen(
     var searchVisible by rememberSaveable { mutableStateOf(false) }
     var clearConfirmationVisible by rememberSaveable { mutableStateOf(false) }
     val selectedProfiles = selectedProfileIds.toSet()
-    val visibleEntries = remember(history, selectedProfileIds, query) {
-        BrowsingHistoryRules.visibleEntries(history, selectedProfiles, query)
+    LaunchedEffect(query, selectedProfiles) {
+        onRecallCriteriaChanged(query, selectedProfiles)
+    }
+    val recallSnapshot = remember(history, selectedProfileIds, query, recallMatches) {
+        HistoryRecallRules.merge(history, selectedProfiles, query, recallMatches)
+    }
+    val visibleEntries = recallSnapshot.entries
+    val clearableHistory = remember(history, recallMatches) {
+        (history + recallMatches.map { match ->
+            HistoryEntry(
+                url = match.url,
+                title = match.title,
+                lastVisitedAt = match.visitedAt,
+                profileId = match.profileId,
+            )
+        }).distinctBy(BrowsingHistoryRules::entryKey)
     }
     val sections = remember(visibleEntries, zoneId) {
         BrowsingHistoryRules.sections(visibleEntries, zoneId)
     }
-    val selectedEntries = remember(history, selectedEntryKeys) {
+    val selectedEntries = remember(visibleEntries, selectedEntryKeys) {
         val keys = selectedEntryKeys.toSet()
-        history.filter { entry -> BrowsingHistoryRules.entryKey(entry) in keys }
+        visibleEntries.filter { entry -> BrowsingHistoryRules.entryKey(entry) in keys }
     }
     val today = remember { LocalDate.now(zoneId) }
 
@@ -189,7 +208,9 @@ internal fun HistoryScreen(
                         }
                         TextButton(
                             onClick = { clearConfirmationVisible = true },
-                            enabled = history.any { entry -> entry.profileId in selectedProfiles },
+                            enabled = clearableHistory.any { entry ->
+                                entry.profileId in selectedProfiles
+                            },
                             modifier = Modifier.testTag(HistoryScreenTestTags.Clear),
                         ) {
                             Text(stringResource(R.string.history_clear))
@@ -331,6 +352,7 @@ internal fun HistoryScreen(
                                 Instant.ofEpochMilli(entry.lastVisitedAt).atZone(zoneId),
                             ),
                             profileEmoji = profileEmoji.takeIf { selectedProfiles.size > 1 },
+                            excerpt = recallSnapshot.excerptsByEntryKey[entryKey],
                             selected = entryKey in selectedEntryKeys,
                             onSelectedChange = { selected ->
                                 val updated = ArrayList(selectedEntryKeys)
@@ -350,7 +372,7 @@ internal fun HistoryScreen(
         HistoryClearDialog(
             profiles = profiles,
             initialProfileIds = selectedProfiles,
-            history = history,
+            history = clearableHistory,
             zoneId = zoneId,
             dateFormatter = dateFormatter,
             timeFormatter = timeFormatter,
@@ -793,6 +815,7 @@ private fun HistoryEntryRow(
     entry: HistoryEntry,
     time: String,
     profileEmoji: String?,
+    excerpt: String?,
     selected: Boolean,
     onSelectedChange: (Boolean) -> Unit,
     onOpen: () -> Unit,
@@ -806,11 +829,21 @@ private fun HistoryEntryRow(
             )
         },
         supportingContent = {
-            Text(
-                text = BrowserUriPolicy.displayHttpHost(entry.url),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column {
+                Text(
+                    text = BrowserUriPolicy.displayHttpHost(entry.url),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                excerpt?.takeIf(String::isNotBlank)?.let { value ->
+                    Text(
+                        text = value,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         },
         leadingContent = {
             Checkbox(

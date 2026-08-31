@@ -14,6 +14,7 @@
 | Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
 | App data archive | SAF launch and confirmation stay in the activity; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
 | Android backup | Encrypted cloud and device-transfer inclusion policy | `res/xml/data_extraction_rules.xml`, [`app-data-archive.md`](app-data-archive.md#android-auto-backup) |
+| Candy Recall | Disabled-by-default local readable-page indexing and clear-on-disable behavior | `BrowserSessionStore`, `RecallRepository`, [`recall.md`](recall.md) |
 
 ## Choices
 
@@ -23,6 +24,7 @@
 | Color palette | Material You, Candy, neutral | Material You |
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
+| Candy Recall | Off, on | Off |
 
 ### Surface semantics
 
@@ -58,6 +60,9 @@ Frosted exposes three persisted controls while selected:
   Link Peek closes before its ephemeral preview WebView is released.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
 - Each top-level settings destination has a distinct leading icon on the settings home page.
+- Candy Recall is an explicit opt-in under Protection & data. Its summary states that readable text
+  from regular pages is stored locally for search and private tabs are never included. Turning it
+  off clears stored Recall text; ordinary History remains governed by its own settings.
 - The Browser setting for the draggable page scroll bar is global and defaults off. When enabled,
   native WebView scroll bars are replaced by a touch-sized thumb that appears during scrolling,
   supports direct dragging, and fades after interaction.
