@@ -4,7 +4,7 @@
 
 | Feature | Start here | Owns |
 | --- | --- | --- |
-| Browsing and gestures | [`browsing/README.md`](browsing/README.md) | WebView runtime, address flow, commands, Link Peek, browser actions |
+| Browsing and gestures | [`browsing/README.md`](browsing/README.md) | WebView runtime, address flow, commands, Candy Recall, Link Peek, browser actions |
 | Tabs and profiles | [`tabs-and-profiles/README.md`](tabs-and-profiles/README.md) | Tab lifecycle, previews, persistence, snoozing, profile isolation |
 | Candy Trails | [`candy-trails/README.md`](candy-trails/README.md) | Journey graph, history reconciliation, forks, persistence, graph UI |
 | Site Capsules | [`site-capsules/README.md`](site-capsules/README.md) | Capsule model, navigation boundary, profile ownership, shortcuts |

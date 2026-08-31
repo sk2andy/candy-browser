@@ -28,6 +28,7 @@ internal data class HistoryMutationResult(
 internal class BrowsingHistoryRepository private constructor(context: Context) {
     private val appContext = context.applicationContext
     private val store = BrowserSessionStore(appContext)
+    private val recallRepository = RecallRepository.get(appContext)
 
     @Synchronized
     fun snapshot(): List<HistoryEntry> = store.loadHistory()
@@ -42,31 +43,49 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
     }
 
     @Synchronized
-    fun remove(entries: Collection<HistoryEntry>): List<HistoryEntry> =
-        mutate { current -> BrowsingHistoryRules.removeEntries(current, entries) }
+    fun remove(entries: Collection<HistoryEntry>): List<HistoryEntry> {
+        val current = store.loadHistory()
+        if (!recallRepository.deleteEntries(entries)) return current
+        return mutate(current) { history -> BrowsingHistoryRules.removeEntries(history, entries) }
+    }
 
     @Synchronized
     fun clearProfiles(
         profileIds: Set<String>,
         trailTabIds: Set<String> = emptySet(),
-    ): HistoryMutationResult = mutateWithTrailRedaction(trailTabIds) { current ->
-        BrowsingHistoryRules.removeProfiles(current, profileIds)
+        recallAlreadyDeleted: Boolean = false,
+    ): HistoryMutationResult {
+        if (!recallAlreadyDeleted && !recallRepository.deleteProfiles(profileIds)) {
+            return HistoryMutationResult(history = store.loadHistory(), committed = false)
+        }
+        return mutateWithTrailRedaction(trailTabIds) { current ->
+            BrowsingHistoryRules.removeProfiles(current, profileIds)
+        }
     }
 
     @Synchronized
     fun clearRange(
         request: HistoryClearRequest,
         trailTabIds: Set<String> = emptySet(),
-    ): HistoryMutationResult = mutateWithTrailRedaction(
-        trailTabIds = trailTabIds,
-        sinceInclusiveMillis = request.sinceInclusiveMillis,
-        untilExclusiveMillis = request.untilExclusiveMillis,
-    ) { current ->
-        BrowsingHistoryRules.removeRange(current, request)
+    ): HistoryMutationResult {
+        if (!recallRepository.deleteRange(request)) {
+            return HistoryMutationResult(history = store.loadHistory(), committed = false)
+        }
+        return mutateWithTrailRedaction(
+            trailTabIds = trailTabIds,
+            sinceInclusiveMillis = request.sinceInclusiveMillis,
+            untilExclusiveMillis = request.untilExclusiveMillis,
+        ) { current ->
+            BrowsingHistoryRules.removeRange(current, request)
+        }
     }
 
     @Synchronized
-    fun clear(): List<HistoryEntry> = mutate { emptyList() }
+    fun clear(): List<HistoryEntry> {
+        val current = store.loadHistory()
+        if (!recallRepository.clear()) return current
+        return mutate(current) { emptyList() }
+    }
 
     @Synchronized
     fun recordingMode(): HistoryRecordingMode = store.loadHistoryRecordingMode()
@@ -82,7 +101,11 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
     fun beginSession() {
         val clearsOnExit = recordingMode() == HistoryRecordingMode.ClearOnExit
         if (clearsOnExit && store.loadHistorySessionActive()) {
-            saveClearedHistoryWithTrailRedaction(sessionActive = true)
+            recallRepository.clearAsync()
+            saveClearedHistoryWithTrailRedaction(
+                sessionActive = true,
+                clearRecall = false,
+            )
         } else {
             store.saveHistorySessionActive(clearsOnExit)
         }
@@ -93,14 +116,42 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
         store.saveHistorySessionActive(recordingMode() == HistoryRecordingMode.ClearOnExit)
     }
 
-    @Synchronized
-    fun clearOnExit(): Boolean {
-        if (recordingMode() != HistoryRecordingMode.ClearOnExit) return false
-        return saveClearedHistoryWithTrailRedaction(sessionActive = false)
+    fun clearOnExit(): Boolean = clearOnExit(
+        isSessionCurrent = { true },
+        untilExclusiveMillis = Long.MAX_VALUE,
+    )
+
+    fun clearOnExit(
+        isSessionCurrent: () -> Boolean,
+        untilExclusiveMillis: Long,
+    ): Boolean {
+        val shouldClear = synchronized(this) {
+            recordingMode() == HistoryRecordingMode.ClearOnExit && isSessionCurrent()
+        }
+        if (!shouldClear || !recallRepository.clear()) return false
+        return synchronized(this) {
+            val sessionStillCurrent = isSessionCurrent()
+            val retainedHistory = if (sessionStillCurrent) {
+                emptyList()
+            } else {
+                store.loadHistory().filter { entry ->
+                    entry.lastVisitedAt >= untilExclusiveMillis
+                }
+            }
+            saveClearedHistoryWithTrailRedaction(
+                sessionActive = !sessionStillCurrent &&
+                    recordingMode() == HistoryRecordingMode.ClearOnExit,
+                clearRecall = false,
+                retainedHistory = retainedHistory,
+                untilExclusiveMillis = untilExclusiveMillis,
+            )
+        }
     }
 
-    private fun mutate(transform: (List<HistoryEntry>) -> List<HistoryEntry>): List<HistoryEntry> {
-        val current = store.loadHistory()
+    private fun mutate(
+        current: List<HistoryEntry> = store.loadHistory(),
+        transform: (List<HistoryEntry>) -> List<HistoryEntry>,
+    ): List<HistoryEntry> {
         val updated = transform(current)
         return if (updated == current || store.commitHistory(updated)) updated else current
     }
@@ -132,17 +183,23 @@ internal class BrowsingHistoryRepository private constructor(context: Context) {
         )
     }
 
-    private fun saveClearedHistoryWithTrailRedaction(sessionActive: Boolean): Boolean {
+    private fun saveClearedHistoryWithTrailRedaction(
+        sessionActive: Boolean,
+        clearRecall: Boolean = true,
+        retainedHistory: List<HistoryEntry> = emptyList(),
+        untilExclusiveMillis: Long = Long.MAX_VALUE,
+    ): Boolean {
+        if (clearRecall && !recallRepository.clear()) return false
         val redaction = trailRedaction(
             tabIds = persistentRegularTabIds(),
             sinceInclusiveMillis = Long.MIN_VALUE,
-            untilExclusiveMillis = Long.MAX_VALUE,
+            untilExclusiveMillis = untilExclusiveMillis,
         )
         return if (redaction == null) {
-            store.saveHistoryAndSessionState(emptyList(), sessionActive)
+            store.saveHistoryAndSessionState(retainedHistory, sessionActive)
         } else {
             store.saveHistoryAndTrailRedaction(
-                history = emptyList(),
+                history = retainedHistory,
                 redaction = redaction,
                 sessionActive = sessionActive,
             )

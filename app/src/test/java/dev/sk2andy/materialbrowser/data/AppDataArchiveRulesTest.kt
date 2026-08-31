@@ -14,7 +14,7 @@ class AppDataArchiveRulesTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
-    fun `persistent roots exclude only disposable app directories`() {
+    fun `persistent roots retain non Recall no backup data`() {
         val dataDirectory = temporaryFolder.newFolder("data")
         listOf(
             "cache",
@@ -32,12 +32,30 @@ class AppDataArchiveRulesTest {
             AppDataArchiveRules.persistentRootNames(dataDirectory),
         )
         assertFalse(AppDataArchiveRules.shouldExportTopLevel("cache"))
+        assertTrue(AppDataArchiveRules.shouldExportTopLevel("no_backup"))
         assertFalse(
             AppDataArchiveRules.shouldExportTopLevel(
                 AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME,
             ),
         )
         assertTrue(AppDataArchiveRules.shouldExportTopLevel("cache_nested"))
+    }
+
+    @Test
+    fun `archive excludes only Recall files from no backup`() {
+        listOf(
+            "candy_recall.db",
+            "candy_recall.db-journal",
+            "candy_recall.db-shm",
+            "candy_recall.db-wal",
+        ).forEach { fileName ->
+            assertFalse(
+                AppDataArchiveRules.shouldExportRelativePath("no_backup/$fileName"),
+            )
+        }
+        assertTrue(
+            AppDataArchiveRules.shouldExportRelativePath("no_backup/candy_trails/trail.json"),
+        )
     }
 
     @Test
@@ -63,6 +81,7 @@ class AppDataArchiveRulesTest {
             "data\\settings.xml",
             "data/C:/settings.xml",
             "data/cache/settings.xml",
+            "data/no_backup/candy_recall.db",
             "data/",
             "data/settings.xml/",
         ).forEach { unsafePath ->

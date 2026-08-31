@@ -287,6 +287,15 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun recallDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadRecallEnabled())
+        store.saveRecallEnabled(true)
+        assertTrue(store.loadRecallEnabled())
+    }
+
+    @Test
     fun historyProfileAndRecordingModeRoundTrip() {
         val store = BrowserSessionStore(context)
         val entry = HistoryEntry(

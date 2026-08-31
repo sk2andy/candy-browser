@@ -201,6 +201,7 @@ import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
 import dev.sk2andy.materialbrowser.data.PendingCandyTrailRedaction
+import dev.sk2andy.materialbrowser.data.RecallRepository
 import dev.sk2andy.materialbrowser.data.SiteCapsuleIconStore
 import dev.sk2andy.materialbrowser.data.SiteCapsuleStore
 import dev.sk2andy.materialbrowser.data.SnoozeRestoreRules
@@ -234,6 +235,10 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
+import dev.sk2andy.materialbrowser.recall.RecallExtractionIdentity
+import dev.sk2andy.materialbrowser.recall.RecallExtractionScript
+import dev.sk2andy.materialbrowser.recall.RecallMatch
+import dev.sk2andy.materialbrowser.recall.RecallRules
 import java.util.ArrayDeque
 import java.util.UUID
 import java.util.WeakHashMap
@@ -422,6 +427,8 @@ class BrowserController(
         private set
     var isAiModeToggleVisible by mutableStateOf(false)
         private set
+    var isRecallEnabled by mutableStateOf(false)
+        private set
     var searchSuggestionProvider by mutableStateOf(SearchSuggestionProvider.DuckDuckGo)
         private set
     var dismissResistancePercent by mutableIntStateOf(40)
@@ -609,6 +616,7 @@ class BrowserController(
     private val linkPeekPreviewAssignments = mutableMapOf<WebView, WebViewProfileAssignment>()
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
     private val externalNavigationGrantExpirations = mutableMapOf<String, Long>()
     private val mainFrameTlsNavigations = mutableMapOf<String, MainFrameTlsNavigation>()
     private var webContentRequestGeneration = 0L
@@ -632,6 +640,9 @@ class BrowserController(
     private var incognitoWebViewProfileName = newIncognitoWebViewProfileName()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val fileChooserValidationExecutor = Executors.newSingleThreadExecutor()
+    private val historyMutationExecutor = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "browser-history-mutation")
+    }
     private val pendingBlockedCounts = ConcurrentHashMap<String, AtomicInteger>()
     private val pendingPrivacyTabs = ConcurrentHashMap.newKeySet<String>()
     private val reportedAllowedDecisions = ConcurrentHashMap<String, MutableSet<String>>()
@@ -667,6 +678,7 @@ class BrowserController(
     private val pendingCandyTrailTargets = mutableMapOf<String, String>()
     private val candyTrailGenerations = mutableMapOf<String, Int>()
     private val capsuleTabIds = mutableMapOf<String, String>()
+    private val pendingRecallProfileDeletions = mutableSetOf<String>()
     var activeCapsuleTabId: String? = null
         private set
     private val pendingCandyTrailRestoreIds = mutableSetOf<String>()
@@ -676,6 +688,7 @@ class BrowserController(
     private var candyTrailEpoch = 0
     private val store = BrowserSessionStore(activity)
     private val historyRepository = BrowsingHistoryRepository.get(activity)
+    private val recallRepository = RecallRepository.get(activity)
     private val snoozedTabStore = SnoozedTabStore(activity)
     private val snoozeScheduler = SnoozeScheduler(activity)
     private val snoozeRestoreCallback: (Long) -> Unit = { nowMillis ->
@@ -1308,6 +1321,8 @@ class BrowserController(
         residentTabLimit = store.loadResidentTabLimit()
         searchEngine = store.loadSearchEngine()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
+        isRecallEnabled = store.loadRecallEnabled()
+        if (!isRecallEnabled) recallRepository.clearAsync()
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
@@ -2392,6 +2407,39 @@ class BrowserController(
             }
             if (!deleteProfile(capsule.profileId, capsuleId)) return false
         }
+        return finishSiteCapsuleDeletion(capsuleId)
+    }
+
+    fun deleteSiteCapsuleAsync(
+        capsuleId: String,
+        deleteDedicatedProfileConfirmed: Boolean,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        val capsule = siteCapsules.firstOrNull { it.id == capsuleId }
+        if (capsule == null) {
+            onComplete(false)
+            return
+        }
+        val plan = CapsuleDeletionRules.plan(
+            capsule = capsule,
+            remainingCapsules = siteCapsules.filterNot { it.id == capsuleId },
+            deleteDedicatedProfileConfirmed = deleteDedicatedProfileConfirmed,
+        )
+        if (!plan.deleteDedicatedProfile) {
+            onComplete(finishSiteCapsuleDeletion(capsuleId))
+            return
+        }
+        if (profiles.size == 1 && profiles.single().id != DEFAULT_PROFILE_ID) {
+            profiles += DEFAULT_BROWSER_PROFILE
+        }
+        deleteProfileAsync(capsule.profileId, capsuleId) { deleted ->
+            onComplete(deleted && finishSiteCapsuleDeletion(capsuleId))
+        }
+    }
+
+    private fun finishSiteCapsuleDeletion(capsuleId: String): Boolean {
+        val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return false
+        val remaining = siteCapsules.filterNot { it.id == capsuleId }
         if (activeCapsuleId == capsuleId) leaveSiteCapsule()
         capsuleTabIds.remove(capsuleId)
         siteCapsules.clear()
@@ -2869,7 +2917,42 @@ class BrowserController(
         return true
     }
 
-    fun deleteProfile(profileId: String, excludedCapsuleId: String? = null): Boolean {
+    fun deleteProfile(profileId: String, excludedCapsuleId: String? = null): Boolean =
+        deleteProfileInternal(
+            profileId = profileId,
+            excludedCapsuleId = excludedCapsuleId,
+            recallAlreadyDeleted = false,
+        )
+
+    fun deleteProfileAsync(
+        profileId: String,
+        excludedCapsuleId: String? = null,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        if (profiles.size <= 1 || profiles.none { it.id == profileId }) {
+            onComplete(false)
+            return
+        }
+        if (!pendingRecallProfileDeletions.add(profileId)) {
+            onComplete(false)
+            return
+        }
+        recallRepository.deleteProfilesAsync(setOf(profileId)) { deleted ->
+            val result = deleted && !destroyed && deleteProfileInternal(
+                profileId = profileId,
+                excludedCapsuleId = excludedCapsuleId,
+                recallAlreadyDeleted = true,
+            )
+            pendingRecallProfileDeletions.remove(profileId)
+            onComplete(result)
+        }
+    }
+
+    private fun deleteProfileInternal(
+        profileId: String,
+        excludedCapsuleId: String?,
+        recallAlreadyDeleted: Boolean,
+    ): Boolean {
         if (profiles.size <= 1) return false
         val profileIndex = profiles.indexOfFirst { it.id == profileId }
         if (profileIndex < 0) return false
@@ -2886,6 +2969,7 @@ class BrowserController(
         val historyMutation = historyRepository.clearProfiles(
             profileIds = setOf(profileId),
             trailTabIds = removedProfileTrailTabIds,
+            recallAlreadyDeleted = recallAlreadyDeleted,
         )
         if (!historyMutation.committed) return false
         if (historyMutation.history.size != history.size) {
@@ -3734,8 +3818,19 @@ class BrowserController(
     fun addressSuggestionItems(
         query: String,
         searchQueries: List<String> = emptyList(),
+        recallMatches: List<RecallMatch> = emptyList(),
         limit: Int = 10,
     ): List<AddressSuggestionItem> {
+        if (RecallRules.isExplicitCommand(query)) {
+            return AddressSuggestionComposer.compose(
+                query = query,
+                navigation = emptyList(),
+                commands = emptyList(),
+                searchQueries = emptyList(),
+                recallMatches = recallMatches,
+                limit = limit,
+            )
+        }
         val duplicateTabIds = TabDuplicateRules.tabIdsToClose(activeTabs, selectedTabId)
         val expiredTabCount = TabRetentionRules.expiredTabIds(
             tabs = tabs,
@@ -3775,8 +3870,43 @@ class BrowserController(
             navigation = navigationMatches,
             commands = commandMatches,
             searchQueries = searchQueries,
+            recallMatches = recallMatches,
             limit = if (CommandMatcher.isExplicitCommandQuery(query)) definitions.size else limit,
         )
+    }
+
+    fun searchRecallForAddress(query: String, onComplete: (List<RecallMatch>) -> Unit) {
+        val tab = selectedTab
+        val recallQuery = if (RecallRules.isExplicitCommand(query)) {
+            RecallRules.explicitQuery(query)
+        } else {
+            RecallRules.addressQuery(query)
+        }
+        if (!isRecallEnabled || tab.isIncognito || recallQuery == null) {
+            onComplete(emptyList())
+            return
+        }
+        val expectedTabId = tab.id
+        val expectedProfileId = tab.profileId
+        val expectedInput = query
+        val limit = if (RecallRules.isExplicitCommand(query)) {
+            RecallRules.MAX_COMMAND_RESULTS
+        } else {
+            RecallRules.MAX_ADDRESS_RESULTS
+        }
+        recallRepository.search(
+            profileIds = setOf(expectedProfileId),
+            query = recallQuery,
+            limit = limit,
+        ) { matches ->
+            val current = tabs.firstOrNull { candidate -> candidate.id == expectedTabId }
+            val accepted = isRecallEnabled &&
+                !destroyed &&
+                selectedTabId == expectedTabId &&
+                current?.isIncognito == false &&
+                current.profileId == expectedProfileId
+            onComplete(if (accepted && expectedInput == query) matches else emptyList())
+        }
     }
 
     fun closeDuplicateTabs(confirmedTabIds: List<String>): Int {
@@ -4239,6 +4369,13 @@ class BrowserController(
         store.saveAiModeToggleVisible(visible)
     }
 
+    fun updateRecallEnabled(enabled: Boolean) {
+        if (isRecallEnabled == enabled) return
+        isRecallEnabled = enabled
+        store.saveRecallEnabled(enabled)
+        if (!enabled) recallRepository.clearAsync()
+    }
+
     fun updateSearchSuggestionProvider(provider: SearchSuggestionProvider) {
         searchSuggestionProvider = provider
         store.saveSearchSuggestionProvider(provider)
@@ -4410,7 +4547,7 @@ class BrowserController(
         }
         tabs.indices.forEach { index -> tabs[index] = tabs[index].copy(blockedCount = 0) }
         history.clear()
-        historyRepository.clear()
+        historyMutationExecutor.execute(historyRepository::clear)
         snoozedTabs.clear()
         snoozedTabStore.save(emptyList())
         snoozeScheduler.schedule(emptyList())
@@ -4636,6 +4773,7 @@ class BrowserController(
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
         fileChooserValidationExecutor.shutdownNow()
+        historyMutationExecutor.shutdown()
         activePermissions.clear()
         permissionRepository.clearPrivateSession()
         mainHandler.removeCallbacks(blockerCountFlush)
@@ -4674,6 +4812,7 @@ class BrowserController(
         pendingConsentCssUrls.clear()
         edgeToEdgePages.clear()
         navigationGenerations.clear()
+        committedRecallPages.clear()
         externalNavigationGrantExpirations.clear()
         mainFrameTlsNavigations.clear()
         clearIncognitoProfile()
@@ -4802,6 +4941,7 @@ class BrowserController(
         webViewProfileKeys.remove(tabId)
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
+        committedRecallPages.remove(tabId)
         externalNavigationGrantExpirations.remove(tabId)
         mainFrameTlsNavigations.remove(tabId)
         pageUrls.remove(tabId)
@@ -4985,6 +5125,7 @@ class BrowserController(
             }
             if (handlePendingPopunderOpenerNavigation(tabId, view, url)) return
             beginMainFrameTlsNavigation(tabId, view, url)
+            committedRecallPages.remove(tabId)
             userScriptRuntime.clearMenuCommands(view)
             clearWebMediaForTab(tabId)
             fullscreenVideoSession
@@ -5019,6 +5160,7 @@ class BrowserController(
 
         override fun onPageCommitVisible(view: WebView, url: String) {
             if (isQuarantinedPopup(tabId)) return
+            recordCommittedRecallPage(tabId, view, url)
             detectPageEdgeToEdge(tabId, view)
             injectCookieConsentCss(tabId, view, url)
             injectForcedVerticalScrollFallback(tabId, view, url)
@@ -5042,6 +5184,7 @@ class BrowserController(
                 )
             }
             recordHistory(tabId, url, title)
+            capturePageForRecall(tabId, view, url)
             if (view.url == url && pageUrls[tabId] == url) {
                 updateCandyTrailPage(tabId, url, title)
             }
@@ -5236,6 +5379,7 @@ class BrowserController(
             removeUserScripts(view)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
+            committedRecallPages.remove(tabId)
             externalNavigationGrantExpirations.remove(tabId)
             mainFrameTlsNavigations.remove(tabId)
             candyTrailHistoryBindings.remove(tabId)
@@ -7743,6 +7887,7 @@ class BrowserController(
     }
 
     private fun updateCandyTrailPage(tabId: String, url: String, title: String) {
+        if (!isActivityStarted) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (tabId in suppressedCandyTrailTabIds || pageUrls[tabId] != url) return
         val nowMillis = System.currentTimeMillis()
@@ -7779,6 +7924,7 @@ class BrowserController(
     }
 
     private fun recordHistory(tabId: String, url: String, title: String) {
+        if (!isActivityStarted) return
         val tab = tabs.firstOrNull { it.id == tabId }?.takeUnless(BrowserTab::isIncognito)
             ?: return
         val updated = historyRepository.record(
@@ -7792,6 +7938,80 @@ class BrowserController(
         if (updated == history) return
         history.clear()
         history += updated
+    }
+
+    private fun capturePageForRecall(tabId: String, view: WebView, url: String) {
+        if (!isActivityStarted || !isRecallEnabled) return
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
+            ?.takeUnless(BrowserTab::isIncognito)
+            ?: return
+        if (tab.profileId in pendingRecallProfileDeletions) return
+        val canonicalUrl = RecallRules.canonicalUrl(url) ?: return
+        val generation = navigationGenerations[tabId] ?: return
+        if (
+            webViews[tabId] !== view ||
+            RecallRules.canonicalUrl(pageUrls[tabId].orEmpty()) != canonicalUrl
+        ) {
+            return
+        }
+        val identity = RecallExtractionIdentity(
+            tabId = tabId,
+            profileId = tab.profileId,
+            url = canonicalUrl,
+            navigationGeneration = generation,
+        )
+        if (committedRecallPages[tabId] != identity) return
+        val visitedAt = System.currentTimeMillis()
+        val cleanupEpoch = recallRepository.captureCleanupEpoch()
+        view.evaluateJavascript(RecallExtractionScript.javascript) { result ->
+            val currentTab = tabs.firstOrNull { candidate -> candidate.id == tabId }
+            val actualIdentity = currentTab?.let { current ->
+                RecallExtractionIdentity(
+                    tabId = current.id,
+                    profileId = current.profileId,
+                    url = RecallRules.canonicalUrl(pageUrls[tabId].orEmpty()).orEmpty(),
+                    navigationGeneration = navigationGenerations[tabId] ?: -1,
+                )
+            }
+            if (
+                destroyed ||
+                currentTab == null ||
+                !RecallRules.isCurrent(
+                    expected = identity,
+                    actual = actualIdentity,
+                    isActivityStarted = isActivityStarted,
+                    enabled = isRecallEnabled,
+                    isPrivate = currentTab.isIncognito,
+                    webViewMatches = webViews[tabId] === view &&
+                        RecallRules.canonicalUrl(view.url.orEmpty()) == canonicalUrl,
+                )
+            ) {
+                return@evaluateJavascript
+            }
+            recallRepository.indexExtracted(
+                webViewResult = result,
+                profileId = identity.profileId,
+                expectedUrl = identity.url,
+                expectedCleanupEpoch = cleanupEpoch,
+                visitedAt = visitedAt,
+            )
+        }
+    }
+
+    private fun recordCommittedRecallPage(tabId: String, view: WebView, url: String) {
+        if (!isActivityStarted) return
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
+            ?.takeUnless(BrowserTab::isIncognito)
+            ?: return
+        val canonicalUrl = RecallRules.canonicalUrl(url) ?: return
+        val generation = navigationGenerations[tabId] ?: return
+        if (webViews[tabId] !== view) return
+        committedRecallPages[tabId] = RecallExtractionIdentity(
+            tabId = tabId,
+            profileId = tab.profileId,
+            url = canonicalUrl,
+            navigationGeneration = generation,
+        )
     }
 
     internal fun reloadHistory() {

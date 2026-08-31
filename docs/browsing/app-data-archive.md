@@ -19,8 +19,9 @@ again while extracting.
 
 The exporter walks the app data directory rather than maintaining a list of individual
 settings. New SharedPreferences, file stores, databases and WebView profile files therefore
-join future exports automatically. Top-level `cache`, `code_cache`, `lib` and `app_textures`
-are excluded as transient or installed artifacts.
+join future exports automatically unless their owner adds an explicit archive-path exclusion.
+Top-level `cache`, `code_cache`, `lib` and `app_textures` are excluded. Import path validation
+and restore-root discovery enforce the same exclusions.
 
 ## Included data
 
@@ -35,6 +36,12 @@ Private in-memory state, Android runtime permissions, default-browser role, noti
 settings, system password/passkey stores, public downloads and APK assets are not portable
 app data and are not archived. Export is blocked while private tabs exist so an active
 incognito WebView profile cannot enter the ZIP.
+
+Candy Recall stores readable page text in `no_backup/candy_recall.db`. Manual export and import
+rules reject that database and its SQLite journal/WAL sidecars by exact relative path while
+preserving unrelated persistent `no_backup` stores. Imported History does not silently fetch or
+reconstruct Recall text. Successful import and interrupted-import recovery clear any pre-existing
+local Recall index so old page text cannot coexist with imported History.
 
 ## Safety and compatibility
 
@@ -72,8 +79,10 @@ Capsules. This covers settings, domain exceptions, regular tabs, snoozes and Fil
 state. Rules and userscripts migrate once from `noBackupFilesDir` to `filesDir` so Android can
 include them.
 
-Device-to-device transfer additionally includes all `filesDir` and database content. Raw
-WebView profiles are deliberately excluded from automatic backup: they contain login tokens,
+Device-to-device transfer additionally includes all `filesDir` and database content. Android's
+`noBackupFilesDir` remains outside automatic backup and transfer, so Candy Recall text stays on
+its source device. Raw WebView profiles are deliberately excluded from automatic backup: they
+contain login tokens,
 are provider-specific and can exceed Android's 25 MB cloud quota. The manual ZIP remains the
 full, user-controlled route for cookies and website storage. Auto Backup timing and restore
 availability are controlled by Android and the active backup transport.

@@ -146,6 +146,10 @@
     <string name="history_save_summary">Keep regular browsing visits on this device</string>
     <string name="history_clear_on_exit_title">Clear when Candy closes</string>
     <string name="history_clear_on_exit_summary">Delete saved history when the whole app leaves the screen</string>
+    <string name="recall_from_history">From your history</string>
+    <string name="recall_settings_title">Candy Recall</string>
+    <string name="recall_settings_summary">Store readable text from regular pages locally so you can search it. Private tabs and Link Peek are never included.</string>
+    <string name="recall_excerpt_content_description">Matching page text: %1$s</string>
     <string name="action_clear_browsing_data">Clear browsing data</string>
     <string name="clear_data_title">Clear browsing data?</string>
     <string name="clear_data_message">Cookies, site storage, cache, and this session’s history will be deleted.</string>

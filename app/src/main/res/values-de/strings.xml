@@ -140,6 +140,10 @@
     <string name="history_save_summary">Normale Browserbesuche auf diesem Gerät behalten</string>
     <string name="history_clear_on_exit_title">Beim Schließen von Candy löschen</string>
     <string name="history_clear_on_exit_summary">Gespeicherten Verlauf löschen, wenn die gesamte App den Bildschirm verlässt</string>
+    <string name="recall_from_history">Aus deinem Verlauf</string>
+    <string name="recall_settings_title">Candy Recall</string>
+    <string name="recall_settings_summary">Lesbaren Text normaler Seiten lokal speichern, damit du ihn durchsuchen kannst. Private Tabs und Link Peek werden nie einbezogen.</string>
+    <string name="recall_excerpt_content_description">Passender Seitentext: %1$s</string>
     <string name="action_clear_browsing_data">Browserdaten löschen</string>
     <string name="clear_data_title">Browserdaten löschen?</string>
     <string name="clear_data_message">Cookies, Website-Speicher, Cache und Verlauf dieser Sitzung werden gelöscht.</string>

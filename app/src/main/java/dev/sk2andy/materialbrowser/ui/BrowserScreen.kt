@@ -314,6 +314,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSession
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.recall.RecallMatch
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
@@ -325,11 +326,13 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+import kotlin.coroutines.resume
 
 private data class TabHandoff(
     val tabId: String,
@@ -343,6 +346,7 @@ private data class TabHandoff(
 internal object AddressSuggestionTestTags {
     fun searchRow(query: String): String = "address_search_suggestion:$query"
     fun fillSearch(query: String): String = "address_search_suggestion_fill:$query"
+    fun recallRow(url: String): String = "address_recall_suggestion:$url"
 }
 
 private data class TabExitHero(
@@ -445,6 +449,7 @@ internal fun BrowserScreen(
     var pendingCapsuleDelete by remember { mutableStateOf<SiteCapsule?>(null) }
     var addressValue by remember { mutableStateOf(TextFieldValue()) }
     var remoteSearchSuggestions by remember { mutableStateOf(emptyList<String>()) }
+    var localRecallMatches by remember { mutableStateOf(emptyList<RecallMatch>()) }
     val searchSuggestionClient = remember { SearchSuggestionClient() }
     var highlightedSuggestionIndex by remember { mutableIntStateOf(-1) }
     var addressFocusNonce by remember { mutableIntStateOf(0) }
@@ -796,12 +801,29 @@ internal fun BrowserScreen(
             searxngSettings = controller.searxngSettings,
         )
     }
+    LaunchedEffect(
+        addressEditorVisible,
+        addressValue.text,
+        selectedTab.id,
+        selectedTab.profileId,
+        selectedTab.isIncognito,
+        controller.isRecallEnabled,
+    ) {
+        localRecallMatches = emptyList()
+        if (!addressEditorVisible) return@LaunchedEffect
+        localRecallMatches = suspendCancellableCoroutine { continuation ->
+            controller.searchRecallForAddress(addressValue.text) { matches ->
+                if (continuation.isActive) continuation.resume(matches)
+            }
+        }
+    }
     val suggestionItems by remember {
         derivedStateOf {
             if (addressEditorVisible) {
                 controller.addressSuggestionItems(
                     query = addressValue.text,
                     searchQueries = remoteSearchSuggestions,
+                    recallMatches = localRecallMatches,
                     limit = 10,
                 )
             } else {
@@ -964,6 +986,12 @@ internal fun BrowserScreen(
                 controller.submitAddress(item.query, searchModeFor(item.query))
                 addressEditorVisible = false
             }
+            is AddressSuggestionItem.Recall -> selectNavigation(
+                AddressSuggestion(
+                    url = item.match.url,
+                    title = item.match.title,
+                ),
+            )
         }
     }
 
@@ -971,6 +999,7 @@ internal fun BrowserScreen(
         val text = when (item) {
             is AddressSuggestionItem.Navigation -> item.suggestion.url
             is AddressSuggestionItem.Search -> item.query
+            is AddressSuggestionItem.Recall -> item.match.url
             is AddressSuggestionItem.Command -> return
         }
         addressValue = TextFieldValue(text = text, selection = TextRange(text.length))
@@ -1877,6 +1906,7 @@ internal fun BrowserScreen(
                 searxngSettings = controller.searxngSettings,
                 isAiModeToggleVisible = controller.isAiModeToggleVisible,
                 searchSuggestionProvider = controller.searchSuggestionProvider,
+                isRecallEnabled = controller.isRecallEnabled,
                 tabOverviewMode = controller.tabOverviewMode,
                 tabListStartsAtBottom = controller.tabListStartsAtBottom,
                 automaticTabSortingEnabled = controller.automaticTabSortingEnabled,
@@ -1922,6 +1952,7 @@ internal fun BrowserScreen(
                 onSearxngSettingsChanged = controller::updateSearxngSettings,
                 onAiModeToggleVisibleChanged = controller::updateAiModeToggleVisible,
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
+                onRecallEnabledChanged = controller::updateRecallEnabled,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onTabListStartsAtBottomChanged = controller::updateTabListStartsAtBottom,
                 onAutomaticTabSortingEnabledChanged =
@@ -2327,14 +2358,14 @@ internal fun BrowserScreen(
                 if (capsule.ownsDedicatedProfile) {
                     Button(
                         onClick = {
-                            controller.deleteSiteCapsule(capsule.id, true)
+                            controller.deleteSiteCapsuleAsync(capsule.id, true) {}
                             pendingCapsuleDelete = null
                         },
                     ) { Text(stringResource(R.string.capsule_delete_with_profile)) }
                 } else {
                     Button(
                         onClick = {
-                            controller.deleteSiteCapsule(capsule.id, false)
+                            controller.deleteSiteCapsuleAsync(capsule.id, false) {}
                             pendingCapsuleDelete = null
                         },
                     ) { Text(stringResource(R.string.action_delete)) }
@@ -2345,7 +2376,7 @@ internal fun BrowserScreen(
                     if (capsule.ownsDedicatedProfile) {
                         TextButton(
                             onClick = {
-                                controller.deleteSiteCapsule(capsule.id, false)
+                                controller.deleteSiteCapsuleAsync(capsule.id, false) {}
                                 pendingCapsuleDelete = null
                             },
                         ) { Text(stringResource(R.string.capsule_delete_only)) }
@@ -4582,7 +4613,7 @@ private fun WebContentContextSheet(
 }
 
 @Composable
-private fun AddressSuggestions(
+internal fun AddressSuggestions(
     suggestions: List<AddressSuggestionItem>,
     highlightedIndex: Int,
     onHighlight: (Int) -> Unit,
@@ -4634,7 +4665,25 @@ private fun AddressSuggestions(
                 items = suggestions,
                 key = { _, suggestion -> suggestion.stableId },
             ) { index, suggestion ->
-                when (suggestion) {
+                Column {
+                    if (
+                        suggestion is AddressSuggestionItem.Recall &&
+                        suggestions.getOrNull(index - 1) !is AddressSuggestionItem.Recall
+                    ) {
+                        Text(
+                            text = stringResource(R.string.recall_from_history),
+                            modifier = Modifier.padding(
+                                start = 18.dp,
+                                end = 18.dp,
+                                top = 8.dp,
+                                bottom = 4.dp,
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    when (suggestion) {
                     is AddressSuggestionItem.Navigation -> NavigationSuggestionRow(
                         suggestion = suggestion.suggestion,
                         highlighted = index == highlightedIndex,
@@ -4655,7 +4704,89 @@ private fun AddressSuggestions(
                         onClick = { onSelect(suggestion) },
                         onFill = { onFill(suggestion) },
                     )
+                    is AddressSuggestionItem.Recall -> RecallSuggestionRow(
+                        match = suggestion.match,
+                        highlighted = index == highlightedIndex,
+                        onHighlight = { onHighlight(index) },
+                        onClick = { onSelect(suggestion) },
+                        onFill = { onFill(suggestion) },
+                    )
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecallSuggestionRow(
+    match: RecallMatch,
+    highlighted: Boolean,
+    onHighlight: () -> Unit,
+    onClick: () -> Unit,
+    onFill: () -> Unit,
+) {
+    val containerColor = if (highlighted) {
+        MaterialTheme.colorScheme.tertiaryContainer
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+    }
+    val contentColor = if (highlighted) {
+        MaterialTheme.colorScheme.onTertiaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    Surface(
+        modifier = Modifier
+            .padding(horizontal = 6.dp, vertical = 1.dp)
+            .fillMaxWidth()
+            .testTag(AddressSuggestionTestTags.recallRow(match.url))
+            .clip(RoundedCornerShape(16.dp))
+            .semantics { selected = highlighted }
+            .clickable(role = Role.Button) {
+                onHighlight()
+                onClick()
+            },
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor,
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 10.dp, end = 2.dp, top = 7.dp, bottom = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_history),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = contentColor,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    match.title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor,
+                )
+                Text(
+                    match.excerpt,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.78f),
+                )
+            }
+            IconButton(onClick = onFill, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    painterResource(R.drawable.ic_north_east),
+                    contentDescription = stringResource(
+                        R.string.cd_fill_address_suggestion,
+                        match.url,
+                    ),
+                    modifier = Modifier.size(20.dp),
+                    tint = contentColor,
+                )
             }
         }
     }
@@ -6900,7 +7031,9 @@ internal fun TabOverview(
             onDelete = {
                 val target = actionProfile ?: return@ProfileActionsSheet
                 profileActionsProfileId = null
-                if (controller.deleteProfile(target.id)) rootView.performConfirmHaptic()
+                controller.deleteProfileAsync(target.id) { deleted ->
+                    if (deleted) rootView.performConfirmHaptic()
+                }
             },
             onIsolationChange = { enabled ->
                 val target = actionProfile ?: return@ProfileActionsSheet

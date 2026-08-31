@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.commands
 
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
+import dev.sk2andy.materialbrowser.recall.RecallMatch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -11,6 +12,14 @@ class AddressSuggestionComposerTest {
         BrowserCommand("reload", BrowserCommandKind.Reload),
         "Reload",
         "Reload current tab",
+    )
+    private val recall = RecallMatch(
+        profileId = "personal",
+        url = "https://recall.example",
+        title = "Recall docs",
+        excerpt = "matching local text",
+        visitedAt = 2L,
+        score = 3.0,
     )
 
     @Test
@@ -79,5 +88,38 @@ class AddressSuggestionComposerTest {
 
         assertTrue(result.first() is AddressSuggestionItem.Navigation)
         assertEquals(2, result.count { it is AddressSuggestionItem.Search })
+    }
+
+    @Test
+    fun `recall matches precede remote searches and remain capped`() {
+        val result = AddressSuggestionComposer.compose(
+            query = "candy browser",
+            navigation = navigation,
+            commands = listOf(command),
+            searchQueries = listOf("candy browser remote"),
+            recallMatches = listOf(recall, recall.copy(url = "https://two.example"), recall.copy(url = "https://three.example")),
+            limit = 8,
+        )
+
+        assertTrue(result.first() is AddressSuggestionItem.Navigation)
+        assertEquals(2, result.count { it is AddressSuggestionItem.Recall })
+        assertTrue(
+            result.indexOfFirst { it is AddressSuggestionItem.Recall } <
+                result.indexOfFirst { it is AddressSuggestionItem.Search },
+        )
+    }
+
+    @Test
+    fun `explicit recall excludes navigation remote and normal commands`() {
+        val result = AddressSuggestionComposer.compose(
+            query = ">recall candy browser",
+            navigation = navigation,
+            commands = listOf(command),
+            searchQueries = listOf("remote"),
+            recallMatches = listOf(recall),
+            limit = 8,
+        )
+
+        assertEquals(listOf(AddressSuggestionItem.Recall(recall)), result)
     }
 }

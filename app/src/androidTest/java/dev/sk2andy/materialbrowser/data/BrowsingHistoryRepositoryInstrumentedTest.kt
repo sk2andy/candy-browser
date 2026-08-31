@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.recall.RecallDocument
+import dev.sk2andy.materialbrowser.recall.RecallMatch
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.UUID
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -23,10 +27,12 @@ class BrowsingHistoryRepositoryInstrumentedTest {
     @Before
     fun setUp() {
         preferences.edit().clear().commit()
+        RecallRepository.get(context).clearForTesting()
     }
 
     @After
     fun tearDown() {
+        RecallRepository.get(context).clearForTesting()
         preferences.edit().clear().commit()
     }
 
@@ -92,6 +98,42 @@ class BrowsingHistoryRepositoryInstrumentedTest {
     }
 
     @Test
+    fun clearOnExitRetainsNewSessionHistoryWhenForegroundChangesMidCleanup() {
+        val store = BrowserSessionStore(context)
+        val previousSession = HistoryEntry("https://old.example/", "Old", 10L)
+        val newSession = HistoryEntry("https://new.example/", "New", 20L)
+        val tabId = UUID.randomUUID().toString()
+        store.saveTabs(
+            tabs = listOf(BrowserTab(id = tabId, lastAccessedAt = 1L)),
+            selectedTabId = tabId,
+        )
+        store.saveHistory(listOf(previousSession))
+        repository.setRecordingMode(HistoryRecordingMode.ClearOnExit)
+        var sessionChecks = 0
+
+        assertTrue(
+            repository.clearOnExit(
+                isSessionCurrent = {
+                    if (sessionChecks++ == 0) {
+                        true
+                    } else {
+                        store.saveHistory(listOf(previousSession, newSession))
+                        false
+                    }
+                },
+                untilExclusiveMillis = 15L,
+            ),
+        )
+
+        assertEquals(listOf(newSession), repository.snapshot())
+        assertTrue(store.loadHistorySessionActive())
+        assertEquals(
+            15L,
+            store.loadPendingCandyTrailRedactions().single().untilExclusiveMillis,
+        )
+    }
+
+    @Test
     fun clearOnExitCommitsTrailRedactionForPersistedTabs() {
         val tabId = UUID.randomUUID().toString()
         val store = BrowserSessionStore(context)
@@ -131,5 +173,30 @@ class BrowsingHistoryRepositoryInstrumentedTest {
         repository.beginSession()
 
         assertTrue(repository.snapshot().isEmpty())
+    }
+
+    @Test
+    fun individualHistoryDeletionAlsoDeletesRecallContent() {
+        val entry = HistoryEntry("https://example.com/", "Example", 1L, "personal")
+        BrowserSessionStore(context).saveHistory(listOf(entry))
+        RecallRepository.get(context).index(
+            RecallDocument("personal", entry.url, entry.title, "sensitive page phrase", 1L),
+        )
+        assertTrue(RecallRepository.get(context).awaitIdleForTesting())
+
+        repository.remove(listOf(entry))
+
+        assertTrue(searchRecall("personal", "sensitive page").isEmpty())
+    }
+
+    private fun searchRecall(profileId: String, query: String): List<RecallMatch> {
+        val latch = CountDownLatch(1)
+        var matches = emptyList<RecallMatch>()
+        RecallRepository.get(context).search(setOf(profileId), query, 10) { result ->
+            matches = result
+            latch.countDown()
+        }
+        assertTrue(latch.await(5, TimeUnit.SECONDS))
+        return matches
     }
 }
