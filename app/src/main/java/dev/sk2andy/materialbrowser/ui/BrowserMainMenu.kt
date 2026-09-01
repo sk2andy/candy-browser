@@ -61,6 +61,7 @@ import androidx.compose.ui.window.PopupProperties
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
+import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
@@ -125,7 +126,12 @@ internal fun BrowserMainMenu(
     canAddSiteCapsule: Boolean,
     canSnooze: Boolean,
     snoozedTabCount: Int,
+    overflowAddressBarActions: List<AddressBarAction> = emptyList(),
+    canCloseTab: Boolean = true,
     userScriptMenuCommands: List<UserScriptMenuCommand> = emptyList(),
+    onTabs: () -> Unit = {},
+    onNewTab: () -> Unit = {},
+    onCloseTab: () -> Unit = {},
     onBack: () -> Unit,
     onForward: () -> Unit,
     onReloadOrStop: () -> Unit,
@@ -135,6 +141,7 @@ internal fun BrowserMainMenu(
     onOpenExternal: () -> Unit,
     onPrint: () -> Unit,
     onOpenReader: () -> Unit,
+    onFindInPage: () -> Unit = {},
     onDomainMutedChange: (Boolean) -> Unit,
     onDesktopViewChange: (Boolean) -> Unit,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
@@ -374,12 +381,46 @@ internal fun BrowserMainMenu(
                 modifier = Modifier.testTag(BrowserMainMenuTestTags.PageGroup),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
+                overflowAddressBarActions.forEachIndexed { index, action ->
+                    val iconRes = when (action) {
+                        AddressBarAction.Tabs -> R.drawable.ic_switch_to_tab
+                        AddressBarAction.NewTab -> R.drawable.ic_symbol_add
+                        AddressBarAction.CloseTab -> R.drawable.ic_symbol_close
+                        else -> return@forEachIndexed
+                    }
+                    val enabled = action != AddressBarAction.CloseTab || canCloseTab
+                    val callback = when (action) {
+                        AddressBarAction.Tabs -> onTabs
+                        AddressBarAction.NewTab -> onNewTab
+                        AddressBarAction.CloseTab -> onCloseTab
+                        else -> return@forEachIndexed
+                    }
+                    MenuRow(
+                        label = stringResource(action.labelRes()),
+                        iconRes = iconRes,
+                        enabled = enabled,
+                        shape = if (index == 0) firstItemShape else innerCorners,
+                        onClick = { dismissThen(callback) },
+                    )
+                }
                 MenuRow(
                     label = stringResource(R.string.reader_open_action),
                     iconRes = R.drawable.ic_reader_align_start,
                     enabled = presentation.canOpenReader,
-                    shape = firstItemShape,
+                    shape = if (overflowAddressBarActions.isEmpty()) {
+                        firstItemShape
+                    } else {
+                        innerCorners
+                    },
                     onClick = { dismissThen(onOpenReader) },
+                )
+                MenuRow(
+                    label = stringResource(R.string.action_find_in_page),
+                    iconRes = R.drawable.ic_symbol_find_in_page,
+                    enabled = presentation.canUsePageActions,
+                    shape = innerCorners,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.FindInPage),
+                    onClick = { dismissThen(onFindInPage) },
                 )
                 MenuRow(
                     label = stringResource(R.string.action_share),
@@ -1145,6 +1186,7 @@ internal object BrowserMainMenuTestTags {
     const val CookieBannerRemoval = "browser_main_menu_cookie_banner_removal"
     const val ForceVerticalScrolling = "browser_main_menu_force_vertical_scrolling"
     const val DesktopView = "browser_main_menu_desktop_view"
+    const val FindInPage = "browser_main_menu_find_in_page"
     const val ForcePageZooming = "browser_main_menu_force_page_zooming"
     const val ForceSafeArea = "browser_main_menu_force_safe_area"
 

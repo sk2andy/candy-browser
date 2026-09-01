@@ -181,6 +181,8 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRejectionReason
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRuntime
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
+import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
+import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
@@ -352,6 +354,13 @@ private data class MainFrameTlsNavigation(
     val targetUrls: List<String>,
 )
 
+private data class FindInPageSession(
+    val id: Long,
+    val tabId: String,
+    val webView: WebView,
+    val navigationGeneration: Int,
+)
+
 class BrowserController(
     private val activity: Activity,
     private val requestRuntimePermissions: (Set<String>) -> Unit = { permissions ->
@@ -394,6 +403,7 @@ class BrowserController(
         get() = selectedTabIdState
         private set(value) {
             if (selectedTabIdState == value) return
+            if (findInPageState?.tabId != value) closeFindInPage()
             selectedTabIdState = value
             fullscreenVideoSession
                 ?.takeIf { session -> session.isPrivate && session.tabId != value }
@@ -442,8 +452,12 @@ class BrowserController(
         get() = addressBarDockPlacement != null
     var isAddressBarDockingEnabled by mutableStateOf(true)
         private set
-    var isTabButtonVisible by mutableStateOf(true)
+    var addressBarActionLayout by mutableStateOf(AddressBarActionLayout.Default)
         private set
+    internal var findInPageState by mutableStateOf<FindInPageState?>(null)
+        private set
+    private var findInPageSession: FindInPageSession? = null
+    private var nextFindInPageSessionId = 0L
     var isFullImmersiveModeEnabled by mutableStateOf(false)
         private set
     var isScrollBarEnabled by mutableStateOf(false)
@@ -1326,7 +1340,7 @@ class BrowserController(
         if (!isAddressBarDockingEnabled && storedAddressBarDockPlacement != null) {
             store.saveAddressBarDockPlacement(null)
         }
-        isTabButtonVisible = store.loadTabButtonVisible()
+        addressBarActionLayout = store.loadAddressBarActionLayout()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
         isVideoAutoplayBlocked =
@@ -3152,6 +3166,77 @@ class BrowserController(
         }
     }
 
+    fun openFindInPage(): Boolean {
+        val tab = selectedTab
+        if (tab.url == BLANK_URL) return false
+        val webView = webViews[tab.id] ?: return false
+        val navigationGeneration = navigationGenerations[tab.id] ?: return false
+        closeFindInPage()
+        val session = FindInPageSession(
+            id = ++nextFindInPageSessionId,
+            tabId = tab.id,
+            webView = webView,
+            navigationGeneration = navigationGeneration,
+        )
+        findInPageSession = session
+        findInPageState = FindInPageState(tabId = tab.id)
+        webView.setFindListener { activeMatchOrdinal, matchCount, isDoneCounting ->
+            val currentSession = findInPageSession
+            val currentState = findInPageState
+            if (
+                destroyed ||
+                currentSession?.id != session.id ||
+                currentSession.webView !== webView ||
+                currentState?.tabId != session.tabId ||
+                currentState.query.isEmpty() ||
+                selectedTabId != session.tabId ||
+                webViews[session.tabId] !== webView ||
+                navigationGenerations[session.tabId] != session.navigationGeneration
+            ) {
+                return@setFindListener
+            }
+            findInPageState = FindInPageRules.withResult(
+                state = currentState,
+                activeMatchOrdinal = activeMatchOrdinal,
+                matchCount = matchCount,
+                isDoneCounting = isDoneCounting,
+            )
+        }
+        return true
+    }
+
+    fun updateFindInPageQuery(query: String) {
+        val session = findInPageSession ?: return
+        val state = findInPageState?.takeIf { it.tabId == session.tabId } ?: return
+        val updated = FindInPageRules.withQuery(state, query)
+        if (updated === state) return
+        findInPageState = updated
+        if (query.isEmpty()) {
+            session.webView.clearMatches()
+        } else {
+            session.webView.findAllAsync(query)
+        }
+    }
+
+    fun findNextInPage(forward: Boolean): Boolean {
+        val session = findInPageSession ?: return false
+        val state = findInPageState ?: return false
+        if (!FindInPageRules.canNavigate(state)) return false
+        session.webView.findNext(forward)
+        return true
+    }
+
+    fun closeFindInPage() {
+        val session = findInPageSession
+        findInPageSession = null
+        findInPageState = null
+        nextFindInPageSessionId++
+        session?.webView?.runCatching {
+            clearMatches()
+            setFindListener(null)
+        }
+    }
+
     fun shareSelectedPage() = sharePage(selectedTabId)
 
     fun sharePage(tabId: String) {
@@ -3892,10 +3977,11 @@ class BrowserController(
         if (!enabled) updateAddressBarDocked(false)
     }
 
-    fun updateTabButtonVisible(visible: Boolean) {
-        if (isTabButtonVisible == visible) return
-        isTabButtonVisible = visible
-        store.saveTabButtonVisible(visible)
+    fun updateAddressBarActionLayout(layout: AddressBarActionLayout) {
+        val normalized = AddressBarActionLayoutRules.normalize(layout)
+        if (addressBarActionLayout == normalized) return
+        addressBarActionLayout = normalized
+        store.saveAddressBarActionLayout(normalized)
     }
 
     fun updateFullImmersiveModeEnabled(enabled: Boolean) {
@@ -4611,6 +4697,7 @@ class BrowserController(
 
     fun destroy() {
         SnoozeRuntimeRegistry.unregister(snoozeRestoreCallback)
+        closeFindInPage()
         clearWebMediaPresentation(pause = true)
         fullscreenVideoSession?.let { session ->
             dismissFullscreenVideo(session, notifyPage = true)
@@ -4987,6 +5074,7 @@ class BrowserController(
                 return
             }
             if (handlePendingPopunderOpenerNavigation(tabId, view, url)) return
+            if (findInPageSession?.webView === view) closeFindInPage()
             beginMainFrameTlsNavigation(tabId, view, url)
             userScriptRuntime.clearMenuCommands(view)
             clearWebMediaForTab(tabId)
@@ -5054,6 +5142,7 @@ class BrowserController(
 
         override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
             if (isQuarantinedPopup(tabId)) return
+            if (findInPageSession?.webView === view) closeFindInPage()
             val visibleUrl = url?.takeIf(String::isNotBlank)
                 ?: view.url?.takeIf(String::isNotBlank)
             if (visibleUrl != null && isPendingInitialBlank(tabId, visibleUrl)) return
@@ -8981,6 +9070,7 @@ class BrowserController(
     }
 
     private fun destroyWebView(webView: WebView) {
+        if (findInPageSession?.webView === webView) closeFindInPage()
         fullscreenVideoSession
             ?.takeIf { session -> session.webView === webView }
             ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }

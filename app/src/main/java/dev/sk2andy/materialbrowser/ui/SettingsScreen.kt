@@ -82,6 +82,8 @@ import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.AddressBarAction
+import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
@@ -97,6 +99,7 @@ internal enum class SettingsDestination {
     Home,
     Search,
     TabsAndGestures,
+    AddressBarActions,
     Appearance,
     Browser,
     Downloads,
@@ -158,7 +161,8 @@ internal fun SettingsScreen(
     automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
-    isTabButtonVisible: Boolean,
+    tabCount: Int,
+    addressBarActionLayout: AddressBarActionLayout,
     isAddressBarDockingEnabled: Boolean,
     isFullImmersiveModeEnabled: Boolean,
     isScrollBarEnabled: Boolean,
@@ -186,7 +190,7 @@ internal fun SettingsScreen(
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
-    onTabButtonVisibleChanged: (Boolean) -> Unit,
+    onAddressBarActionLayoutChanged: (AddressBarActionLayout) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
@@ -224,7 +228,9 @@ internal fun SettingsScreen(
                 if (
                     targetState == SettingsDestination.Home ||
                     initialState == SettingsDestination.ToppingCatalog &&
-                    targetState == SettingsDestination.Userscripts
+                    targetState == SettingsDestination.Userscripts ||
+                    initialState == SettingsDestination.AddressBarActions &&
+                    targetState == SettingsDestination.TabsAndGestures
                 ) {
                     (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith
                         (slideOutHorizontally { width -> width } + fadeOut())
@@ -262,7 +268,6 @@ internal fun SettingsScreen(
                     automaticTabSortingEnabled = automaticTabSortingEnabled,
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
-                    isTabButtonVisible = isTabButtonVisible,
                     isAddressBarDockingEnabled = isAddressBarDockingEnabled,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
@@ -272,10 +277,39 @@ internal fun SettingsScreen(
                         onAutomaticTabSortingEnabledChanged,
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
-                    onTabButtonVisibleChanged = onTabButtonVisibleChanged,
                     onAddressBarDockingEnabledChanged = onAddressBarDockingEnabledChanged,
+                    onAddressBarActions = {
+                        onDestinationChanged(SettingsDestination.AddressBarActions)
+                    },
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
+
+                SettingsDestination.AddressBarActions -> {
+                    val actionLabels = AddressBarAction.entries.associateWith { action ->
+                        stringResource(action.labelRes())
+                    }
+                    AddressBarActionEditorPage(
+                        layout = addressBarActionLayout,
+                        tabCount = tabCount,
+                        onLayoutChanged = onAddressBarActionLayoutChanged,
+                        onBack = {
+                            onDestinationChanged(SettingsDestination.TabsAndGestures)
+                        },
+                        backLabel = stringResource(R.string.action_back),
+                        title = stringResource(R.string.settings_address_bar_actions_title),
+                        instructions = stringResource(
+                            R.string.settings_address_bar_actions_instructions,
+                        ),
+                        availableTitle = stringResource(
+                            R.string.settings_address_bar_actions_available,
+                        ),
+                        beforeLabel = stringResource(R.string.settings_address_bar_actions_before),
+                        afterLabel = stringResource(R.string.settings_address_bar_actions_after),
+                        moreLabel = stringResource(R.string.cd_more_options),
+                        fullMessage = stringResource(R.string.settings_address_bar_actions_full),
+                        actionLabel = actionLabels::getValue,
+                    )
+                }
 
                 SettingsDestination.Appearance -> AppearanceSettingsPage(
                     settings = appearanceSettings,
@@ -830,7 +864,6 @@ internal fun TabsAndGesturesSettingsPage(
     automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
-    isTabButtonVisible: Boolean,
     isAddressBarDockingEnabled: Boolean,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
@@ -839,8 +872,8 @@ internal fun TabsAndGesturesSettingsPage(
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
-    onTabButtonVisibleChanged: (Boolean) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
+    onAddressBarActions: () -> Unit,
     onBack: () -> Unit,
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
@@ -965,11 +998,11 @@ internal fun TabsAndGesturesSettingsPage(
         Spacer(Modifier.height(14.dp))
         SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
         Spacer(Modifier.height(2.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_tab_button_title),
-            subtitle = stringResource(R.string.settings_tab_button_subtitle),
-            checked = isTabButtonVisible,
-            onCheckedChange = onTabButtonVisibleChanged,
+        SettingsLink(
+            icon = ImageVector.vectorResource(R.drawable.ic_switch_to_tab),
+            title = stringResource(R.string.settings_address_bar_actions_title),
+            subtitle = stringResource(R.string.settings_address_bar_actions_summary),
+            onClick = onAddressBarActions,
         )
         Spacer(Modifier.height(2.dp))
         SettingsSwitch(
@@ -1455,7 +1488,7 @@ private fun UserCaTrustWarning(
 }
 
 @Composable
-private fun SettingsPage(
+internal fun SettingsPage(
     title: String,
     onBack: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
