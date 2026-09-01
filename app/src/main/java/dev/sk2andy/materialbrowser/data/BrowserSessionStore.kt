@@ -650,10 +650,44 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKING_ENABLED, enabled).apply()
     }
 
-    fun loadTabButtonVisible(): Boolean = preferences.getBoolean(KEY_TAB_BUTTON_VISIBLE, true)
+    fun loadAddressBarActionLayout(): AddressBarActionLayout {
+        if (!preferences.contains(KEY_ADDRESS_BAR_ACTION_LAYOUT)) {
+            val legacyTabButtonVisible = runCatching {
+                preferences.getBoolean(KEY_TAB_BUTTON_VISIBLE, true)
+            }.getOrDefault(true)
+            val migrated = AddressBarActionLayout.Default.copy(
+                beforeAddress = AddressBarActionLayout.Default.beforeAddress
+                    .takeIf { legacyTabButtonVisible }
+                    .orEmpty(),
+            )
+            saveAddressBarActionLayout(migrated)
+            preferences.edit().remove(KEY_TAB_BUTTON_VISIBLE).apply()
+            return migrated
+        }
+        val stored = runCatching {
+            val root = JSONObject(preferences.getString(KEY_ADDRESS_BAR_ACTION_LAYOUT, null)!!)
+            AddressBarActionLayoutRules.fromWireLists(
+                beforeAddress = root.optJSONArray("beforeAddress").stringValues(),
+                afterAddress = root.optJSONArray("afterAddress").stringValues(),
+            )
+        }.getOrElse { AddressBarActionLayout.Default }
+        val normalized = AddressBarActionLayoutRules.normalize(stored)
+        saveAddressBarActionLayout(normalized)
+        return normalized
+    }
 
-    fun saveTabButtonVisible(visible: Boolean) {
-        preferences.edit().putBoolean(KEY_TAB_BUTTON_VISIBLE, visible).apply()
+    fun saveAddressBarActionLayout(layout: AddressBarActionLayout) {
+        val normalized = AddressBarActionLayoutRules.normalize(layout)
+        val root = JSONObject()
+            .put(
+                "beforeAddress",
+                JSONArray(normalized.beforeAddress.map(AddressBarAction::wireValue)),
+            )
+            .put(
+                "afterAddress",
+                JSONArray(normalized.afterAddress.map(AddressBarAction::wireValue)),
+            )
+        preferences.edit().putString(KEY_ADDRESS_BAR_ACTION_LAYOUT, root.toString()).apply()
     }
 
     fun loadFullImmersiveModeEnabled(): Boolean =
@@ -788,6 +822,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(key, array.toString()).apply()
     }
 
+    private fun JSONArray?.stringValues(): List<String> = buildList {
+        val source = this@stringValues ?: return@buildList
+        for (index in 0 until source.length()) {
+            (source.opt(index) as? String)?.let(::add)
+        }
+    }
+
     private fun encodeHistory(history: List<HistoryEntry>): String {
         val array = JSONArray()
         history.forEach { entry ->
@@ -853,6 +894,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_ADDRESS_BAR_DOCK_VERTICAL_FRACTION =
             "address_bar_dock_vertical_fraction"
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
+        const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"

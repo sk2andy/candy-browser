@@ -9,6 +9,7 @@
 | State | Observable selection and update wiring | `browser/BrowserController.kt` |
 | Theme | Color schemes, Android night resources, website color-scheme preference, surface treatment, shape tokens and AMOLED surfaces | `MainActivity`, `ui/theme/MaterialBrowserTheme.kt` |
 | UI | Appearance destination and live selection controls | `ui/SettingsScreen.kt` |
+| Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
 | Page scroll bar | Persisted opt-in, WebView scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, `BrowserWebView`, `ui/WebViewScrollBar` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
 | Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
@@ -58,6 +59,8 @@ Frosted exposes three persisted controls while selected:
   Link Peek closes before its ephemeral preview WebView is released.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
 - Each top-level settings destination has a distinct leading icon on the settings home page.
+- Tabs & gestures owns the expanded address-bar action editor. The former standalone tab-button
+  visibility switch is intentionally absent because **Tabs** is now an ordinary configurable action.
 - The Browser setting for the draggable page scroll bar is global and defaults off. When enabled,
   native WebView scroll bars are replaced by a touch-sized thumb that appears during scrolling,
   supports direct dragging, and fades after interaction.

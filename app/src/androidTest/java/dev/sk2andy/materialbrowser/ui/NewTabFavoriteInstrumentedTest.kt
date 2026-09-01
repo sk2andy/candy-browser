@@ -15,6 +15,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.HistoryEntry
@@ -54,7 +55,9 @@ class NewTabFavoriteInstrumentedTest {
         )
         setBrowserContent(browserController)
 
-        composeRule.onNodeWithTag("address_bar_new_tab_button").performClick()
+        composeRule.onNodeWithTag(
+            AddressBarActionTestTags.action(AddressBarAction.NewTab),
+        ).performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) {
             browserController.activeTabs.size == 2
         }
