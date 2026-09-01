@@ -166,6 +166,31 @@ Candy Browser requires Android 13 (API 33) or newer.
 Production builds check GitHub for updates at startup and offer the signed APK for download. Android
 still requires you to open the downloaded file and approve installation.
 
+### Obtainium
+
+Use the filtered setup link so Obtainium always selects the standard certificate-trust channel:
+
+[![Get it on Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D)
+
+Both GitHub APK channels use the same application ID and signing key. Obtainium can track only one
+of them at a time. Do not add the unfiltered repository URL: the release contains two installable
+APKs and choosing the wrong asset can silently switch the installed certificate-trust policy.
+
+### F-Droid
+
+> PolyForm-licensed snapshots are not eligible for the official F-Droid
+> repository. This section documents the earlier MPL-licensed distribution.
+> See [licensing](LICENSING.md).
+
+Candy includes a `foss` distribution flavor for the official F-Droid repository. It removes Google
+Play services, Google Cast, Google Code Scanner, and Candy's GitHub update checker. Remote search
+suggestions default to off. F-Droid builds and signs this variant from the tagged public source.
+
+The first prepared F-Droid release is `0.31`. Submission files and the remaining maintainer steps
+live in [`distribution/fdroid`](distribution/fdroid/README.md). Because F-Droid normally signs with
+its own key, switching between a GitHub/Obtainium installation and F-Droid requires uninstalling the
+existing app first.
+
 Releases contain two APK channels:
 
 | APK suffix | Certificate trust | Intended use |
@@ -184,22 +209,31 @@ install the User CA APK when you trust every CA in Android's user credential sto
 that controls its private key. APK signature verification still protects Candy updates from APKs
 signed by another key.
 
+Advanced users who intentionally need this channel can use the
+[filtered User CA Obtainium setup](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%20User%20CA%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-user-ca-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D).
+
 ## Build from source
 
 Requirements: Android SDK 35 and JDK 17. Point `JAVA_HOME` to your JDK 17 installation.
 
 ```bash
-./gradlew testDebugUnitTest lintDebug assembleDebug
+./gradlew testFullDebugUnitTest lintFullDebug assembleFullDebug
+```
+
+To verify the F-Droid-compatible build:
+
+```bash
+./gradlew testFossDebugUnitTest lintFossDebug assembleFossDebug
 ```
 
 To build the explicit User CA development variant:
 
 ```bash
-./gradlew testUserCaDebugUnitTest lintUserCaDebug assembleUserCaDebug
+./gradlew testFullUserCaDebugUnitTest lintFullUserCaDebug assembleFullUserCaDebug
 python3 scripts/test_network_security_apks.py
 ```
 
-Debug APK: `app/build/outputs/apk/debug/app-debug.apk`. It installs as
+Debug APK: `app/build/outputs/apk/full/debug/app-full-debug.apk`. It installs as
 `dev.sk2andy.materialbrowser.debug`, uses the label `Candy Browser Debug`, and has a badged launcher
 icon, so it can stay installed beside the release app.
 
@@ -227,7 +261,7 @@ For an ignored project file:
 ```bash
 cp keystore.properties.example keystore.properties
 # Replace every placeholder in keystore.properties, then:
-./gradlew assembleLocalRelease
+./gradlew assembleFullLocalRelease
 ```
 
 Alternatively, export the same values from `~/.zshrc.shared`:
@@ -239,12 +273,13 @@ export CANDY_RELEASE_KEY_ALIAS='candy'
 export CANDY_RELEASE_KEY_PASSWORD='replace-me'
 ```
 
-Signed local APK: `app/build/outputs/apk/localRelease/app-localRelease.apk`
+Signed local APK: `app/build/outputs/apk/full/localRelease/app-full-localRelease.apk`
 
 `localRelease` installs beside the GitHub build as `dev.sk2andy.materialbrowser.local` and uses a
 separate launcher icon and the label `Candy Browser Local`. GitHub update prompts are disabled for
 this side-by-side build because production APKs cannot update its package. The GitHub workflow uses
-`assembleRelease` and `assembleUserCaRelease`; both preserve the production application ID and icon.
+`assembleFullRelease` and `assembleFullUserCaRelease`; both preserve the production application ID
+and icon. It also builds `assembleFossRelease` as source-build verification but does not publish it.
 
 ### GitHub releases
 
@@ -275,19 +310,20 @@ keytool -exportcert \
 The workflow uses the `release` GitHub environment. Configure required reviewers for that environment
 if releases should require a manual approval after dispatch.
 
-Then dispatch a release from GitHub Actions or with GitHub CLI:
+Before each release, update `candy.versionName` and the monotonically increasing
+`candy.versionCode` in `gradle.properties`. The workflow rejects an input version that differs
+from the committed version. Then dispatch a release from GitHub Actions or with GitHub CLI:
 
 ```bash
 gh workflow run release.yml \
-  -f version=0.2 \
+  -f version=0.31 \
   -f prerelease=false
 ```
 
-Android `versionCode` is the monotonically increasing GitHub workflow run number plus the current
-source-code base of `1`, so the first automated release starts at `2`. Tags and releases are created
-only after tests, release build checks, APK signing, certificate pinning, and signature verification
-succeed. Back up the original keystore and credentials securely: Android updates must always use the
-same signing key.
+Android `versionCode` is stored in source so GitHub and F-Droid can build identical version
+metadata from a tag. Tags and releases are created only after full and FOSS tests, release build
+checks, APK signing, certificate pinning, and signature verification succeed. Back up the original
+keystore and credentials securely: Android updates must always use the same signing key.
 
 ## Privacy and limitations
 

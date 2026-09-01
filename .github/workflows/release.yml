@@ -45,7 +45,8 @@ jobs:
           set -euo pipefail
 
           version="$INPUT_VERSION"
-          version_code="$((1 + GITHUB_RUN_NUMBER))"
+          project_version="$(sed -n 's/^candy\.versionName=//p' gradle.properties)"
+          version_code="$(sed -n 's/^candy\.versionCode=//p' gradle.properties)"
           tag="v${version}"
 
           if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,2}(-[0-9A-Za-z.-]+)?$ ]]; then
@@ -55,6 +56,21 @@ jobs:
 
           if [[ ! "$version_code" =~ ^[1-9][0-9]*$ ]] || (( version_code > 2100000000 )); then
             echo "Version code must be between 1 and 2100000000." >&2
+            exit 1
+          fi
+
+          if [[ "$version" != "$project_version" ]]; then
+            echo "Workflow version ${version} does not match gradle.properties ${project_version}." >&2
+            exit 1
+          fi
+
+          if [[ "$version" == *-* && "$INPUT_PRERELEASE" != 'true' ]]; then
+            echo "Versions with a prerelease suffix must be marked as prereleases." >&2
+            exit 1
+          fi
+
+          if [[ "$version" != *-* && "$INPUT_PRERELEASE" == 'true' ]]; then
+            echo "Prereleases must use a version suffix such as -rc.1." >&2
             exit 1
           fi
 
@@ -186,16 +202,17 @@ jobs:
             app/src/main/assets/uassets_procedural_cosmetic_rules.txt \
             app/src/main/assets/uassets_filters_source.txt
           ./gradlew --no-daemon \
-            testDebugUnitTest \
-            testUserCaDebugUnitTest \
-            testReleaseUnitTest \
-            testUserCaReleaseUnitTest \
-            assembleRelease \
-            assembleUserCaRelease \
-            -Pcandy.versionName="$RELEASE_VERSION" \
-            -Pcandy.versionCode="$RELEASE_VERSION_CODE"
-          CANDY_STANDARD_APK="app/build/outputs/apk/release/app-release.apk" \
-            CANDY_USER_CA_APK="app/build/outputs/apk/userCaRelease/app-userCaRelease.apk" \
+            testFullDebugUnitTest \
+            testFossDebugUnitTest \
+            testFullUserCaDebugUnitTest \
+            testFullReleaseUnitTest \
+            testFossReleaseUnitTest \
+            testFullUserCaReleaseUnitTest \
+            assembleFullRelease \
+            assembleFossRelease \
+            assembleFullUserCaRelease
+          CANDY_STANDARD_APK="app/build/outputs/apk/full/release/app-full-release.apk" \
+            CANDY_USER_CA_APK="app/build/outputs/apk/full/userCaRelease/app-full-userCaRelease.apk" \
             python3 scripts/test_network_security_apks.py
 
       - name: Verify and checksum APKs
@@ -207,9 +224,9 @@ jobs:
 
           release_apk="CandyBrowser-${RELEASE_TAG}-release.apk"
           user_ca_release_apk="CandyBrowser-${RELEASE_TAG}-user-ca-release.apk"
-          cp "app/build/outputs/apk/release/app-release.apk" "$release_apk"
+          cp "app/build/outputs/apk/full/release/app-full-release.apk" "$release_apk"
           cp \
-            "app/build/outputs/apk/userCaRelease/app-userCaRelease.apk" \
+            "app/build/outputs/apk/full/userCaRelease/app-full-userCaRelease.apk" \
             "$user_ca_release_apk"
 
           apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)"

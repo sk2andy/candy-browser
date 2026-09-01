@@ -363,6 +363,7 @@
     <string name="about_version">Candy Browser version %1$s</string>
     <string name="about_github_action">Ouvrir le profil GitHub</string>
     <string name="about_open_source_intro">Candy utilise ces composants, services et données de filtrage. Google Code Scanner est indiqué séparément, car il dépend des conditions des API Google et non d’une licence open source.</string>
+    <string name="about_open_source_intro_foss">Candy utilise ces composants d’exécution open source et ces données de filtrage. Cette version FOSS exclut les services Google Play.</string>
     <string name="about_license_androidx">AndroidX et Jetpack Compose</string>
     <string name="about_license_kotlin">Kotlin, Coroutines et annotations JetBrains</string>
     <string name="about_license_material_icons">Icônes Material Design</string>
