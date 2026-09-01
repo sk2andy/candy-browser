@@ -39,6 +39,8 @@
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.
+- Keep `CREDENTIAL_MANAGER_SET_ORIGIN` declared while WebViews use browser WebAuthn mode. Android
+  Credential Manager requires it before a browser can request passkeys for a website origin.
 - Never register userscript handlers on private or Link Peek WebViews. Userscript source is global
   regular-browser configuration, not private session state.
 - Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
@@ -149,6 +151,7 @@ WebView request state.
 | --- | --- |
 | Input/URL policy | Matching JVM rule test |
 | WebView settings or callbacks | Focused browser instrumented test |
+| Browser WebAuthn manifest contract | `SystemWebViewCredentialsInstrumentedTest` on API 34+ |
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Web media, fullscreen and PiP policy | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` on API 34+ |
