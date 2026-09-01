@@ -14,4 +14,15 @@ class BuildVariantContractTest {
 
         assertEquals(expected, BuildConfig.TRUST_USER_CERTIFICATES)
     }
+
+    @Test
+    fun `distribution capabilities match flavor`() {
+        val expectedFoss = when (BuildConfig.FLAVOR) {
+            "full" -> false
+            "foss" -> true
+            else -> error("Unknown flavor: ${BuildConfig.FLAVOR}")
+        }
+
+        assertEquals(expectedFoss, BuildConfig.FOSS_DISTRIBUTION)
+    }
 }

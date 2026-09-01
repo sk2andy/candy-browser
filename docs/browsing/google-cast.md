@@ -4,6 +4,11 @@ Candy can send compatible direct HTML5 video streams from regular tabs to Google
 This is remote media playback through the Google Cast Android Sender SDK, not tab or screen
 mirroring.
 
+Google Cast belongs only to the `full` distribution flavor. `src/full` owns the Cast SDK adapter,
+route button, manifest provider, and Google notices. The `foss` flavor used by F-Droid supplies
+no-op adapters, hides Cast actions, and resolves no Google runtime dependency. Keep Cast media
+eligibility rules in common code because they are deterministic and SDK-free.
+
 ## Supported path
 
 | Stage | Owner | Contract |
@@ -51,6 +56,6 @@ upgrading the Cast SDK; never suppress Kotlin metadata compatibility checks.
 | Candidate or URL/MIME policy | `CastMediaRulesTest` and `WebMediaContractTest` |
 | Bridge source reporting | Focused `WebMediaBridgeInstrumentedTest` on dedicated API 34+ emulator |
 | Compose controls | `CastControlsInstrumentedTest` on the same dedicated emulator |
-| SDK, manifest or resources | `lintDebug assembleDebug` |
+| SDK, manifest or resources | `lintFullDebug assembleFullDebug` |
 | Store release | Re-review Google Cast SDK Data Safety disclosure before publishing |
 | Receiver behavior | Manual smoke test with a physical Cast device and public MP4/HLS/DASH samples |

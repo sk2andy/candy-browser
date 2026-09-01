@@ -231,11 +231,21 @@ private fun OpenSourceDialog(
         onDismiss = onDismiss,
     ) {
         Text(
-            stringResource(R.string.about_open_source_intro),
+            stringResource(
+                if (BuildConfig.FOSS_DISTRIBUTION) {
+                    R.string.about_open_source_intro_foss
+                } else {
+                    R.string.about_open_source_intro
+                },
+            ),
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(12.dp))
-        CandyLegalSources.thirdPartyNotices.forEachIndexed { index, notice ->
+        val notices = CandyLegalSources.thirdPartyNotices.filter { notice ->
+            !BuildConfig.FOSS_DISTRIBUTION ||
+                notice.component != ThirdPartyComponent.GoogleCodeScanner
+        }
+        notices.forEachIndexed { index, notice ->
             if (index > 0) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 10.dp),

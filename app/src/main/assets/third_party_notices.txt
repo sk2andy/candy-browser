@@ -1,7 +1,7 @@
 Candy Browser third-party notices
 =================================
 
-This inventory reflects the release runtime classpath for Candy Browser 1.0.0.
+This inventory reflects the FOSS release runtime classpath for Candy Browser.
 
 Apache License 2.0 components
 -----------------------------
@@ -10,21 +10,12 @@ Apache License 2.0 components
 - Kotlin standard library and kotlinx.coroutines
 - JetBrains annotations
 - Material Design Icons
-- Google Data Transport
-- Firebase components and encoders
 - JSpecify annotations
 - Guava ListenableFuture
 - javax.inject
 - BlurView by Dmytro Saviuk
 
 License and terms links for current component groups are shown in Settings > About & legal.
-
-Google SDK terms
-----------------
-
-Google Code Scanner, ML Kit, Google Play services, and related binary SDK components
-are governed by the Google APIs Terms of Service rather than represented as open source:
-https://developers.google.com/terms
 
 Filter data
 -----------

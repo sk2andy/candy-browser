@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.ui
 
-import android.view.ContextThemeWrapper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,9 +34,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.mediarouter.app.MediaRouteButton
-import com.google.android.gms.cast.framework.CastButtonFactory
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 
@@ -49,25 +45,6 @@ internal object CastControlsTestTags {
     const val ExpandedController = "cast_expanded_controller"
     const val Seek = "cast_seek"
     const val Volume = "cast_volume"
-}
-
-@Composable
-internal fun CastRouteButton(modifier: Modifier = Modifier) {
-    val contentDescription = stringResource(R.string.cd_cast_video)
-    AndroidView(
-        factory = { context ->
-            MediaRouteButton(
-                ContextThemeWrapper(context, R.style.Theme_MaterialBrowser_MediaRouteButton),
-            ).apply {
-                CastButtonFactory.setUpMediaRouteButton(context, this)
-                this.contentDescription = contentDescription
-            }
-        },
-        update = { it.contentDescription = contentDescription },
-        modifier = modifier
-            .size(48.dp)
-            .testTag(CastControlsTestTags.RouteButton),
-    )
 }
 
 @Composable

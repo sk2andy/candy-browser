@@ -16,17 +16,6 @@ import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.android.gms.common.images.WebImage
 
-internal data class CastUiState(
-    val isConnected: Boolean = false,
-    val hasMedia: Boolean = false,
-    val isPlaying: Boolean = false,
-    val title: String = "",
-    val deviceName: String = "",
-    val positionMillis: Long = 0L,
-    val durationMillis: Long? = null,
-    val deviceVolume: Float = 0f,
-)
-
 internal class CastSessionController(
     context: Context,
     private val onMediaLoaded: (CastMediaCandidate) -> Unit,

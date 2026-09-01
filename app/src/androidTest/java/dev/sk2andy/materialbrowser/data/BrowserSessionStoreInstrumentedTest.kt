@@ -155,6 +155,28 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun searchSuggestionProviderUsesInjectedFallbackAndPreservesSavedChoice() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(
+            SearchSuggestionProvider.None,
+            store.loadSearchSuggestionProvider(fallback = SearchSuggestionProvider.None),
+        )
+
+        preferences.edit().putString("search_suggestion_provider", "unknown").commit()
+        assertEquals(
+            SearchSuggestionProvider.None,
+            store.loadSearchSuggestionProvider(fallback = SearchSuggestionProvider.None),
+        )
+
+        store.saveSearchSuggestionProvider(SearchSuggestionProvider.Brave)
+        assertEquals(
+            SearchSuggestionProvider.Brave,
+            store.loadSearchSuggestionProvider(fallback = SearchSuggestionProvider.None),
+        )
+    }
+
+    @Test
     fun addressBarDockingDefaultsToEnabledAndRoundTrips() {
         val store = BrowserSessionStore(context)
 

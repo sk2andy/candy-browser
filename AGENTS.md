@@ -39,8 +39,8 @@
 
 | Change | Minimum check |
 | --- | --- |
-| Pure Kotlin rules/models | `./gradlew testDebugUnitTest` |
-| Android resources, manifest, build config | `./gradlew lintDebug assembleDebug` |
+| Pure Kotlin rules/models | `./gradlew testFullDebugUnitTest testFossDebugUnitTest` |
+| Android resources, manifest, build config | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |
 | Compose, WebView, storage, Android contracts | Relevant `src/androidTest` test on an API 34+ device/emulator |
 | Filter compiler or generated assets | Matching script tests plus clean generated-asset diff |
 | Release path | Follow release workflow checks; never expose or commit signing material |

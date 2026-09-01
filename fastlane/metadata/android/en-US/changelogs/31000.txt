@@ -1,0 +1,1 @@
+Added a fully open-source F-Droid build without Google Play services. Added official Obtainium setup and source-based release metadata.

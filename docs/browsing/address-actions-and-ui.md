@@ -10,6 +10,7 @@
 | Search suggestions | [`SearchSuggestionProvider.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/suggestions/SearchSuggestionProvider.kt), [`searxng.md`](searxng.md) | Bound reads, isolate caches by provider configuration, and keep every provider and fallback call disabled for private tabs |
 | Presentation | [`ui/AddressBarPresentationRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarPresentationRules.kt), [`ui/AddressBarInsetRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarInsetRules.kt) | Resolve UI mode with pure rules before composing; subtract any platform-applied IME resize before padding bottom chrome |
 | Blank-tab editor | `ui/BrowserScreen.kt` | Keep regular-tab favorites visible and actionable while address input is focused; hide them in private mode |
+| QR scanner | `ui/QrCodeScanner.kt`, `src/full/ui/QrCodeScanner.kt` | The `full` flavor delegates explicit scans to Google Code Scanner. The F-Droid `foss` flavor hides the action and contains no scanner SDK. |
 
 ## Gestures and actions
 
@@ -36,3 +37,7 @@ after restart. Active docking and the last edge/height are stored separately: re
 the pill centers it without forgetting where the next park action should place it. The normalized
 position survives window-size changes and restart. Clicking a parked pill restores it and focuses
 address input. Blank new tabs keep parking unavailable so address entry remains directly accessible.
+
+Remote search suggestions keep their saved provider across distributions. On a new installation,
+`full` defaults to DuckDuckGo while `foss` defaults to `None`; this prevents address text from
+leaving a new F-Droid installation until the user explicitly enables a provider.

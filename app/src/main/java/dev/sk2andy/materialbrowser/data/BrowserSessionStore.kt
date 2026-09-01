@@ -546,9 +546,12 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_AI_MODE_TOGGLE_VISIBLE, visible).apply()
     }
 
-    fun loadSearchSuggestionProvider(): SearchSuggestionProvider =
+    fun loadSearchSuggestionProvider(
+        fallback: SearchSuggestionProvider = SearchSuggestionProvider.DuckDuckGo,
+    ): SearchSuggestionProvider =
         SearchSuggestionProvider.fromStableId(
             preferences.getString(KEY_SEARCH_SUGGESTION_PROVIDER, null),
+            fallback = fallback,
         )
 
     fun saveSearchSuggestionProvider(provider: SearchSuggestionProvider) {

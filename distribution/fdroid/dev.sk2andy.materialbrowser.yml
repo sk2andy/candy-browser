@@ -1,0 +1,28 @@
+Disabled: PolyForm Noncommercial snapshots are not eligible for official F-Droid inclusion
+Categories:
+  - Browser
+  - Internet
+  - Reading
+License: PolyForm-Noncommercial-1.0.0
+AuthorName: André Naumann
+SourceCode: https://github.com/sk2andy/candy-browser
+IssueTracker: https://github.com/sk2andy/candy-browser/issues
+Changelog: https://github.com/sk2andy/candy-browser/releases
+Donate: https://buymeacoffee.com/sk2andy
+
+RepoType: git
+Repo: https://github.com/sk2andy/candy-browser.git
+
+Builds:
+  - versionName: '0.31'
+    versionCode: 31000
+    commit: REPLACE_WITH_V0.31_COMMIT_SHA
+    subdir: app
+    gradle:
+      - foss
+
+AutoUpdateMode: None
+UpdateCheckMode: None
+UpdateCheckData: gradle.properties|candy.versionCode=(\d+)|.|candy.versionName=(.+)
+CurrentVersion: '0.31'
+CurrentVersionCode: 31000

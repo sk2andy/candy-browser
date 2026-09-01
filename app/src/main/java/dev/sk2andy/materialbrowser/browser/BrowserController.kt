@@ -33,9 +33,9 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebStorage
+import android.webkit.ValueCallback
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.webkit.ValueCallback
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -61,6 +61,7 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebStorageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.AdvancedFilterAction
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
@@ -157,7 +158,6 @@ import dev.sk2andy.materialbrowser.browser.permissions.PermissionPromptChoice
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarEntry
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarRepository
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarSnapshot
-import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRequestIdentity
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRequestRules
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRequestState
@@ -166,6 +166,7 @@ import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionActivity
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.browser.permissions.runtimePermissions
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogEntry
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogRules
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
@@ -422,7 +423,7 @@ class BrowserController(
         private set
     var isAiModeToggleVisible by mutableStateOf(false)
         private set
-    var searchSuggestionProvider by mutableStateOf(SearchSuggestionProvider.DuckDuckGo)
+    var searchSuggestionProvider by mutableStateOf(defaultSearchSuggestionProvider())
         private set
     var dismissResistancePercent by mutableIntStateOf(40)
         private set
@@ -1308,7 +1309,9 @@ class BrowserController(
         residentTabLimit = store.loadResidentTabLimit()
         searchEngine = store.loadSearchEngine()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
-        searchSuggestionProvider = store.loadSearchSuggestionProvider()
+        searchSuggestionProvider = store.loadSearchSuggestionProvider(
+            fallback = defaultSearchSuggestionProvider(),
+        )
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
@@ -9253,6 +9256,13 @@ class BrowserController(
         val requestContext: ProtectionRequestContext,
     )
 }
+
+private fun defaultSearchSuggestionProvider(): SearchSuggestionProvider =
+    if (BuildConfig.FOSS_DISTRIBUTION) {
+        SearchSuggestionProvider.None
+    } else {
+        SearchSuggestionProvider.DuckDuckGo
+    }
 
 enum class CapsuleSaveResult {
     PinRequested,

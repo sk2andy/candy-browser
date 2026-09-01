@@ -1,0 +1,13 @@
+Candy Browser is a gesture-first browser for Android 13 and newer. It uses Android System WebView and keeps tabs, history, favorites, profiles, site permissions, reader saves, and privacy telemetry on your device.
+
+Highlights:
+• Swipe between tabs and open a visual cover-flow, grid, or list overview.
+• Block known ads, trackers, and cookie banners with bundled local filter data.
+• Inspect blocked requests and site permissions in Privacy X-Ray and Permission Radar.
+• Use private tabs that keep their session and journey data in memory only.
+• Read and save articles locally with Reader Studio and text-to-speech.
+• Organize browsing with profiles, Candy Trails, favorites, snoozed tabs, and Site Capsules.
+• Customize compatible sites with reviewed, explicitly installed Toppings.
+• Choose from several search engines or configure a SearXNG instance.
+
+The F-Droid build contains no Google Play services. Google Cast and the Google Code Scanner are therefore unavailable in this build. Remote search suggestions are disabled by default and can be enabled explicitly in settings.

@@ -253,9 +253,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
@@ -539,13 +537,7 @@ internal fun BrowserScreen(
         context.getSystemService(AccessibilityManager::class.java)
     }
     val qrScanFailureMessage = stringResource(R.string.toast_qr_scan_failed)
-    val qrScanner = remember(context) {
-        val options = GmsBarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .enableAutoZoom()
-            .build()
-        GmsBarcodeScanning.getClient(context, options)
-    }
+    val qrScanner = rememberQrCodeScanner()
     val density = LocalDensity.current
     val rootView = LocalView.current
     val siteCapsuleEditorLauncher = rememberLauncherForActivityResult(
@@ -1334,7 +1326,9 @@ internal fun BrowserScreen(
             dockTargetEdge = controller.lastAddressBarDockEdge,
             editing = addressEditorVisible,
             showTabButton = controller.isTabButtonVisible,
-            showCastButton = controller.castMediaCandidate != null || castUiState.isConnected,
+            showCastButton = !BuildConfig.FOSS_DISTRIBUTION &&
+                (controller.castMediaCandidate != null || castUiState.isConnected),
+            showQrScanner = !BuildConfig.FOSS_DISTRIBUTION,
             tabCount = controller.activeTabs.size,
             userScriptMenuCommands = controller.selectedUserScriptMenuCommands,
             onUserScriptMenuCommand = controller::invokeUserScriptMenuCommand,
@@ -1383,10 +1377,9 @@ internal fun BrowserScreen(
             onScanQrCode = {
                 if (!qrScanInProgress) {
                     qrScanInProgress = true
-                    qrScanner.startScan()
-                        .addOnSuccessListener { barcode ->
+                    qrScanner.startScan(
+                        onSuccess = { scannedValue ->
                             qrScanInProgress = false
-                            val scannedValue = barcode.rawValue?.trim().orEmpty()
                             if (scannedValue.isEmpty()) {
                                 Toast.makeText(
                                     context,
@@ -1397,16 +1390,17 @@ internal fun BrowserScreen(
                                 controller.submitAddress(scannedValue)
                                 addressEditorVisible = false
                             }
-                        }
-                        .addOnCanceledListener { qrScanInProgress = false }
-                        .addOnFailureListener {
+                        },
+                        onCanceled = { qrScanInProgress = false },
+                        onFailure = {
                             qrScanInProgress = false
                             Toast.makeText(
                                 context,
                                 qrScanFailureMessage,
                                 Toast.LENGTH_SHORT,
                             ).show()
-                        }
+                        },
+                    )
                 }
             },
             onExpand = controller::expandBottomBar,
@@ -3048,6 +3042,7 @@ private fun BrowserBottomBar(
     editing: Boolean,
     showTabButton: Boolean,
     showCastButton: Boolean,
+    showQrScanner: Boolean,
     tabCount: Int,
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
@@ -3386,6 +3381,7 @@ private fun BrowserBottomBar(
                                 blurTarget = blurTarget.takeIf { blurSourceVisible },
                                 showTabButton = showTabButton,
                                 showCastButton = showCastButton,
+                                showQrScanner = showQrScanner,
                                 tabCount = tabCount,
                                 userScriptMenuCommands = userScriptMenuCommands,
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
@@ -3936,6 +3932,7 @@ private fun ExpandedBottomBarContent(
     blurTarget: BlurTarget?,
     showTabButton: Boolean,
     showCastButton: Boolean,
+    showQrScanner: Boolean,
     tabCount: Int,
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
@@ -4273,8 +4270,11 @@ private fun ExpandedBottomBarContent(
                             )
                         }
                     }
-                    if (editing && tab.url == BLANK_URL) {
-                        IconButton(onClick = onScanQrCode) {
+                    if (editing && tab.url == BLANK_URL && showQrScanner) {
+                        IconButton(
+                            onClick = onScanQrCode,
+                            modifier = Modifier.testTag(AddressBarTestTags.QrScanner),
+                        ) {
                             Icon(
                                 painterResource(R.drawable.ic_qr_code_scanner),
                                 contentDescription = stringResource(R.string.cd_scan_qr_code),
@@ -4456,6 +4456,7 @@ internal fun AddressBarTabCounterButton(
 internal object AddressBarTestTags {
     const val AiModeToggle = "address_bar_ai_mode_toggle"
     const val Editor = "address_bar_editor"
+    const val QrScanner = "address_bar_qr_scanner"
     const val TabButton = "address_bar_tab_button"
 }
 
