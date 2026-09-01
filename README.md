@@ -63,8 +63,8 @@ landscape-oriented previews for cover flow and compact grid layouts.
 
 ### Browsing and gestures
 
-- Floating chrome over edge-to-edge WebView content, with an optional tab counter and a docked
-  edge mode
+- Floating chrome over edge-to-edge WebView content, with configurable actions around the fixed
+  address field and a docked edge mode
 - Pull to refresh, direct URL navigation, QR scanning, local domain completion, and optional
   provider-backed search suggestions (disabled in private tabs)
 - Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, Qwant, Kagi, Perplexity, ChatGPT, and configurable SearXNG search
@@ -123,6 +123,8 @@ landscape-oriented previews for cover flow and compact grid layouts.
 
 - **Reader Studio:** local article extraction with typography, alignment, paper and night themes,
   offline saves, and text-to-speech
+- Find in page with live match counts and previous/next navigation that stays visible above the
+  keyboard
 - **Toppings:** Candy's lightweight, transparent alternative to traditional browser extensions.
   Discover, install, update, toggle, import, and edit bounded userscripts that customize matching
   regular tabs without privileged browser or `GM_*` APIs. The reviewed catalog lives in
@@ -316,7 +318,7 @@ from the committed version. Then dispatch a release from GitHub Actions or with 
 
 ```bash
 gh workflow run release.yml \
-  -f version=0.31 \
+  -f version=0.32 \
   -f prerelease=false
 ```
 

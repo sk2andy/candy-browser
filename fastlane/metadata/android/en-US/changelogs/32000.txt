@@ -1,0 +1,1 @@
+Customize the expanded address bar with up to three unique actions using drag and drop, haptic snapping, and expressive drop targets. Added Find in Page with live match navigation above the keyboard. Existing tab-button settings migrate automatically, while the compact edge pill stays unchanged.
