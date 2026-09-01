@@ -33,7 +33,8 @@
 
 Address-bar parking is enabled by default under Tabs & gestures. Disabling it immediately restores
 the centered pill, hides the park action, and prevents a persisted parked state from returning
-after restart. Active docking and the last edge/height are stored separately: restoring or disabling
-the pill centers it without forgetting where the next park action should place it. The normalized
-position survives window-size changes and restart. Clicking a parked pill restores it and focuses
-address input. Blank new tabs keep parking unavailable so address entry remains directly accessible.
+after restart. Compact address text stays vertically centered whether the park action or Cast action
+is present. Active docking and the last edge/height are stored separately: restoring or disabling the
+pill centers it without forgetting where the next park action should place it. The normalized position
+survives window-size changes and restart. Clicking a parked pill restores it and focuses address input.
+Blank new tabs keep parking unavailable so address entry remains directly accessible.

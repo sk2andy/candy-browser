@@ -295,6 +295,32 @@ class AddressBarDockInstrumentedTest {
     }
 
     @Test
+    fun centeredPillWithoutParkActionCentersAddressVertically() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                Box(Modifier.size(width = 128.dp, height = 48.dp)) {
+                    AddressBarCompactContent(
+                        domain = "google.com",
+                        showCastButton = false,
+                        dockingEnabled = false,
+                        dockTargetEdge = AddressBarDockEdge.Left,
+                        onDock = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(AddressBarDockTestTags.CompactContent)
+            .assertHeightIsEqualTo(48.dp)
+        val contentBounds = composeRule.onNodeWithTag(AddressBarDockTestTags.CompactContent)
+            .fetchSemanticsNode().boundsInRoot
+        val addressBounds = composeRule.onNodeWithTag(AddressBarDockTestTags.CompactAddress)
+            .fetchSemanticsNode().boundsInRoot
+
+        assertEquals(contentBounds.center.y, addressBounds.center.y, 1f)
+    }
+
+    @Test
     fun persistedHighEdgePillCanBeDraggedAgainFromItsRenderedPosition() {
         lateinit var browserController: BrowserController
         composeRule.runOnIdle {

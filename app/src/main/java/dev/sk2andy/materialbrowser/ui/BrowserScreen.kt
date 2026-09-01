@@ -3561,7 +3561,7 @@ internal fun AddressBarCompactContent(
 ) {
     Row(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .testTag(AddressBarDockTestTags.CompactContent),
         horizontalArrangement = when {
             !dockingEnabled -> Arrangement.Center
