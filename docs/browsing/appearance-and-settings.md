@@ -24,6 +24,7 @@
 | Color palette | Material You, Candy, neutral | Material You |
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
+| Startup animation | Off, on | On |
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Google Translate |
 
@@ -45,6 +46,10 @@ Frosted exposes three persisted controls while selected:
 ## Invariants
 
 - Appearance settings are global and persist across normal and private browsing.
+- Startup animation is global and enabled by default. Disabling it skips Candy's custom animation
+  on a cold launcher start and opens the address editor immediately on cold and warm launcher
+  starts. External launches, activity recreation, and first-run onboarding do not force the editor
+  open.
 - Unknown stored values fall back per field; one corrupt value does not discard valid choices.
 - AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.

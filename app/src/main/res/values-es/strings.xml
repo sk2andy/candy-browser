@@ -323,6 +323,8 @@
     <string name="settings_searxng_suggestion_fallback_summary">Solo se usa si falla la solicitud de sugerencias de SearXNG. La consulta también se enviará al proveedor alternativo. Desactivado en pestañas privadas.</string>
     <string name="toast_searxng_instance_required">Primero configura una URL de instancia SearXNG válida</string>
     <string name="settings_section_browser">Navegador</string>
+    <string name="settings_startup_animation_title">Animación de inicio</string>
+    <string name="settings_startup_animation_subtitle">Muestra la animación de Candy al iniciar la aplicación normalmente. Desactívala para abrir la barra de direcciones de inmediato.</string>
     <string name="settings_full_immersive_mode_title">Modo inmersivo a pantalla completa</string>
     <string name="settings_full_immersive_mode_subtitle">Oculta las barras de estado y navegación. Desliza desde un borde para mostrarlas temporalmente.</string>
     <string name="settings_scroll_bar_title">Barra de desplazamiento arrastrable</string>

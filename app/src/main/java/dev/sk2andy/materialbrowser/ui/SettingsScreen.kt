@@ -127,6 +127,7 @@ internal object ProtectionSettingsTestTags {
 }
 
 internal object BrowserSettingsTestTags {
+    const val StartupAnimation = "browser_settings_startup_animation"
     const val ScrollBar = "browser_settings_scroll_bar"
     const val TranslationProvider = "browser_settings_translation_provider"
 }
@@ -166,6 +167,7 @@ internal fun SettingsScreen(
     isTabButtonVisible: Boolean,
     isAddressBarDockingEnabled: Boolean,
     isFullImmersiveModeEnabled: Boolean,
+    isStartupAnimationEnabled: Boolean,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
@@ -196,6 +198,7 @@ internal fun SettingsScreen(
     onTabButtonVisibleChanged: (Boolean) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
+    onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
@@ -293,11 +296,13 @@ internal fun SettingsScreen(
                 SettingsDestination.Browser -> BrowserSettingsPage(
                     pageTranslationProvider = pageTranslationProvider,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
+                    isStartupAnimationEnabled = isStartupAnimationEnabled,
                     isScrollBarEnabled = isScrollBarEnabled,
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
                     isDefaultBrowser = isDefaultBrowser,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
+                    onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
                     onPageTranslationProviderChanged = onPageTranslationProviderChanged,
@@ -1027,11 +1032,13 @@ internal fun TabsAndGesturesSettingsPage(
 internal fun BrowserSettingsPage(
     pageTranslationProvider: PageTranslationProvider,
     isFullImmersiveModeEnabled: Boolean,
+    isStartupAnimationEnabled: Boolean,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
     isDefaultBrowser: Boolean,
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
+    onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
@@ -1043,6 +1050,14 @@ internal fun BrowserSettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
     ) {
+        SettingsSwitch(
+            title = stringResource(R.string.settings_startup_animation_title),
+            subtitle = stringResource(R.string.settings_startup_animation_subtitle),
+            checked = isStartupAnimationEnabled,
+            onCheckedChange = onStartupAnimationEnabledChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.StartupAnimation),
+        )
+        Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_full_immersive_mode_title),
             subtitle = stringResource(R.string.settings_full_immersive_mode_subtitle),

@@ -14,6 +14,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -33,11 +34,13 @@ class BrowserSettingsScreenInstrumentedTest {
                 BrowserSettingsPage(
                     pageTranslationProvider = PageTranslationProvider.Google,
                     isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
                     isScrollBarEnabled = enabled,
                     isVideoAutoplayBlocked = false,
                     isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
                     onScrollBarEnabledChanged = { enabled = it },
                     onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
@@ -53,6 +56,35 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
+    fun startupAnimationSwitchUpdatesSetting() {
+        var enabled by mutableStateOf(true)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = enabled,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = { enabled = it },
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.StartupAnimation).performClick()
+
+        assertFalse(enabled)
+    }
+
+    @Test
     fun translationProviderChoiceUpdatesSetting() {
         var provider by mutableStateOf(PageTranslationProvider.Google)
         composeRule.setContent {
@@ -60,11 +92,13 @@ class BrowserSettingsScreenInstrumentedTest {
                 BrowserSettingsPage(
                     pageTranslationProvider = provider,
                     isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
                     isScrollBarEnabled = false,
                     isVideoAutoplayBlocked = false,
                     isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
                     onScrollBarEnabledChanged = {},
                     onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = { provider = it },

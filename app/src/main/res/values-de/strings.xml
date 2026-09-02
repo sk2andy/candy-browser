@@ -320,6 +320,8 @@
     <string name="settings_searxng_suggestion_fallback_summary">Wird nur genutzt, wenn die SearXNG-Vorschlagsanfrage fehlschlägt. Die Eingabe geht dann auch an den Fallback-Anbieter. In privaten Tabs deaktiviert.</string>
     <string name="toast_searxng_instance_required">Lege zuerst eine gültige SearXNG-Instanz-URL fest</string>
     <string name="settings_section_browser">Browser</string>
+    <string name="settings_startup_animation_title">Startanimation</string>
+    <string name="settings_startup_animation_subtitle">Zeigt die Candy-Animation beim normalen App-Start. Deaktivieren, um die Adressleiste sofort zu öffnen.</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>
     <string name="settings_full_immersive_mode_subtitle">Blendet Status- und Navigationsleiste aus. Vom Bildschirmrand wischen, um sie kurz einzublenden.</string>
     <string name="settings_scroll_bar_title">Ziehbare Scrollleiste</string>

@@ -222,6 +222,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -413,6 +414,8 @@ internal fun BrowserScreen(
     onImportUserScript: () -> Unit = {},
     onExportAppData: () -> Unit = {},
     onImportAppData: () -> Unit = {},
+    openAddressEditorOnLaunch: Boolean = false,
+    launcherAddressEditorRequestId: Int = 0,
 ) {
     val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
         onTabOverviewPortraitLockChanged,
@@ -432,7 +435,7 @@ internal fun BrowserScreen(
     var tabOverviewVisible by rememberSaveable { mutableStateOf(false) }
     var candyTrailTabId by rememberSaveable { mutableStateOf<String?>(null) }
     var candyTrailSourceBounds by remember { mutableStateOf<Rect?>(null) }
-    var addressEditorVisible by remember { mutableStateOf(false) }
+    var addressEditorVisible by remember { mutableStateOf(openAddressEditorOnLaunch) }
     val aiModeSelectedState = remember { mutableStateOf(false) }
     var settingsVisible by remember { mutableStateOf(false) }
     var settingsDestination by rememberSaveable { mutableStateOf(SettingsDestination.Home) }
@@ -448,7 +451,21 @@ internal fun BrowserScreen(
     var readerStudioRequestId by remember { mutableIntStateOf(0) }
     var clearDialogVisible by remember { mutableStateOf(false) }
     var pendingCapsuleDelete by remember { mutableStateOf<SiteCapsule?>(null) }
-    var addressValue by remember { mutableStateOf(TextFieldValue()) }
+    var addressValue by remember {
+        val initialAddress = controller.selectedTab.url
+            .takeUnless { it == BLANK_URL }
+            .orEmpty()
+        mutableStateOf(
+            if (openAddressEditorOnLaunch) {
+                TextFieldValue(
+                    text = initialAddress,
+                    selection = TextRange(initialAddress.length, 0),
+                )
+            } else {
+                TextFieldValue()
+            },
+        )
+    }
     var remoteSearchSuggestions by remember { mutableStateOf(emptyList<String>()) }
     var localRecallMatches by remember { mutableStateOf(emptyList<RecallMatch>()) }
     val searchSuggestionClient = remember { SearchSuggestionClient() }
@@ -751,6 +768,13 @@ internal fun BrowserScreen(
                 highlightedSuggestionIndex = -1
                 addressFocusNonce++
             }
+        }
+    }
+    LaunchedEffect(launcherAddressEditorRequestId) {
+        if (launcherAddressEditorRequestId > 0) {
+            closeTabOverview()
+            settingsVisible = false
+            openAddressEditor()
         }
     }
     fun createTabAndConfirm(isIncognito: Boolean, emitHaptic: Boolean): Boolean {
@@ -1918,6 +1942,7 @@ internal fun BrowserScreen(
                 isTabButtonVisible = controller.isTabButtonVisible,
                 isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
                 isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
+                isStartupAnimationEnabled = controller.isStartupAnimationEnabled,
                 isScrollBarEnabled = controller.isScrollBarEnabled,
                 isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
                 isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
@@ -1968,6 +1993,8 @@ internal fun BrowserScreen(
                     controller::updateAddressBarDockingEnabled,
                 onFullImmersiveModeEnabledChanged =
                     controller::updateFullImmersiveModeEnabled,
+                onStartupAnimationEnabledChanged =
+                    controller::updateStartupAnimationEnabled,
                 onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
                 onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
@@ -4056,6 +4083,7 @@ private fun ExpandedBottomBarContent(
 ) {
     val tabDragState = rememberDraggableState(onTabDrag)
     val keyboard = LocalSoftwareKeyboardController.current
+    val windowInfo = LocalWindowInfo.current
     var addressFieldFocused by remember(tab.id) { mutableStateOf(false) }
     val editorUsesFullWidth = AddressBarControlRules.editorUsesFullWidth(
         editing = editing,
@@ -4065,8 +4093,13 @@ private fun ExpandedBottomBarContent(
     LaunchedEffect(editorUsesFullWidth) {
         if (editorUsesFullWidth) onMenuExpandedChange(false)
     }
-    LaunchedEffect(requestAddressFocus, tab.id, addressFocusNonce) {
-        if (requestAddressFocus) {
+    LaunchedEffect(
+        requestAddressFocus,
+        tab.id,
+        addressFocusNonce,
+        windowInfo.isWindowFocused,
+    ) {
+        if (requestAddressFocus && windowInfo.isWindowFocused) {
             withFrameNanos { }
             focusRequester.requestFocus()
             keyboard?.show()

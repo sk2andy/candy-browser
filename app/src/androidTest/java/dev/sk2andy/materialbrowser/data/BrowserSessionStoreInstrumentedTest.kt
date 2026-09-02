@@ -141,6 +141,19 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun startupAnimationDefaultsOnAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertTrue(store.loadStartupAnimationEnabled())
+
+        store.saveStartupAnimationEnabled(false)
+        assertFalse(store.loadStartupAnimationEnabled())
+
+        store.saveStartupAnimationEnabled(true)
+        assertTrue(store.loadStartupAnimationEnabled())
+    }
+
+    @Test
     fun aiModeToggleDefaultsToHiddenAndRoundTripsVisibleState() {
         val store = BrowserSessionStore(context)
 
