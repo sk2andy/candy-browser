@@ -23,6 +23,7 @@ type Config struct {
 	ListenAddress  string
 	DatabasePath   string
 	PublicURL      *url.URL
+	AllowHTTP      bool
 	LogLevel       string
 	TokenTTL       time.Duration
 	MaxBodyBytes   int64
@@ -61,6 +62,15 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		MaxBatch:       defaultMaxBatch,
 		ClientIPHeader: valueOrDefault(lookup, "CANDY_SYNC_CLIENT_IP_HEADER", ""),
 	}
+	if raw, ok := lookup("CANDY_SYNC_ALLOW_HTTP"); ok && raw != "" {
+		switch raw {
+		case "true":
+			cfg.AllowHTTP = true
+		case "false":
+		default:
+			return Config{}, errors.New("CANDY_SYNC_ALLOW_HTTP must be true or false")
+		}
+	}
 
 	if strings.TrimSpace(cfg.ListenAddress) == "" {
 		return Config{}, errors.New("CANDY_SYNC_LISTEN_ADDR must not be empty")
@@ -80,9 +90,9 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
 			return Config{}, errors.New("CANDY_SYNC_PUBLIC_URL must be an absolute URL without credentials, query, or fragment")
 		}
-		localHTTP := parsed.Scheme == "http" && isLocalHost(parsed.Hostname())
-		if parsed.Scheme != "https" && !localHTTP {
-			return Config{}, errors.New("CANDY_SYNC_PUBLIC_URL must use HTTPS; HTTP is allowed only for localhost")
+		allowedHTTP := parsed.Scheme == "http" && (isLocalHost(parsed.Hostname()) || cfg.AllowHTTP)
+		if parsed.Scheme != "https" && !allowedHTTP {
+			return Config{}, errors.New("CANDY_SYNC_PUBLIC_URL must use HTTPS; remote HTTP requires CANDY_SYNC_ALLOW_HTTP=true")
 		}
 		cfg.PublicURL = parsed
 	}

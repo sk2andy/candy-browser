@@ -1,8 +1,24 @@
 import type { SyncSelection } from "../core/models.js";
 import { dataCollectionForSelection, permissionsForSelection } from "../core/permission-rules.js";
+import { IS_FIREFOX_BUILD } from "../platform/browser-target.js";
 import { extensionApi } from "../platform/webextension.js";
 
 type FirefoxPermissionRequest = chrome.permissions.Permissions & { data_collection?: string[] };
+
+export function permissionRequest(
+  selection: SyncSelection,
+  origins: string[],
+  includeFirefoxDataCollection: boolean,
+): FirefoxPermissionRequest {
+  const request: FirefoxPermissionRequest = {
+    origins,
+    permissions: permissionsForSelection(selection) as chrome.runtime.ManifestPermission[],
+  };
+  if (includeFirefoxDataCollection) {
+    request.data_collection = dataCollectionForSelection(selection);
+  }
+  return request;
+}
 
 async function requestPermissions(request: FirefoxPermissionRequest): Promise<boolean> {
   const invoke = extensionApi().permissions.request as unknown as (
@@ -12,14 +28,7 @@ async function requestPermissions(request: FirefoxPermissionRequest): Promise<bo
 }
 
 export async function requestSyncPermissions(selection: SyncSelection): Promise<boolean> {
-  const api = extensionApi();
-  const request: FirefoxPermissionRequest = {
-    permissions: permissionsForSelection(selection) as chrome.runtime.ManifestPermission[],
-  };
-  if ((globalThis as typeof globalThis & { browser?: unknown }).browser) {
-    request.data_collection = dataCollectionForSelection(selection);
-  }
-  return requestPermissions(request);
+  return requestPermissions(permissionRequest(selection, [], IS_FIREFOX_BUILD));
 }
 
 export async function hasSyncPermissions(selection: SyncSelection): Promise<boolean> {
@@ -33,14 +42,7 @@ export async function requestEndpointPermission(originPattern: string): Promise<
 }
 
 export async function requestSetupPermissions(selection: SyncSelection, originPattern: string): Promise<boolean> {
-  const request: FirefoxPermissionRequest = {
-    origins: [originPattern],
-    permissions: permissionsForSelection(selection) as chrome.runtime.ManifestPermission[],
-  };
-  if ((globalThis as typeof globalThis & { browser?: unknown }).browser) {
-    request.data_collection = dataCollectionForSelection(selection);
-  }
-  return requestPermissions(request);
+  return requestPermissions(permissionRequest(selection, [originPattern], IS_FIREFOX_BUILD));
 }
 
 export async function removeEndpointPermission(originPattern: string): Promise<boolean> {

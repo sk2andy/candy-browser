@@ -104,6 +104,74 @@ object SyncedProfileRuntimeRules {
         )
     }
 
+    fun reconcileLinkedProfile(
+        profile: SyncProfile,
+        localProfileId: String,
+        existingTabs: List<BrowserTab>,
+        nowMillis: Long,
+        maxTabs: Int = MAX_TABS,
+        locallyPendingCandyIds: Set<String> = emptySet(),
+    ): SyncedTabReconciliation {
+        require(maxTabs >= 0)
+        val localTabs = existingTabs.filter { it.profileId == localProfileId }
+        val existingByCandyId = localTabs
+            .filter { !it.isIncognito && it.syncCandyId != null }
+            .associateBy { requireNotNull(it.syncCandyId) }
+        val orderedRemoteTabs = profile.tabs
+            .sortedWith(compareBy<SyncTab>({ it.windowId }, { it.index }, { it.candyId }))
+        val remoteIds = orderedRemoteTabs.mapTo(linkedSetOf(), SyncTab::candyId)
+        val retainedLocalTabs = localTabs.filter { tab ->
+            val candyId = tab.syncCandyId
+            tab.isIncognito ||
+                candyId == null ||
+                candyId !in remoteIds && (
+                    tab.url == BLANK_URL ||
+                        BrowserUriPolicy.normalizeHttpUrl(tab.url) == null ||
+                        candyId in locallyPendingCandyIds
+                    )
+        }.take(maxTabs)
+        val visibleRemoteTabs = orderedRemoteTabs.take(
+            (maxTabs - retainedLocalTabs.size).coerceAtLeast(0),
+        )
+        val remoteTabs = visibleRemoteTabs.map { remote ->
+            val existing = existingByCandyId[remote.candyId]
+            if (existing == null) {
+                BrowserTab(
+                    id = runtimeTabId(profile.deviceId, remote.candyId),
+                    lastAccessedAt = nowMillis,
+                    profileId = localProfileId,
+                    isPinned = remote.pinned,
+                    title = remote.title,
+                    url = remote.url,
+                    isLoading = remote.url != BLANK_URL,
+                    syncCandyId = remote.candyId,
+                )
+            } else {
+                existing.copy(
+                    profileId = localProfileId,
+                    isIncognito = false,
+                    isPinned = remote.pinned,
+                    title = remote.title,
+                    url = remote.url,
+                )
+            }
+        }
+        val ordered = (remoteTabs + retainedLocalTabs)
+            .distinctBy(BrowserTab::id)
+        val retainedRuntimeIds = ordered.mapTo(hashSetOf(), BrowserTab::id)
+        return SyncedTabReconciliation(
+            tabs = ordered,
+            removedRuntimeTabIds = localTabs
+                .filterNot { it.id in retainedRuntimeIds }
+                .mapTo(linkedSetOf(), BrowserTab::id),
+            navigations = remoteTabs.mapNotNull { reconciled ->
+                val previous = existingByCandyId[reconciled.syncCandyId]
+                reconciled.takeIf { previous != null && previous.url != it.url }
+                    ?.let { SyncedTabNavigation(it.id, it.url) }
+            },
+        )
+    }
+
     fun outboundTab(
         tab: BrowserTab,
         index: Int,

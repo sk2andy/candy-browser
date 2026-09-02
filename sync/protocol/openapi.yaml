@@ -8,6 +8,8 @@ info:
     HTTP Basic authenticates bootstrap and first-device enrollment. A random device
     bearer token authenticates later device and sync operations. E2EE passphrase is
     client-only and is never an API field, header, server environment value or log field.
+    Remote cleartext HTTP is disabled by default. Servers that explicitly enable it
+    advertise `allowHttp: true`; clients must discover that policy before sending credentials.
   license:
     name: PolyForm Noncommercial License 1.0.0
     identifier: PolyForm-Noncommercial-1.0.0
@@ -348,7 +350,7 @@ components:
     Discovery:
       type: object
       additionalProperties: false
-      required: [protocol, versions, features, limits]
+      required: [protocol, versions, allowHttp, features, limits]
       properties:
         protocol: { const: candy-sync }
         versions:
@@ -356,6 +358,9 @@ components:
           minItems: 1
           uniqueItems: true
           items: { type: integer, minimum: 1 }
+        allowHttp:
+          type: boolean
+          description: Whether clients may send credentials and bearer tokens over non-loopback HTTP.
         features:
           type: array
           uniqueItems: true

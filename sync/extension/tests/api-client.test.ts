@@ -3,13 +3,36 @@ import test from "node:test";
 
 import { CandySyncApiClient } from "../src/protocol/api-client.js";
 
+test("calls the native fetch function with its browser-global receiver", async () => {
+  const originalFetch = globalThis.fetch;
+  let receiver: unknown;
+  const receiverSensitiveFetch: typeof fetch = function (this: unknown) {
+    receiver = this;
+    if (this !== globalThis) throw new TypeError("Illegal invocation");
+    return Promise.resolve(Response.json({
+      protocol: "candy-sync",
+      versions: [1],
+      allowHttp: false,
+      features: ["e2ee"],
+      limits: { payloadBytes: 1_048_576 },
+    }));
+  };
+  globalThis.fetch = receiverSensitiveFetch;
+  try {
+    await new CandySyncApiClient("https://sync.example/").discover();
+    assert.equal(receiver, globalThis);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("uses discovery, Basic bootstrap/enrollment and never sends E2EE passphrase", async () => {
   const requests: Array<{ url: string; init: RequestInit | undefined }> = [];
   const fetcher: typeof fetch = async (input, init) => {
     const url = String(input);
     requests.push({ url, init });
     if (url.endsWith("/.well-known/candy-sync")) {
-      return Response.json({ protocol: "candy-sync", versions: [1], features: ["e2ee", "encrypted-device-icons"], limits: { payloadBytes: 1_048_576 } });
+      return Response.json({ protocol: "candy-sync", versions: [1], allowHttp: false, features: ["e2ee", "encrypted-device-icons"], limits: { payloadBytes: 1_048_576 } });
     }
     if (url.endsWith("/v1/bootstrap")) return Response.json({
       workspaceId: "workspace-1",
@@ -97,6 +120,50 @@ test("rejects incompatible discovery responses", async () => {
     limits: { payloadBytes: 1_048_576 },
   }));
   await assert.rejects(client.discover(), /Protocol v1/u);
+});
+
+test("never sends credentials to remote HTTP before explicit server approval", async () => {
+  const requests: Array<{ url: string; init: RequestInit | undefined }> = [];
+  const client = new CandySyncApiClient("http://sync.example/", async (input, init) => {
+    requests.push({ url: String(input), init });
+    return Response.json({
+      protocol: "candy-sync",
+      versions: [1],
+      allowHttp: false,
+      features: ["e2ee"],
+      limits: { payloadBytes: 1_048_576 },
+    });
+  });
+  await assert.rejects(client.bootstrap("alice", "secret"), /before credentials/u);
+  assert.equal(requests.length, 0);
+  await assert.rejects(client.discover(), /does not allow remote HTTP/u);
+  assert.equal(requests.length, 1);
+  assert.equal(new Headers(requests[0]?.init?.headers).has("Authorization"), false);
+});
+
+test("allows remote HTTP credentials after discovery advertises the server flag", async () => {
+  const requests: Array<{ url: string; init: RequestInit | undefined }> = [];
+  const client = new CandySyncApiClient("http://sync.example/", async (input, init) => {
+    requests.push({ url: String(input), init });
+    if (String(input).endsWith("/.well-known/candy-sync")) {
+      return Response.json({
+        protocol: "candy-sync",
+        versions: [1],
+        allowHttp: true,
+        features: ["e2ee"],
+        limits: { payloadBytes: 1_048_576 },
+      });
+    }
+    return Response.json({
+      workspaceId: "workspace-1",
+      initialized: false,
+      kdf: { algorithm: "argon2id-v1", salt: "AAAAAAAAAAAAAAAAAAAAAA", memoryKiB: 65_536, iterations: 3, parallelism: 4 },
+      recoveryEnvelope: null,
+    });
+  });
+  await client.discover();
+  await client.bootstrap("alice", "secret");
+  assert.equal(new Headers(requests[1]?.init?.headers).has("Authorization"), true);
 });
 
 test("pull requests one bounded page and accepts a large encrypted payload", async () => {

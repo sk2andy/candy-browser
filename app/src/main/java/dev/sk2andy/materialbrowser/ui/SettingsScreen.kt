@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -77,7 +78,9 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AddressResolver
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -176,6 +179,8 @@ internal fun SettingsScreen(
     automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
+    profiles: List<BrowserProfile>,
+    activeProfileId: String,
     tabCount: Int,
     addressBarActionLayout: AddressBarActionLayout,
     isAddressBarDockingEnabled: Boolean,
@@ -399,6 +404,8 @@ internal fun SettingsScreen(
                 SettingsDestination.Sync -> SyncSettingsPage(
                     state = syncState,
                     iconCatalog = syncIconCatalog,
+                    localProfiles = profiles.filterNot(BrowserProfile::isSynced),
+                    activeProfileId = activeProfileId,
                     onConfigure = onConfigureSync,
                     onEnroll = onEnrollSync,
                     onRefresh = onRefreshSync,
@@ -1621,7 +1628,8 @@ internal fun SettingsPage(
             .navigationBarsPadding()
             .padding(horizontal = 24.dp)
             .padding(bottom = 24.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .imePadding(),
     ) {
         Row(
             modifier = Modifier.padding(top = 8.dp, bottom = 12.dp),

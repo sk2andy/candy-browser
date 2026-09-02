@@ -58,6 +58,8 @@ const statusMessage = element<HTMLElement>("status-message");
 
 let settings: StoredSettings | null = null;
 
+const permissionOrigin = (endpoint: string): string => endpointPermissionOrigin(endpoint);
+
 function selection(): SyncSelection {
   return { tabs: tabsInput.checked, bookmarks: bookmarksInput.checked, groups: groupsInput.checked };
 }
@@ -136,28 +138,31 @@ async function initialize(): Promise<void> {
 setupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (settings) return;
+  let password = passwordInput.value;
+  const passphraseText = passphraseInput.value;
+  const confirmationText = confirmationInput.value;
   let endpoint: string;
   try {
-    endpoint = normalizeEndpoint(endpointInput.value);
+    endpoint = normalizeEndpoint(endpointInput.value, true);
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "Endpoint is invalid.", "error");
     return;
   }
-  if (passphraseInput.value !== confirmationInput.value) {
+  if (passphraseText !== confirmationText) {
     showFeedback("Passphrase confirmation does not match.", "error");
     return;
   }
-  if (passphraseInput.value.length < 16 || !acknowledgeInput.checked) {
+  if (passphraseText.length < 16 || !acknowledgeInput.checked) {
     showFeedback("Use at least 16 characters and acknowledge the loss warning.", "error");
     return;
   }
-  if (passphraseInput.value === passwordInput.value) {
+  if (passphraseText === password) {
     showFeedback("Use different values for the server password and E2EE passphrase.", "error");
     return;
   }
 
   // Permission request must remain the first asynchronous call in this user gesture.
-  const granted = await requestSetupPermissions(selection(), endpointPermissionOrigin(endpoint));
+  const granted = await requestSetupPermissions(selection(), permissionOrigin(endpoint));
   if (!granted) {
     showFeedback("The required browser or endpoint permission was not granted.", "error");
     return;
@@ -165,8 +170,7 @@ setupForm.addEventListener("submit", async (event) => {
 
   setBusy(true);
   showFeedback("Checking the server and generating local keys …");
-  let password = passwordInput.value;
-  const passphrase = utf8(passphraseInput.value);
+  const passphrase = utf8(passphraseText);
   let devicePrivateKey: Uint8Array | null = null;
   let workspaceKey: Uint8Array | null = null;
   let committed = false;
@@ -248,7 +252,7 @@ setupForm.addEventListener("submit", async (event) => {
       if (settings) renderConfigured(settings);
       await saveStatus({ code: "offline", message: "Setup is saved; unlock again to continue.", updatedAt: new Date().toISOString() });
     } else {
-      await removeEndpointPermission(endpointPermissionOrigin(endpoint));
+      await removeEndpointPermission(permissionOrigin(endpoint));
     }
     showFeedback(error instanceof Error ? error.message : "Einrichtung fehlgeschlagen.", "error");
   } finally {

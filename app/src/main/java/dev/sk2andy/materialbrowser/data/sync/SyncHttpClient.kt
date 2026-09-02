@@ -54,16 +54,21 @@ interface SyncTransport {
 }
 
 class SyncHttpClient(endpoint: String) : SyncTransport {
-    private val endpoint = URI(requireNotNull(SyncEndpointRules.normalize(endpoint)))
+    private val endpoint = URI(requireNotNull(SyncEndpointRules.normalize(endpoint, allowRemoteHttp = true)))
+    private val requiresRemoteHttpApproval = SyncEndpointRules.requiresRemoteHttpApproval(endpoint.toString())
+    private var remoteHttpApproved = !requiresRemoteHttpApproval
 
     override fun discover() {
         val value = parseStrictJsonObject(request(".well-known/candy-sync", "GET"))
-        require(value.keys().asSequence().toSet() == setOf("protocol", "versions", "features", "limits"))
+        require(value.keys().asSequence().toSet() == setOf("protocol", "versions", "allowHttp", "features", "limits"))
         require(value.strictString("protocol", 32) == "candy-sync")
         val versions = value.getJSONArray("versions")
         require(versions.length() in 1..16)
         require((0 until versions.length()).all { versions.get(it) is Int })
         require((0 until versions.length()).any { versions.get(it) == 1 })
+        val allowHttp = value.get("allowHttp") as? Boolean
+            ?: throw IllegalArgumentException("Invalid allowHttp")
+        require(!requiresRemoteHttpApproval || allowHttp)
         val features = value.getJSONArray("features")
         require(features.length() in 1..32)
         val supported = (0 until features.length()).map { index ->
@@ -75,6 +80,7 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
         require(limits.strictInt("batchChanges") in 1..1_000)
         require(limits.strictInt("payloadBytes") in 1_024..MAX_RESPONSE_BYTES)
         require(limits.strictInt("devices") in 1..10_000)
+        remoteHttpApproved = true
     }
 
     override fun bootstrap(username: String, password: ByteArray): SyncBootstrap =
@@ -164,6 +170,9 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
         idempotencyKey: String? = null,
         expectBody: Boolean = true,
     ): String {
+        require(authorization == null || remoteHttpApproved) {
+            "Remote HTTP must be approved by Candy Sync discovery before credentials are sent"
+        }
         var connection: HttpURLConnection? = null
         try {
             connection = endpoint.resolve(path).toURL().openConnection() as HttpURLConnection

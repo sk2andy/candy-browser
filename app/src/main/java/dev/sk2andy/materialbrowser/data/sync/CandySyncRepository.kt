@@ -50,6 +50,7 @@ class CandySyncRepository(
 ) : AutoCloseable {
     private val listeners = CopyOnWriteArraySet<(SyncRepositoryState) -> Unit>()
     private var cache = cacheStore.load()
+    private var currentDeviceId = loadCurrentDeviceId()
     private var configurationWriteFailed = false
 
     @Volatile
@@ -87,6 +88,7 @@ class CandySyncRepository(
             vaultStore.clear()
             cacheStore.clear()
             cache = SyncCache(cursor = "", profiles = emptyMap())
+            currentDeviceId = null
         }
         publish(stateFrom(normalized, if (!hasVault()) SyncStatus.Unconfigured else SyncStatus.Ready))
         return true
@@ -223,10 +225,23 @@ class CandySyncRepository(
             } finally {
                 secrets.clear()
             }
-            val enrolledCache = SyncCache(cursor = enrollment.cursor, profiles = emptyMap())
+            val enrolledAt = Instant.now(clock).toString()
+            val enrolledProfile = SyncProfile(
+                deviceId = enrollment.deviceId,
+                displayName = settings.deviceName,
+                icon = icon,
+                revision = 0,
+                tabs = emptyList(),
+                lastSeenAt = enrolledAt,
+            )
+            val enrolledCache = SyncCache(
+                cursor = enrollment.cursor,
+                profiles = mapOf(enrollment.deviceId to enrolledProfile),
+            )
             require(cacheStore.save(enrolledCache))
             cache = enrolledCache
-            publish(stateFrom(settings, SyncStatus.Ready, Instant.now(clock).toString()))
+            currentDeviceId = enrollment.deviceId
+            publish(stateFrom(settings, SyncStatus.Ready, enrolledAt))
             SyncEnrollmentOutcome.Enrolled
         } catch (error: Exception) {
             val outcome = when {
@@ -248,6 +263,7 @@ class CandySyncRepository(
 
     private fun refreshNow(settings: SyncConnectionSettings, secrets: SyncVaultSecrets) {
         val transport = transportFactory(settings.endpoint)
+        transport.discover()
         val devices = transport.listDevices(secrets.deviceToken).filter { it.status == SyncDeviceStatus.Active }
         val metadata = devices.associate { device ->
             val publicKey = SyncBase64.decode(device.publicKey, expectedBytes = 91)
@@ -386,6 +402,7 @@ class CandySyncRepository(
         mutation: SyncPendingMutation,
     ): SyncWriteOutcome {
         val transport = transportFactory(settings.endpoint)
+        transport.discover()
         repeat(MAX_CAS_ATTEMPTS) { attempt ->
             val profile = cache.profiles[mutation.targetDeviceId]
                 ?: return SyncWriteOutcome.Rejected("unknown-profile").also { removePending(mutation.mutationId) }
@@ -463,6 +480,7 @@ class CandySyncRepository(
         pendingCount = cache.pendingMutations.size,
         lastCursor = cache.cursor.takeIf(String::isNotEmpty),
         lastSuccessAt = lastSuccessAt,
+        currentDeviceId = currentDeviceId,
     )
 
     private fun stateOrNull(): SyncRepositoryState? = runCatching { state }.getOrNull()
@@ -471,6 +489,14 @@ class CandySyncRepository(
         secrets.clear()
         true
     } ?: false
+
+    private fun loadCurrentDeviceId(): String? = vaultStore.load()?.let { secrets ->
+        try {
+            secrets.deviceId
+        } finally {
+            secrets.clear()
+        }
+    }
 
     private fun optimisticProfiles(): Map<String, SyncProfile> {
         var profiles = cache.profiles

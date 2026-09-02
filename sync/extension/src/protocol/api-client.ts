@@ -1,4 +1,5 @@
 import type { EncryptedChange, RecoveryEnvelope, SyncType } from "../core/models.js";
+import { requiresRemoteHttpApproval } from "../core/endpoint-rules.js";
 import type { RecoveryKdf } from "../crypto/crypto.js";
 import { utf8 } from "../crypto/encoding.js";
 
@@ -6,6 +7,7 @@ export interface DiscoveryResponse {
   protocol: "candy-sync";
   versions: number[];
   features: string[];
+  allowHttp: boolean;
   limits: { payloadBytes: number };
 }
 
@@ -60,6 +62,8 @@ export class ApiError extends Error {
     super(message);
   }
 }
+
+const platformFetch: typeof fetch = (input, init) => globalThis.fetch(input, init);
 
 function basicAuthorization(username: string, password: string): string {
   const bytes = utf8(`${username}:${password}`);
@@ -166,13 +170,22 @@ function requireRecoveryParameter(value: unknown, expected: number, name: string
 }
 
 export class CandySyncApiClient {
-  constructor(private readonly endpoint: string, private readonly fetcher: typeof fetch = fetch) {}
+  private readonly remoteHttpRequiresApproval: boolean;
+  private remoteHttpApproved: boolean;
+
+  constructor(private readonly endpoint: string, private readonly fetcher: typeof fetch = platformFetch) {
+    this.remoteHttpRequiresApproval = requiresRemoteHttpApproval(endpoint);
+    this.remoteHttpApproved = !this.remoteHttpRequiresApproval;
+  }
 
   private url(path: string): string {
     return new URL(path.replace(/^\//u, ""), this.endpoint).href;
   }
 
   private async request(path: string, init: RequestInit): Promise<unknown> {
+    if (new Headers(init.headers).has("Authorization") && !this.remoteHttpApproved) {
+      throw new ApiError("Remote HTTP must be approved by Candy Sync discovery before credentials are sent.");
+    }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
@@ -199,10 +212,16 @@ export class CandySyncApiClient {
     const limits = requireObject(object.limits);
     const payloadBytes = Number(limits.payloadBytes);
     if (!Number.isSafeInteger(payloadBytes) || payloadBytes < 1_024) throw new ApiError("Server reports invalid limits.");
+    if (typeof object.allowHttp !== "boolean") throw new ApiError("Server reports an invalid HTTP policy.");
+    if (this.remoteHttpRequiresApproval && !object.allowHttp) {
+      throw new ApiError("This server does not allow remote HTTP. Enable HTTPS or set CANDY_SYNC_ALLOW_HTTP=true on the server.");
+    }
+    this.remoteHttpApproved = true;
     return {
       protocol: "candy-sync",
       versions: object.versions.filter((value): value is number => Number.isSafeInteger(value)),
       features: Array.isArray(object.features) ? object.features.filter((value): value is string => typeof value === "string") : [],
+      allowHttp: object.allowHttp,
       limits: { payloadBytes },
     };
   }

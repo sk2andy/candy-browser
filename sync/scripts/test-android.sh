@@ -100,4 +100,4 @@ fi
 cd "$repo_root"
 ./gradlew testFullDebugUnitTest testFossDebugUnitTest
 ANDROID_SERIAL="$serial" ./gradlew connectedFullDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.data.sync.AndroidSyncSecurityInstrumentedTest,dev.sk2andy.materialbrowser.ui.ProfileCreationSheetInstrumentedTest,dev.sk2andy.materialbrowser.ui.ProfileSwitcherInstrumentedTest,dev.sk2andy.materialbrowser.ui.SyncSettingsPageInstrumentedTest
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.data.BrowserSessionStoreInstrumentedTest,dev.sk2andy.materialbrowser.data.sync.AndroidSyncSecurityInstrumentedTest,dev.sk2andy.materialbrowser.ui.ProfileCreationSheetInstrumentedTest,dev.sk2andy.materialbrowser.ui.ProfileSwitcherInstrumentedTest,dev.sk2andy.materialbrowser.ui.SyncSettingsPageInstrumentedTest

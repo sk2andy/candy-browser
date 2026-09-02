@@ -292,7 +292,11 @@ tabs are sorted by window ID then index.
 ## Authentication and token handling
 
 - Discovery is unauthenticated.
-- `GET /v1/bootstrap` and `POST /v1/devices` use HTTP Basic over TLS.
+- `GET /v1/bootstrap` and `POST /v1/devices` use HTTP Basic over TLS by default.
+- Non-loopback HTTP is opt-in with `CANDY_SYNC_ALLOW_HTTP=true`. Clients first fetch unauthenticated
+  discovery and block every authenticated request unless `allowHttp: true` is present. This is an
+  accidental-misconfiguration guard, not authentication of an HTTP server; a network attacker can
+  forge discovery and steal credentials or tokens.
 - `DELETE /v1/devices/{deviceId}` requires server username/password through
   HTTP Basic again; a stolen device token alone cannot revoke devices.
 - Device listing and sync routes use random bearer token returned once at enrollment.
@@ -325,7 +329,7 @@ tabs are sorted by window ID then index.
 | --- | --- |
 | Stolen database or backup | No tab, device-name, device-icon, workspace-key or private-key plaintext. Recovery envelope remains offline-guess target. |
 | Compromised server | Cannot decrypt GCM payloads without passphrase/workspace key. Can manipulate availability, ordering, metadata and KDF response unless client enforces exact v1 contract. |
-| Network attacker | HTTPS protects Basic credentials and tokens; E2EE independently protects payload. HTTP allowed only on loopback development. |
+| Network attacker | HTTPS protects Basic credentials and tokens; E2EE independently protects payload. Explicit remote HTTP keeps payload encryption but exposes credentials, tokens, and metadata. |
 | Stolen locked profile | Vault remains passphrase encrypted; offline guessing remains possible. |
 | Unlocked profile, local malware or malicious extension update | Out of scope; can read or use unlocked secrets. |
 | Malicious authorized device | Can read workspace data and forge workspace-valid payloads; signatures are not implemented. |

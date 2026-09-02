@@ -14,10 +14,20 @@ import org.junit.Test
 
 class SyncHttpClientTest {
     @Test
+    fun `remote HTTP never sends credentials before discovery approval`() {
+        val client = SyncHttpClient("http://sync.example/")
+        val error = runCatching {
+            client.bootstrap("candy", "password".toByteArray())
+        }.exceptionOrNull()
+        assertTrue(error is IllegalArgumentException)
+        assertTrue(error?.message?.contains("before credentials") == true)
+    }
+
+    @Test
     fun `discovery and bootstrap use bounded strict protocol and Basic auth`() {
         TestServer(
             responses = listOf(
-                """{"protocol":"candy-sync","versions":[1],"features":["e2ee","tab-snapshots","encrypted-device-icons"],"limits":{"batchChanges":100,"payloadBytes":1048576,"devices":1000}}""",
+                """{"protocol":"candy-sync","versions":[1],"allowHttp":false,"features":["e2ee","tab-snapshots","encrypted-device-icons"],"limits":{"batchChanges":100,"payloadBytes":1048576,"devices":1000}}""",
                 """{"protocolVersion":1,"cryptoVersion":1,"workspaceId":"workspace_1","serverEpoch":"epoch_1","initialized":false,"kdf":{"algorithm":"argon2id-v1","salt":"AAAAAAAAAAAAAAAAAAAAAA","memoryKiB":65536,"iterations":3,"parallelism":4,"keyBytes":32},"recoveryEnvelope":null}""",
             ),
         ).use { server ->

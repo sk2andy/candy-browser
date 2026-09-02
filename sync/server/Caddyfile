@@ -1,0 +1,16 @@
+{
+	admin off
+	auto_https disable_redirects
+	default_sni {$CANDY_SYNC_TLS_HOST:localhost}
+	persist_config off
+	skip_install_trust
+}
+
+http://:7070 {
+	reverse_proxy candy-sync:8080
+}
+
+https://{$CANDY_SYNC_TLS_HOST:localhost}:7443 {
+	tls internal
+	reverse_proxy candy-sync:8080
+}

@@ -86,6 +86,28 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun linkedLocalTabKeepsStableSyncIdentityAcrossRestart() {
+        val store = BrowserSessionStore(context)
+        store.saveTabs(
+            tabs = listOf(
+                BrowserTab(
+                    id = "local-tab",
+                    lastAccessedAt = 10L,
+                    profileId = "personal",
+                    url = "https://example.com/",
+                    syncCandyId = "stable-sync-id",
+                ),
+            ),
+            selectedTabId = "local-tab",
+        )
+
+        val restored = store.loadTabs().first.single()
+
+        assertEquals("stable-sync-id", restored.syncCandyId)
+    }
+
+
+    @Test
     fun profilesAndPerProfileSelectionsRoundTrip() {
         val store = BrowserSessionStore(context)
         val profiles = listOf(

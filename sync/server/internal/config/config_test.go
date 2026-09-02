@@ -60,6 +60,9 @@ func TestLoadAppliesSafeDefaults(t *testing.T) {
 	if cfg.MaxBodyBytes != 1<<20 || cfg.MaxBatch != 250 {
 		t.Fatalf("unexpected limits: %+v", cfg)
 	}
+	if cfg.AllowHTTP {
+		t.Fatal("HTTP must be disabled by default")
+	}
 }
 
 func TestLoadAcceptsLocalHTTPOnly(t *testing.T) {
@@ -82,6 +85,32 @@ func TestLoadAcceptsLocalHTTPOnly(t *testing.T) {
 				t.Fatalf("error = %v, wantErr = %v", err, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestLoadAllowsRemoteHTTPOnlyWithExplicitFlag(t *testing.T) {
+	cfg, err := load(mapLookup(map[string]string{
+		"CANDY_SYNC_USERNAME":   "candy",
+		"CANDY_SYNC_PASSWORD":   "correct horse battery staple",
+		"CANDY_SYNC_PUBLIC_URL": "http://sync.example.net:8080",
+		"CANDY_SYNC_ALLOW_HTTP": "true",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.AllowHTTP {
+		t.Fatal("HTTP flag was not enabled")
+	}
+}
+
+func TestLoadRejectsInvalidHTTPFlag(t *testing.T) {
+	_, err := load(mapLookup(map[string]string{
+		"CANDY_SYNC_USERNAME":   "candy",
+		"CANDY_SYNC_PASSWORD":   "correct horse battery staple",
+		"CANDY_SYNC_ALLOW_HTTP": "1",
+	}))
+	if err == nil || !strings.Contains(err.Error(), "true or false") {
+		t.Fatalf("HTTP flag error = %v", err)
 	}
 }
 

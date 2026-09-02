@@ -47,11 +47,15 @@ func TestDiscoveryAdvertisesEncryptedDeviceIcons(t *testing.T) {
 	server := newTestServer(t, 1<<20)
 	response := get(t, server.URL+"/.well-known/candy-sync", "")
 	var discovery struct {
-		Features []string `json:"features"`
+		Features  []string `json:"features"`
+		AllowHTTP bool     `json:"allowHttp"`
 	}
 	decodeResponse(t, response, &discovery)
 	if !slices.Contains(discovery.Features, "encrypted-device-icons") {
 		t.Fatalf("features = %v", discovery.Features)
+	}
+	if discovery.AllowHTTP {
+		t.Fatal("test server unexpectedly advertises remote HTTP")
 	}
 }
 

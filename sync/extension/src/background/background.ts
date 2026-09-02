@@ -93,6 +93,7 @@ export async function synchronizeTabsOnce(): Promise<void> {
   const workspaceKey = base64UrlToBytes(secrets.workspaceKey);
   try {
     const api = new CandySyncApiClient(settings.endpoint);
+    await api.discover();
     const pulled = await pullAndApplyTargetChanges(api, settings, secrets.deviceToken, workspaceKey);
     settings = pulled.settings;
     let change: EncryptedChange | undefined = settings.pendingTabChange;

@@ -26,4 +26,13 @@ test("browser manifests use their supported background environment", () => {
   assert.equal(chromium.background.service_worker, "background.js");
   assert.deepEqual(firefox.background.scripts, ["background.js"]);
   assert.equal(firefox.browser_specific_settings.gecko.strict_min_version, "140.0");
+  assert.deepEqual(chromium.optional_host_permissions, ["https://*/*", "http://*/*"]);
+  assert.deepEqual(firefox.optional_host_permissions, ["https://*/*", "http://*/*"]);
+
+  const chromiumOptions = fs.readFileSync(path.join(root, "dist/chromium/options/options.js"), "utf8");
+  const firefoxOptions = fs.readFileSync(path.join(root, "dist/firefox/options/options.js"), "utf8");
+  assert.match(chromiumOptions, /var IS_FIREFOX_BUILD = false;/u);
+  assert.match(firefoxOptions, /var IS_FIREFOX_BUILD = true;/u);
+  assert.doesNotMatch(chromiumOptions, /__CANDY_SYNC_FIREFOX__/u);
+  assert.doesNotMatch(firefoxOptions, /__CANDY_SYNC_FIREFOX__/u);
 });

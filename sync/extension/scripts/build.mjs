@@ -42,6 +42,7 @@ for (const browser of browsers) {
       target: browser === "chromium" ? "chrome121" : "firefox139",
       sourcemap: true,
       legalComments: "none",
+      define: { __CANDY_SYNC_FIREFOX__: JSON.stringify(browser === "firefox") },
     }),
     build({
       entryPoints: [path.join(root, "src/entrypoints/options.ts")],
@@ -52,6 +53,7 @@ for (const browser of browsers) {
       target: browser === "chromium" ? "chrome121" : "firefox139",
       sourcemap: true,
       legalComments: "none",
+      define: { __CANDY_SYNC_FIREFOX__: JSON.stringify(browser === "firefox") },
     }),
   ]);
 

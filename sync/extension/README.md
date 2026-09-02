@@ -84,6 +84,12 @@ Firefox:
 P-256 public key and fingerprint, and capabilities. The server password exists only
 during setup in the Options Page context. The E2EE passphrase is never part of a request.
 
+HTTPS is the default remote transport. A non-loopback HTTP endpoint is accepted only after its
+unauthenticated discovery document reports `allowHttp: true`, which the server emits only with
+`CANDY_SYNC_ALLOW_HTTP=true`. The extension performs discovery before every authenticated sync
+session. HTTP remains vulnerable to credential/token interception and should be limited to a
+trusted development LAN.
+
 ## Permission lifecycle
 
 - `storage` and `alarms` are baseline permissions.

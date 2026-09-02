@@ -165,9 +165,10 @@ func (s *Server) requireBearer(next deviceHandler) http.HandlerFunc {
 
 func (s *Server) discovery(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
-		"protocol": "candy-sync",
-		"versions": []int{1},
-		"features": []string{"e2ee", "delta-sync", "encrypted-snapshot", "tab-snapshots", "encrypted-device-icons", "editable-tab-profiles"},
+		"protocol":  "candy-sync",
+		"versions":  []int{1},
+		"allowHttp": s.cfg.AllowHTTP,
+		"features":  []string{"e2ee", "delta-sync", "encrypted-snapshot", "tab-snapshots", "encrypted-device-icons", "editable-tab-profiles"},
 		"limits": map[string]any{
 			"batchChanges": s.cfg.MaxBatch,
 			"payloadBytes": s.cfg.MaxBodyBytes,

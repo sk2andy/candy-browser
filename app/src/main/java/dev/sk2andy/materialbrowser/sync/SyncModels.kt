@@ -151,6 +151,7 @@ data class SyncConnectionSettings(
     val deviceName: String,
     val iconCatalogId: String,
     val iconAccentHue: Int,
+    val localProfileId: String? = null,
 )
 
 enum class SyncStatus {
@@ -171,6 +172,7 @@ data class SyncRepositoryState(
     val pendingCount: Int,
     val lastCursor: String?,
     val lastSuccessAt: String?,
+    val currentDeviceId: String? = null,
 )
 
 sealed interface SyncMutationResult {

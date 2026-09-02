@@ -28,9 +28,32 @@ docker compose up --build -d
 docker compose ps
 ```
 
-The default endpoint is `http://localhost:8080`, allowed only for local development. For any remote
-endpoint, place the service behind an HTTPS reverse proxy and set `CANDY_SYNC_PUBLIC_URL` to that
-HTTPS origin. Never expose the plain HTTP port publicly.
+Compose starts the Go service behind a Caddy gateway. The gateway exposes HTTPS on
+`https://localhost:8443` and keeps HTTP on `http://localhost:8080` for explicit local-development
+use. Caddy creates and renews a leaf certificate through a persistent local CA. Export its public
+root certificate after the first start:
+
+```sh
+./scripts/export-local-ca.sh
+```
+
+Trust that certificate only on development clients that connect to this server. The CA private key
+stays in the `candy-sync-tls-data` Docker volume; deleting that volume rotates the CA and requires
+clients to trust the new root. Never export or distribute the CA private key.
+
+On macOS, import `.local-tls/root.crt` into the login keychain and explicitly trust it for SSL in
+Keychain Access. On Android, install the root as a user CA and use Candy Browser's opt-in
+`userCaDebug` or `userCaRelease` variant. The standard app deliberately trusts only system CAs.
+Importing a local CA is a security-sensitive client action: trust only this exported certificate,
+protect the Docker volume that contains its signing key, and remove the trust when local HTTPS is
+no longer needed.
+
+For LAN access, set `CANDY_SYNC_TLS_HOST` to the exact IP address or DNS name used by clients,
+`CANDY_SYNC_PUBLIC_URL` to the corresponding HTTPS URL, and `CANDY_SYNC_BIND_ADDRESS=0.0.0.0` (or a
+specific host address). Trusted-LAN cleartext access must additionally set
+`CANDY_SYNC_PUBLIC_URL=http://...`, `CANDY_SYNC_ALLOW_HTTP=true`, and
+use the HTTP port. Never expose HTTP to an untrusted network: E2EE hides tab content, but HTTP
+exposes Basic credentials, bearer tokens, and traffic metadata.
 
 SQLite lives at `/data/candy-sync.sqlite3`, uses WAL and `synchronous=FULL`, and must reside on a
 local filesystem. Do not use NFS or run multiple server replicas against the same SQLite file.
@@ -43,7 +66,12 @@ local filesystem. Do not use NFS or run multiple server replicas against the sam
 | `CANDY_SYNC_PASSWORD` | yes | - | At least 16 bytes; changing it invalidates all device tokens |
 | `CANDY_SYNC_LISTEN_ADDR` | no | `:8080` | HTTP listen address |
 | `CANDY_SYNC_DB_PATH` | no | `/data/candy-sync.sqlite3` | SQLite file on local storage |
-| `CANDY_SYNC_PUBLIC_URL` | no | - | HTTPS public origin, or HTTP localhost |
+| `CANDY_SYNC_PUBLIC_URL` | no | - | HTTPS public origin, or explicitly allowed HTTP origin |
+| `CANDY_SYNC_ALLOW_HTTP` | no | `false` | Permit and advertise non-loopback HTTP to clients |
+| `CANDY_SYNC_BIND_ADDRESS` | no | `127.0.0.1` | Host address used by the supplied Compose port mapping |
+| `CANDY_SYNC_PORT` | no | `8080` | Host port for the optional HTTP gateway |
+| `CANDY_SYNC_TLS_HOST` | no | `localhost` | Exact DNS name or IP address included in the local TLS certificate |
+| `CANDY_SYNC_TLS_PORT` | no | `8443` | Host port for the HTTPS gateway |
 | `CANDY_SYNC_TOKEN_TTL` | no | `0` | Device token TTL; `0` means until revocation |
 | `CANDY_SYNC_MAX_BODY_BYTES` | no | `1048576` | Request body limit |
 | `CANDY_SYNC_MAX_BATCH` | no | `250` | Push/pull batch limit |
@@ -54,9 +82,9 @@ Username/password are used for authenticated bootstrap and enrollment. The clien
 a random, device-scoped bearer token and must not persist the password. The database stores only a
 keyed token hash. Changing the configured username or password invalidates existing tokens.
 
-Basic-auth attempts are limited per client address. The Compose example trusts
-`X-Forwarded-For`; the reverse proxy must therefore overwrite that header instead
-of appending an untrusted client value. Without a trusted proxy, leave
+Basic-auth attempts are limited per client address. The supplied Caddy gateway is the only
+published service and overwrites `X-Forwarded-For`; the Go service is reachable only inside the
+Compose network. Another reverse proxy must provide the same boundary. Without a trusted proxy, leave
 `CANDY_SYNC_CLIENT_IP_HEADER` empty. Missing or malformed header values fall back
 to the transport peer.
 
@@ -107,6 +135,7 @@ Docker-only reproducible gate:
 
 ```sh
 ./scripts/test.sh
+./scripts/test-compose-https.sh
 ```
 
 The container test target downloads pinned Go modules, runs all tests with the race detector, and

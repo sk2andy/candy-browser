@@ -39,7 +39,7 @@
 
       <section id="connection" aria-labelledby="connection-title">
         <h2 id="connection-title">Connection</h2>
-        <p class="section-intro">Your own Candy Sync server only. HTTPS is required; localhost may use HTTP.</p>
+        <p class="section-intro">HTTPS is recommended. Remote HTTP works only when the self-hosted server explicitly enables it.</p>
         <form id="setup-form">
           <div class="field">
             <label for="endpoint">Server-Endpoint</label>
@@ -52,7 +52,7 @@
             </div>
             <div class="field">
               <label for="password">Password</label>
-              <input id="password" name="password" type="password" required autocomplete="off">
+              <input id="password" name="password" type="password" required autocomplete="current-password">
               <small>Used only for authentication and never stored.</small>
             </div>
           </div>
@@ -72,11 +72,11 @@
             <div class="field-row">
               <div class="field">
                 <label for="passphrase">Passphrase</label>
-                <input id="passphrase" name="passphrase" type="password" required minlength="16" autocomplete="off">
+                <input id="passphrase" name="passphrase" type="password" required minlength="16" autocomplete="new-password">
               </div>
               <div class="field" id="confirmation-field">
                 <label for="passphrase-confirmation">Repeat passphrase</label>
-                <input id="passphrase-confirmation" name="passphraseConfirmation" type="password" required minlength="16" autocomplete="off">
+                <input id="passphrase-confirmation" name="passphraseConfirmation" type="password" required minlength="16" autocomplete="new-password">
               </div>
             </div>
             <label class="acknowledge" id="acknowledge-row">

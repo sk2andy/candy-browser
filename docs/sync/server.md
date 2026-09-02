@@ -20,9 +20,38 @@ docker compose up --build -d
 docker compose ps
 ```
 
-The default development endpoint is `http://localhost:8080`. The Compose port binds to loopback.
-For access from another device, place the service behind a correctly configured HTTPS reverse proxy
-and set `CANDY_SYNC_PUBLIC_URL` to its public HTTPS origin.
+Compose includes a Caddy gateway with two independent ports:
+
+| Endpoint | Default | Use |
+| --- | --- | --- |
+| HTTPS | `https://localhost:8443` | Recommended client endpoint |
+| HTTP | `http://localhost:8080` | Explicit local-development fallback |
+
+Caddy issues and renews the HTTPS leaf through its persistent local CA. After the first start,
+export only the public root certificate with `./scripts/export-local-ca.sh` and trust it on each
+development client. A client that does not trust the root must reject the connection. Never disable
+TLS verification in Candy Sync, and never export the CA private key from the Docker volume.
+
+| Client | Local CA setup |
+| --- | --- |
+| macOS / Arc | Import `.local-tls/root.crt` into the login keychain and set SSL trust in Keychain Access |
+| Android | Install the root as a user CA and run the opt-in `userCaDebug` or `userCaRelease` build |
+| Standard Candy Browser build | Use a publicly trusted certificate; user CAs remain intentionally excluded |
+
+Trusting a CA lets it authenticate TLS endpoints. Protect the persistent `candy-sync-tls-data`
+volume that contains the CA signing key, and remove the client-side trust when this local deployment
+is retired.
+
+For LAN access, set `CANDY_SYNC_TLS_HOST` to the exact IP address or DNS name clients use,
+`CANDY_SYNC_PUBLIC_URL` to `https://<host>:<TLS port>`, and publish through a reachable bind address.
+If the host changes, Caddy issues a matching leaf while retaining the same root CA.
+
+Trusted-LAN HTTP requires three explicit values: an `http://` public URL,
+`CANDY_SYNC_ALLOW_HTTP=true`, and a reachable Compose publish address such as
+`CANDY_SYNC_BIND_ADDRESS=0.0.0.0`. Clients perform unauthenticated discovery first and refuse to send
+Basic credentials or bearer tokens unless the server advertises the enabled flag. This prevents
+accidental cleartext use, but it cannot protect against interception; HTTP exposes credentials,
+tokens, identifiers, timing, and ciphertext to the network.
 
 Do not add the E2EE passphrase to `.env`. The server rejects `CANDY_SYNC_PASSPHRASE` at startup.
 The passphrase belongs only in a client setup or unlock screen.
@@ -33,7 +62,12 @@ The passphrase belongs only in a client setup or unlock screen.
 | --- | ---: | --- | --- |
 | `CANDY_SYNC_USERNAME` | Yes | — | Bootstrap and enrollment username |
 | `CANDY_SYNC_PASSWORD` | Yes | — | Server-auth password; at least 16 bytes |
-| `CANDY_SYNC_PUBLIC_URL` | Remote use | — | Public HTTPS origin, or loopback HTTP for development |
+| `CANDY_SYNC_PUBLIC_URL` | Remote use | — | Public HTTPS origin, or HTTP when explicitly allowed |
+| `CANDY_SYNC_ALLOW_HTTP` | No | `false` | Explicitly permit and advertise non-loopback HTTP |
+| `CANDY_SYNC_BIND_ADDRESS` | No | `127.0.0.1` | Host address on which Compose publishes the port |
+| `CANDY_SYNC_PORT` | No | `8080` | Published HTTP fallback port |
+| `CANDY_SYNC_TLS_HOST` | No | `localhost` | Exact certificate DNS name or IP address |
+| `CANDY_SYNC_TLS_PORT` | No | `8443` | Published HTTPS port |
 | `CANDY_SYNC_LISTEN_ADDR` | No | `:8080` | Container listen address |
 | `CANDY_SYNC_DB_PATH` | No | `/data/candy-sync.sqlite3` | SQLite file on local storage |
 | `CANDY_SYNC_TOKEN_TTL` | No | `0` | Device-token lifetime; `0` lasts until revocation |
@@ -42,9 +76,9 @@ The passphrase belongs only in a client setup or unlock screen.
 | `CANDY_SYNC_LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, or `error` |
 | `CANDY_SYNC_CLIENT_IP_HEADER` | No | Empty in binary | Trusted proxy header for Basic-auth rate limits |
 
-The supplied Compose file sets `X-Forwarded-For`. A production reverse proxy must overwrite this
-header instead of accepting or appending a client-provided value. Leave the variable empty when the
-service is not behind a trusted proxy.
+The supplied Compose file publishes only Caddy. Caddy overwrites `X-Forwarded-For` before forwarding
+to the private Go container. A different production reverse proxy must preserve this trust boundary.
+Leave the variable empty when the service is not behind a trusted proxy.
 
 Changing the configured username or password invalidates existing device tokens. Clients must
 enroll again with the same immutable E2EE passphrase to recover the existing workspace key.
@@ -53,7 +87,7 @@ enroll again with the same immutable E2EE passphrase to recover the existing wor
 
 ```mermaid
 flowchart LR
-    C[Sync clients] -->|HTTPS| R[Reverse proxy]
+    C[Sync clients] -->|HTTPS 8443 or explicit HTTP 8080| R[Caddy gateway]
     R -->|Private HTTP| S[Candy Sync container]
     S --> V[(Local persistent volume)]
 ```
@@ -64,11 +98,16 @@ Keep these invariants:
 - keep SQLite on a local filesystem, not NFS;
 - run one server replica per SQLite database;
 - persist `/data` on a durable volume;
-- terminate TLS with a valid certificate;
+- terminate TLS with a valid public certificate or the documented local CA;
 - never inject the E2EE passphrase into server-side configuration.
 
-The runtime image is non-root, read-only apart from `/data`, drops Linux capabilities, and includes
-an internal health check.
+When intentionally using trusted-LAN HTTP, the first and fifth invariants are relaxed only for that
+isolated network. E2EE still protects synced payload plaintext, but it does not protect server
+credentials, device tokens, or metadata carried by HTTP.
+
+The Go runtime image is non-root, read-only apart from `/data`, drops Linux capabilities, and
+includes an internal health check. The Caddy container is read-only apart from its persistent
+certificate/configuration volumes and also drops Linux capabilities.
 
 ## API responsibilities
 

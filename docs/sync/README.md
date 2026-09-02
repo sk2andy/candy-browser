@@ -2,7 +2,8 @@
 
 Candy Sync is a self-hosted, end-to-end encrypted tab synchronization system for Candy Browser,
 Chromium, and Firefox. A Go/SQLite server stores opaque ciphertext; clients own every encryption key
-and render each device as a writable synced profile.
+and render remote devices as writable synced profiles. On Android, the current device binds to an
+existing local profile instead of creating a duplicate self profile.
 
 ## Documentation
 
@@ -20,7 +21,7 @@ and render each device as a writable synced profile.
 | --- | --- |
 | Single-workspace Go/SQLite server and Docker Compose | Implemented |
 | Chromium MV3 and Firefox WebExtension builds | Implemented |
-| Android client with Keystore-protected local secrets | Implemented |
+| Android client with Keystore-protected local secrets and local-profile binding | Implemented |
 | First-device setup and later-device passphrase recovery | Implemented |
 | Writable device profiles: open, navigate, pin, reorder, close | Implemented |
 | Durable offline outbox, cursor pull, acknowledgement, and CAS retry | Implemented |

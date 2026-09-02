@@ -82,6 +82,15 @@ test("pulls and applies a winning remote CAS revision before attempting pending 
   globalThis.fetch = async (input, init) => {
     const path = new URL(String(input)).pathname;
     requests.push(`${init?.method} ${path}`);
+    if (path === "/.well-known/candy-sync") {
+      return Response.json({
+        protocol: "candy-sync",
+        versions: [1],
+        allowHttp: false,
+        features: ["e2ee", "tab-snapshots", "encrypted-device-icons"],
+        limits: { payloadBytes: 1_048_576 },
+      });
+    }
     if (path === "/v1/sync/pull") {
       return Response.json({ changes: [{ ...remote, revision: "1" }], nextCursor: "epoch.1", hasMore: false });
     }
@@ -95,7 +104,7 @@ test("pulls and applies a winning remote CAS revision before attempting pending 
     workspaceKey.fill(0);
   }
 
-  assert.deepEqual(requests, ["GET /v1/sync/pull"]);
+  assert.deepEqual(requests, ["GET /.well-known/candy-sync", "GET /v1/sync/pull"]);
   const stored = local.get("candySyncSettingsV1") as StoredSettings;
   assert.equal(stored.cursor, "epoch.1");
   assert.equal(stored.tabRevision, "1");

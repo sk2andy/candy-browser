@@ -135,6 +135,93 @@ class SyncedProfileRuntimeRulesTest {
         assertTrue(result.removedRuntimeTabIds.isEmpty())
     }
 
+    @Test
+    fun `linked profile merges remote tabs without losing local private or pending tabs`() {
+        val remoteTab = BrowserTab(
+            id = "local-remote",
+            lastAccessedAt = 1,
+            profileId = "personal",
+            url = "https://old.example/",
+            syncCandyId = "remote",
+        )
+        val pendingTab = remoteTab.copy(
+            id = "local-pending",
+            url = "https://pending.example/",
+            syncCandyId = "pending",
+        )
+        val privateTab = remoteTab.copy(
+            id = "local-private",
+            isIncognito = true,
+            url = "https://private.example/",
+            syncCandyId = null,
+        )
+        val result = SyncedProfileRuntimeRules.reconcileLinkedProfile(
+            profile = profile(
+                tabs = listOf(
+                    tab("remote", 0, "https://changed.example/"),
+                    tab("new", 1, "https://new.example/"),
+                ),
+            ),
+            localProfileId = "personal",
+            existingTabs = listOf(remoteTab, pendingTab, privateTab),
+            nowMillis = 10,
+            locallyPendingCandyIds = setOf("pending"),
+        )
+
+        assertEquals(
+            listOf("remote", "new", "pending", null),
+            result.tabs.map(BrowserTab::syncCandyId),
+        )
+        assertTrue(result.removedRuntimeTabIds.isEmpty())
+        assertEquals(
+            listOf(SyncedTabNavigation("local-remote", "https://changed.example/")),
+            result.navigations,
+        )
+    }
+
+    @Test
+    fun `linked profile treats missing acknowledged tab as remote close`() {
+        val closed = BrowserTab(
+            id = "closed",
+            lastAccessedAt = 1,
+            profileId = "personal",
+            url = "https://closed.example/",
+            syncCandyId = "closed-candy",
+        )
+
+        val result = SyncedProfileRuntimeRules.reconcileLinkedProfile(
+            profile = profile(),
+            localProfileId = "personal",
+            existingTabs = listOf(closed),
+            nowMillis = 10,
+        )
+
+        assertTrue(result.tabs.isEmpty())
+        assertEquals(setOf("closed"), result.removedRuntimeTabIds)
+    }
+
+    @Test
+    fun `linked profile capacity never evicts a private tab for a remote tab`() {
+        val privateTab = BrowserTab(
+            id = "private",
+            lastAccessedAt = 1,
+            profileId = "personal",
+            isIncognito = true,
+            url = "https://private.example/",
+        )
+
+        val result = SyncedProfileRuntimeRules.reconcileLinkedProfile(
+            profile = profile(tabs = listOf(tab("remote", 0, "https://remote.example/"))),
+            localProfileId = "personal",
+            existingTabs = listOf(privateTab),
+            nowMillis = 10,
+            maxTabs = 1,
+        )
+
+        assertEquals(listOf("private"), result.tabs.map(BrowserTab::id))
+        assertTrue(result.removedRuntimeTabIds.isEmpty())
+    }
+
     private fun profile(tabs: List<SyncTab> = emptyList()) = SyncProfile(
         deviceId = "desktop",
         displayName = "Workstation",

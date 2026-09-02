@@ -7,6 +7,8 @@ object SyncTabRules {
     const val MAX_TITLE_LENGTH = 4_096
     const val MAX_URL_LENGTH = 16_384
 
+    fun isValidCandyId(value: String): Boolean = value.matches(IDENTIFIER)
+
     fun outboundTab(tab: SyncTab, isPrivate: Boolean): SyncTab? {
         if (isPrivate) return null
         return normalizeTab(tab)
@@ -117,7 +119,7 @@ object SyncTabRules {
     }
 
     private fun normalizeTab(tab: SyncTab): SyncTab? {
-        if (!tab.candyId.matches(IDENTIFIER) || tab.windowId < 0 || tab.index < 0) return null
+        if (!isValidCandyId(tab.candyId) || tab.windowId < 0 || tab.index < 0) return null
         if (tab.groupId != null && tab.groupId < 0) return null
         val safeUrl = BrowserUriPolicy.normalizeHttpUrl(tab.url) ?: return null
         if (safeUrl.length > MAX_URL_LENGTH) return null

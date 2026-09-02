@@ -264,6 +264,7 @@ import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserWebView
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.isSyncLinked
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.FindInPageRules
@@ -2023,6 +2024,8 @@ internal fun BrowserScreen(
                 automaticTabSortingEnabled = controller.automaticTabSortingEnabled,
                 dismissResistancePercent = controller.dismissResistancePercent,
                 profilesEnabled = controller.profilesEnabled,
+                profiles = controller.profiles,
+                activeProfileId = controller.activeProfileId,
                 tabCount = controller.activeTabs.size,
                 addressBarActionLayout = controller.addressBarActionLayout,
                 isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
@@ -7698,11 +7701,11 @@ internal fun ProfileSwitcher(
                                             textAlign = TextAlign.Center,
                                         )
                                     }
-                                    if (profile.isSynced) {
+                                    if (profile.isSyncLinked) {
                                         Surface(
                                             modifier = Modifier
                                                 .align(Alignment.BottomEnd)
-                                                .offset(x = (-3).dp, y = (-3).dp)
+                                                .offset(x = (-6).dp, y = (-6).dp)
                                                 .size(17.dp)
                                                 .testTag(
                                                     ProfileSwitcherTestTags.syncedBadge(profile.id),

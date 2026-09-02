@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.data.sync
 
 import dev.sk2andy.materialbrowser.sync.SyncCache
+import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDescriptor
 import dev.sk2andy.materialbrowser.sync.SyncEncryptedChange
 import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
@@ -11,6 +12,34 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class SyncStateCodecTest {
+    @Test
+    fun `settings round trip preserves linked local profile`() {
+        val settings = SyncConnectionSettings(
+            endpoint = "https://sync.example/",
+            username = "candy",
+            deviceName = "Phone",
+            iconCatalogId = "phone",
+            iconAccentHue = 312,
+            localProfileId = "personal",
+        )
+
+        assertEquals(settings, SyncStateCodec.decodeSettings(SyncStateCodec.encodeSettings(settings)))
+    }
+
+    @Test
+    fun `legacy settings remain readable without profile binding`() {
+        val legacy = """{
+            "schemaVersion":1,
+            "endpoint":"https://sync.example/",
+            "username":"candy",
+            "deviceName":"Phone",
+            "iconCatalogId":"phone",
+            "iconAccentHue":312
+        }""".trimIndent()
+
+        assertEquals(null, SyncStateCodec.decodeSettings(legacy).localProfileId)
+    }
+
     @Test
     fun `cache round trip preserves exact encrypted outbox attempt`() {
         val mutation = SyncPendingMutation.Navigate(

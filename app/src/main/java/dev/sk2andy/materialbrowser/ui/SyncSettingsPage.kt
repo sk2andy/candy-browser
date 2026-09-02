@@ -1,20 +1,26 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,36 +32,55 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.sync.SyncStatus
-import kotlin.math.roundToInt
+
+private val SYNC_ACCENT_HUES = listOf(0, 36, 72, 108, 144, 180, 216, 252, 288, 312)
 
 internal object SyncSettingsTestTags {
     const val Endpoint = "sync_settings_endpoint"
     const val Username = "sync_settings_username"
     const val Password = "sync_settings_password"
+    const val PasswordVisibility = "sync_settings_password_visibility"
     const val Passphrase = "sync_settings_passphrase"
+    const val PassphraseVisibility = "sync_settings_passphrase_visibility"
     const val PassphraseConfirmation = "sync_settings_passphrase_confirmation"
+    const val PassphraseConfirmationVisibility =
+        "sync_settings_passphrase_confirmation_visibility"
     const val DeviceName = "sync_settings_device_name"
+    const val LocalProfile = "sync_settings_local_profile"
     const val Icon = "sync_settings_icon"
+    const val AccentColors = "sync_settings_accent_colors"
     const val Enroll = "sync_settings_enroll"
     const val Refresh = "sync_settings_refresh"
+
+    fun accentColor(hue: Int): String = "sync_settings_accent_color:$hue"
 }
 
 @Composable
 internal fun SyncSettingsPage(
     state: SyncRepositoryState,
     iconCatalog: SyncDeviceIconCatalog,
+    localProfiles: List<BrowserProfile> = listOf(DEFAULT_BROWSER_PROFILE),
+    activeProfileId: String = localProfiles.first().id,
     onConfigure: (SyncConnectionSettings) -> Boolean,
     onEnroll: (CharArray, CharArray, (SyncEnrollmentOutcome) -> Unit) -> Unit,
     onRefresh: () -> Unit,
@@ -71,6 +96,14 @@ internal fun SyncSettingsPage(
     var deviceName by rememberSaveable(configured?.deviceName) {
         mutableStateOf(configured?.deviceName.orEmpty())
     }
+    var localProfileId by rememberSaveable(configured?.localProfileId, activeProfileId) {
+        mutableStateOf(
+            configured?.localProfileId
+                ?.takeIf { candidate -> localProfiles.any { it.id == candidate } }
+                ?: activeProfileId.takeIf { candidate -> localProfiles.any { it.id == candidate } }
+                ?: localProfiles.first().id,
+        )
+    }
     var iconCatalogId by rememberSaveable(configured?.iconCatalogId) {
         mutableStateOf(configured?.iconCatalogId ?: "phone")
     }
@@ -81,10 +114,13 @@ internal fun SyncSettingsPage(
     var passphrase by remember { mutableStateOf("") }
     var passphraseConfirmation by remember { mutableStateOf("") }
     var iconMenuExpanded by remember { mutableStateOf(false) }
+    var profileMenuExpanded by remember { mutableStateOf(false) }
     var submitting by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<Int?>(null) }
     val selectedIcon = iconCatalog.icons.firstOrNull { it.id == iconCatalogId }
         ?: iconCatalog.icons.first()
+    val selectedProfile = localProfiles.firstOrNull { it.id == localProfileId }
+        ?: localProfiles.first()
 
     SettingsPage(
         title = stringResource(R.string.sync_settings_title),
@@ -112,15 +148,13 @@ internal fun SyncSettingsPage(
             singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag(SyncSettingsTestTags.Username),
         )
-        OutlinedTextField(
+        SecretTextField(
             value = serverPassword,
             onValueChange = { serverPassword = it },
-            label = { Text(stringResource(R.string.sync_server_password_label)) },
-            supportingText = { Text(stringResource(R.string.sync_server_password_summary)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth().testTag(SyncSettingsTestTags.Password),
+            label = stringResource(R.string.sync_server_password_label),
+            supportingText = stringResource(R.string.sync_server_password_summary),
+            fieldTestTag = SyncSettingsTestTags.Password,
+            visibilityTestTag = SyncSettingsTestTags.PasswordVisibility,
         )
 
         Text(
@@ -129,6 +163,57 @@ internal fun SyncSettingsPage(
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
         )
+        Box {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { profileMenuExpanded = true }
+                    .testTag(SyncSettingsTestTags.LocalProfile),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(selectedProfile.emoji, style = MaterialTheme.typography.headlineSmall)
+                    Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                        Text(stringResource(R.string.sync_local_profile_label))
+                        Text(
+                            if (selectedProfile.id == activeProfileId) {
+                                stringResource(R.string.sync_local_profile_current)
+                            } else {
+                                stringResource(R.string.sync_local_profile_existing)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            DropdownMenu(
+                expanded = profileMenuExpanded,
+                onDismissRequest = { profileMenuExpanded = false },
+            ) {
+                localProfiles.forEach { profile ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (profile.id == activeProfileId) {
+                                    "${profile.emoji}  ${stringResource(R.string.sync_local_profile_current)}"
+                                } else {
+                                    "${profile.emoji}  ${stringResource(R.string.sync_local_profile_existing)}"
+                                },
+                            )
+                        },
+                        onClick = {
+                            localProfileId = profile.id
+                            profileMenuExpanded = false
+                        },
+                    )
+                }
+            }
+        }
         OutlinedTextField(
             value = deviceName,
             onValueChange = { deviceName = it },
@@ -175,15 +260,9 @@ internal fun SyncSettingsPage(
                 }
             }
         }
-        Text(
-            stringResource(R.string.sync_accent_hue_label, iconAccentHue),
-            modifier = Modifier.padding(start = 18.dp, top = 12.dp),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Slider(
-            value = iconAccentHue.toFloat(),
-            onValueChange = { iconAccentHue = it.roundToInt() },
-            valueRange = 0f..359f,
+        SyncAccentColorPicker(
+            selectedHue = iconAccentHue,
+            onHueSelected = { iconAccentHue = it },
         )
 
         Surface(
@@ -205,25 +284,19 @@ internal fun SyncSettingsPage(
                 )
             }
         }
-        OutlinedTextField(
+        SecretTextField(
             value = passphrase,
             onValueChange = { passphrase = it },
-            label = { Text(stringResource(R.string.sync_passphrase_label)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth().testTag(SyncSettingsTestTags.Passphrase),
+            label = stringResource(R.string.sync_passphrase_label),
+            fieldTestTag = SyncSettingsTestTags.Passphrase,
+            visibilityTestTag = SyncSettingsTestTags.PassphraseVisibility,
         )
-        OutlinedTextField(
+        SecretTextField(
             value = passphraseConfirmation,
             onValueChange = { passphraseConfirmation = it },
-            label = { Text(stringResource(R.string.sync_passphrase_confirm_label)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(SyncSettingsTestTags.PassphraseConfirmation),
+            label = stringResource(R.string.sync_passphrase_confirm_label),
+            fieldTestTag = SyncSettingsTestTags.PassphraseConfirmation,
+            visibilityTestTag = SyncSettingsTestTags.PassphraseConfirmationVisibility,
         )
         feedback?.let { message ->
             Text(
@@ -264,6 +337,7 @@ internal fun SyncSettingsPage(
                         deviceName = deviceName,
                         iconCatalogId = iconCatalogId,
                         iconAccentHue = iconAccentHue,
+                        localProfileId = localProfileId,
                     )
                     if (!onConfigure(settings)) {
                         feedback = R.string.sync_error_invalid_configuration
@@ -323,6 +397,123 @@ internal fun SyncSettingsPage(
             }
         }
     }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun SyncAccentColorPicker(
+    selectedHue: Int,
+    onHueSelected: (Int) -> Unit,
+) {
+    val accentLabel = stringResource(R.string.sync_accent_color_label)
+    val hues = if (selectedHue in SYNC_ACCENT_HUES) {
+        SYNC_ACCENT_HUES
+    } else {
+        SYNC_ACCENT_HUES.dropLast(1) + selectedHue.coerceIn(0, 359)
+    }
+    Text(
+        text = accentLabel,
+        modifier = Modifier.padding(start = 18.dp, top = 16.dp, bottom = 4.dp),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(SyncSettingsTestTags.AccentColors),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        hues.forEachIndexed { index, hue ->
+            val selected = hue == selectedHue
+            val color = Color.hsv(hue.toFloat(), 0.42f, 0.86f)
+            val optionDescription = stringResource(
+                R.string.sync_accent_color_option,
+                index + 1,
+            )
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .selectable(
+                        selected = selected,
+                        role = Role.RadioButton,
+                        onClick = { onHueSelected(hue) },
+                    )
+                    .semantics { contentDescription = optionDescription }
+                    .testTag(SyncSettingsTestTags.accentColor(hue)),
+                contentAlignment = Alignment.Center,
+            ) {
+                SyncAccentColorSwatch(
+                    color = color,
+                    selected = selected,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncAccentColorSwatch(
+    color: Color,
+    selected: Boolean,
+) {
+    Surface(
+        modifier = Modifier
+            .size(34.dp)
+            .then(
+                if (selected) {
+                    Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                } else {
+                    Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                },
+            ),
+        shape = CircleShape,
+        color = color,
+        contentColor = Color.Transparent,
+    ) {}
+}
+
+@Composable
+private fun SecretTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    fieldTestTag: String,
+    visibilityTestTag: String,
+    supportingText: String? = null,
+) {
+    var visible by remember { mutableStateOf(false) }
+    val visibilityDescription = stringResource(
+        if (visible) R.string.sync_hide_password else R.string.sync_show_password,
+    )
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        supportingText = supportingText?.let { text -> { Text(text) } },
+        trailingIcon = {
+            IconButton(
+                onClick = { visible = !visible },
+                modifier = Modifier.testTag(visibilityTestTag),
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (visible) R.drawable.ic_visibility_off else R.drawable.ic_visibility,
+                    ),
+                    contentDescription = visibilityDescription,
+                )
+            }
+        },
+        singleLine = true,
+        visualTransformation = if (visible) {
+            VisualTransformation.None
+        } else {
+            PasswordVisualTransformation()
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(fieldTestTag),
+    )
 }
 
 @Composable

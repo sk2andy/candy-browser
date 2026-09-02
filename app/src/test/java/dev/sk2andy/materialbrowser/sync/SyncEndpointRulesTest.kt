@@ -15,6 +15,10 @@ class SyncEndpointRulesTest {
     @Test
     fun `rejects remote cleartext credentials paths and fragments`() {
         assertNull(SyncEndpointRules.normalize("http://sync.example/"))
+        assertEquals(
+            "http://sync.example/",
+            SyncEndpointRules.normalize("http://sync.example/", allowRemoteHttp = true),
+        )
         assertNull(SyncEndpointRules.normalize("https://user:secret@sync.example/"))
         assertNull(SyncEndpointRules.normalize("https://sync.example/v1"))
         assertNull(SyncEndpointRules.normalize("https://sync.example/#token"))

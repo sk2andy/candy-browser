@@ -14,30 +14,49 @@ import org.json.JSONObject
 
 internal object SyncStateCodec {
     fun encodeSettings(value: SyncConnectionSettings): String = JSONObject()
-        .put("schemaVersion", 1)
+        .put("schemaVersion", 2)
         .put("endpoint", value.endpoint)
         .put("username", value.username)
         .put("deviceName", value.deviceName)
         .put("iconCatalogId", value.iconCatalogId)
         .put("iconAccentHue", value.iconAccentHue)
+        .put("localProfileId", value.localProfileId ?: JSONObject.NULL)
         .toString()
 
     fun decodeSettings(raw: String): SyncConnectionSettings {
-        val value = parseStrictJsonObject(raw).requireKeys(
-            "schemaVersion",
-            "endpoint",
-            "username",
-            "deviceName",
-            "iconCatalogId",
-            "iconAccentHue",
-        )
-        require(value.getInt("schemaVersion") == 1)
+        val value = parseStrictJsonObject(raw)
+        val schemaVersion = value.getInt("schemaVersion")
+        when (schemaVersion) {
+            1 -> value.requireKeys(
+                "schemaVersion",
+                "endpoint",
+                "username",
+                "deviceName",
+                "iconCatalogId",
+                "iconAccentHue",
+            )
+            2 -> value.requireKeys(
+                "schemaVersion",
+                "endpoint",
+                "username",
+                "deviceName",
+                "iconCatalogId",
+                "iconAccentHue",
+                "localProfileId",
+            )
+            else -> throw IllegalArgumentException("Unknown settings schema")
+        }
         return SyncConnectionSettings(
             endpoint = value.getString("endpoint"),
             username = value.getString("username"),
             deviceName = value.getString("deviceName"),
             iconCatalogId = value.getString("iconCatalogId"),
             iconAccentHue = value.getInt("iconAccentHue"),
+            localProfileId = if (schemaVersion == 1 || value.isNull("localProfileId")) {
+                null
+            } else {
+                value.boundedString("localProfileId", 128)
+            },
         )
     }
 

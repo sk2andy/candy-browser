@@ -53,6 +53,18 @@ class CandySyncRepositoryTest {
     )
 
     @Test
+    fun `state exposes local device identity without private key material`() {
+        val repository = repository(
+            FakeTransport(deviceRecord(), crypto),
+            MemoryCacheStore(SyncCache("cursor-0", mapOf(profile.deviceId to profile))),
+        )
+
+        repository.use {
+            assertEquals("android-device", it.currentState().currentDeviceId)
+        }
+    }
+
+    @Test
     fun `lost response retry reuses exact durable ciphertext and change id`() {
         val transport = FakeTransport(deviceRecord(), crypto).apply { failFirstPutOffline = true }
         val cacheStore = MemoryCacheStore(SyncCache("cursor-0", mapOf(profile.deviceId to profile)))
