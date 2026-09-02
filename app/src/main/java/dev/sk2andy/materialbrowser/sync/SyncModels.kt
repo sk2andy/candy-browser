@@ -79,6 +79,34 @@ data class SyncEncryptedChange(
     val ciphertext: String,
 )
 
+data class SyncEncryptedDelta(
+    val changeId: String,
+    val mutationId: String,
+    val workspaceId: String,
+    val writerDeviceId: String,
+    val targetDeviceId: String,
+    val baseRevision: Long,
+    val revision: Long?,
+    val nonce: String,
+    val ciphertext: String,
+)
+
+data class SyncDeltaPullPage(
+    val changes: List<SyncEncryptedDelta>,
+    val nextCursor: String,
+    val hasMore: Boolean,
+)
+
+data class SyncRealtimeTicket(
+    val ticket: String,
+    val expiresAt: String,
+)
+
+data class SyncRealtimeEvent(
+    val cursor: String,
+    val change: SyncEncryptedDelta,
+)
+
 data class SyncPullPage(
     val changes: List<SyncEncryptedChange>,
     val nextCursor: String,
@@ -104,6 +132,8 @@ data class SyncCache(
     val profiles: Map<String, SyncProfile>,
     val pendingMutations: List<SyncPendingMutation> = emptyList(),
     val preparedWrites: Map<String, SyncEncryptedChange> = emptyMap(),
+    val deltaCursor: String = "",
+    val preparedDeltas: Map<String, SyncEncryptedDelta> = emptyMap(),
 )
 
 sealed interface SyncPendingMutation {

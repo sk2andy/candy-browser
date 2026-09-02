@@ -21,7 +21,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const currentMigrationVersion = 2
+const currentMigrationVersion = 3
 
 type Store struct {
 	db *sql.DB
@@ -188,6 +188,15 @@ func (s *Store) initialize(ctx context.Context) error {
 			INSERT INTO workspaces(
 				id, kdf_algorithm, kdf_salt, kdf_memory_kib, kdf_iterations, kdf_parallelism, created_at
 			) VALUES(?, 'argon2id-v1', ?, 65536, 3, 4, ?)`, workspaceID, salt, now); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO accounts(id, created_at) VALUES('acct_default', ?)`, now); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO workspace_members(account_id, workspace_id, role, created_at) VALUES('acct_default', ?, 'owner', ?)`, workspaceID, now); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO v2_workspace_state(workspace_id, head_sequence) VALUES(?, 0)`, workspaceID); err != nil {
 			return err
 		}
 	}

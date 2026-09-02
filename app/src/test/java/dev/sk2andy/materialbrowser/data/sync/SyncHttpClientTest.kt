@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.data.sync
 
 import dev.sk2andy.materialbrowser.sync.SyncEncryptedChange
+import dev.sk2andy.materialbrowser.sync.SyncEncryptedDelta
 import java.io.BufferedInputStream
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -73,6 +74,47 @@ class SyncHttpClientTest {
             assertEquals("7", body.getString("expectedRevision"))
             assertEquals("8", body.getString("revision"))
             assertTrue(!body.has("deviceId") && !body.has("entityId"))
+        }
+    }
+
+    @Test
+    fun `v2 discovery enables encrypted delta push with tenant metadata`() {
+        TestServer(
+            listOf(
+                """{"protocol":"candy-sync","versions":[1,2],"allowHttp":false,"features":["e2ee","tab-snapshots","encrypted-device-icons","tab-mutations-v2","realtime"],"limits":{"batchChanges":100,"payloadBytes":1048576,"devices":1000}}""",
+                """{"cursor":"epoch.8","results":[{"changeId":"attempt-123","revision":"8"}]}""",
+            ),
+        ).use { server ->
+            val client = SyncHttpClient(server.endpoint)
+            client.discover()
+            assertTrue(client.supportsTabMutationsV2())
+            assertTrue(client.supportsRealtime())
+            val response = client.pushDelta(
+                "token",
+                SyncEncryptedDelta(
+                    changeId = "attempt-123",
+                    mutationId = "logical-123",
+                    workspaceId = "workspace-1",
+                    writerDeviceId = "android-device",
+                    targetDeviceId = "target-device",
+                    baseRevision = 7,
+                    revision = null,
+                    nonce = "AAECAwQFBgcICQoL",
+                    ciphertext = "AAAAAAAAAAAAAAAAAAAAAA",
+                ),
+            )
+
+            assertEquals(8, response.revision)
+            server.awaitRequests(2)
+            val request = server.requests[1]
+            assertEquals("POST /v2/sync/push HTTP/1.1", request.requestLine)
+            assertEquals("attempt-123", request.headers["idempotency-key"])
+            val change = JSONObject(request.body).getJSONArray("changes").getJSONObject(0)
+            assertEquals("logical-123", change.getString("mutationId"))
+            assertEquals("workspace-1", change.getString("workspaceId"))
+            assertEquals("android-device", change.getString("deviceId"))
+            assertEquals("delta", change.getString("operation"))
+            assertTrue(!change.has("revision"))
         }
     }
 

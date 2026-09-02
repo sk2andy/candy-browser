@@ -6,10 +6,12 @@ import {
   decryptDeviceName,
   decryptDeviceIcon,
   decryptTabSnapshot,
+  decryptTabMutation,
   deriveDeviceIconDescriptor,
   encryptDeviceIcon,
   encryptDeviceName,
   encryptTabSnapshot,
+  encryptTabMutation,
   fingerprintDeviceKey,
   generateDeviceIdentity,
   randomBytes,
@@ -156,6 +158,83 @@ test("real extension crypto survives server enroll, idempotent retry, revision a
 	assert.deepEqual(await decryptTabSnapshot(workspaceKey, firstPage.changes[2]!), {
 	  tabs: [{ url: "https://remote-edit-canary.invalid/", title: "REMOTE_EDIT_CANARY" }],
 	});
+
+    const ticket = await api.createRealtimeTicket(enrolled.token);
+    const socket = new WebSocket(api.realtimeUrl(ticket.ticket));
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Realtime socket did not open")), 5_000);
+      socket.addEventListener("open", () => {
+        clearTimeout(timeout);
+        resolve();
+      }, { once: true });
+      socket.addEventListener("error", () => {
+        clearTimeout(timeout);
+        reject(new Error("Realtime socket failed"));
+      }, { once: true });
+    });
+    const realtimeFrame = new Promise<Record<string, unknown>>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Realtime change was not delivered")), 5_000);
+      socket.addEventListener("message", (event) => {
+        clearTimeout(timeout);
+        try {
+          resolve(JSON.parse(String(event.data)) as Record<string, unknown>);
+        } catch (error) {
+          reject(error);
+        }
+      }, { once: true });
+    });
+    const mutation = {
+      schemaVersion: 2 as const,
+      mutationId: "e2e-mutation-1",
+      targetDeviceId: enrolled.deviceId,
+      type: "navigate" as const,
+      candyId: "tab-1",
+      title: "DELTA_TITLE_CANARY",
+      url: "https://delta-url-canary.invalid/",
+    };
+    const delta = await encryptTabMutation(workspaceKey, {
+      changeId: "e2e-delta-change-1",
+      mutationId: mutation.mutationId,
+      workspaceId: bootstrap.workspaceId,
+      deviceId: secondDevice.deviceId,
+      entity: "tabs",
+      entityId: enrolled.deviceId,
+      operation: "delta",
+      baseRevision: "3",
+      schemaVersion: 2,
+      cryptoVersion: 1,
+      keyVersion: 1,
+    }, mutation);
+    const pushedDelta = await api.pushDelta(secondDevice.token, delta);
+    assert.deepEqual(pushedDelta.results, [{ changeId: delta.changeId, revision: "4" }]);
+
+    const frame = await realtimeFrame;
+    assert.equal(frame.type, "change");
+    assert.equal(frame.cursor, pushedDelta.cursor);
+    const committed = (frame.change ?? {}) as typeof delta & { revision: string };
+    assert.equal(committed.revision, "4");
+    assert.deepEqual(await decryptTabMutation(workspaceKey, committed), mutation);
+    socket.close(1000, "test complete");
+
+    const deltaPage = await api.pullDeltas(enrolled.token);
+    assert.equal(deltaPage.changes.length, 1);
+    assert.equal(deltaPage.nextCursor, pushedDelta.cursor);
+    assert.deepEqual(await decryptTabMutation(workspaceKey, deltaPage.changes[0]!), mutation);
+
+    const staleV1Write = await encryptTabSnapshot(workspaceKey, {
+      changeId: "e2e-v1-after-upgrade",
+      deviceId: enrolled.deviceId,
+      entity: "tabs",
+      entityId: enrolled.deviceId,
+      operation: "snapshot",
+      baseRevision: "4",
+      schemaVersion: 1,
+      cryptoVersion: 1,
+      keyVersion: 1,
+    }, { tabs: [] });
+    await assert.rejects(api.putTabSnapshot(enrolled.token, enrolled.deviceId, staleV1Write), {
+      status: 409,
+    });
   } finally {
     passphrase.fill(0);
     workspaceKey.fill(0);

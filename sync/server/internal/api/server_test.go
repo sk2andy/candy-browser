@@ -54,6 +54,9 @@ func TestDiscoveryAdvertisesEncryptedDeviceIcons(t *testing.T) {
 	if !slices.Contains(discovery.Features, "encrypted-device-icons") {
 		t.Fatalf("features = %v", discovery.Features)
 	}
+	if !slices.Contains(discovery.Features, "tab-mutations-v2") || !slices.Contains(discovery.Features, "realtime") {
+		t.Fatalf("v2 features = %v", discovery.Features)
+	}
 	if discovery.AllowHTTP {
 		t.Fatal("test server unexpectedly advertises remote HTTP")
 	}

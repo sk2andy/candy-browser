@@ -39,6 +39,9 @@ Passphrase --Argon2id 65536/3/4--> Recovery KEK --AES-256-GCM--> Workspace key
 Workspace key --HKDF-SHA-256(device, domain)--> Tabs payload key
 Tabs payload key --AES-256-GCM--> Tab snapshot ciphertext
 
+Workspace key --HKDF-SHA-256(workspace + target, v2 delta domain)--> Tab-delta key
+Tab-delta key --AES-256-GCM--> One strict tab mutation
+
 Workspace key --HKDF-SHA-256(workspace, name domain, SPKI fingerprint)--> Device name key
 Device name key --AES-256-GCM--> Device name ciphertext
 
@@ -63,8 +66,11 @@ from the server but are not tunable; any downgrade, fractional value, or value
 outside the exact contract fails closed before memory allocation. The local
 vault uses its independent fixed `65536/3/1` parameters.
 
-AES-GCM AAD binds protocol, crypto, key, and schema versions; device, change, and
-entity identity; operation; and base revision. Every new encryption uses a fresh
+Protocol-v2 AES-GCM AAD is the exact JSON array
+`["candy-sync-change",1,1,2,workspaceId,writerDeviceId,changeId,mutationId,"tabs",targetDeviceId,"delta",baseRevision]`.
+Its HKDF salt is the JSON array `[workspaceId,targetDeviceId]`, with info
+`candy-sync/v2/payload/tab-delta`. Thus workspace, writer, target, change, mutation, operation,
+and revision-chain substitution fails authentication. Every new encryption uses a fresh
 CSPRNG nonce. Durable outbox retries reuse the original change ID, nonce, and
 ciphertext instead of encrypting again under the same nonce.
 
@@ -83,7 +89,7 @@ device downloads the envelope, decrypts it locally with the same passphrase,
 creates its own independent P-256 identity, and enrolls without replacing the
 recovery envelope.
 
-The passphrase is immutable in protocol v1. There is no change endpoint or input
+The passphrase is immutable for the workspace in protocols v1 and v2. There is no change endpoint or input
 for changing it. Loss is unrecoverable. A complete workspace reset is a separate,
 destructive operation and is not part of this vertical slice. Because the
 server-stored recovery envelope permits offline guessing, users should choose a
@@ -107,7 +113,7 @@ envelopes therefore cannot be swapped across device records or between domains.
 
 | Area | Contents |
 | --- | --- |
-| `storage.local` | Endpoint, username, device label, selection, IDs, sync cursor, encrypted vault, durable encrypted outbox, stable browser-tab UUID map, redacted status |
+| `storage.local` | Endpoint, username, device label, selection, IDs, separate v1/v2 cursors and revisions, encrypted vault, durable encrypted outboxes, reducer tombstones, stable browser-tab UUID map, redacted status |
 | `storage.session` | Decrypted vault secrets for the current browser session |
 | `storage.sync` | Never used |
 
@@ -142,6 +148,9 @@ components.
 - P-256 key generation, canonical SPKI/PKCS8 import, server fingerprint validation,
   and cross-device icon-envelope substitution rejection.
 - AES-GCM round trip, ciphertext bit flip, and AAD manipulation.
+- Fixed protocol-v2 HKDF/AES-GCM known-answer vector and every routing-field substitution.
+- Delta reducer replay, tombstone, coalescing, revision-gap, and writer-echo rules.
+- Realtime frame validation and bounded exponential reconnect backoff.
 - Property-based Unicode and JSON round trips.
 - KDF downgrade and denial-of-service boundaries.
 - Endpoint and permission rules.
@@ -157,7 +166,7 @@ components.
 
 - Direct authorized device pairing without sharing the passphrase.
 - Signed device membership and cryptographic key rotation after revocation.
-- Shared Go/TypeScript cryptographic known-answer vectors for the final wire
-  schema; current shared protocol fixtures validate structure only.
+- Additional cross-language cryptographic known-answer vectors beyond the v2 vector asserted by
+  both Android and the WebExtension; current shared protocol fixtures validate structure only.
 - Automated end-to-end tests in real Chromium and Firefox profiles against the
   Compose test server.

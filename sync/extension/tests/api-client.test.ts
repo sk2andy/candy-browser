@@ -247,3 +247,32 @@ test("rejects device capabilities outside the protocol schema", async () => {
     await assert.rejects(client.listDevices("device-token"), /capabilities/u);
   }
 });
+
+test("v2 pushes and pulls one encrypted delta and creates one-use realtime ticket", async () => {
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  const envelope = {
+    changeId: "change-1", mutationId: "mutation-1", workspaceId: "workspace-1", deviceId: "phone-1",
+    entity: "tabs" as const, entityId: "desktop-1", operation: "delta" as const, baseRevision: "4",
+    schemaVersion: 2 as const, cryptoVersion: 1 as const, keyVersion: 1 as const,
+    nonce: "AAAAAAAAAAAAAAAA", ciphertext: "AAAAAAAAAAAAAAAAAAAAAA",
+  };
+  const client = new CandySyncApiClient("https://sync.example/base/", async (input, init) => {
+    const request = { url: String(input), ...(init ? { init } : {}) };
+    requests.push(request);
+    const path = new URL(request.url).pathname;
+    if (path.endsWith("/v2/sync/push")) return Response.json({ cursor: "epoch.5", results: [{ changeId: "change-1", revision: "5" }] });
+    if (path.endsWith("/v2/sync/pull")) return Response.json({ changes: [{ ...envelope, revision: "5" }], nextCursor: "epoch.5", hasMore: false });
+    return Response.json({ ticket: "one-use-secret", expiresAt: "2026-09-02T15:00:00Z" });
+  });
+  const pushed = await client.pushDelta("device-token", envelope);
+  const pulled = await client.pullDeltas("device-token", "epoch.4");
+  const ticket = await client.createRealtimeTicket("device-token");
+  assert.deepEqual(pushed, { cursor: "epoch.5", results: [{ changeId: "change-1", revision: "5" }] });
+  assert.deepEqual(pulled.changes, [{ ...envelope, revision: "5" }]);
+  assert.deepEqual(ticket, { ticket: "one-use-secret", expiresAt: "2026-09-02T15:00:00Z" });
+  assert.equal(new URL(requests[0]!.url).pathname, "/base/v2/sync/push");
+  assert.equal(new Headers(requests[0]!.init?.headers).get("Idempotency-Key"), "change-1");
+  assert.equal(new URL(requests[1]!.url).searchParams.get("after"), "epoch.4");
+  assert.equal(new Headers(requests[2]!.init?.headers).get("Authorization"), "Bearer device-token");
+  assert.equal(client.realtimeUrl("one-use-secret"), "wss://sync.example/base/v2/realtime?ticket=one-use-secret");
+});

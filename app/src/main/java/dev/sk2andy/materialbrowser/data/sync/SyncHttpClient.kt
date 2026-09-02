@@ -3,18 +3,30 @@ package dev.sk2andy.materialbrowser.data.sync
 import dev.sk2andy.materialbrowser.sync.SyncBootstrap
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIdentity
 import dev.sk2andy.materialbrowser.sync.SyncDeviceRecord
+import dev.sk2andy.materialbrowser.sync.SyncDeltaPullPage
 import dev.sk2andy.materialbrowser.sync.SyncEncryptedChange
+import dev.sk2andy.materialbrowser.sync.SyncEncryptedDelta
 import dev.sk2andy.materialbrowser.sync.SyncEncryptedValue
 import dev.sk2andy.materialbrowser.sync.SyncEndpointRules
 import dev.sk2andy.materialbrowser.sync.SyncProtocolCodec
 import dev.sk2andy.materialbrowser.sync.SyncPullPage
 import dev.sk2andy.materialbrowser.sync.SyncRecoveryEnvelope
+import dev.sk2andy.materialbrowser.sync.SyncRealtimeEvent
+import dev.sk2andy.materialbrowser.sync.SyncRealtimeTicket
 import dev.sk2andy.materialbrowser.sync.SyncServerSnapshot
 import dev.sk2andy.materialbrowser.sync.parseStrictJsonObject
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Base64
+import java.time.Instant
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import org.json.JSONObject
 
 data class SyncEnrollmentResponse(
@@ -51,12 +63,27 @@ interface SyncTransport {
     fun snapshot(token: String): SyncServerSnapshot
     fun putTabs(token: String, change: SyncEncryptedChange): SyncPutResponse
     fun acknowledge(token: String, cursor: String)
+    fun supportsTabMutationsV2(): Boolean = false
+    fun supportsRealtime(): Boolean = false
+    fun pullDeltas(token: String, cursor: String): SyncDeltaPullPage =
+        throw UnsupportedOperationException("Protocol v2 is unavailable")
+    fun pushDelta(token: String, change: SyncEncryptedDelta): SyncPutResponse =
+        throw UnsupportedOperationException("Protocol v2 is unavailable")
+    fun requestRealtimeTicket(token: String): SyncRealtimeTicket =
+        throw UnsupportedOperationException("Realtime is unavailable")
+    fun connectRealtime(
+        ticket: SyncRealtimeTicket,
+        onEvent: (SyncRealtimeEvent) -> Unit,
+        onClosed: (Throwable?) -> Unit,
+    ): AutoCloseable = throw UnsupportedOperationException("Realtime is unavailable")
 }
 
 class SyncHttpClient(endpoint: String) : SyncTransport {
     private val endpoint = URI(requireNotNull(SyncEndpointRules.normalize(endpoint, allowRemoteHttp = true)))
     private val requiresRemoteHttpApproval = SyncEndpointRules.requiresRemoteHttpApproval(endpoint.toString())
     private var remoteHttpApproved = !requiresRemoteHttpApproval
+    private var tabMutationsV2 = false
+    private var realtime = false
 
     override fun discover() {
         val value = parseStrictJsonObject(request(".well-known/candy-sync", "GET"))
@@ -75,6 +102,9 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
             features.get(index) as? String ?: throw IllegalArgumentException("Invalid feature")
         }.toSet()
         require(supported.containsAll(setOf("e2ee", "tab-snapshots", "encrypted-device-icons")))
+        tabMutationsV2 = 2 in (0 until versions.length()).map { versions.getInt(it) } &&
+            "tab-mutations-v2" in supported
+        realtime = tabMutationsV2 && "realtime" in supported
         val limits = value.getJSONObject("limits")
         require(limits.keys().asSequence().toSet() == setOf("batchChanges", "payloadBytes", "devices"))
         require(limits.strictInt("batchChanges") in 1..1_000)
@@ -160,6 +190,112 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
             body = JSONObject().put("cursor", cursor).toString(),
             expectBody = false,
         )
+    }
+
+    override fun supportsTabMutationsV2(): Boolean = tabMutationsV2
+
+    override fun supportsRealtime(): Boolean = realtime
+
+    override fun pullDeltas(token: String, cursor: String): SyncDeltaPullPage =
+        SyncProtocolCodec.decodeDeltaPull(
+            request(
+                path = "v2/sync/pull?after=${java.net.URLEncoder.encode(cursor, StandardCharsets.UTF_8)}&limit=100",
+                method = "GET",
+                authorization = bearer(token),
+            ),
+        )
+
+    override fun pushDelta(token: String, change: SyncEncryptedDelta): SyncPutResponse {
+        val body = JSONObject()
+            .put("changes", org.json.JSONArray().put(JSONObject(SyncProtocolCodec.encodeDelta(change))))
+            .toString()
+        val value = parseStrictJsonObject(
+            request(
+                path = "v2/sync/push",
+                method = "POST",
+                authorization = bearer(token),
+                body = body,
+                idempotencyKey = change.changeId,
+            ),
+        )
+        value.requireExactKeys("cursor", "results")
+        val results = value.getJSONArray("results")
+        require(results.length() == 1)
+        val result = results.getJSONObject(0)
+        result.requireExactKeys("changeId", "revision")
+        require(result.identifier("changeId") == change.changeId)
+        return SyncPutResponse(
+            revision = result.strictRevision("revision"),
+            cursor = value.strictString("cursor", 260).also(SyncProtocolCodec::requireCursor),
+        )
+    }
+
+    override fun requestRealtimeTicket(token: String): SyncRealtimeTicket {
+        val value = parseStrictJsonObject(
+            request(
+                path = "v2/realtime/tickets",
+                method = "POST",
+                authorization = bearer(token),
+                body = "{}",
+            ),
+        )
+        value.requireExactKeys("ticket", "expiresAt")
+        return SyncRealtimeTicket(
+            ticket = value.strictString("ticket", 512).also { require(it.none(Char::isWhitespace)) },
+            expiresAt = value.strictString("expiresAt", 64).also { require(runCatching { Instant.parse(it) }.isSuccess) },
+        )
+    }
+
+    override fun connectRealtime(
+        ticket: SyncRealtimeTicket,
+        onEvent: (SyncRealtimeEvent) -> Unit,
+        onClosed: (Throwable?) -> Unit,
+    ): AutoCloseable {
+        val realtimeHttp = endpoint.resolve(
+            "v2/realtime?ticket=${java.net.URLEncoder.encode(ticket.ticket, StandardCharsets.UTF_8)}",
+        )
+        val scheme = when (realtimeHttp.scheme) {
+            "https" -> "wss"
+            "http" -> "ws"
+            else -> throw IllegalArgumentException("Invalid realtime endpoint")
+        }
+        val realtimeUri = URI(
+            scheme,
+            realtimeHttp.userInfo,
+            realtimeHttp.host,
+            realtimeHttp.port,
+            realtimeHttp.path,
+            realtimeHttp.query,
+            null,
+        )
+        val closed = AtomicBoolean(false)
+        fun notifyClosed(error: Throwable?) {
+            if (closed.compareAndSet(false, true)) onClosed(error)
+        }
+        val socket = webSocketClient.newWebSocket(
+            Request.Builder().url(realtimeUri.toString()).build(),
+            object : WebSocketListener() {
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    runCatching { SyncProtocolCodec.decodeRealtimeEvent(text) }
+                        .onSuccess(onEvent)
+                        .onFailure { error ->
+                            webSocket.close(1002, "Invalid Candy Sync event")
+                            notifyClosed(error)
+                        }
+                }
+
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    notifyClosed(null)
+                }
+
+                override fun onFailure(webSocket: WebSocket, error: Throwable, response: Response?) {
+                    notifyClosed(error)
+                }
+            },
+        )
+        return AutoCloseable {
+            if (closed.compareAndSet(false, true)) socket.close(1000, "Background")
+        }
     }
 
     private fun request(
@@ -265,6 +401,10 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
             ?: throw IllegalArgumentException("Invalid $name")
     }
 
+    private fun JSONObject.requireExactKeys(vararg expected: String) {
+        require(keys().asSequence().toSet() == expected.toSet())
+    }
+
     private fun JSONObject.identifier(name: String): String = strictString(name, 128).also {
         require(it.matches(IDENTIFIER))
     }
@@ -279,5 +419,9 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
         const val MAX_RESPONSE_BYTES = 1_048_576
         const val MAX_ERROR_BYTES = 16_384
         val IDENTIFIER = Regex("[A-Za-z0-9_-]+")
+        val webSocketClient = OkHttpClient.Builder()
+            .pingInterval(20, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
     }
 }

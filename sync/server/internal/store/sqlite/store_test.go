@@ -131,6 +131,23 @@ func TestEncryptedDeviceIconMigrationPreservesLegacyRows(t *testing.T) {
 			'name_nonce', 'name_ciphertext', '["tabs"]', 0, 0)`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO changes(
+			change_id, device_id, entity, entity_id, operation, base_revision,
+			revision, schema_version, crypto_version, key_version, nonce,
+			ciphertext, envelope_hash, created_at
+		) VALUES('legacy_tab_snapshot', 'device_legacy', 'tabs', 'device_legacy',
+			'snapshot', 6, 7, 1, 1, 1, 'nonce', 'ciphertext', X'01', 0)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO tab_snapshots(
+			device_id, revision, schema_version, crypto_version, key_version,
+			nonce, ciphertext, updated_sequence
+		) SELECT 'device_legacy', 7, 1, 1, 1, 'nonce', 'ciphertext', sequence
+		  FROM changes WHERE change_id = 'legacy_tab_snapshot'`); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -146,6 +163,18 @@ func TestEncryptedDeviceIconMigrationPreservesLegacyRows(t *testing.T) {
 	}
 	if len(devices) != 1 || devices[0].ID != "device_legacy" || devices[0].EncryptedIconNonce != "" || devices[0].EncryptedIconCiphertext != "" {
 		t.Fatalf("legacy device changed during migration: %+v", devices)
+	}
+	authenticated, err := repository.DefaultAuthContext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authenticated.DeviceID = "device_legacy"
+	if result, _, err := repository.PushDelta(ctx, authenticated, testDelta(
+		"first_v2_delta", "first_v2_mutation", "device_legacy", 7, "v2_ciphertext",
+	)); err != nil {
+		t.Fatalf("first v2 delta after v1 migration: %v", err)
+	} else if result.Revision != 8 {
+		t.Fatalf("first v2 revision = %d, want 8", result.Revision)
 	}
 	if _, err := repository.EnrollDevice(ctx, testEnrollment("device_new", "selector_new")); err != nil {
 		t.Fatal(err)

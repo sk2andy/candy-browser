@@ -234,6 +234,61 @@ class SyncCrypto(
         }
     }
 
+    fun encryptTabMutation(
+        workspaceKey: ByteArray,
+        metadata: SyncEncryptedDelta,
+        mutation: SyncPendingMutation,
+    ): SyncEncryptedDelta {
+        require(metadata.revision == null)
+        require(metadata.mutationId == mutation.mutationId)
+        require(metadata.targetDeviceId == mutation.targetDeviceId)
+        val plaintext = SyncMutationCodec.encode(mutation).utf8()
+        val key = deriveDeltaPayloadKey(
+            workspaceKey = workspaceKey,
+            workspaceId = metadata.workspaceId,
+            targetDeviceId = metadata.targetDeviceId,
+        )
+        return try {
+            val encrypted = try {
+                encryptAes(key = key, plaintext = plaintext, aad = deltaAad(metadata))
+            } finally {
+                key.fill(0)
+            }
+            metadata.copy(nonce = encrypted.nonce, ciphertext = encrypted.ciphertext)
+        } finally {
+            plaintext.fill(0)
+        }
+    }
+
+    fun decryptTabMutation(
+        workspaceKey: ByteArray,
+        change: SyncEncryptedDelta,
+    ): SyncPendingMutation {
+        val key = deriveDeltaPayloadKey(
+            workspaceKey = workspaceKey,
+            workspaceId = change.workspaceId,
+            targetDeviceId = change.targetDeviceId,
+        )
+        val plaintext = try {
+            decryptAes(
+                key = key,
+                encrypted = SyncEncryptedValue(change.nonce, change.ciphertext),
+                aad = deltaAad(change),
+                maxCiphertextBytes = 196_624,
+            )
+        } finally {
+            key.fill(0)
+        }
+        return try {
+            SyncMutationCodec.decode(plaintext.decodeUtf8()).also { mutation ->
+                require(mutation.mutationId == change.mutationId)
+                require(mutation.targetDeviceId == change.targetDeviceId)
+            }
+        } finally {
+            plaintext.fill(0)
+        }
+    }
+
     private fun deriveDeviceKey(
         workspaceKey: ByteArray,
         workspaceId: String,
@@ -254,6 +309,16 @@ class SyncCrypto(
         info = "candy-sync/v1/payload/tabs".utf8(),
     )
 
+    private fun deriveDeltaPayloadKey(
+        workspaceKey: ByteArray,
+        workspaceId: String,
+        targetDeviceId: String,
+    ): ByteArray = hkdf(
+        inputKey = workspaceKey,
+        salt = jsonArray(workspaceId, targetDeviceId).utf8(),
+        info = "candy-sync/v2/payload/tab-delta".utf8(),
+    )
+
     private fun changeAad(change: SyncEncryptedChange): ByteArray = jsonArray(
         "candy-sync-change",
         1,
@@ -264,6 +329,21 @@ class SyncCrypto(
         "tabs",
         change.targetDeviceId,
         "snapshot",
+        change.baseRevision.toString(),
+    ).utf8()
+
+    private fun deltaAad(change: SyncEncryptedDelta): ByteArray = jsonArray(
+        "candy-sync-change",
+        1,
+        1,
+        2,
+        change.workspaceId,
+        change.writerDeviceId,
+        change.changeId,
+        change.mutationId,
+        "tabs",
+        change.targetDeviceId,
+        "delta",
         change.baseRevision.toString(),
     ).utf8()
 

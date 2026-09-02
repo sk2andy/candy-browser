@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://candybrowser.dev/sync/protocol/schemas/encrypted-tab-delta-v2.schema.json",
+  "title": "Candy Sync encrypted tab delta v2",
+  "description": "Workspace-scoped encrypted tab mutation. Routing metadata is authenticated as AES-GCM AAD; tab action and content remain inside ciphertext.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "changeId",
+    "mutationId",
+    "workspaceId",
+    "deviceId",
+    "entity",
+    "entityId",
+    "operation",
+    "baseRevision",
+    "schemaVersion",
+    "cryptoVersion",
+    "keyVersion",
+    "nonce",
+    "ciphertext"
+  ],
+  "properties": {
+    "changeId": { "$ref": "#/$defs/identifier" },
+    "mutationId": {
+      "description": "Stable client-generated mutation identity used for cross-transport deduplication.",
+      "$ref": "#/$defs/identifier"
+    },
+    "workspaceId": {
+      "description": "Claimed workspace. Server rejects any value not equal to bearer-authenticated workspace.",
+      "$ref": "#/$defs/identifier"
+    },
+    "deviceId": {
+      "description": "Authenticated writer device. Server ignores no client override and rejects mismatches.",
+      "$ref": "#/$defs/identifier"
+    },
+    "entity": { "const": "tabs" },
+    "entityId": {
+      "description": "Target synced-profile device in same workspace.",
+      "$ref": "#/$defs/identifier"
+    },
+    "operation": { "const": "delta" },
+    "baseRevision": { "$ref": "#/$defs/revision" },
+    "revision": {
+      "description": "Server-assigned target-profile revision. Omitted from push; required in pull and realtime frames.",
+      "$ref": "#/$defs/revision"
+    },
+    "schemaVersion": { "const": 2 },
+    "cryptoVersion": { "const": 1 },
+    "keyVersion": { "const": 1 },
+    "nonce": { "$ref": "#/$defs/nonce" },
+    "ciphertext": { "$ref": "#/$defs/ciphertext" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "revision": {
+      "description": "Non-negative signed 64-bit decimal encoded as a string.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,18})$"
+    },
+    "nonce": {
+      "description": "Exactly 12 bytes encoded as unpadded base64url.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16}$"
+    },
+    "ciphertext": {
+      "description": "AES-256-GCM ciphertext including 16-byte tag, encoded as unpadded base64url.",
+      "type": "string",
+      "minLength": 22,
+      "maxLength": 262166,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    }
+  }
+}

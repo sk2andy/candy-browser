@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { applyTabSnapshot, collectTabSnapshot } from "../src/browser-adapters/tabs.js";
+import {
+  applyTabMutation, applyTabSnapshot, collectTabSnapshot, mutationForCreatedTab,
+  mutationForMovedTab, mutationForRemovedTab, mutationsForUpdatedTab,
+} from "../src/browser-adapters/tabs.js";
 
 function storageArea(local: Map<string, unknown>): chrome.storage.StorageArea {
   return {
@@ -106,4 +109,57 @@ test("remote snapshot parser rejects private/internal schemes and unknown fields
     tabs: [{ candyId: "x", windowId: 1, index: 0, groupId: null, active: true, pinned: false, title: "", url: "chrome://settings/", extra: true }],
   }), /fields|URL/u);
   assert.equal(queried, false);
+});
+
+test("local browser events emit small mutations with stable identity and exclude private/internal tabs", async () => {
+  const local = new Map<string, unknown>();
+  const tab = { id: 7, windowId: 1, index: 2, active: true, pinned: false, incognito: false, url: "https://one.example/", title: "One" } as chrome.tabs.Tab;
+  const fakeChrome = { tabs: { query: async () => [tab] }, storage: { local: storageArea(local) } } as unknown as typeof chrome;
+  (globalThis as typeof globalThis & { chrome: typeof chrome }).chrome = fakeChrome;
+  const opened = await mutationForCreatedTab(tab);
+  assert.equal(opened?.type, "open");
+  const candyId = opened!.type === "open" ? opened.tab.candyId : "";
+  assert.deepEqual(await mutationsForUpdatedTab(7, { url: "https://two.example/" }, { ...tab, url: "https://two.example/", title: "Two" }), [{
+    type: "navigate", candyId, url: "https://two.example/", title: "Two",
+  }]);
+  assert.deepEqual(await mutationsForUpdatedTab(7, { pinned: true }, { ...tab, pinned: true }), [{
+    type: "set-pinned", candyId, pinned: true,
+  }]);
+  assert.deepEqual(await mutationForMovedTab(7, 4), { type: "reorder", orderedCandyIds: [candyId] });
+  assert.deepEqual(await mutationForRemovedTab(7), { type: "close", candyId });
+  assert.equal(await mutationForCreatedTab({ ...tab, id: 8, incognito: true }), null);
+  assert.equal(await mutationForCreatedTab({ ...tab, id: 9, url: "chrome://settings/" }), null);
+});
+
+test("remote mutation applies one browser operation and maintains UUID mapping", async () => {
+  const local = new Map<string, unknown>();
+  const tabs: chrome.tabs.Tab[] = [];
+  const updates: unknown[] = [];
+  const moves: unknown[] = [];
+  const removals: number[] = [];
+  const fakeChrome = {
+    tabs: {
+      create: async (properties: chrome.tabs.CreateProperties) => {
+        const tab = { id: 11, windowId: 1, index: properties.index ?? 0, active: false, pinned: properties.pinned ?? false, incognito: false, url: properties.url } as chrome.tabs.Tab;
+        tabs.push(tab); return tab;
+      },
+      update: async (tabId: number, properties: chrome.tabs.UpdateProperties) => { updates.push([tabId, properties]); return tabs[0]!; },
+      move: async (tabId: number, properties: chrome.tabs.MoveProperties) => { moves.push([tabId, properties]); return tabs[0]!; },
+      remove: async (tabId: number) => { removals.push(tabId); },
+    },
+    storage: { local: storageArea(local) },
+  } as unknown as typeof chrome;
+  (globalThis as typeof globalThis & { chrome: typeof chrome }).chrome = fakeChrome;
+  const common = { schemaVersion: 2 as const, targetDeviceId: "desktop-1" };
+  await applyTabMutation({ ...common, mutationId: "mutation-open", type: "open", tab: {
+    candyId: "remote-tab", windowId: 1, index: 2, groupId: null, active: false, pinned: false, title: "", url: "https://one.example/",
+  } });
+  await applyTabMutation({ ...common, mutationId: "mutation-nav", type: "navigate", candyId: "remote-tab", url: "https://two.example/", title: "" });
+  await applyTabMutation({ ...common, mutationId: "mutation-pin", type: "set-pinned", candyId: "remote-tab", pinned: true });
+  await applyTabMutation({ ...common, mutationId: "mutation-order", type: "reorder", orderedCandyIds: ["remote-tab"] });
+  await applyTabMutation({ ...common, mutationId: "mutation-close", type: "close", candyId: "remote-tab" });
+  assert.deepEqual(local.get("candySyncTabIdentitiesV1"), {});
+  assert.deepEqual(updates, [[11, { url: "https://two.example/" }], [11, { pinned: true }]]);
+  assert.deepEqual(moves, [[11, { index: 0 }]]);
+  assert.deepEqual(removals, [11]);
 });

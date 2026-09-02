@@ -15,8 +15,8 @@ encrypted Android device identity is then associated locally with that profile I
 flowchart LR
     P[Existing local profile] <-->|localProfileId / ownDeviceId| B[Sync binding]
     P --> L[BrowserSessionStore, history, Capsules]
-    B --> O[Encrypted outbox and device snapshot]
-    O <-->|E2EE tab changes| S[Self-hosted server]
+    B --> O[Encrypted delta outbox and device projection]
+    O <-->|Durable REST + realtime ciphertext| S[Self-hosted server]
 ```
 
 The binding is local metadata. The server never receives the Candy profile ID. The bound profile
@@ -42,8 +42,8 @@ extension applies those changes when the target browser is available.
 ```mermaid
 flowchart LR
     A[Android synced profile] -->|Open / navigate / pin / reorder / close| R[Encrypted mutation queue]
-    R -->|CAS encrypted snapshot| S[Self-hosted server]
-    S -->|Pull target changes| E[Chromium or Firefox extension]
+    R -->|CAS encrypted v2 delta| S[Self-hosted server]
+    S -->|Committed WebSocket frame or REST pull| E[Chromium or Firefox extension]
     E -->|Apply safe HTTP(S) tab diff| D[Desktop browser tabs]
 ```
 
@@ -87,14 +87,38 @@ cache, and retries them after reconnecting.
 
 ## Conflicts and delivery
 
-Every target profile has a monotonically increasing revision. Android encrypts the proposed target
-snapshot and sends a compare-and-swap update. On `409 snapshot_conflict`, it pulls the latest target,
-replays the logical mutation by stable ID, and creates a new attempt.
+Every target profile has a monotonically increasing revision. With protocol v2, Android encrypts
+one logical mutation and sends it as a compare-and-swap delta. On a revision conflict, it pulls the
+latest ordered deltas, replays the logical mutation by stable ID, and creates a new attempt. The v1
+compatibility path retains encrypted snapshot CAS for servers that do not advertise the complete v2
+feature set and whose workspace protocol floor has not been promoted.
 
-A prepared delivery attempt stores its exact change ID, base revision, nonce, and ciphertext before
-network I/O. A timeout or process restart reuses those exact bytes. This prevents a lost response
-from producing different ciphertext under one idempotency key. A confirmed CAS conflict retires the
-attempt before a fresh encrypted attempt is created.
+A prepared delivery attempt stores its exact change ID, mutation ID, base revision, nonce, and
+ciphertext before network I/O. A timeout or process restart reuses those exact bytes. This prevents
+a lost response from producing different ciphertext under one idempotency key. A confirmed CAS
+conflict retires the attempt before a fresh encrypted attempt is created.
+
+### V2 authenticated encryption
+
+Android and the WebExtension implement the same v2 derivation and AAD contract:
+
+```text
+deltaKey = HKDF-SHA-256(
+    workspaceKey,
+    salt=UTF8(JSON.stringify([workspaceId, targetDeviceId])),
+    info=UTF8("candy-sync/v2/payload/tab-delta"),
+    output=32)
+
+aad = JSON.stringify([
+    "candy-sync-change", cryptoVersion, keyVersion, schemaVersion,
+    workspaceId, writerDeviceId, changeId, mutationId,
+    "tabs", targetDeviceId, "delta", baseRevision
+])
+```
+
+AES-256-GCM uses a fresh 12-byte CSPRNG nonce for every new mutation. Plaintext repeats
+`mutationId` and `targetDeviceId`; both must match authenticated metadata after decryption. Workspace,
+writer, target, operation, identities, and revision-chain substitution therefore fail authentication.
 
 ## Shared device icons
 
@@ -125,8 +149,8 @@ The Sync settings page requests:
 - the E2EE passphrase and confirmation.
 
 The server password and E2EE passphrase must differ. Neither input is saved. The passphrase never
-leaves the device, cannot be changed or recovered in protocol v1, and is needed to enroll future
-devices. Losing it can make the workspace unrecoverable. Each secret field has an explicit
+leaves the device, is immutable for the workspace, cannot be changed or recovered in either protocol
+version, and is needed to enroll future devices. Losing it can make the workspace unrecoverable. Each secret field has an explicit
 show/hide control, and the settings page remains scrollable above the on-screen keyboard.
 
 Android generates its own P-256 device key locally. The workspace key, bearer token, and private key
@@ -139,12 +163,26 @@ unauthenticated discovery and sends no Basic credential or bearer token until th
 `allowHttp: true`. That report requires `CANDY_SYNC_ALLOW_HTTP=true` server-side. It is a deliberate
 cleartext opt-in, not transport security; HTTPS remains the recommended deployment.
 
-## Refresh behavior
+## Foreground and background behavior
 
-The controller refreshes on foreground start and every 15 seconds while the app is active. Local
-mutations push immediately; offline writes remain durable and replay after a later refresh. The
-settings page also offers **Sync now**. The current implementation does not keep a permanent socket
-or wake a closed app continuously.
+The controller starts realtime when Candy Browser enters the foreground and closes the socket when
+the activity stops. While foregrounded, a single-use 45-second ticket authenticates the WebSocket;
+contiguous committed frames apply immediately. Duplicate cursors are ignored; missing or
+non-contiguous cursors trigger ordered REST catch-up from the last durably stored v2 cursor.
+Reconnect uses bounded backoff.
+
+The controller also refreshes on foreground start and every 15 seconds while active. Local mutations
+push immediately; offline writes remain durable and replay after a later refresh. **Sync now** offers
+an explicit recovery action. Android does not keep a permanent background socket and does not wake a
+closed app continuously. REST remains durable truth; realtime is a foreground latency accelerator.
+
+## Protocol floor
+
+Android selects v2 only when discovery advertises version 2, `tab-mutations-v2`, and `realtime`.
+The first committed v2 delta atomically raises that workspace's protocol floor. Later v1 tab writes
+fail with `409 protocol_upgrade_required`; clients must upgrade rather than fall back. V1 reads stay
+available, and v1/v2 cursors remain separate. Before promotion, accepted v1 writes advance the v2
+revision baseline to prevent divergent successors.
 
 ## Code map
 

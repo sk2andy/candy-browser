@@ -6,6 +6,8 @@ import dev.sk2andy.materialbrowser.sync.AndroidArgon2RecoveryKeyDeriver
 import dev.sk2andy.materialbrowser.sync.SyncBase64
 import dev.sk2andy.materialbrowser.sync.SyncCache
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
+import dev.sk2andy.materialbrowser.sync.SyncMutationCodec
+import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
 import dev.sk2andy.materialbrowser.sync.SyncRecoveryKdf
 import dev.sk2andy.materialbrowser.sync.SyncVaultSecrets
 import java.io.File
@@ -106,6 +108,26 @@ class AndroidSyncSecurityInstrumentedTest {
         assertEquals(54, catalog.icons.size)
         assertTrue(catalog.contains("phone"))
         assertTrue(catalog.contains("computer"))
+    }
+
+    @Test
+    fun mutationEncodingMatchesJavaScriptOnAndroidRuntime() {
+        val encoded = SyncMutationCodec.encode(
+            SyncPendingMutation.Navigate(
+                mutationId = "navigate-1",
+                targetDeviceId = "target-1",
+                candyId = "tab-1",
+                title = "Candy/\n\"🍬",
+                url = "https://example.com/path",
+            ),
+        )
+
+        assertEquals(
+            "{\"schemaVersion\":2,\"mutationId\":\"navigate-1\",\"targetDeviceId\":\"target-1\"," +
+                "\"type\":\"navigate\",\"candyId\":\"tab-1\",\"title\":\"Candy/\\n\\\"🍬\"," +
+                "\"url\":\"https://example.com/path\"}",
+            encoded,
+        )
     }
 
     private fun deleteKey(alias: String) {

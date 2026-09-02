@@ -15,6 +15,8 @@ local E2EE keys, and the desired sync scopes.
 | User-selectable shared Android/WebExtension profile-icon catalog | Implemented |
 | Argon2id-protected local vault | Implemented |
 | AES-256-GCM-encrypted tab snapshot | Implemented |
+| AES-256-GCM-encrypted protocol-v2 tab mutations | Implemented |
+| Durable delta outbox, REST catch-up, and WebSocket notifications | Implemented |
 | Apply Android edits to the matching desktop synced profile | Implemented |
 | Chromium service worker | Implemented |
 | Firefox non-persistent event page | Implemented |
@@ -89,6 +91,29 @@ unauthenticated discovery document reports `allowHttp: true`, which the server e
 `CANDY_SYNC_ALLOW_HTTP=true`. The extension performs discovery before every authenticated sync
 session. HTTP remains vulnerable to credential/token interception and should be limited to a
 trusted development LAN.
+
+## Protocol v2 realtime path
+
+When discovery advertises protocol version 2 plus `tab-mutations-v2` and `realtime`, local tab
+events create individual encrypted `open`, `navigate`, `close`, `reorder`, or `set-pinned`
+mutations. The durable outbox preserves the exact change ID, mutation ID, nonce, and ciphertext
+used for idempotent retry. Consecutive navigation updates coalesce; a close supersedes pending
+updates for the same tab when their revision chain is contiguous.
+
+`POST /v2/sync/push` commits one encrypted mutation. `GET /v2/sync/pull` recovers missed changes
+from a v2-specific cursor. A short-lived single-use ticket from `POST /v2/realtime/tickets`
+authenticates `WSS /v2/realtime`; committed frames are applied directly when their target revision
+is contiguous. Gaps trigger REST catch-up. Chromium receives a 20-second application heartbeat;
+Firefox uses the same connection best-effort. A one-minute alarm remains the background fallback.
+
+Disabling tab sync closes realtime delivery and stops both applying and queueing tab mutations.
+Re-enabling it compares the current stable tab IDs with the ID-only disable boundary, then sends
+encrypted opens, closes, navigations, pin changes, and final order. URLs and titles are not retained
+as plaintext for this reconciliation. REST pagination and push acknowledgements keep cursors
+monotonic and fail closed on cursor cycles.
+
+Protocol-v1 cursor, revision, snapshot outbox, and endpoint path remain separate and are used when
+the server does not advertise the complete v2 feature set.
 
 ## Permission lifecycle
 

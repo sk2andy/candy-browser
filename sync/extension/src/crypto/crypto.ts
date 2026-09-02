@@ -3,11 +3,14 @@ import { argon2idAsync } from "@noble/hashes/argon2.js";
 import type {
   DeviceIconDescriptor,
   EncryptedChange,
+  EncryptedTabDelta,
   RecoveryEnvelope,
+  TabMutation,
   VaultEnvelope,
   VaultSecrets,
 } from "../core/models.js";
 import { defaultDeviceIconId, DEVICE_ICON_IDS } from "../core/device-icon-catalog.js";
+import { parseTabMutation } from "../core/tab-mutation-rules.js";
 import { base64UrlToBytes, bytesToBase64Url, utf8 } from "./encoding.js";
 
 export const ARGON2_PARAMETERS: Readonly<{ memoryKiB: number; iterations: number; parallelism: number }> = Object.freeze({
@@ -18,6 +21,8 @@ export const ARGON2_PARAMETERS: Readonly<{ memoryKiB: number; iterations: number
 
 const VAULT_AAD = utf8("candy-sync/local-vault/v1");
 const MAX_VAULT_CIPHERTEXT_BYTES = 131_072;
+const MAX_TAB_DELTA_PLAINTEXT_BYTES = 196_608;
+const MAX_TAB_DELTA_CIPHERTEXT_BYTES = 196_624;
 
 export interface DeviceIdentity {
   privateKeyPkcs8: Uint8Array;
@@ -412,6 +417,105 @@ export async function decryptTabSnapshot(workspaceKey: Uint8Array, change: Encry
   ));
   try {
     return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(plaintext));
+  } finally {
+    plaintext.fill(0);
+  }
+}
+
+type TabDeltaAadFields = Omit<EncryptedTabDelta, "nonce" | "ciphertext">;
+
+async function deriveTabDeltaKey(workspaceKey: Uint8Array, workspaceId: string, targetDeviceId: string): Promise<CryptoKey> {
+  if (workspaceKey.length !== 32) throw new Error("Workspace key must be 32 bytes");
+  const baseKey = await crypto.subtle.importKey("raw", buffer(workspaceKey), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: buffer(utf8(JSON.stringify([workspaceId, targetDeviceId]))),
+      info: buffer(utf8("candy-sync/v2/payload/tab-delta")),
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+export function tabDeltaAad(change: TabDeltaAadFields): Uint8Array {
+  return utf8(JSON.stringify([
+    "candy-sync-change",
+    change.cryptoVersion,
+    change.keyVersion,
+    change.schemaVersion,
+    change.workspaceId,
+    change.deviceId,
+    change.changeId,
+    change.mutationId,
+    change.entity,
+    change.entityId,
+    change.operation,
+    change.baseRevision,
+  ]));
+}
+
+export async function encryptTabMutation(
+  workspaceKey: Uint8Array,
+  change: TabDeltaAadFields,
+  rawMutation: unknown,
+  nonceBytes: Uint8Array = randomBytes(12),
+): Promise<EncryptedTabDelta> {
+  const mutation = parseTabMutation(rawMutation);
+  if (nonceBytes.length !== 12) throw new Error("Tab delta nonce must be 12 bytes");
+  if (change.schemaVersion !== 2 || change.cryptoVersion !== 1 || change.keyVersion !== 1 ||
+      change.entity !== "tabs" || change.operation !== "delta") throw new Error("Invalid tab delta metadata");
+  if (mutation.mutationId !== change.mutationId || mutation.targetDeviceId !== change.entityId) {
+    throw new Error("Tab mutation identity does not match authenticated metadata");
+  }
+  const plaintext = utf8(JSON.stringify(mutation));
+  if (plaintext.length > MAX_TAB_DELTA_PLAINTEXT_BYTES) {
+    plaintext.fill(0);
+    throw new Error("Tab delta plaintext is too large");
+  }
+  try {
+    const key = await deriveTabDeltaKey(workspaceKey, change.workspaceId, change.entityId);
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: buffer(nonceBytes), additionalData: buffer(tabDeltaAad(change)) },
+      key,
+      buffer(plaintext),
+    );
+    return {
+      ...change,
+      nonce: bytesToBase64Url(nonceBytes),
+      ciphertext: bytesToBase64Url(new Uint8Array(ciphertext)),
+    };
+  } finally {
+    plaintext.fill(0);
+  }
+}
+
+export async function decryptTabMutation(
+  workspaceKey: Uint8Array,
+  change: EncryptedTabDelta,
+): Promise<TabMutation> {
+  const { nonce, ciphertext, ...aadFields } = change;
+  const nonceBytes = base64UrlToBytes(nonce);
+  const ciphertextBytes = base64UrlToBytes(ciphertext);
+  if (nonceBytes.length !== 12 || ciphertextBytes.length < 17 ||
+      ciphertextBytes.length > MAX_TAB_DELTA_CIPHERTEXT_BYTES) {
+    throw new Error("Invalid encrypted tab delta");
+  }
+  const key = await deriveTabDeltaKey(workspaceKey, change.workspaceId, change.entityId);
+  const plaintext = new Uint8Array(await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: buffer(nonceBytes), additionalData: buffer(tabDeltaAad(aadFields)) },
+    key,
+    buffer(ciphertextBytes),
+  ));
+  try {
+    const mutation = parseTabMutation(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(plaintext)) as unknown);
+    if (mutation.mutationId !== change.mutationId || mutation.targetDeviceId !== change.entityId) {
+      throw new Error("Tab mutation identity does not match authenticated metadata");
+    }
+    return mutation;
   } finally {
     plaintext.fill(0);
   }

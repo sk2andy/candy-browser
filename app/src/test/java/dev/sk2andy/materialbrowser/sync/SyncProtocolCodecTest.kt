@@ -63,4 +63,22 @@ class SyncProtocolCodecTest {
             SyncProtocolCodec.decodeDeviceIcon("""{"schemaVersion":1,"catalogId":"phone","accentHue":360}""")
         }
     }
+
+    @Test
+    fun `v2 delta accepts shared maximum ciphertext and rejects larger input`() {
+        val ciphertext = "A".repeat(262_166)
+        fun response(value: String) = """{
+            "changes":[{
+              "changeId":"change-1","mutationId":"mutation-1","workspaceId":"workspace-1",
+              "deviceId":"writer-1","entity":"tabs","entityId":"target-1","operation":"delta",
+              "baseRevision":"0","revision":"1","schemaVersion":2,"cryptoVersion":1,"keyVersion":1,
+              "nonce":"AAAAAAAAAAAAAAAA","ciphertext":"$value"
+            }],"nextCursor":"epoch-1.1","hasMore":false
+        }""".trimIndent()
+
+        assertEquals(ciphertext, SyncProtocolCodec.decodeDeltaPull(response(ciphertext)).changes.single().ciphertext)
+        assertThrows(IllegalArgumentException::class.java) {
+            SyncProtocolCodec.decodeDeltaPull(response("${ciphertext}A"))
+        }
+    }
 }

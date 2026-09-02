@@ -92,9 +92,121 @@ class SyncCryptoTest {
         }
     }
 
+    @Test
+    fun `tab delta round trips and binds tenant mutation and revision metadata`() {
+        val mutation = SyncPendingMutation.Navigate(
+            mutationId = "mutation-1",
+            targetDeviceId = "device-target",
+            candyId = "tab-1",
+            title = "Candy",
+            url = "https://example.com/next",
+        )
+        val metadata = SyncEncryptedDelta(
+            changeId = "change-1",
+            mutationId = mutation.mutationId,
+            workspaceId = "workspace-1",
+            writerDeviceId = "device-writer",
+            targetDeviceId = mutation.targetDeviceId,
+            baseRevision = 7,
+            revision = null,
+            nonce = "",
+            ciphertext = "",
+        )
+        val encrypted = SyncCrypto(IncrementingSecureRandom()).encryptTabMutation(
+            workspaceKey,
+            metadata,
+            mutation,
+        )
+
+        assertEquals("AAECAwQFBgcICQoL", encrypted.nonce)
+        assertEquals(mutation, crypto.decryptTabMutation(workspaceKey, encrypted))
+        listOf(
+            encrypted.copy(workspaceId = "workspace-2"),
+            encrypted.copy(writerDeviceId = "other-writer"),
+            encrypted.copy(targetDeviceId = "other-target"),
+            encrypted.copy(changeId = "change-2"),
+            encrypted.copy(mutationId = "mutation-2"),
+            encrypted.copy(baseRevision = 8),
+        ).forEach { tampered ->
+            assertThrows(Exception::class.java) {
+                crypto.decryptTabMutation(workspaceKey, tampered)
+            }
+        }
+    }
+
+    @Test
+    fun `matches extension tab delta known answer vector`() {
+        val key = ByteArray(32) { it.toByte() }
+        val mutation = SyncPendingMutation.Navigate(
+            mutationId = "mutation-1",
+            targetDeviceId = "desktop-1",
+            candyId = "tab-1",
+            title = "Example",
+            url = "https://example.com/path",
+        )
+        val metadata = SyncEncryptedDelta(
+            changeId = "change-1",
+            mutationId = mutation.mutationId,
+            workspaceId = "workspace-1",
+            writerDeviceId = "phone-1",
+            targetDeviceId = mutation.targetDeviceId,
+            baseRevision = 7,
+            revision = null,
+            nonce = "",
+            ciphertext = "",
+        )
+
+        val encrypted = SyncCrypto(OffsetSecureRandom(0xa0)).encryptTabMutation(
+            key,
+            metadata,
+            mutation,
+        )
+
+        assertEquals("oKGio6Slpqeoqaqr", encrypted.nonce)
+        assertEquals(
+            "5Kht0grOpg8vOfI8gpO4y9SV3GJxOCqB23ihkpH4rukEYkaEEnsrFrgi9dcNep-k4YIwWLXo13ejkU9eMmawkb05Z1DxCUXdB8vRUWHbHYnPZMtIZRMRpbCrSksm9lNsAyB-_RQLINh6mCzZH5-jco6XzHgd6m0xKuFVE_ESwVMZ30fAFDMnqtVPzN2js72qI9wRb3GiT688AOOb8pcosY6jofTVak4qlERI8LAsPSEU",
+            encrypted.ciphertext,
+        )
+        assertEquals(mutation, crypto.decryptTabMutation(key, encrypted))
+    }
+
+    @Test
+    fun `tab delta accepts the largest protocol reorder payload`() {
+        val mutation = SyncPendingMutation.Reorder(
+            mutationId = "mutation-largest",
+            targetDeviceId = "desktop-1",
+            orderedCandyIds = List(1_000) { index ->
+                "tab-${index.toString().padStart(4, '0')}-${"x".repeat(119)}"
+            },
+        )
+        val metadata = SyncEncryptedDelta(
+            changeId = "change-largest",
+            mutationId = mutation.mutationId,
+            workspaceId = "workspace-1",
+            writerDeviceId = "phone-1",
+            targetDeviceId = mutation.targetDeviceId,
+            baseRevision = 7,
+            revision = null,
+            nonce = "",
+            ciphertext = "",
+        )
+
+        val encrypted = crypto.encryptTabMutation(workspaceKey, metadata, mutation)
+
+        assertEquals(mutation, crypto.decryptTabMutation(workspaceKey, encrypted))
+    }
+
     private class IncrementingSecureRandom : SecureRandom() {
         private var next = 0
 
+        override fun nextBytes(bytes: ByteArray) {
+            bytes.indices.forEach { index -> bytes[index] = (next++).toByte() }
+        }
+    }
+
+    private class OffsetSecureRandom(
+        private var next: Int,
+    ) : SecureRandom() {
         override fun nextBytes(bytes: ByteArray) {
             bytes.indices.forEach { index -> bytes[index] = (next++).toByte() }
         }

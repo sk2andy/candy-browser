@@ -690,6 +690,7 @@ class BrowserController(
     private var syncObservation: AutoCloseable? = null
     private val locallyPendingSyncCandyIds = mutableSetOf<String>()
     private val pendingSyncNavigationRunnables = mutableMapOf<String, Runnable>()
+    private val remoteSyncNavigationUrls = mutableMapOf<String, String>()
     private val syncRefreshRunnable = object : Runnable {
         override fun run() {
             if (destroyed || !isActivityStarted) return
@@ -5440,6 +5441,7 @@ class BrowserController(
 
     fun onStart() {
         isActivityStarted = true
+        syncRepository.startRealtime()
         mainHandler.removeCallbacks(syncRefreshRunnable)
         mainHandler.post(syncRefreshRunnable)
     }
@@ -5448,6 +5450,7 @@ class BrowserController(
         val wasActivityStarted = isActivityStarted
         val shouldCloseTabsWhenHidden = wasActivityStarted && !activity.isChangingConfigurations
         isActivityStarted = false
+        syncRepository.stopRealtime()
         mainHandler.removeCallbacks(syncRefreshRunnable)
         val keepsPictureInPictureMedia = isInPictureInPictureMode ||
             isInPictureInPicture ||
@@ -5514,6 +5517,7 @@ class BrowserController(
         mainHandler.removeCallbacks(syncRefreshRunnable)
         pendingSyncNavigationRunnables.values.forEach(mainHandler::removeCallbacks)
         pendingSyncNavigationRunnables.clear()
+        remoteSyncNavigationUrls.clear()
         syncObservation?.close()
         syncObservation = null
         syncRepository.close()
@@ -9308,6 +9312,7 @@ class BrowserController(
             replaceProfileTabs(boundProfileId, reconciliation.tabs)
             reconciliation.navigations.forEach { navigation ->
                 webViews[navigation.runtimeTabId]?.let { webView ->
+                    remoteSyncNavigationUrls[navigation.runtimeTabId] = navigation.url
                     loadUrlWithProtection(navigation.runtimeTabId, webView, navigation.url)
                 }
             }
@@ -9348,6 +9353,7 @@ class BrowserController(
             replaceProfileTabs(profileId, reconciliation.tabs)
             reconciliation.navigations.forEach { navigation ->
                 webViews[navigation.runtimeTabId]?.let { webView ->
+                    remoteSyncNavigationUrls[navigation.runtimeTabId] = navigation.url
                     loadUrlWithProtection(navigation.runtimeTabId, webView, navigation.url)
                 }
             }
@@ -9416,6 +9422,10 @@ class BrowserController(
     private fun scheduleSyncedTabNavigation(tabId: String) {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (!isSyncTargetProfile(tab.profileId) || tab.isIncognito) return
+        remoteSyncNavigationUrls[tabId]?.let { expectedUrl ->
+            remoteSyncNavigationUrls.remove(tabId)
+            if (BrowserUriPolicy.normalizeHttpUrl(tab.url) == expectedUrl) return
+        }
         pendingSyncNavigationRunnables.remove(tabId)?.let(mainHandler::removeCallbacks)
         val runnable = Runnable {
             pendingSyncNavigationRunnables.remove(tabId)

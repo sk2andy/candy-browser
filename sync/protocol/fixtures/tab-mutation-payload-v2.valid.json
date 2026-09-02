@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "mutation_01J7V2",
+  "targetDeviceId": "device_target",
+  "type": "open",
+  "tab": {
+    "candyId": "tab:01J7V2",
+    "windowId": 1,
+    "index": 0,
+    "groupId": null,
+    "active": true,
+    "pinned": false,
+    "title": "Candy Browser",
+    "url": "https://candybrowser.dev/"
+  }
+}

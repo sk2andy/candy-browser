@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://candybrowser.dev/sync/protocol/schemas/tab-mutation-payload-v2.schema.json",
+  "title": "Candy Sync client-only tab mutation payload v2",
+  "description": "Plaintext mutation encrypted on device before transport. Servers must never accept, store, log, or inspect this structure.",
+  "oneOf": [
+    { "$ref": "#/$defs/open" },
+    { "$ref": "#/$defs/navigate" },
+    { "$ref": "#/$defs/close" },
+    { "$ref": "#/$defs/reorder" },
+    { "$ref": "#/$defs/setPinned" }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "candyId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384,
+      "pattern": "^https?://"
+    },
+    "title": { "type": "string", "maxLength": 4096 },
+    "tab": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candyId", "windowId", "index", "groupId", "active", "pinned", "title", "url"],
+      "properties": {
+        "candyId": { "$ref": "#/$defs/candyId" },
+        "windowId": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+        "index": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+        "groupId": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+            { "type": "null" }
+          ]
+        },
+        "active": { "type": "boolean" },
+        "pinned": { "type": "boolean" },
+        "title": { "$ref": "#/$defs/title" },
+        "url": { "$ref": "#/$defs/url" }
+      }
+    },
+    "open": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "mutationId", "targetDeviceId", "type", "tab"],
+      "properties": {
+        "schemaVersion": { "const": 2 },
+        "mutationId": { "$ref": "#/$defs/identifier" },
+        "targetDeviceId": { "$ref": "#/$defs/identifier" },
+        "type": { "const": "open" },
+        "tab": { "$ref": "#/$defs/tab" }
+      }
+    },
+    "navigate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "mutationId", "targetDeviceId", "type", "candyId", "title", "url"],
+      "properties": {
+        "schemaVersion": { "const": 2 },
+        "mutationId": { "$ref": "#/$defs/identifier" },
+        "targetDeviceId": { "$ref": "#/$defs/identifier" },
+        "type": { "const": "navigate" },
+        "candyId": { "$ref": "#/$defs/candyId" },
+        "title": { "$ref": "#/$defs/title" },
+        "url": { "$ref": "#/$defs/url" }
+      }
+    },
+    "close": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "mutationId", "targetDeviceId", "type", "candyId"],
+      "properties": {
+        "schemaVersion": { "const": 2 },
+        "mutationId": { "$ref": "#/$defs/identifier" },
+        "targetDeviceId": { "$ref": "#/$defs/identifier" },
+        "type": { "const": "close" },
+        "candyId": { "$ref": "#/$defs/candyId" }
+      }
+    },
+    "reorder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "mutationId", "targetDeviceId", "type", "orderedCandyIds"],
+      "properties": {
+        "schemaVersion": { "const": 2 },
+        "mutationId": { "$ref": "#/$defs/identifier" },
+        "targetDeviceId": { "$ref": "#/$defs/identifier" },
+        "type": { "const": "reorder" },
+        "orderedCandyIds": {
+          "type": "array",
+          "maxItems": 1000,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/candyId" }
+        }
+      }
+    },
+    "setPinned": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "mutationId", "targetDeviceId", "type", "candyId", "pinned"],
+      "properties": {
+        "schemaVersion": { "const": 2 },
+        "mutationId": { "$ref": "#/$defs/identifier" },
+        "targetDeviceId": { "$ref": "#/$defs/identifier" },
+        "type": { "const": "set-pinned" },
+        "candyId": { "$ref": "#/$defs/candyId" },
+        "pinned": { "type": "boolean" }
+      }
+    }
+  }
+}

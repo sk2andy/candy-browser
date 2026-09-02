@@ -1,8 +1,9 @@
 # Candy Sync server
 
-The self-hosted server is a single-workspace Go service backed by SQLite. It authenticates clients,
-assigns monotonic revisions and opaque cursors, and stores encrypted device metadata and snapshots.
-It is intentionally not a decryption endpoint.
+The self-hosted server is a Go service backed by SQLite. It authenticates clients, assigns
+workspace-scoped monotonic revisions and opaque cursors, and stores encrypted device metadata,
+v1 snapshots, and v2 deltas. It broadcasts only committed v2 envelopes through authenticated
+WebSockets. It is intentionally not a decryption endpoint.
 
 ## Quick start
 
@@ -87,8 +88,8 @@ enroll again with the same immutable E2EE passphrase to recover the existing wor
 
 ```mermaid
 flowchart LR
-    C[Sync clients] -->|HTTPS 8443 or explicit HTTP 8080| R[Caddy gateway]
-    R -->|Private HTTP| S[Candy Sync container]
+    C[Sync clients] <-->|HTTPS REST / WSS or explicit HTTP / WS| R[Caddy gateway]
+    R <-->|Private HTTP / WebSocket upgrade| S[Candy Sync container]
     S --> V[(Local persistent volume)]
 ```
 
@@ -119,10 +120,46 @@ certificate/configuration volumes and also drops Linux capabilities.
 | Device list | Return public identity plus encrypted presentation fields | Authenticate and decrypt locally |
 | Push | Atomically CAS-update one target device and retain authenticated writer identity | Reuse the same ciphertext on delivery retry |
 | Pull/snapshot | Return ordered encrypted records and cursors | Authenticate before parsing plaintext |
+| V2 delta push | Commit one workspace-scoped encrypted mutation, cursor, and target revision atomically | Bind routing metadata with AEAD and retain exact retry bytes |
+| Realtime | Issue single-use tickets and fan out committed envelopes within one workspace | Treat frames as hints and recover every gap through REST pull |
 | Revocation | Deny future token use | Treat already copied plaintext as unrecoverable |
 
 The exact contract is [`../../sync/protocol/openapi.yaml`](../../sync/protocol/openapi.yaml). API
-errors use `application/problem+json`; revisions are decimal strings; cursors are opaque.
+errors use `application/problem+json`; revisions are decimal strings; cursors are opaque. V1 and v2
+cursors have independent sequence spaces under the same server epoch.
+
+## Protocol v2, realtime, and upgrade floor
+
+V2 accepts exactly one encrypted tab mutation per `POST /v2/sync/push`. Bearer authentication
+determines account, workspace, and writer device; matching values in the envelope are authenticated
+claims and must agree. The server commits the change, v2 cursor, and target-profile CAS revision in
+one SQLite transaction before broadcasting the identical envelope to all connected devices in that
+workspace, including the sender.
+
+Clients exchange their bearer token for a 45-second, single-use ticket at
+`POST /v2/realtime/tickets`, then open WebSocket `/v2/realtime` (`wss:` by default; `ws:` only for an
+explicitly allowed HTTP endpoint). Tickets must not be persisted, and reverse
+proxies must suppress query strings in access logs. Realtime queues are bounded: slow clients are
+disconnected and recover from their last durable v2 cursor through `GET /v2/sync/pull`. REST is the
+durable source of truth; WebSocket delivery only reduces latency.
+
+The first successful v2 commit atomically promotes the workspace `protocol_floor` from 1 to 2.
+After promotion, v1 tab writes return `409 protocol_upgrade_required`; v1 reads remain available.
+Before promotion, every accepted v1 tab write updates the v2 CAS baseline, and migration seeds that
+baseline from existing v1 snapshots. This prevents v1 and v2 writers from producing divergent
+successors to the same target revision.
+
+## Account and workspace model
+
+Migration 0003 introduces accounts, workspace membership, workspace-scoped v2 sequence heads,
+change uniqueness, and target revisions. V2 bearer authentication carries account, workspace, and
+device identity, and every v2 store query is scoped by workspace. This is a multi-user-ready storage
+boundary, not a finished multi-user product.
+
+The current Compose deployment configures one account and one default workspace through
+`CANDY_SYNC_USERNAME` and `CANDY_SYNC_PASSWORD`. It has no account-provisioning flow, invitations,
+workspace switching, role-management UI, or tenant-aware administration surface. Protocol v1 stays
+restricted to that default workspace and must not be exposed to future non-default accounts.
 
 ## Storage, backup, and restore
 
@@ -130,7 +167,7 @@ SQLite uses WAL mode and `synchronous=FULL`. A plain copy of the main database w
 running can omit committed WAL data. Either stop the container before copying the database or use a
 SQLite-consistent backup tool that includes WAL state.
 
-A restore can roll the server behind cursors already held by clients. Protocol v1 has no finished
+A restore can roll the server behind cursors already held by clients. The current server has no finished
 administrative restore command for rotating the server epoch. Until that exists, restore testing
 must use a fresh workspace and full encrypted resynchronization rather than silently serving an old
 database as current.

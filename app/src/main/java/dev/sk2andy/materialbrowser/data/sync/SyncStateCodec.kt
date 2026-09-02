@@ -4,6 +4,7 @@ import dev.sk2andy.materialbrowser.sync.SyncBase64
 import dev.sk2andy.materialbrowser.sync.SyncCache
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDescriptor
+import dev.sk2andy.materialbrowser.sync.SyncEncryptedDelta
 import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
 import dev.sk2andy.materialbrowser.sync.SyncProfile
 import dev.sk2andy.materialbrowser.sync.SyncTab
@@ -96,10 +97,13 @@ internal object SyncStateCodec {
         require(value.profiles.size <= MAX_CACHE_ENTRIES)
         require(value.pendingMutations.size <= MAX_CACHE_ENTRIES)
         require(value.preparedWrites.size <= MAX_CACHE_ENTRIES)
+        require(value.preparedDeltas.size <= MAX_CACHE_ENTRIES)
         require(value.preparedWrites.keys.all(value.pendingMutations.associateBy(SyncPendingMutation::mutationId)::containsKey))
+        require(value.preparedDeltas.keys.all(value.pendingMutations.associateBy(SyncPendingMutation::mutationId)::containsKey))
         return JSONObject()
-            .put("schemaVersion", 1)
+            .put("schemaVersion", 2)
             .put("cursor", value.cursor)
+            .put("deltaCursor", value.deltaCursor)
             .put("profiles", JSONArray(value.profiles.values.sortedBy(SyncProfile::deviceId).map(::encodeProfile)))
             .put("pendingMutations", JSONArray(value.pendingMutations.map(::encodeMutation)))
             .put(
@@ -108,27 +112,48 @@ internal object SyncStateCodec {
                     encodePreparedWrite(mutationId, change)
                 }),
             )
+            .put(
+                "preparedDeltas",
+                JSONArray(value.preparedDeltas.entries.sortedBy { it.key }.map { (mutationId, change) ->
+                    encodePreparedDelta(mutationId, change)
+                }),
+            )
             .toString()
             .toByteArray(Charsets.UTF_8)
     }
 
     fun decodeCache(raw: ByteArray): SyncCache {
         require(raw.size <= MAX_CACHE_BYTES)
-        val value = parseStrictJsonObject(raw.toString(Charsets.UTF_8)).requireKeys(
-            "schemaVersion",
-            "cursor",
-            "profiles",
-            "pendingMutations",
-            "preparedWrites",
-        )
-        require(value.getInt("schemaVersion") == 1)
+        val value = parseStrictJsonObject(raw.toString(Charsets.UTF_8))
+        val schemaVersion = value.getInt("schemaVersion")
+        when (schemaVersion) {
+            1 -> value.requireKeys(
+                "schemaVersion",
+                "cursor",
+                "profiles",
+                "pendingMutations",
+                "preparedWrites",
+            )
+            2 -> value.requireKeys(
+                "schemaVersion",
+                "cursor",
+                "deltaCursor",
+                "profiles",
+                "pendingMutations",
+                "preparedWrites",
+                "preparedDeltas",
+            )
+            else -> throw IllegalArgumentException("Unknown cache schema")
+        }
         val profiles = value.getJSONArray("profiles")
         val pending = value.getJSONArray("pendingMutations")
         val prepared = value.getJSONArray("preparedWrites")
+        val preparedDeltas = if (schemaVersion == 2) value.getJSONArray("preparedDeltas") else JSONArray()
         require(
             profiles.length() <= MAX_CACHE_ENTRIES &&
                 pending.length() <= MAX_CACHE_ENTRIES &&
-                prepared.length() <= MAX_CACHE_ENTRIES,
+                prepared.length() <= MAX_CACHE_ENTRIES &&
+                preparedDeltas.length() <= MAX_CACHE_ENTRIES,
         )
         val decodedProfiles = buildList {
             repeat(profiles.length()) { add(decodeProfile(profiles.getJSONObject(it))) }
@@ -149,11 +174,27 @@ internal object SyncStateCodec {
         preparedWrites.forEach { (mutationId, change) ->
             require(pendingById.getValue(mutationId).targetDeviceId == change.targetDeviceId)
         }
+        val decodedDeltas = buildMap {
+            repeat(preparedDeltas.length()) {
+                val (mutationId, change) = decodePreparedDelta(preparedDeltas.getJSONObject(it))
+                require(put(mutationId, change) == null)
+            }
+        }
+        require(decodedDeltas.keys.all(pendingById::containsKey))
+        decodedDeltas.forEach { (mutationId, change) ->
+            require(pendingById.getValue(mutationId).targetDeviceId == change.targetDeviceId)
+        }
         return SyncCache(
             cursor = value.getString("cursor").also { require(it.length <= 260) },
             profiles = decodedProfiles.associateBy(SyncProfile::deviceId),
             pendingMutations = pendingMutations,
             preparedWrites = preparedWrites,
+            deltaCursor = if (schemaVersion == 2) {
+                value.getString("deltaCursor").also { require(it.length <= 260) }
+            } else {
+                ""
+            },
+            preparedDeltas = decodedDeltas,
         )
     }
 
@@ -317,6 +358,41 @@ internal object SyncStateCodec {
             revision = revision,
             nonce = value.boundedString("nonce", 16),
             ciphertext = value.boundedString("ciphertext", 524_288),
+        )
+    }
+
+    private fun encodePreparedDelta(mutationId: String, change: SyncEncryptedDelta): JSONObject = JSONObject()
+        .put("mutationId", mutationId)
+        .put("changeId", change.changeId)
+        .put("workspaceId", change.workspaceId)
+        .put("writerDeviceId", change.writerDeviceId)
+        .put("targetDeviceId", change.targetDeviceId)
+        .put("baseRevision", change.baseRevision.toString())
+        .put("nonce", change.nonce)
+        .put("ciphertext", change.ciphertext)
+
+    private fun decodePreparedDelta(value: JSONObject): Pair<String, SyncEncryptedDelta> {
+        value.requireKeys(
+            "mutationId",
+            "changeId",
+            "workspaceId",
+            "writerDeviceId",
+            "targetDeviceId",
+            "baseRevision",
+            "nonce",
+            "ciphertext",
+        )
+        val mutationId = value.boundedString("mutationId", 128)
+        return mutationId to SyncEncryptedDelta(
+            changeId = value.boundedString("changeId", 128),
+            mutationId = mutationId,
+            workspaceId = value.boundedString("workspaceId", 128),
+            writerDeviceId = value.boundedString("writerDeviceId", 128),
+            targetDeviceId = value.boundedString("targetDeviceId", 128),
+            baseRevision = value.getString("baseRevision").toLong().also { require(it >= 0) },
+            revision = null,
+            nonce = value.boundedString("nonce", 16),
+            ciphertext = value.boundedString("ciphertext", 87_424),
         )
     }
 

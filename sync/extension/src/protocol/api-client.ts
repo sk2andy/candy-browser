@@ -1,4 +1,4 @@
-import type { EncryptedChange, RecoveryEnvelope, SyncType } from "../core/models.js";
+import type { CommittedTabDelta, EncryptedChange, EncryptedTabDelta, RecoveryEnvelope, SyncType } from "../core/models.js";
 import { requiresRemoteHttpApproval } from "../core/endpoint-rules.js";
 import type { RecoveryKdf } from "../crypto/crypto.js";
 import { utf8 } from "../crypto/encoding.js";
@@ -55,6 +55,22 @@ export interface PullResponse {
   changes: PulledChange[];
   nextCursor: string;
   hasMore: boolean;
+}
+
+export interface DeltaPullResponse {
+  changes: CommittedTabDelta[];
+  nextCursor: string;
+  hasMore: boolean;
+}
+
+export interface RealtimeTicket {
+  ticket: string;
+  expiresAt: string;
+}
+
+export interface DeltaPushResponse {
+  cursor: string;
+  results: Array<{ changeId: string; revision: string }>;
 }
 
 export class ApiError extends Error {
@@ -114,6 +130,13 @@ function requireObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function requireExactKeys(value: Record<string, unknown>, expected: readonly string[], name: string): void {
+  const keys = Object.keys(value);
+  if (keys.length !== expected.length || keys.some((key) => !expected.includes(key))) {
+    throw new ApiError(`Server field ${name} has unexpected fields.`);
+  }
+}
+
 function requireString(value: unknown, name: string): string {
   if (typeof value !== "string" || value.length === 0 || value.length > 4_096) throw new ApiError(`Server field ${name} is invalid.`);
   return value;
@@ -135,6 +158,13 @@ function requireRevision(value: unknown, name: string): string {
 
 function requireCiphertext(value: unknown, name: string): string {
   if (typeof value !== "string" || value.length === 0 || value.length > 512 * 1_024) {
+    throw new ApiError(`Server field ${name} is invalid.`);
+  }
+  return value;
+}
+
+function requireDeltaCiphertext(value: unknown, name: string): string {
+  if (typeof value !== "string" || value.length < 22 || value.length > 262_166) {
     throw new ApiError(`Server field ${name} is invalid.`);
   }
   return value;
@@ -167,6 +197,32 @@ function requireRecoveryParameter(value: unknown, expected: number, name: string
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed !== expected) throw new ApiError(`Server field ${name} is invalid.`);
   return parsed;
+}
+
+export function parseCommittedTabDelta(raw: unknown): CommittedTabDelta {
+  const value = requireObject(raw);
+  requireExactKeys(value, [
+    "changeId", "mutationId", "workspaceId", "deviceId", "entity", "entityId", "operation",
+    "baseRevision", "revision", "schemaVersion", "cryptoVersion", "keyVersion", "nonce", "ciphertext",
+  ], "change");
+  if (value.entity !== "tabs" || value.operation !== "delta") throw new ApiError("Server delta has an unsupported type.");
+  if (value.schemaVersion !== 2 || value.cryptoVersion !== 1 || value.keyVersion !== 1) throw new ApiError("Server delta has an unsupported version.");
+  return {
+    changeId: requireIdentifier(value.changeId, "changeId"),
+    mutationId: requireIdentifier(value.mutationId, "mutationId"),
+    workspaceId: requireIdentifier(value.workspaceId, "workspaceId"),
+    deviceId: requireIdentifier(value.deviceId, "deviceId"),
+    entity: "tabs",
+    entityId: requireIdentifier(value.entityId, "entityId"),
+    operation: "delta",
+    baseRevision: requireRevision(value.baseRevision, "baseRevision"),
+    revision: requireRevision(value.revision, "revision"),
+    schemaVersion: 2,
+    cryptoVersion: 1,
+    keyVersion: 1,
+    nonce: requireString(value.nonce, "nonce"),
+    ciphertext: requireDeltaCiphertext(value.ciphertext, "ciphertext"),
+  };
 }
 
 export class CandySyncApiClient {
@@ -206,8 +262,9 @@ export class CandySyncApiClient {
 
   async discover(): Promise<DiscoveryResponse> {
     const object = requireObject(await this.request("/.well-known/candy-sync", { method: "GET" }));
-    if (object.protocol !== "candy-sync" || !Array.isArray(object.versions) || !object.versions.includes(1)) {
-      throw new ApiError("Server does not support Candy Sync Protocol v1.");
+    if (object.protocol !== "candy-sync" || !Array.isArray(object.versions) ||
+        (!object.versions.includes(1) && !object.versions.includes(2))) {
+      throw new ApiError("Server does not support Candy Sync Protocol v1 or v2.");
     }
     const limits = requireObject(object.limits);
     const payloadBytes = Number(limits.payloadBytes);
@@ -390,5 +447,55 @@ export class CandySyncApiClient {
       }),
     }));
     return { revision: requireRevision(object.revision, "revision"), cursor: requireString(object.cursor, "cursor") };
+  }
+
+  async pushDelta(token: string, change: EncryptedTabDelta): Promise<DeltaPushResponse> {
+    const object = requireObject(await this.request("/v2/sync/push", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": change.changeId,
+      },
+      body: JSON.stringify({ changes: [change] }),
+    }));
+    if (!Array.isArray(object.results) || object.results.length !== 1) throw new ApiError("Server field results is invalid.");
+    const results = object.results.map((raw) => {
+      const result = requireObject(raw);
+      requireExactKeys(result, ["changeId", "revision"], "results");
+      return { changeId: requireIdentifier(result.changeId, "results.changeId"), revision: requireRevision(result.revision, "results.revision") };
+    });
+    return { cursor: requireString(object.cursor, "cursor"), results };
+  }
+
+  async pullDeltas(token: string, after = ""): Promise<DeltaPullResponse> {
+    const object = requireObject(await this.request(`/v2/sync/pull?after=${encodeURIComponent(after)}&limit=100`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    }));
+    if (!Array.isArray(object.changes) || object.changes.length > 100) throw new ApiError("Server field changes is invalid.");
+    return {
+      changes: object.changes.map(parseCommittedTabDelta),
+      nextCursor: requireString(object.nextCursor, "nextCursor"),
+      hasMore: object.hasMore === true,
+    };
+  }
+
+  async createRealtimeTicket(token: string): Promise<RealtimeTicket> {
+    const object = requireObject(await this.request("/v2/realtime/tickets", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: "{}",
+    }));
+    const expiresAt = requireString(object.expiresAt, "expiresAt");
+    if (!Number.isFinite(Date.parse(expiresAt))) throw new ApiError("Server field expiresAt is invalid.");
+    return { ticket: requireString(object.ticket, "ticket"), expiresAt };
+  }
+
+  realtimeUrl(ticket: string): string {
+    const url = new URL("v2/realtime", this.endpoint);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.searchParams.set("ticket", ticket);
+    return url.href;
   }
 }

@@ -14,6 +14,8 @@ test("background serializes selection updates without losing revision or durable
     deviceId: "device-1",
     cursor: "epoch-1.7",
     tabRevision: "7",
+    protocolVersion: 2,
+    v2Initialized: true,
     pendingTabChange: {
       changeId: "pending-1",
       deviceId: "device-1",
@@ -40,7 +42,13 @@ test("background serializes selection updates without losing revision or durable
   const event = { addListener: () => undefined };
   const fakeChrome = {
     alarms: { get: async () => ({ name: "candy-sync-periodic" }), create: async () => undefined, onAlarm: event },
-    tabs: { onCreated: event, onRemoved: event, onMoved: event, onUpdated: event },
+    tabs: {
+      query: async () => [{
+        id: 7, windowId: 1, index: 0, groupId: -1, active: true, pinned: false,
+        incognito: false, url: "https://example.com/", title: "Example",
+      }],
+      onCreated: event, onRemoved: event, onMoved: event, onUpdated: event,
+    },
     permissions: { onAdded: event, onRemoved: event, contains: async () => true },
     runtime: {
       onInstalled: event,
@@ -73,4 +81,6 @@ test("background serializes selection updates without losing revision or durable
   assert.deepEqual(stored.selection, { tabs: true, bookmarks: false, groups: false });
   assert.equal(stored.tabRevision, "7");
   assert.equal(stored.pendingTabChange?.changeId, "pending-1");
+  assert.equal(stored.v2ReconciliationPending, true);
+  assert.equal(stored.v2DisabledTabIds?.length, 1);
 });

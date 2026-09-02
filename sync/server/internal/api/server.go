@@ -27,6 +27,8 @@ type Server struct {
 	limiter *auth.AttemptLimiter
 	logger  *slog.Logger
 	now     func() time.Time
+	tickets *ticketStore
+	hub     *realtimeHub
 }
 
 type problem struct {
@@ -54,6 +56,8 @@ func New(cfg config.Config, repository store.Repository, logger *slog.Logger) ht
 		logger:  logger,
 		now:     time.Now,
 	}
+	server.tickets = newTicketStore(func() time.Time { return server.now() })
+	server.hub = newRealtimeHub()
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /.well-known/candy-sync", server.discovery)
 	mux.HandleFunc("GET /healthz", server.health)
@@ -67,6 +71,10 @@ func New(cfg config.Config, repository store.Repository, logger *slog.Logger) ht
 	mux.HandleFunc("POST /v1/sync/ack", server.requireBearer(server.ack))
 	mux.HandleFunc("GET /v1/sync/snapshot", server.requireBearer(server.snapshot))
 	mux.HandleFunc("PUT /v1/devices/{deviceId}/tabs", server.requireBearer(server.putTabs))
+	mux.HandleFunc("POST /v2/sync/push", server.requireBearer(server.pushDelta))
+	mux.HandleFunc("GET /v2/sync/pull", server.requireBearer(server.pullDeltas))
+	mux.HandleFunc("POST /v2/realtime/tickets", server.requireBearer(server.createRealtimeTicket))
+	mux.HandleFunc("GET /v2/realtime", server.realtime)
 	return server.requestMiddleware(mux)
 }
 
@@ -95,6 +103,8 @@ type statusWriter struct {
 	http.ResponseWriter
 	status int
 }
+
+func (w *statusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
 func (w *statusWriter) WriteHeader(status int) {
 	w.status = status
@@ -140,7 +150,7 @@ func (s *Server) rateLimitPeer(r *http.Request) string {
 	return peer
 }
 
-type deviceHandler func(http.ResponseWriter, *http.Request, string)
+type deviceHandler func(http.ResponseWriter, *http.Request, store.AuthContext)
 
 func (s *Server) requireBearer(next deviceHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -159,16 +169,16 @@ func (s *Server) requireBearer(next deviceHandler) http.HandlerFunc {
 			writeProblem(w, r, http.StatusUnauthorized, "invalid_token", "valid device token required")
 			return
 		}
-		next(w, r, token.DeviceID)
+		next(w, r, store.AuthContext{AccountID: token.AccountID, WorkspaceID: token.WorkspaceID, DeviceID: token.DeviceID})
 	}
 }
 
 func (s *Server) discovery(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"protocol":  "candy-sync",
-		"versions":  []int{1},
+		"versions":  []int{1, 2},
 		"allowHttp": s.cfg.AllowHTTP,
-		"features":  []string{"e2ee", "delta-sync", "encrypted-snapshot", "tab-snapshots", "encrypted-device-icons", "editable-tab-profiles"},
+		"features":  []string{"e2ee", "delta-sync", "encrypted-snapshot", "tab-snapshots", "encrypted-device-icons", "editable-tab-profiles", "tab-mutations-v2", "realtime", "realtime-deltas", "workspace-tenancy"},
 		"limits": map[string]any{
 			"batchChanges": s.cfg.MaxBatch,
 			"payloadBytes": s.cfg.MaxBodyBytes,
@@ -356,7 +366,7 @@ type deviceResponse struct {
 	LastSeenAt         string             `json:"lastSeenAt"`
 }
 
-func (s *Server) listDevices(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *Server) listDevices(w http.ResponseWriter, r *http.Request, _ store.AuthContext) {
 	values, err := s.store.ListDevices(r.Context())
 	if err != nil {
 		s.internalError(w, r, err)
@@ -407,6 +417,8 @@ func (s *Server) revokeDevice(w http.ResponseWriter, r *http.Request) {
 		s.internalError(w, r, err)
 		return
 	}
+	s.tickets.revokeDevice(deviceID)
+	s.hub.disconnectDevice(deviceID)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -429,7 +441,8 @@ type pushRequest struct {
 	Changes []changeDTO `json:"changes"`
 }
 
-func (s *Server) push(w http.ResponseWriter, r *http.Request, deviceID string) {
+func (s *Server) push(w http.ResponseWriter, r *http.Request, authenticated store.AuthContext) {
+	deviceID := authenticated.DeviceID
 	if err := validateIdempotencyKey(r.Header.Get("Idempotency-Key")); err != nil {
 		writeProblem(w, r, http.StatusBadRequest, "invalid_idempotency_key", err.Error())
 		return
@@ -465,6 +478,10 @@ func (s *Server) push(w http.ResponseWriter, r *http.Request, deviceID string) {
 		writeProblem(w, r, http.StatusConflict, "revision_conflict", err.Error())
 		return
 	}
+	if errors.Is(err, store.ErrProtocolUpgradeRequired) {
+		writeProblem(w, r, http.StatusConflict, "protocol_upgrade_required", "workspace tab writes require Candy Sync protocol v2")
+		return
+	}
 	if err != nil {
 		s.internalError(w, r, err)
 		return
@@ -476,7 +493,7 @@ func (s *Server) push(w http.ResponseWriter, r *http.Request, deviceID string) {
 	writeJSON(w, http.StatusOK, map[string]any{"cursor": cursor, "revisions": revisions})
 }
 
-func (s *Server) pull(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *Server) pull(w http.ResponseWriter, r *http.Request, _ store.AuthContext) {
 	epoch, after, err := parseCursor(r.URL.Query().Get("after"))
 	if err != nil {
 		writeProblem(w, r, http.StatusBadRequest, "invalid_cursor", err.Error())
@@ -517,7 +534,8 @@ func (s *Server) pull(w http.ResponseWriter, r *http.Request, _ string) {
 	})
 }
 
-func (s *Server) ack(w http.ResponseWriter, r *http.Request, deviceID string) {
+func (s *Server) ack(w http.ResponseWriter, r *http.Request, authenticated store.AuthContext) {
+	deviceID := authenticated.DeviceID
 	var request struct {
 		Cursor string `json:"cursor"`
 	}
@@ -540,7 +558,7 @@ func (s *Server) ack(w http.ResponseWriter, r *http.Request, deviceID string) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) snapshot(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *Server) snapshot(w http.ResponseWriter, r *http.Request, _ store.AuthContext) {
 	value, err := s.store.Snapshot(r.Context())
 	if errors.Is(err, store.ErrSnapshotTooLarge) {
 		writeProblem(w, r, http.StatusRequestEntityTooLarge, "snapshot_too_large", "snapshot exceeds the v1 response limit; use paginated pull")
@@ -576,7 +594,8 @@ type putTabsRequest struct {
 	Ciphertext       string `json:"ciphertext"`
 }
 
-func (s *Server) putTabs(w http.ResponseWriter, r *http.Request, authenticatedDeviceID string) {
+func (s *Server) putTabs(w http.ResponseWriter, r *http.Request, authenticated store.AuthContext) {
+	authenticatedDeviceID := authenticated.DeviceID
 	deviceID := r.PathValue("deviceId")
 	if err := validateIdentifier(deviceID, 128); err != nil {
 		writeProblem(w, r, http.StatusBadRequest, "invalid_target_device", "invalid target device identity")
@@ -618,6 +637,10 @@ func (s *Server) putTabs(w http.ResponseWriter, r *http.Request, authenticatedDe
 		Nonce:         request.Nonce,
 		Ciphertext:    request.Ciphertext,
 	})
+	if errors.Is(err, store.ErrProtocolUpgradeRequired) {
+		writeProblem(w, r, http.StatusConflict, "protocol_upgrade_required", "workspace tab writes require Candy Sync protocol v2")
+		return
+	}
 	if errors.Is(err, store.ErrRevisionConflict) || errors.Is(err, store.ErrIdempotencyConflict) {
 		writeProblem(w, r, http.StatusConflict, "snapshot_conflict", err.Error())
 		return

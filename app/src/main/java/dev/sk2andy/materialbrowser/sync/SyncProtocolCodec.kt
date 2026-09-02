@@ -147,6 +147,36 @@ object SyncProtocolCodec {
         )
     }
 
+    fun encodeDelta(change: SyncEncryptedDelta): String {
+        require(change.revision == null)
+        return encodeDeltaObject(change).toString()
+    }
+
+    fun decodeDeltaPull(raw: String): SyncDeltaPullPage {
+        val root = parseStrictJsonObject(raw)
+        root.requireExactKeys("changes", "nextCursor", "hasMore")
+        val changes = root.get("changes") as? JSONArray ?: throw IllegalArgumentException("Invalid changes")
+        require(changes.length() <= 100)
+        return SyncDeltaPullPage(
+            changes = buildList {
+                repeat(changes.length()) { index -> add(decodeDelta(changes.getJSONObject(index))) }
+            },
+            nextCursor = root.strictString("nextCursor", 1, 260).also(::requireCursor),
+            hasMore = root.strictBoolean("hasMore"),
+        )
+    }
+
+    fun decodeRealtimeEvent(raw: String): SyncRealtimeEvent {
+        require(raw.toByteArray(Charsets.UTF_8).size <= MAX_PLAINTEXT_BYTES)
+        val root = parseStrictJsonObject(raw)
+        root.requireExactKeys("type", "cursor", "change")
+        require(root.strictString("type") == "change")
+        return SyncRealtimeEvent(
+            cursor = root.strictString("cursor", 1, 260).also(::requireCursor),
+            change = decodeDelta(root.getJSONObject("change")),
+        )
+    }
+
     fun decodeServerSnapshot(raw: String): SyncServerSnapshot {
         val root = parseStrictJsonObject(raw)
         root.requireExactKeys("cursor", "changes", "tabSnapshots")
@@ -189,6 +219,59 @@ object SyncProtocolCodec {
             .put("nonce", change.nonce)
             .put("ciphertext", change.ciphertext)
             .toString()
+    }
+
+    private fun encodeDeltaObject(change: SyncEncryptedDelta): JSONObject = JSONObject()
+        .put("changeId", change.changeId)
+        .put("mutationId", change.mutationId)
+        .put("workspaceId", change.workspaceId)
+        .put("deviceId", change.writerDeviceId)
+        .put("entity", "tabs")
+        .put("entityId", change.targetDeviceId)
+        .put("operation", "delta")
+        .put("baseRevision", change.baseRevision.toString())
+        .apply { change.revision?.let { put("revision", it.toString()) } }
+        .put("schemaVersion", 2)
+        .put("cryptoVersion", 1)
+        .put("keyVersion", 1)
+        .put("nonce", change.nonce)
+        .put("ciphertext", change.ciphertext)
+
+    private fun decodeDelta(value: JSONObject): SyncEncryptedDelta {
+        val required = setOf(
+            "changeId",
+            "mutationId",
+            "workspaceId",
+            "deviceId",
+            "entity",
+            "entityId",
+            "operation",
+            "baseRevision",
+            "revision",
+            "schemaVersion",
+            "cryptoVersion",
+            "keyVersion",
+            "nonce",
+            "ciphertext",
+        )
+        require(value.keys().asSequence().toSet() == required)
+        require(value.strictString("entity") == "tabs" && value.strictString("operation") == "delta")
+        require(value.strictInt("schemaVersion") == 2)
+        require(value.strictInt("cryptoVersion") == 1)
+        require(value.strictInt("keyVersion") == 1)
+        return SyncEncryptedDelta(
+            changeId = value.identifier("changeId"),
+            mutationId = value.identifier("mutationId"),
+            workspaceId = value.identifier("workspaceId"),
+            writerDeviceId = value.identifier("deviceId"),
+            targetDeviceId = value.identifier("entityId"),
+            baseRevision = value.revision("baseRevision"),
+            revision = value.revision("revision"),
+            nonce = value.strictString("nonce", 16, 16).also { SyncBase64.decode(it, expectedBytes = 12) },
+            ciphertext = value.strictString("ciphertext", 22, 262_166).also {
+                SyncBase64.decode(it, maxBytes = 196_624)
+            },
+        ).also { require(it.revision == it.baseRevision + 1) }
     }
 
     private fun decodeDevice(value: JSONObject): SyncDeviceRecord {

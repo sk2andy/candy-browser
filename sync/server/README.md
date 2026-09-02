@@ -1,7 +1,8 @@
 # Candy Sync self-hosted server
 
-Single-workspace Go server for Candy Sync protocol v1. It stores encrypted payloads and only the
-routing metadata needed for cursor sync, device revocation, and target-device tab profiles.
+Go server for Candy Sync protocols v1 and v2. V1 preserves encrypted snapshot compatibility. V2
+stores workspace-scoped encrypted tab mutations and broadcasts only committed envelopes through
+authenticated WebSockets.
 
 ## Security boundary
 
@@ -104,6 +105,10 @@ to the transport peer.
 | `POST` | `/v1/sync/ack` | Bearer |
 | `GET` | `/v1/sync/snapshot` | Bearer |
 | `PUT` | `/v1/devices/{targetId}/tabs` | active device Bearer + `Idempotency-Key` |
+| `POST` | `/v2/sync/push` | Bearer + `Idempotency-Key` |
+| `GET` | `/v2/sync/pull?after={cursor}` | Bearer |
+| `POST` | `/v2/realtime/tickets` | Bearer |
+| `GET` | `/v2/realtime?ticket={singleUseTicket}` | single-use ticket, then WebSocket |
 
 API errors use `application/problem+json`. Revisions are decimal strings to avoid JavaScript integer
 loss. Cursors are opaque `serverEpoch.sequence` values. A cursor from another epoch or ahead of the
@@ -120,6 +125,29 @@ and tab snapshots use compare-and-swap revisions.
 Any active workspace device may update another active device's synced tab profile.
 The bearer-authenticated writer remains in change metadata as `deviceId`; the target
 profile is `entityId`. This is auditable routing metadata only—the payload stays E2EE.
+
+V2 accepts exactly one encrypted tab delta per push. Bearer authentication determines account,
+workspace, and writer device; request metadata must match it. Each target profile uses CAS revision
+ordering. Server commits envelope and workspace cursor before fan-out. Realtime queues are bounded;
+slow clients are disconnected and recover through ordered v2 pull. Device revocation disconnects
+its current sockets. Sender is included in fan-out so stream delivery can confirm a commit whose
+HTTP response was lost.
+
+First committed v2 delta atomically raises that workspace's protocol floor. All later v1 tab writes
+fail with `409 protocol_upgrade_required`, while v1 reads remain usable. V1 tab writes accepted
+before promotion also update v2's CAS baseline, and migration seeds that baseline from existing v1
+snapshots. This prevents mixed writers from creating two different successors to one revision.
+
+V2 tickets expire after 45 seconds and are consumed once. The ticket query value is deliberately
+short-lived because browser WebSocket APIs cannot attach an Authorization header. Reverse proxies
+must avoid query-string access logs for `/v2/realtime`.
+
+Migration 0003 creates account/workspace membership and v2-scoped storage. Current environment Basic
+credentials still select one default account/workspace. Protocol v1 intentionally remains the
+single-default-workspace compatibility API; it must not be exposed to future non-default accounts.
+V2 bearer authentication already carries account, workspace, and device identity, and every v2 store
+query scopes by workspace. Full account provisioning, tenant-aware v1 replacement, and shared-workspace
+key lifecycle are reserved for a later iteration.
 
 ## Tests
 

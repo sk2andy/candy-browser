@@ -1,10 +1,11 @@
 openapi: 3.1.0
 info:
   title: Candy Sync API
-  version: 1.0.0
+  version: 2.0.0
   summary: Implemented self-hosted Candy Sync vertical-slice protocol
   description: |
-    Protocol v1 synchronizes encrypted tab snapshots for one self-hosted workspace.
+    Protocol v1 synchronizes encrypted tab snapshots. Protocol v2 adds workspace-scoped,
+    encrypted tab deltas, durable cursor recovery and realtime WebSocket delivery.
     HTTP Basic authenticates bootstrap and first-device enrollment. A random device
     bearer token authenticates later device and sync operations. E2EE passphrase is
     client-only and is never an API field, header, server environment value or log field.
@@ -149,7 +150,7 @@ paths:
       tags: [Sync]
       operationId: pushChanges
       summary: Append one encrypted change idempotently
-      description: Candy Sync v1 requires exactly one array item and Idempotency-Key equal to that item's changeId.
+      description: Candy Sync v1 requires exactly one array item and Idempotency-Key equal to that item's changeId. A tabs change returns 409 protocol_upgrade_required after workspace promotion to v2; non-tab v1 entities remain compatible.
       security:
         - BearerAuth: []
       parameters:
@@ -272,7 +273,7 @@ paths:
       tags: [Sync]
       operationId: putTabSnapshot
       summary: Replace latest encrypted tab snapshot with compare-and-swap
-      description: Any active workspace device may write an active target device profile. Bearer identity is the auditable writer; path deviceId is the target and is authenticated server metadata. revision must equal expectedRevision plus one. Idempotency-Key must equal body changeId.
+      description: Any active workspace device may write an active target device profile. Bearer identity is the auditable writer; path deviceId is the target and is authenticated server metadata. revision must equal expectedRevision plus one. Idempotency-Key must equal body changeId. After the first committed v2 delta, v1 tab writes return 409 protocol_upgrade_required.
       security:
         - BearerAuth: []
       parameters:
@@ -312,6 +313,103 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+  /v2/sync/push:
+    post:
+      tags: [Sync]
+      operationId: pushTabDeltaV2
+      summary: Persist one encrypted tab delta before realtime fan-out
+      description: Exactly one change is accepted. Authenticated workspace and writer identity must match outer metadata. Successful non-duplicate commits are broadcast to every connected device in the same workspace, including sender.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [changes]
+              properties:
+                changes:
+                  type: array
+                  minItems: 1
+                  maxItems: 1
+                  items:
+                    $ref: ./schemas/encrypted-tab-delta-v2.schema.json
+      responses:
+        "200":
+          description: Durable workspace cursor and assigned target-profile revision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeltaPushResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v2/sync/pull:
+    get:
+      tags: [Sync]
+      operationId: pullTabDeltasV2
+      summary: Recover ordered workspace deltas after a cursor
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: after
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/Cursor" }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 250, default: 250 }
+      responses:
+        "200":
+          description: Workspace-isolated committed deltas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeltaPullResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "410": { $ref: "#/components/responses/CursorReset" }
+  /v2/realtime/tickets:
+    post:
+      tags: [Sync]
+      operationId: createRealtimeTicketV2
+      summary: Exchange bearer authentication for one short-lived WebSocket ticket
+      description: Ticket is single-use, expires after 45 seconds and must not be logged or persisted by clients.
+      security:
+        - BearerAuth: []
+      responses:
+        "201":
+          description: One-time realtime ticket
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RealtimeTicket" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /v2/realtime:
+    get:
+      tags: [Sync]
+      operationId: connectRealtimeV2
+      summary: Receive committed encrypted deltas for authenticated workspace
+      description: WebSocket upgrade. Queue is bounded; disconnected or slow clients recover from last durable cursor through v2 pull.
+      security: []
+      parameters:
+        - name: ticket
+          in: query
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 128 }
+      responses:
+        "101":
+          description: WebSocket connection; each text frame is a RealtimeChangeFrame
+        "401": { $ref: "#/components/responses/Unauthorized" }
 components:
   securitySchemes:
     BasicAuth:
@@ -366,7 +464,7 @@ components:
           uniqueItems: true
           items:
             type: string
-            enum: [e2ee, delta-sync, encrypted-snapshot, tab-snapshots, encrypted-device-icons, editable-tab-profiles]
+            enum: [e2ee, delta-sync, encrypted-snapshot, tab-snapshots, encrypted-device-icons, editable-tab-profiles, tab-mutations-v2, realtime, realtime-deltas, workspace-tenancy]
         limits:
           type: object
           additionalProperties: false
@@ -406,6 +504,55 @@ components:
             $ref: ./schemas/encrypted-change-v1.schema.json#/$defs/identifier
           additionalProperties:
             $ref: ./schemas/encrypted-change-v1.schema.json#/$defs/revision
+    DeltaPushResponse:
+      type: object
+      additionalProperties: false
+      required: [cursor, results]
+      properties:
+        cursor: { $ref: "#/components/schemas/Cursor" }
+        results:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [changeId, revision]
+            properties:
+              changeId: { $ref: ./schemas/encrypted-tab-delta-v2.schema.json#/$defs/identifier }
+              revision: { $ref: ./schemas/encrypted-tab-delta-v2.schema.json#/$defs/revision }
+    DeltaPullResponse:
+      type: object
+      additionalProperties: false
+      required: [changes, nextCursor, hasMore]
+      properties:
+        changes:
+          type: array
+          maxItems: 250
+          items:
+            allOf:
+              - $ref: ./schemas/encrypted-tab-delta-v2.schema.json
+              - required: [revision]
+        nextCursor: { $ref: "#/components/schemas/Cursor" }
+        hasMore: { type: boolean }
+    RealtimeTicket:
+      type: object
+      additionalProperties: false
+      required: [ticket, expiresAt]
+      properties:
+        ticket: { type: string, minLength: 16, maxLength: 128, writeOnly: true }
+        expiresAt: { type: string, format: date-time }
+    RealtimeChangeFrame:
+      type: object
+      additionalProperties: false
+      required: [type, cursor, change]
+      properties:
+        type: { const: change }
+        cursor: { $ref: "#/components/schemas/Cursor" }
+        change:
+          allOf:
+            - $ref: ./schemas/encrypted-tab-delta-v2.schema.json
+            - required: [revision]
     PullResponse:
       type: object
       additionalProperties: false

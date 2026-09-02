@@ -46,6 +46,17 @@ func (s *Store) Bootstrap(ctx context.Context) (store.Bootstrap, error) {
 	return result, nil
 }
 
+func (s *Store) DefaultAuthContext(ctx context.Context) (store.AuthContext, error) {
+	var result store.AuthContext
+	err := s.db.QueryRowContext(ctx, `
+		SELECT wm.account_id, wm.workspace_id
+		FROM workspace_members wm
+		WHERE wm.role = 'owner'
+		ORDER BY wm.created_at, wm.account_id, wm.workspace_id
+		LIMIT 1`).Scan(&result.AccountID, &result.WorkspaceID)
+	return result, err
+}
+
 func (s *Store) EnrollDevice(ctx context.Context, params store.EnrollDeviceParams) (store.Device, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -54,8 +65,14 @@ func (s *Store) EnrollDevice(ctx context.Context, params store.EnrollDeviceParam
 	defer tx.Rollback()
 
 	var workspaceID string
+	var accountID string
 	var recoveryNonce sql.NullString
-	if err := tx.QueryRowContext(ctx, `SELECT id, recovery_nonce FROM workspaces LIMIT 1`).Scan(&workspaceID, &recoveryNonce); err != nil {
+	if err := tx.QueryRowContext(ctx, `
+		SELECT w.id, wm.account_id, w.recovery_nonce
+		FROM workspaces w
+		JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.role = 'owner'
+		ORDER BY w.created_at, w.id
+		LIMIT 1`).Scan(&workspaceID, &accountID, &recoveryNonce); err != nil {
 		return store.Device{}, err
 	}
 	if !recoveryNonce.Valid {
@@ -87,13 +104,14 @@ func (s *Store) EnrollDevice(ctx context.Context, params store.EnrollDeviceParam
 	now := time.Now().UTC()
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO devices(
-			id, workspace_id, public_key_algorithm, public_key,
+			id, workspace_id, account_id, public_key_algorithm, public_key,
 			encrypted_name_nonce, encrypted_name_ciphertext,
 			encrypted_icon_nonce, encrypted_icon_ciphertext, capabilities_json,
 			created_at, last_seen_at
-		) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		params.DeviceID,
 		workspaceID,
+		accountID,
 		params.PublicKeyAlgorithm,
 		params.PublicKey,
 		params.EncryptedNameNonce,
@@ -152,10 +170,12 @@ func (s *Store) Token(ctx context.Context, selector string) (store.Token, error)
 	var tokenRevokedAt sql.NullInt64
 	var deviceRevokedAt sql.NullInt64
 	err := s.db.QueryRowContext(ctx, `
-		SELECT dt.device_id, dt.token_hash, dt.expires_at, dt.revoked_at, d.revoked_at
+		SELECT d.account_id, d.workspace_id, dt.device_id, dt.token_hash, dt.expires_at, dt.revoked_at, d.revoked_at
 		FROM device_tokens dt
 		JOIN devices d ON d.id = dt.device_id
 		WHERE dt.selector = ?`, selector).Scan(
+		&result.AccountID,
+		&result.WorkspaceID,
 		&result.DeviceID,
 		&result.Hash,
 		&expiresAt,

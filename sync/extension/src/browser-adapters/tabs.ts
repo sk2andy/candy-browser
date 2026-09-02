@@ -1,4 +1,4 @@
-import type { DeviceTabSnapshot } from "../core/models.js";
+import type { DeviceTabSnapshot, TabMutation, TabMutationDraft } from "../core/models.js";
 import { isSyncableTabUrl, parseDeviceTabSnapshot, snapshotFromTabs } from "../core/snapshot-rules.js";
 import { extensionApi } from "../platform/webextension.js";
 import { loadTabIdentities, saveTabIdentities } from "../storage/stores.js";
@@ -64,4 +64,119 @@ export async function applyTabSnapshot(rawSnapshot: unknown): Promise<DeviceTabS
   if (activeTabId !== undefined) await api.tabs.update(activeTabId, { active: true });
   await saveTabIdentities(nextIdentities);
   return snapshot;
+}
+
+function tabUrl(tab: Pick<chrome.tabs.Tab, "url" | "pendingUrl">): string | undefined {
+  return tab.url ?? tab.pendingUrl;
+}
+
+async function identityFor(tabId: number, create: boolean): Promise<string | undefined> {
+  const identities = await loadTabIdentities();
+  const key = String(tabId);
+  const existing = identities[key];
+  if (existing || !create) return existing;
+  const candyId = crypto.randomUUID();
+  await saveTabIdentities({ ...identities, [key]: candyId });
+  return candyId;
+}
+
+export async function mutationForCreatedTab(tab: chrome.tabs.Tab): Promise<TabMutationDraft | null> {
+  const candidate = tabUrl(tab);
+  if (tab.id == null || tab.incognito || !isSyncableTabUrl(candidate)) return null;
+  const candyId = await identityFor(tab.id, true);
+  return candyId ? { type: "open", tab: {
+    candyId, windowId: tab.windowId, index: tab.index, groupId: tab.groupId != null && tab.groupId >= 0 ? tab.groupId : null,
+    active: tab.active, pinned: tab.pinned, title: (tab.title ?? "").slice(0, 4_096), url: new URL(candidate).href,
+  } } : null;
+}
+
+export async function mutationsForUpdatedTab(
+  tabId: number,
+  changeInfo: chrome.tabs.OnUpdatedInfo,
+  tab: chrome.tabs.Tab,
+): Promise<TabMutationDraft[]> {
+  const identities = await loadTabIdentities();
+  const existing = identities[String(tabId)];
+  const candidate = tabUrl(tab);
+  if (tab.incognito || !isSyncableTabUrl(candidate)) {
+    if (!existing) return [];
+    const { [String(tabId)]: _removed, ...next } = identities;
+    await saveTabIdentities(next);
+    return [{ type: "close", candyId: existing }];
+  }
+  if (!existing) {
+    const opened = await mutationForCreatedTab(tab);
+    return opened ? [opened] : [];
+  }
+  const mutations: TabMutationDraft[] = [];
+  if (changeInfo.url !== undefined || changeInfo.title !== undefined) {
+    mutations.push({
+      type: "navigate",
+      candyId: existing,
+      url: new URL(candidate).href,
+      title: (tab.title ?? "").slice(0, 4_096),
+    });
+  }
+  if (changeInfo.pinned !== undefined) {
+    mutations.push({ type: "set-pinned", candyId: existing, pinned: tab.pinned });
+  }
+  return mutations;
+}
+
+export async function mutationForRemovedTab(tabId: number): Promise<TabMutationDraft | null> {
+  const identities = await loadTabIdentities();
+  const candyId = identities[String(tabId)];
+  if (!candyId) return null;
+  const { [String(tabId)]: _removed, ...next } = identities;
+  await saveTabIdentities(next);
+  return { type: "close", candyId };
+}
+
+export async function mutationForMovedTab(tabId: number, _toIndex: number): Promise<TabMutationDraft | null> {
+  const candyId = await identityFor(tabId, false);
+  if (!candyId) return null;
+  const snapshot = await collectTabSnapshot();
+  return { type: "reorder", orderedCandyIds: snapshot.tabs.map((tab) => tab.candyId) };
+}
+
+export async function applyTabMutation(mutation: TabMutation): Promise<number | null> {
+  const api = extensionApi();
+  const identities = await loadTabIdentities();
+  const candyId = mutation.type === "open" ? mutation.tab.candyId : mutation.type === "reorder" ? undefined : mutation.candyId;
+  const entry = candyId ? Object.entries(identities).find(([, identity]) => identity === candyId) : undefined;
+  const tabId = entry ? Number(entry[0]) : undefined;
+  switch (mutation.type) {
+    case "open": {
+      const desired = mutation.tab;
+      if (tabId !== undefined) {
+        await api.tabs.update(tabId, { url: desired.url, pinned: desired.pinned });
+        await api.tabs.move(tabId, { index: desired.index });
+        return tabId;
+      }
+      const created = await api.tabs.create({ url: desired.url, pinned: desired.pinned, active: false, index: desired.index });
+      if (created.id == null || created.incognito) throw new Error("Browser did not create a normal tab");
+      await saveTabIdentities({ ...identities, [String(created.id)]: desired.candyId });
+      return created.id;
+    }
+    case "navigate":
+      if (tabId !== undefined) await api.tabs.update(tabId, { url: mutation.url });
+      return tabId ?? null;
+    case "close":
+      if (tabId !== undefined) {
+        await api.tabs.remove(tabId);
+        const { [String(tabId)]: _removed, ...next } = identities;
+        await saveTabIdentities(next);
+      }
+      return tabId ?? null;
+    case "reorder":
+      for (let index = 0; index < mutation.orderedCandyIds.length; index += 1) {
+        const desiredId = mutation.orderedCandyIds[index]!;
+        const browserEntry = Object.entries(identities).find(([, id]) => id === desiredId);
+        if (browserEntry) await api.tabs.move(Number(browserEntry[0]), { index });
+      }
+      return null;
+    case "set-pinned":
+      if (tabId !== undefined) await api.tabs.update(tabId, { pinned: mutation.pinned });
+      return tabId ?? null;
+  }
 }

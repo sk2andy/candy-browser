@@ -18,9 +18,86 @@ export interface StoredSettings {
   deviceId: string;
   cursor: string;
   tabRevision: string;
+  v2Cursor?: string;
+  v2TabRevision?: string;
+  v2Initialized?: boolean;
+  v2DisabledTabIds?: string[];
+  v2ReconciliationPending?: boolean;
   pendingTabChange?: EncryptedChange;
+  /** Negotiated transport. Missing means legacy v1 until discovery succeeds. */
+  protocolVersion?: 1 | 2;
   selection: SyncSelection;
   vault: VaultEnvelope;
+}
+
+interface TabMutationBase {
+  schemaVersion: 2;
+  mutationId: string;
+  targetDeviceId: string;
+}
+
+export type TabMutation =
+  | (TabMutationBase & { type: "open"; tab: TabSnapshotEntry })
+  | (TabMutationBase & { type: "navigate"; candyId: string; url: string; title: string })
+  | (TabMutationBase & { type: "close"; candyId: string })
+  | (TabMutationBase & { type: "reorder"; orderedCandyIds: string[] })
+  | (TabMutationBase & { type: "set-pinned"; candyId: string; pinned: boolean });
+
+export type TabMutationDraft =
+  | { type: "open"; tab: TabSnapshotEntry }
+  | { type: "navigate"; candyId: string; url: string; title: string }
+  | { type: "close"; candyId: string }
+  | { type: "reorder"; orderedCandyIds: string[] }
+  | { type: "set-pinned"; candyId: string; pinned: boolean };
+
+export interface EncryptedTabDelta {
+  changeId: string;
+  mutationId: string;
+  workspaceId: string;
+  deviceId: string;
+  entity: "tabs";
+  entityId: string;
+  operation: "delta";
+  baseRevision: string;
+  schemaVersion: 2;
+  cryptoVersion: 1;
+  keyVersion: 1;
+  nonce: string;
+  ciphertext: string;
+}
+
+export interface CommittedTabDelta extends EncryptedTabDelta {
+  revision: string;
+}
+
+export interface TabDeltaOutboxItem {
+  envelope: EncryptedTabDelta;
+  mutationType: TabMutation["type"];
+  candyId?: string;
+  createdAt: string;
+}
+
+export interface TabDeltaOutbox {
+  schemaVersion: 2;
+  items: TabDeltaOutboxItem[];
+}
+
+export interface ReducedTab {
+  candyId: string;
+  windowId: number;
+  groupId: number | null;
+  active: boolean;
+  url: string;
+  title: string;
+  pinned: boolean;
+  index: number;
+}
+
+export interface TabMutationState {
+  schemaVersion: 2;
+  tabs: Record<string, ReducedTab>;
+  tombstones: Record<string, true>;
+  appliedMutationIds: string[];
 }
 
 export interface VaultEnvelope {

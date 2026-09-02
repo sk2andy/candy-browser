@@ -26,6 +26,36 @@ func (s *Store) Push(ctx context.Context, deviceID string, changes []store.Chang
 	if err != nil {
 		return nil, "", err
 	}
+	for _, change := range changes {
+		if change.Entity != "tabs" {
+			continue
+		}
+		var existing int
+		err := tx.QueryRowContext(ctx, `
+			SELECT 1 FROM changes WHERE device_id = ? AND change_id = ?`,
+			deviceID, change.ChangeID,
+		).Scan(&existing)
+		if err == nil {
+			continue
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, "", err
+		}
+		var protocolFloor int
+		err = tx.QueryRowContext(ctx, `
+			SELECT w.protocol_floor
+			FROM devices d JOIN workspaces w ON w.id = d.workspace_id
+			WHERE d.id = ?`, deviceID).Scan(&protocolFloor)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, "", store.ErrDeviceNotFound
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		if protocolFloor >= 2 {
+			return nil, "", store.ErrProtocolUpgradeRequired
+		}
+	}
 	results := make([]store.PushResult, 0, len(changes))
 	for _, change := range changes {
 		change.DeviceID = deviceID
@@ -134,6 +164,17 @@ func (s *Store) Push(ctx context.Context, deviceID string, changes []store.Chang
 				change.Ciphertext,
 				sequence,
 			)
+			if err == nil {
+				var workspaceID string
+				if err = tx.QueryRowContext(ctx, `SELECT workspace_id FROM devices WHERE id = ?`, change.EntityID).Scan(&workspaceID); err == nil {
+					_, err = tx.ExecContext(ctx, `
+						INSERT INTO v2_tab_heads(workspace_id, target_device_id, revision)
+						VALUES(?, ?, ?)
+						ON CONFLICT(workspace_id, target_device_id) DO UPDATE SET revision = excluded.revision`,
+						workspaceID, change.EntityID, change.Revision,
+					)
+				}
+			}
 		} else {
 			_, err = tx.ExecContext(ctx, `
 				INSERT INTO entity_state(

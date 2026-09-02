@@ -7,14 +7,15 @@ import (
 )
 
 var (
-	ErrConflict            = errors.New("conflict")
-	ErrCursorReset         = errors.New("cursor reset required")
-	ErrDeviceNotFound      = errors.New("device not found")
-	ErrDeviceRevoked       = errors.New("device revoked")
-	ErrIdempotencyConflict = errors.New("idempotency conflict")
-	ErrRevisionConflict    = errors.New("revision conflict")
-	ErrSnapshotTooLarge    = errors.New("snapshot too large")
-	ErrResponseTooLarge    = errors.New("response too large")
+	ErrConflict                = errors.New("conflict")
+	ErrCursorReset             = errors.New("cursor reset required")
+	ErrDeviceNotFound          = errors.New("device not found")
+	ErrDeviceRevoked           = errors.New("device revoked")
+	ErrIdempotencyConflict     = errors.New("idempotency conflict")
+	ErrRevisionConflict        = errors.New("revision conflict")
+	ErrSnapshotTooLarge        = errors.New("snapshot too large")
+	ErrResponseTooLarge        = errors.New("response too large")
+	ErrProtocolUpgradeRequired = errors.New("protocol upgrade required")
 )
 
 type Bootstrap struct {
@@ -67,15 +68,27 @@ type Device struct {
 }
 
 type Token struct {
-	DeviceID string
-	Hash     []byte
-	Expires  *time.Time
-	Revoked  *time.Time
+	AccountID   string
+	WorkspaceID string
+	DeviceID    string
+	Hash        []byte
+	Expires     *time.Time
+	Revoked     *time.Time
+}
+
+// AuthContext is server-derived tenant identity. Callers must never populate it
+// from request JSON, query parameters, or WebSocket frames.
+type AuthContext struct {
+	AccountID   string
+	WorkspaceID string
+	DeviceID    string
 }
 
 type Change struct {
 	Sequence      int64
 	ChangeID      string
+	MutationID    string
+	WorkspaceID   string
 	DeviceID      string
 	Entity        string
 	EntityID      string
@@ -137,4 +150,7 @@ type Repository interface {
 	Ack(context.Context, string, string, int64) error
 	Snapshot(context.Context) (Snapshot, error)
 	PutTabSnapshot(context.Context, string, string, int64, TabSnapshot) (TabSnapshot, string, error)
+	DefaultAuthContext(context.Context) (AuthContext, error)
+	PushDelta(context.Context, AuthContext, Change) (PushResult, string, error)
+	PullDeltas(context.Context, AuthContext, string, int64, int) (PullResult, error)
 }

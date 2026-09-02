@@ -4,6 +4,7 @@ import dev.sk2andy.materialbrowser.sync.SyncCache
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDescriptor
 import dev.sk2andy.materialbrowser.sync.SyncEncryptedChange
+import dev.sk2andy.materialbrowser.sync.SyncEncryptedDelta
 import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
 import dev.sk2andy.materialbrowser.sync.SyncProfile
 import dev.sk2andy.materialbrowser.sync.SyncTab
@@ -73,6 +74,31 @@ class SyncStateCodecTest {
         assertThrows(IllegalArgumentException::class.java) {
             SyncStateCodec.decodeCache(encoded.replaceFirst("{", "{\"passphrase\":\"leak\",").toByteArray())
         }
+    }
+
+    @Test
+    fun `cache round trip preserves v2 cursor and exact delta attempt`() {
+        val mutation = SyncPendingMutation.Close("logical-2", "device-1", "tab-1")
+        val prepared = SyncEncryptedDelta(
+            changeId = "attempt-2",
+            mutationId = mutation.mutationId,
+            workspaceId = "workspace-1",
+            writerDeviceId = "writer-1",
+            targetDeviceId = "device-1",
+            baseRevision = 7,
+            revision = null,
+            nonce = "AAECAwQFBgcICQoL",
+            ciphertext = "AAAAAAAAAAAAAAAAAAAAAA",
+        )
+        val cache = SyncCache(
+            cursor = "epoch.7",
+            deltaCursor = "epoch.12",
+            profiles = mapOf("device-1" to profile()),
+            pendingMutations = listOf(mutation),
+            preparedDeltas = mapOf(mutation.mutationId to prepared),
+        )
+
+        assertEquals(cache, SyncStateCodec.decodeCache(SyncStateCodec.encodeCache(cache)))
     }
 
     private fun profile() = SyncProfile(

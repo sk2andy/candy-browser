@@ -54,6 +54,10 @@ for canary in \
     PLAINTEXT_SYNC_CANARY \
     second-canary.invalid \
     SECOND_SYNC_CANARY \
+    remote-edit-canary.invalid \
+    REMOTE_EDIT_CANARY \
+    delta-url-canary.invalid \
+    DELTA_TITLE_CANARY \
     'E2E Device' \
     'Recovered E2E Device' \
     '"schemaVersion":1' \

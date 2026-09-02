@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "mutation_01J7V2",
+  "targetDeviceId": "device_target",
+  "type": "setPinned",
+  "candyId": "tab:01J7V2",
+  "pinned": true
+}

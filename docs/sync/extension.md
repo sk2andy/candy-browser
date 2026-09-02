@@ -1,8 +1,9 @@
 # Candy Sync browser extension
 
-The Candy Sync WebExtension adds encrypted desktop-tab export to Chromium and Firefox without a
-toolbar popup. Configuration and status live on a full Options Page opened from the browser's normal
-extension settings. Background events keep sync current and a periodic alarm retries missed work.
+The Candy Sync WebExtension adds encrypted desktop-tab synchronization to Chromium and Firefox
+without a toolbar popup. Configuration and status live on a full Options Page opened from the
+browser's normal extension settings. Protocol v2 sends encrypted logical tab mutations; realtime
+notifications reduce active-session latency, while REST and a periodic alarm recover missed work.
 
 ## Current scope
 
@@ -17,6 +18,7 @@ extension settings. Background events keep sync current and a periodic alarm ret
 | Firefox non-persistent background page | Implemented |
 | Pulling and applying changes targeting this desktop device | Implemented |
 | Cross-device open, navigate, pin, reorder, and close | Implemented |
+| V2 durable delta outbox, REST catch-up, and WebSocket notifications | Implemented |
 | Freely selectable shared Android-compatible profile icon | Implemented |
 | Bookmark merge and direct pairing | Not implemented |
 
@@ -68,8 +70,9 @@ later device downloads that envelope and unlocks it locally using the same passp
 creates its own independent device key and encrypted name/icon. No passphrase is sent to the server.
 
 The server password and E2EE passphrase must differ. The password is used only during enrollment and
-is not persisted. The passphrase is never persisted and must be entered again after browser restart
-to unlock sync.
+is not persisted. The passphrase is immutable for the workspace, cannot be changed or recovered in
+either protocol version, is never persisted, and must be entered again after browser restart to
+unlock sync.
 
 For a non-loopback HTTP endpoint, setup first performs unauthenticated discovery. Basic credentials
 are blocked unless the server advertises `allowHttp: true`; background sync repeats discovery before
@@ -91,8 +94,22 @@ and cannot be spoofed by the descriptor.
 ## Runtime behavior
 
 The background runtime reacts to tab creation, removal, movement, updates, browser startup, and
-permission changes. Multiple events coalesce into a serialized sync operation. A five-minute alarm
-is the recovery path for suspended background contexts or missed events.
+permission changes. Multiple events enter one serialized state machine. On a v2-capable server,
+they become encrypted `open`, `navigate`, `close`, `reorder`, and `set-pinned` mutations. Consecutive
+navigation changes may coalesce; a close may supersede pending updates when their revision chain is
+contiguous.
+
+Chromium maintains a best-effort WebSocket while its service worker is active and sends a
+20-second application heartbeat. Firefox uses the same connection while its non-persistent event
+page remains loaded. Either runtime may be suspended at any time. A one-minute alarm, startup and
+tab events, detected socket gaps, and explicit **Sync now** all resume REST catch-up from the last
+durably applied v2 cursor. Correctness never depends on a permanently running background context.
+
+Turning tab sync off closes realtime delivery and stops local uploads. The extension records only
+the stable tab IDs present at that boundary. When tab sync is enabled again, it emits encrypted
+opens for new IDs, closes for missing IDs, and explicit navigation, pin, and order changes for
+surviving IDs. This reconciles changes made while disabled without storing URLs or titles as
+plaintext. Pull pagination rejects repeated, cyclic, and non-progressing cursors.
 
 The network client invokes the platform `fetch` function through its owning browser global. This
 keeps native Web API receiver rules consistent between Options Pages, Chromium service workers,
@@ -108,13 +125,46 @@ Before upload, capture rules:
 - remove group assignments when group sync is disabled.
 
 The extension writes an encrypted change to a durable local outbox before upload. A retry reuses its
-change ID, nonce, and ciphertext. The server can therefore accept repeated delivery idempotently
-without risking AES-GCM nonce reuse from re-encryption.
+change ID, mutation ID, nonce, and ciphertext. The server can therefore accept repeated delivery
+idempotently without risking AES-GCM nonce reuse from re-encryption.
 
 Before uploading its own browser state, the extension pulls and applies pending changes targeting
 its device profile. Stable `candyId` values are persisted in `storage.local`, so normal navigation
 does not create a new logical tab. Reconciliation creates, updates, pins, moves, and removes only
 eligible HTTP(S) tabs; incognito, internal, local-file, and unmanaged tabs are preserved.
+
+## Protocol v2 encryption and delivery
+
+V2 derives a target-specific tab-delta key with HKDF-SHA-256:
+
+```text
+salt = UTF8(JSON.stringify([workspaceId, targetDeviceId]))
+info = UTF8("candy-sync/v2/payload/tab-delta")
+key  = HKDF-SHA-256(workspaceKey, salt, info, 32 bytes)
+```
+
+AES-256-GCM authenticates this exact JSON-array AAD:
+
+```text
+["candy-sync-change", cryptoVersion, keyVersion, schemaVersion,
+ workspaceId, writerDeviceId, changeId, mutationId,
+ "tabs", targetDeviceId, "delta", baseRevision]
+```
+
+The encrypted plaintext repeats `mutationId` and `targetDeviceId`; clients require both to match the
+authenticated envelope after decryption. Substituting workspace, writer, target, identity,
+operation, or revision chain therefore fails authentication. Every new encryption uses a fresh
+12-byte CSPRNG nonce; retries reuse the already persisted envelope.
+
+`POST /v2/sync/push` is the durable commit. `GET /v2/sync/pull` is the authoritative ordered recovery
+path. A 45-second, single-use ticket opens WebSocket `/v2/realtime`; committed frames may be applied
+directly only when cursor and target revision are contiguous. Gaps, malformed frames, socket loss,
+and slow-consumer disconnects trigger REST recovery.
+
+V2 is selected only when discovery advertises version 2 plus `tab-mutations-v2` and `realtime`.
+The first v2 commit raises the workspace protocol floor. A client must treat
+`409 protocol_upgrade_required` as a mandatory upgrade signal; it must not fall back to v1 writes.
+V1 snapshot state and cursors remain separate for compatibility before promotion and for reads.
 
 ## Permissions
 

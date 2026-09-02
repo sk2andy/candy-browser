@@ -11,11 +11,14 @@ import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconRules
 import dev.sk2andy.materialbrowser.sync.SyncDeviceStatus
 import dev.sk2andy.materialbrowser.sync.SyncEncryptedChange
+import dev.sk2andy.materialbrowser.sync.SyncEncryptedDelta
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
 import dev.sk2andy.materialbrowser.sync.SyncMutationResult
+import dev.sk2andy.materialbrowser.sync.SyncOutboxRules
 import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
 import dev.sk2andy.materialbrowser.sync.SyncProfile
 import dev.sk2andy.materialbrowser.sync.SyncRecoveryKeyDeriver
+import dev.sk2andy.materialbrowser.sync.SyncRealtimeEvent
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.sync.SyncStatus
 import dev.sk2andy.materialbrowser.sync.SyncTabRules
@@ -33,6 +36,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 class CandySyncRepository(
     private val settingsStore: SyncSettingsStore,
@@ -47,11 +52,21 @@ class CandySyncRepository(
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "candy-sync").apply { isDaemon = true }
     },
+    private val realtimeScheduler: ScheduledExecutorService =
+        Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "candy-sync-realtime").apply { isDaemon = true }
+        },
 ) : AutoCloseable {
     private val listeners = CopyOnWriteArraySet<(SyncRepositoryState) -> Unit>()
     private var cache = cacheStore.load()
     private var currentDeviceId = loadCurrentDeviceId()
     private var configurationWriteFailed = false
+    private var realtimeConnection: AutoCloseable? = null
+    private var realtimeReconnectAttempt = 0
+    private var realtimeGeneration = 0L
+
+    @Volatile
+    private var realtimeEnabled = false
 
     @Volatile
     private var state = stateFrom(
@@ -85,12 +100,14 @@ class CandySyncRepository(
         }
         configurationWriteFailed = false
         if (previous != null && (previous.endpoint != normalized.endpoint || previous.username != normalized.username)) {
+            closeRealtimeConnection()
             vaultStore.clear()
             cacheStore.clear()
             cache = SyncCache(cursor = "", profiles = emptyMap())
             currentDeviceId = null
         }
         publish(stateFrom(normalized, if (!hasVault()) SyncStatus.Unconfigured else SyncStatus.Ready))
+        if (realtimeEnabled) connectRealtimeNow()
         return true
     }
 
@@ -132,7 +149,21 @@ class CandySyncRepository(
         mutateNow(mutation)
     }
 
+    fun startRealtime() {
+        realtimeEnabled = true
+        submit { connectRealtimeNow() }
+    }
+
+    fun stopRealtime() {
+        realtimeEnabled = false
+        submit { closeRealtimeConnection() }
+    }
+
     override fun close() {
+        realtimeEnabled = false
+        realtimeConnection?.close()
+        realtimeConnection = null
+        realtimeScheduler.shutdownNow()
         executor.shutdownNow()
         listeners.clear()
     }
@@ -242,6 +273,7 @@ class CandySyncRepository(
             cache = enrolledCache
             currentDeviceId = enrollment.deviceId
             publish(stateFrom(settings, SyncStatus.Ready, enrolledAt))
+            if (realtimeEnabled) connectRealtimeNow()
             SyncEnrollmentOutcome.Enrolled
         } catch (error: Exception) {
             val outcome = when {
@@ -311,6 +343,38 @@ class CandySyncRepository(
                 pullAll(transport, secrets.deviceToken, reset, metadata.keys, secrets.workspaceKey)
             }
         }
+        if (transport.supportsTabMutationsV2()) {
+            if (working.profiles.values.any { profile ->
+                    profile.deviceId != secrets.deviceId && profile.revision == 0L
+                }
+            ) {
+                val snapshot = transport.snapshot(secrets.deviceToken)
+                working = applyChanges(
+                    initial = working,
+                    changes = snapshot.changes,
+                    knownDeviceIds = metadata.keys,
+                    workspaceKey = secrets.workspaceKey,
+                ).copy(cursor = snapshot.cursor)
+            }
+            working = try {
+                pullAllDeltas(
+                    transport = transport,
+                    token = secrets.deviceToken,
+                    initial = working,
+                    knownDeviceIds = metadata.keys,
+                    secrets = secrets,
+                )
+            } catch (error: SyncTransportException) {
+                if (error.statusCode != 410 || error.problemCode != "cursor_reset") throw error
+                pullAllDeltas(
+                    transport = transport,
+                    token = secrets.deviceToken,
+                    initial = working.copy(deltaCursor = ""),
+                    knownDeviceIds = metadata.keys,
+                    secrets = secrets,
+                )
+            }
+        }
         require(cacheStore.save(working))
         transport.acknowledge(secrets.deviceToken, working.cursor)
         cache = working
@@ -354,6 +418,57 @@ class CandySyncRepository(
         throw IllegalArgumentException("Too many sync pages")
     }
 
+    private fun pullAllDeltas(
+        transport: SyncTransport,
+        token: String,
+        initial: SyncCache,
+        knownDeviceIds: Set<String>,
+        secrets: SyncVaultSecrets,
+    ): SyncCache {
+        var working = initial
+        val seenCursors = mutableSetOf(working.deltaCursor)
+        repeat(MAX_PULL_PAGES) {
+            val page = transport.pullDeltas(token, working.deltaCursor)
+            require(page.nextCursor != working.deltaCursor || !page.hasMore)
+            require(seenCursors.add(page.nextCursor) || !page.hasMore)
+            working = applyDeltas(
+                initial = working,
+                changes = page.changes,
+                knownDeviceIds = knownDeviceIds,
+                secrets = secrets,
+            ).copy(deltaCursor = page.nextCursor)
+            if (!page.hasMore) return working
+        }
+        throw IllegalArgumentException("Too many delta pages")
+    }
+
+    private fun applyDeltas(
+        initial: SyncCache,
+        changes: List<SyncEncryptedDelta>,
+        knownDeviceIds: Set<String>,
+        secrets: SyncVaultSecrets,
+    ): SyncCache {
+        var profiles = initial.profiles
+        changes.forEach { change ->
+            require(change.workspaceId == secrets.workspaceId)
+            if (change.targetDeviceId !in knownDeviceIds) return@forEach
+            val current = profiles[change.targetDeviceId] ?: return@forEach
+            val revision = requireNotNull(change.revision)
+            if (revision <= current.revision) return@forEach
+            require(revision == current.revision + 1) { "Delta revision gap" }
+            val mutation = crypto.decryptTabMutation(secrets.workspaceKey, change)
+            val updated = when (val applied = SyncTabRules.apply(current, mutation)) {
+                is SyncMutationResult.Applied -> applied.profile
+                SyncMutationResult.AlreadyApplied,
+                SyncMutationResult.MissingTab,
+                -> current
+                SyncMutationResult.InvalidTab -> throw IllegalArgumentException("Invalid encrypted mutation")
+            }
+            profiles = profiles + (change.targetDeviceId to updated.copy(revision = revision))
+        }
+        return initial.copy(profiles = profiles)
+    }
+
     private fun mutateNow(mutation: SyncPendingMutation): SyncWriteOutcome {
         val settings = settingsStore.load() ?: return SyncWriteOutcome.Rejected("unconfigured")
         val secrets = vaultStore.load() ?: return SyncWriteOutcome.Rejected("unenrolled")
@@ -375,7 +490,13 @@ class CandySyncRepository(
                         is SyncMutationResult.Applied -> error("Handled above")
                     }
                 }
-                val queuedCache = cache.copy(pendingMutations = cache.pendingMutations + mutation)
+                val pendingMutations = SyncOutboxRules.enqueue(cache.pendingMutations, mutation)
+                val retainedIds = pendingMutations.mapTo(hashSetOf(), SyncPendingMutation::mutationId)
+                val queuedCache = cache.copy(
+                    pendingMutations = pendingMutations,
+                    preparedWrites = cache.preparedWrites.filterKeys(retainedIds::contains),
+                    preparedDeltas = cache.preparedDeltas.filterKeys(retainedIds::contains),
+                )
                 if (!cacheStore.save(queuedCache)) return SyncWriteOutcome.Failed(retryable = true)
                 cache = queuedCache
             }
@@ -403,6 +524,9 @@ class CandySyncRepository(
     ): SyncWriteOutcome {
         val transport = transportFactory(settings.endpoint)
         transport.discover()
+        if (transport.supportsTabMutationsV2()) {
+            return pushDeltaWithCasRetry(transport, settings, secrets, mutation)
+        }
         repeat(MAX_CAS_ATTEMPTS) { attempt ->
             val profile = cache.profiles[mutation.targetDeviceId]
                 ?: return SyncWriteOutcome.Rejected("unknown-profile").also { removePending(mutation.mutationId) }
@@ -460,10 +584,79 @@ class CandySyncRepository(
         return SyncWriteOutcome.Conflict(cache.profiles[mutation.targetDeviceId], retryable = true)
     }
 
+    private fun pushDeltaWithCasRetry(
+        transport: SyncTransport,
+        settings: SyncConnectionSettings,
+        secrets: SyncVaultSecrets,
+        mutation: SyncPendingMutation,
+    ): SyncWriteOutcome {
+        repeat(MAX_CAS_ATTEMPTS) { attempt ->
+            val profile = cache.profiles[mutation.targetDeviceId]
+                ?: return SyncWriteOutcome.Rejected("unknown-profile").also { removePending(mutation.mutationId) }
+            when (val applied = SyncTabRules.apply(profile, mutation)) {
+                SyncMutationResult.AlreadyApplied -> {
+                    removePending(mutation.mutationId)
+                    return SyncWriteOutcome.Synced(profile, cache.deltaCursor)
+                }
+                SyncMutationResult.InvalidTab -> {
+                    removePending(mutation.mutationId)
+                    return SyncWriteOutcome.Rejected("invalid-tab")
+                }
+                SyncMutationResult.MissingTab -> {
+                    removePending(mutation.mutationId)
+                    return SyncWriteOutcome.Rejected("missing-tab")
+                }
+                is SyncMutationResult.Applied -> {
+                    val existing = cache.preparedDeltas[mutation.mutationId]
+                        ?.takeIf { prepared ->
+                            prepared.baseRevision == profile.revision &&
+                                prepared.writerDeviceId == secrets.deviceId &&
+                                prepared.targetDeviceId == mutation.targetDeviceId &&
+                                prepared.workspaceId == secrets.workspaceId
+                        }
+                    val encrypted = existing ?: prepareDelta(secrets, mutation, profile)
+                    try {
+                        val response = transport.pushDelta(secrets.deviceToken, encrypted)
+                        require(response.revision == profile.revision + 1)
+                        val synced = applied.profile.copy(revision = response.revision)
+                        val updated = cache.copy(
+                            profiles = cache.profiles + (synced.deviceId to synced),
+                            pendingMutations = cache.pendingMutations.filterNot {
+                                it.mutationId == mutation.mutationId
+                            },
+                            preparedDeltas = cache.preparedDeltas - mutation.mutationId,
+                        )
+                        if (!cacheStore.save(updated)) return SyncWriteOutcome.Failed(retryable = true)
+                        cache = updated
+                        return SyncWriteOutcome.Synced(synced, cache.deltaCursor)
+                    } catch (error: SyncTransportException) {
+                        val isConflict = error.statusCode == 409 &&
+                            error.problemCode in setOf("revision_conflict", "snapshot_conflict")
+                        if (!isConflict) throw error
+                        val withoutAttempt = cache.copy(
+                            preparedDeltas = cache.preparedDeltas - mutation.mutationId,
+                        )
+                        require(cacheStore.save(withoutAttempt))
+                        cache = withoutAttempt
+                        refreshNow(settings, secrets)
+                        if (attempt == MAX_CAS_ATTEMPTS - 1) {
+                            return SyncWriteOutcome.Conflict(
+                                cache.profiles[mutation.targetDeviceId],
+                                retryable = true,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        return SyncWriteOutcome.Conflict(cache.profiles[mutation.targetDeviceId], retryable = true)
+    }
+
     private fun removePending(mutationId: String) {
         val updated = cache.copy(
             pendingMutations = cache.pendingMutations.filterNot { it.mutationId == mutationId },
             preparedWrites = cache.preparedWrites - mutationId,
+            preparedDeltas = cache.preparedDeltas - mutationId,
         )
         if (cacheStore.save(updated)) cache = updated
     }
@@ -478,7 +671,8 @@ class CandySyncRepository(
         profiles = optimisticProfiles().values
             .sortedBy(SyncProfile::displayName),
         pendingCount = cache.pendingMutations.size,
-        lastCursor = cache.cursor.takeIf(String::isNotEmpty),
+        lastCursor = cache.deltaCursor.takeIf(String::isNotEmpty)
+            ?: cache.cursor.takeIf(String::isNotEmpty),
         lastSuccessAt = lastSuccessAt,
         currentDeviceId = currentDeviceId,
     )
@@ -534,6 +728,123 @@ class CandySyncRepository(
         return encrypted
     }
 
+    private fun prepareDelta(
+        secrets: SyncVaultSecrets,
+        mutation: SyncPendingMutation,
+        profile: SyncProfile,
+    ): SyncEncryptedDelta {
+        val metadata = SyncEncryptedDelta(
+            changeId = UUID.randomUUID().toString(),
+            mutationId = mutation.mutationId,
+            workspaceId = secrets.workspaceId,
+            writerDeviceId = secrets.deviceId,
+            targetDeviceId = mutation.targetDeviceId,
+            baseRevision = profile.revision,
+            revision = null,
+            nonce = "",
+            ciphertext = "",
+        )
+        val encrypted = crypto.encryptTabMutation(secrets.workspaceKey, metadata, mutation)
+        val prepared = cache.copy(
+            preparedDeltas = cache.preparedDeltas + (mutation.mutationId to encrypted),
+        )
+        require(cacheStore.save(prepared))
+        cache = prepared
+        return encrypted
+    }
+
+    private fun connectRealtimeNow() {
+        if (!realtimeEnabled || realtimeConnection != null) return
+        val settings = settingsStore.load() ?: return
+        val secrets = vaultStore.load() ?: return
+        try {
+            val transport = transportFactory(settings.endpoint)
+            transport.discover()
+            if (!transport.supportsTabMutationsV2() || !transport.supportsRealtime()) return
+            val ticket = transport.requestRealtimeTicket(secrets.deviceToken)
+            val generation = ++realtimeGeneration
+            realtimeConnection = transport.connectRealtime(
+                ticket = ticket,
+                onEvent = { event -> submit { handleRealtimeEvent(event) } },
+                onClosed = {
+                    submit {
+                        if (generation != realtimeGeneration) return@submit
+                        realtimeConnection = null
+                        scheduleRealtimeReconnect()
+                    }
+                },
+            )
+            realtimeReconnectAttempt = 0
+        } catch (_: Exception) {
+            scheduleRealtimeReconnect()
+        } finally {
+            secrets.clear()
+        }
+    }
+
+    private fun handleRealtimeEvent(event: SyncRealtimeEvent) {
+        if (!realtimeEnabled) return
+        val settings = settingsStore.load() ?: return
+        val secrets = vaultStore.load() ?: return
+        try {
+            if (cache.deltaCursor.isEmpty()) {
+                refreshNow(settings, secrets)
+                return
+            }
+            if (!isNextOrDuplicateCursor(cache.deltaCursor, event.cursor)) {
+                refreshNow(settings, secrets)
+                return
+            }
+            if (event.cursor == cache.deltaCursor) return
+            val updated = applyDeltas(
+                initial = cache,
+                changes = listOf(event.change),
+                knownDeviceIds = cache.profiles.keys,
+                secrets = secrets,
+            ).copy(deltaCursor = event.cursor)
+            require(cacheStore.save(updated))
+            cache = updated
+            publish(stateFrom(settings, SyncStatus.Ready, Instant.now(clock).toString()))
+        } catch (_: Exception) {
+            runCatching { refreshNow(settings, secrets) }
+        } finally {
+            secrets.clear()
+        }
+    }
+
+    private fun scheduleRealtimeReconnect() {
+        if (!realtimeEnabled || realtimeScheduler.isShutdown) return
+        val index = realtimeReconnectAttempt.coerceAtMost(REALTIME_RECONNECT_SECONDS.lastIndex)
+        realtimeReconnectAttempt++
+        realtimeScheduler.schedule(
+            { if (realtimeEnabled) submit { connectRealtimeNow() } },
+            REALTIME_RECONNECT_SECONDS[index],
+            TimeUnit.SECONDS,
+        )
+    }
+
+    private fun closeRealtimeConnection() {
+        realtimeGeneration++
+        realtimeConnection?.close()
+        realtimeConnection = null
+        realtimeReconnectAttempt = 0
+    }
+
+    private fun isNextOrDuplicateCursor(current: String, incoming: String): Boolean {
+        if (current.isEmpty()) return true
+        val currentParts = current.splitCursor() ?: return false
+        val incomingParts = incoming.splitCursor() ?: return false
+        return currentParts.first == incomingParts.first &&
+            incomingParts.second in currentParts.second..(currentParts.second + 1)
+    }
+
+    private fun String.splitCursor(): Pair<String, Long>? {
+        val separator = lastIndexOf('.')
+        if (separator <= 0 || separator == lastIndex) return null
+        val sequence = substring(separator + 1).toLongOrNull() ?: return null
+        return substring(0, separator) to sequence
+    }
+
     private fun publish(value: SyncRepositoryState) {
         state = value
         listeners.forEach { listener -> runCatching { listener(value) } }
@@ -565,5 +876,6 @@ class CandySyncRepository(
         const val MAX_PULL_PAGES = 10_000
         const val MAX_PENDING_MUTATIONS = 1_000
         const val MIN_PASSPHRASE_CHARS = 16
+        val REALTIME_RECONNECT_SECONDS = longArrayOf(1, 2, 5, 10, 30, 60)
     }
 }
