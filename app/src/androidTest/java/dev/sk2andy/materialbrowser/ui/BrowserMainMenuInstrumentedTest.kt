@@ -88,6 +88,7 @@ class BrowserMainMenuInstrumentedTest {
                             isPinned = false,
                             canUsePageActions = true,
                             canOpenReader = true,
+                            canTranslatePage = true,
                             canToggleDomainMute = true,
                             isDomainMuted = false,
                             canToggleDesktopView = true,
@@ -112,6 +113,7 @@ class BrowserMainMenuInstrumentedTest {
                             onOpenExternal = {},
                             onPrint = {},
                             onOpenReader = {},
+                            onTranslate = {},
                             onDomainMutedChange = {},
                             onDesktopViewChange = { enabled ->
                                 desktopViewChanges.incrementAndGet()
@@ -164,6 +166,7 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNode(
             pageGroup and
                 hasAnyDescendant(hasText(context.getString(R.string.reader_open_action))) and
+                hasAnyDescendant(hasText(context.getString(R.string.action_translate_page))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_share))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_open_in_app))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_print))) and
@@ -318,6 +321,7 @@ class BrowserMainMenuInstrumentedTest {
                     isPinned = false,
                     canUsePageActions = false,
                     canOpenReader = false,
+                    canTranslatePage = false,
                     canToggleDomainMute = false,
                     isDomainMuted = false,
                     canToggleDesktopView = false,
@@ -343,6 +347,7 @@ class BrowserMainMenuInstrumentedTest {
                     onOpenExternal = {},
                     onPrint = {},
                     onOpenReader = {},
+                    onTranslate = {},
                     onDomainMutedChange = {},
                     onDesktopViewChange = {},
                     onCookieBannerRemovalEnabledChange = {},
@@ -367,6 +372,7 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.reader_open_action),
         ).assertIsNotEnabled()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Translate).assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
             .assertDoesNotExist()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling)

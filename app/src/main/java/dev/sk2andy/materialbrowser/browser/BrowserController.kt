@@ -423,6 +423,8 @@ class BrowserController(
         private set
     var searchEngine by mutableStateOf(SearchEngine.Google)
         private set
+    var pageTranslationProvider by mutableStateOf(PageTranslationProvider.Google)
+        private set
     var searxngSettings by mutableStateOf(SearxngSettings())
         private set
     var isAiModeToggleVisible by mutableStateOf(false)
@@ -1322,6 +1324,7 @@ class BrowserController(
         searxngSettings = store.loadSearxngSettings()
         residentTabLimit = store.loadResidentTabLimit()
         searchEngine = store.loadSearchEngine()
+        pageTranslationProvider = store.loadPageTranslationProvider()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
         isRecallEnabled = store.loadRecallEnabled()
         if (!isRecallEnabled) recallRepository.clearAsync()
@@ -3170,6 +3173,17 @@ class BrowserController(
 
     fun openSelectedPageExternally() = openPageExternally(selectedTabId)
 
+    fun translateSelectedPage() {
+        val translationUrl = PageTranslationRules.buildTranslationUrl(
+            provider = pageTranslationProvider,
+            sourceUrl = selectedTab.url,
+            targetLanguage = PageTranslationRules.targetLanguage(
+                activity.resources.configuration.locales[0],
+            ),
+        ) ?: return
+        submitAddress(translationUrl)
+    }
+
     private fun showExternalAppOpenedToast() {
         Toast.makeText(
             activity,
@@ -4362,6 +4376,11 @@ class BrowserController(
     fun updateSearchEngine(engine: SearchEngine) {
         searchEngine = engine
         store.saveSearchEngine(engine)
+    }
+
+    fun updatePageTranslationProvider(provider: PageTranslationProvider) {
+        pageTranslationProvider = provider
+        store.savePageTranslationProvider(provider)
     }
 
     fun updateSearxngSettings(settings: SearxngSettings) {

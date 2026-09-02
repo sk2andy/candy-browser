@@ -268,6 +268,7 @@ import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
+import dev.sk2andy.materialbrowser.browser.PageTranslationRules
 import dev.sk2andy.materialbrowser.browser.RootTabBackResult
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
@@ -1616,6 +1617,7 @@ internal fun BrowserScreen(
             onSummarizeWithAssistant = controller::summarizeSelectedPageWithAssistant,
             onShare = controller::shareSelectedPage,
             onPrint = controller::printSelectedPage,
+            onTranslate = controller::translateSelectedPage,
             onReaderStudio = {
                 readerStudioResult = null
                 val requestId = ++readerStudioRequestId
@@ -1903,6 +1905,7 @@ internal fun BrowserScreen(
                 inactiveTabLifetime = controller.inactiveTabLifetime,
                 residentTabLimit = controller.residentTabLimit,
                 searchEngine = controller.searchEngine,
+                pageTranslationProvider = controller.pageTranslationProvider,
                 searxngSettings = controller.searxngSettings,
                 isAiModeToggleVisible = controller.isAiModeToggleVisible,
                 searchSuggestionProvider = controller.searchSuggestionProvider,
@@ -1949,6 +1952,7 @@ internal fun BrowserScreen(
                 onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
                 onResidentTabLimitChanged = controller::updateResidentTabLimit,
                 onSearchEngineChanged = controller::updateSearchEngine,
+                onPageTranslationProviderChanged = controller::updatePageTranslationProvider,
                 onSearxngSettingsChanged = controller::updateSearxngSettings,
                 onAiModeToggleVisibleChanged = controller::updateAiModeToggleVisible,
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
@@ -3151,6 +3155,7 @@ private fun BrowserBottomBar(
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
     onPrint: () -> Unit,
+    onTranslate: () -> Unit,
     onReaderStudio: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onSnooze: () -> Unit,
@@ -3492,6 +3497,7 @@ private fun BrowserBottomBar(
                                 onSummarizeWithAssistant = onSummarizeWithAssistant,
                                 onShare = onShare,
                                 onPrint = onPrint,
+                                onTranslate = onTranslate,
                                 onReaderStudio = onReaderStudio,
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onSnooze = onSnooze,
@@ -4035,6 +4041,7 @@ private fun ExpandedBottomBarContent(
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
     onPrint: () -> Unit,
+    onTranslate: () -> Unit,
     onReaderStudio: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onSnooze: () -> Unit,
@@ -4336,6 +4343,7 @@ private fun ExpandedBottomBarContent(
                                 isPinned = isPinned,
                                 canUsePageActions = tab.url != BLANK_URL,
                                 canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
+                                canTranslatePage = PageTranslationRules.canTranslate(tab.url),
                                 canToggleDomainMute = canToggleDomainMute,
                                 isDomainMuted = isDomainMuted,
                                 canToggleDesktopView = canToggleDesktopView,
@@ -4371,6 +4379,7 @@ private fun ExpandedBottomBarContent(
                                 onOpenExternal = onOpenExternal,
                                 onPrint = onPrint,
                                 onOpenReader = onReaderStudio,
+                                onTranslate = onTranslate,
                                 onDomainMutedChange = onDomainMutedChange,
                                 onDesktopViewChange = onDesktopViewChange,
                                 onCookieBannerRemovalEnabledChange =

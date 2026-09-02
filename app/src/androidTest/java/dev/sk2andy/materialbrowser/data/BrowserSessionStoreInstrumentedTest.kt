@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -453,6 +454,18 @@ class BrowserSessionStoreInstrumentedTest {
 
         preferences.edit().putString("search_engine", "unknown").commit()
         assertEquals(SearchEngine.Google, store.loadSearchEngine())
+    }
+
+    @Test
+    fun pageTranslationProviderRoundTripsAndUnknownValueFallsBackToGoogle() {
+        val store = BrowserSessionStore(context)
+        assertEquals(PageTranslationProvider.Google, store.loadPageTranslationProvider())
+
+        store.savePageTranslationProvider(PageTranslationProvider.Kagi)
+        assertEquals(PageTranslationProvider.Kagi, store.loadPageTranslationProvider())
+
+        preferences.edit().putString("page_translation_provider", "unknown").commit()
+        assertEquals(PageTranslationProvider.Google, store.loadPageTranslationProvider())
     }
 
     @Test

@@ -25,6 +25,7 @@
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
 | Candy Recall | Off, on | Off |
+| Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Google Translate |
 
 ### Surface semantics
 
@@ -66,3 +67,5 @@ Frosted exposes three persisted controls while selected:
 - The Browser setting for the draggable page scroll bar is global and defaults off. When enabled,
   native WebView scroll bars are replaced by a touch-sized thumb that appears during scrolling,
   supports direct dragging, and fades after interaction.
+- Page translation provider is global and persists across regular and private browsing. Translation
+  itself remains an explicit page action; no source URL or translated content is stored separately.

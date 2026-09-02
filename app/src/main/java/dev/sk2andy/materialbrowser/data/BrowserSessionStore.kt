@@ -12,6 +12,7 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
+import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -518,6 +519,15 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_SEARCH_ENGINE, searchEngine.stableId).apply()
     }
 
+    fun loadPageTranslationProvider(): PageTranslationProvider =
+        PageTranslationProvider.fromStableId(
+            preferences.getString(KEY_PAGE_TRANSLATION_PROVIDER, null),
+        )
+
+    fun savePageTranslationProvider(provider: PageTranslationProvider) {
+        preferences.edit().putString(KEY_PAGE_TRANSLATION_PROVIDER, provider.stableId).apply()
+    }
+
     fun loadSearxngSettings(): SearxngSettings = SearxngRules.sanitize(
         SearxngSettings(
             instanceUrl = preferences.getString(KEY_SEARXNG_INSTANCE_URL, null).orEmpty(),
@@ -843,6 +853,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
         const val KEY_RESIDENT_TAB_LIMIT = "resident_tab_limit"
         const val KEY_SEARCH_ENGINE = "search_engine"
+        const val KEY_PAGE_TRANSLATION_PROVIDER = "page_translation_provider"
         const val KEY_SEARXNG_INSTANCE_URL = "searxng_instance_url"
         const val KEY_SEARXNG_SUGGESTION_FALLBACK = "searxng_suggestion_fallback"
         const val KEY_AI_MODE_TOGGLE_VISIBLE = "ai_mode_toggle_visible"

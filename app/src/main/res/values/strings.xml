@@ -737,4 +737,8 @@
     <string name="cast_volume">Device volume</string>
     <string name="popup_blocked">Popup blocked</string>
     <string name="action_open_popup">Open</string>
+    <string name="action_translate_page">Translate page</string>
+    <string name="settings_translation_provider">Page translation provider</string>
+    <string name="settings_translation_provider_summary">On translate, the full page address is sent to this provider. Private tabs do not store translation state.</string>
+    <string name="settings_translation_provider_kagi_summary">Kagi Translate currently requires an active Kagi subscription. On translate, the full page address is sent to Kagi.</string>
 </resources>

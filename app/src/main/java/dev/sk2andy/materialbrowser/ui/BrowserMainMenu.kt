@@ -80,6 +80,7 @@ private data class BrowserMainMenuPresentation(
     val isPinned: Boolean,
     val canUsePageActions: Boolean,
     val canOpenReader: Boolean,
+    val canTranslatePage: Boolean,
     val canToggleDomainMute: Boolean,
     val isDomainMuted: Boolean,
     val canToggleDesktopView: Boolean,
@@ -110,6 +111,7 @@ internal fun BrowserMainMenu(
     isPinned: Boolean,
     canUsePageActions: Boolean,
     canOpenReader: Boolean,
+    canTranslatePage: Boolean,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
     canToggleDesktopView: Boolean,
@@ -135,6 +137,7 @@ internal fun BrowserMainMenu(
     onOpenExternal: () -> Unit,
     onPrint: () -> Unit,
     onOpenReader: () -> Unit,
+    onTranslate: () -> Unit,
     onDomainMutedChange: (Boolean) -> Unit,
     onDesktopViewChange: (Boolean) -> Unit,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
@@ -186,6 +189,7 @@ internal fun BrowserMainMenu(
         isPinned = isPinned,
         canUsePageActions = canUsePageActions,
         canOpenReader = canOpenReader,
+        canTranslatePage = canTranslatePage,
         canToggleDomainMute = canToggleDomainMute,
         isDomainMuted = isDomainMuted,
         canToggleDesktopView = canToggleDesktopView,
@@ -380,6 +384,14 @@ internal fun BrowserMainMenu(
                     enabled = presentation.canOpenReader,
                     shape = firstItemShape,
                     onClick = { dismissThen(onOpenReader) },
+                )
+                MenuRow(
+                    label = stringResource(R.string.action_translate_page),
+                    iconRes = R.drawable.ic_symbol_translate,
+                    enabled = presentation.canTranslatePage,
+                    shape = innerCorners,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.Translate),
+                    onClick = { dismissThen(onTranslate) },
                 )
                 MenuRow(
                     label = stringResource(R.string.action_share),
@@ -1134,6 +1146,7 @@ internal object BrowserMainMenuTestTags {
     const val Favorite = "browser_main_menu_favorite"
     const val Pin = "browser_main_menu_pin"
     const val PageGroup = "browser_main_menu_page_group"
+    const val Translate = "browser_main_menu_translate"
     const val CandyGroup = "browser_main_menu_candy_group"
     const val ToppingsGroup = "browser_main_menu_toppings_group"
     const val BrowserGroup = "browser_main_menu_browser_group"

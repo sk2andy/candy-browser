@@ -74,6 +74,7 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AddressResolver
+import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -127,6 +128,7 @@ internal object ProtectionSettingsTestTags {
 
 internal object BrowserSettingsTestTags {
     const val ScrollBar = "browser_settings_scroll_bar"
+    const val TranslationProvider = "browser_settings_translation_provider"
 }
 
 internal object SearchSettingsTestTags {
@@ -151,6 +153,7 @@ internal fun SettingsScreen(
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
     searchEngine: SearchEngine,
+    pageTranslationProvider: PageTranslationProvider,
     searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
@@ -180,6 +183,7 @@ internal fun SettingsScreen(
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
+    onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
@@ -287,6 +291,7 @@ internal fun SettingsScreen(
                 )
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
+                    pageTranslationProvider = pageTranslationProvider,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
                     isScrollBarEnabled = isScrollBarEnabled,
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
@@ -295,6 +300,7 @@ internal fun SettingsScreen(
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
+                    onPageTranslationProviderChanged = onPageTranslationProviderChanged,
                     onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
@@ -1019,6 +1025,7 @@ internal fun TabsAndGesturesSettingsPage(
 
 @Composable
 internal fun BrowserSettingsPage(
+    pageTranslationProvider: PageTranslationProvider,
     isFullImmersiveModeEnabled: Boolean,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
@@ -1027,9 +1034,11 @@ internal fun BrowserSettingsPage(
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
+    onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
 ) {
+    var translationProviderMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
@@ -1061,6 +1070,43 @@ internal fun BrowserSettingsPage(
             checked = isVideoAutoplayBlocked,
             enabled = isVideoAutoplayBlockingSupported,
             onCheckedChange = onVideoAutoplayBlockedChanged,
+        )
+        Spacer(Modifier.height(8.dp))
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_translation_provider),
+                value = pageTranslationProvider.displayName,
+                expanded = translationProviderMenuExpanded,
+                onClick = { translationProviderMenuExpanded = true },
+                modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
+            )
+            SettingsDropdown(
+                expanded = translationProviderMenuExpanded,
+                onDismissRequest = { translationProviderMenuExpanded = false },
+            ) {
+                PageTranslationProvider.entries.forEach { provider ->
+                    SettingsDropdownItem(
+                        label = provider.displayName,
+                        selected = provider == pageTranslationProvider,
+                        onClick = {
+                            translationProviderMenuExpanded = false
+                            onPageTranslationProviderChanged(provider)
+                        },
+                    )
+                }
+            }
+        }
+        Text(
+            stringResource(
+                if (pageTranslationProvider == PageTranslationProvider.Kagi) {
+                    R.string.settings_translation_provider_kagi_summary
+                } else {
+                    R.string.settings_translation_provider_summary
+                },
+            ),
+            modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
         Surface(
