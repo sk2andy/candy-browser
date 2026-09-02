@@ -893,4 +893,15 @@ class BrowserSessionStoreInstrumentedTest {
                 .cookieBannerRemovalDisabled,
         )
     }
+
+    @Test
+    fun externalLinkPreviewSettingDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(false, store.loadExternalLinkPreviewEnabled())
+        store.saveExternalLinkPreviewEnabled(true)
+        assertEquals(true, store.loadExternalLinkPreviewEnabled())
+        store.saveExternalLinkPreviewEnabled(false)
+        assertEquals(false, store.loadExternalLinkPreviewEnabled())
+    }
 }

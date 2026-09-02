@@ -7,6 +7,8 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.graphics.Bitmap
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -271,6 +273,8 @@ import dev.sk2andy.materialbrowser.browser.MAX_TABS
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PageTranslationRules
 import dev.sk2andy.materialbrowser.browser.RootTabBackResult
+import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewCommitResult
+import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
@@ -413,6 +417,7 @@ internal fun BrowserScreen(
     incomingBrowserNavigationRequestId: Int = 0,
     externalLaunchTabId: String? = null,
     onReturnToExternalApp: () -> Unit = {},
+    onExternalPreviewCommitted: (String) -> Unit = {},
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onImportUserScript: () -> Unit = {},
@@ -432,6 +437,16 @@ internal fun BrowserScreen(
             controller = controller,
             capsule = capsule,
             webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
+        )
+        return
+    }
+    controller.externalLinkPreviewState?.let { state ->
+        ExternalLinkPreviewScreen(
+            controller = controller,
+            state = state,
+            onReturnToExternalApp = onReturnToExternalApp,
+            onCommitted = onExternalPreviewCommitted,
+            onTabOverviewPortraitLockChanged = currentTabOverviewPortraitLockChanged,
         )
         return
     }
@@ -2004,6 +2019,7 @@ internal fun BrowserScreen(
                 tabCount = controller.activeTabs.size,
                 addressBarActionLayout = controller.addressBarActionLayout,
                 isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
+                isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
                 isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
                 isStartupAnimationEnabled = controller.isStartupAnimationEnabled,
                 isScrollBarEnabled = controller.isScrollBarEnabled,
@@ -2054,6 +2070,8 @@ internal fun BrowserScreen(
                 onAddressBarActionLayoutChanged = controller::updateAddressBarActionLayout,
                 onAddressBarDockingEnabledChanged =
                     controller::updateAddressBarDockingEnabled,
+                onExternalLinkPreviewEnabledChanged =
+                    controller::updateExternalLinkPreviewEnabled,
                 onFullImmersiveModeEnabledChanged =
                     controller::updateFullImmersiveModeEnabled,
                 onStartupAnimationEnabledChanged =
@@ -2482,6 +2500,177 @@ internal fun BrowserScreen(
             },
         )
     }
+}
+
+@Composable
+private fun ExternalLinkPreviewScreen(
+    controller: BrowserController,
+    state: ExternalLinkPreviewState,
+    onReturnToExternalApp: () -> Unit,
+    onCommitted: (String) -> Unit,
+    onTabOverviewPortraitLockChanged: (Boolean) -> Unit,
+) {
+    var rootBottomInWindowPx by remember { mutableIntStateOf(0) }
+    var blurTarget by remember { mutableStateOf<BlurTarget?>(null) }
+    val profiles = if (controller.profilesEnabled) {
+        controller.profiles.toList()
+    } else {
+        controller.profiles.take(1)
+    }
+    LaunchedEffect(state.sessionId) {
+        onTabOverviewPortraitLockChanged(false)
+    }
+    BackHandler {
+        when {
+            controller.findInPageState != null -> controller.closeFindInPage()
+            state.canGoBack -> controller.goBackInExternalLinkPreview(state.sessionId)
+            controller.dismissExternalLinkPreview(state.sessionId) -> onReturnToExternalApp()
+        }
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { coordinates ->
+                rootBottomInWindowPx = coordinates.boundsInWindow().bottom.roundToInt()
+            }
+            .background(MaterialTheme.colorScheme.surface),
+    ) {
+        ExternalLinkPreviewViewport(
+            controller = controller,
+            onBlurTargetAttached = { target -> blurTarget = target },
+            onBlurTargetReleased = { target ->
+                if (blurTarget === target) blurTarget = null
+            },
+        )
+        controller.findInPageState?.let { findState ->
+            val matchPosition = FindInPageRules.displayPosition(findState)
+            FindInPageBar(
+                query = findState.query,
+                onQueryChange = controller::updateFindInPageQuery,
+                matchText = stringResource(
+                    R.string.find_in_page_match_count,
+                    matchPosition.activeMatchNumber,
+                    matchPosition.matchCount,
+                ),
+                isCounting = findState.query.isNotEmpty() && !findState.isDoneCounting,
+                canNavigate = FindInPageRules.canNavigate(findState),
+                focusNonce = 0,
+                autoFocus = true,
+                placeholder = stringResource(R.string.action_find_in_page),
+                queryContentDescription = stringResource(R.string.cd_find_in_page_query),
+                countingContentDescription = stringResource(R.string.cd_find_in_page_counting),
+                previousMatchContentDescription = stringResource(
+                    R.string.cd_find_in_page_previous,
+                ),
+                nextMatchContentDescription = stringResource(R.string.cd_find_in_page_next),
+                closeContentDescription = stringResource(R.string.cd_find_in_page_close),
+                onPreviousMatch = { controller.findNextInPage(forward = false) },
+                onNextMatch = { controller.findNextInPage(forward = true) },
+                onClose = controller::closeFindInPage,
+                blurTarget = blurTarget,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(12.dp)
+                    .zIndex(25f),
+            )
+        }
+        ExternalLinkPreviewChrome(
+            controller = controller,
+            state = state,
+            profiles = profiles,
+            rootBottomInWindowPx = rootBottomInWindowPx,
+            onReturnToExternalApp = onReturnToExternalApp,
+            onCommitted = onCommitted,
+        )
+    }
+}
+
+@Composable
+private fun ExternalLinkPreviewChrome(
+    controller: BrowserController,
+    state: ExternalLinkPreviewState,
+    profiles: List<BrowserProfile>,
+    rootBottomInWindowPx: Int,
+    onReturnToExternalApp: () -> Unit,
+    onCommitted: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    ExternalLinkPreviewBar(
+        state = state,
+        profiles = profiles,
+        isDesktopView = controller.isExternalLinkPreviewDesktopView,
+        blurTarget = null,
+        rootBottomInWindowPx = rootBottomInWindowPx,
+        onDismissPreview = {
+            if (controller.dismissExternalLinkPreview(state.sessionId)) {
+                onReturnToExternalApp()
+            }
+        },
+        onOpenInCandy = {
+            when (val result = controller.commitExternalLinkPreview(state.sessionId)) {
+                is ExternalLinkPreviewCommitResult.Opened -> onCommitted(result.tabId)
+                ExternalLinkPreviewCommitResult.MissingPreview,
+                ExternalLinkPreviewCommitResult.TabLimitReached,
+                -> Unit
+            }
+        },
+        onSelectProfile = { profileId ->
+            controller.selectExternalLinkPreviewProfile(state.sessionId, profileId)
+        },
+        onShare = { controller.shareExternalLinkPreview(state.sessionId) },
+        onCopyLink = {
+            context.getSystemService(ClipboardManager::class.java).setPrimaryClip(
+                ClipData.newPlainText(
+                    context.getString(R.string.external_link_preview_copy_label),
+                    state.currentUrl,
+                ),
+            )
+            Toast.makeText(context, R.string.toast_link_copied, Toast.LENGTH_SHORT).show()
+        },
+        onFindInPage = { controller.openExternalLinkPreviewFindInPage(state.sessionId) },
+        onDesktopViewChange = { enabled ->
+            controller.setExternalLinkPreviewDesktopView(state.sessionId, enabled)
+        },
+        modifier = Modifier.zIndex(10f),
+    )
+}
+
+@Composable
+private fun ExternalLinkPreviewViewport(
+    controller: BrowserController,
+    onBlurTargetAttached: (BlurTarget) -> Unit,
+    onBlurTargetReleased: (BlurTarget) -> Unit,
+) {
+    val density = LocalDensity.current
+    val geometry = StatusBarFrostedGlassRules.geometry(
+        statusBarHeightPx = WindowInsets.statusBars.getTop(density),
+        density = density.density,
+    )
+    val statusBarTint = MaterialTheme.colorScheme.surface.toArgb()
+    val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
+    val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
+    controller.externalLinkPreviewState?.generation
+    AndroidView(
+        factory = { context -> StatusBarFrostedGlassHost(context) },
+        update = { host ->
+            currentOnBlurTargetAttached(host.blurTarget)
+            host.updateFrostedGlass(
+                geometry = geometry,
+                tint = statusBarTint,
+                visible = true,
+            )
+            controller.attachExternalLinkPreview(host.blurTarget)
+        },
+        onRelease = { host ->
+            controller.detachExternalLinkPreview(host.blurTarget)
+            host.release()
+            currentOnBlurTargetReleased(host.blurTarget)
+        },
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface),
+    )
 }
 
 @Composable

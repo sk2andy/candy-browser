@@ -666,6 +666,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKING_ENABLED, enabled).apply()
     }
 
+    fun loadExternalLinkPreviewEnabled(): Boolean =
+        preferences.getBoolean(KEY_EXTERNAL_LINK_PREVIEW_ENABLED, false)
+
+    fun saveExternalLinkPreviewEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_EXTERNAL_LINK_PREVIEW_ENABLED, enabled).apply()
+    }
+
     fun loadAddressBarActionLayout(): AddressBarActionLayout {
         if (!preferences.contains(KEY_ADDRESS_BAR_ACTION_LAYOUT)) {
             val legacyTabButtonVisible = runCatching {
@@ -919,6 +926,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_ADDRESS_BAR_DOCK_VERTICAL_FRACTION =
             "address_bar_dock_vertical_fraction"
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
+        const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"

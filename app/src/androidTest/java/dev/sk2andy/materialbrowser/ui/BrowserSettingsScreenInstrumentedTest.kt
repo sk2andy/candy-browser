@@ -127,4 +127,35 @@ class BrowserSettingsScreenInstrumentedTest {
             context.getString(R.string.settings_translation_provider_kagi_summary),
         ).assertIsDisplayed()
     }
+
+    @Test
+    fun externalLinkPreviewSwitchUpdatesSetting() {
+        var enabled by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isExternalLinkPreviewEnabled = enabled,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onExternalLinkPreviewEnabledChanged = { enabled = it },
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreview).performClick()
+
+        assertTrue(enabled)
+    }
 }

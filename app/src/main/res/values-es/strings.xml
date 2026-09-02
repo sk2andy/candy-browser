@@ -750,4 +750,12 @@
     <string name="settings_translation_provider">Proveedor de traducción de páginas</string>
     <string name="settings_translation_provider_summary">Al traducir, se envía la dirección completa de la página a este proveedor. Las pestañas privadas no guardan el estado de traducción.</string>
     <string name="settings_translation_provider_kagi_summary">Kagi Translate requiere actualmente una suscripción activa a Kagi. Al traducir, se envía la dirección completa de la página a Kagi.</string>
+    <string name="settings_external_link_preview_title">Previsualizar enlaces de otras aplicaciones</string>
+    <string name="settings_external_link_preview_subtitle">Abrir enlaces externos sin crear primero una pestaña nueva.</string>
+    <string name="external_link_preview_close_description">Cerrar vista previa</string>
+    <string name="external_link_preview_open_description">Abrir en Candy con el perfil %1$s</string>
+    <string name="external_link_preview_profile_description">Elegir perfil de destino, %1$s seleccionado</string>
+    <string name="external_link_preview_copy_link">Copiar enlace</string>
+    <string name="external_link_preview_copy_label">Enlace de Candy</string>
+    <string name="toast_link_copied">Enlace copiado</string>
 </resources>

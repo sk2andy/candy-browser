@@ -76,6 +76,11 @@ landscape-oriented previews for cover flow and compact grid layouts.
   download managers
 - **Link Peek:** long-press a link to inspect it in a live, disposable preview without creating a
   tab or history entry, then send it to a background tab through the pulsing plus target
+- **External Link Preview:** optionally open links from other apps in a temporary Candy preview
+  instead of creating a tab immediately. A compact bottom pill keeps the current host visible,
+  combines the outlined **Open in Candy** action with its profile picker, and offers share, copy,
+  find-in-page, and desktop-site actions before the page is promoted to a real tab. Leaving Candy
+  discards the temporary preview.
 
 <p align="center">
   <img src="docs/screenshots/candy-link-peek.png" width="32%" alt="Candy Browser Link Peek live preview">

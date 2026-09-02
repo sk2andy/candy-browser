@@ -244,6 +244,9 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         val restoredCapsuleId = savedInstanceState?.getString(STATE_CAPSULE_ID)
+        val restoreExternalLinkPreview = savedInstanceState
+            ?.getBoolean(STATE_EXTERNAL_LINK_PREVIEW_ACTIVE)
+            ?: false
         externalLaunchTabId = savedInstanceState
             ?.getString(STATE_EXTERNAL_LAUNCH_TAB_ID)
             ?.takeIf { tabId -> browserController.tabs.any { it.id == tabId } }
@@ -254,6 +257,15 @@ class MainActivity : AppCompatActivity() {
             }
         } else if (savedInstanceState == null) {
             openIntent(intent)
+        } else if (restoreExternalLinkPreview) {
+            IncomingBrowserIntent.from(intent)?.let { request ->
+                if (
+                    browserController.isExternalLinkPreviewEnabled &&
+                    browserController.openExternalLinkPreview(request.url)
+                ) {
+                    incomingBrowserNavigationRequestId++
+                }
+            }
         }
         val startupPresentation = StartupPresentationRules.resolve(
             isColdStart = savedInstanceState == null,
@@ -349,8 +361,12 @@ class MainActivity : AppCompatActivity() {
                             incomingBrowserNavigationRequestId,
                         externalLaunchTabId = externalLaunchTabId,
                         onReturnToExternalApp = {
+                            browserController.dismissExternalLinkPreview()
                             externalLaunchTabId = null
                             moveTaskToBack(true)
+                        },
+                        onExternalPreviewCommitted = { tabId ->
+                            externalLaunchTabId = tabId
                         },
                         onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
                         onOpenHistory = {
@@ -534,7 +550,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onUserLeaveHint() {
-        if (!appDataTransferActive) prepareForPictureInPictureTransition()
+        if (!appDataTransferActive) {
+            browserController.dismissExternalLinkPreview()
+            prepareForPictureInPictureTransition()
+        }
         super.onUserLeaveHint()
     }
 
@@ -663,6 +682,10 @@ class MainActivity : AppCompatActivity() {
         }
         browserController.activeCapsuleId?.let { outState.putString(STATE_CAPSULE_ID, it) }
         browserController.activeCapsuleTabId?.let { outState.putString(STATE_CAPSULE_TAB_ID, it) }
+        outState.putBoolean(
+            STATE_EXTERNAL_LINK_PREVIEW_ACTIVE,
+            browserController.externalLinkPreviewState != null,
+        )
         externalLaunchTabId?.let { outState.putString(STATE_EXTERNAL_LAUNCH_TAB_ID, it) }
         super.onSaveInstanceState(outState)
     }
@@ -910,6 +933,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun openIntent(intent: Intent) {
         externalLaunchTabId = null
+        val incomingRequest = IncomingBrowserIntent.from(intent)
+        if (incomingRequest == null) browserController.dismissExternalLinkPreview()
         if (intent.action == SnoozeWakeNotifier.ACTION_OPEN_RESTORED_TAB) {
             intent.getStringExtra(SnoozeWakeNotifier.EXTRA_TAB_ID)?.let { tabId ->
                 browserController.openSnoozedWakeTab(tabId)
@@ -935,7 +960,15 @@ class MainActivity : AppCompatActivity() {
             CapsuleLaunchResolution.NotCapsuleIntent -> Unit
         }
         if (intent.action == Intent.ACTION_MAIN) browserController.leaveSiteCapsule()
-        IncomingBrowserIntent.from(intent)?.let { request ->
+        incomingRequest?.let { request ->
+            if (
+                browserController.isExternalLinkPreviewEnabled &&
+                browserController.openExternalLinkPreview(request.url)
+            ) {
+                incomingBrowserNavigationRequestId++
+                return
+            }
+            browserController.dismissExternalLinkPreview()
             if (!browserController.openUrl(request.url, inNewTab = true)) return
             externalLaunchTabId = browserController.selectedTabId
             incomingBrowserNavigationRequestId++
@@ -1194,6 +1227,7 @@ class MainActivity : AppCompatActivity() {
         const val SPLASH_DURATION_MILLIS = 1_050L
         const val STATE_CAPSULE_ID = "active_site_capsule_id"
         const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
+        const val STATE_EXTERNAL_LINK_PREVIEW_ACTIVE = "external_link_preview_active"
         const val STATE_EXTERNAL_LAUNCH_TAB_ID = "external_launch_tab_id"
         const val VIDEO_ASPECT_WIDTH = 16
         const val VIDEO_ASPECT_HEIGHT = 9

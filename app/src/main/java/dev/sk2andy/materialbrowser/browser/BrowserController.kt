@@ -461,6 +461,8 @@ class BrowserController(
         get() = addressBarDockPlacement != null
     var isAddressBarDockingEnabled by mutableStateOf(true)
         private set
+    var isExternalLinkPreviewEnabled by mutableStateOf(false)
+        private set
     var addressBarActionLayout by mutableStateOf(AddressBarActionLayout.Default)
         private set
     internal var findInPageState by mutableStateOf<FindInPageState?>(null)
@@ -474,6 +476,8 @@ class BrowserController(
     var isScrollBarEnabled by mutableStateOf(false)
         private set
     var isVideoAutoplayBlocked by mutableStateOf(false)
+        private set
+    var externalLinkPreviewState by mutableStateOf<ExternalLinkPreviewState?>(null)
         private set
     var appearanceSettings by mutableStateOf(AppearanceSettings())
         private set
@@ -633,6 +637,8 @@ class BrowserController(
         mutableMapOf<WebMediaMessageRateKey, WebMediaMessageRateWindow>()
     private val retiredWebMediaDocumentIds = mutableMapOf<WebView, ArrayDeque<String>>()
     private val linkPeekPreviewAssignments = mutableMapOf<WebView, WebViewProfileAssignment>()
+    private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
+    private var nextExternalLinkPreviewSessionId = 0L
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
@@ -1353,6 +1359,7 @@ class BrowserController(
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
         automaticTabSortingEnabled = store.loadAutomaticTabSortingEnabled()
         isAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
+        isExternalLinkPreviewEnabled = store.loadExternalLinkPreviewEnabled()
         val storedAddressBarDockPlacement = store.loadAddressBarDockPlacement()
         lastAddressBarDockPlacement = store.loadLastAddressBarDockPlacement()
             ?: storedAddressBarDockPlacement
@@ -1493,6 +1500,10 @@ class BrowserController(
                     tabs.firstOrNull { tab -> tab.id == tabId }?.let { tab ->
                         configureProfileServiceWorkerBlocking(profileAssignmentFor(tab), webView)
                     }
+                }
+                externalLinkPreviewRuntime?.let { runtime ->
+                    configureProfileServiceWorkerBlocking(runtime.profileAssignment, runtime.webView)
+                    startExternalLinkPreviewIfReady(runtime)
                 }
                 resumePendingBlockingStarts(pendingStarts)
             }
@@ -1898,6 +1909,393 @@ class BrowserController(
 
     fun releaseLinkPeekPreviewWebView(webView: WebView) {
         if (linkPeekPreviewAssignments.remove(webView) != null) destroyWebView(webView)
+    }
+
+    fun openExternalLinkPreview(url: String): Boolean {
+        val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return false
+        val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
+            profiles = profiles,
+            profilesEnabled = profilesEnabled,
+            requestedProfileId = null,
+            activeProfileId = activeProfileId,
+        ) ?: return false
+        closeFindInPage()
+        contentActions.dismiss()
+        releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
+        prepareMediaForTabDeparture(selectedTabId)
+        webViews[selectedTabId]?.let(::pauseWebView)
+        val sessionId = ++nextExternalLinkPreviewSessionId
+        createExternalLinkPreviewRuntime(
+            state = ExternalLinkPreviewState(
+                sessionId = sessionId,
+                generation = 0,
+                currentUrl = safeUrl,
+                targetProfileId = targetProfileId,
+            ),
+        )
+        return true
+    }
+
+    fun selectExternalLinkPreviewProfile(sessionId: Long, profileId: String): Boolean {
+        val current = externalLinkPreviewState?.takeIf { it.sessionId == sessionId }
+            ?: return false
+        val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
+            profiles = profiles,
+            profilesEnabled = profilesEnabled,
+            requestedProfileId = profileId,
+            activeProfileId = activeProfileId,
+        ) ?: return false
+        if (targetProfileId == current.targetProfileId) return false
+        val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(current.currentUrl) ?: return false
+        releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
+        createExternalLinkPreviewRuntime(
+            state = current.copy(
+                generation = current.generation + 1,
+                currentUrl = safeUrl,
+                targetProfileId = targetProfileId,
+                progress = 0,
+                isLoading = true,
+                canGoBack = false,
+            ),
+        )
+        return true
+    }
+
+    fun dismissExternalLinkPreview(sessionId: Long? = null): Boolean {
+        val state = externalLinkPreviewState ?: return false
+        if (sessionId != null && state.sessionId != sessionId) return false
+        releaseExternalLinkPreviewRuntime(resumeSelectedTab = true)
+        return true
+    }
+
+    fun goBackInExternalLinkPreview(sessionId: Long): Boolean {
+        val runtime = externalLinkPreviewRuntime
+            ?.takeIf { it.sessionId == sessionId }
+            ?: return false
+        if (!runtime.webView.canGoBack()) return false
+        runtime.webView.goBack()
+        return true
+    }
+
+    fun commitExternalLinkPreview(sessionId: Long): ExternalLinkPreviewCommitResult {
+        val state = externalLinkPreviewState?.takeIf { it.sessionId == sessionId }
+            ?: return ExternalLinkPreviewCommitResult.MissingPreview
+        pruneStaleTabs()
+        if (tabs.size >= MAX_TABS) {
+            showTabLimitReached()
+            return ExternalLinkPreviewCommitResult.TabLimitReached
+        }
+        val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(state.currentUrl)
+            ?: return ExternalLinkPreviewCommitResult.MissingPreview
+        val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
+            profiles = profiles,
+            profilesEnabled = profilesEnabled,
+            requestedProfileId = state.targetProfileId,
+            activeProfileId = activeProfileId,
+        ) ?: return ExternalLinkPreviewCommitResult.MissingPreview
+        if (profilesEnabled && targetProfileId != activeProfileId) {
+            selectProfile(targetProfileId)
+        }
+        val previousTabId = selectedTabId
+        val tabId = createTab(
+            initialUrl = safeUrl,
+            isIncognito = false,
+            openerTabId = previousTabId,
+        )
+        return if (tabId == previousTabId) {
+            ExternalLinkPreviewCommitResult.TabLimitReached
+        } else {
+            releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
+            ExternalLinkPreviewCommitResult.Opened(tabId)
+        }
+    }
+
+    fun attachExternalLinkPreview(container: FrameLayout) {
+        val runtime = externalLinkPreviewRuntime ?: run {
+            container.removeAllViews()
+            return
+        }
+        val webView = runtime.webView
+        if (webView.parent === container && container.childCount == 1) return
+        (webView.parent as? FrameLayout)?.removeView(webView)
+        container.removeAllViews()
+        container.addView(
+            webView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        startExternalLinkPreviewIfReady(runtime)
+        if (isActivityResumed) webView.onResume()
+    }
+
+    fun detachExternalLinkPreview(container: FrameLayout) {
+        container.removeAllViews()
+    }
+
+    fun shareExternalLinkPreview(sessionId: Long) {
+        val state = externalLinkPreviewState?.takeIf { it.sessionId == sessionId } ?: return
+        val request = PageShareRequest.create(url = state.currentUrl, title = "") ?: return
+        if (pageShare.launch(request) == PageShareResult.Unsupported) {
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.toast_no_matching_app),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    fun openExternalLinkPreviewFindInPage(sessionId: Long): Boolean {
+        val runtime = externalLinkPreviewRuntime
+            ?.takeIf { it.sessionId == sessionId }
+            ?: return false
+        return openFindInPage(
+            tabId = runtime.policyTab.id,
+            webView = runtime.webView,
+            navigationGeneration = runtime.generation,
+        )
+    }
+
+    val isExternalLinkPreviewDesktopView: Boolean
+        get() {
+            val runtime = externalLinkPreviewRuntime ?: return false
+            return isDesktopView(runtime.policyTab, externalLinkPreviewState?.currentUrl)
+        }
+
+    fun setExternalLinkPreviewDesktopView(sessionId: Long, enabled: Boolean): Boolean {
+        val runtime = externalLinkPreviewRuntime
+            ?.takeIf { it.sessionId == sessionId }
+            ?: return false
+        val state = externalLinkPreviewState ?: return false
+        val domain = DesktopSiteRules.domainForUrl(state.currentUrl) ?: return false
+        val current = permanentDesktopViewDomains[runtime.policyTab.profileId].orEmpty()
+        val updated = DesktopSiteRules.withDesktopViewState(
+            current = current,
+            domain = domain,
+            enabled = enabled,
+        )
+        if (updated == current) return false
+        if (updated.isEmpty()) permanentDesktopViewDomains.remove(runtime.policyTab.profileId)
+        else permanentDesktopViewDomains[runtime.policyTab.profileId] = updated
+        store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
+        reloadDesktopViewDomain(runtime.policyTab.profileId, isIncognito = false, domain = domain)
+        recreateExternalLinkPreviewRuntime(state)
+        return true
+    }
+
+    private fun recreateExternalLinkPreviewRuntime(state: ExternalLinkPreviewState) {
+        releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
+        createExternalLinkPreviewRuntime(
+            state.copy(
+                generation = state.generation + 1,
+                progress = 0,
+                isLoading = true,
+                canGoBack = false,
+            ),
+        )
+    }
+
+    private fun createExternalLinkPreviewRuntime(state: ExternalLinkPreviewState) {
+        val policyTab = BrowserTab(
+            id = "external-preview-${state.sessionId}",
+            lastAccessedAt = System.currentTimeMillis(),
+            profileId = state.targetProfileId,
+            url = state.currentUrl,
+            isLoading = true,
+        )
+        val profileAssignment = profileAssignmentFor(policyTab)
+        val protectionState = AtomicReference(
+            LinkPeekProtectionState(
+                pageUrl = state.currentUrl,
+                requestContext = protectionRequestContextFor(policyTab, state.currentUrl),
+            ),
+        )
+        synchronized(privacyEventLock) {
+            protectionRequestContexts[policyTab.id] = protectionState.get().requestContext
+        }
+        val webView = WebView(activity)
+        when (profileAssignment) {
+            WebViewProfileAssignment.Default -> Unit
+            is WebViewProfileAssignment.Incognito,
+            is WebViewProfileAssignment.Isolated,
+            -> WebViewCompat.setProfile(webView, profileAssignment.storageKey)
+        }
+        configureProfileServiceWorkerBlocking(profileAssignment, webView)
+        val nightMode = webView.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        webView.setBackgroundColor(
+            if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE,
+        )
+        with(webView.settings) {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowFileAccess = false
+            allowContentAccess = false
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = false
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = false
+            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            javaScriptCanOpenWindowsAutomatically = false
+            setSupportMultipleWindows(false)
+            safeBrowsingEnabled = true
+            requireMediaPlaybackGesture()
+        }
+        if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(webView)
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+            WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, true)
+        }
+        applyDesktopViewPolicy(policyTab, webView, state.currentUrl)
+        cookieManagerFor(webView).setAcceptCookie(true)
+        applyExternalLinkPreviewCookiePolicy(policyTab, protectionState.get(), webView)
+        webView.webViewClient = externalLinkPreviewWebViewClient(
+            sessionId = state.sessionId,
+            policyTab = policyTab,
+            protectionState = protectionState,
+        )
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView, newProgress: Int) {
+                updateExternalLinkPreviewState(state.sessionId, view) { current ->
+                    current.copy(progress = newProgress.coerceIn(0, 100))
+                }
+            }
+        }
+        webView.isFocusable = true
+        webView.isFocusableInTouchMode = true
+        webView.isEnabled = true
+        webView.isLongClickable = true
+        webView.importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        externalLinkPreviewState = state
+        externalLinkPreviewRuntime = ExternalLinkPreviewRuntime(
+            sessionId = state.sessionId,
+            generation = state.generation,
+            policyTab = policyTab,
+            profileAssignment = profileAssignment,
+            webView = webView,
+        )
+        if (!isActivityResumed) pauseWebView(webView)
+    }
+
+    private fun externalLinkPreviewWebViewClient(
+        sessionId: Long,
+        policyTab: BrowserTab,
+        protectionState: AtomicReference<LinkPeekProtectionState>,
+    ) = object : WebViewClient() {
+        override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+            val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
+            protectionState.set(
+                LinkPeekProtectionState(
+                    pageUrl = safeUrl,
+                    requestContext = protectionRequestContextFor(policyTab, safeUrl),
+                ),
+            )
+            synchronized(privacyEventLock) {
+                protectionRequestContexts[policyTab.id] = protectionState.get().requestContext
+            }
+            applyDesktopViewPolicy(policyTab, view, safeUrl)
+            applyExternalLinkPreviewCookiePolicy(policyTab, protectionState.get(), view)
+            if (findInPageSession?.webView === view) closeFindInPage()
+            updateExternalLinkPreviewState(sessionId, view) { current ->
+                current.copy(
+                    currentUrl = safeUrl,
+                    progress = 0,
+                    isLoading = true,
+                    canGoBack = view.canGoBack(),
+                )
+            }
+        }
+
+        override fun onPageCommitVisible(view: WebView, url: String) {
+            val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
+            updateExternalLinkPreviewState(sessionId, view) { current ->
+                current.copy(currentUrl = safeUrl, canGoBack = view.canGoBack())
+            }
+        }
+
+        override fun onPageFinished(view: WebView, url: String) {
+            val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
+            updateExternalLinkPreviewState(sessionId, view) { current ->
+                current.copy(
+                    currentUrl = safeUrl,
+                    progress = 100,
+                    isLoading = false,
+                    canGoBack = view.canGoBack(),
+                )
+            }
+        }
+
+        override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+            val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url ?: view.url) ?: return
+            if (findInPageSession?.webView === view) closeFindInPage()
+            updateExternalLinkPreviewState(sessionId, view) { current ->
+                current.copy(currentUrl = safeUrl, canGoBack = view.canGoBack())
+            }
+        }
+
+        override fun shouldInterceptRequest(
+            view: WebView,
+            request: WebResourceRequest,
+        ): WebResourceResponse? {
+            val state = protectionState.get()
+            return interceptProtectedSubresourceRequest(
+                tabId = policyTab.id,
+                request = request,
+                requestContext = state.requestContext,
+                pageUrl = state.pageUrl,
+                recordDecision = false,
+            )
+        }
+
+        override fun shouldOverrideUrlLoading(
+            view: WebView,
+            request: WebResourceRequest,
+        ): Boolean {
+            val targetUrl = request.url.toString()
+            val shouldBlock = LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)
+            if (!shouldBlock && request.isForMainFrame) {
+                applyDesktopViewPolicy(policyTab, view, targetUrl)
+            }
+            return shouldBlock
+        }
+    }
+
+    private fun startExternalLinkPreviewIfReady(runtime: ExternalLinkPreviewRuntime) {
+        if (
+            runtime !== externalLinkPreviewRuntime ||
+            runtime.hasStarted ||
+            !runtime.webView.isAttachedToWindow ||
+            !blockingStartGate.isReady
+        ) return
+        runtime.hasStarted = true
+        val state = externalLinkPreviewState?.takeIf { it.sessionId == runtime.sessionId } ?: return
+        runtime.webView.loadUrl(state.currentUrl)
+    }
+
+    private fun updateExternalLinkPreviewState(
+        sessionId: Long,
+        webView: WebView,
+        transform: (ExternalLinkPreviewState) -> ExternalLinkPreviewState,
+    ) {
+        val runtime = externalLinkPreviewRuntime
+        val state = externalLinkPreviewState
+        if (runtime?.sessionId != sessionId || runtime.webView !== webView || state == null) return
+        externalLinkPreviewState = transform(state)
+    }
+
+    private fun releaseExternalLinkPreviewRuntime(resumeSelectedTab: Boolean) {
+        val runtime = externalLinkPreviewRuntime
+        if (findInPageSession?.webView === runtime?.webView) closeFindInPage()
+        externalLinkPreviewRuntime = null
+        externalLinkPreviewState = null
+        runtime?.policyTab?.id?.let { policyTabId ->
+            synchronized(privacyEventLock) {
+                protectionRequestContexts.remove(policyTabId)?.let(::flushPendingFilterHits)
+            }
+        }
+        runtime?.webView?.let(::destroyWebView)
+        if (resumeSelectedTab && isActivityResumed) {
+            webViews[selectedTabId]?.let { webView -> resumeWebView(selectedTabId, webView) }
+        }
     }
 
     private fun linkPeekPreviewWebViewClient(
@@ -2938,6 +3336,9 @@ class BrowserController(
         val affectedTabIds = WebViewProfileRules.regularTabIdsForStorageChange(tabs, profileId)
         profiles[index] = profiles[index].copy(isolationEnabled = enabled)
         recreateWebViews(affectedTabIds)
+        externalLinkPreviewState
+            ?.takeIf { it.targetProfileId == profileId }
+            ?.let(::recreateExternalLinkPreviewRuntime)
         persist()
         return true
     }
@@ -2997,6 +3398,12 @@ class BrowserController(
             recallAlreadyDeleted = recallAlreadyDeleted,
         )
         if (!historyMutation.committed) return false
+        val previewToRecreate = externalLinkPreviewState
+            ?.takeIf { it.targetProfileId == profileId }
+            ?.copy(targetProfileId = fallbackProfile.id)
+        if (previewToRecreate != null) {
+            releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
+        }
         if (historyMutation.history.size != history.size) {
             history.clear()
             history += historyMutation.history
@@ -3088,6 +3495,7 @@ class BrowserController(
         }
         reconcileCandyTrailForks(System.currentTimeMillis())
         persist()
+        previewToRecreate?.let(::createExternalLinkPreviewRuntime)
         return true
     }
 
@@ -3274,15 +3682,23 @@ class BrowserController(
         if (tab.url == BLANK_URL) return false
         val webView = webViews[tab.id] ?: return false
         val navigationGeneration = navigationGenerations[tab.id] ?: return false
+        return openFindInPage(tab.id, webView, navigationGeneration)
+    }
+
+    private fun openFindInPage(
+        tabId: String,
+        webView: WebView,
+        navigationGeneration: Int,
+    ): Boolean {
         closeFindInPage()
         val session = FindInPageSession(
             id = ++nextFindInPageSessionId,
-            tabId = tab.id,
+            tabId = tabId,
             webView = webView,
             navigationGeneration = navigationGeneration,
         )
         findInPageSession = session
-        findInPageState = FindInPageState(tabId = tab.id)
+        findInPageState = FindInPageState(tabId = tabId)
         webView.setFindListener { activeMatchOrdinal, matchCount, isDoneCounting ->
             val currentSession = findInPageSession
             val currentState = findInPageState
@@ -3292,9 +3708,7 @@ class BrowserController(
                 currentSession.webView !== webView ||
                 currentState?.tabId != session.tabId ||
                 currentState.query.isEmpty() ||
-                selectedTabId != session.tabId ||
-                webViews[session.tabId] !== webView ||
-                navigationGenerations[session.tabId] != session.navigationGeneration
+                !isFindInPageSessionCurrent(session)
             ) {
                 return@setFindListener
             }
@@ -3306,6 +3720,17 @@ class BrowserController(
             )
         }
         return true
+    }
+
+    private fun isFindInPageSessionCurrent(session: FindInPageSession): Boolean {
+        if (webViews[session.tabId] === session.webView) {
+            return selectedTabId == session.tabId &&
+                navigationGenerations[session.tabId] == session.navigationGeneration
+        }
+        val previewRuntime = externalLinkPreviewRuntime
+        return previewRuntime?.policyTab?.id == session.tabId &&
+            previewRuntime.webView === session.webView &&
+            previewRuntime.generation == session.navigationGeneration
     }
 
     fun updateFindInPageQuery(query: String) {
@@ -4136,6 +4561,13 @@ class BrowserController(
         if (!enabled) updateAddressBarDocked(false)
     }
 
+    fun updateExternalLinkPreviewEnabled(enabled: Boolean) {
+        if (isExternalLinkPreviewEnabled == enabled) return
+        isExternalLinkPreviewEnabled = enabled
+        store.saveExternalLinkPreviewEnabled(enabled)
+        if (!enabled) dismissExternalLinkPreview()
+    }
+
     fun updateAddressBarActionLayout(layout: AddressBarActionLayout) {
         val normalized = AddressBarActionLayoutRules.normalize(layout)
         if (addressBarActionLayout == normalized) return
@@ -4167,7 +4599,11 @@ class BrowserController(
         if (isVideoAutoplayBlocked == blocked) return
         isVideoAutoplayBlocked = blocked
         store.saveVideoAutoplayBlocked(blocked)
-        val activeWebViews = (webViews.values + linkPeekPreviewAssignments.keys).distinct()
+        val activeWebViews = (
+            webViews.values +
+                linkPeekPreviewAssignments.keys +
+                listOfNotNull(externalLinkPreviewRuntime?.webView)
+            ).distinct()
         if (blocked) {
             activeWebViews.forEach { webView ->
                 installVideoAutoplayDocumentStartScript(webView)
@@ -4189,8 +4625,10 @@ class BrowserController(
     }
 
     fun onAppearanceConfigurationChanged() {
+        val externalPreview = externalLinkPreviewState
         if (linkPeekPreviewAssignments.isNotEmpty()) contentActions.dismiss()
         destroyLinkPeekPreviewWebViews()
+        if (externalPreview != null) recreateExternalLinkPreviewRuntime(externalPreview)
         recreateWebViews(
             tabIds = webViews.keys.toSet(),
             reloadImmediately = true,
@@ -4212,6 +4650,12 @@ class BrowserController(
         }
         profilesEnabled = enabled
         store.saveProfilesEnabled(enabled)
+        if (!enabled) {
+            externalLinkPreviewState
+                ?.takeIf { it.targetProfileId != profiles.first().id }
+                ?.copy(targetProfileId = profiles.first().id)
+                ?.let(::recreateExternalLinkPreviewRuntime)
+        }
     }
 
     fun updateWebContentEdgeToEdgeEnabled(enabled: Boolean) {
@@ -4746,7 +5190,9 @@ class BrowserController(
     }
 
     fun onPause() {
-        captureVisiblePreview(selectedTabId, acceptAfterDeparture = true)
+        if (externalLinkPreviewState == null) {
+            captureVisiblePreview(selectedTabId, acceptAfterDeparture = true)
+        }
         isActivityResumed = false
         fullscreenVideoSession
             ?.takeIf(FullscreenVideoSession::isPrivate)
@@ -4761,6 +5207,7 @@ class BrowserController(
         persistWebViewStates()
         webViews.values.forEach(::pauseWebView)
         linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
+        externalLinkPreviewRuntime?.webView?.let(::pauseWebView)
         flushCookieStores()
         persist()
     }
@@ -4769,6 +5216,7 @@ class BrowserController(
         ReaderLibraryRepository.get(activity).awaitIdle {
             webViews.values.forEach(::pauseWebView)
             linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
+            externalLinkPreviewRuntime?.webView?.let(::pauseWebView)
             persistWebViewStates()
             flushCookieStores()
             persist()
@@ -4788,7 +5236,9 @@ class BrowserController(
     }
 
     private fun resumeWebViewsAfterTransferPreparationFailure() {
-        webViews[selectedTabId]?.let { webView -> resumeWebView(selectedTabId, webView) }
+        if (externalLinkPreviewRuntime == null) {
+            webViews[selectedTabId]?.let { webView -> resumeWebView(selectedTabId, webView) }
+        }
         fullscreenVideoSession
             ?.takeIf { session -> session.tabId != selectedTabId }
             ?.let(::resumeFullscreenVideoWebView)
@@ -4796,11 +5246,16 @@ class BrowserController(
             ?.takeIf { channel -> channel.key.tabId != selectedTabId }
             ?.let { channel -> resumeWebView(channel.key.tabId, channel.webView) }
         linkPeekPreviewAssignments.keys.forEach(WebView::onResume)
+        externalLinkPreviewRuntime?.webView?.onResume()
     }
 
     private fun flushCookieStores() {
         CookieManager.getInstance().flush()
-        (webViews.values + linkPeekPreviewAssignments.keys).forEach { webView ->
+        (
+            webViews.values +
+                linkPeekPreviewAssignments.keys +
+                listOfNotNull(externalLinkPreviewRuntime?.webView)
+            ).forEach { webView ->
             if (isProfileIsolationSupported) cookieManagerFor(webView).flush()
         }
     }
@@ -4823,7 +5278,9 @@ class BrowserController(
         pruneStaleTabs(nowMillis, persistChanges = false)
         touchTab(selectedTabId, nowMillis)
         persist()
-        webViews[selectedTabId]?.let { resumeWebView(selectedTabId, it) }
+        if (externalLinkPreviewRuntime == null) {
+            webViews[selectedTabId]?.let { resumeWebView(selectedTabId, it) }
+        }
         fullscreenVideoSession
             ?.takeIf { session -> session.tabId != selectedTabId }
             ?.let(::resumeFullscreenVideoWebView)
@@ -4831,6 +5288,7 @@ class BrowserController(
             ?.takeIf { channel -> channel.key.tabId != selectedTabId }
             ?.let { channel -> resumeWebView(channel.key.tabId, channel.webView) }
         linkPeekPreviewAssignments.keys.forEach(WebView::onResume)
+        externalLinkPreviewRuntime?.webView?.onResume()
         releasePictureInPictureExitGuardWhenResumed()
     }
 
@@ -4905,6 +5363,7 @@ class BrowserController(
     fun destroy() {
         SnoozeRuntimeRegistry.unregister(snoozeRestoreCallback)
         closeFindInPage()
+        releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
         clearWebMediaPresentation(pause = true)
         fullscreenVideoSession?.let { session ->
             dismissFullscreenVideo(session, notifyPage = true)
@@ -9074,6 +9533,23 @@ class BrowserController(
         cookieManagerFor(webView).setAcceptThirdPartyCookies(webView, acceptThirdPartyCookies)
     }
 
+    private fun applyExternalLinkPreviewCookiePolicy(
+        tab: BrowserTab,
+        state: LinkPeekProtectionState,
+        webView: WebView,
+    ) {
+        val pageHost = PrivacyRequestSanitizer.webHost(state.pageUrl)
+        val sitePaused = pageHost != null && SiteExceptionRules.isPaused(
+            pageHost,
+            permanentSiteExceptions[tab.profileId].orEmpty(),
+        )
+        val acceptThirdPartyCookies = PrivacyPolicyRules.acceptsThirdPartyCookies(
+            blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
+            sitePaused = sitePaused,
+        )
+        cookieManagerFor(webView).setAcceptThirdPartyCookies(webView, acceptThirdPartyCookies)
+    }
+
     private fun applySiteProtectionForNavigation(
         tabId: String,
         webView: WebView,
@@ -9496,6 +9972,10 @@ class BrowserController(
 
     private fun applyDesktopViewPolicy(tabId: String, webView: WebView, pageUrl: String?) {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        applyDesktopViewPolicy(tab, webView, pageUrl)
+    }
+
+    private fun applyDesktopViewPolicy(tab: BrowserTab, webView: WebView, pageUrl: String?) {
         val enabled = isDesktopView(tab, pageUrl)
         val defaultUserAgent = WebSettings.getDefaultUserAgent(activity)
         val desiredUserAgent = if (enabled) {
@@ -9636,6 +10116,15 @@ class BrowserController(
     private data class LinkPeekProtectionState(
         val pageUrl: String,
         val requestContext: ProtectionRequestContext,
+    )
+
+    private data class ExternalLinkPreviewRuntime(
+        val sessionId: Long,
+        val generation: Int,
+        val policyTab: BrowserTab,
+        val profileAssignment: WebViewProfileAssignment,
+        val webView: WebView,
+        var hasStarted: Boolean = false,
     )
 }
 

@@ -135,6 +135,7 @@ internal object BrowserSettingsTestTags {
     const val StartupAnimation = "browser_settings_startup_animation"
     const val ScrollBar = "browser_settings_scroll_bar"
     const val TranslationProvider = "browser_settings_translation_provider"
+    const val ExternalLinkPreview = "browser_settings_external_link_preview"
 }
 
 internal object SearchSettingsTestTags {
@@ -172,6 +173,7 @@ internal fun SettingsScreen(
     tabCount: Int,
     addressBarActionLayout: AddressBarActionLayout,
     isAddressBarDockingEnabled: Boolean,
+    isExternalLinkPreviewEnabled: Boolean = false,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
     isScrollBarEnabled: Boolean,
@@ -203,6 +205,7 @@ internal fun SettingsScreen(
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarActionLayoutChanged: (AddressBarActionLayout) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
+    onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
@@ -331,12 +334,15 @@ internal fun SettingsScreen(
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
                     pageTranslationProvider = pageTranslationProvider,
+                    isExternalLinkPreviewEnabled = isExternalLinkPreviewEnabled,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
                     isStartupAnimationEnabled = isStartupAnimationEnabled,
                     isScrollBarEnabled = isScrollBarEnabled,
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
                     isDefaultBrowser = isDefaultBrowser,
+                    onExternalLinkPreviewEnabledChanged =
+                        onExternalLinkPreviewEnabledChanged,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
@@ -1066,12 +1072,14 @@ internal fun TabsAndGesturesSettingsPage(
 @Composable
 internal fun BrowserSettingsPage(
     pageTranslationProvider: PageTranslationProvider,
+    isExternalLinkPreviewEnabled: Boolean = false,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
     isDefaultBrowser: Boolean,
+    onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onScrollBarEnabledChanged: (Boolean) -> Unit,
@@ -1157,6 +1165,14 @@ internal fun BrowserSettingsPage(
             modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_external_link_preview_title),
+            subtitle = stringResource(R.string.settings_external_link_preview_subtitle),
+            checked = isExternalLinkPreviewEnabled,
+            onCheckedChange = onExternalLinkPreviewEnabledChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreview),
         )
         Spacer(Modifier.height(8.dp))
         Surface(

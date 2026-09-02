@@ -750,4 +750,12 @@
     <string name="settings_translation_provider">Service de traduction des pages</string>
     <string name="settings_translation_provider_summary">Lors de la traduction, l’adresse complète de la page est envoyée à ce service. Les onglets privés ne conservent aucun état de traduction.</string>
     <string name="settings_translation_provider_kagi_summary">Kagi Translate nécessite actuellement un abonnement Kagi actif. Lors de la traduction, l’adresse complète de la page est envoyée à Kagi.</string>
+    <string name="settings_external_link_preview_title">Prévisualiser les liens d’autres applications</string>
+    <string name="settings_external_link_preview_subtitle">Ouvrir les liens externes sans créer immédiatement un nouvel onglet.</string>
+    <string name="external_link_preview_close_description">Fermer l’aperçu</string>
+    <string name="external_link_preview_open_description">Ouvrir dans Candy avec le profil %1$s</string>
+    <string name="external_link_preview_profile_description">Choisir le profil cible, %1$s sélectionné</string>
+    <string name="external_link_preview_copy_link">Copier le lien</string>
+    <string name="external_link_preview_copy_label">Lien Candy</string>
+    <string name="toast_link_copied">Lien copié</string>
 </resources>

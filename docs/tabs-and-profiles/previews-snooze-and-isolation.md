@@ -9,6 +9,7 @@
 | `TabPreviewRepository` | Serialize preview file I/O on one executor and prune unknown tab IDs |
 | `TabPreviewStore` | Validate bitmap dimensions/encoding and bound stored data |
 | `AtomicTabFileDirectory` | Share safe UUID filenames, atomic writes, pruning and explicit directory lifecycle with favicon and WebView-state stores |
+| External Link Preview | Own one interactive, controller-managed WebView without registering a tab. The session is memory-only, foreground-only, uses the selected regular profile's storage boundary, blocks non-HTTP(S) navigation, records no browser history or Candy Trail, and is recreated for every profile change. Promotion destroys the preview and reloads its final normalized URL as one regular tab; a user-driven departure from Candy discards it. |
 
 ## Snoozing
 

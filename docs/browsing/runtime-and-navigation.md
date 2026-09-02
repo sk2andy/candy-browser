@@ -14,7 +14,7 @@
 | Input | Path | Boundary |
 | --- | --- | --- |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
-| Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy, open them in a new active tab and dismiss the tab overview; root Back on that tab returns to the calling app |
+| Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy. The optional external-link preview keeps the page memory-only until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links to non-browser apps; allow safe main-frame special-scheme redirects; block unsafe/internal schemes and subframes |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
@@ -32,6 +32,11 @@
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Keep the external-app return marker memory-only and scoped to the tab opened by the latest
   `ACTION_VIEW`. Web history consumes Back first; normal root tabs keep the tab-close/overview flow.
+- Keep external-link preview sessions, URLs, WebViews, progress, and target-profile selection out of
+  tab/session, history, Candy Trail, favicon, WebView-state, and tab-preview persistence. Recreate
+  the preview WebView when its target profile changes and reload the final normalized HTTP(S) URL
+  when promoting it to a regular tab. Preview loads still use the selected profile's cookies and
+  DOM storage, so the feature is disposable UI rather than a private-browsing mode.
 - Resolve external intents on every handoff attempt so apps installed while Candy remains open are
   immediately eligible. Show handoff feedback only after Android accepts the external launch.
 - Carry user intent across script-driven handoffs with a short-lived, tab-bound grant after a

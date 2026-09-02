@@ -758,4 +758,12 @@
     <string name="settings_translation_provider">Page translation provider</string>
     <string name="settings_translation_provider_summary">On translate, the full page address is sent to this provider. Private tabs do not store translation state.</string>
     <string name="settings_translation_provider_kagi_summary">Kagi Translate currently requires an active Kagi subscription. On translate, the full page address is sent to Kagi.</string>
+    <string name="settings_external_link_preview_title">Preview links from other apps</string>
+    <string name="settings_external_link_preview_subtitle">Open external links without creating a new tab first.</string>
+    <string name="external_link_preview_close_description">Close preview</string>
+    <string name="external_link_preview_open_description">Open in Candy with profile %1$s</string>
+    <string name="external_link_preview_profile_description">Choose target profile, %1$s selected</string>
+    <string name="external_link_preview_copy_link">Copy link</string>
+    <string name="external_link_preview_copy_label">Candy link</string>
+    <string name="toast_link_copied">Link copied</string>
 </resources>
