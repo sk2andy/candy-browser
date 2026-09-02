@@ -64,6 +64,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -1746,6 +1748,7 @@ private fun SettingsDropdownItem(
     DropdownMenuItem(
         text = { Text(label) },
         onClick = onClick,
+        modifier = Modifier.semantics { this.selected = selected },
         trailingIcon = {
             if (selected) Icon(Icons.Default.Check, contentDescription = null)
         },

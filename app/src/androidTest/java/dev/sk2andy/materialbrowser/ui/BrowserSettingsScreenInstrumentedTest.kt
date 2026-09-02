@@ -3,7 +3,10 @@ package dev.sk2andy.materialbrowser.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -75,6 +78,14 @@ class BrowserSettingsScreenInstrumentedTest {
         }
 
         composeRule.onNodeWithTag(BrowserSettingsTestTags.TranslationProvider).performClick()
+        composeRule.onNode(
+            hasText(PageTranslationProvider.Google.displayName) and
+                SemanticsMatcher.expectValue(SemanticsProperties.Selected, true),
+        ).assertExists()
+        composeRule.onNode(
+            hasText(PageTranslationProvider.Kagi.displayName) and
+                SemanticsMatcher.expectValue(SemanticsProperties.Selected, false),
+        ).assertExists()
         composeRule.onNodeWithText(PageTranslationProvider.Kagi.displayName).performClick()
 
         assertEquals(PageTranslationProvider.Kagi, provider)

@@ -268,6 +268,7 @@ import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
+import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PageTranslationRules
 import dev.sk2andy.materialbrowser.browser.RootTabBackResult
 import dev.sk2andy.materialbrowser.browser.SearchEngine
@@ -1356,6 +1357,7 @@ internal fun BrowserScreen(
             .takeIf { addressBarDockingAvailable && !linkPeekAddressBarExpanded }
         BrowserBottomBar(
             tab = selectedTab,
+            pageTranslationProvider = controller.pageTranslationProvider,
             compact = controller.isBottomBarCompact && !linkPeekAddressBarExpanded,
             dockState = AddressBarDockState(
                 enabled = addressBarDockingAvailable,
@@ -3077,6 +3079,7 @@ private fun NewTabPage(
 @Composable
 private fun BrowserBottomBar(
     tab: BrowserTab,
+    pageTranslationProvider: PageTranslationProvider,
     compact: Boolean,
     dockState: AddressBarDockState,
     dockTargetEdge: AddressBarDockEdge,
@@ -3419,6 +3422,7 @@ private fun BrowserBottomBar(
                             }
                             AddressBarPresentation.Expanded -> ExpandedBottomBarContent(
                                 tab = tab,
+                                pageTranslationProvider = pageTranslationProvider,
                                 blurTarget = blurTarget.takeIf { blurSourceVisible },
                                 showTabButton = showTabButton,
                                 showCastButton = showCastButton,
@@ -3970,6 +3974,7 @@ internal fun Modifier.addressBarVerticalGesture(
 @Composable
 private fun ExpandedBottomBarContent(
     tab: BrowserTab,
+    pageTranslationProvider: PageTranslationProvider,
     blurTarget: BlurTarget?,
     showTabButton: Boolean,
     showCastButton: Boolean,
@@ -4343,7 +4348,10 @@ private fun ExpandedBottomBarContent(
                                 isPinned = isPinned,
                                 canUsePageActions = tab.url != BLANK_URL,
                                 canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
-                                canTranslatePage = PageTranslationRules.canTranslate(tab.url),
+                                canTranslatePage = PageTranslationRules.canTranslate(
+                                    provider = pageTranslationProvider,
+                                    sourceUrl = tab.url,
+                                ),
                                 canToggleDomainMute = canToggleDomainMute,
                                 isDomainMuted = isDomainMuted,
                                 canToggleDesktopView = canToggleDesktopView,

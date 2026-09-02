@@ -63,11 +63,96 @@ class PageTranslationRulesTest {
                 targetLanguage = "en",
             ),
         )
-        assertFalse(PageTranslationRules.canTranslate("https://translate.google.com/"))
-        assertFalse(PageTranslationRules.canTranslate("https://translate.kagi.com/example.com"))
-        assertFalse(PageTranslationRules.canTranslate("https://example-com.translate.goog/"))
-        assertFalse(PageTranslationRules.canTranslate("https://translated.turbopages.org/proxy"))
-        assertTrue(PageTranslationRules.canTranslate("https://小说.example/chapter"))
+        assertFalse(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Google,
+                sourceUrl = "https://translate.google.com/",
+            ),
+        )
+        assertFalse(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Kagi,
+                sourceUrl = "https://translate.kagi.com/example.com",
+            ),
+        )
+        assertFalse(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Google,
+                sourceUrl = "https://example-com.translate.goog/",
+            ),
+        )
+        assertFalse(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Yandex,
+                sourceUrl = "https://translated.turbopages.org/proxy",
+            ),
+        )
+        assertTrue(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Google,
+                sourceUrl = "https://小说.example/chapter",
+            ),
+        )
+    }
+
+    @Test
+    fun `translation result hosts with dns root dot are rejected`() {
+        assertFalse(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Google,
+                sourceUrl = "https://translate.google.com./",
+            ),
+        )
+        assertFalse(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Google,
+                sourceUrl = "https://example-com.translate.goog./",
+            ),
+        )
+        assertFalse(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Yandex,
+                sourceUrl = "https://translated.turbopages.org./proxy",
+            ),
+        )
+        assertFalse(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Kagi,
+                sourceUrl = "https://translate.kagi.com./example.com",
+            ),
+        )
+    }
+
+    @Test
+    fun `kagi rejects source queries that collide with provider parameters`() {
+        listOf("to", "kt_quality", "kt_view", "%74o").forEach { parameter ->
+            val sourceUrl = "https://example.com/chapter?$parameter=source-value"
+            assertFalse(
+                PageTranslationRules.canTranslate(
+                    provider = PageTranslationProvider.Kagi,
+                    sourceUrl = sourceUrl,
+                ),
+            )
+            assertNull(
+                PageTranslationRules.buildTranslationUrl(
+                    provider = PageTranslationProvider.Kagi,
+                    sourceUrl = sourceUrl,
+                    targetLanguage = "de",
+                ),
+            )
+        }
+        assertTrue(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Kagi,
+                sourceUrl = "https://example.com/chapter?id=7",
+            ),
+        )
+        assertTrue(
+            PageTranslationRules.canTranslate(
+                provider = PageTranslationProvider.Google,
+                sourceUrl = "https://example.com/chapter?to=source-value",
+            ),
+        )
     }
 
     @Test
