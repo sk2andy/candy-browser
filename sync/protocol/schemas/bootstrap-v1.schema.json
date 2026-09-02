@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://candybrowser.dev/sync/protocol/schemas/bootstrap-v1.schema.json",
+  "title": "Candy Sync bootstrap response v1",
+  "description": "Response to Basic-authenticated GET /v1/bootstrap. It never contains an E2EE passphrase or plaintext workspace key.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocolVersion",
+    "cryptoVersion",
+    "workspaceId",
+    "serverEpoch",
+    "initialized",
+    "kdf",
+    "recoveryEnvelope"
+  ],
+  "properties": {
+    "protocolVersion": { "const": 1 },
+    "cryptoVersion": { "const": 1 },
+    "workspaceId": { "$ref": "#/$defs/identifier" },
+    "serverEpoch": { "$ref": "#/$defs/identifier" },
+    "initialized": { "type": "boolean" },
+    "kdf": { "$ref": "#/$defs/recoveryKdf" },
+    "recoveryEnvelope": {
+      "oneOf": [
+        { "$ref": "#/$defs/recoveryEnvelope" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "initialized": { "const": false } } },
+      "then": { "properties": { "recoveryEnvelope": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "initialized": { "const": true } } },
+      "then": { "properties": { "recoveryEnvelope": { "$ref": "#/$defs/recoveryEnvelope" } } }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "recoveryKdf": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "salt", "memoryKiB", "iterations", "parallelism", "keyBytes"],
+      "properties": {
+        "algorithm": { "const": "argon2id-v1" },
+        "salt": {
+          "description": "Exactly 16 random bytes encoded as unpadded base64url.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{22}$"
+        },
+        "memoryKiB": { "const": 65536 },
+        "iterations": { "const": 3 },
+        "parallelism": { "const": 4 },
+        "keyBytes": { "const": 32 }
+      }
+    },
+    "recoveryEnvelope": {
+      "description": "32-byte workspace key encrypted by AES-256-GCM; ciphertext includes the 16-byte tag and therefore decodes to 48 bytes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cryptoVersion", "nonce", "ciphertext"],
+      "properties": {
+        "cryptoVersion": { "const": 1 },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{16}$"
+        },
+        "ciphertext": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{64}$"
+        }
+      }
+    }
+  }
+}

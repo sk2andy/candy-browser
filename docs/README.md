@@ -10,6 +10,7 @@
 | Site Capsules | [`site-capsules/README.md`](site-capsules/README.md) | Capsule model, navigation boundary, profile ownership, shortcuts |
 | Reader Studio | [`reader-studio/README.md`](reader-studio/README.md) | Extraction, reader sessions, local library, speech |
 | Privacy protection | [`privacy-protection/README.md`](privacy-protection/README.md) | Request/cosmetic blocking, Candy Rules, X-Ray, Permission Radar |
+| Candy Sync | [`sync/README.md`](sync/README.md) | Self-hosted server, browser extension, Android integration, and E2EE protocol |
 
 ## Cross-cutting lookup
 
@@ -22,6 +23,6 @@
 | Product overview and build commands | [`../README.md`](../README.md) |
 | Privacy and compatibility audits | [`audits/`](audits/) |
 | Product screenshots | [`screenshots/`](screenshots/) |
-| Address-bar design studies | [`designs/`](designs/) |
+| Candy Sync architecture and operations | [`sync/README.md`](sync/README.md) |
 | Promotional artwork and video | [`promo/`](promo/), [`promo/video/README.md`](promo/video/README.md), and the `generate_*promo*` scripts in [`../scripts/`](../scripts/) |
 | Release implementation | [`../.github/workflows/release.yml`](../.github/workflows/release.yml) |

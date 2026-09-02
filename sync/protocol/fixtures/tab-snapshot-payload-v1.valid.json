@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-02T10:00:00Z",
+  "tabs": [
+    {
+      "candyId": "tab-1-7",
+      "windowId": 1,
+      "index": 0,
+      "groupId": null,
+      "active": true,
+      "pinned": false,
+      "title": "Example",
+      "url": "https://example.com/"
+    }
+  ]
+}

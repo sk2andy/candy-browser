@@ -1,0 +1,10 @@
+{
+  "deviceId": "device_a",
+  "revision": "1",
+  "schemaVersion": 1,
+  "cryptoVersion": 1,
+  "keyVersion": 1,
+  "nonce": "AAAAAAAAAAAAAAAA",
+  "ciphertext": "AAAAAAAAAAAAAAAAAAAAAA",
+  "url": "https://plaintext.example/"
+}

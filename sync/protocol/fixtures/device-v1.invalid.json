@@ -1,0 +1,18 @@
+{
+  "deviceId": "device_a",
+  "publicKeyAlgorithm": "ECDH-P256-SPKI",
+  "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHN1zBr5betGzMQU1jLrxXzBt7TL0pelpMsiRjzZ--XC_NGD6MwWcgy9iFjhQI39CAT0usjcpji5kSeIWuibWGA",
+  "encryptedName": {
+    "nonce": "AAAAAAAAAAAAAAAA",
+    "ciphertext": "AAAAAAAAAAAAAAAAAAAAAA"
+  },
+  "encryptedIcon": {
+    "nonce": "BBBBBBBBBBBBBBBB",
+    "ciphertext": "BBBBBBBBBBBBBBBBBBBBBB"
+  },
+  "capabilities": ["tabs"],
+  "status": "active",
+  "createdAt": "2026-09-02T10:00:00Z",
+  "lastSeenAt": "2026-09-02T10:00:00Z",
+  "devicePrivateKeyPkcs8": "must-never-cross-the-wire"
+}

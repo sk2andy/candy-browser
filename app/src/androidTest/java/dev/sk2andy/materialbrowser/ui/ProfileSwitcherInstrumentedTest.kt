@@ -138,4 +138,38 @@ class ProfileSwitcherInstrumentedTest {
 
         assertEquals(0, actionCount.get())
     }
+
+    @Test
+    fun syncedProfileUsesSharedIconAndVisibleSyncBadge() {
+        val profile = BrowserProfile(
+            id = "synced:desktop",
+            emoji = "💻",
+            syncedDeviceId = "desktop",
+            syncedDisplayName = "Office desktop",
+            syncedIconCatalogId = "computer",
+            syncedIconEmoji = "💻",
+            syncedIconAccentHue = 210,
+        )
+
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ProfileSwitcher(
+                    profiles = listOf(profile),
+                    activeProfileId = profile.id,
+                    enabled = true,
+                    onSelect = {},
+                    onLongClick = {},
+                    onAdd = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(ProfileSwitcherTestTags.profile(profile.id))
+            .assertIsSelected()
+        composeRule.onNodeWithTag(
+            ProfileSwitcherTestTags.syncedBadge(profile.id),
+            useUnmergedTree = true,
+        )
+            .assertIsDisplayed()
+    }
 }

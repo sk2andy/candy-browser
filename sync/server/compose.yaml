@@ -1,0 +1,29 @@
+services:
+  candy-sync:
+    build:
+      context: .
+      target: runtime
+    environment:
+      CANDY_SYNC_USERNAME: ${CANDY_SYNC_USERNAME:?set CANDY_SYNC_USERNAME}
+      CANDY_SYNC_PASSWORD: ${CANDY_SYNC_PASSWORD:?set CANDY_SYNC_PASSWORD}
+      CANDY_SYNC_LISTEN_ADDR: ":8080"
+      CANDY_SYNC_DB_PATH: /data/candy-sync.sqlite3
+      CANDY_SYNC_PUBLIC_URL: ${CANDY_SYNC_PUBLIC_URL:-http://localhost:8080}
+      CANDY_SYNC_LOG_LEVEL: ${CANDY_SYNC_LOG_LEVEL:-info}
+      CANDY_SYNC_CLIENT_IP_HEADER: ${CANDY_SYNC_CLIENT_IP_HEADER:-X-Forwarded-For}
+    ports:
+      - "127.0.0.1:${CANDY_SYNC_PORT:-8080}:8080"
+    volumes:
+      - candy-sync-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    stop_grace_period: 15s
+
+volumes:
+  candy-sync-data:

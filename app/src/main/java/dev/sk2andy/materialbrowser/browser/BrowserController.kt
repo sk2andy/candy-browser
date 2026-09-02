@@ -233,6 +233,10 @@ import dev.sk2andy.materialbrowser.data.ToppingCatalogRepository
 import dev.sk2andy.materialbrowser.data.ToppingDownloadResult
 import dev.sk2andy.materialbrowser.data.UserScriptRepository
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
+import dev.sk2andy.materialbrowser.data.sync.AndroidSyncCacheStore
+import dev.sk2andy.materialbrowser.data.sync.AndroidSyncSettingsStore
+import dev.sk2andy.materialbrowser.data.sync.AndroidSyncVaultStore
+import dev.sk2andy.materialbrowser.data.sync.CandySyncRepository
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
@@ -242,6 +246,14 @@ import dev.sk2andy.materialbrowser.recall.RecallExtractionIdentity
 import dev.sk2andy.materialbrowser.recall.RecallExtractionScript
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import dev.sk2andy.materialbrowser.recall.RecallRules
+import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
+import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
+import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
+import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
+import dev.sk2andy.materialbrowser.sync.SyncProfile
+import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
+import dev.sk2andy.materialbrowser.sync.SyncStatus
+import dev.sk2andy.materialbrowser.sync.SyncTab
 import java.util.ArrayDeque
 import java.util.UUID
 import java.util.WeakHashMap
@@ -664,6 +676,27 @@ class BrowserController(
     private val configuredServiceWorkerProfiles = mutableSetOf<String>()
     private var incognitoWebViewProfileName = newIncognitoWebViewProfileName()
     private val mainHandler = Handler(Looper.getMainLooper())
+    val syncIconCatalog = SyncDeviceIconCatalog.decode(
+        activity.assets.open("candy_sync_device_icons_v1.json"),
+    )
+    private val syncRepository = CandySyncRepository(
+        settingsStore = AndroidSyncSettingsStore(activity),
+        vaultStore = AndroidSyncVaultStore(activity),
+        cacheStore = AndroidSyncCacheStore(activity),
+        iconCatalog = syncIconCatalog,
+    )
+    var syncState by mutableStateOf(syncRepository.currentState())
+        private set
+    private var syncObservation: AutoCloseable? = null
+    private val locallyPendingSyncCandyIds = mutableSetOf<String>()
+    private val pendingSyncNavigationRunnables = mutableMapOf<String, Runnable>()
+    private val syncRefreshRunnable = object : Runnable {
+        override fun run() {
+            if (destroyed || !isActivityStarted) return
+            syncRepository.refresh()
+            mainHandler.postDelayed(this, SYNC_REFRESH_INTERVAL_MILLIS)
+        }
+    }
     private val fileChooserValidationExecutor = Executors.newSingleThreadExecutor()
     private val historyMutationExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "browser-history-mutation")
@@ -802,6 +835,15 @@ class BrowserController(
                 activeTabs
             }
         }
+
+    private val localProfiles: List<BrowserProfile>
+        get() = profiles.filterNot(BrowserProfile::isSynced)
+
+    val localBrowserProfiles: List<BrowserProfile>
+        get() = localProfiles
+
+    private fun isSyncedProfile(profileId: String): Boolean =
+        profiles.any { it.id == profileId && it.isSynced }
 
     val canToggleSelectedDomainMute: Boolean
         get() = canToggleDomainMute(selectedTabId)
@@ -1523,6 +1565,11 @@ class BrowserController(
         }
         SnoozeRuntimeRegistry.register(snoozeRestoreCallback)
         snoozeScheduler.schedule(snoozedTabs, nowMillis)
+        syncObservation = syncRepository.observe { state ->
+            mainHandler.post {
+                if (!destroyed) applySyncRepositoryState(state)
+            }
+        }
     }
 
     fun attachSelectedWebView(container: FrameLayout) {
@@ -2754,7 +2801,10 @@ class BrowserController(
         if (existing == null && !SiteCapsuleRules.canCreate(siteCapsules.size)) {
             return CapsuleSaveResult.LimitReached
         }
-        if (profiles.none { it.id == draft.profileId }) return CapsuleSaveResult.Invalid
+        if (
+            profiles.none { it.id == draft.profileId } ||
+            isSyncedProfile(draft.profileId)
+        ) return CapsuleSaveResult.Invalid
         val nowMillis = System.currentTimeMillis()
         val capsule = if (existing == null) {
             SiteCapsuleRules.create(
@@ -3172,12 +3222,14 @@ class BrowserController(
         val tab = newTabState(
             url = resolvedUrl,
             nowMillis = nowMillis,
-            isIncognito = isIncognito,
+            isIncognito = isIncognito && !isSyncedProfile(activeProfileId),
             openerTabId = openerTabId,
         )
         tabs += tab
+        markSyncedTabPending(tab)
         updateSelectedTabId(tab.id)
         rememberSelectedTab(activeProfileId, tab.id)
+        enqueueSyncedTab(tab.id)
         persist()
         return tab.id
     }
@@ -3215,6 +3267,10 @@ class BrowserController(
             profileId = openerTab?.profileId ?: activeProfileId,
         )
         tabs += tab
+        if (!transientPopup) {
+            markSyncedTabPending(tab)
+            enqueueSyncedTab(tab.id)
+        }
         if (transientPopup) transientPopupTabIds += tab.id
         persist()
         pauseWebView(webViewFor(tab.id))
@@ -3242,6 +3298,8 @@ class BrowserController(
         updateTab(tab.id) { current ->
             current.copy(url = offer.targetUrl, isLoading = true, progress = 0, error = null)
         }
+        tabs.firstOrNull { it.id == tab.id }?.let(::markSyncedTabPending)
+        scheduleSyncedTabNavigation(tab.id)
         loadUrlWithProtection(tab.id, view, offer.targetUrl)
         selectTab(tab.id)
     }
@@ -3254,7 +3312,7 @@ class BrowserController(
 
     fun createProfile(emoji: String, isolationEnabled: Boolean = false): String? {
         if (!profilesEnabled) return null
-        if (profiles.size >= MAX_PROFILES) {
+        if (localProfiles.size >= MAX_PROFILES) {
             Toast.makeText(
                 activity,
                 activity.resources.getQuantityString(
@@ -3321,6 +3379,7 @@ class BrowserController(
     }
 
     fun updateProfileEmoji(profileId: String, emoji: String): Boolean {
+        if (isSyncedProfile(profileId)) return false
         val safeEmoji = emoji.trim().takeIf(String::isNotEmpty) ?: return false
         val index = profiles.indexOfFirst { it.id == profileId }
         if (index < 0 || profiles[index].emoji == safeEmoji) return false
@@ -3330,6 +3389,7 @@ class BrowserController(
     }
 
     fun setProfileIsolation(profileId: String, enabled: Boolean): Boolean {
+        if (isSyncedProfile(profileId)) return false
         if (!isProfileIsolationSupported) return false
         val index = profiles.indexOfFirst { it.id == profileId }
         if (index < 0 || profiles[index].isolationEnabled == enabled) return false
@@ -3355,7 +3415,11 @@ class BrowserController(
         excludedCapsuleId: String? = null,
         onComplete: (Boolean) -> Unit,
     ) {
-        if (profiles.size <= 1 || profiles.none { it.id == profileId }) {
+        if (
+            localProfiles.size <= 1 ||
+            isSyncedProfile(profileId) ||
+            profiles.none { it.id == profileId }
+        ) {
             onComplete(false)
             return
         }
@@ -3379,13 +3443,14 @@ class BrowserController(
         excludedCapsuleId: String?,
         recallAlreadyDeleted: Boolean,
     ): Boolean {
-        if (profiles.size <= 1) return false
+        if (localProfiles.size <= 1 || isSyncedProfile(profileId)) return false
         val profileIndex = profiles.indexOfFirst { it.id == profileId }
         if (profileIndex < 0) return false
+        val remainingLocalProfiles = localProfiles.filterNot { it.id == profileId }
         val fallbackProfile = if (profileId == activeProfileId) {
-            profiles.getOrNull(profileIndex + 1) ?: profiles[profileIndex - 1]
+            remainingLocalProfiles.first()
         } else {
-            profiles.first { it.id == activeProfileId }
+            localProfiles.first { it.id == activeProfileId }
         }
         val removedProfileTrailTabIds = (
             tabs.asSequence() + snoozedTabs.asSequence().map { snoozed -> snoozed.tab }
@@ -3503,6 +3568,8 @@ class BrowserController(
         if (!profilesEnabled) return false
         val sourceTab = tabs.firstOrNull { it.id == tabId } ?: return false
         if (sourceTab.profileId == profileId || profiles.none { it.id == profileId }) return false
+        val targetIsSynced = isSyncedProfile(profileId)
+        if (sourceTab.isIncognito && targetIsSynced) return false
         if (sourceTab.profileId == activeProfileId && activeTabs.size == 1 && tabs.size >= MAX_TABS) {
             Toast.makeText(
                 activity,
@@ -3513,7 +3580,17 @@ class BrowserController(
         }
         val sourceIndex = activeTabs.indexOfFirst { it.id == tabId }
         val oldAssignment = profileAssignmentFor(sourceTab)
-        val movedTab = sourceTab.copy(profileId = profileId, blockedCount = 0)
+        if (isSyncedProfile(sourceTab.profileId)) enqueueSyncedTabClose(sourceTab)
+        val movedTab = sourceTab.copy(
+            profileId = profileId,
+            isIncognito = sourceTab.isIncognito && !targetIsSynced,
+            blockedCount = 0,
+            syncCandyId = if (targetIsSynced) {
+                sourceTab.syncCandyId ?: UUID.randomUUID().toString()
+            } else {
+                null
+            },
+        )
         val newAssignment = profileAssignmentFor(movedTab)
         if (tabId == selectedTabId) {
             clearPermissionActivity(tabId)
@@ -3531,6 +3608,10 @@ class BrowserController(
             profileId,
             TabPinningRules.orderedTabs(tabs.filter { it.profileId == profileId }),
         )
+        if (targetIsSynced) {
+            markSyncedTabPending(movedTab)
+            enqueueSyncedTab(movedTab.id)
+        }
         if (tabId == selectedTabId) {
             updateSelectedTabId(
                 activeTabs.getOrNull(sourceIndex.coerceAtMost(activeTabs.lastIndex))?.id
@@ -3854,6 +3935,7 @@ class BrowserController(
 
     fun setBlankTabIncognito(enabled: Boolean): Boolean {
         val tab = selectedTab
+        if (isSyncedProfile(tab.profileId)) return false
         if (tab.url != BLANK_URL || tab.isIncognito == enabled) return false
         if (enabled && !isProfileIsolationSupported) {
             Toast.makeText(
@@ -3891,6 +3973,7 @@ class BrowserController(
         if (index < 0) return
         val closingTab = tabs[index]
         if (!TabDeletionRules.canDelete(closingTab)) return
+        enqueueSyncedTabClose(closingTab)
         if (activeCapsuleTabId == tabId) leaveSiteCapsule()
         val closesLastIncognitoTab =
             closingTab.isIncognito && tabs.count(BrowserTab::isIncognito) == 1
@@ -3910,6 +3993,7 @@ class BrowserController(
             )
             touchTab(selectedTabId, nowMillis)
             rememberSelectedTab(activeProfileId, selectedTabId)
+            markSyncedTabPending(selectedTab)
         }
         if (closingTab.isIncognito && tabs.none(BrowserTab::isIncognito)) {
             clearIncognitoProfile()
@@ -3942,6 +4026,7 @@ class BrowserController(
         val index = tabs.indexOfFirst { it.id == tabId }
         if (index < 0) return null
         val tab = tabs[index]
+        if (isSyncedProfile(tab.profileId)) return null
         if (!SnoozeRules.canSnooze(tab, wakeAtMillis, nowMillis)) return null
         val updatedSnoozed = (snoozedTabs.filterNot { it.tab.id == tabId } +
             SnoozedTab(tab, wakeAtMillis, nowMillis))
@@ -4122,6 +4207,7 @@ class BrowserController(
         )
         if (updatedTabs == activeTabs) return false
         replaceProfileTabs(activeProfileId, updatedTabs)
+        enqueueSyncedTabPinned(tabId, isPinned)
         persist()
         return true
     }
@@ -4135,6 +4221,7 @@ class BrowserController(
         )
         if (updatedTabs == activeTabs) return false
         replaceProfileTabs(activeProfileId, updatedTabs)
+        enqueueSyncedTabOrder(activeProfileId)
         persist()
         return true
     }
@@ -4380,7 +4467,9 @@ class BrowserController(
                 profilesEnabled = profilesEnabled,
                 duplicateTabIds = duplicateTabIds,
                 canCreateTab = canCreateTab,
-                canCreateIncognitoTab = canCreateTab && isProfileIsolationSupported,
+                canCreateIncognitoTab = canCreateTab &&
+                    isProfileIsolationSupported &&
+                    !isSyncedProfile(activeProfileId),
                 canMoveSelectedTab = canMoveSelectedTab,
                 hasLoadedPage = selectedTab.url != BLANK_URL,
                 canClearCookies = webViews[selectedTabId]
@@ -4622,6 +4711,28 @@ class BrowserController(
         if (appearanceSettings == normalized) return
         appearanceSettings = normalized
         store.saveAppearanceSettings(normalized)
+    }
+
+    fun configureSync(settings: SyncConnectionSettings): Boolean =
+        syncRepository.configure(settings)
+
+    fun enrollSync(
+        serverPassword: CharArray,
+        passphrase: CharArray,
+        onComplete: (SyncEnrollmentOutcome) -> Unit,
+    ) {
+        syncRepository.enroll(serverPassword, passphrase).whenComplete { outcome, _ ->
+            mainHandler.post {
+                if (!destroyed) {
+                    onComplete(outcome ?: SyncEnrollmentOutcome.Failed)
+                    if (outcome == SyncEnrollmentOutcome.Enrolled) syncRepository.refresh()
+                }
+            }
+        }
+    }
+
+    fun refreshSync() {
+        syncRepository.refresh()
     }
 
     fun onAppearanceConfigurationChanged() {
@@ -5294,12 +5405,15 @@ class BrowserController(
 
     fun onStart() {
         isActivityStarted = true
+        mainHandler.removeCallbacks(syncRefreshRunnable)
+        mainHandler.post(syncRefreshRunnable)
     }
 
     fun onStop(isInPictureInPictureMode: Boolean = false) {
         val wasActivityStarted = isActivityStarted
         val shouldCloseTabsWhenHidden = wasActivityStarted && !activity.isChangingConfigurations
         isActivityStarted = false
+        mainHandler.removeCallbacks(syncRefreshRunnable)
         val keepsPictureInPictureMedia = isInPictureInPictureMode ||
             isInPictureInPicture ||
             pictureInPictureTransitionPending
@@ -5362,6 +5476,12 @@ class BrowserController(
 
     fun destroy() {
         SnoozeRuntimeRegistry.unregister(snoozeRestoreCallback)
+        mainHandler.removeCallbacks(syncRefreshRunnable)
+        pendingSyncNavigationRunnables.values.forEach(mainHandler::removeCallbacks)
+        pendingSyncNavigationRunnables.clear()
+        syncObservation?.close()
+        syncObservation = null
+        syncRepository.close()
         closeFindInPage()
         releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
         clearWebMediaPresentation(pause = true)
@@ -5808,6 +5928,7 @@ class BrowserController(
                 updateCandyTrailPage(tabId, url, title)
             }
             detectPageEdgeToEdge(tabId, view)
+            scheduleSyncedTabNavigation(tabId)
             persist()
         }
 
@@ -5820,6 +5941,7 @@ class BrowserController(
             if (visibleUrl != null) {
                 pageUrls[tabId] = visibleUrl
                 updateTab(tabId) { tab -> WebViewProfileRules.withVisibleUrl(tab, visibleUrl) }
+                scheduleSyncedTabNavigation(tabId)
             }
             updateNavigationState(tabId, view)
             reconcileCandyTrailHistory(tabId, view, isReload)
@@ -8508,6 +8630,7 @@ class BrowserController(
 
     private fun updateCandyTrailPage(tabId: String, url: String, title: String) {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (isSyncedProfile(tab.profileId)) return
         if (tabId in suppressedCandyTrailTabIds || pageUrls[tabId] != url) return
         val nowMillis = System.currentTimeMillis()
         val trail = candyTrails[tabId]
@@ -8536,6 +8659,7 @@ class BrowserController(
     }
 
     private fun setCandyTrail(tab: BrowserTab, trail: CandyTrail) {
+        if (isSyncedProfile(tab.profileId)) return
         if (candyTrails[tab.id] == trail) return
         candyTrailGenerations[tab.id] = candyTrailGenerations.getOrDefault(tab.id, 0) + 1
         candyTrails[tab.id] = trail
@@ -8545,6 +8669,7 @@ class BrowserController(
     private fun recordHistory(tabId: String, url: String, title: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId }?.takeUnless(BrowserTab::isIncognito)
             ?: return false
+        if (isSyncedProfile(tab.profileId)) return false
         val result = historyRepository.record(
             HistoryEntry(
                 url = url,
@@ -9068,15 +9193,187 @@ class BrowserController(
 
     private fun persist() {
         store.saveTabs(persistableTabs(tabs), selectedTabId)
-        store.saveProfiles(profiles.toList(), activeProfileId)
+        val persistentProfiles = localProfiles
+        val persistentActiveProfileId = activeProfileId
+            .takeIf { id -> persistentProfiles.any { it.id == id } }
+            ?: persistentProfiles.first().id
+        store.saveProfiles(persistentProfiles, persistentActiveProfileId)
         savePersistentFilterRules()
     }
 
     private fun persistableTabs(source: Collection<BrowserTab>): List<BrowserTab> =
-        source.filterNot { tab -> tab.id in transientPopupTabIds }
+        source.filterNot { tab ->
+            tab.id in transientPopupTabIds || isSyncedProfile(tab.profileId)
+        }
 
     private fun savePersistentFilterRules() {
         candyRuleRepository.save(filterRules.filterNot { it.id in ephemeralRuleIds })
+    }
+
+    private fun applySyncRepositoryState(state: SyncRepositoryState) {
+        syncState = state
+        val remoteById = state.profiles.associateBy(SyncProfile::deviceId)
+        locallyPendingSyncCandyIds.removeAll { candyId ->
+            state.profiles.any { profile -> profile.tabs.any { it.candyId == candyId } }
+        }
+
+        val removedProfiles = profiles.filter { profile ->
+            profile.isSynced && profile.syncedDeviceId !in remoteById
+        }
+        if (removedProfiles.any { it.id == activeProfileId }) {
+            selectProfile(localProfiles.first().id)
+        }
+        val removedProfileIds = removedProfiles.mapTo(hashSetOf(), BrowserProfile::id)
+        tabs.filter { it.profileId in removedProfileIds }
+            .map(BrowserTab::id)
+            .forEach(::removeTabResources)
+        tabs.removeAll { it.profileId in removedProfileIds }
+        profiles.removeAll { it.id in removedProfileIds }
+
+        var remainingCapacity = (MAX_TABS - tabs.count { !isSyncedProfile(it.profileId) })
+            .coerceAtLeast(0)
+        state.profiles.forEach { remote ->
+            val profileId = SyncedProfileRuntimeRules.profileId(remote.deviceId)
+            val existingProfile = profiles.firstOrNull { it.id == profileId }
+            val reconciliation = SyncedProfileRuntimeRules.reconcile(
+                profile = remote,
+                existingTabs = tabs,
+                nowMillis = System.currentTimeMillis(),
+                maxTabs = remainingCapacity,
+                locallyPendingCandyIds = locallyPendingSyncCandyIds,
+            )
+            remainingCapacity = (remainingCapacity - reconciliation.tabs.size).coerceAtLeast(0)
+            val selectedRuntimeTabId = existingProfile?.selectedTabId
+                ?.takeIf { id -> reconciliation.tabs.any { it.id == id } }
+                ?: remote.tabs.firstOrNull(SyncTab::active)?.candyId?.let { candyId ->
+                    reconciliation.tabs.firstOrNull { it.syncCandyId == candyId }?.id
+                }
+                ?: reconciliation.tabs.firstOrNull()?.id
+            val iconEmoji = syncIconCatalog.icons
+                .firstOrNull { it.id == remote.icon.catalogId }
+                ?.emoji
+                ?: DEFAULT_PROFILE_EMOJI
+            val runtimeProfile = SyncedProfileRuntimeRules.runtimeProfile(
+                profile = remote,
+                iconEmoji = iconEmoji,
+                selectedTabId = selectedRuntimeTabId,
+            )
+            val profileIndex = profiles.indexOfFirst { it.id == profileId }
+            if (profileIndex >= 0) profiles[profileIndex] = runtimeProfile else profiles += runtimeProfile
+
+            reconciliation.removedRuntimeTabIds.forEach(::removeTabResources)
+            replaceProfileTabs(profileId, reconciliation.tabs)
+            reconciliation.navigations.forEach { navigation ->
+                webViews[navigation.runtimeTabId]?.let { webView ->
+                    loadUrlWithProtection(navigation.runtimeTabId, webView, navigation.url)
+                }
+            }
+        }
+
+        if (isSyncedProfile(activeProfileId) && activeTabs.none { it.id == selectedTabId }) {
+            val replacement = profiles.first { it.id == activeProfileId }.selectedTabId
+                ?.let { id -> activeTabs.firstOrNull { it.id == id } }
+                ?: activeTabs.firstOrNull()
+                ?: if (tabs.size < MAX_TABS) newTabState().also(tabs::add) else null
+            if (replacement != null) {
+                updateSelectedTabId(replacement.id)
+                rememberSelectedTab(activeProfileId, replacement.id)
+            } else {
+                selectProfile(localProfiles.first().id)
+            }
+        }
+    }
+
+    private fun markSyncedTabPending(tab: BrowserTab) {
+        tab.syncCandyId?.let(locallyPendingSyncCandyIds::add)
+    }
+
+    private fun scheduleSyncedTabNavigation(tabId: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (!isSyncedProfile(tab.profileId)) return
+        pendingSyncNavigationRunnables.remove(tabId)?.let(mainHandler::removeCallbacks)
+        val runnable = Runnable {
+            pendingSyncNavigationRunnables.remove(tabId)
+            enqueueSyncedTab(tabId)
+        }
+        pendingSyncNavigationRunnables[tabId] = runnable
+        mainHandler.postDelayed(runnable, SYNC_NAVIGATION_DEBOUNCE_MILLIS)
+    }
+
+    private fun enqueueSyncedTab(tabId: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val targetDeviceId = profiles.firstOrNull { it.id == tab.profileId }
+            ?.syncedDeviceId
+            ?: return
+        val tabIndex = tabs.filter { it.profileId == tab.profileId }.indexOfFirst { it.id == tabId }
+        if (tabIndex < 0) return
+        val outbound = SyncedProfileRuntimeRules.outboundTab(tab, tabIndex, selectedTabId) ?: return
+        val remote = syncState.profiles.firstOrNull { it.deviceId == targetDeviceId }
+        val mutationId = UUID.randomUUID().toString()
+        val mutation = if (remote?.tabs?.any { it.candyId == outbound.candyId } == true) {
+            SyncPendingMutation.Navigate(
+                mutationId = mutationId,
+                targetDeviceId = targetDeviceId,
+                candyId = outbound.candyId,
+                title = outbound.title,
+                url = outbound.url,
+            )
+        } else {
+            locallyPendingSyncCandyIds += outbound.candyId
+            SyncPendingMutation.Open(
+                mutationId = mutationId,
+                targetDeviceId = targetDeviceId,
+                tab = outbound,
+            )
+        }
+        syncRepository.mutate(mutation)
+    }
+
+    private fun enqueueSyncedTabClose(tab: BrowserTab) {
+        val candyId = tab.syncCandyId ?: return
+        val targetDeviceId = profiles.firstOrNull { it.id == tab.profileId }
+            ?.syncedDeviceId
+            ?: return
+        pendingSyncNavigationRunnables.remove(tab.id)?.let(mainHandler::removeCallbacks)
+        locallyPendingSyncCandyIds.remove(candyId)
+        syncRepository.mutate(
+            SyncPendingMutation.Close(
+                mutationId = UUID.randomUUID().toString(),
+                targetDeviceId = targetDeviceId,
+                candyId = candyId,
+            ),
+        )
+    }
+
+    private fun enqueueSyncedTabOrder(profileId: String) {
+        val targetDeviceId = profiles.firstOrNull { it.id == profileId }
+            ?.syncedDeviceId
+            ?: return
+        val orderedCandyIds = tabs.filter { it.profileId == profileId }
+            .mapNotNull(BrowserTab::syncCandyId)
+        syncRepository.mutate(
+            SyncPendingMutation.Reorder(
+                mutationId = UUID.randomUUID().toString(),
+                targetDeviceId = targetDeviceId,
+                orderedCandyIds = orderedCandyIds,
+            ),
+        )
+    }
+
+    private fun enqueueSyncedTabPinned(tabId: String, pinned: Boolean) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val candyId = tab.syncCandyId ?: return
+        val targetDeviceId = profiles.firstOrNull { it.id == tab.profileId }
+            ?.syncedDeviceId
+            ?: return
+        syncRepository.mutate(
+            SyncPendingMutation.SetPinned(
+                mutationId = UUID.randomUUID().toString(),
+                targetDeviceId = targetDeviceId,
+                candyId = candyId,
+                pinned = pinned,
+            ),
+        )
     }
 
     private fun rebuildCandyMatcher() {
@@ -9109,10 +9406,11 @@ class BrowserController(
         lastAccessedAt = nowMillis,
         openerTabId = openerTabId,
         profileId = profileId,
-        isIncognito = isIncognito && isProfileIsolationSupported,
+        isIncognito = isIncognito && isProfileIsolationSupported && !isSyncedProfile(profileId),
         url = url,
         title = if (url == BLANK_URL) "" else AddressResolver.displayText(url),
         isLoading = url != BLANK_URL,
+        syncCandyId = UUID.randomUUID().toString().takeIf { isSyncedProfile(profileId) },
     )
 
     private fun touchTab(tabId: String, nowMillis: Long) {
@@ -9177,6 +9475,7 @@ class BrowserController(
         ) {
             prepareIncognitoProfileForRemoval()
         }
+        tabs.filter { it.id in tabIds }.forEach(::enqueueSyncedTabClose)
         tabIds.forEach(::removeTabResources)
         tabs.removeAll { it.id in tabIds }
         reconcileCandyTrailForks(nowMillis)
@@ -9184,7 +9483,9 @@ class BrowserController(
             clearIncognitoProfile()
         }
         if (activeTabs.isEmpty()) {
-            tabs += newTabState(nowMillis = nowMillis)
+            val replacement = newTabState(nowMillis = nowMillis)
+            tabs += replacement
+            markSyncedTabPending(replacement)
             updateSelectedTabId(activeTabs.first().id)
         } else if (tabs.none { it.id == selectedTabId }) {
             updateSelectedTabId(activeTabs.maxByOrNull(BrowserTab::lastAccessedAt)!!.id)
@@ -9212,6 +9513,8 @@ class BrowserController(
         tabId: String,
         preserveFaviconGeneration: Boolean = false,
     ) {
+        pendingSyncNavigationRunnables.remove(tabId)?.let(mainHandler::removeCallbacks)
+        tabs.firstOrNull { it.id == tabId }?.syncCandyId?.let(locallyPendingSyncCandyIds::remove)
         clearPermissionActivity(tabId)
         clearPrivacyDataForTab(tabId)
         webViews.remove(tabId)?.let(::destroyWebView)
@@ -10057,6 +10360,8 @@ class BrowserController(
         const val PREVIEW_CAPTURE_TIMEOUT_MS = 64L
         const val PREVIEW_NEAR_BLACK_CHANNEL_MAX = 16
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
+        const val SYNC_REFRESH_INTERVAL_MILLIS = 15_000L
+        const val SYNC_NAVIGATION_DEBOUNCE_MILLIS = 450L
         const val MAX_COSMETIC_DOCUMENT_START_RULES = 64
         const val MAX_GENERIC_POLICY_HOST_LENGTH = 253
         const val MAX_GENERIC_POLICY_CACHE_ENTRIES = 64

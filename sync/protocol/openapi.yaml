@@ -1,0 +1,489 @@
+openapi: 3.1.0
+info:
+  title: Candy Sync API
+  version: 1.0.0
+  summary: Implemented self-hosted Candy Sync vertical-slice protocol
+  description: |
+    Protocol v1 synchronizes encrypted tab snapshots for one self-hosted workspace.
+    HTTP Basic authenticates bootstrap and first-device enrollment. A random device
+    bearer token authenticates later device and sync operations. E2EE passphrase is
+    client-only and is never an API field, header, server environment value or log field.
+  license:
+    name: PolyForm Noncommercial License 1.0.0
+    identifier: PolyForm-Noncommercial-1.0.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: https://sync.example.net
+    description: Example self-hosted endpoint
+tags:
+  - name: Discovery
+    description: Unauthenticated protocol and limit discovery.
+  - name: Bootstrap
+    description: Basic-authenticated workspace state and first-device enrollment.
+  - name: Devices
+    description: Bearer-authenticated public device listing and Basic-reauthenticated revocation.
+  - name: Sync
+    description: Idempotent encrypted changes, cursor acknowledgement and tab snapshots.
+paths:
+  /.well-known/candy-sync:
+    get:
+      tags: [Discovery]
+      operationId: discoverCandySync
+      summary: Discover supported protocol and server limits
+      security: []
+      responses:
+        "200":
+          description: Candy Sync protocol v1 discovery document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Discovery"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /v1/bootstrap:
+    get:
+      tags: [Bootstrap]
+      operationId: getBootstrap
+      summary: Read workspace initialization and recovery state
+      description: Uses configured server username and password through HTTP Basic. No request body exists.
+      security:
+        - BasicAuth: []
+      responses:
+        "200":
+          description: Workspace bootstrap state
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: ./schemas/bootstrap-v1.schema.json
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/devices:
+    post:
+      tags: [Bootstrap]
+      operationId: enrollDevice
+      summary: Enroll a first or recovered additional device
+      description: |
+        Device P-256 private key is generated locally and never sent. The first device includes
+        the immutable recovery envelope and initializes the workspace atomically. A later device
+        first unlocks that envelope locally with the same passphrase, then enrolls without a
+        recoveryEnvelope. Request always contains DER SPKI public key, SHA-256 fingerprint and
+        encrypted device name and encrypted per-device profile icon descriptor. Server verifies
+        the canonical P-256 SPKI and its exact SHA-256 fingerprint before storing the record;
+        name and icon encryption bind that fingerprint to prevent cross-device envelope substitution.
+      security:
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./schemas/device-v1.schema.json#/$defs/enrollmentRequest
+      responses:
+        "201":
+          description: Device enrolled; device bearer token is returned once
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrollmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    get:
+      tags: [Devices]
+      operationId: listDevices
+      summary: List public and encrypted device records
+      description: Device names and profile icon descriptors remain opaque AES-GCM envelopes to the server.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Workspace devices
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [devices]
+                properties:
+                  devices:
+                    type: array
+                    maxItems: 1000
+                    items:
+                      $ref: ./schemas/device-v1.schema.json
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/devices/{deviceId}:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    delete:
+      tags: [Devices]
+      operationId: revokeDevice
+      summary: Revoke future API access for a device
+      description: Requires fresh server username/password authentication. Does not erase previously decrypted data and does not rotate workspace key.
+      security:
+        - BasicAuth: []
+      responses:
+        "204":
+          description: Device tokens revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/sync/push:
+    post:
+      tags: [Sync]
+      operationId: pushChanges
+      summary: Append one encrypted change idempotently
+      description: Candy Sync v1 requires exactly one array item and Idempotency-Key equal to that item's changeId.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [changes]
+              properties:
+                changes:
+                  type: array
+                  minItems: 1
+                  maxItems: 1
+                  items:
+                    $ref: ./schemas/encrypted-change-v1.schema.json
+      responses:
+        "200":
+          description: Cursor and assigned revision per accepted change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/sync/pull:
+    get:
+      tags: [Sync]
+      operationId: pullChanges
+      summary: Pull ordered encrypted changes after an opaque cursor
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: after
+          in: query
+          required: false
+          description: Cursor returned by enrollment, push, pull, snapshot or tab update.
+          schema:
+            $ref: "#/components/schemas/Cursor"
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 250, default: 250 }
+      responses:
+        "200":
+          description: Ordered encrypted changes and next cursor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PullResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "410":
+          $ref: "#/components/responses/CursorReset"
+  /v1/sync/ack:
+    post:
+      tags: [Sync]
+      operationId: acknowledgeCursor
+      summary: Acknowledge durable local application through a cursor
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [cursor]
+              properties:
+                cursor:
+                  $ref: "#/components/schemas/Cursor"
+      responses:
+        "204":
+          description: Cursor acknowledged
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "410":
+          $ref: "#/components/responses/CursorReset"
+  /v1/sync/snapshot:
+    get:
+      tags: [Sync]
+      operationId: getEncryptedSnapshot
+      summary: Get current encrypted state after cursor reset or restore
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current encrypted changes and target-device tab profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SnapshotResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          description: Encrypted snapshot would exceed the v1 response limit; continue with paginated pull
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+  /v1/devices/{deviceId}/tabs:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    put:
+      tags: [Sync]
+      operationId: putTabSnapshot
+      summary: Replace latest encrypted tab snapshot with compare-and-swap
+      description: Any active workspace device may write an active target device profile. Bearer identity is the auditable writer; path deviceId is the target and is authenticated server metadata. revision must equal expectedRevision plus one. Idempotency-Key must equal body changeId.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./schemas/tab-snapshot-v1.schema.json#/$defs/putRequest
+      responses:
+        "200":
+          description: Stored revision and resulting cursor
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [revision, cursor]
+                properties:
+                  revision:
+                    $ref: ./schemas/tab-snapshot-v1.schema.json#/$defs/revision
+                  cursor:
+                    $ref: "#/components/schemas/Cursor"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Target device does not exist
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: Configured self-hosted server username and password. Never the E2EE passphrase.
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Random device-scoped token returned once by enrollment.
+  parameters:
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      schema:
+        $ref: ./schemas/device-v1.schema.json#/$defs/identifier
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 8 to 128 letters, digits, underscores or hyphens. For push it must equal the sole changeId and be retained with the durable outbox item.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: "^[A-Za-z0-9_-]+$"
+  schemas:
+    Cursor:
+      description: Opaque `serverEpoch.sequence` string.
+      type: string
+      minLength: 3
+      maxLength: 148
+      pattern: "^[A-Za-z0-9_-]+\\.(0|[1-9][0-9]{0,18})$"
+    Discovery:
+      type: object
+      additionalProperties: false
+      required: [protocol, versions, features, limits]
+      properties:
+        protocol: { const: candy-sync }
+        versions:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: integer, minimum: 1 }
+        features:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [e2ee, delta-sync, encrypted-snapshot, tab-snapshots, encrypted-device-icons, editable-tab-profiles]
+        limits:
+          type: object
+          additionalProperties: false
+          required: [batchChanges, payloadBytes, devices]
+          properties:
+            batchChanges: { type: integer, minimum: 1, maximum: 250 }
+            payloadBytes: { type: integer, minimum: 1024, maximum: 1048576 }
+            devices: { type: integer, minimum: 1, maximum: 1000 }
+    EnrollmentResponse:
+      type: object
+      additionalProperties: false
+      required: [workspaceId, deviceId, token, cursor]
+      properties:
+        workspaceId:
+          $ref: ./schemas/bootstrap-v1.schema.json#/$defs/identifier
+        deviceId:
+          $ref: ./schemas/device-v1.schema.json#/$defs/identifier
+        token:
+          type: string
+          minLength: 32
+          maxLength: 256
+          pattern: "^cst1_[A-Za-z0-9_-]+$"
+          writeOnly: true
+        cursor:
+          $ref: "#/components/schemas/Cursor"
+        expiresAt: { type: string, format: date-time }
+    PushResponse:
+      type: object
+      additionalProperties: false
+      required: [cursor, revisions]
+      properties:
+        cursor:
+          $ref: "#/components/schemas/Cursor"
+        revisions:
+          type: object
+          propertyNames:
+            $ref: ./schemas/encrypted-change-v1.schema.json#/$defs/identifier
+          additionalProperties:
+            $ref: ./schemas/encrypted-change-v1.schema.json#/$defs/revision
+    PullResponse:
+      type: object
+      additionalProperties: false
+      required: [changes, nextCursor, hasMore]
+      properties:
+        changes:
+          type: array
+          maxItems: 250
+          items:
+            allOf:
+              - $ref: ./schemas/encrypted-change-v1.schema.json
+              - required: [revision]
+        nextCursor:
+          $ref: "#/components/schemas/Cursor"
+        hasMore: { type: boolean }
+    SnapshotResponse:
+      type: object
+      additionalProperties: false
+      required: [cursor, changes, tabSnapshots]
+      properties:
+        cursor:
+          $ref: "#/components/schemas/Cursor"
+        changes:
+          type: array
+          maxItems: 100000
+          items:
+            allOf:
+              - $ref: ./schemas/encrypted-change-v1.schema.json
+              - required: [revision]
+        tabSnapshots:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: ./schemas/tab-snapshot-v1.schema.json
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string, minLength: 1, maxLength: 256 }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        code: { type: string, minLength: 1, maxLength: 128 }
+        detail: { type: string, maxLength: 2048 }
+        requestId: { type: string, maxLength: 128 }
+  responses:
+    BadRequest:
+      description: Invalid cursor, idempotency key or JSON request
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unauthorized:
+      description: Invalid Basic credentials or device token
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Forbidden:
+      description: Authenticated device does not own requested resource
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: Device not found
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Conflict:
+      description: Immutable recovery, revision or idempotency conflict
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    CursorReset:
+      description: Cursor epoch no longer belongs to current server state; request encrypted snapshot
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    PayloadTooLarge:
+      description: Request exceeds configured body limit
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    UnprocessableEntity:
+      description: Structurally valid request violates protocol invariants
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }

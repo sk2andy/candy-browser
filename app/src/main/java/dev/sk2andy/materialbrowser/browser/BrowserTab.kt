@@ -17,7 +17,11 @@ data class BrowserTab(
     val canGoForward: Boolean = false,
     val blockedCount: Int = 0,
     val error: String? = null,
+    val syncCandyId: String? = null,
 )
+
+val BrowserTab.isSynced: Boolean
+    get() = syncCandyId != null
 
 enum class RootTabBackResult {
     ReturnedToOpener,

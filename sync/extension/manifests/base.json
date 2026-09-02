@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Candy Sync",
+  "version": "0.1.0",
+  "description": "Ende-zu-Ende verschlüsselter, selbst gehosteter Sync für Tabs und Tab-Gruppen.",
+  "permissions": ["alarms", "storage"],
+  "optional_permissions": ["tabs", "bookmarks", "tabGroups"],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
+  }
+}

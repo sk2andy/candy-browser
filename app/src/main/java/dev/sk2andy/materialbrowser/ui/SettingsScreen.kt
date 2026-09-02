@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -95,6 +96,10 @@ import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
+import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
+import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
+import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
@@ -109,6 +114,7 @@ internal enum class SettingsDestination {
     Userscripts,
     ToppingCatalog,
     SiteCapsules,
+    Sync,
     ProtectionAndData,
     AboutLegal,
 }
@@ -186,6 +192,8 @@ internal fun SettingsScreen(
     siteCapsules: List<SiteCapsule>,
     userScripts: List<UserscriptUiItem>,
     toppingCatalogState: ToppingCatalogUiState,
+    syncState: SyncRepositoryState,
+    syncIconCatalog: SyncDeviceIconCatalog,
     onDestinationChanged: (SettingsDestination) -> Unit,
     onAppearanceSettingsChanged: (AppearanceSettings) -> Unit,
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
@@ -222,6 +230,9 @@ internal fun SettingsScreen(
     onToggleTopping: (id: String, enabled: Boolean) -> Unit,
     onUpdateTopping: (id: String) -> Unit,
     onRefreshToppingCatalog: () -> Unit,
+    onConfigureSync: (SyncConnectionSettings) -> Boolean,
+    onEnrollSync: (CharArray, CharArray, (SyncEnrollmentOutcome) -> Unit) -> Unit,
+    onRefreshSync: () -> Unit,
     onFilterStudio: () -> Unit,
     onExportAppData: () -> Unit,
     onImportAppData: () -> Unit,
@@ -385,6 +396,15 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 
+                SettingsDestination.Sync -> SyncSettingsPage(
+                    state = syncState,
+                    iconCatalog = syncIconCatalog,
+                    onConfigure = onConfigureSync,
+                    onEnroll = onEnrollSync,
+                    onRefresh = onRefreshSync,
+                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                )
+
                 SettingsDestination.ProtectionAndData -> ProtectionAndDataSettingsPage(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
@@ -430,6 +450,13 @@ private fun SettingsHomePage(
             title = stringResource(R.string.settings_section_search),
             subtitle = stringResource(R.string.settings_home_search_summary),
             onClick = { onDestinationChanged(SettingsDestination.Search) },
+        )
+        SettingsPageSpacer()
+        SettingsLink(
+            icon = Icons.Default.Refresh,
+            title = stringResource(R.string.sync_settings_title),
+            subtitle = stringResource(R.string.settings_home_sync_summary),
+            onClick = { onDestinationChanged(SettingsDestination.Sync) },
         )
         SettingsPageSpacer()
         SettingsLink(

@@ -1,0 +1,38 @@
+{
+  "name": "@candy-browser/sync-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  },
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "build": "node scripts/build.mjs",
+    "build:chromium": "node scripts/build.mjs chromium",
+    "build:firefox": "node scripts/build.mjs firefox",
+    "test:build": "node --test tests/build.test.mjs",
+    "verify:reproducible": "node scripts/verify-reproducible.mjs",
+    "lint:manifests": "npm run build && node scripts/lint-manifests.mjs",
+    "test:protocol": "node scripts/validate-protocol.mjs",
+    "verify": "npm run typecheck && npm test && npm run test:protocol && npm run build && npm run test:build && npm run lint:manifests && npm run verify:reproducible"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.2.8",
+    "@types/node": "24.10.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "esbuild": "0.28.2",
+    "fast-check": "4.9.0",
+    "typescript": "5.9.3",
+    "yaml": "2.9.0"
+  }
+}

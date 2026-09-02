@@ -1,0 +1,17 @@
+{
+  "protocolVersion": 1,
+  "cryptoVersion": 1,
+  "workspaceId": "wsp_AAAAAAAAAAAAAAAAAAAAAA",
+  "serverEpoch": "epoch_AAAAAAAAAAAAAAAAAAAAAA",
+  "initialized": false,
+  "kdf": {
+    "algorithm": "argon2id-v1",
+    "salt": "AAAAAAAAAAAAAAAAAAAAAA",
+    "memoryKiB": 65536,
+    "iterations": 3,
+    "parallelism": 4,
+    "keyBytes": 32
+  },
+  "recoveryEnvelope": null,
+  "passphrase": "must-never-cross-the-wire"
+}

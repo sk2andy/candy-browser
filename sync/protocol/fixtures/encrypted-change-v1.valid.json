@@ -1,0 +1,13 @@
+{
+  "changeId": "change_a",
+  "deviceId": "device_a",
+  "entity": "tabs",
+  "entityId": "device_a",
+  "operation": "snapshot",
+  "baseRevision": "0",
+  "schemaVersion": 1,
+  "cryptoVersion": 1,
+  "keyVersion": 1,
+  "nonce": "AAAAAAAAAAAAAAAA",
+  "ciphertext": "AAAAAAAAAAAAAAAAAAAAAA"
+}

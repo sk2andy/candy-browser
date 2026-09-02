@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://candybrowser.dev/sync/protocol/schemas/encrypted-change-v1.schema.json",
+  "title": "Candy Sync encrypted change v1",
+  "description": "Vertical-slice tab snapshot change. AES-GCM ciphertext includes its 16-byte authentication tag.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "changeId",
+    "deviceId",
+    "entity",
+    "entityId",
+    "operation",
+    "baseRevision",
+    "schemaVersion",
+    "cryptoVersion",
+    "keyVersion",
+    "nonce",
+    "ciphertext"
+  ],
+  "properties": {
+    "changeId": { "$ref": "#/$defs/identifier" },
+    "deviceId": { "$ref": "#/$defs/identifier" },
+    "entity": { "const": "tabs" },
+    "entityId": {
+      "description": "Target synced-profile device id. For cross-device tab edits this differs from authenticated writer deviceId.",
+      "$ref": "#/$defs/identifier"
+    },
+    "operation": { "const": "snapshot" },
+    "baseRevision": { "$ref": "#/$defs/revision" },
+    "revision": {
+      "description": "Server-assigned revision, present in pull and snapshot responses and absent from push requests.",
+      "$ref": "#/$defs/revision"
+    },
+    "schemaVersion": { "const": 1 },
+    "cryptoVersion": { "const": 1 },
+    "keyVersion": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+    "nonce": { "$ref": "#/$defs/nonce" },
+    "ciphertext": { "$ref": "#/$defs/ciphertext" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "revision": {
+      "description": "Non-negative signed 64-bit decimal encoded as a string.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,18})$"
+    },
+    "nonce": {
+      "description": "Exactly 12 bytes encoded as unpadded base64url.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16}$"
+    },
+    "ciphertext": {
+      "description": "AES-256-GCM ciphertext with the final 16-byte tag included, unpadded base64url.",
+      "type": "string",
+      "minLength": 22,
+      "maxLength": 524288,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    }
+  }
+}

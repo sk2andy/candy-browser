@@ -1,0 +1,14 @@
+{
+  "changeId": "change_a",
+  "deviceId": "writer_android",
+  "entity": "tabs",
+  "entityId": "target_desktop",
+  "operation": "snapshot",
+  "baseRevision": "0",
+  "revision": "1",
+  "schemaVersion": 1,
+  "cryptoVersion": 1,
+  "keyVersion": 1,
+  "nonce": "AAAAAAAAAAAAAAAA",
+  "ciphertext": "AAAAAAAAAAAAAAAAAAAAAA"
+}
