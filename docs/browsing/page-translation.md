@@ -25,6 +25,8 @@ language. Their translated page UI can select another target language.
   service contracts and may need maintenance if a provider changes them.
 - Kagi Translate currently requires an active Kagi subscription. Candy does not manage Kagi
   authentication; the provider page handles sign-in.
+- Kagi reserves the `to`, `kt_quality`, and `kt_view` query names for its own website route. Candy
+  disables Kagi translation for source URLs using those names instead of changing their meaning.
 
 ## Provider endpoints
 

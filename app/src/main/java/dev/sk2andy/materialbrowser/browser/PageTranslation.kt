@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.browser
 
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import java.net.URI
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 enum class PageTranslationProvider(
@@ -36,11 +38,22 @@ object PageTranslationRules {
         "translate.kagi.com",
         "translated.turbopages.org",
     )
+    private val kagiProviderParameters = setOf("to", "kt_quality", "kt_view")
 
-    fun canTranslate(sourceUrl: String?): Boolean {
+    fun canTranslate(
+        provider: PageTranslationProvider,
+        sourceUrl: String?,
+    ): Boolean {
         val safeUrl = normalizedSourceUrl(sourceUrl) ?: return false
-        val host = runCatching { URI(safeUrl).toURL().host.lowercase() }.getOrNull() ?: return false
-        return host !in translationHosts && !host.endsWith(".translate.goog")
+        val sourceUri = runCatching { URI(safeUrl) }.getOrNull() ?: return false
+        val host = runCatching { sourceUri.toURL().host }
+            .getOrNull()
+            ?.lowercase(Locale.ROOT)
+            ?.trimEnd('.')
+            ?: return false
+        if (host in translationHosts || host.endsWith(".translate.goog")) return false
+        return provider != PageTranslationProvider.Kagi ||
+            !hasKagiProviderParameter(sourceUri.rawQuery)
     }
 
     fun buildTranslationUrl(
@@ -48,7 +61,9 @@ object PageTranslationRules {
         sourceUrl: String?,
         targetLanguage: String,
     ): String? {
-        val safeUrl = normalizedSourceUrl(sourceUrl)?.takeIf(::canTranslate) ?: return null
+        val safeUrl = normalizedSourceUrl(sourceUrl)
+            ?.takeIf { canTranslate(provider, it) }
+            ?: return null
         val safeLanguage = normalizedTargetLanguage(targetLanguage)
         return when (provider) {
             PageTranslationProvider.Google ->
@@ -87,6 +102,17 @@ object PageTranslationRules {
             "$parameterSeparator" +
             "to=$targetLanguage" +
             translatedFragment
+    }
+
+    private fun hasKagiProviderParameter(rawQuery: String?): Boolean {
+        if (rawQuery == null) return false
+        return rawQuery.split('&').any { parameter ->
+            val rawName = parameter.substringBefore('=')
+            val name = runCatching {
+                URLDecoder.decode(rawName, StandardCharsets.UTF_8.toString())
+            }.getOrNull() ?: return true
+            name.lowercase(Locale.ROOT) in kagiProviderParameters
+        }
     }
 
     private const val DEFAULT_TARGET_LANGUAGE = "en"
