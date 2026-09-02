@@ -101,6 +101,7 @@
     <string name="action_stop_loading">Laden stoppen</string>
     <string name="action_reload">Neu laden</string>
     <string name="action_dock_address_bar">Pille Parken</string>
+    <string name="action_park_address_pill_right">Pille rechts parken</string>
     <string name="action_mute_domain">Diese Website stummschalten</string>
     <string name="action_desktop_view">Desktop-Ansicht</string>
     <string name="action_desktop_view_description">Desktop-Version für diese Domain anfordern</string>

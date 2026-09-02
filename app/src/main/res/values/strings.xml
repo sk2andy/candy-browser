@@ -107,6 +107,7 @@
     <string name="action_stop_loading">Stop loading</string>
     <string name="action_reload">Reload</string>
     <string name="action_dock_address_bar">Park address bar at edge</string>
+    <string name="action_park_address_pill_right">Park address pill right</string>
     <string name="action_mute_domain">Mute this site</string>
     <string name="action_desktop_view">Desktop view</string>
     <string name="action_desktop_view_description">Request the desktop version for this domain</string>

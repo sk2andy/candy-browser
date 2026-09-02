@@ -10,6 +10,10 @@ class AddressBarActionLayoutTest {
         AddressBarAction.entries.forEach { action ->
             assertEquals(action, AddressBarAction.fromWireValue(action.wireValue))
         }
+        assertEquals(
+            AddressBarAction.ParkRight,
+            AddressBarAction.fromWireValue("park_right"),
+        )
         assertNull(AddressBarAction.fromWireValue(null))
         assertNull(AddressBarAction.fromWireValue("unknown"))
     }

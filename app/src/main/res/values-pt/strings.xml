@@ -101,6 +101,7 @@
     <string name="action_stop_loading">Parar carregamento</string>
     <string name="action_reload">Recarregar</string>
     <string name="action_dock_address_bar">Fixar a barra de endereço na margem</string>
+    <string name="action_park_address_pill_right">Fixar a pílula de endereço à direita</string>
     <string name="action_mute_domain">Silenciar este site</string>
     <string name="action_desktop_view">Vista para computador</string>
     <string name="action_desktop_view_description">Pedir a versão para computador neste domínio</string>

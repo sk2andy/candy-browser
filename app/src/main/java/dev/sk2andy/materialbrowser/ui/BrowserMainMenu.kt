@@ -159,6 +159,7 @@ internal fun BrowserMainMenu(
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit = {},
     canDockAddressBar: Boolean = true,
     onDockAddressBar: () -> Unit,
+    onParkAddressBarRight: () -> Unit = {},
     onHistory: () -> Unit,
     onSettings: () -> Unit,
 ) {
@@ -390,13 +391,20 @@ internal fun BrowserMainMenu(
                         AddressBarAction.Tabs -> R.drawable.ic_switch_to_tab
                         AddressBarAction.NewTab -> R.drawable.ic_symbol_add
                         AddressBarAction.CloseTab -> R.drawable.ic_symbol_close
+                        AddressBarAction.ParkRight ->
+                            R.drawable.ic_symbol_chevron_physical_right
                         else -> return@forEachIndexed
                     }
-                    val enabled = action != AddressBarAction.CloseTab || canCloseTab
+                    val enabled = when (action) {
+                        AddressBarAction.CloseTab -> canCloseTab
+                        AddressBarAction.ParkRight -> canDockAddressBar
+                        else -> true
+                    }
                     val callback = when (action) {
                         AddressBarAction.Tabs -> onTabs
                         AddressBarAction.NewTab -> onNewTab
                         AddressBarAction.CloseTab -> onCloseTab
+                        AddressBarAction.ParkRight -> onParkAddressBarRight
                         else -> return@forEachIndexed
                     }
                     MenuRow(
@@ -635,7 +643,10 @@ internal fun BrowserMainMenu(
                 modifier = Modifier.testTag(BrowserMainMenuTestTags.BrowserGroup),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                if (canDockAddressBar) {
+                if (
+                    canDockAddressBar &&
+                    AddressBarAction.ParkRight !in overflowAddressBarActions
+                ) {
                     MenuRow(
                         label = stringResource(R.string.action_dock_address_bar),
                         iconRes = R.drawable.ic_symbol_chevron_right,
@@ -647,7 +658,14 @@ internal fun BrowserMainMenu(
                 MenuRow(
                     label = stringResource(R.string.snoozed_tabs_title),
                     iconRes = R.drawable.ic_snooze,
-                    shape = if (canDockAddressBar) innerCorners else firstItemShape,
+                    shape = if (
+                        canDockAddressBar &&
+                        AddressBarAction.ParkRight !in overflowAddressBarActions
+                    ) {
+                        innerCorners
+                    } else {
+                        firstItemShape
+                    },
                     modifier = Modifier.testTag(BrowserMainMenuTestTags.SnoozedTabs),
                     supportingText = if (snoozedTabCount == 0) {
                         stringResource(R.string.snoozed_tabs_settings_summary)

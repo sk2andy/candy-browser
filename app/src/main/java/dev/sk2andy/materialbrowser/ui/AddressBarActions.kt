@@ -52,6 +52,7 @@ internal data class AddressBarActionState(
     val canUsePageActions: Boolean,
     val canOpenReader: Boolean,
     val canCloseTab: Boolean,
+    val canParkRight: Boolean,
     val newTabPulseScale: Float,
 )
 
@@ -70,6 +71,7 @@ internal data class AddressBarActionCallbacks(
     val onCloseTab: () -> Unit,
     val onBack: () -> Unit,
     val onForward: () -> Unit,
+    val onParkRight: () -> Unit,
     val onNewTabButtonBounds: (Rect?) -> Unit,
 )
 
@@ -166,6 +168,7 @@ private fun AddressBarRegularActionButton(
         AddressBarAction.CloseTab -> state.canCloseTab
         AddressBarAction.Back -> state.canGoBack
         AddressBarAction.Forward -> state.canGoForward
+        AddressBarAction.ParkRight -> state.canParkRight
         else -> true
     }
     val onClick = when (action) {
@@ -178,6 +181,7 @@ private fun AddressBarRegularActionButton(
         AddressBarAction.CloseTab -> callbacks.onCloseTab
         AddressBarAction.Back -> callbacks.onBack
         AddressBarAction.Forward -> callbacks.onForward
+        AddressBarAction.ParkRight -> callbacks.onParkRight
         else -> return
     }
     val description = when (action) {
@@ -192,6 +196,7 @@ private fun AddressBarRegularActionButton(
         AddressBarAction.CloseTab -> stringResource(R.string.cd_close_tab)
         AddressBarAction.Back -> stringResource(R.string.action_back)
         AddressBarAction.Forward -> stringResource(R.string.action_forward)
+        AddressBarAction.ParkRight -> stringResource(R.string.action_park_address_pill_right)
         else -> ""
     }
     IconButton(
@@ -321,6 +326,8 @@ internal fun AddressBarActionGlyph(
                     }
                     AddressBarAction.Back -> R.drawable.ic_symbol_arrow_back
                     AddressBarAction.Forward -> R.drawable.ic_symbol_arrow_forward
+                    AddressBarAction.ParkRight ->
+                        R.drawable.ic_symbol_chevron_physical_right
                     AddressBarAction.FindInPage,
                     AddressBarAction.NewTab,
                     AddressBarAction.CloseTab,
@@ -379,4 +386,5 @@ internal fun AddressBarAction.labelRes(): Int = when (this) {
     AddressBarAction.CloseTab -> R.string.cd_close_tab
     AddressBarAction.Back -> R.string.action_back
     AddressBarAction.Forward -> R.string.action_forward
+    AddressBarAction.ParkRight -> R.string.action_park_address_pill_right
 }

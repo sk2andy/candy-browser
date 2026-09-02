@@ -4109,6 +4109,13 @@ class BrowserController(
         updateAddressBarDockPlacement(placement)
     }
 
+    fun parkAddressBarOnRight() {
+        if (!isAddressBarDockingEnabled) return
+        updateAddressBarDockPlacement(
+            lastAddressBarDockPlacement.copy(edge = AddressBarDockEdge.Right),
+        )
+    }
+
     fun updateAddressBarDockPlacement(placement: AddressBarDockPlacement?) {
         val normalized = placement?.normalized()
         if (normalized != null && !isAddressBarDockingEnabled) return

@@ -25,6 +25,8 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.data.AddressBarAction
+import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -246,6 +248,57 @@ class AddressBarDockInstrumentedTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertIsFocused()
+    }
+
+    @Test
+    fun configuredRightParkActionMovesRememberedLeftPlacementToRight() {
+        lateinit var browserController: BrowserController
+        val rememberedPlacement = AddressBarDockPlacement(
+            edge = AddressBarDockEdge.Left,
+            verticalFraction = 0.42f,
+        )
+        composeRule.runOnIdle {
+            clearSession()
+            val tab = BrowserTab(
+                id = "right-park-action-tab",
+                lastAccessedAt = 1L,
+                title = "Example",
+                url = "https://example.test/page",
+            )
+            BrowserSessionStore(composeRule.activity).apply {
+                saveTabsImmediately(listOf(tab), tab.id)
+                saveAddressBarDockPlacement(rememberedPlacement)
+                saveAddressBarDockPlacement(null)
+                saveAddressBarActionLayout(
+                    AddressBarActionLayout(
+                        beforeAddress = listOf(AddressBarAction.ParkRight),
+                        afterAddress = emptyList(),
+                    ),
+                )
+            }
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserScreen(browserController)
+            }
+        }
+
+        composeRule.onNodeWithTag(
+            AddressBarActionTestTags.action(AddressBarAction.ParkRight),
+        ).performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            composeRule.onAllNodesWithTag(AddressBarDockTestTags.EdgeTab)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.runOnIdle {
+            assertEquals(
+                rememberedPlacement.copy(edge = AddressBarDockEdge.Right),
+                browserController.addressBarDockPlacement,
+            )
+        }
     }
 
     @Test

@@ -1495,6 +1495,7 @@ internal fun BrowserScreen(
             },
             onExpand = controller::expandBottomBar,
             onDock = { controller.updateAddressBarDocked(true) },
+            onParkRight = controller::parkAddressBarOnRight,
             onDockPlacementChanged = controller::updateAddressBarDockPlacement,
             onRestoreDock = { controller.updateAddressBarDocked(false) },
             onTabDrag = { delta ->
@@ -3169,6 +3170,7 @@ private fun BrowserBottomBar(
     onScanQrCode: () -> Unit,
     onExpand: () -> Unit,
     onDock: () -> Unit,
+    onParkRight: () -> Unit,
     onDockPlacementChanged: (AddressBarDockPlacement) -> Unit,
     onRestoreDock: () -> Unit,
     onTabDrag: (Float) -> Unit,
@@ -3570,6 +3572,7 @@ private fun BrowserBottomBar(
                                 onAddSiteCapsule = onAddSiteCapsule,
                                 canDock = dockingEnabled,
                                 onDock = onDock,
+                                onParkRight = onParkRight,
                                 overviewGestureEnabled = overviewGestureEnabled,
                                 overviewGestureProgress = overviewGestureProgress,
                                 onOverviewGestureProgress = onOverviewGestureProgress,
@@ -4117,6 +4120,7 @@ private fun ExpandedBottomBarContent(
     onAddSiteCapsule: () -> Unit,
     canDock: Boolean,
     onDock: () -> Unit,
+    onParkRight: () -> Unit,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
     onOverviewGestureProgress: (Float) -> Unit,
@@ -4146,7 +4150,8 @@ private fun ExpandedBottomBarContent(
         ).filter { action ->
             action == AddressBarAction.Tabs ||
                 action == AddressBarAction.NewTab ||
-                action == AddressBarAction.CloseTab
+                action == AddressBarAction.CloseTab ||
+                action == AddressBarAction.ParkRight
         }
     } else {
         emptyList()
@@ -4166,6 +4171,7 @@ private fun ExpandedBottomBarContent(
         canUsePageActions = tab.url != BLANK_URL,
         canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
         canCloseTab = TabDeletionRules.canDelete(tab),
+        canParkRight = canDock,
         newTabPulseScale = newTabPulseScale,
     )
     val actionCallbacks = AddressBarActionCallbacks(
@@ -4183,6 +4189,7 @@ private fun ExpandedBottomBarContent(
         onCloseTab = onCloseTab,
         onBack = onBack,
         onForward = onForward,
+        onParkRight = onParkRight,
         onNewTabButtonBounds = onNewTabButtonBounds,
     )
     LaunchedEffect(editorUsesFullWidth) {
@@ -4520,6 +4527,7 @@ private fun ExpandedBottomBarContent(
                                 onSnoozedTabs = onSnoozedTabs,
                                 canDockAddressBar = canDock,
                                 onDockAddressBar = onDock,
+                                onParkAddressBarRight = onParkRight,
                                 onHistory = onHistory,
                                 onSettings = onSettings,
                             )

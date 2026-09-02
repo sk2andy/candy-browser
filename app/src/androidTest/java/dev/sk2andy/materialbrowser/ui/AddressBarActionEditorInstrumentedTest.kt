@@ -48,6 +48,22 @@ class AddressBarActionEditorInstrumentedTest {
     }
 
     @Test
+    fun rightParkActionCanBeAddedFromPalette() {
+        var layout by mutableStateOf(AddressBarActionLayout.Default)
+        setEditorContent(layout = { layout }, onLayoutChanged = { layout = it })
+
+        performCustomAction(AddressBarAction.ParkRight, index = 0)
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(AddressBarAction.Tabs, AddressBarAction.ParkRight),
+                layout.beforeAddress,
+            )
+            assertEquals(listOf(AddressBarAction.NewTab), layout.afterAddress)
+        }
+    }
+
+    @Test
     fun fullToolbarRejectsAdditionalPaletteActionAndAnnouncesReason() {
         var layout by mutableStateOf(
             AddressBarActionLayout(

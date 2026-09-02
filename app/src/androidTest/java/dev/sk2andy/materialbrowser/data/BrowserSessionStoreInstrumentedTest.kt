@@ -604,7 +604,7 @@ class BrowserSessionStoreInstrumentedTest {
         assertEquals(AddressBarActionLayout.Default, store.loadAddressBarActionLayout())
 
         val layout = AddressBarActionLayout(
-            beforeAddress = listOf(AddressBarAction.Back, AddressBarAction.Favorite),
+            beforeAddress = listOf(AddressBarAction.Back, AddressBarAction.ParkRight),
             afterAddress = listOf(AddressBarAction.Reload),
         )
         store.saveAddressBarActionLayout(layout)

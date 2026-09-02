@@ -18,7 +18,7 @@
 | Concern | Source | Rule |
 | --- | --- | --- |
 | Catalog and layout | [`AddressBarActionLayout.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/AddressBarActionLayout.kt) | The address field and trailing **More** action are fixed. Users may place at most three unique actions before or after the field, for at most four outer icons including **More**. The default remains **Tabs** before and **New tab** after the field. |
-| Available actions | [`AddressBarActions.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarActions.kt) | Favorite, pin, desktop view, forced vertical scrolling, Reader Studio, find in page, tabs, share, print, new tab, reload/stop, close tab, back and forward share the same runtime availability rules as their menu equivalents. Unavailable actions stay visible but disabled. |
+| Available actions | [`AddressBarActions.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarActions.kt) | Favorite, pin, desktop view, forced vertical scrolling, Reader Studio, find in page, tabs, share, print, new tab, reload/stop, close tab, back, forward and right parking share the same runtime availability rules as their menu equivalents. Unavailable actions stay visible but disabled. |
 | Editing | [`AddressBarActionEditor.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarActionEditor.kt), [`AddressBarActionEditorRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarActionEditorRules.kt) | Tabs & gestures opens a drag editor with a fixed preview and a scrollable available palette. A long press lifts an action through breakaway resistance. Slots are derived deterministically from measured action bounds and canonicalized against the layout with the dragged action removed, so its two raw neighbors become one plus-marked target at the vacated center. Other valid gaps remain gently wiggling, shape-morphing bubbles; the active target grows, settles to its static hit anchor and slot changes tick. A palette tile keeps its label while moving freely, then fades the label and springs to the 48dp toolbar size as it snaps toward a slot. Toolbar drops keep the real item hidden until its final post-layout bounds are measured, then spring the overlay directly to that button center before handoff. Returning an action expands it toward its measured palette tile while its label fades back in. Accepted drops confirm and rejected/full drops reject haptically. Moving an action removes it from its old location, so the palette and address bar cannot contain duplicates. Accessibility custom actions provide equivalent placement and removal. |
 | Persistence and migration | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Stable wire names persist the two ordered sides. Unknown, duplicate or excess values are normalized independently of Compose. The former tab-button visibility preference migrates once into the new layout and is then removed. |
 | Temporary controls | `ui/BrowserScreen.kt`, `ui/BrowserMainMenu.kt` | Cast and blank-editor controls consume the same icon budget. Cast may temporarily displace the last configured action; any displaced action that has no ordinary menu equivalent is exposed in **More** for that state. |
@@ -42,6 +42,7 @@ editor closes.
 | Horizontal tab switch | `AddressBarGestureRules`, `AddressBarTabSwitchRules` | Pure distance/velocity decision; controller changes selection |
 | Upward overview morph | `AddressBarOverviewGestureRules`, `AddressBarMotion` | Pure progress/motion math; Compose owns pointer input and animation |
 | Address-bar parking | `AddressBarDockingRules`, `AddressBarMotion` | The existing park action creates an edge pill. Its single physical chevron points toward the last parked edge and sits on that same side of the centered address text. The parked pill can be dragged in two dimensions and snaps to the nearest physical edge at the released height. The normal-height anchor visibly stretches the pill under resistance, then releases it with a spring. Live movement haptics stop when movement pauses; edge snaps and anchor breakaway use confirm feedback. Parked, centered and overview positions share one spring path. |
+| Configurable right parking | `AddressBarAction.ParkRight`, `BrowserController.parkAddressBarOnRight` | Keeps a right-park button in the configured address actions. It reuses the remembered vertical position, forces only the right edge, and leaves the resulting pill draggable. |
 | Link Peek | [`LinkPeek.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/LinkPeek.kt), `WebContentActionState` | Temporary preview; commit/open behavior remains explicit |
 | Long-press page content | [`WebContentActions.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/WebContentActions.kt) | Normalize link/image URLs before background open or download |
 | Share/download/assistant/external app | [`browser/integration/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/integration/), [`browser/actions/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/) | Construct bounded requests, then let Android adapters launch them |
@@ -56,12 +57,14 @@ editor closes.
 5. Add instrumentation only for Android, WebView, semantics, or gesture integration.
 
 Address-bar parking is enabled by default under Tabs & gestures. Disabling it immediately restores
-the centered pill, hides the park action, and prevents a persisted parked state from returning
+the centered pill, hides the built-in compact-pill park control, and prevents a persisted parked state from returning
 after restart. Compact address text stays vertically centered whether the park action or Cast action
 is present. Active docking and the last edge/height are stored separately: restoring or disabling the
 pill centers it without forgetting where the next park action should place it. The normalized position
 survives window-size changes and restart. Clicking a parked pill restores it and focuses address input.
 Blank new tabs keep parking unavailable so address entry remains directly accessible.
+The configurable **Park address pill right** action remains in the saved layout when unavailable and
+becomes enabled again on a non-blank page. It does not resize or inset the WebView.
 
 Remote search suggestions keep their saved provider across distributions. On a new installation,
 `full` defaults to DuckDuckGo while `foss` defaults to `None`; this prevents address text from
