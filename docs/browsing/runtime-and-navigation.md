@@ -156,4 +156,4 @@ WebView request state.
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Web media, fullscreen and PiP policy | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` on API 34+ |
 | Android intent routing | Integration unit test plus launch instrumented test when lifecycle matters |
-| TLS trust channels | `./gradlew testDebugUnitTest testUserCaDebugUnitTest assembleDebug assembleUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
+| TLS trust channels | `./gradlew testFullDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |

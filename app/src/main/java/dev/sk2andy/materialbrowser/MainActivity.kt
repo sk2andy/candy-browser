@@ -298,7 +298,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(updateCheckCompleted) {
                     if (updateCheckCompleted) return@LaunchedEffect
-                    if (BuildConfig.ENABLE_GITHUB_UPDATES) {
+                    if (
+                        BuildConfig.ENABLE_GITHUB_UPDATES &&
+                        !BuildConfig.FOSS_DISTRIBUTION
+                    ) {
                         val releaseChannel = AppReleaseChannel.forUserCertificateTrust(
                             BuildConfig.TRUST_USER_CERTIFICATES,
                         )

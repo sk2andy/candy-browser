@@ -8,11 +8,15 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.legal.CandyLegalSources
 import dev.sk2andy.materialbrowser.legal.ThirdPartyComponent
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -95,5 +99,23 @@ class AboutLegalSectionInstrumentedTest {
             useUnmergedTree = true,
         ).performScrollTo().performClick()
         composeRule.onNodeWithTag(AboutLegalTestTags.BundledNoticesDialog).assertExists()
+    }
+
+    @Test
+    fun bundledNoticesMatchDistributionRuntime() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val notices = context.assets.open("third_party_notices.txt")
+            .bufferedReader()
+            .use { it.readText() }
+
+        if (BuildConfig.FOSS_DISTRIBUTION) {
+            assertTrue(notices.contains("FOSS release runtime classpath"))
+            assertFalse(notices.contains("Google Code Scanner"))
+            assertFalse(notices.contains("Google Data Transport"))
+        } else {
+            assertTrue(notices.contains("full release runtime classpath"))
+            assertTrue(notices.contains("Google Code Scanner"))
+            assertTrue(notices.contains("Google Data Transport"))
+        }
     }
 }

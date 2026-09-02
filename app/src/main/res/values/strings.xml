@@ -35,6 +35,14 @@
     <string name="cd_scan_qr_code">Scan QR code</string>
     <string name="action_back">Back</string>
     <string name="action_forward">Forward</string>
+    <string name="action_find_in_page">Find on page</string>
+    <string name="address_bar_action_tabs">Tabs</string>
+    <string name="find_in_page_match_count">%1$d/%2$d</string>
+    <string name="cd_find_in_page_query">Text to find on page</string>
+    <string name="cd_find_in_page_counting">Counting matches</string>
+    <string name="cd_find_in_page_previous">Previous match</string>
+    <string name="cd_find_in_page_next">Next match</string>
+    <string name="cd_find_in_page_close">Close find on page</string>
 
     <!-- Tabs -->
     <string name="new_tab_title">New tab</string>
@@ -342,8 +350,13 @@
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>
     <string name="settings_section_gestures">Gestures</string>
-    <string name="settings_tab_button_title">Show tab button</string>
-    <string name="settings_tab_button_subtitle">Shows the tab counter in addition to the swipe-up gesture.</string>
+    <string name="settings_address_bar_actions_title">Address bar buttons</string>
+    <string name="settings_address_bar_actions_summary">Choose and arrange up to three buttons around the address field.</string>
+    <string name="settings_address_bar_actions_instructions">Touch and hold a button, then drag it left or right of the address field. More stays fixed and counts as the fourth button.</string>
+    <string name="settings_address_bar_actions_available">Available buttons</string>
+    <string name="settings_address_bar_actions_before">Left of address</string>
+    <string name="settings_address_bar_actions_after">Right of address</string>
+    <string name="settings_address_bar_actions_full">All three configurable positions are occupied.</string>
     <string name="settings_address_bar_docking_title">Move the parked address pill</string>
     <string name="settings_address_bar_docking_subtitle">Drag the parked pill and release it at any height to snap it to the nearest screen edge. Turn off to keep the address bar centered.</string>
     <string name="settings_tab_dismiss_resistance">Tab dismissal resistance</string>
@@ -373,6 +386,7 @@
     <string name="about_version">Candy Browser version %1$s</string>
     <string name="about_github_action">Open GitHub profile</string>
     <string name="about_open_source_intro">Candy uses these runtime components, services, and filter data. Google Code Scanner is listed separately because Google APIs Terms apply instead of an open-source license.</string>
+    <string name="about_open_source_intro_foss">Candy uses these open-source runtime components and filter data. This FOSS build excludes Google Play services.</string>
     <string name="about_license_androidx">AndroidX &amp; Jetpack Compose</string>
     <string name="about_license_kotlin">Kotlin, Coroutines &amp; JetBrains annotations</string>
     <string name="about_license_material_icons">Material Design Icons</string>

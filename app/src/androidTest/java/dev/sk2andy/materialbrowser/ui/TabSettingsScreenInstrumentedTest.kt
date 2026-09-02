@@ -43,7 +43,6 @@ class TabSettingsScreenInstrumentedTest {
                     automaticTabSortingEnabled = false,
                     dismissResistancePercent = 40,
                     profilesEnabled = true,
-                    isTabButtonVisible = true,
                     isAddressBarDockingEnabled = true,
                     onInactiveTabLifetimeChanged = {},
                     onResidentTabLimitChanged = {},
@@ -52,8 +51,8 @@ class TabSettingsScreenInstrumentedTest {
                     onAutomaticTabSortingEnabledChanged = {},
                     onDismissResistancePercentChanged = {},
                     onProfilesEnabledChanged = {},
-                    onTabButtonVisibleChanged = {},
                     onAddressBarDockingEnabledChanged = {},
+                    onAddressBarActions = {},
                     onBack = {},
                 )
             }
@@ -93,7 +92,6 @@ class TabSettingsScreenInstrumentedTest {
                     automaticTabSortingEnabled = false,
                     dismissResistancePercent = 40,
                     profilesEnabled = true,
-                    isTabButtonVisible = true,
                     isAddressBarDockingEnabled = true,
                     onInactiveTabLifetimeChanged = {},
                     onResidentTabLimitChanged = {},
@@ -102,8 +100,8 @@ class TabSettingsScreenInstrumentedTest {
                     onAutomaticTabSortingEnabledChanged = automaticSorting::set,
                     onDismissResistancePercentChanged = {},
                     onProfilesEnabledChanged = {},
-                    onTabButtonVisibleChanged = {},
                     onAddressBarDockingEnabledChanged = {},
+                    onAddressBarActions = {},
                     onBack = {},
                 )
             }
@@ -132,7 +130,6 @@ class TabSettingsScreenInstrumentedTest {
                     automaticTabSortingEnabled = false,
                     dismissResistancePercent = 40,
                     profilesEnabled = true,
-                    isTabButtonVisible = true,
                     isAddressBarDockingEnabled = enabled,
                     onInactiveTabLifetimeChanged = {},
                     onResidentTabLimitChanged = {},
@@ -141,8 +138,8 @@ class TabSettingsScreenInstrumentedTest {
                     onAutomaticTabSortingEnabledChanged = {},
                     onDismissResistancePercentChanged = {},
                     onProfilesEnabledChanged = {},
-                    onTabButtonVisibleChanged = {},
                     onAddressBarDockingEnabledChanged = { enabled = it },
+                    onAddressBarActions = {},
                     onBack = {},
                 )
             }

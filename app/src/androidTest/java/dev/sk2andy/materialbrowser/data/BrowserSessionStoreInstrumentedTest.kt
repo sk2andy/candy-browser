@@ -156,6 +156,28 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun searchSuggestionProviderUsesInjectedFallbackAndPreservesSavedChoice() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(
+            SearchSuggestionProvider.None,
+            store.loadSearchSuggestionProvider(fallback = SearchSuggestionProvider.None),
+        )
+
+        preferences.edit().putString("search_suggestion_provider", "unknown").commit()
+        assertEquals(
+            SearchSuggestionProvider.None,
+            store.loadSearchSuggestionProvider(fallback = SearchSuggestionProvider.None),
+        )
+
+        store.saveSearchSuggestionProvider(SearchSuggestionProvider.Brave)
+        assertEquals(
+            SearchSuggestionProvider.Brave,
+            store.loadSearchSuggestionProvider(fallback = SearchSuggestionProvider.None),
+        )
+    }
+
+    @Test
     fun addressBarDockingDefaultsToEnabledAndRoundTrips() {
         val store = BrowserSessionStore(context)
 
@@ -577,15 +599,51 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
-    fun tabButtonPreferenceDefaultsVisibleAndRoundTrips() {
+    fun addressBarActionLayoutDefaultsAndRoundTrips() {
         val store = BrowserSessionStore(context)
-        assertTrue(store.loadTabButtonVisible())
+        assertEquals(AddressBarActionLayout.Default, store.loadAddressBarActionLayout())
 
-        store.saveTabButtonVisible(false)
-        assertFalse(store.loadTabButtonVisible())
+        val layout = AddressBarActionLayout(
+            beforeAddress = listOf(AddressBarAction.Back, AddressBarAction.Favorite),
+            afterAddress = listOf(AddressBarAction.Reload),
+        )
+        store.saveAddressBarActionLayout(layout)
+        assertEquals(layout, store.loadAddressBarActionLayout())
+    }
 
-        store.saveTabButtonVisible(true)
-        assertTrue(store.loadTabButtonVisible())
+    @Test
+    fun legacyHiddenTabButtonMigratesToLayoutWithoutTabs() {
+        preferences.edit().putBoolean("tab_button_visible", false).commit()
+        val store = BrowserSessionStore(context)
+
+        assertEquals(
+            AddressBarActionLayout(
+                beforeAddress = emptyList(),
+                afterAddress = listOf(AddressBarAction.NewTab),
+            ),
+            store.loadAddressBarActionLayout(),
+        )
+        assertFalse(preferences.contains("tab_button_visible"))
+        assertTrue(preferences.contains("address_bar_action_layout"))
+    }
+
+    @Test
+    fun corruptAddressBarActionLayoutFallsBackAndNormalizes() {
+        val store = BrowserSessionStore(context)
+        preferences.edit().putString("address_bar_action_layout", "broken").commit()
+        assertEquals(AddressBarActionLayout.Default, store.loadAddressBarActionLayout())
+
+        preferences.edit().putString(
+            "address_bar_action_layout",
+            """{"beforeAddress":["tabs","tabs","broken"],"afterAddress":["new_tab","share"]}""",
+        ).commit()
+        assertEquals(
+            AddressBarActionLayout(
+                beforeAddress = listOf(AddressBarAction.Tabs),
+                afterAddress = listOf(AddressBarAction.NewTab, AddressBarAction.Share),
+            ),
+            store.loadAddressBarActionLayout(),
+        )
     }
 
     @Test

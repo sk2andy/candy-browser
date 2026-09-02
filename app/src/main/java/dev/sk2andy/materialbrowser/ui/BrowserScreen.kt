@@ -253,9 +253,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
@@ -264,6 +262,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserWebView
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.FindInPageRules
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
@@ -302,6 +301,9 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorContract
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorRequest
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
+import dev.sk2andy.materialbrowser.data.AddressBarAction
+import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
+import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
@@ -389,6 +391,7 @@ private enum class BrowserBackTarget {
     SettingsSubpage,
     Settings,
     AddressEditor,
+    FindInPage,
     CandyTrail,
     TabOverview,
     WebHistory,
@@ -545,13 +548,7 @@ internal fun BrowserScreen(
         context.getSystemService(AccessibilityManager::class.java)
     }
     val qrScanFailureMessage = stringResource(R.string.toast_qr_scan_failed)
-    val qrScanner = remember(context) {
-        val options = GmsBarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .enableAutoZoom()
-            .build()
-        GmsBarcodeScanning.getClient(context, options)
-    }
+    val qrScanner = rememberQrCodeScanner()
     val density = LocalDensity.current
     val rootView = LocalView.current
     val siteCapsuleEditorLauncher = rememberLauncherForActivityResult(
@@ -741,6 +738,7 @@ internal fun BrowserScreen(
     }
     val openAddressEditor: () -> Unit = {
         if (activeCommandExecutionId == null) {
+            controller.closeFindInPage()
             controller.refreshSelectedTabPreview {
                 val initialAddress = selectedTab.url.takeUnless { it == BLANK_URL }.orEmpty()
                 addressValue = TextFieldValue(
@@ -1115,6 +1113,22 @@ internal fun BrowserScreen(
         }
     }
 
+    LaunchedEffect(
+        addressEditorVisible,
+        tabOverviewVisible,
+        settingsVisible,
+        readerStudioSession,
+    ) {
+        if (
+            addressEditorVisible ||
+            tabOverviewVisible ||
+            settingsVisible ||
+            readerStudioSession != null
+        ) {
+            controller.closeFindInPage()
+        }
+    }
+
 
     val currentBackTarget by rememberUpdatedState(
         when {
@@ -1125,6 +1139,7 @@ internal fun BrowserScreen(
                 BrowserBackTarget.SettingsSubpage
             settingsVisible -> BrowserBackTarget.Settings
             addressEditorVisible -> BrowserBackTarget.AddressEditor
+            controller.findInPageState != null -> BrowserBackTarget.FindInPage
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
             tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
@@ -1155,6 +1170,8 @@ internal fun BrowserScreen(
                 BrowserBackTarget.SettingsSubpage -> {
                     settingsDestination = when (settingsDestination) {
                         SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
+                        SettingsDestination.AddressBarActions ->
+                            SettingsDestination.TabsAndGestures
                         else -> SettingsDestination.Home
                     }
                 }
@@ -1174,6 +1191,7 @@ internal fun BrowserScreen(
                     settingsVisible = false
                 }
                 BrowserBackTarget.AddressEditor -> addressEditorVisible = false
+                BrowserBackTarget.FindInPage -> controller.closeFindInPage()
                 BrowserBackTarget.CandyTrail -> {
                     candyTrailPredictiveBackCommitted = receivedProgress
                     if (receivedProgress) {
@@ -1327,6 +1345,40 @@ internal fun BrowserScreen(
             },
         )
 
+        controller.findInPageState?.let { findState ->
+            val matchPosition = FindInPageRules.displayPosition(findState)
+            FindInPageBar(
+                query = findState.query,
+                onQueryChange = controller::updateFindInPageQuery,
+                matchText = stringResource(
+                    R.string.find_in_page_match_count,
+                    matchPosition.activeMatchNumber,
+                    matchPosition.matchCount,
+                ),
+                isCounting = findState.query.isNotEmpty() && !findState.isDoneCounting,
+                canNavigate = FindInPageRules.canNavigate(findState),
+                focusNonce = 0,
+                autoFocus = true,
+                placeholder = stringResource(R.string.action_find_in_page),
+                queryContentDescription = stringResource(R.string.cd_find_in_page_query),
+                countingContentDescription = stringResource(R.string.cd_find_in_page_counting),
+                previousMatchContentDescription = stringResource(
+                    R.string.cd_find_in_page_previous,
+                ),
+                nextMatchContentDescription = stringResource(R.string.cd_find_in_page_next),
+                closeContentDescription = stringResource(R.string.cd_find_in_page_close),
+                onPreviousMatch = { controller.findNextInPage(forward = false) },
+                onNextMatch = { controller.findNextInPage(forward = true) },
+                onClose = controller::closeFindInPage,
+                blurTarget = webContentBlurTarget,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(12.dp)
+                    .zIndex(25f),
+            )
+        }
+
         if (addressEditorVisible && !showInteractiveBlankStart) {
             AddressEditorBackdrop(
                 showStartContent = selectedTab.url == BLANK_URL,
@@ -1363,8 +1415,10 @@ internal fun BrowserScreen(
             ),
             dockTargetEdge = controller.lastAddressBarDockEdge,
             editing = addressEditorVisible,
-            showTabButton = controller.isTabButtonVisible,
-            showCastButton = controller.castMediaCandidate != null || castUiState.isConnected,
+            actionLayout = controller.addressBarActionLayout,
+            showCastButton = !BuildConfig.FOSS_DISTRIBUTION &&
+                (controller.castMediaCandidate != null || castUiState.isConnected),
+            showQrScanner = !BuildConfig.FOSS_DISTRIBUTION,
             tabCount = controller.activeTabs.size,
             userScriptMenuCommands = controller.selectedUserScriptMenuCommands,
             onUserScriptMenuCommand = controller::invokeUserScriptMenuCommand,
@@ -1413,10 +1467,9 @@ internal fun BrowserScreen(
             onScanQrCode = {
                 if (!qrScanInProgress) {
                     qrScanInProgress = true
-                    qrScanner.startScan()
-                        .addOnSuccessListener { barcode ->
+                    qrScanner.startScan(
+                        onSuccess = { scannedValue ->
                             qrScanInProgress = false
-                            val scannedValue = barcode.rawValue?.trim().orEmpty()
                             if (scannedValue.isEmpty()) {
                                 Toast.makeText(
                                     context,
@@ -1427,16 +1480,17 @@ internal fun BrowserScreen(
                                 controller.submitAddress(scannedValue)
                                 addressEditorVisible = false
                             }
-                        }
-                        .addOnCanceledListener { qrScanInProgress = false }
-                        .addOnFailureListener {
+                        },
+                        onCanceled = { qrScanInProgress = false },
+                        onFailure = {
                             qrScanInProgress = false
                             Toast.makeText(
                                 context,
                                 qrScanFailureMessage,
                                 Toast.LENGTH_SHORT,
                             ).show()
-                        }
+                        },
+                    )
                 }
             },
             onExpand = controller::expandBottomBar,
@@ -1536,6 +1590,11 @@ internal fun BrowserScreen(
             onReload = controller::reload,
             onStop = controller::stopLoading,
             onNewTab = openNewTabAndEdit,
+            onFindInPage = {
+                addressEditorVisible = false
+                controller.openFindInPage()
+            },
+            onCloseTab = { controller.closeTab(selectedTab.id) },
             onToggleIncognito = {
                 if (controller.setBlankTabIncognito(enabled = !selectedTab.isIncognito)) {
                     rootView.performConfirmHaptic()
@@ -1915,7 +1974,8 @@ internal fun BrowserScreen(
                 automaticTabSortingEnabled = controller.automaticTabSortingEnabled,
                 dismissResistancePercent = controller.dismissResistancePercent,
                 profilesEnabled = controller.profilesEnabled,
-                isTabButtonVisible = controller.isTabButtonVisible,
+                tabCount = controller.activeTabs.size,
+                addressBarActionLayout = controller.addressBarActionLayout,
                 isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
                 isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
                 isScrollBarEnabled = controller.isScrollBarEnabled,
@@ -1963,7 +2023,7 @@ internal fun BrowserScreen(
                     controller::updateAutomaticTabSortingEnabled,
                 onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
                 onProfilesEnabledChanged = controller::updateProfilesEnabled,
-                onTabButtonVisibleChanged = controller::updateTabButtonVisible,
+                onAddressBarActionLayoutChanged = controller::updateAddressBarActionLayout,
                 onAddressBarDockingEnabledChanged =
                     controller::updateAddressBarDockingEnabled,
                 onFullImmersiveModeEnabledChanged =
@@ -3081,8 +3141,9 @@ private fun BrowserBottomBar(
     dockState: AddressBarDockState,
     dockTargetEdge: AddressBarDockEdge,
     editing: Boolean,
-    showTabButton: Boolean,
+    actionLayout: AddressBarActionLayout,
     showCastButton: Boolean,
+    showQrScanner: Boolean,
     tabCount: Int,
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
@@ -3116,6 +3177,8 @@ private fun BrowserBottomBar(
     onReload: () -> Unit,
     onStop: () -> Unit,
     onNewTab: () -> Unit,
+    onFindInPage: () -> Unit,
+    onCloseTab: () -> Unit,
     onToggleIncognito: () -> Unit,
     blankTabModeProgress: Float,
     onIncognitoControlCenterChanged: (Offset) -> Unit,
@@ -3150,7 +3213,7 @@ private fun BrowserBottomBar(
     onPermissionRadar: () -> Unit,
     addressBarPulseNonce: Int,
     newTabPulseNonce: Int,
-    onNewTabButtonBounds: (Rect) -> Unit,
+    onNewTabButtonBounds: (Rect?) -> Unit,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
@@ -3420,8 +3483,9 @@ private fun BrowserBottomBar(
                             AddressBarPresentation.Expanded -> ExpandedBottomBarContent(
                                 tab = tab,
                                 blurTarget = blurTarget.takeIf { blurSourceVisible },
-                                showTabButton = showTabButton,
+                                actionLayout = actionLayout,
                                 showCastButton = showCastButton,
+                                showQrScanner = showQrScanner,
                                 tabCount = tabCount,
                                 userScriptMenuCommands = userScriptMenuCommands,
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
@@ -3452,6 +3516,8 @@ private fun BrowserBottomBar(
                                 onReload = onReload,
                                 onStop = onStop,
                                 onNewTab = onNewTab,
+                                onFindInPage = onFindInPage,
+                                onCloseTab = onCloseTab,
                                 newTabPulseScale = newTabPulseScale.value,
                                 onNewTabButtonBounds = onNewTabButtonBounds,
                                 onToggleIncognito = onToggleIncognito,
@@ -3971,8 +4037,9 @@ internal fun Modifier.addressBarVerticalGesture(
 private fun ExpandedBottomBarContent(
     tab: BrowserTab,
     blurTarget: BlurTarget?,
-    showTabButton: Boolean,
+    actionLayout: AddressBarActionLayout,
     showCastButton: Boolean,
+    showQrScanner: Boolean,
     tabCount: Int,
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
@@ -4003,8 +4070,10 @@ private fun ExpandedBottomBarContent(
     onReload: () -> Unit,
     onStop: () -> Unit,
     onNewTab: () -> Unit,
+    onFindInPage: () -> Unit,
+    onCloseTab: () -> Unit,
     newTabPulseScale: Float,
-    onNewTabButtonBounds: (Rect) -> Unit,
+    onNewTabButtonBounds: (Rect?) -> Unit,
     onToggleIncognito: () -> Unit,
     blankTabModeProgress: Float,
     onIncognitoControlCenterChanged: (Offset) -> Unit,
@@ -4062,6 +4131,60 @@ private fun ExpandedBottomBarContent(
         addressFieldFocused = addressFieldFocused,
         imeVisible = WindowInsets.isImeVisible,
     )
+    val dynamicSlotCount = maxOf(
+        if (showCastButton) 1 else 0,
+        if (editing && tab.url == BLANK_URL) 1 else 0,
+    )
+    val visibleActionLayout = AddressBarActionLayoutRules.reserveDynamicSlots(
+        layout = actionLayout,
+        dynamicSlotCount = dynamicSlotCount,
+    )
+    val overflowAddressBarActions = if (showCastButton) {
+        AddressBarActionLayoutRules.temporarilyHiddenActions(
+            layout = actionLayout,
+            visibleLayout = visibleActionLayout,
+        ).filter { action ->
+            action == AddressBarAction.Tabs ||
+                action == AddressBarAction.NewTab ||
+                action == AddressBarAction.CloseTab
+        }
+    } else {
+        emptyList()
+    }
+    val actionState = AddressBarActionState(
+        tabCount = tabCount,
+        isLoading = tab.isLoading,
+        canGoBack = tab.canGoBack,
+        canGoForward = tab.canGoForward,
+        canToggleFavorite = tab.url != BLANK_URL && !tab.isIncognito,
+        isFavorite = isFavorite,
+        isPinned = isPinned,
+        canToggleDesktopView = canToggleDesktopView,
+        isDesktopView = isDesktopView,
+        canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
+        isForceVerticalScrollingEnabled = isForceVerticalScrollingEnabled,
+        canUsePageActions = tab.url != BLANK_URL,
+        canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
+        canCloseTab = TabDeletionRules.canDelete(tab),
+        newTabPulseScale = newTabPulseScale,
+    )
+    val actionCallbacks = AddressBarActionCallbacks(
+        onTabs = onTabs,
+        onToggleFavorite = onToggleFavorite,
+        onTogglePinned = onTogglePinned,
+        onDesktopViewChange = onDesktopViewChange,
+        onForceVerticalScrollingChange = onForceVerticalScrollingChange,
+        onReaderStudio = onReaderStudio,
+        onFindInPage = onFindInPage,
+        onShare = onShare,
+        onPrint = onPrint,
+        onNewTab = onNewTab,
+        onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
+        onCloseTab = onCloseTab,
+        onBack = onBack,
+        onForward = onForward,
+        onNewTabButtonBounds = onNewTabButtonBounds,
+    )
     LaunchedEffect(editorUsesFullWidth) {
         if (editorUsesFullWidth) onMenuExpandedChange(false)
     }
@@ -4078,14 +4201,19 @@ private fun ExpandedBottomBarContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
             AnimatedVisibility(
-                visible = showTabButton && !editorUsesFullWidth,
+                visible = visibleActionLayout.beforeAddress.isNotEmpty() && !editorUsesFullWidth,
                 enter = fadeIn(tween(120)) + expandHorizontally(tween(180)),
                 exit = fadeOut(tween(80)) + shrinkHorizontally(tween(180)),
             ) {
-                AddressBarTabCounterButton(
-                    tabCount = tabCount,
-                    onClick = onTabs,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    visibleActionLayout.beforeAddress.forEach { action ->
+                        AddressBarActionButton(
+                            action = action,
+                            state = actionState,
+                            callbacks = actionCallbacks,
+                        )
+                    }
+                }
             }
             Surface(
                 modifier = Modifier
@@ -4281,9 +4409,6 @@ private fun ExpandedBottomBarContent(
                 exit = fadeOut(tween(80)) + shrinkHorizontally(tween(180)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (!editing && showCastButton) {
-                        CastRouteButton()
-                    }
                     if (editing && tab.url == BLANK_URL) {
                         Spacer(Modifier.width(8.dp))
                         BlankTabIncognitoModeButton(
@@ -4293,26 +4418,20 @@ private fun ExpandedBottomBarContent(
                             onClick = onToggleIncognito,
                         )
                     } else {
-                        IconButton(
-                            onClick = onNewTab,
-                            modifier = Modifier
-                                .onGloballyPositioned { coordinates ->
-                                    onNewTabButtonBounds(coordinates.boundsInRoot())
-                                }
-                                .graphicsLayer {
-                                    scaleX = newTabPulseScale
-                                    scaleY = newTabPulseScale
-                                }
-                                .testTag("address_bar_new_tab_button"),
-                        ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = stringResource(R.string.cd_new_tab),
+                        visibleActionLayout.afterAddress.forEach { action ->
+                            AddressBarActionButton(
+                                action = action,
+                                state = actionState,
+                                callbacks = actionCallbacks,
                             )
                         }
+                        if (showCastButton) CastRouteButton()
                     }
-                    if (editing && tab.url == BLANK_URL) {
-                        IconButton(onClick = onScanQrCode) {
+                    if (editing && tab.url == BLANK_URL && showQrScanner) {
+                        IconButton(
+                            onClick = onScanQrCode,
+                            modifier = Modifier.testTag(AddressBarTestTags.QrScanner),
+                        ) {
                             Icon(
                                 painterResource(R.drawable.ic_qr_code_scanner),
                                 contentDescription = stringResource(R.string.cd_scan_qr_code),
@@ -4368,8 +4487,13 @@ private fun ExpandedBottomBarContent(
                                         ),
                                 canSnooze = !tab.isIncognito,
                                 snoozedTabCount = snoozedTabCount,
+                                overflowAddressBarActions = overflowAddressBarActions,
+                                canCloseTab = actionState.canCloseTab,
                                 userScriptMenuCommands = userScriptMenuCommands,
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
+                                onTabs = onTabs,
+                                onNewTab = onNewTab,
+                                onCloseTab = onCloseTab,
                                 onBack = onBack,
                                 onForward = onForward,
                                 onReloadOrStop = { if (tab.isLoading) onStop() else onReload() },
@@ -4380,6 +4504,7 @@ private fun ExpandedBottomBarContent(
                                 onPrint = onPrint,
                                 onOpenReader = onReaderStudio,
                                 onTranslate = onTranslate,
+                                onFindInPage = onFindInPage,
                                 onDomainMutedChange = onDomainMutedChange,
                                 onDesktopViewChange = onDesktopViewChange,
                                 onCookieBannerRemovalEnabledChange =
@@ -4461,7 +4586,6 @@ internal fun AddressBarTabCounterButton(
     tabCount: Int,
     onClick: () -> Unit,
 ) {
-    val label = AddressBarControlRules.tabCountLabel(tabCount)
     val description = pluralStringResource(
         R.plurals.cd_open_tab_overview_count,
         tabCount,
@@ -4473,29 +4597,14 @@ internal fun AddressBarTabCounterButton(
             .testTag(AddressBarTestTags.TabButton)
             .semantics { contentDescription = description },
     ) {
-        Box(
-            modifier = Modifier
-                .size(25.dp)
-                .border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    shape = RoundedCornerShape(6.dp),
-                )
-                .clearAndSetSemantics { },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        AddressBarTabCounterGlyph(tabCount = tabCount)
     }
 }
 
 internal object AddressBarTestTags {
     const val AiModeToggle = "address_bar_ai_mode_toggle"
     const val Editor = "address_bar_editor"
+    const val QrScanner = "address_bar_qr_scanner"
     const val TabButton = "address_bar_tab_button"
 }
 

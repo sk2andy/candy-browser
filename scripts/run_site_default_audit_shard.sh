@@ -16,8 +16,8 @@ if ! [[ "$first_rank" =~ ^[0-9]+$ && "$last_rank" =~ ^[0-9]+$ && "$batch_size" =
     exit 2
 fi
 
-app_apk="app/build/outputs/apk/debug/app-debug.apk"
-test_apk="app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+app_apk="app/build/outputs/apk/full/debug/app-full-debug.apk"
+test_apk="app/build/outputs/apk/androidTest/full/debug/app-full-debug-androidTest.apk"
 if [[ ! -f "$app_apk" || ! -f "$test_apk" ]]; then
     echo "Candy audit APKs are missing; build them before starting shards" >&2
     exit 1

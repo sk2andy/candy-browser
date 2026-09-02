@@ -11,13 +11,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STANDARD_APK = Path(
     os.environ.get(
         "CANDY_STANDARD_APK",
-        PROJECT_ROOT / "app/build/outputs/apk/debug/app-debug.apk",
+        PROJECT_ROOT / "app/build/outputs/apk/full/debug/app-full-debug.apk",
     ),
 )
 USER_CA_APK = Path(
     os.environ.get(
         "CANDY_USER_CA_APK",
-        PROJECT_ROOT / "app/build/outputs/apk/userCaDebug/app-userCaDebug.apk",
+        PROJECT_ROOT / "app/build/outputs/apk/full/userCaDebug/app-full-userCaDebug.apk",
     ),
 )
 

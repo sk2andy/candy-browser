@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
@@ -20,6 +21,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.BuildConfig
+import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
@@ -243,6 +246,36 @@ class AddressBarDockInstrumentedTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertIsFocused()
+    }
+
+    @Test
+    fun blankTabQrScannerMatchesDistributionCapability() {
+        lateinit var browserController: BrowserController
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserScreen(browserController)
+            }
+        }
+
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.address_empty_hint))
+            .performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            composeRule.onAllNodesWithTag(AddressBarTestTags.Editor)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        if (BuildConfig.FOSS_DISTRIBUTION) {
+            composeRule.onNodeWithTag(AddressBarTestTags.QrScanner).assertDoesNotExist()
+        } else {
+            composeRule.onNodeWithTag(AddressBarTestTags.QrScanner)
+                .assertExists()
+                .assertHasClickAction()
+        }
     }
 
     @Test

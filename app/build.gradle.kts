@@ -66,9 +66,22 @@ android {
         manifestPlaceholders["appLabel"] = "@string/app_name"
         manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config"
         buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
+        buildConfigField("boolean", "FOSS_DISTRIBUTION", "false")
         buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("full") {
+            dimension = "distribution"
+        }
+
+        create("foss") {
+            dimension = "distribution"
+            buildConfigField("boolean", "FOSS_DISTRIBUTION", "true")
+        }
     }
 
     signingConfigs {
@@ -175,11 +188,46 @@ val validateReleaseSigning by tasks.registering {
 }
 
 tasks.matching {
-    it.name == "preReleaseBuild" ||
-        it.name == "preLocalReleaseBuild" ||
-        it.name == "preUserCaReleaseBuild"
+    it.name == "preFullReleaseBuild" ||
+        it.name == "preFullLocalReleaseBuild" ||
+        it.name == "preFullUserCaReleaseBuild"
 }.configureEach {
     dependsOn(validateReleaseSigning)
+}
+
+val verifyFossReleaseDependencies by tasks.registering {
+    group = "verification"
+    description = "Rejects proprietary Google runtime dependencies from the FOSS release."
+
+    doLast {
+        val forbiddenGroups = listOf(
+            "com.google.android.datatransport",
+            "com.google.android.gms",
+            "com.google.android.odml",
+            "com.google.firebase",
+            "com.google.mlkit",
+        )
+        val violations = configurations.getByName("fossReleaseRuntimeClasspath")
+            .resolvedConfiguration
+            .resolvedArtifacts
+            .map { it.moduleVersion.id }
+            .filter { module ->
+                forbiddenGroups.any { group ->
+                    module.group == group || module.group.startsWith("$group.")
+                }
+            }
+            .map { it.toString() }
+            .sorted()
+
+        check(violations.isEmpty()) {
+            "FOSS release contains forbidden Google runtime dependencies: " +
+                violations.joinToString()
+        }
+    }
+}
+
+tasks.matching { it.name == "preFossReleaseBuild" }.configureEach {
+    dependsOn(verifyFossReleaseDependencies)
 }
 
 dependencies {
@@ -201,8 +249,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
-    implementation("com.google.android.gms:play-services-cast-framework:21.4.0") {
+    "fullImplementation"("com.google.android.gms:play-services-code-scanner:16.1.0")
+    "fullImplementation"("com.google.android.gms:play-services-cast-framework:21.4.0") {
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
     }
 

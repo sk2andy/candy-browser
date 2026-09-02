@@ -44,10 +44,10 @@ adb -s "$serial" shell wm dismiss-keyguard
 adb -s "$serial" shell settings put global stay_on_while_plugged_in 3
 
 if [[ "${CANDY_AUDIT_SKIP_BUILD:-false}" != "true" ]]; then
-    ./gradlew assembleDebug assembleDebugAndroidTest "${gradle_args[@]}"
+    ./gradlew assembleFullDebug assembleFullDebugAndroidTest "${gradle_args[@]}"
 fi
-app_apk="app/build/outputs/apk/debug/app-debug.apk"
-test_apk="app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+app_apk="app/build/outputs/apk/full/debug/app-full-debug.apk"
+test_apk="app/build/outputs/apk/androidTest/full/debug/app-full-debug-androidTest.apk"
 build_id="$(shasum -a 256 "$app_apk" | awk '{print $1}')"
 adb -s "$serial" install -r -d "$app_apk"
 adb -s "$serial" shell pm clear "$app_id" >/dev/null

@@ -112,11 +112,11 @@ commands below.
 
 | Layer | Minimum check |
 | --- | --- |
-| Contract and pure rules | `./gradlew testDebugUnitTest` |
+| Contract and pure rules | `./gradlew testFullDebugUnitTest testFossDebugUnitTest` |
 | Bridge or WebView behavior | `ANDROID_SERIAL=$CANDY_EMULATOR_SERIAL ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.WebMediaBridgeInstrumentedTest` |
 | Activity PiP lifecycle | Run `FullscreenVideoActivityInstrumentedTest` on the same API 34+ session emulator |
 | Fullscreen/overlay placement | Run `FullscreenVideoInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` |
-| Android integration | `./gradlew lintDebug assembleDebug` |
+| Android integration | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |
 
 Run deterministic tests first. Treat live checks on `anichi.to` and `reanime.cz` as compatibility
 smoke tests because their player hosts and markup can change independently of Candy.

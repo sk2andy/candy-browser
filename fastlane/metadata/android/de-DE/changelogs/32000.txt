@@ -1,0 +1,1 @@
+Erweiterte Adressleiste frei konfigurieren: bis zu drei eindeutige Aktionen per Drag & Drop, mit haptischem Einrasten und expressiven Drop-Zielen. Neu: „Auf Seite suchen“ mit Treffernavigation oberhalb der Tastatur. Die bisherige Tab-Schaltflächen-Einstellung wird automatisch übernommen; die kompakte Rand-Pille bleibt unverändert.
