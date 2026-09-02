@@ -167,8 +167,9 @@ Candy Browser requires Android 13 (API 33) or newer.
 
 [Download Candy Browser](https://github.com/sk2andy/candy-browser/releases)
 
-Production builds check GitHub for updates at startup and offer the signed APK for download. Android
-still requires you to open the downloaded file and approve installation.
+Standard and User CA production builds check GitHub for updates at startup and offer the signed APK
+for download. The FOSS build disables this updater. Android still requires you to open a downloaded
+file and approve installation.
 
 ### Obtainium
 
@@ -176,9 +177,10 @@ Use the filtered setup link so Obtainium always selects the standard certificate
 
 [![Get it on Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D)
 
-Both GitHub APK channels use the same application ID and signing key. Obtainium can track only one
-of them at a time. Do not add the unfiltered repository URL: the release contains two installable
-APKs and choosing the wrong asset can silently switch the installed certificate-trust policy.
+All GitHub APK channels use the same application ID and signing key. Obtainium can track only one
+of them at a time. Do not add the unfiltered repository URL: the release contains three installable
+APKs, and choosing the wrong asset can silently switch the installed feature set or certificate-trust
+policy.
 
 ### F-Droid
 
@@ -188,22 +190,24 @@ APKs and choosing the wrong asset can silently switch the installed certificate-
 
 Candy includes a `foss` distribution flavor for the official F-Droid repository. It removes Google
 Play services, Google Cast, Google Code Scanner, and Candy's GitHub update checker. Remote search
-suggestions default to off. F-Droid builds and signs this variant from the tagged public source.
+suggestions default to off. F-Droid builds this variant from tagged public source and verifies it
+against Candy's upstream-signed FOSS APK.
 
 The first prepared F-Droid release is `0.31`. Submission files and the remaining maintainer steps
-live in [`distribution/fdroid`](distribution/fdroid/README.md). Because F-Droid normally signs with
-its own key, switching between a GitHub/Obtainium installation and F-Droid requires uninstalling the
-existing app first.
+live in [`distribution/fdroid`](distribution/fdroid/README.md). Candy publishes a signed FOSS
+reference APK so F-Droid can verify its source build and preserve update compatibility with the
+upstream signing key.
 
-Releases contain two APK channels:
+Releases contain three APK channels:
 
 | APK suffix | Certificate trust | Intended use |
 | --- | --- | --- |
 | `-release.apk` | Android system CAs only | Recommended default |
+| `-foss-release.apk` | Android system CAs only | F-Droid reproducible-build reference without proprietary Google integrations |
 | `-user-ca-release.apk` | System CAs plus every CA in Android's user store | Explicit opt-in for HTTPS filtering/proxy tools such as AdGuard |
 
-The User CA build has the same application ID and signing key as the standard build, so installing it
-replaces the other channel without clearing Candy's data. Its launcher label and the warning under
+The User CA build has the same application ID and signing key as the other builds, so installing it
+replaces another channel without clearing Candy's data. Its launcher label and the warning under
 **Settings → Protection & data** identify the broader trust policy. Updates stay on the installed
 channel.
 
@@ -281,15 +285,16 @@ Signed local APK: `app/build/outputs/apk/full/localRelease/app-full-localRelease
 
 `localRelease` installs beside the GitHub build as `dev.sk2andy.materialbrowser.local` and uses a
 separate launcher icon and the label `Candy Browser Local`. GitHub update prompts are disabled for
-this side-by-side build because production APKs cannot update its package. The GitHub workflow uses
-`assembleFullRelease` and `assembleFullUserCaRelease`; both preserve the production application ID
-and icon. It also builds `assembleFossRelease` as source-build verification but does not publish it.
+this side-by-side build because production APKs cannot update its package. The GitHub release
+workflow uses `assembleFullRelease`, `assembleFossRelease`, and `assembleFullUserCaRelease`; all
+preserve the production application ID and icon. A separate workflow signs and publishes the FOSS
+output from explicitly allowlisted release tags.
 
 ### GitHub releases
 
-The manual `Release Android APK` workflow tests the selected source revision, builds and verifies the
-signed standard and User CA APKs, creates a `v<version>` source tag, and publishes both APKs plus
-their SHA-256 checksums. Add four repository secrets once:
+The manual `Release Android APK` workflow tests the selected source revision, builds the FOSS flavor,
+builds and verifies the signed standard and User CA APKs, creates a `v<version>` source tag, and
+publishes the two signed APKs plus their SHA-256 checksums. Add four repository secrets once:
 
 ```bash
 base64 < "$CANDY_RELEASE_KEYSTORE_PATH" | gh secret set CANDY_RELEASE_KEYSTORE_BASE64
@@ -311,6 +316,12 @@ keytool -exportcert \
   | gh variable set CANDY_RELEASE_CERTIFICATE_SHA256
 ```
 
+The separate `Publish F-Droid reference APK` workflow builds without access to signing secrets, then
+passes the unsigned APK to an isolated signing job that executes no repository code. It accepts only
+explicitly allowlisted release tags and commits and uses Android Build Tools 34 for compatibility
+with F-Droid's signature-copying process. F-Droid accepts the resulting signed APK only when its
+independent build matches byte for byte apart from signing.
+
 The workflow uses the `release` GitHub environment. Configure required reviewers for that environment
 if releases should require a manual approval after dispatch.
 
@@ -323,6 +334,15 @@ gh workflow run release.yml \
   -f version=0.32 \
   -f prerelease=false
 ```
+
+Publish a FOSS reference APK from an allowlisted release tag with:
+
+```bash
+gh workflow run publish-fdroid-reference.yml -f tag=v0.31
+```
+
+Before each later F-Droid release, add its exact tag and immutable commit to the workflow allowlist
+through normal code review, then dispatch the workflow.
 
 Android `versionCode` is stored in source so GitHub and F-Droid can build identical version
 metadata from a tag. Tags and releases are created only after full and FOSS tests, release build

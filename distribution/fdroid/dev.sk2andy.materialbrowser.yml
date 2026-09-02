@@ -12,20 +12,23 @@ Donate: https://buymeacoffee.com/sk2andy
 
 RepoType: git
 Repo: https://github.com/sk2andy/candy-browser.git
+Binaries: https://github.com/sk2andy/candy-browser/releases/download/v%v/CandyBrowser-v%v-foss-release.apk
 
 Builds:
   - versionName: '0.31'
     versionCode: 31000
-    commit: REPLACE_WITH_V0.31_COMMIT_SHA
+    commit: 724187d01e7472fa9e7151ebe825fdd18acb199d
     subdir: app
     gradle:
       - foss
   - versionName: '0.32'
     versionCode: 32000
-    commit: REPLACE_WITH_V0.32_COMMIT_SHA
+    commit: 65a93dc6b962cbae492226ac896dac60026939ef
     subdir: app
     gradle:
       - foss
+
+AllowedAPKSigningKeys: e65082d293039290b24b6ef689996cf42f8e8b61966a2ebe4f49d9f8e486b7d3
 
 AutoUpdateMode: None
 UpdateCheckMode: None
