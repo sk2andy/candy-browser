@@ -332,6 +332,8 @@
     <string name="settings_searxng_suggestion_fallback_summary">Utilisé uniquement si la requête de suggestions SearXNG échoue. La saisie est alors aussi envoyée au fournisseur de repli. Désactivé dans les onglets privés.</string>
     <string name="toast_searxng_instance_required">Configurez d’abord une URL d’instance SearXNG valide</string>
     <string name="settings_section_browser">Navigateur</string>
+    <string name="settings_startup_animation_title">Animation de démarrage</string>
+    <string name="settings_startup_animation_subtitle">Affiche l’animation Candy lors d’un lancement normal. Désactivez-la pour ouvrir immédiatement la barre d’adresse.</string>
     <string name="settings_full_immersive_mode_title">Mode immersif plein écran</string>
     <string name="settings_full_immersive_mode_subtitle">Masque les barres d’état et de navigation. Balayez depuis un bord pour les afficher temporairement.</string>
     <string name="settings_scroll_bar_title">Barre de défilement déplaçable</string>

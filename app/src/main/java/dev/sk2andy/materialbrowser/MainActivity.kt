@@ -54,6 +54,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
+import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
@@ -109,6 +110,8 @@ class MainActivity : AppCompatActivity() {
     private var pictureInPictureModeEntered = false
     private var isTabOverviewPortraitLocked = false
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
+    private var launcherAddressEditorRequestId by mutableIntStateOf(0)
+    private var onboardingVisible by mutableStateOf(false)
     private var externalLaunchTabId by mutableStateOf<String?>(null)
     private var appDataExportWarningVisible by mutableStateOf(false)
     private var pendingAppDataImport by mutableStateOf<AppDataImportPreview?>(null)
@@ -198,6 +201,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
+        onboardingVisible = onboardingRequired
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
         browserController = BrowserController(
             activity = this,
@@ -251,6 +255,12 @@ class MainActivity : AppCompatActivity() {
         } else if (savedInstanceState == null) {
             openIntent(intent)
         }
+        val startupPresentation = StartupPresentationRules.resolve(
+            isColdStart = savedInstanceState == null,
+            isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
+            isStartupAnimationEnabled = browserController.isStartupAnimationEnabled,
+            isOnboardingRequired = onboardingRequired,
+        )
         setContent {
             val appearanceSettings = browserController.appearanceSettings
             val appearanceDark = appearanceSettings.usesDarkColors(
@@ -261,13 +271,8 @@ class MainActivity : AppCompatActivity() {
                 applyAppearanceSystemBars(appearanceDark)
             }
             MaterialBrowserTheme(settings = appearanceSettings) {
-                var onboardingVisible by rememberSaveable {
-                    mutableStateOf(onboardingRequired)
-                }
                 var splashVisible by remember {
-                    mutableStateOf(
-                        savedInstanceState == null && intent.action == Intent.ACTION_MAIN,
-                    )
+                    mutableStateOf(startupPresentation.showSplash)
                 }
                 var updateCheckCompleted by rememberSaveable { mutableStateOf(false) }
                 var availableUpdateVersion by rememberSaveable { mutableStateOf<String?>(null) }
@@ -378,6 +383,8 @@ class MainActivity : AppCompatActivity() {
                                 arrayOf("application/zip", "application/octet-stream"),
                             )
                         },
+                        openAddressEditorOnLaunch = startupPresentation.openAddressEditor,
+                        launcherAddressEditorRequestId = launcherAddressEditorRequestId,
                     )
                     if (videoOnlyPresentation && !webViewVideoOnlyPresentation) {
                         Box(modifier = Modifier.fillMaxSize().background(Color.Black))
@@ -477,6 +484,15 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         showAppDataTransferResult(intent)
         openIntent(intent)
+        if (
+            StartupPresentationRules.shouldOpenAddressEditor(
+                isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
+                isStartupAnimationEnabled = browserController.isStartupAnimationEnabled,
+                isOnboardingRequired = onboardingVisible,
+            )
+        ) {
+            launcherAddressEditorRequestId++
+        }
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
