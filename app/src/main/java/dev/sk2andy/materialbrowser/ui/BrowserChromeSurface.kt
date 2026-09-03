@@ -13,12 +13,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
 import eightbitlab.com.blurview.BlurView
+
+internal object BrowserChromeSurfaceTestTags {
+    const val BackdropBlur = "browser_chrome_backdrop_blur"
+}
 
 @Composable
 internal fun BrowserChromeSurface(
@@ -71,7 +76,8 @@ internal fun BrowserChromeSurface(
                         onRelease = { blurView -> blurView.setBlurAutoUpdate(false) },
                         modifier = Modifier
                             .matchParentSize()
-                            .clip(shape),
+                            .clip(shape)
+                            .testTag(BrowserChromeSurfaceTestTags.BackdropBlur),
                     )
                 }
             }

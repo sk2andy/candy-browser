@@ -513,7 +513,7 @@ internal fun BrowserScreen(
     var keepLinkPeekAddressBarExpanded by remember { mutableStateOf(false) }
     var tabOverviewOpening by remember { mutableStateOf(false) }
     var tabHandoff by remember { mutableStateOf<TabHandoff?>(null) }
-    var webContentBlurTarget by remember { mutableStateOf<BlurTarget?>(null) }
+    var browserContentBlurTarget by remember { mutableStateOf<BlurTarget?>(null) }
     val liveFrameTabIdState = remember { mutableStateOf<String?>(null) }
     var liveFrameTabId by liveFrameTabIdState
     val reportLiveFrame = remember { { tabId: String -> liveFrameTabIdState.value = tabId } }
@@ -1379,9 +1379,9 @@ internal fun BrowserScreen(
             blankTabModeProgress = blankTabModeProgress,
             blankTabModeRevealOrigin = blankTabModeRevealOrigin,
             onRetry = controller::retryFailedPage,
-            onBlurTargetAttached = { target -> webContentBlurTarget = target },
+            onBlurTargetAttached = { target -> browserContentBlurTarget = target },
             onBlurTargetReleased = { target ->
-                if (webContentBlurTarget === target) webContentBlurTarget = null
+                if (browserContentBlurTarget === target) browserContentBlurTarget = null
             },
         )
 
@@ -1410,7 +1410,7 @@ internal fun BrowserScreen(
                 onPreviousMatch = { controller.findNextInPage(forward = false) },
                 onNextMatch = { controller.findNextInPage(forward = true) },
                 onClose = controller::closeFindInPage,
-                blurTarget = webContentBlurTarget,
+                blurTarget = browserContentBlurTarget,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
@@ -1435,6 +1435,7 @@ internal fun BrowserScreen(
                     onFill = ::fillAddressFromSuggestion,
                     rootHeightPx = browserHeightPx,
                     bottomBarTopPx = bottomBarTopPx,
+                    blurTarget = browserContentBlurTarget,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -1464,8 +1465,8 @@ internal fun BrowserScreen(
             userScriptMenuCommands = controller.selectedUserScriptMenuCommands,
             onUserScriptMenuCommand = controller::invokeUserScriptMenuCommand,
             commandFeedback = commandFeedback,
-            blurTarget = webContentBlurTarget,
-            blurSourceVisible = selectedTab.url != BLANK_URL && !tabOverviewVisible,
+            blurTarget = browserContentBlurTarget,
+            blurSourceVisible = browserContentBlurTarget != null && !tabOverviewVisible,
             feedbackGesturesEnabled = !addressEditorVisible && !settingsVisible,
             onBack = controller::goBack,
             onForward = controller::goForward,
@@ -2184,6 +2185,7 @@ internal fun BrowserScreen(
                     snapshot = controller.privacySnapshot(tabId),
                     blockerSettings = controller.blockerSettings,
                     siteState = controller.siteProtectionState(tabId),
+                    blurTarget = browserContentBlurTarget,
                     onPause = { persistently ->
                         controller.pauseSiteProtection(tabId, persistently)
                     },
@@ -2803,14 +2805,21 @@ private fun BrowserViewport(
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            NewTabPage(
-                favorites = controller.favorites,
-                incognito = selectedTab.isIncognito,
-                modeProgress = blankTabModeProgress,
-                revealOriginInRoot = blankTabModeRevealOrigin,
-                onSearch = onSearch,
-                onFavorite = onFavorite,
-            )
+            BrowserContentBlurTarget(
+                enabled = selectedTab.url == BLANK_URL && !tabOverviewVisible,
+                onTargetAttached = onBlurTargetAttached,
+                onTargetReleased = onBlurTargetReleased,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                NewTabPage(
+                    favorites = controller.favorites,
+                    incognito = selectedTab.isIncognito,
+                    modeProgress = blankTabModeProgress,
+                    revealOriginInRoot = blankTabModeRevealOrigin,
+                    onSearch = onSearch,
+                    onFavorite = onFavorite,
+                )
+            }
         }
 
         PageErrorFeedback(
@@ -4977,6 +4986,7 @@ internal fun AddressSuggestions(
     onFill: (AddressSuggestionItem) -> Unit,
     rootHeightPx: Float,
     bottomBarTopPx: FloatState,
+    blurTarget: BlurTarget? = null,
     modifier: Modifier = Modifier,
 ) {
     if (suggestions.isEmpty()) return
@@ -4998,18 +5008,22 @@ internal fun AddressSuggestions(
         topInsetPx = WindowInsets.statusBars.getTop(density).toFloat(),
         density = density.density,
     ).dp
-    Surface(
-        modifier = modifier
-            .padding(horizontal = 12.dp)
-            .padding(bottom = bottomPadding)
-            .fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = browserChromeColor(
+    val chromeTokens = browserChromeSurfaceTokens().copy(
+        containerColor = browserChromeColor(
             MaterialTheme.colorScheme.surfaceContainerHigh,
             frostedAlpha = 0.9f,
         ),
         tonalElevation = 12.dp,
         shadowElevation = 12.dp,
+    )
+    BrowserChromeSurface(
+        blurTarget = blurTarget,
+        tokens = chromeTokens,
+        modifier = modifier
+            .padding(horizontal = 12.dp)
+            .padding(bottom = bottomPadding)
+            .fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         LazyColumn(
             state = listState,
@@ -5527,6 +5541,7 @@ internal fun TabOverview(
     var lastHapticPage by remember { mutableStateOf<Int?>(null) }
     var pagerSessionEndJob by remember { mutableStateOf<Job?>(null) }
     var tabActionsTabId by remember { mutableStateOf<String?>(null) }
+    var overviewBlurTarget by remember { mutableStateOf<BlurTarget?>(null) }
     var profileActionsProfileId by remember { mutableStateOf<String?>(null) }
     var profileIsolationChange by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     var emojiPickerTargetId by remember { mutableStateOf<String?>(null) }
@@ -5748,12 +5763,19 @@ internal fun TabOverview(
         currentCandyTrailTabId = candyTrailTransition.currentState,
         targetCandyTrailTabId = candyTrailTransition.targetState,
     )
-    BoxWithConstraints(
+    BrowserContentBlurTargetWithConstraints(
+        enabled = layerVisible,
+        onTargetAttached = { target -> overviewBlurTarget = target },
+        onTargetReleased = { target ->
+            if (overviewBlurTarget === target) overviewBlurTarget = null
+        },
         modifier = Modifier
             .fillMaxSize()
-            .onGloballyPositioned { overviewRootBounds = it.boundsInRoot() }
             .zIndex(if (layerVisible) 10f else -1f)
             .graphicsLayer { alpha = if (layerVisible) 1f else 0f },
+        contentModifier = Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { overviewRootBounds = it.boundsInRoot() },
     ) {
         val density = LocalDensity.current
         val rootWidthPx = with(density) { maxWidth.toPx() }
@@ -7217,11 +7239,19 @@ internal fun TabOverview(
             }
         }
 
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(if (layerVisible) 11f else -1f),
+    ) {
         val actionTab = tabActionsTabId?.let { tabId ->
             controller.activeTabs.firstOrNull { it.id == tabId }
         }
         TabActionsFloatingMenu(
             tab = actionTab,
+            blurTarget = overviewBlurTarget,
             profiles = if (controller.profilesEnabled) {
                 controller.profiles
             } else {
@@ -9295,6 +9325,7 @@ private data class TabActionsMenuPresentation(
 @Composable
 internal fun TabActionsFloatingMenu(
     tab: BrowserTab?,
+    blurTarget: BlurTarget? = null,
     profiles: List<BrowserProfile>,
     isFavorite: Boolean,
     canToggleDomainMute: Boolean,
@@ -9398,7 +9429,7 @@ internal fun TabActionsFloatingMenu(
             ) {
                 val presentedTab = presented.tab
                 BrowserChromeSurface(
-                    blurTarget = null,
+                    blurTarget = blurTarget,
                     tokens = chromeTokens,
                     modifier = Modifier
                         .width(menuWidth)

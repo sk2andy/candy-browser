@@ -34,7 +34,7 @@
 | Surface | Browser chrome treatment |
 | --- | --- |
 | Clear | Opaque neutral containers with standard elevation |
-| Frosted | Light translucent chrome with a live blur of WebView content behind it |
+| Frosted | Light translucent chrome with a live blur of browser content behind it |
 
 Frosted exposes three persisted controls while selected:
 
@@ -54,11 +54,12 @@ Frosted exposes three persisted controls while selected:
 - Unknown stored values fall back per field; one corrupt value does not discard valid choices.
 - AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.
-- Frosted falls back to a tinted translucent surface when no WebView blur source is visible, such as the new-tab page or tab overview.
+- Frosted uses WebView blur sources while browsing and Compose-backed blur sources on the new-tab page and tab overview.
 - General transparency controls menus and other browser chrome; address-bar transparency independently controls the browsing and tab-overview address bars.
-- Tab options use that translucent Frosted fallback over tab-overview cards instead of an opaque menu surface.
-- The main `…` menu shares the visible WebView blur source; its rows remain translucent so the effect stays visible.
-- Bottom sheets use the general Frosted transparency setting; Clear and AMOLED sheets remain opaque.
+- Blur strength is global across frosted address chrome, menus, search suggestions and supported sheets.
+- Tab options blur the visible tab-overview cards behind the menu instead of falling back to a sharp translucent surface.
+- The main `…` menu shares the active browser-content blur source, including the new-tab page; its rows remain translucent so the effect stays visible.
+- Bottom sheets use the general Frosted transparency setting; Privacy X-Ray also blurs the active browser content. Clear and AMOLED sheets remain opaque.
 - Forced light, dark and AMOLED modes update system-bar icon contrast independently from system night mode.
 - Appearance mode also selects Android's activity night resources. WebView therefore exposes the
   same effective light or dark mode to websites through `prefers-color-scheme`; AMOLED is dark,
