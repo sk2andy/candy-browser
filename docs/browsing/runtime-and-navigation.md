@@ -25,6 +25,8 @@
 ## Invariants
 
 - Keep activity-result and lifecycle ownership in `MainActivity`; keep browser state in `BrowserController`.
+- Keep separate browser intent filters for untyped HTTP(S) links and HTTP(S) links carrying the
+  `text/html` MIME type. Adding a MIME type to the untyped filter makes ordinary links ineligible.
 - Show WebView custom views above browser chrome and enable sensor rotation for their lifetime.
   Web fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
   the current browser orientation and system-bar policy. Tab overview requests portrait only on
