@@ -49,3 +49,7 @@ gh workflow run release.yml \
 
 The workflow publishes the same file with `gh release create --notes-file`; no second release summary
 is generated.
+
+Version `0.33` is the bootstrap exception: its tag and GitHub Release predate this shared-note
+contract, while `release-notes/0.33.md` seeds the first bundled What’s New page. Starting with the
+next release, prepare the shared Markdown file before tagging and publish it unchanged.
