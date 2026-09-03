@@ -3,9 +3,18 @@ package dev.sk2andy.materialbrowser.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -19,7 +28,10 @@ import dev.sk2andy.materialbrowser.blocking.PrivacyPartyRelation
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestCategory
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import eightbitlab.com.blurview.BlurTarget
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -114,23 +126,39 @@ class PrivacyXRaySheetInstrumentedTest {
     fun incognitoPauseWarningOffersTemporaryExceptionOnly() {
         val temporaryPauses = AtomicInteger()
         composeRule.setContent {
-            MaterialBrowserTheme {
-                PrivacyXRaySheet(
-                    snapshot = sampleSnapshot(),
-                    blockerSettings = BlockerSettings(),
-                    siteState = SiteProtectionState(
-                        host = "private.example",
-                        canPersist = false,
-                    ),
-                    onPause = { persistently ->
-                        if (!persistently) temporaryPauses.incrementAndGet()
-                    },
-                    onResume = {},
-                    onDismiss = {},
-                )
+            MaterialBrowserTheme(
+                settings = AppearanceSettings(surfaceStyle = BrowserSurfaceStyle.Frosted),
+            ) {
+                var blurTarget by remember { mutableStateOf<BlurTarget?>(null) }
+                Box(Modifier.fillMaxSize()) {
+                    BrowserContentBlurTarget(
+                        enabled = true,
+                        onTargetAttached = { blurTarget = it },
+                        onTargetReleased = { if (blurTarget === it) blurTarget = null },
+                        modifier = Modifier.fillMaxSize(),
+                    ) {}
+                    PrivacyXRaySheet(
+                        snapshot = sampleSnapshot(),
+                        blockerSettings = BlockerSettings(),
+                        siteState = SiteProtectionState(
+                            host = "private.example",
+                            canPersist = false,
+                        ),
+                        blurTarget = blurTarget,
+                        onPause = { persistently ->
+                            if (!persistently) temporaryPauses.incrementAndGet()
+                        },
+                        onResume = {},
+                        onDismiss = {},
+                    )
+                }
             }
         }
 
+        composeRule.onAllNodesWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
+            .assertCountEquals(2)
+        composeRule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss))
+            .assertCountEquals(1)
         composeRule.onNodeWithTag(PrivacyXRayTestTags.Pause).performScrollTo().performClick()
         composeRule.onNodeWithTag(PrivacyXRayTestTags.Warning).assertExists()
         composeRule.onNodeWithTag(PrivacyXRayTestTags.PausePersistent).assertDoesNotExist()

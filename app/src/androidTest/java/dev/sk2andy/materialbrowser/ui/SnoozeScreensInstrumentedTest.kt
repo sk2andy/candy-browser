@@ -34,8 +34,10 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.BrowserController
-import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.SnoozedTab
+import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -371,7 +373,9 @@ class SnoozeScreensInstrumentedTest {
         composeRule.setContent {
             var snoozeTabId by remember { mutableStateOf<String?>(null) }
             val bottomBarTop = remember { mutableFloatStateOf(2_000f) }
-            MaterialBrowserTheme {
+            MaterialBrowserTheme(
+                settings = AppearanceSettings(surfaceStyle = BrowserSurfaceStyle.Frosted),
+            ) {
                 Box {
                     TabOverview(
                         controller = browserController,
@@ -418,6 +422,8 @@ class SnoozeScreensInstrumentedTest {
         val chromeBounds = composeRule.onNodeWithTag(TabOverviewChromeTestTags.Bar)
             .fetchSemanticsNode().boundsInRoot
         composeRule.onNodeWithTag(TabOverviewChromeTestTags.More).performClick()
+        composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
+            .assertIsDisplayed()
         composeRule.onNodeWithTag(TabActionsMenuTestTags.Favorite).assertExists()
         composeRule.onNodeWithTag(TabActionsMenuTestTags.Pin).assertExists()
         composeRule.onNodeWithTag(TabActionsMenuTestTags.Trail).assertExists()

@@ -8,7 +8,7 @@
 | `PrivacyRequestClassifier` / `PrivacyPartyClassifier` | Classify category and first/third-party relation |
 | `PrivacyRetention` / `PrivacyAggregation` | Bound retained per-tab observations and summaries |
 | `PrivacyXRayRepository` | Own live snapshots, rule decisions and site exceptions |
-| `PrivacyXRaySheet` | Render snapshot and emit rule/override actions |
+| `PrivacyXRaySheet` | Render snapshot and emit rule/override actions; Frosted mode blurs the active browser-content source behind the sheet |
 
 ## Permission Radar
 

@@ -39,6 +39,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -63,6 +64,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -88,6 +90,8 @@ import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
+import eightbitlab.com.blurview.BlurTarget
 import kotlinx.coroutines.delay
 
 internal object PrivacyXRayTestTags {
@@ -184,6 +188,7 @@ internal fun PrivacyXRaySheet(
     snapshot: PrivacyXRaySnapshot,
     blockerSettings: BlockerSettings,
     siteState: SiteProtectionState,
+    blurTarget: BlurTarget? = null,
     onPause: (persistently: Boolean) -> Unit,
     onResume: () -> Unit,
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
@@ -194,26 +199,55 @@ internal fun PrivacyXRaySheet(
     val title = stringResource(R.string.privacy_xray_title)
     var pauseWarningVisible by remember(siteState.host) { mutableStateOf(false) }
     val view = LocalView.current
+    val chromeTokens = browserChromeSurfaceTokens().copy(
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = Modifier
             .testTag(PrivacyXRayTestTags.Sheet)
             .semantics { paneTitle = title },
-        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
+        containerColor = Color.Transparent,
+        dragHandle = {
+            BrowserChromeSurface(
+                blurTarget = blurTarget,
+                tokens = chromeTokens,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RectangleShape,
+                blurCornerRadius = 0.dp,
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BottomSheetDefaults.DragHandle()
+                }
+            }
+        },
     ) {
-        PrivacyXRayContent(
-            snapshot = snapshot,
-            blockerSettings = blockerSettings,
-            siteState = siteState,
-            onPauseClick = { pauseWarningVisible = true },
-            onResumeClick = {
-                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                onResume()
-            },
-            onRuleAction = onRuleAction,
-            onOpenStudio = onOpenStudio,
-        )
+        BrowserChromeSurface(
+            blurTarget = blurTarget,
+            tokens = chromeTokens,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RectangleShape,
+            blurCornerRadius = 0.dp,
+        ) {
+            PrivacyXRayContent(
+                snapshot = snapshot,
+                blockerSettings = blockerSettings,
+                siteState = siteState,
+                onPauseClick = { pauseWarningVisible = true },
+                onResumeClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    onResume()
+                },
+                onRuleAction = onRuleAction,
+                onOpenStudio = onOpenStudio,
+            )
+        }
     }
 
     if (pauseWarningVisible) {
