@@ -473,7 +473,7 @@ class WebViewWindowInsetsInstrumentedTest {
                         <!doctype html>
                         <html>
                           <body style="margin:0;min-height:4000px">
-                            <div id="probe" style="position:fixed;inset:0">Fixed app shell</div>
+                            <div id="probe" style="position:fixed;inset:0"></div>
                           </body>
                         </html>
                     """.trimIndent(),
@@ -610,6 +610,125 @@ class WebViewWindowInsetsInstrumentedTest {
             awaitWebViewTop(webView, 0)
             awaitDocumentTop(webView, "#top-control", expectedTopPixels.get())
             awaitWebViewScrollY(webView, minimumScrollY = 500)
+        }
+    }
+
+    @Test
+    fun cssToggledFixedDrawerKeepsItsFirstActionBelowStatusBar() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().run {
+                    updateWebContentEdgeToEdgeEnabled(true)
+                    submitAddress("https://example.test/")
+                }
+            }
+            val webView = awaitWebView(scenario)
+            val expectedTopPixels = AtomicInteger()
+            scenario.onActivity {
+                expectedTopPixels.set(
+                    ViewCompat.getRootWindowInsets(webView)
+                        ?.getInsets(
+                            WindowInsetsCompat.Type.systemBars() or
+                                WindowInsetsCompat.Type.displayCutout(),
+                        )
+                        ?.top
+                        ?: 0,
+                )
+                webView.stopLoading()
+                webView.loadDataWithBaseURL(
+                    "https://example.test/",
+                    """
+                        <!doctype html>
+                        <html>
+                          <head>
+                            <meta name="viewport" content="width=device-width, initial-scale=1">
+                            <style>
+                              body { margin: 0; min-height: 4000px }
+                              #drawer, #drawer-mask { visibility: hidden }
+                              body.drawer-open #drawer,
+                              body.drawer-open #drawer-mask { visibility: visible }
+                              #drawer {
+                                box-sizing: border-box;
+                                position: fixed;
+                                inset: 0 auto 0 0;
+                                width: 70vw;
+                                overflow: auto;
+                                z-index: 2;
+                              }
+                              #drawer-mask {
+                                position: fixed;
+                                inset: 0;
+                                background: rgb(0 0 0 / 50%);
+                                z-index: 1;
+                              }
+                              #first-drawer-action, #last-drawer-action {
+                                display: block;
+                                height: 56px;
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            <main id="probe">Flow content</main>
+                            <button
+                              id="drawer-toggle"
+                              onclick="setTimeout(() => document.body.classList.add('drawer-open'), 150)"
+                            >
+                              Menu
+                            </button>
+                            <label id="drawer-mask"></label>
+                            <aside id="drawer">
+                              <a id="first-drawer-action" href="#first">Home</a>
+                              <div style="height:2000px">Drawer content</div>
+                              <a id="last-drawer-action" href="#last">Settings</a>
+                            </aside>
+                          </body>
+                        </html>
+                    """.trimIndent(),
+                    "text/html",
+                    "utf-8",
+                    null,
+                )
+            }
+
+            awaitProbe(webView)
+            awaitDocumentReady(webView)
+            awaitWebViewTop(webView, 0)
+            evaluate(webView, "document.getElementById('drawer-toggle').click()")
+            awaitDocumentTop(webView, "#first-drawer-action", expectedTopPixels.get())
+            assertEquals(
+                "\"true\"",
+                evaluate(
+                    webView,
+                    "document.getElementById('drawer')." +
+                        "getAttribute('data-candy-browser-top-inset-panel')",
+                ),
+            )
+            assertTrue(
+                evaluate(
+                    webView,
+                    "document.getElementById('drawer').getBoundingClientRect().bottom <= " +
+                        "window.innerHeight + 0.5",
+                ) == "true",
+            )
+            evaluate(
+                webView,
+                "document.getElementById('last-drawer-action').scrollIntoView(false)",
+            )
+            assertTrue(
+                evaluate(
+                    webView,
+                    "document.getElementById('last-drawer-action')." +
+                        "getBoundingClientRect().bottom <= window.innerHeight + 0.5",
+                ) == "true",
+            )
+            evaluate(
+                webView,
+                "document.body.classList.remove('drawer-open');" +
+                    "const shell = document.createElement('div');" +
+                    "shell.style.cssText = 'position:fixed;inset:0;z-index:1';" +
+                    "document.body.appendChild(shell)",
+            )
+            awaitWebViewTop(webView, expectedTopPixels.get())
         }
     }
 

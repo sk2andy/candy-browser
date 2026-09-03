@@ -52,6 +52,11 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("translate: 0 var"))
         assertTrue(WebContentTopInsetScript.installScript.contains("absoluteCandidate"))
         assertTrue(WebContentTopInsetScript.installScript.contains("position === 'fixed'"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("panelMaxHeight"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("isBackdrop"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("scheduleInteractionLayoutCheck"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("delayedInteractionCheckMs"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("interactionEvents"))
     }
 
     @Test

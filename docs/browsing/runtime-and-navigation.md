@@ -56,8 +56,10 @@
   edge-to-edge-disabled audit mode, and unavailable or rejected document-start styling use a
   static native safe-area margin. Compact absolute or fixed page controls covering the reserved
   top strip receive a local document-owned offset, keeping the WebView edge-to-edge without hiding
-  those controls behind system icons. If a root-level spacer is neutralized by a site's own scroll
-  container, Candy moves the spacer to that normal-flow page wrapper so headers still scroll away.
+  those controls behind system icons. Interaction-triggered fixed side drawers receive the same
+  offset plus a bounded height, while empty full-screen backdrops may continue behind system icons.
+  If a root-level spacer is neutralized by a site's own scroll container, Candy moves the spacer
+  to that normal-flow page wrapper so headers still scroll away.
   Viewport-sized fixed roots and layouts that cannot be moved safely use the native fallback.
   Force-safe-area remains the manual compatibility path for pages using their own scroll container.
   The status-bar overlay still
