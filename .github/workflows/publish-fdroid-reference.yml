@@ -1,0 +1,282 @@
+name: Publish F-Droid reference APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag, for example v0.32
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fdroid-reference-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build FOSS APK for ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+
+    steps:
+      - name: Validate tag input
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "$RELEASE_TAG" in
+            v0.31)
+              expected_commit="724187d01e7472fa9e7151ebe825fdd18acb199d"
+              ;;
+            v0.32)
+              expected_commit="65a93dc6b962cbae492226ac896dac60026939ef"
+              ;;
+            *)
+              echo "Only the v0.31 and v0.32 backfills are allowed." >&2
+              exit 1
+              ;;
+          esac
+
+          echo "EXPECTED_COMMIT=${expected_commit}" >> "$GITHUB_ENV"
+
+      - name: Check out release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Validate release metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          version="${RELEASE_TAG#v}"
+          project_version="$(sed -n 's/^candy\.versionName=//p' gradle.properties)"
+          version_code="$(sed -n 's/^candy\.versionCode=//p' gradle.properties)"
+
+          if [[ "$(git rev-parse HEAD)" != "$EXPECTED_COMMIT" ]]; then
+            echo "Tag ${RELEASE_TAG} does not resolve to the pinned release commit." >&2
+            exit 1
+          fi
+
+          if [[ "$version" != "$project_version" ]]; then
+            echo "Tag ${RELEASE_TAG} does not match gradle.properties ${project_version}." >&2
+            exit 1
+          fi
+
+          if [[ ! "$version_code" =~ ^[1-9][0-9]*$ ]] || (( version_code > 2100000000 )); then
+            echo "Version code must be between 1 and 2100000000." >&2
+            exit 1
+          fi
+
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Test and build unsigned FOSS APK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ./gradlew --no-daemon \
+            testFossReleaseUnitTest \
+            assembleFossRelease
+
+      - name: Store unsigned FOSS APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fdroid-reference-${{ inputs.tag }}
+          path: app/build/outputs/apk/foss/release/app-foss-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 1
+
+  sign-and-publish:
+    name: Sign and publish FOSS APK for ${{ inputs.tag }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+
+    steps:
+      - name: Download unsigned FOSS APK
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: fdroid-reference-${{ inputs.tag }}
+          path: input
+
+      - name: Validate immutable release tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          case "$RELEASE_TAG" in
+            v0.31)
+              expected_commit="724187d01e7472fa9e7151ebe825fdd18acb199d"
+              ;;
+            v0.32)
+              expected_commit="65a93dc6b962cbae492226ac896dac60026939ef"
+              ;;
+            *)
+              echo "Only the v0.31 and v0.32 backfills are allowed." >&2
+              exit 1
+              ;;
+          esac
+
+          tag_object="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" \
+              --jq '.object.type + " " + .object.sha'
+          )"
+          if [[ "$tag_object" != "commit ${expected_commit}" ]]; then
+            echo "Tag ${RELEASE_TAG} does not resolve to the pinned release commit." >&2
+            exit 1
+          fi
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+
+      - name: Restore release keystore
+        shell: bash
+        env:
+          CANDY_RELEASE_KEYSTORE_BASE64: ${{ secrets.CANDY_RELEASE_KEYSTORE_BASE64 }}
+          CANDY_RELEASE_STORE_PASSWORD: ${{ secrets.CANDY_RELEASE_STORE_PASSWORD }}
+          CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
+          CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
+          CANDY_RELEASE_CERTIFICATE_SHA256: ${{ vars.CANDY_RELEASE_CERTIFICATE_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          required_variables=(
+            CANDY_RELEASE_KEYSTORE_BASE64
+            CANDY_RELEASE_STORE_PASSWORD
+            CANDY_RELEASE_KEY_ALIAS
+            CANDY_RELEASE_KEY_PASSWORD
+            CANDY_RELEASE_CERTIFICATE_SHA256
+          )
+          for variable in "${required_variables[@]}"; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing release configuration: ${variable}" >&2
+              exit 1
+            fi
+          done
+
+          keystore_path="$RUNNER_TEMP/candy-release.jks"
+          printf '%s' "$CANDY_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          chmod 600 "$keystore_path"
+          keytool -list \
+            -keystore "$keystore_path" \
+            -storepass:env CANDY_RELEASE_STORE_PASSWORD \
+            -alias "$CANDY_RELEASE_KEY_ALIAS" \
+            >/dev/null
+
+          expected_certificate="${CANDY_RELEASE_CERTIFICATE_SHA256//:/}"
+          expected_certificate="${expected_certificate,,}"
+          if [[ ! "$expected_certificate" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "CANDY_RELEASE_CERTIFICATE_SHA256 must contain a SHA-256 certificate digest." >&2
+            exit 1
+          fi
+
+          actual_certificate="$(
+            keytool -exportcert \
+              -keystore "$keystore_path" \
+              -storepass:env CANDY_RELEASE_STORE_PASSWORD \
+              -alias "$CANDY_RELEASE_KEY_ALIAS" \
+              | sha256sum \
+              | cut -d ' ' -f 1
+          )"
+          if [[ "$actual_certificate" != "$expected_certificate" ]]; then
+            echo "Release keystore certificate does not match pinned repository fingerprint." >&2
+            exit 1
+          fi
+
+          echo "CANDY_RELEASE_KEYSTORE_PATH=${keystore_path}" >> "$GITHUB_ENV"
+
+      - name: Validate, sign, and publish F-Droid reference APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDY_RELEASE_STORE_PASSWORD: ${{ secrets.CANDY_RELEASE_STORE_PASSWORD }}
+          CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
+          CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
+          CANDY_RELEASE_CERTIFICATE_SHA256: ${{ vars.CANDY_RELEASE_CERTIFICATE_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          unsigned_apk="input/app-foss-release-unsigned.apk"
+          foss_release_apk="CandyBrowser-${RELEASE_TAG}-foss-release.apk"
+          apksigner="$ANDROID_HOME/build-tools/34.0.0/apksigner"
+          aapt="$ANDROID_HOME/build-tools/34.0.0/aapt"
+          if [[ ! -x "$apksigner" || ! -x "$aapt" ]]; then
+            echo "Android Build Tools 34.0.0 are required for F-Droid-compatible signing." >&2
+            exit 1
+          fi
+
+          badging="$("$aapt" dump badging "$unsigned_apk")"
+          package_name="$(printf '%s\n' "$badging" | sed -nE "s/^package: name='([^']+)'.*$/\1/p")"
+          version_name="$(printf '%s\n' "$badging" | sed -nE "s/^package: .*versionName='([^']+)'.*$/\1/p")"
+          if [[ "$package_name" != "dev.sk2andy.materialbrowser" ]]; then
+            echo "Unexpected application ID: ${package_name}" >&2
+            exit 1
+          fi
+          if [[ "v${version_name}" != "$RELEASE_TAG" ]]; then
+            echo "APK version ${version_name} does not match ${RELEASE_TAG}." >&2
+            exit 1
+          fi
+          if "$apksigner" verify "$unsigned_apk" >/dev/null 2>&1; then
+            echo "Build artifact is unexpectedly signed." >&2
+            exit 1
+          fi
+
+          "$apksigner" sign \
+            --ks "$CANDY_RELEASE_KEYSTORE_PATH" \
+            --ks-key-alias "$CANDY_RELEASE_KEY_ALIAS" \
+            --ks-pass env:CANDY_RELEASE_STORE_PASSWORD \
+            --key-pass env:CANDY_RELEASE_KEY_PASSWORD \
+            --out "$foss_release_apk" \
+            "$unsigned_apk"
+
+          expected_certificate="${CANDY_RELEASE_CERTIFICATE_SHA256//:/}"
+          expected_certificate="${expected_certificate,,}"
+          verification="$("$apksigner" verify --verbose --print-certs "$foss_release_apk")"
+          printf '%s\n' "$verification"
+          actual_certificate="$(
+            printf '%s\n' "$verification" \
+              | sed -nE 's/^.*certificate SHA-256 digest: ([[:xdigit:]:]+)$/\1/p' \
+              | tr '[:upper:]' '[:lower:]' \
+              | tr -d ':' \
+              | sort -u
+          )"
+          if [[ "$actual_certificate" != "$expected_certificate" ]]; then
+            echo "${foss_release_apk} certificate does not match pinned repository fingerprint." >&2
+            exit 1
+          fi
+
+          sha256sum "$foss_release_apk" > "${foss_release_apk}.sha256"
+          gh release upload \
+            "$RELEASE_TAG" \
+            "$foss_release_apk" \
+            "${foss_release_apk}.sha256" \
+            --repo "$GITHUB_REPOSITORY"
+
+      - name: Remove release keystore
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/candy-release.jks"
