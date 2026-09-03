@@ -29,6 +29,55 @@
   <img src="docs/screenshots/candy-privacy.png" width="30%" alt="Candy Browser Privacy X-Ray">
 </p>
 
+## Cross-device sync
+
+**Candy Sync turns every connected Android, Chromium, or Firefox device into a writable profile.**
+Open a desktop profile on your phone to inspect its live tab list, open new tabs, navigate, pin,
+reorder, or close them. The same small tab changes flow back to every connected client instead of
+re-uploading the complete browser state.
+
+<p align="center">
+  <img src="docs/screenshots/candy-sync-device-profile.png" width="32%" alt="A synced desktop device selected as a writable profile in Candy Browser">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/candy-sync-setup.png" width="50%" alt="Candy Sync device binding, profile icon, accent color, and E2EE warning on Android">
+</p>
+
+Changes are encrypted locally and written to a durable outbox. REST commits provide ordered,
+retry-safe storage; authenticated WebSocket notifications deliver committed changes immediately.
+After suspension or network loss, clients recover missing changes through REST.
+
+### E2EE in short
+
+The first client creates a random 256-bit workspace key. The immutable passphrase derives a local
+recovery key with Argon2id; HKDF-SHA-256 derives purpose- and device-specific keys, and AES-256-GCM
+encrypts and authenticates tab data. Every device also creates its own P-256 private key locally.
+The passphrase, workspace key, private keys, URLs, titles, device names, and icons never reach the
+server in plaintext—the server stores ciphertext plus the routing metadata required for sync.
+
+### Start Candy Sync
+
+```sh
+cd sync/server
+cp .env.example .env
+# Set a unique username, password, public URL, and TLS host in .env.
+# Never put the E2EE passphrase in server configuration.
+docker compose up --build -d
+```
+
+Build and load the WebExtension from `sync/extension/`, open its browser-managed Options Page, and
+enter the endpoint plus an E2EE passphrase. In Candy Browser, open **Settings → Synchronization**
+and join with the same endpoint, credentials, and passphrase.
+
+See the [Candy Sync guide](docs/sync/README.md) for server deployment, local TLS, Chromium/Firefox
+loading, Android setup, backups, protocol details, and the full security model.
+
+### Candy Sync roadmap
+
+- [ ] Add multi-user support
+- [ ] Publish the extension to the Chrome Web Store and Mozilla Add-ons
+- [ ] Publish a prebuilt server image to Docker Hub or a similar registry
+- [ ] Offer a hosted solution for people who do not want to self-host
+
 ## See Candy in motion
 
 https://github.com/user-attachments/assets/cb9b61d4-5047-4b85-b41e-255f9654949f
@@ -37,16 +86,20 @@ https://github.com/user-attachments/assets/cb9b61d4-5047-4b85-b41e-255f9654949f
   <a href="docs/promo/video/candy-browser-showcase-16x9.mp4"><strong>Download the 16:9 feature showcase (MP4, 60 fps)</strong></a>
 </p>
 
-The showcase combines live API 36 emulator footage, current Topping scripts, and repository screenshots
-to show the gesture-first tab switcher, Link Peek, Spoilerfree Sports, Hacker News Comfort, Privacy
-Toppings, the current Privacy X-Ray, Reader Studio, Candy Trails, and profiles. Its original soundtrack,
-kinetic typography, and camera motion are generated entirely from repository-owned sources.
+The showcase presents self-hosted Android/Chromium/Firefox tab sync with E2EE directly after the tab
+switcher, then combines live API 36 emulator footage, current Topping scripts, and repository screenshots
+to show the gesture-first tab switcher, Link Peek, Spoilerfree Sports, Hacker News Comfort, Privacy Toppings,
+the current Privacy X-Ray,
+Reader Studio, Candy Trails, and profiles. Its original soundtrack, kinetic typography, and camera motion are
+generated entirely from repository-owned sources.
 
 ## Why Candy?
 
 - **Made for gestures.** Switch tabs from the address bar, swipe into the visual overview, and
   dismiss cards with spring motion and haptic feedback.
 - **Private by design.** Filtering, history, favorites, profiles, and privacy telemetry stay local.
+- **Cross-device without surrendering your data.** Self-hosted E2EE sync exposes desktop and Android
+  tab lists as writable device profiles while the server never sees their contents in plaintext.
 - **Feels at home on Android.** Dynamic color, edge-to-edge content, Predictive Back, Autofill,
   passkeys, downloads, sharing, printing, and default-browser integration.
 
