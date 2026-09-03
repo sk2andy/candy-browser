@@ -233,7 +233,7 @@ file and approve installation.
 
 Use the filtered setup link so Obtainium always selects the standard certificate-trust channel:
 
-[![Get it on Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D)
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="48" alt="Get it on Obtainium"></a>
 
 All GitHub APK channels use the same application ID and signing key. Obtainium can track only one
 of them at a time. Do not add the unfiltered repository URL: the release contains three installable
@@ -391,7 +391,7 @@ from the committed version. Then dispatch a release from GitHub Actions or with 
 
 ```bash
 gh workflow run release.yml \
-  -f version=0.32 \
+  -f version=0.33 \
   -f prerelease=false
 ```
 
