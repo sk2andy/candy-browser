@@ -27,11 +27,17 @@ Builds:
     subdir: app
     gradle:
       - foss
+  - versionName: '0.33'
+    versionCode: 33000
+    commit: REPLACE_WITH_V0.33_COMMIT_SHA
+    subdir: app
+    gradle:
+      - foss
 
 AllowedAPKSigningKeys: e65082d293039290b24b6ef689996cf42f8e8b61966a2ebe4f49d9f8e486b7d3
 
 AutoUpdateMode: None
 UpdateCheckMode: None
 UpdateCheckData: gradle.properties|candy.versionCode=(\d+)|.|candy.versionName=(.+)
-CurrentVersion: '0.32'
-CurrentVersionCode: 32000
+CurrentVersion: '0.33'
+CurrentVersionCode: 33000
