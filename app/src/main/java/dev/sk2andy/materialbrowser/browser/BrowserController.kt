@@ -3265,14 +3265,31 @@ class BrowserController(
         }
     }
 
+    fun hasTabCapacity(nowMillis: Long = System.currentTimeMillis()): Boolean =
+        tabs.size - staleTabIds(nowMillis).size < MAX_TABS
+
+    fun prepareTabCreation(
+        targetProfileId: String = activeProfileId,
+        nowMillis: Long = System.currentTimeMillis(),
+    ): Boolean {
+        pruneStaleTabs(nowMillis)
+        val requiredTabCount = if (
+            targetProfileId != activeProfileId && tabs.none { it.profileId == targetProfileId }
+        ) {
+            2
+        } else {
+            1
+        }
+        return tabs.size <= MAX_TABS - requiredTabCount
+    }
+
     fun createTab(
         initialUrl: String = BLANK_URL,
         isIncognito: Boolean = selectedTab.isIncognito,
         openerTabId: String? = null,
     ): String {
         val nowMillis = System.currentTimeMillis()
-        pruneStaleTabs(nowMillis)
-        if (tabs.size >= MAX_TABS) {
+        if (!prepareTabCreation(nowMillis = nowMillis)) {
             Toast.makeText(
                 activity,
                 activity.getString(R.string.toast_tab_limit_reached, MAX_TABS),
@@ -4604,13 +4621,7 @@ class BrowserController(
             )
         }
         val duplicateTabIds = TabDuplicateRules.tabIdsToClose(activeTabs, selectedTabId)
-        val expiredTabCount = TabRetentionRules.expiredTabIds(
-            tabs = tabs,
-            selectedTabId = selectedTabId,
-            lifetime = inactiveTabLifetime,
-            nowMillis = System.currentTimeMillis(),
-        ).size
-        val canCreateTab = tabs.size - expiredTabCount < MAX_TABS
+        val canCreateTab = hasTabCapacity()
         val canMoveSelectedTab = activeTabs.size > 1 || canCreateTab
         val definitions = BrowserCommandRegistry.commands(
             CommandContext(
@@ -9858,19 +9869,19 @@ class BrowserController(
     private fun pruneStaleTabs(
         nowMillis: Long = System.currentTimeMillis(),
         persistChanges: Boolean = true,
-    ): Boolean {
-        val expiredIds = TabRetentionRules.expiredTabIds(
+    ): Boolean = removeTabs(
+        tabIds = staleTabIds(nowMillis),
+        nowMillis = nowMillis,
+        persistChanges = persistChanges,
+    )
+
+    private fun staleTabIds(nowMillis: Long): Set<String> =
+        TabRetentionRules.expiredTabIds(
             tabs = tabs,
             selectedTabId = selectedTabId,
             lifetime = inactiveTabLifetime,
             nowMillis = nowMillis,
         ) - activeFederatedLoginFlowTabIds()
-        return removeTabs(
-            tabIds = expiredIds,
-            nowMillis = nowMillis,
-            persistChanges = persistChanges,
-        )
-    }
 
     private fun closeTabsOnBackground(
         nowMillis: Long = System.currentTimeMillis(),
