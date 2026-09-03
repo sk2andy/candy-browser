@@ -54,6 +54,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
+import dev.sk2andy.materialbrowser.browser.MAX_TABS
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
@@ -62,6 +63,9 @@ import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
+import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
+import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
+import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutTarget
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
@@ -106,6 +110,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webMediaSystemSession: WebMediaSystemSession
     private lateinit var castSessionController: CastSessionController
     private lateinit var releaseNotesStore: ReleaseNotesStore
+    private val launcherShortcutPublisher by lazy {
+        LauncherShortcutPublisher(applicationContext)
+    }
     private var releaseNotesContent: ReleaseNotesContent? = null
     private var videoOnlyPresentation by mutableStateOf(false)
     private var fullscreenVideoBounds: Rect? = null
@@ -303,6 +310,12 @@ class MainActivity : AppCompatActivity() {
                 applyAppearanceSystemBars(appearanceDark)
             }
             MaterialBrowserTheme(settings = appearanceSettings) {
+                val launcherShortcutState = LauncherShortcutRules.state(
+                    profiles = browserController.localBrowserProfiles,
+                    tabs = browserController.tabs.toList(),
+                    activeProfileId = browserController.activeProfileId,
+                    profilesEnabled = browserController.profilesEnabled,
+                )
                 var splashVisible by remember {
                     mutableStateOf(startupPresentation.showSplash)
                 }
@@ -337,6 +350,9 @@ class MainActivity : AppCompatActivity() {
                         delay(SPLASH_DURATION_MILLIS)
                         splashVisible = false
                     }
+                }
+                LaunchedEffect(launcherShortcutState) {
+                    launcherShortcutPublisher.publishSerially(launcherShortcutState)
                 }
                 LaunchedEffect(updateCheckCompleted) {
                     if (updateCheckCompleted) return@LaunchedEffect
@@ -988,6 +1004,7 @@ class MainActivity : AppCompatActivity() {
         externalLaunchTabId = null
         val incomingRequest = IncomingBrowserIntent.from(intent)
         if (incomingRequest == null) browserController.dismissExternalLinkPreview()
+        if (openLauncherShortcut(intent)) return
         if (intent.action == SnoozeWakeNotifier.ACTION_OPEN_RESTORED_TAB) {
             intent.getStringExtra(SnoozeWakeNotifier.EXTRA_TAB_ID)?.let { tabId ->
                 browserController.openSnoozedWakeTab(tabId)
@@ -1026,6 +1043,75 @@ class MainActivity : AppCompatActivity() {
             externalLaunchTabId = browserController.selectedTabId
             incomingBrowserNavigationRequestId++
         }
+    }
+
+    private fun openLauncherShortcut(intent: Intent): Boolean {
+        val target = LauncherShortcutRules.resolve(
+            action = intent.action,
+            profileId = intent.getStringExtra(LauncherShortcutRules.EXTRA_PROFILE_ID),
+            availableProfileIds = browserController.localBrowserProfiles
+                .mapTo(mutableSetOf()) { it.id },
+            profilesEnabled = browserController.profilesEnabled,
+        ) ?: return if (intent.action == LauncherShortcutRules.ACTION_OPEN_PROFILE) {
+            Toast.makeText(this, R.string.command_feedback_rejected, Toast.LENGTH_SHORT).show()
+            true
+        } else {
+            false
+        }
+        val completed = when (target) {
+            LauncherShortcutTarget.NewTab -> createLauncherTab(isIncognito = false)
+            LauncherShortcutTarget.NewPrivateTab -> createPrivateLauncherTab()
+            is LauncherShortcutTarget.Profile -> {
+                val selected = target.profileId == browserController.activeProfileId ||
+                    browserController.selectProfile(target.profileId)
+                if (selected) browserController.leaveSiteCapsule()
+                selected
+            }
+        }
+        if (completed) {
+            launcherShortcutPublisher.reportUsed(target)
+            incomingBrowserNavigationRequestId++
+        }
+        return true
+    }
+
+    private fun createPrivateLauncherTab(): Boolean {
+        val targetProfileId = LauncherShortcutRules.privateTargetProfileId(
+            profiles = browserController.profiles.toList(),
+            activeProfileId = browserController.activeProfileId,
+            profileIsolationSupported = browserController.isProfileIsolationSupported,
+        )
+        if (targetProfileId == null) {
+            Toast.makeText(
+                this,
+                R.string.toast_incognito_unsupported,
+                Toast.LENGTH_SHORT,
+            ).show()
+            return false
+        }
+        if (!browserController.prepareTabCreation(targetProfileId)) {
+            Toast.makeText(
+                this,
+                getString(R.string.toast_tab_limit_reached, MAX_TABS),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return false
+        }
+        if (
+            targetProfileId != browserController.activeProfileId &&
+            !browserController.selectProfile(targetProfileId)
+        ) {
+            return false
+        }
+        return createLauncherTab(isIncognito = true)
+    }
+
+    private fun createLauncherTab(isIncognito: Boolean): Boolean {
+        val previousTabId = browserController.selectedTabId
+        val createdTabId = browserController.createTab(isIncognito = isIncognito)
+        if (createdTabId == previousTabId) return false
+        launcherAddressEditorRequestId++
+        return true
     }
 
     @VisibleForTesting

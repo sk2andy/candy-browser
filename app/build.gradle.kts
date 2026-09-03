@@ -1,6 +1,55 @@
 import java.util.Properties
+import org.gradle.api.DefaultTask
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.TaskAction
+
+abstract class GenerateLauncherShortcutResources : DefaultTask() {
+    @get:Input
+    abstract val applicationId: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val xmlDirectory = outputDirectory.dir("xml").get().asFile
+        xmlDirectory.mkdirs()
+        xmlDirectory.resolve("shortcuts.xml").writeText(
+            """<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="launcher_new_tab"
+        android:enabled="true"
+        android:icon="@mipmap/ic_shortcut_new_tab"
+        android:shortcutShortLabel="@string/new_tab_title"
+        android:shortcutLongLabel="@string/command_new_regular_tab_name">
+        <intent
+            android:action="dev.sk2andy.materialbrowser.action.NEW_TAB"
+            android:targetPackage="${applicationId.get()}"
+            android:targetClass="dev.sk2andy.materialbrowser.LauncherShortcutActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="launcher_new_private_tab"
+        android:enabled="true"
+        android:icon="@mipmap/ic_shortcut_private_tab"
+        android:shortcutShortLabel="@string/incognito"
+        android:shortcutLongLabel="@string/command_new_incognito_tab_name">
+        <intent
+            android:action="dev.sk2andy.materialbrowser.action.NEW_PRIVATE_TAB"
+            android:targetPackage="${applicationId.get()}"
+            android:targetClass="dev.sk2andy.materialbrowser.LauncherShortcutActivity" />
+    </shortcut>
+</shortcuts>
+""".trimIndent(),
+            Charsets.UTF_8,
+        )
+    }
+}
 
 plugins {
     id("com.android.application")
@@ -192,6 +241,21 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        val capitalizedVariantName = variant.name.replaceFirstChar(Char::uppercaseChar)
+        val generateLauncherShortcuts = tasks.register<GenerateLauncherShortcutResources>(
+            "generate${capitalizedVariantName}LauncherShortcutResources",
+        ) {
+            applicationId.set(variant.applicationId)
+        }
+        variant.sources.res?.addGeneratedSourceDirectory(
+            generateLauncherShortcuts,
+            GenerateLauncherShortcutResources::outputDirectory,
+        )
     }
 }
 

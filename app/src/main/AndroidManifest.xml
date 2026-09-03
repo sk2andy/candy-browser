@@ -118,6 +118,10 @@
                 <category android:name="android.intent.category.APP_BROWSER" />
             </intent-filter>
 
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -135,6 +139,14 @@
                 <data android:mimeType="text/html" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".LauncherShortcutActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
 
         <activity
             android:name=".AppDataTransferActivity"
