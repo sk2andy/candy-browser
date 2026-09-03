@@ -250,6 +250,10 @@ jobs:
             --ks-key-alias "$CANDY_RELEASE_KEY_ALIAS" \
             --ks-pass env:CANDY_RELEASE_STORE_PASSWORD \
             --key-pass env:CANDY_RELEASE_KEY_PASSWORD \
+            --v1-signing-enabled false \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
             --out "$foss_release_apk" \
             "$unsigned_apk"
 
