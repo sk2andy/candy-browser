@@ -4668,6 +4668,14 @@ private fun ExpandedBottomBarContent(
                                 }
                             },
                         )
+                        if (tab.url == BLANK_URL) {
+                            BlankTabIncognitoModeButton(
+                                enabled = tab.isIncognito,
+                                progress = blankTabModeProgress,
+                                onCenterChanged = onIncognitoControlCenterChanged,
+                                onClick = onToggleIncognito,
+                            )
+                        }
                         if (showAiModeToggle) {
                             AddressAiModeToggle(
                                 selected = aiModeSelected,
@@ -4731,15 +4739,7 @@ private fun ExpandedBottomBarContent(
                 exit = fadeOut(tween(80)) + shrinkHorizontally(tween(180)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (editing && tab.url == BLANK_URL) {
-                        Spacer(Modifier.width(8.dp))
-                        BlankTabIncognitoModeButton(
-                            enabled = tab.isIncognito,
-                            progress = blankTabModeProgress,
-                            onCenterChanged = onIncognitoControlCenterChanged,
-                            onClick = onToggleIncognito,
-                        )
-                    } else {
+                    if (!editing || tab.url != BLANK_URL) {
                         visibleActionLayout.afterAddress.forEach { action ->
                             AddressBarActionButton(
                                 action = action,
@@ -4930,6 +4930,7 @@ internal fun AddressBarTabCounterButton(
 internal object AddressBarTestTags {
     const val AiModeToggle = "address_bar_ai_mode_toggle"
     const val Editor = "address_bar_editor"
+    const val IncognitoToggle = "address_bar_incognito_toggle"
     const val QrScanner = "address_bar_qr_scanner"
     const val TabButton = "address_bar_tab_button"
 }

@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -19,6 +20,8 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.BuildConfig
@@ -332,6 +335,45 @@ class AddressBarDockInstrumentedTest {
     }
 
     @Test
+    fun blankTabIncognitoToggleStaysBesideFocusedAddressEditor() {
+        lateinit var browserController: BrowserController
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserScreen(browserController)
+            }
+        }
+
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.address_empty_hint))
+            .performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            composeRule.onAllNodesWithTag(AddressBarTestTags.Editor)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertIsFocused()
+        assertImeVisible()
+
+        val editorBounds = composeRule.onNodeWithTag(AddressBarTestTags.Editor)
+            .fetchSemanticsNode().boundsInRoot
+        val toggleBounds = composeRule.onNodeWithTag(AddressBarTestTags.IncognitoToggle)
+            .assertExists()
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .fetchSemanticsNode().boundsInRoot
+        val gapPx = toggleBounds.left - editorBounds.right
+        val maximumGapPx = with(composeRule.density) { 1.dp.toPx() }
+
+        assertTrue(
+            "Incognito toggle must follow editor: $editorBounds vs $toggleBounds",
+            gapPx in -maximumGapPx..maximumGapPx,
+        )
+    }
+
+    @Test
     fun centeredPillPlacesParkActionOnRememberedLeftSide() {
         composeRule.setContent {
             MaterialBrowserTheme {
@@ -504,5 +546,12 @@ class AddressBarDockInstrumentedTest {
             BrowserSessionStore.PREFERENCES_NAME,
             Context.MODE_PRIVATE,
         ).edit().clear().commit()
+    }
+
+    private fun assertImeVisible() {
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            ViewCompat.getRootWindowInsets(composeRule.activity.window.decorView)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        }
     }
 }

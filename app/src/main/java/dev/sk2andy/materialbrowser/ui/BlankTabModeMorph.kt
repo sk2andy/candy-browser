@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -186,6 +187,7 @@ internal fun BlankTabIncognitoModeButton(
             onClick = onClick,
             modifier = Modifier
                 .size(48.dp)
+                .testTag(AddressBarTestTags.IncognitoToggle)
                 .semantics { contentDescription = description },
         ) {
             Box(contentAlignment = Alignment.Center) {
