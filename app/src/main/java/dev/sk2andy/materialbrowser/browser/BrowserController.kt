@@ -597,6 +597,9 @@ class BrowserController(
         get() = linkPeekPreviewAssignments.size
 
     @VisibleForTesting
+    fun externalLinkPreviewWebViewForTesting(): WebView? = externalLinkPreviewRuntime?.webView
+
+    @VisibleForTesting
     val videoAutoplayScriptHandlerCountForTesting: Int
         get() = videoAutoplayScriptHandlers.size
 
@@ -1879,9 +1882,7 @@ class BrowserController(
                 requireMediaPlaybackGesture()
             }
             if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(this)
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-                WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
-            }
+            settings.applyWebsiteDarkeningPolicy(appearanceSettings.forceDarkWebsites)
             applyDesktopViewPolicy(sourceTabId, this, safeUrl)
             cookieManagerFor(this).setAcceptCookie(true)
             applyCookiePolicy(sourceTabId, this, safeUrl)
@@ -2142,9 +2143,7 @@ class BrowserController(
             requireMediaPlaybackGesture()
         }
         if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(webView)
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-            WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, true)
-        }
+        webView.settings.applyWebsiteDarkeningPolicy(appearanceSettings.forceDarkWebsites)
         applyDesktopViewPolicy(policyTab, webView, state.currentUrl)
         cookieManagerFor(webView).setAcceptCookie(true)
         applyExternalLinkPreviewCookiePolicy(policyTab, protectionState.get(), webView)
@@ -4620,8 +4619,21 @@ class BrowserController(
     fun updateAppearanceSettings(settings: AppearanceSettings) {
         val normalized = settings.normalized()
         if (appearanceSettings == normalized) return
+        val forceDarkWebsitesChanged =
+            appearanceSettings.forceDarkWebsites != normalized.forceDarkWebsites
         appearanceSettings = normalized
         store.saveAppearanceSettings(normalized)
+        if (forceDarkWebsitesChanged) applyWebsiteDarkeningPolicyToActiveWebViews()
+    }
+
+    private fun applyWebsiteDarkeningPolicyToActiveWebViews() {
+        (
+            webViews.values +
+                linkPeekPreviewAssignments.keys +
+                listOfNotNull(externalLinkPreviewRuntime?.webView)
+        ).distinct().forEach { webView ->
+            webView.settings.applyWebsiteDarkeningPolicy(appearanceSettings.forceDarkWebsites)
+        }
     }
 
     fun onAppearanceConfigurationChanged() {
@@ -5629,9 +5641,7 @@ class BrowserController(
         if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(this)
         installUserScripts(tabId, this)
         SystemWebViewCredentials.configure(this)
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-            WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
-        }
+        settings.applyWebsiteDarkeningPolicy(appearanceSettings.forceDarkWebsites)
         val configuredWebView = this
         cookieManagerFor(this).setAcceptCookie(true)
         applyCookiePolicy(tabId, configuredWebView, tab.url)

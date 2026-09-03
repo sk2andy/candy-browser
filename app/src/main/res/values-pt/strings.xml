@@ -231,6 +231,8 @@
     <string name="appearance_mode_light">Claro</string>
     <string name="appearance_mode_dark">Escuro</string>
     <string name="appearance_mode_amoled">AMOLED</string>
+    <string name="settings_force_dark_websites">Forçar modo escuro em sites</string>
+    <string name="settings_force_dark_websites_summary">Com a aparência escura do navegador, escurece automaticamente sites sem tema escuro próprio. Pode causar problemas de exibição.</string>
     <string name="settings_color_palette">Paleta de cores</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>

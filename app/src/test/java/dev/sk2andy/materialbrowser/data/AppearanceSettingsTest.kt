@@ -11,6 +11,7 @@ class AppearanceSettingsTest {
         val settings = AppearanceSettings()
 
         assertTrue(settings.appearanceMode == BrowserAppearanceMode.System)
+        assertFalse(settings.forceDarkWebsites)
         assertTrue(settings.colorPalette == BrowserColorPalette.Dynamic)
         assertTrue(settings.surfaceStyle == BrowserSurfaceStyle.Clear)
         assertTrue(settings.shapeStyle == BrowserShapeStyle.Rounded)

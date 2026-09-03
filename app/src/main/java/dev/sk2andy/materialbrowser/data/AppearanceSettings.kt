@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 data class AppearanceSettings(
     val appearanceMode: BrowserAppearanceMode = BrowserAppearanceMode.System,
+    val forceDarkWebsites: Boolean = false,
     val colorPalette: BrowserColorPalette = BrowserColorPalette.Dynamic,
     val surfaceStyle: BrowserSurfaceStyle = BrowserSurfaceStyle.Clear,
     val shapeStyle: BrowserShapeStyle = BrowserShapeStyle.Rounded,
