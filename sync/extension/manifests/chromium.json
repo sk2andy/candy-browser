@@ -1,0 +1,7 @@
+{
+  "minimum_chrome_version": "121",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

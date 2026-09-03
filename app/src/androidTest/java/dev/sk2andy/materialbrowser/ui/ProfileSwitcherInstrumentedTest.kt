@@ -15,6 +15,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.hypot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -137,5 +138,84 @@ class ProfileSwitcherInstrumentedTest {
         addNode.assertIsNotEnabled().performTouchInput { click() }
 
         assertEquals(0, actionCount.get())
+    }
+
+    @Test
+    fun syncedProfileUsesSharedIconAndVisibleSyncBadge() {
+        val profile = BrowserProfile(
+            id = "synced:desktop",
+            emoji = "💻",
+            syncedDeviceId = "desktop",
+            syncedDisplayName = "Office desktop",
+            syncedIconCatalogId = "computer",
+            syncedIconEmoji = "💻",
+            syncedIconAccentHue = 210,
+        )
+
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ProfileSwitcher(
+                    profiles = listOf(profile),
+                    activeProfileId = profile.id,
+                    enabled = true,
+                    onSelect = {},
+                    onLongClick = {},
+                    onAdd = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(ProfileSwitcherTestTags.profile(profile.id))
+            .assertIsSelected()
+        val badgeNode = composeRule.onNodeWithTag(
+            ProfileSwitcherTestTags.syncedBadge(profile.id),
+            useUnmergedTree = true,
+        )
+        badgeNode.assertIsDisplayed()
+
+        val profileBounds = composeRule
+            .onNodeWithTag(ProfileSwitcherTestTags.profile(profile.id))
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val badgeBounds = badgeNode.fetchSemanticsNode().boundsInRoot
+        val centerDistance = hypot(
+            badgeBounds.center.x - profileBounds.center.x,
+            badgeBounds.center.y - profileBounds.center.y,
+        )
+        val profileRadius = profileBounds.width / 2f
+        val badgeRadius = badgeBounds.width / 2f
+        assertTrue(
+            "badge must remain fully inside circular profile clip",
+            centerDistance + badgeRadius <= profileRadius,
+        )
+    }
+
+    @Test
+    fun linkedLocalProfileKeepsOwnIconAndShowsSyncBadge() {
+        val profile = BrowserProfile(
+            id = "personal",
+            emoji = "🏠",
+            linkedSyncDeviceId = "phone",
+        )
+
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ProfileSwitcher(
+                    profiles = listOf(profile),
+                    activeProfileId = profile.id,
+                    enabled = true,
+                    onSelect = {},
+                    onLongClick = {},
+                    onAdd = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(ProfileSwitcherTestTags.profile(profile.id))
+            .assertIsSelected()
+        composeRule.onNodeWithTag(
+            ProfileSwitcherTestTags.syncedBadge(profile.id),
+            useUnmergedTree = true,
+        ).assertIsDisplayed()
     }
 }

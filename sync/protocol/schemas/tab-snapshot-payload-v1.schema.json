@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://candybrowser.dev/sync/protocol/schemas/tab-snapshot-payload-v1.schema.json",
+  "title": "Candy Sync tab snapshot plaintext payload v1",
+  "description": "Client-only DeviceTabSnapshot serialized with JSON.stringify before encryption. It is never an API body in plaintext.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "capturedAt", "tabs"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "tabs": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": { "$ref": "#/$defs/tab" }
+    }
+  },
+  "$defs": {
+    "tab": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candyId", "windowId", "index", "groupId", "active", "pinned", "title", "url"],
+      "properties": {
+        "candyId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+        "windowId": { "type": "integer", "minimum": 0 },
+        "index": { "type": "integer", "minimum": 0 },
+        "groupId": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "null" }
+          ]
+        },
+        "active": { "type": "boolean" },
+        "pinned": { "type": "boolean" },
+        "title": { "type": "string", "maxLength": 4096 },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://"
+        }
+      }
+    }
+  }
+}

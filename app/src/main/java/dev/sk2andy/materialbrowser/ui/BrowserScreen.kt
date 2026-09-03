@@ -264,6 +264,8 @@ import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserWebView
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.isSyncLinked
+import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.FindInPageRules
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
@@ -546,9 +548,9 @@ internal fun BrowserScreen(
         controller.blockerSettings.hideCookieConsent &&
         !selectedSiteState.isPaused
     val visibleProfiles = if (controller.profilesEnabled) {
-        controller.profiles.toList()
+        controller.localBrowserProfiles
     } else {
-        controller.profiles.take(1)
+        controller.localBrowserProfiles.take(1)
     }
     val visibleProfileIds = visibleProfiles.mapTo(hashSetOf(), BrowserProfile::id)
     val visibleSnoozedTabs = controller.snoozedTabs.filter {
@@ -659,12 +661,14 @@ internal fun BrowserScreen(
                 sourceTitle = sourceTitle,
                 sourceUrl = sourceUrl,
                 profiles = visibleProfiles,
-                activeProfileId = controller.activeProfileId,
+                activeProfileId = controller.activeProfileId.takeIf { id ->
+                    visibleProfiles.any { it.id == id }
+                } ?: visibleProfiles.first().id,
                 profileIsolationSupported = controller.isProfileIsolationSupported,
                 pinningSupported = controller.isCapsulePinningSupported,
                 canCreate = controller.canCreateSiteCapsule,
                 canCreateDedicatedProfile = controller.profilesEnabled &&
-                    controller.profiles.size < MAX_PROFILES &&
+                    controller.localBrowserProfiles.size < MAX_PROFILES &&
                     controller.tabs.size < MAX_TABS,
                 previewIcon = if (existing?.iconMode == CapsuleIconMode.Favicon) {
                     controller.siteCapsuleIcon(existing.id)
@@ -1854,6 +1858,10 @@ internal fun BrowserScreen(
                 settingsDestination = SettingsDestination.Home
                 settingsVisible = true
             },
+            onOpenSyncSettings = {
+                settingsDestination = SettingsDestination.Sync
+                settingsVisible = true
+            },
             destinationChromeVisible = overviewDestinationChromeVisible,
             onEntryHeroStarted = { animated ->
                 overviewMorphJob?.cancel()
@@ -2017,6 +2025,8 @@ internal fun BrowserScreen(
                 automaticTabSortingEnabled = controller.automaticTabSortingEnabled,
                 dismissResistancePercent = controller.dismissResistancePercent,
                 profilesEnabled = controller.profilesEnabled,
+                profiles = controller.profiles,
+                activeProfileId = controller.activeProfileId,
                 tabCount = controller.activeTabs.size,
                 addressBarActionLayout = controller.addressBarActionLayout,
                 isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
@@ -2050,6 +2060,8 @@ internal fun BrowserScreen(
                     )
                 },
                 toppingCatalogState = toppingCatalogState,
+                syncState = controller.syncState,
+                syncIconCatalog = controller.syncIconCatalog,
                 onDestinationChanged = { settingsDestination = it },
                 onAppearanceSettingsChanged = controller::updateAppearanceSettings,
                 onDownloadSettingsChanged = controller::updateDownloadSettings,
@@ -2151,6 +2163,9 @@ internal fun BrowserScreen(
                     }
                 },
                 onRefreshToppingCatalog = controller::refreshToppingCatalog,
+                onConfigureSync = controller::configureSync,
+                onEnrollSync = controller::enrollSync,
+                onRefreshSync = controller::refreshSync,
                 onFilterStudio = {
                     filterStudioSelectedRuleId = null
                     filterStudioVisible = true
@@ -5466,6 +5481,7 @@ internal fun TabOverview(
     onSelect: (String) -> Unit,
     onNewTab: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenSyncSettings: () -> Unit = onOpenSettings,
     destinationChromeVisible: Boolean,
     onEntryHeroStarted: (Boolean) -> Unit,
     onEntryHeroCompleted: () -> Unit,
@@ -6315,7 +6331,13 @@ internal fun TabOverview(
                     },
                     onLongClick = { profileId ->
                         rootView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        profileActionsProfileId = profileId
+                        val profile = controller.profiles.firstOrNull { it.id == profileId }
+                        if (profile?.isSynced == true) {
+                            onClose()
+                            onOpenSyncSettings()
+                        } else {
+                            profileActionsProfileId = profileId
+                        }
                     },
                     onAdd = {
                         rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -7403,11 +7425,11 @@ internal fun TabOverview(
         )
 
         val actionProfile = profileActionsProfileId?.let { profileId ->
-            controller.profiles.firstOrNull { it.id == profileId }
+            controller.localBrowserProfiles.firstOrNull { it.id == profileId }
         }
         ProfileActionsSheet(
             profile = actionProfile,
-            canDelete = controller.profiles.size > 1,
+            canDelete = controller.localBrowserProfiles.size > 1,
             isolationSupported = controller.isProfileIsolationSupported,
             onChangeEmoji = {
                 val target = actionProfile ?: return@ProfileActionsSheet
@@ -7466,7 +7488,8 @@ internal fun TabOverview(
             visible = emojiPickerTarget != null,
             creatingProfile = emojiPickerTarget == NEW_PROFILE_TARGET,
             isolationSupported = controller.isProfileIsolationSupported,
-            selectedEmoji = controller.profiles
+            emojis = controller.syncIconCatalog.icons.map { it.emoji },
+            selectedEmoji = controller.localBrowserProfiles
                 .firstOrNull { it.id == emojiPickerTarget }
                 ?.emoji,
             onCreate = { emoji, isolationEnabled ->
@@ -7540,6 +7563,7 @@ internal object ProfileSwitcherTestTags {
     const val Add = "profile_switcher_add"
 
     fun profile(profileId: String): String = "profile_switcher_profile:$profileId"
+    fun syncedBadge(profileId: String): String = "profile_switcher_synced_badge:$profileId"
 }
 
 @Composable
@@ -7618,11 +7642,17 @@ internal fun ProfileSwitcher(
                         Row(modifier = Modifier.fillMaxHeight()) {
                             profiles.forEach { profile ->
                                 val isSelected = profile.id == activeProfileId
+                                val syncedAccent = profile.syncedIconAccentHue?.let { hue ->
+                                    Color.hsv(hue.toFloat(), 0.42f, 0.86f)
+                                }
                                 val profileContainerColor by animateColorAsState(
                                     targetValue = when {
                                         !enabled -> MaterialTheme.colorScheme
                                             .surfaceContainerHighest
                                             .copy(alpha = 0.38f)
+                                        syncedAccent != null -> syncedAccent.copy(
+                                            alpha = if (isSelected) 0.42f else 0.24f,
+                                        )
                                         isSelected -> MaterialTheme.colorScheme.primaryContainer
                                         else -> MaterialTheme.colorScheme.surfaceContainerHighest
                                     },
@@ -7658,8 +7688,10 @@ internal fun ProfileSwitcher(
                                             ProfileSwitcherTestTags.profile(profile.id),
                                         )
                                         .semantics {
-                                            contentDescription =
-                                                "$profileDescription ${profile.emoji}"
+                                            val profileLabel = profile.syncedDisplayName
+                                                ?: profile.syncedIconEmoji
+                                                ?: profile.emoji
+                                            contentDescription = "$profileDescription $profileLabel"
                                             selected = isSelected
                                         }
                                         .clip(CircleShape)
@@ -7682,7 +7714,7 @@ internal fun ProfileSwitcher(
                                         shadowElevation = profileElevation,
                                     ) {}
                                     AnimatedContent(
-                                        targetState = profile.emoji,
+                                        targetState = profile.syncedIconEmoji ?: profile.emoji,
                                         transitionSpec = {
                                             fadeIn(tween(150)) togetherWith fadeOut(tween(90))
                                         },
@@ -7698,6 +7730,27 @@ internal fun ProfileSwitcher(
                                             fontSize = 25.sp,
                                             textAlign = TextAlign.Center,
                                         )
+                                    }
+                                    if (profile.isSyncLinked) {
+                                        Surface(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .offset(x = (-6).dp, y = (-6).dp)
+                                                .size(17.dp)
+                                                .testTag(
+                                                    ProfileSwitcherTestTags.syncedBadge(profile.id),
+                                                ),
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                            tonalElevation = 2.dp,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = null,
+                                                modifier = Modifier.padding(3.dp),
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -9586,6 +9639,7 @@ internal fun EmojiPickerSheet(
     visible: Boolean,
     creatingProfile: Boolean,
     isolationSupported: Boolean,
+    emojis: List<String>,
     selectedEmoji: String?,
     onCreate: (String, Boolean) -> Unit,
     onSelect: (String) -> Unit,
@@ -9657,7 +9711,7 @@ internal fun EmojiPickerSheet(
                     .verticalScroll(rememberScrollState())
                     .testTag(ProfileCreationTestTags.IconScroll),
             ) {
-                PROFILE_EMOJIS.chunked(6).forEach { rowEmojis ->
+                emojis.chunked(6).forEach { rowEmojis ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -9728,18 +9782,6 @@ private val TAB_OVERVIEW_TOP_SPACING = 12.dp
 private val TAB_OVERVIEW_PROFILE_SPACING = 4.dp
 private val PROFILE_SWITCHER_LAYOUT_HEIGHT = 64.dp
 private val HERO_PAGER_VERTICAL_PADDING = 4.dp
-private val PROFILE_EMOJIS = listOf(
-    "🍬", "⭐", "💼", "🛒", "🎮", "📚",
-    "✈️", "🏠", "🎵", "🧪", "📰", "❤️",
-    "🔥", "🌙", "🌿", "🎨", "🏋️", "💡",
-    "🏫", "🎒", "✏️", "🎓", "📖", "🧑‍🎓",
-    "👶", "🧸", "🍼", "👨‍👩‍👧", "💍", "💒",
-    "💰", "💳", "🪙", "📈", "🎬", "🍿",
-    "📺", "📷", "💻", "📱", "🚗", "🚲",
-    "⚽", "🏀", "🏖️", "🍕", "☕", "🎉",
-    "🎁", "🐶", "🐱", "🌍", "🩺", "📅",
-)
-
 @Composable
 private fun IncognitoTabPlaceholder() {
     Box(

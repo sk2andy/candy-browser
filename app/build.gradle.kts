@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.gradle.api.file.DuplicatesStrategy
 
 plugins {
     id("com.android.application")
@@ -143,6 +144,7 @@ android {
     }
 
     sourceSets {
+        getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/candySyncIcons/assets"))
         getByName("userCaDebug").res.srcDir("src/userCa/res")
         getByName("userCaRelease").res.srcDir("src/userCa/res")
     }
@@ -168,6 +170,19 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+}
+
+val generateCandySyncDeviceIconAsset by tasks.registering(Copy::class) {
+    val catalog = rootProject.file("sync/protocol/device-icons-v1.json")
+    inputs.file(catalog)
+    from(catalog)
+    into(layout.buildDirectory.dir("generated/candySyncIcons/assets"))
+    rename { "candy_sync_device_icons_v1.json" }
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(generateCandySyncDeviceIconAsset)
 }
 
 val validateReleaseSigning by tasks.registering {
@@ -243,6 +258,8 @@ dependencies {
     }
     implementation("com.google.guava:guava:33.2.1-android")
     implementation("com.github.Dimezis:BlurView:version-3.2.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.lambdapioneer.argon2kt:argon2kt:1.6.0")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material-icons-core")

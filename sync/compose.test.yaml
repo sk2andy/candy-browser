@@ -1,0 +1,6 @@
+services:
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    network_mode: none

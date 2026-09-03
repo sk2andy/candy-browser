@@ -66,7 +66,7 @@ the existing dedicated Pixel app without clearing its Reddit tab or browsing dat
 | Reddit CSS safe-area inset | 0 px in safe mode |
 | WebView window top | 132 physical px |
 | Display cutout/status-bar safe top | 132 physical px |
-| `App öffnen` window top | approximately 159 physical px |
+| `Open app` window top | approximately 159 physical px |
 | Visual result | Control fully below the system bar |
 
 The page still declares `viewport-fit=cover`, but its fixed header does not consume the CSS safe-area

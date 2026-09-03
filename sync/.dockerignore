@@ -1,0 +1,11 @@
+extension/node_modules/
+extension/dist/
+extension/.test-build/
+server/.env
+server/.env.*
+!server/.env.example
+server/*.sqlite
+server/*.sqlite3
+server/*.sqlite3-*
+**/.DS_Store
+

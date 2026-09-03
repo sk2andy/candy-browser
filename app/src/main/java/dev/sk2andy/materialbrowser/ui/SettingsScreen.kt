@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -76,7 +78,9 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AddressResolver
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -95,6 +99,10 @@ import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
+import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
+import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
+import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
@@ -109,6 +117,7 @@ internal enum class SettingsDestination {
     Userscripts,
     ToppingCatalog,
     SiteCapsules,
+    Sync,
     ProtectionAndData,
     AboutLegal,
 }
@@ -171,6 +180,8 @@ internal fun SettingsScreen(
     automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
+    profiles: List<BrowserProfile>,
+    activeProfileId: String,
     tabCount: Int,
     addressBarActionLayout: AddressBarActionLayout,
     isAddressBarDockingEnabled: Boolean,
@@ -187,6 +198,8 @@ internal fun SettingsScreen(
     siteCapsules: List<SiteCapsule>,
     userScripts: List<UserscriptUiItem>,
     toppingCatalogState: ToppingCatalogUiState,
+    syncState: SyncRepositoryState,
+    syncIconCatalog: SyncDeviceIconCatalog,
     onDestinationChanged: (SettingsDestination) -> Unit,
     onAppearanceSettingsChanged: (AppearanceSettings) -> Unit,
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
@@ -223,6 +236,9 @@ internal fun SettingsScreen(
     onToggleTopping: (id: String, enabled: Boolean) -> Unit,
     onUpdateTopping: (id: String) -> Unit,
     onRefreshToppingCatalog: () -> Unit,
+    onConfigureSync: (SyncConnectionSettings) -> Boolean,
+    onEnrollSync: (CharArray, CharArray, (SyncEnrollmentOutcome) -> Unit) -> Unit,
+    onRefreshSync: () -> Unit,
     onFilterStudio: () -> Unit,
     onExportAppData: () -> Unit,
     onImportAppData: () -> Unit,
@@ -386,6 +402,17 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 
+                SettingsDestination.Sync -> SyncSettingsPage(
+                    state = syncState,
+                    iconCatalog = syncIconCatalog,
+                    localProfiles = profiles.filterNot(BrowserProfile::isSynced),
+                    activeProfileId = activeProfileId,
+                    onConfigure = onConfigureSync,
+                    onEnroll = onEnrollSync,
+                    onRefresh = onRefreshSync,
+                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                )
+
                 SettingsDestination.ProtectionAndData -> ProtectionAndDataSettingsPage(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
@@ -431,6 +458,13 @@ private fun SettingsHomePage(
             title = stringResource(R.string.settings_section_search),
             subtitle = stringResource(R.string.settings_home_search_summary),
             onClick = { onDestinationChanged(SettingsDestination.Search) },
+        )
+        SettingsPageSpacer()
+        SettingsLink(
+            icon = Icons.Default.Refresh,
+            title = stringResource(R.string.sync_settings_title),
+            subtitle = stringResource(R.string.settings_home_sync_summary),
+            onClick = { onDestinationChanged(SettingsDestination.Sync) },
         )
         SettingsPageSpacer()
         SettingsLink(
@@ -1605,7 +1639,8 @@ internal fun SettingsPage(
             .navigationBarsPadding()
             .padding(horizontal = 24.dp)
             .padding(bottom = 24.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .imePadding(),
     ) {
         Row(
             modifier = Modifier.padding(top = 8.dp, bottom = 12.dp),

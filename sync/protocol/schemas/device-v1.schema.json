@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://candybrowser.dev/sync/protocol/schemas/device-v1.schema.json",
+  "title": "Candy Sync device v1",
+  "description": "Server-visible device record. Device name and profile icon descriptor remain encrypted; PKCS8 private key and bearer token are forbidden.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "deviceId",
+    "publicKeyAlgorithm",
+    "publicKey",
+    "encryptedName",
+    "encryptedIcon",
+    "capabilities",
+    "status",
+    "createdAt",
+    "lastSeenAt"
+  ],
+  "properties": {
+    "deviceId": { "$ref": "#/$defs/identifier" },
+    "publicKeyAlgorithm": { "const": "ECDH-P256-SPKI" },
+    "publicKey": { "$ref": "#/$defs/p256Spki" },
+    "encryptedName": {
+      "description": "AES-256-GCM envelope whose HKDF info and AAD bind the exact SHA-256 fingerprint of this record's DER SPKI public key.",
+      "$ref": "#/$defs/encryptedText"
+    },
+    "encryptedIcon": {
+      "description": "AES-256-GCM envelope for #/$defs/deviceIconDescriptor. HKDF info and AEAD AAD bind the exact SHA-256 fingerprint of this record's DER SPKI public key, so envelopes cannot be swapped between devices. Legacy pre-v2 rows may return null until re-enrolled.",
+      "oneOf": [
+        { "$ref": "#/$defs/encryptedIcon" },
+        { "type": "null" }
+      ]
+    },
+    "capabilities": { "$ref": "#/$defs/capabilities" },
+    "status": { "type": "string", "enum": ["active", "revoked"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "lastSeenAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "p256Spki": {
+      "description": "DER SubjectPublicKeyInfo for an ECDH P-256 public key, unpadded base64url. Current Web Crypto export is 91 bytes (122 characters).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{122}$"
+    },
+    "fingerprint": {
+      "description": "SHA-256 of decoded SPKI bytes, exactly 32 bytes encoded as unpadded base64url.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "nonce": {
+      "description": "Exactly 12 bytes encoded as unpadded base64url.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{16}$"
+    },
+    "ciphertext": {
+      "description": "AES-256-GCM ciphertext with included 16-byte tag, unpadded base64url.",
+      "type": "string",
+      "minLength": 22,
+      "maxLength": 524288,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "encryptedText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nonce", "ciphertext"],
+      "properties": {
+        "nonce": { "$ref": "#/$defs/nonce" },
+        "ciphertext": { "$ref": "#/$defs/ciphertext" }
+      }
+    },
+    "encryptedIcon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nonce", "ciphertext"],
+      "properties": {
+        "nonce": { "$ref": "#/$defs/nonce" },
+        "ciphertext": {
+          "description": "Bounded AES-256-GCM ciphertext for a deviceIconDescriptor, including the 16-byte tag.",
+          "type": "string",
+          "minLength": 22,
+          "maxLength": 4096,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    },
+    "deviceIconDescriptor": {
+      "description": "Client-only plaintext used to render a stable per-device profile icon. Synced-profile badges derive locally from item type and sync status, never from this descriptor.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "catalogId", "accentHue"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "catalogId": {
+          "description": "An id from ../device-icons-v1.json. Clients fail closed for ids absent from that versioned catalog.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,31}$"
+        },
+        "accentHue": { "type": "integer", "minimum": 0, "maximum": 359 }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["tabs", "bookmarks", "groups"]
+      }
+    },
+    "enrollmentRequest": {
+      "description": "Device enrollment authenticated with HTTP Basic. Recovery envelope is required by server state for the first device and forbidden as a replacement for later devices.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deviceKeyFingerprint",
+        "publicKeyAlgorithm",
+        "publicKey",
+        "encryptedName",
+        "encryptedIcon",
+        "capabilities"
+      ],
+      "properties": {
+        "deviceId": { "$ref": "#/$defs/identifier" },
+        "deviceKeyFingerprint": { "$ref": "#/$defs/fingerprint" },
+        "publicKeyAlgorithm": { "const": "ECDH-P256-SPKI" },
+        "publicKey": { "$ref": "#/$defs/p256Spki" },
+        "encryptedName": {
+          "description": "Device-name encryption binds deviceKeyFingerprint in both HKDF info and AEAD AAD.",
+          "$ref": "#/$defs/encryptedText"
+        },
+        "encryptedIcon": { "$ref": "#/$defs/encryptedIcon" },
+        "capabilities": { "$ref": "#/$defs/capabilities" },
+        "recoveryEnvelope": {
+          "$ref": "bootstrap-v1.schema.json#/$defs/recoveryEnvelope"
+        }
+      }
+    }
+  }
+}

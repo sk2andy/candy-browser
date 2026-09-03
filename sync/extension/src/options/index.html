@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Candy Sync – Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <nav aria-label="Settings">
+        <a href="#status">Status</a>
+        <a href="#connection">Connection</a>
+        <a href="#security">Security</a>
+        <a href="#sync">Synchronization</a>
+      </nav>
+      <p class="aside-note">Self-hosted · E2EE · No toolbar popup</p>
+    </aside>
+    <main>
+      <header>
+        <p class="eyebrow">Candy Browser</p>
+        <h1>Sync settings</h1>
+        <p>Open tabs and group metadata. Payloads are encrypted locally before upload.</p>
+      </header>
+
+      <section id="status" aria-labelledby="status-title">
+        <h2 id="status-title">Status</h2>
+        <div class="status-card" id="status-card" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div><strong id="status-code">Loading …</strong><small id="status-message"></small></div>
+        </div>
+        <div class="button-row">
+          <button type="button" id="sync-now">Sync now</button>
+          <button type="button" class="ghost" id="lock">Lock</button>
+        </div>
+      </section>
+
+      <section id="connection" aria-labelledby="connection-title">
+        <h2 id="connection-title">Connection</h2>
+        <p class="section-intro">HTTPS is recommended. Remote HTTP works only when the self-hosted server explicitly enables it.</p>
+        <form id="setup-form">
+          <div class="field">
+            <label for="endpoint">Server-Endpoint</label>
+            <input id="endpoint" name="endpoint" type="url" placeholder="https://sync.example.net/" required spellcheck="false" autocomplete="url">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="username">Username</label>
+              <input id="username" name="username" type="text" required maxlength="160" autocomplete="username">
+            </div>
+            <div class="field">
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" required autocomplete="current-password">
+              <small>Used only for authentication and never stored.</small>
+            </div>
+          </div>
+          <div class="field">
+            <label for="device-name">Device Name</label>
+            <input id="device-name" name="deviceName" type="text" required maxlength="80" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="device-icon">Profile Icon</label>
+            <select id="device-icon" name="deviceIcon" required></select>
+            <small>Uses the same shared icon catalog as Candy Browser for Android.</small>
+          </div>
+
+          <div id="security" class="security-box">
+            <h3>Local E2EE passphrase</h3>
+            <p>The private device key and workspace key are generated randomly on this device. The passphrase encrypts both locally and is never sent to the server.</p>
+            <div class="field-row">
+              <div class="field">
+                <label for="passphrase">Passphrase</label>
+                <input id="passphrase" name="passphrase" type="password" required minlength="16" autocomplete="new-password">
+              </div>
+              <div class="field" id="confirmation-field">
+                <label for="passphrase-confirmation">Repeat passphrase</label>
+                <input id="passphrase-confirmation" name="passphraseConfirmation" type="password" required minlength="16" autocomplete="new-password">
+              </div>
+            </div>
+            <label class="acknowledge" id="acknowledge-row">
+              <input id="acknowledge" type="checkbox" required>
+              <span>I understand: the passphrase cannot be changed or recovered. Losing it means losing the data.</span>
+            </label>
+          </div>
+
+          <fieldset id="sync" class="toggle-list">
+            <legend>Synchronization</legend>
+            <label><span><strong>Open tabs</strong><small>Device-scoped encrypted snapshot.</small></span><input id="sync-tabs" type="checkbox" checked></label>
+            <label aria-disabled="true"><span><strong>Bookmarks · planned</strong><small>A dedicated Candy Sync folder follows after the tab vertical slice.</small></span><input id="sync-bookmarks" type="checkbox" disabled></label>
+            <label><span><strong>Tab groups</strong><small>Group assignments are transferred with the tab snapshot.</small></span><input id="sync-groups" type="checkbox" checked></label>
+          </fieldset>
+
+          <div class="button-row">
+            <button type="submit" class="primary" id="connect">Connect securely</button>
+            <button type="button" class="primary" id="unlock" hidden>Unlock this session</button>
+            <button type="button" id="save-selection" hidden>Save selection</button>
+          </div>
+          <p class="feedback" id="feedback" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section aria-labelledby="privacy-title">
+        <h2 id="privacy-title">Security boundaries</h2>
+        <dl>
+          <div><dt>Server can see</dt><dd>Workspace and device IDs, cursors, sizes, and timestamps.</dd></div>
+          <div><dt>Server cannot see</dt><dd>Tab URLs, titles, passphrase, workspace key, or device key.</dd></div>
+          <div><dt>Always excluded</dt><dd>Private windows, internal browser pages, and local files.</dd></div>
+          <div><dt>Local risk</dt><dd>An unlocked browser profile and local malware are outside the E2EE boundary.</dd></div>
+        </dl>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

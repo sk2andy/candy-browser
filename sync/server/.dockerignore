@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+coverage/
+dist/
+tmp/
+.git/
+.DS_Store

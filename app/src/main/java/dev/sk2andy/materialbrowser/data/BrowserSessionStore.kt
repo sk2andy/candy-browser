@@ -18,6 +18,7 @@ import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
+import dev.sk2andy.materialbrowser.sync.SyncTabRules
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -50,6 +51,8 @@ class BrowserSessionStore internal constructor(
                             isPinned = item.optBoolean("isPinned", false),
                             title = item.optString("title", ""),
                             url = item.optString("url", BLANK_URL),
+                            syncCandyId = item.optString("syncCandyId")
+                                .takeIf(SyncTabRules::isValidCandyId),
                         ),
                     )
                 }
@@ -114,7 +117,8 @@ class BrowserSessionStore internal constructor(
                         .put("isIncognito", false)
                         .put("isPinned", tab.isPinned)
                         .put("title", tab.title)
-                        .put("url", tab.url),
+                        .put("url", tab.url)
+                        .put("syncCandyId", tab.syncCandyId),
                 )
             }
             editor.putString(KEY_TABS, array.toString())

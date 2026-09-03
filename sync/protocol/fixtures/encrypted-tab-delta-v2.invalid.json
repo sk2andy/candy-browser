@@ -1,0 +1,15 @@
+{
+  "changeId": "change_01J7V2",
+  "mutationId": "mutation_01J7V2",
+  "workspaceId": "workspace_alpha",
+  "deviceId": "device_writer",
+  "entity": "tabs",
+  "entityId": "device_target",
+  "operation": "snapshot",
+  "baseRevision": "41",
+  "schemaVersion": 2,
+  "cryptoVersion": 1,
+  "keyVersion": 1,
+  "nonce": "AAAAAAAAAAAAAAAA",
+  "ciphertext": "AAAAAAAAAAAAAAAAAAAAAA"
+}
