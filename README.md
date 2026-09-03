@@ -319,8 +319,10 @@ keytool -exportcert \
 The separate `Publish F-Droid reference APK` workflow builds without access to signing secrets, then
 passes the unsigned APK to an isolated signing job that executes no repository code. It accepts only
 explicitly allowlisted release tags and commits and uses Android Build Tools 34 for compatibility
-with F-Droid's signature-copying process. F-Droid accepts the resulting signed APK only when its
-independent build matches byte for byte apart from signing.
+with F-Droid's signature-copying process. Reference APKs disable the legacy v1/JAR signature and
+enable modern APK signature schemes so F-Droid can copy the signature onto its independent build.
+F-Droid accepts the resulting signed APK only when that build matches byte for byte apart from
+signing.
 
 The workflow uses the `release` GitHub environment. Configure required reviewers for that environment
 if releases should require a manual approval after dispatch.
