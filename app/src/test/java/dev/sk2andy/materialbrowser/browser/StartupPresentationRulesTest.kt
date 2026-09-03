@@ -46,6 +46,20 @@ class StartupPresentationRulesTest {
     }
 
     @Test
+    fun `release notes keep editor closed when animation is disabled`() {
+        assertEquals(
+            StartupPresentation(showSplash = false, openAddressEditor = false),
+            StartupPresentationRules.resolve(
+                isColdStart = true,
+                isLauncherLaunch = true,
+                isStartupAnimationEnabled = false,
+                isOnboardingRequired = false,
+                isReleaseNotesRequired = true,
+            ),
+        )
+    }
+
+    @Test
     fun `external launches and recreation do not change startup presentation`() {
         listOf(
             StartupPresentationRules.resolve(

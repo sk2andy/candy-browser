@@ -387,11 +387,16 @@ if releases should require a manual approval after dispatch.
 
 Before each release, update `candy.versionName` and the monotonically increasing
 `candy.versionCode` in `gradle.properties`. The workflow rejects an input version that differs
-from the committed version. Then dispatch a release from GitHub Actions or with GitHub CLI:
+from the committed version. Add the matching English changelog at
+`release-notes/<version>.md`; it is bundled into Android’s one-time What’s New page and published
+unchanged as the GitHub Release body. The project skill at
+`.agents/skills/release-changelog/SKILL.md` documents the supported Markdown and screenshot format.
+Then dispatch a release from GitHub Actions or with GitHub CLI:
 
 ```bash
 gh workflow run release.yml \
   -f version=0.33 \
+  -f changelog=release-notes/0.33.md \
   -f prerelease=false
 ```
 

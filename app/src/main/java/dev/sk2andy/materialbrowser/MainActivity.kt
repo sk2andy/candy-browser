@@ -54,6 +54,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
+import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
@@ -74,6 +75,9 @@ import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
+import dev.sk2andy.materialbrowser.data.ReleaseNotesContent
+import dev.sk2andy.materialbrowser.data.ReleaseNotesRepository
+import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
 import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
 import dev.sk2andy.materialbrowser.data.UserScriptImportReader
 import dev.sk2andy.materialbrowser.data.UserScriptImportResult
@@ -84,6 +88,7 @@ import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
+import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import dev.sk2andy.materialbrowser.update.AvailableAppUpdate
 import dev.sk2andy.materialbrowser.update.AppReleaseChannel
@@ -100,6 +105,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var browserController: BrowserController
     private lateinit var webMediaSystemSession: WebMediaSystemSession
     private lateinit var castSessionController: CastSessionController
+    private lateinit var releaseNotesStore: ReleaseNotesStore
+    private var releaseNotesContent: ReleaseNotesContent? = null
     private var videoOnlyPresentation by mutableStateOf(false)
     private var fullscreenVideoBounds: Rect? = null
     private var pictureInPictureSourceRectHint: Rect? = null
@@ -112,6 +119,7 @@ class MainActivity : AppCompatActivity() {
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
     private var onboardingVisible by mutableStateOf(false)
+    private var releaseNotesVisible by mutableStateOf(false)
     private var externalLaunchTabId by mutableStateOf<String?>(null)
     private var appDataExportWarningVisible by mutableStateOf(false)
     private var pendingAppDataImport by mutableStateOf<AppDataImportPreview?>(null)
@@ -202,6 +210,17 @@ class MainActivity : AppCompatActivity() {
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
         onboardingVisible = onboardingRequired
+        releaseNotesStore = ReleaseNotesStore(this)
+        releaseNotesContent = ReleaseNotesRepository(this).load(
+            BuildConfig.RELEASE_NOTES_VERSION,
+        )
+        val releaseNotesRequired = shouldPresentReleaseNotes(
+            isNewLaunch = savedInstanceState == null,
+            intentAction = intent.action,
+        )
+        releaseNotesVisible = savedInstanceState
+            ?.getBoolean(STATE_RELEASE_NOTES_VISIBLE)
+            ?: releaseNotesRequired
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
         browserController = BrowserController(
             activity = this,
@@ -272,6 +291,7 @@ class MainActivity : AppCompatActivity() {
             isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
             isStartupAnimationEnabled = browserController.isStartupAnimationEnabled,
             isOnboardingRequired = onboardingRequired,
+            isReleaseNotesRequired = releaseNotesRequired,
         )
         setContent {
             val appearanceSettings = browserController.appearanceSettings
@@ -307,6 +327,11 @@ class MainActivity : AppCompatActivity() {
                     val fileName = availableUpdateFileName ?: return@let null
                     AvailableAppUpdate(version, url, fileName)
                 }
+                val showReleaseNotes = releaseNotesVisible &&
+                    releaseNotesContent != null &&
+                    !onboardingVisible &&
+                    !splashVisible &&
+                    !videoOnlyPresentation
                 LaunchedEffect(Unit) {
                     if (splashVisible) {
                         delay(SPLASH_DURATION_MILLIS)
@@ -332,6 +357,11 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     updateCheckCompleted = true
+                }
+                LaunchedEffect(showReleaseNotes) {
+                    if (showReleaseNotes) {
+                        releaseNotesStore.markPresented(BuildConfig.VERSION_CODE.toLong())
+                    }
                 }
                 LaunchedEffect(
                     fullscreenVideoState,
@@ -424,11 +454,24 @@ class MainActivity : AppCompatActivity() {
                     ) {
                         CandySplashScreen()
                     }
+                    releaseNotesContent?.takeIf { showReleaseNotes }?.let { content ->
+                        ReleaseNotesScreen(
+                            versionName = content.versionName,
+                            document = content.document,
+                            onDone = { releaseNotesVisible = false },
+                            onOpenLink = { url ->
+                                if (browserController.openUrl(url, inNewTab = true)) {
+                                    releaseNotesVisible = false
+                                }
+                            },
+                        )
+                    }
                 }
                 if (
                     availableUpdate != null &&
                     !updateDialogDismissed &&
                     !onboardingVisible &&
+                    !releaseNotesVisible &&
                     !splashVisible &&
                     !videoOnlyPresentation
                 ) {
@@ -501,10 +544,19 @@ class MainActivity : AppCompatActivity() {
         showAppDataTransferResult(intent)
         openIntent(intent)
         if (
+            shouldPresentReleaseNotes(
+                isNewLaunch = true,
+                intentAction = intent.action,
+            )
+        ) {
+            releaseNotesVisible = true
+        }
+        if (
             StartupPresentationRules.shouldOpenAddressEditor(
                 isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
                 isStartupAnimationEnabled = browserController.isStartupAnimationEnabled,
                 isOnboardingRequired = onboardingVisible,
+                isReleaseNotesRequired = releaseNotesVisible,
             )
         ) {
             launcherAddressEditorRequestId++
@@ -687,6 +739,7 @@ class MainActivity : AppCompatActivity() {
             browserController.externalLinkPreviewState != null,
         )
         externalLaunchTabId?.let { outState.putString(STATE_EXTERNAL_LAUNCH_TAB_ID, it) }
+        outState.putBoolean(STATE_RELEASE_NOTES_VISIBLE, releaseNotesVisible)
         super.onSaveInstanceState(outState)
     }
 
@@ -1200,6 +1253,25 @@ class MainActivity : AppCompatActivity() {
         PackageManager.FEATURE_PICTURE_IN_PICTURE,
     )
 
+    @Suppress("DEPRECATION")
+    private fun isUpdatedInstallation(): Boolean = runCatching {
+        packageManager.getPackageInfo(packageName, 0).let { packageInfo ->
+            packageInfo.lastUpdateTime > packageInfo.firstInstallTime
+        }
+    }.getOrDefault(false)
+
+    private fun shouldPresentReleaseNotes(
+        isNewLaunch: Boolean,
+        intentAction: String?,
+    ): Boolean = ReleaseNotesPresentationRules.shouldPresent(
+        isNewLaunch = isNewLaunch,
+        isLauncherLaunch = intentAction == Intent.ACTION_MAIN,
+        isAppUpdate = isUpdatedInstallation(),
+        contentAvailable = releaseNotesContent != null,
+        currentVersionCode = BuildConfig.VERSION_CODE.toLong(),
+        lastPresentedVersionCode = releaseNotesStore.lastPresentedVersionCode(),
+    )
+
     private fun applyBrowserSystemUi() {
         val fullscreenVideoExpanded = ::browserController.isInitialized &&
             browserController.isFullscreenVideoExpanded
@@ -1229,6 +1301,7 @@ class MainActivity : AppCompatActivity() {
         const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
         const val STATE_EXTERNAL_LINK_PREVIEW_ACTIVE = "external_link_preview_active"
         const val STATE_EXTERNAL_LAUNCH_TAB_ID = "external_launch_tab_id"
+        const val STATE_RELEASE_NOTES_VISIBLE = "release_notes_visible"
         const val VIDEO_ASPECT_WIDTH = 16
         const val VIDEO_ASPECT_HEIGHT = 9
         const val PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP = 8

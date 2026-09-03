@@ -1,5 +1,6 @@
 import java.util.Properties
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.Sync
 
 plugins {
     id("com.android.application")
@@ -42,6 +43,26 @@ val missingReleaseSigningValues = releaseSigningValues.filterValues { it == null
 val hasReleaseSigning = missingReleaseSigningValues.isEmpty()
 val candyVersionCode = providers.gradleProperty("candy.versionCode").orElse("1")
 val candyVersionName = providers.gradleProperty("candy.versionName").orElse("0.1")
+val candyReleaseNotesFile = providers.gradleProperty("candy.releaseNotesFile")
+    .orElse(candyVersionName.map { version -> "release-notes/$version.md" })
+val releaseNotesImageSyntax = Regex("""!\[([^]]+)]\(([^)]+)\)""")
+val releaseNotesImageFiles = providers.provider {
+    val notes = rootProject.file(candyReleaseNotesFile.get())
+    if (!notes.isFile) {
+        emptyList()
+    } else {
+        val prefix = "https://raw.githubusercontent.com/sk2andy/candy-browser/" +
+            "v${candyVersionName.get()}/docs/screenshots/"
+        releaseNotesImageSyntax.findAll(notes.readText(Charsets.UTF_8))
+            .mapNotNull { match ->
+                match.groupValues[2]
+                    .takeIf { target -> target.startsWith(prefix) }
+                    ?.removePrefix(prefix)
+                    ?.let { fileName -> rootProject.file("docs/screenshots/$fileName") }
+            }
+            .toList()
+    }
+}
 val debugApplicationIdSuffix =
     providers.gradleProperty("candy.debugApplicationIdSuffix").orElse(".linkpeek")
 val debugAppLabel = providers.gradleProperty("candy.debugAppLabel").orElse("Candy Link Peek")
@@ -69,6 +90,7 @@ android {
         buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
         buildConfigField("boolean", "FOSS_DISTRIBUTION", "false")
         buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
+        buildConfigField("String", "RELEASE_NOTES_VERSION", "\"${candyVersionName.get()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -145,6 +167,7 @@ android {
 
     sourceSets {
         getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/candySyncIcons/assets"))
+        getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/releaseNotes/assets"))
         getByName("userCaDebug").res.srcDir("src/userCa/res")
         getByName("userCaRelease").res.srcDir("src/userCa/res")
     }
@@ -181,8 +204,99 @@ val generateCandySyncDeviceIconAsset by tasks.registering(Copy::class) {
     duplicatesStrategy = DuplicatesStrategy.FAIL
 }
 
+val validateReleaseNotes by tasks.registering {
+    group = "verification"
+    description = "Validates the Markdown release notes packaged into the app."
+    val releaseNotes = candyReleaseNotesFile.map(rootProject::file)
+    inputs.property("releaseNotesVersion", candyVersionName)
+    inputs.property("releaseNotesPath", candyReleaseNotesFile)
+    inputs.file(releaseNotes)
+
+    doLast {
+        val version = candyVersionName.get()
+        val expectedPath = "release-notes/$version.md"
+        val configuredPath = candyReleaseNotesFile.get().replace('\\', '/')
+        check(configuredPath == expectedPath) {
+            "Release notes must use the version-matched path $expectedPath, got $configuredPath."
+        }
+        val file = releaseNotes.get()
+        check(file.isFile) { "Release notes do not exist: ${file.absolutePath}" }
+        val bytes = file.readBytes()
+        check(bytes.isNotEmpty() && bytes.size <= 65_536) {
+            "Release notes must contain 1..65536 UTF-8 bytes, got ${bytes.size}."
+        }
+        val content = bytes.toString(Charsets.UTF_8)
+        check(!content.startsWith('\uFEFF') && content.lineSequence().firstOrNull()?.startsWith("# ") == true) {
+            "Release notes must be UTF-8 without BOM and start with one '# ' heading."
+        }
+        val lines = content
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .lines()
+        check(lines.all { line -> line.length <= 8_192 }) {
+            "Release notes contain a line longer than 8192 characters."
+        }
+        check(lines.count(String::isNotBlank) <= 256) {
+            "Release notes must contain at most 256 non-empty lines."
+        }
+        var codeBlockOpen = false
+        lines.forEach { line ->
+            if (!codeBlockOpen && line.startsWith("```")) {
+                codeBlockOpen = true
+            } else if (codeBlockOpen && line == "```") {
+                codeBlockOpen = false
+            }
+        }
+        check(!codeBlockOpen) { "Release notes contain an unclosed fenced code block." }
+        check(content.none { character ->
+            character.code in 0..31 && character != '\n' && character != '\r' && character != '\t'
+        }) {
+            "Release notes contain unsupported control characters."
+        }
+        val imageMatches = releaseNotesImageSyntax.findAll(content).toList()
+        check(imageMatches.size <= 2) { "Release notes support at most two screenshots." }
+        val expectedImagePrefix = "https://raw.githubusercontent.com/sk2andy/candy-browser/" +
+            "v$version/docs/screenshots/"
+        val imageFiles = imageMatches.map { match ->
+            val altText = match.groupValues[1].trim()
+            val target = match.groupValues[2]
+            check(altText.isNotEmpty()) { "Every release-note screenshot needs useful alt text." }
+            check(target.startsWith(expectedImagePrefix)) {
+                "Release-note screenshots must use tag-pinned URLs below $expectedImagePrefix."
+            }
+            val fileName = target.removePrefix(expectedImagePrefix)
+            check(fileName.matches(Regex("""[A-Za-z0-9][A-Za-z0-9._-]*\.(png|jpe?g|webp)"""))) {
+                "Unsupported release-note screenshot path: $fileName."
+            }
+            rootProject.file("docs/screenshots/$fileName").also { image ->
+                check(image.isFile) { "Release-note screenshot does not exist: ${image.absolutePath}" }
+                check(image.length() in 1..2_097_152) {
+                    "Release-note screenshot must contain 1..2097152 bytes: ${image.absolutePath}."
+                }
+            }
+        }
+        check(imageFiles.sumOf { image -> image.length() } <= 4_194_304) {
+            "Release-note screenshots exceed the 4 MiB packaged limit."
+        }
+    }
+}
+
+val generateReleaseNotesAsset by tasks.registering(Sync::class) {
+    dependsOn(validateReleaseNotes)
+    inputs.files(releaseNotesImageFiles)
+    from(candyReleaseNotesFile.map(rootProject::file)) {
+        rename { "candy_release_notes.md" }
+    }
+    from(releaseNotesImageFiles) {
+        into("release-notes-images")
+    }
+    into(layout.buildDirectory.dir("generated/releaseNotes/assets"))
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+
 tasks.named("preBuild").configure {
     dependsOn(generateCandySyncDeviceIconAsset)
+    dependsOn(generateReleaseNotesAsset)
 }
 
 val validateReleaseSigning by tasks.registering {

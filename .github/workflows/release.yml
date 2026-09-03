@@ -7,6 +7,10 @@ on:
         description: Release version without leading v (for example, 0.2 or 1.0.0)
         required: true
         type: string
+      changelog:
+        description: Version-matched Markdown file (for example, release-notes/0.32.md)
+        required: true
+        type: string
       prerelease:
         description: Mark the GitHub release as a prerelease
         required: true
@@ -28,6 +32,7 @@ jobs:
     environment: release
     env:
       INPUT_VERSION: ${{ inputs.version }}
+      INPUT_CHANGELOG: ${{ inputs.changelog }}
       INPUT_PRERELEASE: ${{ inputs.prerelease }}
 
     steps:
@@ -48,6 +53,7 @@ jobs:
           project_version="$(sed -n 's/^candy\.versionName=//p' gradle.properties)"
           version_code="$(sed -n 's/^candy\.versionCode=//p' gradle.properties)"
           tag="v${version}"
+          expected_changelog="release-notes/${version}.md"
 
           if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,2}(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "Version must look like 0.2, 1.0.0, or 1.0.0-rc.1." >&2
@@ -61,6 +67,16 @@ jobs:
 
           if [[ "$version" != "$project_version" ]]; then
             echo "Workflow version ${version} does not match gradle.properties ${project_version}." >&2
+            exit 1
+          fi
+
+          if [[ "$INPUT_CHANGELOG" != "$expected_changelog" ]]; then
+            echo "Changelog must be ${expected_changelog}." >&2
+            exit 1
+          fi
+
+          if [[ ! -s "$INPUT_CHANGELOG" ]]; then
+            echo "Changelog does not exist or is empty: ${INPUT_CHANGELOG}." >&2
             exit 1
           fi
 
@@ -202,6 +218,7 @@ jobs:
             app/src/main/assets/uassets_procedural_cosmetic_rules.txt \
             app/src/main/assets/uassets_filters_source.txt
           ./gradlew --no-daemon \
+            -Pcandy.releaseNotesFile="$INPUT_CHANGELOG" \
             testFullDebugUnitTest \
             testFossDebugUnitTest \
             testFullUserCaDebugUnitTest \
@@ -267,7 +284,7 @@ jobs:
           release_flags=(
             --target "$GITHUB_SHA"
             --title "Candy Browser ${RELEASE_TAG}"
-            --generate-notes
+            --notes-file "$INPUT_CHANGELOG"
           )
           if [[ "$INPUT_PRERELEASE" == 'true' ]]; then
             release_flags+=(--prerelease)

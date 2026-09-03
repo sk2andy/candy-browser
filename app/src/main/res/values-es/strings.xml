@@ -20,6 +20,10 @@
     <string name="onboarding_open_tabs_description">Desliza la barra de direcciones hacia arriba.</string>
     <string name="onboarding_close_tab_title">Cierra una pestaña</string>
     <string name="onboarding_close_tab_description">En la vista de pestañas, desliza la tarjeta hacia arriba.</string>
+    <string name="release_notes_eyebrow">NOVEDADES</string>
+    <string name="release_notes_version">Versión %1$s</string>
+    <string name="release_notes_done">Explorar Candy</string>
+    <string name="cd_close_release_notes">Cerrar novedades</string>
     <string name="address_search_google_or_url">Buscar en Google o introducir una URL</string>
     <string name="address_empty_hint">Buscar o introducir una dirección</string>
     <string name="search_or_enter_url">Buscar o introducir una URL</string>
