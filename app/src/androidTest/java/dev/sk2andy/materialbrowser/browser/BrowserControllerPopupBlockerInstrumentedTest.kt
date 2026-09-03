@@ -96,58 +96,7 @@ class BrowserControllerPopupBlockerInstrumentedTest {
     }
 
     @Test
-    fun crossSitePopupWaitsForUserAndOpenReusesTransportWebView() {
-        lateinit var popup: android.webkit.WebView
-        var openerTabId = ""
-        activityRule.scenario.onActivity { activity ->
-            val browserController = freshController(activity)
-            openerTabId = browserController.selectedTabId
-            browserController.selectedWebViewForTesting().loadDataWithBaseURL(
-                "https://news.example/article",
-                "<html><body>opener</body></html>",
-                "text/html",
-                "utf-8",
-                null,
-            )
-        }
-        awaitDocumentHost("news.example")
-        await { controller?.isBundledBlockingReadyForTesting() == true }
-
-        activityRule.scenario.onActivity {
-            val browserController = requireNotNull(controller)
-            val source = browserController.selectedWebViewForTesting()
-            val transport = source.WebViewTransport()
-            val message = Message.obtain(Handler(Looper.getMainLooper())).apply {
-                obj = transport
-            }
-            assertTrue(
-                requireNotNull(source.webChromeClient)
-                    .onCreateWindow(source, false, true, message),
-            )
-            popup = requireNotNull(transport.webView)
-            popup.loadUrl("https://outside.example/login")
-        }
-
-        await { controller?.blockedPopupOffer != null }
-        activityRule.scenario.onActivity {
-            val browserController = requireNotNull(controller)
-            val offer = requireNotNull(browserController.blockedPopupOffer)
-            assertEquals(openerTabId, browserController.selectedTabId)
-            assertEquals(1, browserController.activeTabs.size)
-            assertEquals(2, browserController.tabs.size)
-            browserController.openBlockedPopup(offer.token)
-        }
-        await { controller?.selectedTabId != openerTabId }
-        activityRule.scenario.onActivity {
-            val browserController = requireNotNull(controller)
-            assertTrue(browserController.selectedWebViewForTesting() === popup)
-            assertEquals(2, browserController.activeTabs.size)
-            assertEquals(null, browserController.blockedPopupOffer)
-        }
-    }
-
-    @Test
-    fun sameSitePopupRedirectRemainsProtectedUntilCrossSiteTarget() {
+    fun crossSiteUserGesturePopupOpensWithoutConfirmation() {
         lateinit var popup: android.webkit.WebView
         var openerTabId = ""
         activityRule.scenario.onActivity { activity ->
@@ -177,7 +126,62 @@ class BrowserControllerPopupBlockerInstrumentedTest {
             )
             popup = requireNotNull(transport.webView)
             popup.loadDataWithBaseURL(
-                "https://news.example/redirect",
+                "https://outside.example/login",
+                "<html><head><title>Loaded cross-site page</title></head><body>loaded</body></html>",
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        await {
+            val browserController = controller
+            browserController != null &&
+                browserController.selectedTabId != openerTabId &&
+                browserController.pendingPopupCountForTesting == 0 &&
+                browserController.selectedTab.title == "Loaded cross-site page"
+        }
+        activityRule.scenario.onActivity {
+            val browserController = requireNotNull(controller)
+            assertTrue(browserController.selectedWebViewForTesting() === popup)
+            assertEquals(2, browserController.tabs.size)
+            assertEquals(2, browserController.activeTabs.size)
+            assertEquals(null, browserController.blockedPopupOffer)
+        }
+    }
+
+    @Test
+    fun sameSitePopupRedirectRemainsProtectedUntilListedCrossSiteTarget() {
+        lateinit var popup: android.webkit.WebView
+        var openerTabId = ""
+        activityRule.scenario.onActivity { activity ->
+            val browserController = freshController(activity)
+            openerTabId = browserController.selectedTabId
+            browserController.selectedWebViewForTesting().loadDataWithBaseURL(
+                "https://eurogamer.net/article",
+                "<html><body>opener</body></html>",
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        awaitDocumentHost("eurogamer.net")
+        await { controller?.isBundledBlockingReadyForTesting() == true }
+
+        activityRule.scenario.onActivity {
+            val browserController = requireNotNull(controller)
+            val source = browserController.selectedWebViewForTesting()
+            val transport = source.WebViewTransport()
+            val message = Message.obtain(Handler(Looper.getMainLooper())).apply {
+                obj = transport
+            }
+            assertTrue(
+                requireNotNull(source.webChromeClient)
+                    .onCreateWindow(source, false, true, message),
+            )
+            popup = requireNotNull(transport.webView)
+            popup.loadDataWithBaseURL(
+                "https://eurogamer.net/redirect",
                 "<html><body>redirect</body></html>",
                 "text/html",
                 "utf-8",
@@ -190,20 +194,15 @@ class BrowserControllerPopupBlockerInstrumentedTest {
                 controller?.pendingPopupCountForTesting == 1
         }
         activityRule.scenario.onActivity {
-            popup.loadUrl("https://casino.example/landing")
+            popup.loadUrl("https://bit.ly/click")
         }
 
-        await { controller?.blockedPopupOffer?.targetUrl == "https://casino.example/landing" }
+        await { controller?.tabs?.size == 1 }
         activityRule.scenario.onActivity {
             val browserController = requireNotNull(controller)
-            val offer = requireNotNull(browserController.blockedPopupOffer)
             assertEquals(openerTabId, browserController.selectedTabId)
             assertEquals(1, browserController.activeTabs.size)
-            browserController.openBlockedPopup(offer.token)
-        }
-        await { controller?.selectedTabId != openerTabId }
-        activityRule.scenario.onActivity {
-            assertTrue(requireNotNull(controller).selectedWebViewForTesting() === popup)
+            assertEquals(null, browserController.blockedPopupOffer)
         }
     }
 

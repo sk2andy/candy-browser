@@ -21,14 +21,13 @@ Bundled advanced rules support bounded host-anchored paths, `*` wildcards, `^` s
 positive/negative `domain` scopes, first/third-party scopes, allow exceptions, `$popup`, and
 `$popunder`.
 Popup rules inspect HTTP(S) main-frame targets created by `onCreateWindow`; automatic non-gesture
-windows remain rejected by existing WebView policy. A same-site first target stays monitored for
-the popup tab lifetime so a delayed cross-site advertising hop cannot bypass policy.
+windows remain rejected by existing WebView policy. A same-site first target stays monitored for a
+bounded five-second window so a delayed cross-site advertising hop cannot bypass policy.
 Site pause, profile, and private-tab ownership come from actual opener. Cross-site windows without a
-matching allow rule remain hidden behind an action Snackbar; choosing Open resumes the same
-quarantined WebView so `window.opener`, profile, and private context survive. Unopened popup tabs are
-never persisted. Popunder rules use a bounded five-second correlation window between the surviving
-child and a redirected opener, then close the listed opener. Regex filters, redirects, `$important`,
-arbitrary JavaScript, and trusted uBO scriptlets fail closed.
+matching rule honor the user gesture and open normally; explicit popup rules still block matching
+targets. Popunder rules use a bounded five-second correlation window between the surviving child and
+a redirected opener, then close the listed opener. Regex filters, redirects, `$important`, arbitrary
+JavaScript, and trusted uBO scriptlets fail closed.
 
 The EasyList and uAssets cosmetic compilers include their supported global standard-CSS subsets.
 Global and scoped `#@#` exceptions cancel matching selectors across merged sources; supported

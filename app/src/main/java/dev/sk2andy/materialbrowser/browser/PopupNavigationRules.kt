@@ -56,7 +56,7 @@ internal object PopupNavigationRules {
             PopupFilterDecision.Block -> PopupNavigationDecision.BlockListed
             PopupFilterDecision.Allow -> PopupNavigationDecision.AllowListed
             PopupFilterDecision.NoMatch -> if (isCrossSite(targetHost, pending.openerUrl)) {
-                PopupNavigationDecision.BlockCrossSite
+                PopupNavigationDecision.Allow
             } else {
                 PopupNavigationDecision.AllowSameSite
             }

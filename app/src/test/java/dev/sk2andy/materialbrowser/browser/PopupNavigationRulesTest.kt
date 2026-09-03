@@ -30,9 +30,9 @@ class PopupNavigationRulesTest {
     }
 
     @Test
-    fun `cross site popup without listed rule requires user confirmation`() {
+    fun `cross site user gesture without listed rule is allowed`() {
         assertEquals(
-            PopupNavigationDecision.BlockCrossSite,
+            PopupNavigationDecision.Allow,
             decide("https://outside.example/click"),
         )
         assertEquals(
@@ -42,7 +42,7 @@ class PopupNavigationRulesTest {
     }
 
     @Test
-    fun `listed popup allow overrides cross site protection`() {
+    fun `listed popup allow is honored`() {
         assertEquals(
             PopupNavigationDecision.AllowListed,
             decide(
