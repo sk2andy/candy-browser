@@ -225,6 +225,7 @@
     <string name="action_open_link_background_tab">Abrir ligação num novo separador em segundo plano</string>
     <string name="link_peek_title">Pré-visualização da ligação</string>
     <string name="action_open_in_new_tab">Abrir num novo separador</string>
+    <string name="action_open_link_in_private_tab">Abrir ligação num separador anónimo</string>
     <string name="action_download_image">Transferir imagem</string>
     <string name="download_notification_description">Transferência</string>
     <string name="settings_title">Definições</string>

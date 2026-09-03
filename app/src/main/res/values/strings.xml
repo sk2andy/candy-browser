@@ -233,6 +233,7 @@
     <string name="action_open_link_background_tab">Open link in new background tab</string>
     <string name="link_peek_title">Link Peek</string>
     <string name="action_open_in_new_tab">Open in New Tab</string>
+    <string name="action_open_link_in_private_tab">Open link in private tab</string>
     <string name="action_download_image">Download image</string>
     <string name="download_notification_description">Download</string>
 

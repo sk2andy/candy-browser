@@ -11,6 +11,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -21,6 +22,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -34,8 +36,11 @@ class LinkPeekOverlayInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun plusTargetOwnsOpenActionAndLabelIsHidden() {
+    fun actionTargetsUseIconsAndCurrentPreviewUrl() {
         val opens = AtomicInteger()
+        val copiedUrl = AtomicReference<String>()
+        val privateUrl = AtomicReference<String>()
+        val sharedUrl = AtomicReference<String>()
         composeRule.setContent {
             MaterialBrowserTheme {
                 LinkPeekOverlay(
@@ -51,6 +56,9 @@ class LinkPeekOverlayInstrumentedTest {
                     createPreviewWebView = ::previewWebView,
                     releasePreviewWebView = WebView::destroy,
                     onOpen = opens::incrementAndGet,
+                    onCopyLink = copiedUrl::set,
+                    onOpenInPrivate = privateUrl::set,
+                    onShare = sharedUrl::set,
                     onDismiss = {},
                 )
             }
@@ -74,6 +82,36 @@ class LinkPeekOverlayInstrumentedTest {
             )
             .performClick()
             .performClick()
+        composeRule.onNodeWithTag(LinkPeekTestTags.CopyLink)
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(composeRule.activity.getString(R.string.external_link_preview_copy_link)),
+                ),
+            )
+            .performClick()
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenPrivate)
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(composeRule.activity.getString(R.string.action_open_link_in_private_tab)),
+                ),
+            )
+            .performClick()
+        composeRule.onNodeWithTag(LinkPeekTestTags.Share)
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(composeRule.activity.getString(R.string.action_share)),
+                ),
+            )
+            .performClick()
 
         val overlayTargetBounds = composeRule
             .onNodeWithTag(LinkPeekTestTags.NewTabTargetOverlay)
@@ -84,6 +122,9 @@ class LinkPeekOverlayInstrumentedTest {
         assertEquals(220f, overlayTargetBounds.bottom, 1f)
 
         assertEquals(1, opens.get())
+        assertEquals("https://example.com/preview", copiedUrl.get())
+        assertEquals("https://example.com/preview", privateUrl.get())
+        assertEquals("https://example.com/preview", sharedUrl.get())
     }
 
     @Test
@@ -97,7 +138,7 @@ class LinkPeekOverlayInstrumentedTest {
                         url = "https://example.com/pulse",
                         progress = 0f,
                         armed = armed.value,
-                        newTabTargetBounds = Rect(100f, 100f, 220f, 220f),
+                        newTabTargetBounds = Rect(700f, 100f, 820f, 220f),
                         createPreviewWebView = ::previewWebView,
                         releasePreviewWebView = WebView::destroy,
                         onOpen = {},
@@ -112,6 +153,13 @@ class LinkPeekOverlayInstrumentedTest {
             val restingRingWidth = composeRule
                 .onNodeWithTag(LinkPeekTestTags.NewTabTargetPulseRing)
                 .fetchSemanticsNode().boundsInRoot.width
+            val restingActionBounds = listOf(
+                LinkPeekTestTags.CopyLink,
+                LinkPeekTestTags.OpenPrivate,
+                LinkPeekTestTags.Share,
+            ).associateWith { tag ->
+                composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+            }
 
             composeRule.mainClock.advanceTimeBy(220)
             val guidingWidth = composeRule
@@ -120,6 +168,12 @@ class LinkPeekOverlayInstrumentedTest {
             val guidingRingBounds = composeRule
                 .onNodeWithTag(LinkPeekTestTags.NewTabTargetPulseRing)
                 .fetchSemanticsNode().boundsInRoot
+            restingActionBounds.forEach { (tag, bounds) ->
+                assertEquals(
+                    bounds,
+                    composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot,
+                )
+            }
             assertTrue(guidingWidth > restingWidth)
             assertTrue(guidingRingBounds.width > restingRingWidth)
 
@@ -216,6 +270,54 @@ class LinkPeekOverlayInstrumentedTest {
         assertEquals(100f, overlayBounds.top, 1f)
         assertEquals(220f, overlayBounds.right, 1f)
         assertEquals(220f, overlayBounds.bottom, 1f)
+    }
+
+    @Test
+    fun actionsAndPlusUseBottomFallbackWhenNewTabActionIsMissing() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                LinkPeekOverlay(
+                    url = "https://example.com/fallback",
+                    progress = 0f,
+                    armed = false,
+                    createPreviewWebView = ::previewWebView,
+                    releasePreviewWebView = WebView::destroy,
+                    onOpen = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(LinkPeekTestTags.CopyLink).assertIsDisplayed()
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenPrivate).assertIsDisplayed()
+        composeRule.onNodeWithTag(LinkPeekTestTags.Share).assertIsDisplayed()
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget).assertIsDisplayed()
+    }
+
+    @Test
+    fun privateActionStaysVisibleAndDisabledWhenPrivateTabsAreUnavailable() {
+        val privateOpens = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                LinkPeekOverlay(
+                    url = "https://example.com/no-private",
+                    progress = 0f,
+                    armed = false,
+                    canOpenInPrivate = false,
+                    createPreviewWebView = ::previewWebView,
+                    releasePreviewWebView = WebView::destroy,
+                    onOpen = {},
+                    onOpenInPrivate = { privateOpens.incrementAndGet() },
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenPrivate)
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
+            .performClick()
+        assertEquals(0, privateOpens.get())
     }
 
     @Test

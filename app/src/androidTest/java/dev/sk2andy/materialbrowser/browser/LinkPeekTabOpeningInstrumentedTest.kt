@@ -4,6 +4,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import org.junit.Assume.assumeTrue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -45,5 +46,30 @@ class LinkPeekTabOpeningInstrumentedTest {
             }
         }
     }
-}
 
+    @Test
+    fun privateActionOpensSelectedIncognitoTabForPreviewUrl() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assumeTrue(controller.canOpenLinkInPrivate)
+                val sourceTabId = controller.selectedTabId
+                val originalIds = controller.tabs.mapTo(mutableSetOf(), BrowserTab::id)
+                val previewUrl = "https://example.com/link-peek-private"
+                controller.contentActions.show(WebContentTarget(linkUrl = previewUrl))
+
+                assertTrue(controller.openLinkInPrivate(previewUrl))
+
+                val createdIds = controller.tabs.map(BrowserTab::id).toSet() - originalIds
+                assertEquals(1, createdIds.size)
+                val created = controller.tabs.single { it.id in createdIds }
+                assertEquals(created.id, controller.selectedTabId)
+                assertEquals(sourceTabId, created.openerTabId)
+                assertEquals(previewUrl, created.url)
+                assertTrue(created.isIncognito)
+                assertFalse(controller.contentActions.isVisible)
+                controller.closeTab(created.id)
+            }
+        }
+    }
+}

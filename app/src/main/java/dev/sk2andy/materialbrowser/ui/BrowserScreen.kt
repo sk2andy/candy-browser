@@ -2500,6 +2500,24 @@ internal fun BrowserScreen(
                 rootView.performConfirmHaptic()
                 controller.openContextLinkInBackground()
             },
+            onCopyLink = { currentUrl ->
+                controller.contentActions.dismiss()
+                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(
+                    ClipData.newPlainText(
+                        context.getString(R.string.external_link_preview_copy_label),
+                        currentUrl,
+                    ),
+                )
+                Toast.makeText(context, R.string.toast_link_copied, Toast.LENGTH_SHORT).show()
+            },
+            onOpenInPrivate = { currentUrl ->
+                if (controller.openLinkInPrivate(currentUrl)) rootView.performConfirmHaptic()
+            },
+            onShare = { currentUrl ->
+                controller.contentActions.dismiss()
+                controller.shareLink(currentUrl)
+            },
+            canOpenInPrivate = controller.canOpenLinkInPrivate,
             onDownloadImage = linkTarget.takeIf { it?.canDownloadImage == true }?.let {
                 controller::downloadContextImage
             },

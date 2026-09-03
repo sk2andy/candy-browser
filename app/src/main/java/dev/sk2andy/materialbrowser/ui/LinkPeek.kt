@@ -16,12 +16,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -54,6 +59,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -76,6 +82,9 @@ internal object LinkPeekTestTags {
     const val Url = "link_peek_url"
     const val NewTabTargetOverlay = "link_peek_new_tab_target_overlay"
     const val NewTabTargetPulseRing = "link_peek_new_tab_target_pulse_ring"
+    const val CopyLink = "link_peek_copy_link"
+    const val OpenPrivate = "link_peek_open_private"
+    const val Share = "link_peek_share"
 }
 
 @Composable
@@ -89,6 +98,10 @@ internal fun LinkPeekOverlay(
     releasePreviewWebView: (WebView) -> Unit,
     onOpen: () -> Unit,
     onCommitRequested: () -> Unit = onOpen,
+    onCopyLink: (String) -> Unit = {},
+    onOpenInPrivate: (String) -> Unit = {},
+    onShare: (String) -> Unit = {},
+    canOpenInPrivate: Boolean = true,
     onDownloadImage: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
@@ -161,6 +174,9 @@ internal fun LinkPeekOverlay(
     val host = remember(committedUrl) { BrowserUriPolicy.displayHttpHost(committedUrl) }
     val isSecure = committedUri?.scheme.equals("https", ignoreCase = true)
     val openLabel = stringResource(R.string.action_open_in_new_tab)
+    val copyLabel = stringResource(R.string.external_link_preview_copy_link)
+    val openPrivateLabel = stringResource(R.string.action_open_link_in_private_tab)
+    val shareLabel = stringResource(R.string.action_share)
     val cancelLabel = stringResource(R.string.action_cancel)
 
     LaunchedEffect(committing) {
@@ -180,7 +196,7 @@ internal fun LinkPeekOverlay(
 
     val flyProgress = commitProgress.value
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -190,6 +206,19 @@ internal fun LinkPeekOverlay(
             )
             .testTag(LinkPeekTestTags.Root),
     ) {
+        val fallbackTargetSizePx = with(density) { 48.dp.toPx() }
+        val horizontalMarginPx = with(density) { 16.dp.toPx() }
+        val verticalMarginPx = with(density) { 12.dp.toPx() }
+        val fallbackTargetRight = constraints.maxWidth - horizontalMarginPx
+        val fallbackTargetBottom = constraints.maxHeight -
+            WindowInsets.navigationBars.getBottom(density) -
+            verticalMarginPx
+        val actionTargetBounds = newTabTargetBounds ?: Rect(
+            left = fallbackTargetRight - fallbackTargetSizePx,
+            top = fallbackTargetBottom - fallbackTargetSizePx,
+            right = fallbackTargetRight,
+            bottom = fallbackTargetBottom,
+        )
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -217,9 +246,9 @@ internal fun LinkPeekOverlay(
                     }
                     .graphicsLayer {
                         val startBounds = commitStartBounds
-                        val destination = newTabTargetBounds
+                        val destination = actionTargetBounds
                         val dragScale = 0.985f - motionProgress * 0.015f
-                        if (startBounds != null && destination != null && flyProgress > 0f) {
+                        if (startBounds != null && flyProgress > 0f) {
                             translationX =
                                 (destination.center.x - startBounds.center.x) * flyProgress
                             translationY = motionProgress * 18.dp.toPx() +
@@ -332,7 +361,51 @@ internal fun LinkPeekOverlay(
             }
             Spacer(Modifier.height(64.dp))
         }
-        newTabTargetBounds?.let { targetBounds ->
+        actionTargetBounds.let { targetBounds ->
+            val actionSpacingPx = with(density) { 4.dp.toPx() }
+            val actionOffsets = LinkPeekActionLayoutRules.horizontalOffsets(
+                containerBounds = Rect(
+                    left = 0f,
+                    top = 0f,
+                    right = constraints.maxWidth.toFloat(),
+                    bottom = constraints.maxHeight.toFloat(),
+                ),
+                targetBounds = targetBounds,
+                actionCount = LINK_PEEK_ACTION_COUNT,
+                preferredSpacingPx = actionSpacingPx,
+            )
+            if (actionOffsets.size == LINK_PEEK_ACTION_COUNT) {
+                LinkPeekActionTarget(
+                    targetBounds = targetBounds,
+                    offsetX = actionOffsets[0],
+                    icon = R.drawable.ic_content_copy,
+                    contentDescription = copyLabel,
+                    testTag = LinkPeekTestTags.CopyLink,
+                    enabled = !committing,
+                    alpha = 1f - flyProgress,
+                    onClick = { onCopyLink(committedUrl) },
+                )
+                LinkPeekActionTarget(
+                    targetBounds = targetBounds,
+                    offsetX = actionOffsets[1],
+                    icon = R.drawable.ic_incognito_outline,
+                    contentDescription = openPrivateLabel,
+                    testTag = LinkPeekTestTags.OpenPrivate,
+                    enabled = canOpenInPrivate && !committing,
+                    alpha = 1f - flyProgress,
+                    onClick = { onOpenInPrivate(committedUrl) },
+                )
+                LinkPeekActionTarget(
+                    targetBounds = targetBounds,
+                    offsetX = actionOffsets[2],
+                    icon = R.drawable.ic_symbol_share,
+                    contentDescription = shareLabel,
+                    testTag = LinkPeekTestTags.Share,
+                    enabled = !committing,
+                    alpha = 1f - flyProgress,
+                    onClick = { onShare(committedUrl) },
+                )
+            }
             val targetWidth = with(density) { targetBounds.width.toDp() }
             val targetHeight = with(density) { targetBounds.height.toDp() }
             Box(
@@ -442,3 +515,58 @@ internal fun LinkPeekOverlay(
         }
     }
 }
+
+@Composable
+private fun BoxScope.LinkPeekActionTarget(
+    targetBounds: Rect,
+    offsetX: Float,
+    icon: Int,
+    contentDescription: String,
+    testTag: String,
+    enabled: Boolean,
+    alpha: Float,
+    onClick: () -> Unit,
+) {
+    val density = LocalDensity.current
+    val targetWidth = with(density) { targetBounds.width.toDp() }
+    val targetHeight = with(density) { targetBounds.height.toDp() }
+    Box(
+        modifier = Modifier
+            .align(AbsoluteAlignment.TopLeft)
+            .absoluteOffset {
+                IntOffset(
+                    x = offsetX.roundToInt(),
+                    y = targetBounds.top.roundToInt(),
+                )
+            }
+            .size(targetWidth, targetHeight)
+            .graphicsLayer { this.alpha = alpha },
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            shadowElevation = 3.dp,
+        ) {
+            IconButton(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(testTag),
+            ) {
+                Icon(
+                    painter = painterResource(icon),
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(
+                        alpha = if (enabled) 1f else 0.38f,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+private const val LINK_PEEK_ACTION_COUNT = 3

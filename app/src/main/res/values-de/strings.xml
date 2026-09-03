@@ -225,6 +225,7 @@
     <string name="action_open_link_background_tab">Link in neuem Hintergrund-Tab öffnen</string>
     <string name="link_peek_title">Link-Vorschau</string>
     <string name="action_open_in_new_tab">In neuem Tab öffnen</string>
+    <string name="action_open_link_in_private_tab">Link im privaten Modus öffnen</string>
     <string name="action_download_image">Bild herunterladen</string>
     <string name="download_notification_description">Download</string>
     <string name="settings_title">Einstellungen</string>

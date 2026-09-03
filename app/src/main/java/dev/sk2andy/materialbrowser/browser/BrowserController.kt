@@ -516,6 +516,8 @@ class BrowserController(
         private set
     val isProfileIsolationSupported: Boolean =
         WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
+    val canOpenLinkInPrivate: Boolean
+        get() = isProfileIsolationSupported && !isSyncedProfile(activeProfileId)
     val isVideoAutoplayBlockingSupported: Boolean =
         WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
     val isUserScriptSupported: Boolean =
@@ -3783,6 +3785,19 @@ class BrowserController(
         }
     }
 
+    fun openLinkInPrivate(url: String): Boolean {
+        if (!canOpenLinkInPrivate) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        val openerTabId = selectedTabId
+        contentActions.dismiss()
+        val tabId = createTab(
+            initialUrl = safeUrl,
+            isIncognito = true,
+            openerTabId = openerTabId,
+        )
+        return tabId != openerTabId && selectedTab.isIncognito
+    }
+
     fun openDefaultBrowserSettings() {
         if (!DefaultBrowserRole.openSettings(activity)) {
             Toast.makeText(
@@ -3960,6 +3975,17 @@ class BrowserController(
     }
 
     fun shareSelectedPage() = sharePage(selectedTabId)
+
+    fun shareLink(url: String) {
+        val request = PageShareRequest.create(url = url, title = "") ?: return
+        if (pageShare.launch(request) == PageShareResult.Unsupported) {
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.toast_no_matching_app),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
 
     fun sharePage(tabId: String) {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
