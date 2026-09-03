@@ -49,8 +49,19 @@
 - Never register userscript handlers on private or Link Peek WebViews. Userscript source is global
   regular-browser configuration, not private session state.
 - Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
-- Keep browser content edge-to-edge. The top safe area redraws a blurred content layer with a
-  surface-tinted fade so status-bar icons stay legible without adding WebView padding.
+- Keep the WebView's measured frame stable while normal pages scroll. A document-start root spacer
+  starts normal flow content below the status bar and scrolls away in Chromium's own render path,
+  without changing layout params or redispatching insets from the scroll callback. Explicit
+  `viewport-fit=cover` pages remove the spacer. The per-site force-safe-area override,
+  edge-to-edge-disabled audit mode, and unavailable or rejected document-start styling use a
+  static native safe-area margin. Compact absolute or fixed page controls covering the reserved
+  top strip receive a local document-owned offset, keeping the WebView edge-to-edge without hiding
+  those controls behind system icons. If a root-level spacer is neutralized by a site's own scroll
+  container, Candy moves the spacer to that normal-flow page wrapper so headers still scroll away.
+  Viewport-sized fixed roots and layouts that cannot be moved safely use the native fallback.
+  Force-safe-area remains the manual compatibility path for pages using their own scroll container.
+  The status-bar overlay still
+  redraws a blurred content layer with a surface-tinted fade so system icons stay legible.
 - Read page-scroll range, extent and offset through `BrowserWebView`. The optional Compose scroll
   thumb observes scroll changes without replacing the controller's WebView scroll listener and is
   removed from fullscreen/video-only presentation.
