@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag, for example v0.32
+        description: Existing release tag, for example v0.33
         required: true
         type: string
 
@@ -36,8 +36,11 @@ jobs:
             v0.32)
               expected_commit="65a93dc6b962cbae492226ac896dac60026939ef"
               ;;
+            v0.33)
+              expected_commit="4d7400de2ee3316743e69fefe396fe5807ad0b9d"
+              ;;
             *)
-              echo "Only the v0.31 and v0.32 backfills are allowed." >&2
+              echo "Release tag is not explicitly allowlisted." >&2
               exit 1
               ;;
           esac
@@ -136,8 +139,11 @@ jobs:
             v0.32)
               expected_commit="65a93dc6b962cbae492226ac896dac60026939ef"
               ;;
+            v0.33)
+              expected_commit="4d7400de2ee3316743e69fefe396fe5807ad0b9d"
+              ;;
             *)
-              echo "Only the v0.31 and v0.32 backfills are allowed." >&2
+              echo "Release tag is not explicitly allowlisted." >&2
               exit 1
               ;;
           esac

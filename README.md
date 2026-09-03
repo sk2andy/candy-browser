@@ -398,7 +398,7 @@ gh workflow run release.yml \
 Publish a FOSS reference APK from an allowlisted release tag with:
 
 ```bash
-gh workflow run publish-fdroid-reference.yml -f tag=v0.31
+gh workflow run publish-fdroid-reference.yml -f tag=v0.33
 ```
 
 Before each later F-Droid release, add its exact tag and immutable commit to the workflow allowlist
