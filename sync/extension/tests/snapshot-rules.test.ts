@@ -24,3 +24,19 @@ test("excludes private, internal, local-file and malformed tabs", () => {
   ], "2026-09-02T10:00:00.000Z");
   assert.deepEqual(snapshot.tabs.map((tab) => tab.url), ["https://kept.example/"]);
 });
+
+test("prefers a syncable pending navigation over the previous internal URL", () => {
+  const snapshot = snapshotFromTabs([{
+    id: 7,
+    windowId: 1,
+    index: 0,
+    active: true,
+    pinned: false,
+    incognito: false,
+    url: "about:blank",
+    pendingUrl: "https://destination.example/path",
+  }], "2026-09-03T08:00:00.000Z", { "7": "stable-tab" });
+
+  assert.equal(snapshot.tabs[0]?.candyId, "stable-tab");
+  assert.equal(snapshot.tabs[0]?.url, "https://destination.example/path");
+});

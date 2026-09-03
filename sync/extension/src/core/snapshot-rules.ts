@@ -25,15 +25,21 @@ export interface BrowserTabLike {
   pendingUrl?: string | undefined;
 }
 
+export function syncableTabUrl(
+  tab: Pick<BrowserTabLike, "url" | "pendingUrl">,
+): string | undefined {
+  if (isSyncableTabUrl(tab.pendingUrl)) return tab.pendingUrl;
+  return isSyncableTabUrl(tab.url) ? tab.url : undefined;
+}
+
 export function snapshotFromTabs(
   tabs: readonly BrowserTabLike[],
   capturedAt: string,
   identities: Readonly<Record<string, string>> = {},
 ): DeviceTabSnapshot {
   const normalized = tabs.flatMap<TabSnapshotEntry>((tab) => {
-    const candidate = tab.url ?? tab.pendingUrl;
+    const candidate = syncableTabUrl(tab);
     if (tab.incognito || tab.id == null || !candidate) return [];
-    if (!isSyncableTabUrl(candidate)) return [];
     const candyId = identities[String(tab.id)] ?? `tab-${tab.windowId}-${tab.id}`;
     return [{
       candyId,

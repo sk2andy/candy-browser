@@ -127,6 +127,8 @@ the server does not advertise the complete v2 feature set.
   absent eligible tabs. It never touches private tabs, internal pages, or local files.
 - A durable local UUID map keeps Candy tab identity stable across navigation and is
   pruned when eligible tabs close.
+- Loading transitions retain that UUID and prefer a syncable `pendingUrl`; only a
+  committed excluded destination emits `close`.
 
 ## Status
 

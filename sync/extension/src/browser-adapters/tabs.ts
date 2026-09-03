@@ -1,5 +1,5 @@
 import type { DeviceTabSnapshot, TabMutation, TabMutationDraft } from "../core/models.js";
-import { isSyncableTabUrl, parseDeviceTabSnapshot, snapshotFromTabs } from "../core/snapshot-rules.js";
+import { parseDeviceTabSnapshot, snapshotFromTabs, syncableTabUrl } from "../core/snapshot-rules.js";
 import { extensionApi } from "../platform/webextension.js";
 import { loadTabIdentities, saveTabIdentities } from "../storage/stores.js";
 
@@ -8,8 +8,11 @@ export async function collectTabSnapshot(now = new Date()): Promise<ReturnType<t
   const storedIdentities = await loadTabIdentities();
   const liveIdentities: Record<string, string> = {};
   for (const tab of tabs) {
-    if (tab.id == null || tab.incognito || !isSyncableTabUrl(tab.url ?? tab.pendingUrl)) continue;
-    liveIdentities[String(tab.id)] = storedIdentities[String(tab.id)] ?? crypto.randomUUID();
+    if (tab.id == null || tab.incognito) continue;
+    const key = String(tab.id);
+    const existing = storedIdentities[key];
+    if (!syncableTabUrl(tab) && !existing) continue;
+    liveIdentities[key] = existing ?? crypto.randomUUID();
   }
   await saveTabIdentities(liveIdentities);
   return snapshotFromTabs(tabs.map((tab) => ({
@@ -32,7 +35,7 @@ export async function applyTabSnapshot(rawSnapshot: unknown): Promise<DeviceTabS
   const allTabs = await api.tabs.query({});
   const identities = await loadTabIdentities();
   const eligible = allTabs.filter((tab): tab is chrome.tabs.Tab & { id: number } =>
-    tab.id != null && !tab.incognito && isSyncableTabUrl(tab.url ?? tab.pendingUrl));
+    tab.id != null && !tab.incognito && syncableTabUrl(tab) != null);
   const byCandyId = new Map<string, chrome.tabs.Tab & { id: number }>();
   for (const tab of eligible) {
     const candyId = identities[String(tab.id)];
@@ -67,7 +70,11 @@ export async function applyTabSnapshot(rawSnapshot: unknown): Promise<DeviceTabS
 }
 
 function tabUrl(tab: Pick<chrome.tabs.Tab, "url" | "pendingUrl">): string | undefined {
-  return tab.url ?? tab.pendingUrl;
+  return syncableTabUrl(tab);
+}
+
+function isTransientNavigation(changeInfo: chrome.tabs.OnUpdatedInfo, tab: chrome.tabs.Tab): boolean {
+  return changeInfo.status === "loading" || tab.status === "loading" || tab.pendingUrl !== undefined;
 }
 
 async function identityFor(tabId: number, create: boolean): Promise<string | undefined> {
@@ -82,7 +89,7 @@ async function identityFor(tabId: number, create: boolean): Promise<string | und
 
 export async function mutationForCreatedTab(tab: chrome.tabs.Tab): Promise<TabMutationDraft | null> {
   const candidate = tabUrl(tab);
-  if (tab.id == null || tab.incognito || !isSyncableTabUrl(candidate)) return null;
+  if (tab.id == null || tab.incognito || !candidate) return null;
   const candyId = await identityFor(tab.id, true);
   return candyId ? { type: "open", tab: {
     candyId, windowId: tab.windowId, index: tab.index, groupId: tab.groupId != null && tab.groupId >= 0 ? tab.groupId : null,
@@ -98,8 +105,9 @@ export async function mutationsForUpdatedTab(
   const identities = await loadTabIdentities();
   const existing = identities[String(tabId)];
   const candidate = tabUrl(tab);
-  if (tab.incognito || !isSyncableTabUrl(candidate)) {
+  if (tab.incognito || !candidate) {
     if (!existing) return [];
+    if (!tab.incognito && isTransientNavigation(changeInfo, tab)) return [];
     const { [String(tabId)]: _removed, ...next } = identities;
     await saveTabIdentities(next);
     return [{ type: "close", candyId: existing }];

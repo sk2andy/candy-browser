@@ -37,6 +37,80 @@ test("durable candy tab UUID survives navigation and collection", async () => {
   assert.equal(after.tabs[0]!.url, "https://after.example/path");
 });
 
+test("transient navigation keeps identity and commits as navigate instead of close plus open", async () => {
+  const local = new Map<string, unknown>([["candySyncTabIdentitiesV1", { "7": "stable-tab" }]]);
+  const transientTab = {
+    id: 7,
+    windowId: 1,
+    index: 0,
+    active: true,
+    pinned: false,
+    incognito: false,
+    status: "loading",
+    url: "about:blank",
+  } as chrome.tabs.Tab;
+  const fakeChrome = {
+    tabs: { query: async () => [transientTab] },
+    storage: { local: storageArea(local) },
+  } as unknown as typeof chrome;
+  (globalThis as typeof globalThis & { chrome: typeof chrome }).chrome = fakeChrome;
+
+  const loading = await mutationsForUpdatedTab(
+    7,
+    { status: "loading" },
+    transientTab,
+  );
+  assert.deepEqual(loading, []);
+  assert.deepEqual((await collectTabSnapshot()).tabs, []);
+  assert.deepEqual(local.get("candySyncTabIdentitiesV1"), { "7": "stable-tab" });
+
+  const committed = await mutationsForUpdatedTab(
+    7,
+    { url: "https://destination.example/" },
+    ({
+      id: 7,
+      windowId: 1,
+      index: 0,
+      active: true,
+      pinned: false,
+      incognito: false,
+      status: "complete",
+      url: "https://destination.example/",
+      title: "Destination",
+    } as chrome.tabs.Tab),
+  );
+  assert.deepEqual(committed, [{
+    type: "navigate",
+    candyId: "stable-tab",
+    url: "https://destination.example/",
+    title: "Destination",
+  }]);
+});
+
+test("completed navigation to an excluded URL closes the synced tab", async () => {
+  const local = new Map<string, unknown>([["candySyncTabIdentitiesV1", { "7": "stable-tab" }]]);
+  const fakeChrome = {
+    storage: { local: storageArea(local) },
+  } as unknown as typeof chrome;
+  (globalThis as typeof globalThis & { chrome: typeof chrome }).chrome = fakeChrome;
+
+  assert.deepEqual(await mutationsForUpdatedTab(
+    7,
+    { status: "complete" },
+    ({
+      id: 7,
+      windowId: 1,
+      index: 0,
+      active: true,
+      pinned: false,
+      incognito: false,
+      status: "complete",
+      url: "chrome://settings/",
+    } as chrome.tabs.Tab),
+  ), [{ type: "close", candyId: "stable-tab" }]);
+  assert.deepEqual(local.get("candySyncTabIdentitiesV1"), {});
+});
+
 test("remote reconciliation updates, creates, reorders and closes only eligible normal web tabs", async () => {
   const local = new Map<string, unknown>([["candySyncTabIdentitiesV1", { "1": "keep-a", "2": "remove-b" }]]);
   const tabs = [
