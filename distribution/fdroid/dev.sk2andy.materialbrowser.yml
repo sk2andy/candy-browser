@@ -29,7 +29,7 @@ Builds:
       - foss
   - versionName: '0.33'
     versionCode: 33000
-    commit: REPLACE_WITH_V0.33_COMMIT_SHA
+    commit: 4d7400de2ee3316743e69fefe396fe5807ad0b9d
     subdir: app
     gradle:
       - foss
