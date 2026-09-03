@@ -14,5 +14,5 @@
 | Host/cosmetic filtering | `blocking/RequestBlockerTest`, `EasyListCosmeticRulesTest`, blocker instrumented tests |
 | Candy Rules and Filter Studio | `CandyRule*Test`, `FilterStudioScreenInstrumentedTest` |
 | X-Ray and permissions | `PrivacyXRayTest`, `permissions/*Test`, matching UI instrumented tests |
+| Federated-login cookie exception | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest` |
 | Generated assets and audits | `scripts/test_*`, `scripts/*.test.mjs`, `blocking/*AssetInstrumentedTest` |
-

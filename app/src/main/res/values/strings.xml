@@ -766,4 +766,13 @@
     <string name="external_link_preview_copy_link">Copy link</string>
     <string name="external_link_preview_copy_label">Candy link</string>
     <string name="toast_link_copied">Link copied</string>
+    <string name="federated_login_detected">%1$s sign-in detected · Third-party cookies blocked</string>
+    <string name="federated_login_options">Options</string>
+    <string name="federated_login_dialog_title">Sign in with %1$s</string>
+    <string name="federated_login_dialog_message">To support sign-in, Candy allows third-party cookies for %1$s and uses a compatibility mode there. This permission applies to all embedded services on this website.</string>
+    <string name="federated_login_private_note">Private tabs can grant this permission only for the current tab.</string>
+    <string name="federated_login_allow_for_tab">Allow for tab</string>
+    <string name="federated_login_allow_for_profile">Allow for profile</string>
+    <string name="federated_login_deny">Don’t allow</string>
+    <string name="federated_login_revoke">Block third-party cookies again</string>
 </resources>

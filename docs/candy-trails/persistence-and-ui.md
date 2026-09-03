@@ -21,5 +21,6 @@
 | Screen | [`CandyTrailScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/CandyTrailScreen.kt) | Render graph and emit select/fork/reopen/close actions |
 
 - Never write private trails to disk.
+- Never create or write trails for session-ephemeral federated-login popup tabs.
 - Preserve format-version migration and bounds when changing encoded fields.
 - Test layout/motion on JVM; test Compose interaction and WebView traversal with instrumentation.

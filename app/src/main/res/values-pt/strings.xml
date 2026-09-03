@@ -758,4 +758,13 @@
     <string name="external_link_preview_copy_link">Copiar ligação</string>
     <string name="external_link_preview_copy_label">Ligação do Candy</string>
     <string name="toast_link_copied">Ligação copiada</string>
+    <string name="federated_login_detected">Início de sessão com %1$s detetado · Cookies de terceiros bloqueados</string>
+    <string name="federated_login_options">Opções</string>
+    <string name="federated_login_dialog_title">Iniciar sessão com %1$s</string>
+    <string name="federated_login_dialog_message">Para facilitar o início de sessão, o Candy autoriza cookies de terceiros para %1$s e usa aí um modo de compatibilidade. A permissão aplica-se a todos os serviços incorporados neste site.</string>
+    <string name="federated_login_private_note">Em separadores privados, esta permissão só pode ser aplicada ao separador atual.</string>
+    <string name="federated_login_allow_for_tab">Permitir para o separador</string>
+    <string name="federated_login_allow_for_profile">Permitir para o perfil</string>
+    <string name="federated_login_deny">Não permitir</string>
+    <string name="federated_login_revoke">Voltar a bloquear cookies de terceiros</string>
 </resources>

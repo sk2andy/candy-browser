@@ -758,4 +758,13 @@
     <string name="external_link_preview_copy_link">Copier le lien</string>
     <string name="external_link_preview_copy_label">Lien Candy</string>
     <string name="toast_link_copied">Lien copié</string>
+    <string name="federated_login_detected">Connexion %1$s détectée · Cookies tiers bloqués</string>
+    <string name="federated_login_options">Options</string>
+    <string name="federated_login_dialog_title">Se connecter avec %1$s</string>
+    <string name="federated_login_dialog_message">Pour faciliter la connexion, Candy autorise les cookies tiers pour %1$s et y utilise un mode de compatibilité. Cette autorisation s’applique à tous les services intégrés de ce site.</string>
+    <string name="federated_login_private_note">Dans un onglet privé, cette autorisation ne peut s’appliquer qu’à l’onglet actuel.</string>
+    <string name="federated_login_allow_for_tab">Autoriser pour l’onglet</string>
+    <string name="federated_login_allow_for_profile">Autoriser pour le profil</string>
+    <string name="federated_login_deny">Ne pas autoriser</string>
+    <string name="federated_login_revoke">Bloquer à nouveau les cookies tiers</string>
 </resources>

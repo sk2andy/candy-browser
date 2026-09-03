@@ -186,6 +186,7 @@ internal fun PrivacyXRaySheet(
     siteState: SiteProtectionState,
     onPause: (persistently: Boolean) -> Unit,
     onResume: () -> Unit,
+    onRevokeFederatedLoginCompatibility: () -> Unit = {},
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
         { _, _, _ -> },
     onOpenStudio: (ruleId: String?) -> Unit = {},
@@ -211,6 +212,7 @@ internal fun PrivacyXRaySheet(
                 view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                 onResume()
             },
+            onRevokeFederatedLoginCompatibility = onRevokeFederatedLoginCompatibility,
             onRuleAction = onRuleAction,
             onOpenStudio = onOpenStudio,
         )
@@ -271,6 +273,7 @@ internal fun PrivacyXRayContent(
     siteState: SiteProtectionState,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
+    onRevokeFederatedLoginCompatibility: () -> Unit = {},
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
         { _, _, _ -> },
     onOpenStudio: (ruleId: String?) -> Unit = {},
@@ -397,7 +400,11 @@ internal fun PrivacyXRayContent(
         }
 
         Spacer(Modifier.height(22.dp))
-        PrivacyPolicyCard(blockerSettings, siteState)
+        PrivacyPolicyCard(
+            settings = blockerSettings,
+            siteState = siteState,
+            onRevokeFederatedLoginCompatibility = onRevokeFederatedLoginCompatibility,
+        )
         siteState.host?.let {
             Spacer(Modifier.height(18.dp))
             SiteProtectionCard(siteState, onPauseClick, onResumeClick)
@@ -708,6 +715,7 @@ private fun PrivacyDomainBar(
 private fun PrivacyPolicyCard(
     settings: BlockerSettings,
     siteState: SiteProtectionState,
+    onRevokeFederatedLoginCompatibility: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -725,10 +733,16 @@ private fun PrivacyPolicyCard(
             HorizontalDivider(Modifier.padding(vertical = 9.dp))
             PolicyRow(
                 stringResource(R.string.privacy_third_party_cookie_policy),
-                active = settings.blockThirdPartyCookies && !siteState.isPaused,
+                active = settings.blockThirdPartyCookies && !siteState.isPaused &&
+                    !siteState.thirdPartyLoginAllowed,
                 activeLabel = stringResource(R.string.privacy_policy_blocked),
                 inactiveLabel = stringResource(R.string.privacy_policy_allowed),
             )
+            if (siteState.thirdPartyLoginAllowed) {
+                TextButton(onClick = onRevokeFederatedLoginCompatibility) {
+                    Text(stringResource(R.string.federated_login_revoke))
+                }
+            }
             HorizontalDivider(Modifier.padding(vertical = 9.dp))
             PolicyRow(
                 stringResource(R.string.privacy_cookie_banner_protection),
