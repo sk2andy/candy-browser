@@ -499,6 +499,7 @@ class BrowserController(
         private set
     var isWebContentEdgeToEdgeEnabled by mutableStateOf(false)
         private set
+    private var isScrollAwareTopInsetEnabled = true
     var isDefaultBrowser by mutableStateOf(false)
         private set
     var activeCapsuleId by mutableStateOf<String?>(null)
@@ -675,6 +676,8 @@ class BrowserController(
     private val forcedPageZoomScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
+    private val webContentTopInsetScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
+    private val webContentTopInsetNativeFallbacks = mutableSetOf<WebView>()
     private val genericCosmeticBridges = mutableMapOf<WebView, GenericCosmeticBridge>()
     private val videoAutoplayScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private var userScriptMutationPending = false
@@ -2464,10 +2467,20 @@ class BrowserController(
                 (navigationBars.bottom > 0 && tappableElements.bottom > 0)
         val usesGestureNavigation = navigationBars != Insets.NONE && !hasTappableNavigation
         val forceSafeArea = isSafeAreaForced(tabId)
-        val topMargin = when {
-            drawsEdgeToEdge -> 0
-            forceSafeArea -> safeArea.top
-            else -> (safeArea.top - webView.scrollY).coerceAtLeast(0)
+        val topInsetMode = WebContentTopInsetRules.resolve(
+            drawsEdgeToEdge = drawsEdgeToEdge,
+            forceSafeArea = forceSafeArea,
+            scrollableDocumentEnabled = isScrollAwareTopInsetEnabled,
+            documentStartAvailable =
+                webView in webContentTopInsetScriptHandlers &&
+                    webView !in webContentTopInsetNativeFallbacks,
+        )
+        val usesScrollableDocumentInset =
+            topInsetMode == WebContentTopInsetMode.ScrollableDocument
+        val topMargin = if (topInsetMode == WebContentTopInsetMode.NativeSafeArea) {
+            safeArea.top
+        } else {
+            0
         }
         val bottomMargin = when {
             drawsEdgeToEdge -> 0
@@ -2490,6 +2503,16 @@ class BrowserController(
                 webView.layoutParams = layoutParams
             }
         }
+        (webView as? BrowserWebView)?.let { browserWebView ->
+            if (
+                browserWebView.updateContentTopInset(
+                    insetPx = if (usesScrollableDocumentInset) safeArea.top else 0,
+                    viewportCoverAllowed = isWebContentEdgeToEdgeEnabled,
+                )
+            ) {
+                browserWebView.evaluateJavascript(WebContentTopInsetScript.installScript, null)
+            }
+        }
         val rendererInsets = if (drawsEdgeToEdge) {
             effectiveInsets
         } else {
@@ -2498,7 +2521,7 @@ class BrowserController(
                     SAFE_AREA_INSET_TYPES,
                     Insets.of(
                         0,
-                        safeArea.top - topMargin,
+                        0,
                         0,
                         safeArea.bottom - bottomMargin,
                     ),
@@ -2520,20 +2543,6 @@ class BrowserController(
         !isSafeAreaForced(tabId) &&
             isWebContentEdgeToEdgeEnabled &&
             edgeToEdgePages[tabId] == true
-
-    private fun updateScrollAwareInsets(
-        tabId: String,
-        webView: WebView,
-        scrollY: Int,
-        oldScrollY: Int,
-    ) {
-        if (drawsEdgeToEdge(tabId) || isSafeAreaForced(tabId)) return
-        val insets = ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets ?: return
-        val safeTop = insets.getInsets(SAFE_AREA_INSET_TYPES).top
-        val topMargin = (safeTop - scrollY).coerceAtLeast(0)
-        val oldTopMargin = (safeTop - oldScrollY).coerceAtLeast(0)
-        if (topMargin != oldTopMargin) applyWindowInsets(tabId, webView, insets)
-    }
 
     private fun detectPageEdgeToEdge(tabId: String, webView: WebView) {
         val navigationGeneration = navigationGenerations[tabId] ?: return
@@ -2567,6 +2576,34 @@ class BrowserController(
                     return@post
                 }
                 setPageEdgeToEdge(tabId, webView, enabled)
+            }
+        }
+    }
+
+    private inner class WebContentTopInsetBridge(
+        private val tabId: String,
+        private val webView: BrowserWebView,
+    ) {
+        @JavascriptInterface
+        fun topInsetPx(): Int = webView.contentTopInsetPx()
+
+        @JavascriptInterface
+        fun viewportCoverAllowed(): Boolean = webView.isViewportCoverAllowed()
+
+        @JavascriptInterface
+        fun navigationGeneration(): Int = webView.contentInsetNavigationGeneration()
+
+        @JavascriptInterface
+        fun fallbackToNative(navigationGeneration: Int) {
+            mainHandler.post {
+                if (
+                    webViews[tabId] !== webView ||
+                    navigationGenerations[tabId] != navigationGeneration ||
+                    !webContentTopInsetNativeFallbacks.add(webView)
+                ) {
+                    return@post
+                }
+                lastWindowInsets?.let { insets -> applyWindowInsets(tabId, webView, insets) }
             }
         }
     }
@@ -4876,8 +4913,14 @@ class BrowserController(
     }
 
     fun updateWebContentEdgeToEdgeEnabled(enabled: Boolean) {
-        if (isWebContentEdgeToEdgeEnabled == enabled) return
+        if (
+            isWebContentEdgeToEdgeEnabled == enabled &&
+            isScrollAwareTopInsetEnabled == enabled
+        ) {
+            return
+        }
         isWebContentEdgeToEdgeEnabled = enabled
+        isScrollAwareTopInsetEnabled = enabled
         lastWindowInsets?.let(::dispatchWindowInsetsToAttachedWebViews)
     }
 
@@ -4903,15 +4946,28 @@ class BrowserController(
     }
 
     fun previewTopInsetPx(tabId: String): Int {
-        if (drawsEdgeToEdge(tabId)) return 0
-        val webView = webViews[tabId]
-        val currentMargin = (webView?.layoutParams as? FrameLayout.LayoutParams)?.topMargin
-        if (currentMargin != null) return currentMargin.coerceAtLeast(0)
-        return lastWindowInsets
+        val safeTop = lastWindowInsets
             ?.getInsets(SAFE_AREA_INSET_TYPES)
             ?.top
             ?.coerceAtLeast(0)
             ?: 0
+        val webView = webViews[tabId]
+        return when (
+            WebContentTopInsetRules.resolve(
+                drawsEdgeToEdge = drawsEdgeToEdge(tabId),
+                forceSafeArea = isSafeAreaForced(tabId),
+                scrollableDocumentEnabled = isScrollAwareTopInsetEnabled,
+                documentStartAvailable =
+                    webView != null &&
+                        webView in webContentTopInsetScriptHandlers &&
+                        webView !in webContentTopInsetNativeFallbacks,
+            )
+        ) {
+            WebContentTopInsetMode.EdgeToEdge -> 0
+            WebContentTopInsetMode.ScrollableDocument ->
+                (safeTop - (webView?.scrollY ?: 0)).coerceAtLeast(0)
+            WebContentTopInsetMode.NativeSafeArea -> safeTop
+        }
     }
 
     fun updateBlockerSettings(settings: BlockerSettings) {
@@ -5660,6 +5716,8 @@ class BrowserController(
         forcedPageZoomScriptHandlers.clear()
         forcedVerticalScrollScriptHandlers.clear()
         cosmeticScriptHandlers.clear()
+        webContentTopInsetScriptHandlers.clear()
+        webContentTopInsetNativeFallbacks.clear()
         videoAutoplayScriptHandlers.clear()
         webMediaScriptHandlers.clear()
         webMediaBridgeTokens.clear()
@@ -5841,6 +5899,25 @@ class BrowserController(
         edgeToEdgePages[tabId] = false
         navigationGenerations[tabId] = 0
         mainFrameTlsNavigations.remove(tabId)
+        addJavascriptInterface(
+            WebContentTopInsetBridge(tabId, this),
+            WebContentTopInsetScript.bridgeName,
+        )
+        updateContentInsetNavigationGeneration(0)
+        installWebContentTopInsetDocumentStartScript(this)
+        val initialContentTopInset = lastWindowInsets
+            ?.getInsets(SAFE_AREA_INSET_TYPES)
+            ?.top
+            ?.takeIf {
+                !isSafeAreaForced(tabId) &&
+                    isScrollAwareTopInsetEnabled &&
+                    this in webContentTopInsetScriptHandlers
+            }
+            ?: 0
+        updateContentTopInset(
+            insetPx = initialContentTopInset,
+            viewportCoverAllowed = isWebContentEdgeToEdgeEnabled,
+        )
         installWebMediaBridge(tabId, this)
         addJavascriptInterface(ViewportFitBridge(tabId, this), PageViewportFit.bridgeName)
         GenericCosmeticBridge().also { bridge ->
@@ -5932,7 +6009,6 @@ class BrowserController(
         var previousDirection = 0
         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
             if (tabId != selectedTabId) return@setOnScrollChangeListener
-            updateScrollAwareInsets(tabId, this, scrollY, oldScrollY)
             if (scrollY <= 0) {
                 accumulatedDistance = 0f
                 previousDirection = 0
@@ -6010,7 +6086,14 @@ class BrowserController(
             updateProtectionRequestContext(tabId, url)
             applySiteProtectionForNavigation(tabId, view, url)
             suppressedCandyTrailTabIds.remove(tabId)
+            (view as? BrowserWebView)?.updateContentInsetNavigationGeneration(
+                navigationGenerations[tabId] ?: 0,
+            )
+            if (webContentTopInsetNativeFallbacks.remove(view)) {
+                lastWindowInsets?.let { insets -> applyWindowInsets(tabId, view, insets) }
+            }
             setPageEdgeToEdge(tabId, view, false)
+            view.evaluateJavascript(WebContentTopInsetScript.installScript, null)
             val previousUrl = tabs.firstOrNull { it.id == tabId }?.url
             if (previousUrl != null && FaviconRules.changedSite(previousUrl, url)) {
                 invalidateFavicon(tabId)
@@ -6245,9 +6328,12 @@ class BrowserController(
             removeWebMediaBridge(view)
             genericCosmeticBridges.remove(view)
             removeSiteCompatibilityDocumentStartScripts(view)
+            removeWebContentTopInsetDocumentStartScript(view)
+            webContentTopInsetNativeFallbacks.remove(view)
             removeCosmeticDocumentStartScripts(view)
             removeVideoAutoplayDocumentStartScript(view)
             removeUserScripts(view)
+            view.removeJavascriptInterface(WebContentTopInsetScript.bridgeName)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
             committedRecallPages.remove(tabId)
@@ -6631,6 +6717,23 @@ class BrowserController(
     ) {
         installForcedVerticalScrollDocumentStartScript(tabId, view, pageUrl)
         installForcedPageZoomDocumentStartScript(tabId, view, pageUrl)
+    }
+
+    private fun installWebContentTopInsetDocumentStartScript(view: WebView) {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
+        runCatching {
+            WebViewCompat.addDocumentStartJavaScript(
+                view,
+                WebContentTopInsetScript.installScript,
+                ALL_WEB_ORIGINS,
+            )
+        }.getOrNull()?.let { handler -> webContentTopInsetScriptHandlers[view] = handler }
+    }
+
+    private fun removeWebContentTopInsetDocumentStartScript(view: WebView) {
+        webContentTopInsetScriptHandlers.remove(view)?.let { handler ->
+            runCatching(handler::remove)
+        }
     }
 
     private fun removeSiteCompatibilityDocumentStartScripts(view: WebView) {
@@ -10515,9 +10618,12 @@ class BrowserController(
         removeWebMediaBridge(webView)
         genericCosmeticBridges.remove(webView)
         removeSiteCompatibilityDocumentStartScripts(webView)
+        removeWebContentTopInsetDocumentStartScript(webView)
+        webContentTopInsetNativeFallbacks.remove(webView)
         removeCosmeticDocumentStartScripts(webView)
         removeVideoAutoplayDocumentStartScript(webView)
         removeUserScripts(webView)
+        webView.removeJavascriptInterface(WebContentTopInsetScript.bridgeName)
         defaultUserAgentMetadataBySettings.remove(webView.settings)
         webView.setOnScrollChangeListener(null)
         (webView.parent as? FrameLayout)?.removeView(webView)

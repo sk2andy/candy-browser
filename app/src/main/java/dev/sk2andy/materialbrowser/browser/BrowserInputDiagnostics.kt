@@ -137,6 +137,12 @@ internal class BrowserWebView(
     private var confirmedFlingAtMs = Long.MIN_VALUE
     private var momentumInterruption: BrowserMomentumInterruption? = null
     private var recoveryGeneration = Long.MIN_VALUE
+    @Volatile
+    private var contentTopInsetPx = 0
+    @Volatile
+    private var viewportCoverAllowed = false
+    @Volatile
+    private var contentInsetNavigationGeneration = 0
     private val recoveryFrame = object : Runnable {
         override fun run() {
             if (
@@ -218,6 +224,29 @@ internal class BrowserWebView(
         }
         return handled
     }
+
+    fun updateContentTopInset(insetPx: Int, viewportCoverAllowed: Boolean): Boolean {
+        val normalizedInset = insetPx.coerceAtLeast(0)
+        if (
+            contentTopInsetPx == normalizedInset &&
+            this.viewportCoverAllowed == viewportCoverAllowed
+        ) {
+            return false
+        }
+        contentTopInsetPx = normalizedInset
+        this.viewportCoverAllowed = viewportCoverAllowed
+        return true
+    }
+
+    fun contentTopInsetPx(): Int = contentTopInsetPx
+
+    fun isViewportCoverAllowed(): Boolean = viewportCoverAllowed
+
+    fun updateContentInsetNavigationGeneration(generation: Int) {
+        contentInsetNavigationGeneration = generation
+    }
+
+    fun contentInsetNavigationGeneration(): Int = contentInsetNavigationGeneration
 
     private fun retainParentTouchStreamOwnership() {
         releaseParentTouchStreamOwnership()
