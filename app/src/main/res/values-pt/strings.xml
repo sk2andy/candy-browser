@@ -20,6 +20,10 @@
     <string name="onboarding_open_tabs_description">Deslize a barra de endereço para cima.</string>
     <string name="onboarding_close_tab_title">Feche uma aba</string>
     <string name="onboarding_close_tab_description">Na visão geral de abas, deslize o cartão para cima.</string>
+    <string name="release_notes_eyebrow">NOVIDADES</string>
+    <string name="release_notes_version">Versão %1$s</string>
+    <string name="release_notes_done">Explorar o Candy</string>
+    <string name="cd_close_release_notes">Fechar novidades</string>
     <string name="address_search_google_or_url">Pesquisar no Google ou inserir um URL</string>
     <string name="address_empty_hint">Pesquisar ou inserir um endereço</string>
     <string name="search_or_enter_url">Pesquisar ou inserir um URL</string>

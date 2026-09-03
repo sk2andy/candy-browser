@@ -20,6 +20,10 @@
     <string name="onboarding_open_tabs_description">Balayez la barre d’adresse vers le haut.</string>
     <string name="onboarding_close_tab_title">Fermez un onglet</string>
     <string name="onboarding_close_tab_description">Dans la vue des onglets, balayez la carte vers le haut.</string>
+    <string name="release_notes_eyebrow">NOUVEAUTÉS</string>
+    <string name="release_notes_version">Version %1$s</string>
+    <string name="release_notes_done">Découvrir Candy</string>
+    <string name="cd_close_release_notes">Fermer les nouveautés</string>
     <string name="address_search_google_or_url">Rechercher avec Google ou saisir une URL</string>
     <string name="address_empty_hint">Rechercher ou saisir une adresse</string>
     <string name="search_or_enter_url">Rechercher ou saisir une URL</string>

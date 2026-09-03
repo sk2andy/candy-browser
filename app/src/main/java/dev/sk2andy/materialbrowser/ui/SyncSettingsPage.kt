@@ -219,12 +219,16 @@ internal fun SyncSettingsPage(
             onValueChange = { deviceName = it },
             label = { Text(stringResource(R.string.sync_device_name_label)) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag(SyncSettingsTestTags.DeviceName),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .testTag(SyncSettingsTestTags.DeviceName),
         )
         Box {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(top = 8.dp)
                     .clickable { iconMenuExpanded = true }
                     .testTag(SyncSettingsTestTags.Icon),
                 shape = MaterialTheme.shapes.large,

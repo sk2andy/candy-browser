@@ -11,6 +11,7 @@ internal object StartupPresentationRules {
         isLauncherLaunch: Boolean,
         isStartupAnimationEnabled: Boolean,
         isOnboardingRequired: Boolean,
+        isReleaseNotesRequired: Boolean = false,
     ): StartupPresentation {
         val isRegularLauncherStart = isColdStart && isLauncherLaunch
         return StartupPresentation(
@@ -19,6 +20,7 @@ internal object StartupPresentationRules {
                 isLauncherLaunch = isLauncherLaunch,
                 isStartupAnimationEnabled = isStartupAnimationEnabled,
                 isOnboardingRequired = isOnboardingRequired,
+                isReleaseNotesRequired = isReleaseNotesRequired,
             ),
         )
     }
@@ -27,7 +29,9 @@ internal object StartupPresentationRules {
         isLauncherLaunch: Boolean,
         isStartupAnimationEnabled: Boolean,
         isOnboardingRequired: Boolean,
+        isReleaseNotesRequired: Boolean = false,
     ): Boolean = isLauncherLaunch &&
         !isStartupAnimationEnabled &&
-        !isOnboardingRequired
+        !isOnboardingRequired &&
+        !isReleaseNotesRequired
 }

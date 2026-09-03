@@ -31,7 +31,7 @@ WIDTH = 1920
 HEIGHT = 1080
 FPS = 60
 SOURCE_FPS = 30
-DURATION = 27.0
+DURATION = 30.4
 TRANSITION = 0.34
 
 FONT_REGULAR = "/System/Library/Fonts/SFNS.ttf"
@@ -52,16 +52,17 @@ class Scene:
 
 
 SCENES = (
-    Scene(0.0, 1.4, "hook"),
-    Scene(1.4, 3.8, "tabs"),
-    Scene(3.8, 6.8, "peek"),
-    Scene(6.8, 8.8, "topping_intro"),
-    Scene(8.8, 12.3, "spoiler"),
-    Scene(12.3, 15.6, "hackernews"),
-    Scene(15.6, 18.0, "privacy_toppings"),
-    Scene(18.0, 21.6, "privacy"),
-    Scene(21.6, 24.2, "more"),
-    Scene(24.2, 27.0, "end"),
+    Scene(0.0, 1.6, "hook"),
+    Scene(1.6, 4.0, "tabs"),
+    Scene(4.0, 7.2, "sync"),
+    Scene(7.2, 10.2, "peek"),
+    Scene(10.2, 12.2, "topping_intro"),
+    Scene(12.2, 15.7, "spoiler"),
+    Scene(15.7, 19.0, "hackernews"),
+    Scene(19.0, 21.4, "privacy_toppings"),
+    Scene(21.4, 25.0, "privacy"),
+    Scene(25.0, 27.6, "more"),
+    Scene(27.6, 30.4, "end"),
 )
 
 VIDEO_SOURCES = {
@@ -327,6 +328,141 @@ def render_hook(local: float, time: float) -> Image.Image:
         fill=(116, 87, 215, alpha),
     )
     canvas.alpha_composite(text_layer)
+    return canvas
+
+
+def draw_glass_card(
+    canvas: Image.Image,
+    bounds: tuple[int, int, int, int],
+    *,
+    radius: int,
+    fill: tuple[int, int, int, int] = (255, 255, 255, 232),
+) -> None:
+    x1, y1, x2, y2 = bounds
+    shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    shadow_draw = ImageDraw.Draw(shadow)
+    shadow_draw.rounded_rectangle((x1 + 8, y1 + 14, x2 + 8, y2 + 14), radius=radius, fill=(39, 28, 77, 54))
+    canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(18)))
+    draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle(bounds, radius=radius, fill=fill, outline=(255, 255, 255, 220), width=2)
+
+
+def draw_device_row(
+    draw: ImageDraw.ImageDraw,
+    *,
+    y: int,
+    monogram: str,
+    label: str,
+    detail: str,
+    selected: bool,
+) -> None:
+    fill = (236, 231, 255, 255) if selected else (255, 255, 255, 0)
+    draw.rounded_rectangle((890, y, 1145, y + 90), radius=28, fill=fill)
+    draw.ellipse((910, y + 19, 962, y + 71), fill=PURPLE if selected else "#E8E4F4")
+    monogram_font = font(22, weight="semibold")
+    bounds = draw.textbbox((0, 0), monogram, font=monogram_font)
+    draw.text((936 - (bounds[2] - bounds[0]) // 2, y + 33), monogram, font=monogram_font, fill="white" if selected else MUTED)
+    draw.text((980, y + 18), label, font=font(22, weight="semibold"), fill=INK)
+    draw.text((980, y + 51), detail, font=font(17, weight="medium"), fill=MUTED)
+    draw.ellipse((1115, y + 36, 1129, y + 50), fill="#20B486")
+
+
+def render_sync(local: float, time: float) -> Image.Image:
+    canvas = background(time, accent=PURPLE)
+    draw = ImageDraw.Draw(canvas)
+    reveal = ease_out_quint(local / 0.62)
+    draw_chip(
+        draw,
+        (round(-380 + 490 * ease_out_quint(local / 0.44)), 64),
+        "NEW  ·  CROSS-DEVICE SYNC",
+        "#FFFFFFE8",
+        PURPLE,
+    )
+    draw.multiline_text(
+        (105, 220 + round(48 * (1.0 - reveal))),
+        "YOUR TABS.\nEVERY DEVICE.",
+        font=font(78, weight="semibold"),
+        fill=INK,
+        spacing=0,
+    )
+    draw.multiline_text(
+        (110, 480 + round(24 * (1.0 - reveal))),
+        "Android  ↔  Chromium  ↔  Firefox\n\nOpen · navigate · pin · reorder · close",
+        font=font(31, weight="medium"),
+        fill=MUTED,
+        spacing=7,
+    )
+
+    entrance = ease_out_quint((local - 0.08) / 0.72)
+    desktop_x = round(855 + 760 * (1.0 - entrance))
+    desktop_bounds = (desktop_x, 135, desktop_x + 880, 790)
+    draw_glass_card(canvas, desktop_bounds, radius=42)
+    draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle((desktop_x, 135, desktop_x + 880, 215), radius=42, fill=(245, 242, 255, 245))
+    draw.rectangle((desktop_x, 175, desktop_x + 880, 215), fill=(245, 242, 255, 245))
+    for index, color in enumerate(("#FF6484", "#FFBF4B", "#3ACB7D")):
+        cx = desktop_x + 38 + index * 30
+        draw.ellipse((cx - 8, 167, cx + 8, 183), fill=color)
+    draw.rounded_rectangle((desktop_x + 150, 157, desktop_x + 690, 196), radius=20, fill="white")
+    draw.text((desktop_x + 370, 166), "candy://synced-tabs", font=font(17, weight="medium"), fill=MUTED)
+
+    draw.rounded_rectangle((desktop_x + 22, 232, desktop_x + 290, 765), radius=30, fill=(248, 246, 255, 238))
+    draw.text((desktop_x + 50, 260), "SYNCED DEVICES", font=font(18, weight="semibold"), fill=PURPLE)
+    row_offset = desktop_x - 855
+    # Device rows use stable positions; translate their layer together with the desktop entrance.
+    device_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    device_draw = ImageDraw.Draw(device_layer)
+    for y, monogram, label, detail, selected in (
+        (315, "P", "Pixel 11 Pro", "Android · live", True),
+        (415, "F", "Firefox", "Desktop · synced", False),
+        (515, "C", "Chromium", "Work · synced", False),
+    ):
+        draw_device_row(device_draw, y=y, monogram=monogram, label=label, detail=detail, selected=selected)
+    if row_offset:
+        device_layer = device_layer.transform(
+            device_layer.size,
+            Image.Transform.AFFINE,
+            (1, 0, -row_offset, 0, 1, 0),
+            resample=Image.Resampling.BICUBIC,
+        )
+    canvas.alpha_composite(device_layer)
+    draw = ImageDraw.Draw(canvas)
+
+    content_left = desktop_x + 320
+    draw.text((content_left, 260), "Pixel 11 Pro", font=font(34, weight="semibold"), fill=INK)
+    draw.rounded_rectangle((content_left + 250, 266, content_left + 325, 302), radius=18, fill="#DDF8ED")
+    draw.text((content_left + 269, 274), "LIVE", font=font(15, weight="semibold"), fill="#12845E")
+    for index, (tab_title, host, accent) in enumerate((
+        ("Candy Browser", "github.com", PINK),
+        ("Android Developers", "developer.android.com", PURPLE),
+        ("Reader Studio", "local reading view", "#00A9A5"),
+    )):
+        y = 335 + index * 116
+        draw.rounded_rectangle((content_left, y, desktop_x + 830, y + 94), radius=28, fill=(250, 249, 255, 255))
+        draw.rounded_rectangle((content_left + 18, y + 18, content_left + 30, y + 76), radius=6, fill=accent)
+        draw.text((content_left + 52, y + 17), tab_title, font=font(25, weight="semibold"), fill=INK)
+        draw.text((content_left + 52, y + 53), host, font=font(18, weight="medium"), fill=MUTED)
+
+    badge_progress = ease_out_quint((local - 0.40) / 0.58)
+    badge_x = round(760 + 70 * (1.0 - badge_progress))
+    badge_y = 745
+    badge_width = 410
+    draw_glass_card(canvas, (badge_x, badge_y, badge_x + badge_width, badge_y + 142), radius=42, fill=(255, 255, 255, 246))
+    draw = ImageDraw.Draw(canvas)
+    draw.ellipse((badge_x + 24, badge_y + 30, badge_x + 106, badge_y + 112), fill=PURPLE)
+    draw.arc((badge_x + 48, badge_y + 44, badge_x + 82, badge_y + 78), 180, 360, fill="white", width=6)
+    draw.rounded_rectangle((badge_x + 43, badge_y + 65, badge_x + 87, badge_y + 98), radius=8, fill="white")
+    draw.text((badge_x + 126, badge_y + 32), "SELF-HOSTED · E2EE", font=font(22, weight="semibold"), fill=INK)
+    draw.text((badge_x + 126, badge_y + 72), "Docker Compose · your server", font=font(18, weight="medium"), fill=MUTED)
+
+    pulse_progress = (local * 0.72) % 1.0
+    pulse_radius = round(7 + 5 * math.sin(pulse_progress * math.pi))
+    pulse_x = badge_x + badge_width - 28
+    pulse_y = badge_y + 71
+    draw.ellipse(
+        (pulse_x - pulse_radius, pulse_y - pulse_radius, pulse_x + pulse_radius, pulse_y + pulse_radius),
+        fill=PINK,
+    )
     return canvas
 
 
@@ -641,7 +777,7 @@ def render_end(local: float, time: float) -> Image.Image:
     foot_font = font(25, weight="medium")
     bounds = draw.textbbox((0, 0), foot, font=foot_font)
     draw.text((button_left + (button_width - bounds[2]) // 2, 735 + content_offset), foot, font=foot_font, fill=MUTED)
-    chip_label = "ANDROID 14+  ·  PolyForm Noncommercial 1.0.0"
+    chip_label = "ANDROID 13+  ·  NONCOMMERCIAL"
     chip_font = font(22, weight="semibold")
     chip_bounds = draw.textbbox((0, 0), chip_label, font=chip_font)
     chip_width = chip_bounds[2] - chip_bounds[0] + 38
@@ -677,7 +813,7 @@ def camera_move(
 
 
 def apply_scene_camera(kind: str, image: Image.Image, local: float) -> Image.Image:
-    if kind in {"hook", "topping_intro", "privacy_toppings", "end"}:
+    if kind in {"hook", "sync", "topping_intro", "privacy_toppings", "end"}:
         return image
     camera_progress = ease_in_out((local - 0.55) / 2.35)
     if kind == "spoiler":
@@ -712,6 +848,8 @@ def apply_scene_camera(kind: str, image: Image.Image, local: float) -> Image.Ima
 def render_scene(scene: Scene, local: float, time: float) -> Image.Image:
     if scene.kind == "hook":
         image = render_hook(local, time)
+    elif scene.kind == "sync":
+        image = render_sync(local, time)
     elif scene.kind == "tabs":
         image = render_feature(
             local,
@@ -1163,7 +1301,7 @@ def main() -> None:
     ) as export_temporary:
         extract_video_frames(Path(temporary), ffmpeg=ffmpeg)
         synthesize_theme(theme)
-        render_frame(25.1).save(poster, quality=92, optimize=True)
+        render_frame(5.65).save(poster, quality=92, optimize=True)
         temporary_output = Path(export_temporary) / output.name
         render_video(temporary_output, theme, ffmpeg=ffmpeg)
         temporary_output.replace(output)
