@@ -398,6 +398,10 @@ class BrowserSessionStore internal constructor(
                         .takeIf { item.has("forcePageZoomingOverride") },
                     forceSafeArea = item.optBoolean("forceSafeAreaOverride", false)
                         .takeIf { item.has("forceSafeAreaOverride") },
+                    thirdPartyLoginAllowed = item.optBoolean(
+                        "thirdPartyLoginAllowedOverride",
+                        false,
+                    ).takeIf { item.has("thirdPartyLoginAllowedOverride") },
                 ),
             )
         }.mapNotNull { (profileId, host, overrides) ->
@@ -448,6 +452,9 @@ class BrowserSessionStore internal constructor(
                     }
                     overrides.forceSafeArea?.let { enabled ->
                         item.put("forceSafeAreaOverride", enabled)
+                    }
+                    overrides.thirdPartyLoginAllowed?.let { enabled ->
+                        item.put("thirdPartyLoginAllowedOverride", enabled)
                     }
                 }
         }

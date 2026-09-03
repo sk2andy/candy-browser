@@ -22,13 +22,15 @@ flowchart LR
 The binding is local metadata. The server never receives the Candy profile ID. The bound profile
 remains a local profile: history, Candy Trails, Site Capsules, WebView isolation, snoozing, and
 normal session persistence keep their existing owners. Only its non-private HTTP(S) tab projection
-is synchronized.
+is synchronized. Session-ephemeral federated-login popups and their active opener are excluded from
+outbound mutations and protected from inbound reconciliation until the login window closes.
 
 During first binding, Android assigns stable sync IDs to eligible existing tabs and publishes them.
 Remote tabs already present for the device are merged into the same local profile. Private tabs and
-untracked blank, internal, or local-file tabs are preserved locally. Once a synchronized tab has
-been acknowledged, a later remote close removes it locally. This distinguishes initial migration
-from a real remote deletion.
+untracked blank, internal, local-file, and active federated-login popup tabs are preserved locally.
+Once a synchronized tab has been acknowledged, a later remote close removes it locally unless it is
+temporarily protected by an active federated-login flow. This distinguishes initial migration from
+a real remote deletion without interrupting an authenticator or password-manager round trip.
 
 The binding cannot point at an incognito context, and a profile cannot be deleted while actively
 bound. Legacy Android sync settings without a profile ID migrate to the active local profile.
@@ -68,8 +70,8 @@ interaction remains native. The projection is deliberately excluded from local o
 stable cross-client tab identity; the Android runtime tab ID remains an implementation detail.
 
 An empty `about:blank` tab is kept locally until its first valid HTTP(S) navigation. It then becomes
-an encrypted `Open` mutation. `file:`, browser-internal, malformed, and private URLs never enter the
-sync payload.
+an encrypted `Open` mutation. `file:`, browser-internal, malformed, private, and session-ephemeral
+federated-login URLs never enter the sync payload.
 
 ## Supported mutations
 

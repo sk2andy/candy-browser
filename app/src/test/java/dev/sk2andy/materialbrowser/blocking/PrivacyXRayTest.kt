@@ -253,10 +253,17 @@ class PrivacyXRayTest {
     }
 
     @Test
-    fun `cookie policy allows third party cookies only when global rule is off or site paused`() {
+    fun `cookie policy allows third party cookies for explicit login compatibility`() {
         assertFalse(PrivacyPolicyRules.acceptsThirdPartyCookies(true, false))
         assertTrue(PrivacyPolicyRules.acceptsThirdPartyCookies(true, true))
         assertTrue(PrivacyPolicyRules.acceptsThirdPartyCookies(false, false))
+        assertTrue(
+            PrivacyPolicyRules.acceptsThirdPartyCookies(
+                blockThirdPartyCookies = true,
+                sitePaused = false,
+                thirdPartyLoginAllowed = true,
+            ),
+        )
     }
 
     @Test

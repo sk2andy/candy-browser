@@ -20,6 +20,7 @@
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
 | Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; apply desktop user agent and viewport before navigation |
+| Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
 | Local userscript | `UserScriptRules` → AndroidX WebKit document-start handler | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 
 ## Invariants
@@ -39,6 +40,10 @@
   the preview WebView when its target profile changes and reload the final normalized HTTP(S) URL
   when promoting it to a regular tab. Preview loads still use the selected profile's cookies and
   DOM storage, so the feature is disposable UI rather than a private-browsing mode.
+- Keep federated-login popup tabs session-ephemeral for their complete window lifetime. App
+  backgrounding pauses their live WebView and resumes it on return, while tab/session, History,
+  Recall, Candy Trail, WebView-state, and preview persistence exclude them. Process death therefore
+  restores the opener instead of an identity-provider page.
 - Resolve external intents on every handoff attempt so apps installed while Candy remains open are
   immediately eligible. Show handoff feedback only after Android accepts the external launch.
 - Carry user intent across script-driven handoffs with a short-lived, tab-bound grant after a
@@ -89,11 +94,22 @@
 | Force vertical scrolling | Removes vertical page scroll locks without changing horizontal overflow |
 | Force page zooming | Removes viewport `user-scalable`, minimum-scale and maximum-scale restrictions while preserving other viewport directives |
 | Force safe area | Keeps the WebView below the top system-bar/display-cutout inset while scrolling and ignores `viewport-fit=cover` for that host |
+| Federated-login compatibility | Allows third-party cookies for the exact site host, removes WebView-only user-agent markers, and permits user-initiated popups only to recognized identity-provider authentication paths |
 
 - Compatibility overrides match the exact current host. Regular tabs persist them per profile;
   private tabs keep them in memory for that tab only.
 - Changing an override reloads affected pages. Document-start scripts handle direct navigation and
   commit-visible fallbacks cover redirects whose final host was not known before navigation.
+- A detected Google Identity Services SDK first produces a dismissible Snackbar. **Options** opens
+  a centered Material 3 dialog; detection alone never changes browser policy. A tab grant is
+  memory-only. A profile grant is persisted for the exact host and applies to matching regular tabs.
+  Private tabs never expose or persist the profile grant. Privacy X-Ray shows the resulting cookie
+  policy and provides a host-scoped action to revoke the grant.
+- Federated-login popup exceptions require all three conditions: a user gesture, an active grant on
+  the opener site, and a recognized HTTPS provider authentication path. The compatibility identity
+  used for the provider user agent is removed when the popup leaves the provider. Its separate
+  session-ephemeral identity remains until the popup closes. Other cross-site popups continue through
+  the normal popup blocker.
 
 ## Web media, fullscreen and picture-in-picture
 
@@ -158,6 +174,7 @@ WebView request state.
 | --- | --- |
 | Input/URL policy | Matching JVM rule test |
 | WebView settings or callbacks | Focused browser instrumented test |
+| Federated login | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, and popup-blocker regression tests |
 | Browser WebAuthn manifest contract | `SystemWebViewCredentialsInstrumentedTest` on API 34+ |
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |

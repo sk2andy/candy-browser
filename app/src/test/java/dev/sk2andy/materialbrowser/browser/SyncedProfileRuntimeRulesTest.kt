@@ -201,6 +201,68 @@ class SyncedProfileRuntimeRulesTest {
     }
 
     @Test
+    fun `linked profile keeps protected login flow tabs out of remote reconciliation`() {
+        val opener = BrowserTab(
+            id = "opener",
+            lastAccessedAt = 1,
+            profileId = "personal",
+            url = "https://reddit.com/",
+            syncCandyId = "opener-candy",
+        )
+        val popup = opener.copy(
+            id = "login-popup",
+            openerTabId = opener.id,
+            url = "https://accounts.google.com/o/oauth2/auth",
+            syncCandyId = "popup-candy",
+        )
+
+        val result = SyncedProfileRuntimeRules.reconcileLinkedProfile(
+            profile = profile(tabs = listOf(tab("opener-candy", 0, "https://remote.example/"))),
+            localProfileId = "personal",
+            existingTabs = listOf(opener, popup),
+            nowMillis = 10,
+            protectedRuntimeTabIds = setOf(opener.id, popup.id),
+        )
+
+        assertEquals(listOf(opener.id, popup.id), result.tabs.map(BrowserTab::id))
+        assertEquals(listOf(opener.url, popup.url), result.tabs.map(BrowserTab::url))
+        assertTrue(result.removedRuntimeTabIds.isEmpty())
+        assertTrue(result.navigations.isEmpty())
+    }
+
+    @Test
+    fun `remote profile keeps protected login popup when sync snapshot changes`() {
+        val runtimeProfileId = SyncedProfileRuntimeRules.profileId("desktop")
+        val pending = BrowserTab(
+            id = "pending",
+            lastAccessedAt = 0,
+            profileId = runtimeProfileId,
+            url = BLANK_URL,
+            syncCandyId = "pending-candy",
+        )
+        val popup = BrowserTab(
+            id = "login-popup",
+            lastAccessedAt = 1,
+            profileId = runtimeProfileId,
+            openerTabId = "opener",
+            url = "https://accounts.google.com/o/oauth2/auth",
+            syncCandyId = "popup-candy",
+        )
+
+        val result = SyncedProfileRuntimeRules.reconcile(
+            profile = profile(),
+            existingTabs = listOf(pending, popup),
+            nowMillis = 10,
+            maxTabs = 1,
+            protectedRuntimeTabIds = setOf(popup.id),
+        )
+
+        assertEquals(listOf(popup), result.tabs)
+        assertEquals(setOf(pending.id), result.removedRuntimeTabIds)
+        assertTrue(result.navigations.isEmpty())
+    }
+
+    @Test
     fun `linked profile capacity never evicts a private tab for a remote tab`() {
         val privateTab = BrowserTab(
             id = "private",

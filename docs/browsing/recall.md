@@ -12,8 +12,8 @@ so it can be searched later.
 | `>recall <query>` | Active regular profile | Searches only the local Recall index. It never falls through to navigation or a remote search/suggestion request. |
 | History search | Profiles selected in History | Existing title, host and URL matches are combined with full-text Recall matches and bounded matching excerpts. |
 
-Recall is absent in private tabs. Private input does not query the index, and private pages and
-Link Peek never enter it.
+Recall is absent in private tabs. Private input does not query the index, and private pages, Link
+Peek, and federated-login popup pages never enter it.
 
 ## Ownership
 

@@ -277,6 +277,8 @@ import dev.sk2andy.materialbrowser.browser.PageTranslationRules
 import dev.sk2andy.materialbrowser.browser.RootTabBackResult
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewCommitResult
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
+import dev.sk2andy.materialbrowser.browser.FederatedLoginOffer
+import dev.sk2andy.materialbrowser.browser.FederatedLoginPromptChoice
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
@@ -686,6 +688,11 @@ internal fun BrowserScreen(
     val undoLabel = stringResource(R.string.action_undo)
     val popupBlockedMessage = stringResource(R.string.popup_blocked)
     val openPopupLabel = stringResource(R.string.action_open_popup)
+    val federatedLoginDetectedMessage = stringResource(
+        R.string.federated_login_detected,
+        controller.federatedLoginOffer?.provider?.displayName.orEmpty(),
+    )
+    val federatedLoginOptionsLabel = stringResource(R.string.federated_login_options)
     val toggleFavoriteWithFeedback: (String) -> Unit = { tabId ->
         controller.toggleFavorite(tabId)?.let { mutation ->
             rootView.performConfirmHaptic()
@@ -729,6 +736,31 @@ internal fun BrowserScreen(
             }
         } finally {
             if (!opened) controller.dismissBlockedPopup(offer.token)
+        }
+    }
+    val federatedLoginOffer = controller.federatedLoginOffer
+    LaunchedEffect(federatedLoginOffer?.token) {
+        val offer = federatedLoginOffer?.takeUnless(FederatedLoginOffer::showDialog)
+            ?: return@LaunchedEffect
+        var optionsOpened = false
+        try {
+            val result = feedbackSnackbarHostState.showSnackbar(
+                message = federatedLoginDetectedMessage,
+                actionLabel = federatedLoginOptionsLabel,
+                withDismissAction = true,
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                optionsOpened = true
+                controller.showFederatedLoginOptions(offer.token)
+            }
+        } finally {
+            if (!optionsOpened) {
+                controller.respondToFederatedLoginOffer(
+                    offer.token,
+                    FederatedLoginPromptChoice.Deny,
+                )
+            }
         }
     }
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
@@ -2205,6 +2237,9 @@ internal fun BrowserScreen(
                         controller.pauseSiteProtection(tabId, persistently)
                     },
                     onResume = { controller.resumeSiteProtection(tabId) },
+                    onRevokeFederatedLoginCompatibility = {
+                        controller.revokeFederatedLoginCompatibility(tabId)
+                    },
                     onRuleAction = { domain, action, siteScoped ->
                         val rule = controller.addFilterRuleFromXRay(
                             tabId = tabId,
@@ -2269,6 +2304,17 @@ internal fun BrowserScreen(
                 onChoice = { choice -> controller.respondToPermissionPrompt(prompt.id, choice) },
             )
         }
+
+        controller.federatedLoginOffer
+            ?.takeIf(FederatedLoginOffer::showDialog)
+            ?.let { offer ->
+                FederatedLoginPromptDialog(
+                    offer = offer,
+                    onChoice = { choice ->
+                        controller.respondToFederatedLoginOffer(offer.token, choice)
+                    },
+                )
+            }
 
         if (filterStudioVisible) {
             FilterStudioScreen(

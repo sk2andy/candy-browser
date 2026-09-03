@@ -800,4 +800,13 @@
     <string name="sync_error_wrong_passphrase">Die E2EE-Passphrase kann diesen Arbeitsbereich nicht entsperren.</string>
     <string name="sync_error_incompatible">Der Server unterstützt das erforderliche sichere Protokoll nicht.</string>
     <string name="sync_error_failed">Die Einrichtung ist fehlgeschlagen. Prüfe die Verbindung und versuche es erneut.</string>
+    <string name="federated_login_detected">%1$s-Anmeldung erkannt · Drittanbieter-Cookies blockiert</string>
+    <string name="federated_login_options">Optionen</string>
+    <string name="federated_login_dialog_title">Mit %1$s anmelden</string>
+    <string name="federated_login_dialog_message">Zur Unterstützung der Anmeldung erlaubt Candy Drittanbieter-Cookies für %1$s und verwendet dort einen Kompatibilitätsmodus. Die Freigabe gilt für alle eingebetteten Dienste dieser Website.</string>
+    <string name="federated_login_private_note">In privaten Tabs kann die Freigabe nur für den aktuellen Tab gelten.</string>
+    <string name="federated_login_allow_for_tab">Für den Tab erlauben</string>
+    <string name="federated_login_allow_for_profile">Für das Profil erlauben</string>
+    <string name="federated_login_deny">Nicht erlauben</string>
+    <string name="federated_login_revoke">Drittanbieter-Cookies wieder blockieren</string>
 </resources>

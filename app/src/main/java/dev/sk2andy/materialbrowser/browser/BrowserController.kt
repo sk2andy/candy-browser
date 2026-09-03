@@ -571,6 +571,18 @@ class BrowserController(
     fun selectedWebViewForTesting(): WebView = webViewFor(selectedTabId)
 
     @VisibleForTesting
+    fun detectFederatedLoginForTesting(requestUrl: String) {
+        val context = protectionRequestContexts[selectedTabId] ?: return
+        detectFederatedLoginRequest(selectedTabId, requestUrl, context)
+    }
+
+    @VisibleForTesting
+    fun acceptsThirdPartyCookiesForTesting(tabId: String = selectedTabId): Boolean {
+        val webView = webViewFor(tabId)
+        return cookieManagerFor(webView).acceptThirdPartyCookies(webView)
+    }
+
+    @VisibleForTesting
     fun isBundledBlockingReadyForTesting(): Boolean = blockingStartGate.isReady
 
     @VisibleForTesting
@@ -674,6 +686,12 @@ class BrowserController(
     private var blockedPopupSequence = 0L
     internal var blockedPopupOffer by mutableStateOf<BlockedPopupOffer?>(null)
         private set
+    internal var federatedLoginOffer by mutableStateOf<FederatedLoginOffer?>(null)
+        private set
+    private var federatedLoginOfferSequence = 0L
+    private val federatedLoginOfferKeys = ConcurrentHashMap<String, String>()
+    private val federatedLoginPopupTabIds = mutableSetOf<String>()
+    private val federatedLoginCompatibilityTabIds = mutableSetOf<String>()
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val webViewProfileKeys = ConcurrentHashMap<String, String>()
     private val configuredServiceWorkerProfiles = mutableSetOf<String>()
@@ -1164,6 +1182,7 @@ class BrowserController(
             forceVerticalScrolling = isForcedVerticalScrolling(tab, host),
             forcePageZooming = isPageZoomingForced(tab, host),
             forceSafeArea = isSafeAreaForced(tab, host),
+            thirdPartyLoginAllowed = isFederatedLoginCompatibilityEnabled(tab, pageUrls[tabId]),
         )
     }
 
@@ -3311,6 +3330,9 @@ class BrowserController(
         }
         blockedPopupOffer = null
         transientPopupTabIds.remove(tab.id)
+        if (!FederatedLoginRules.isProviderNavigation(offer.targetUrl)) {
+            federatedLoginCompatibilityTabIds.remove(tab.id)
+        }
         if (tab.profileId != activeProfileId && profilesEnabled) selectProfile(tab.profileId)
         updateTab(tab.id) { current ->
             current.copy(url = offer.targetUrl, isLoading = true, progress = 0, error = null)
@@ -3326,6 +3348,38 @@ class BrowserController(
         blockedPopupOffer = null
         closeTab(offer.popupTabId)
     }
+
+    fun showFederatedLoginOptions(token: Long) {
+        val offer = federatedLoginOffer?.takeIf { it.token == token } ?: return
+        if (!isCurrentFederatedLoginOffer(offer)) {
+            federatedLoginOffer = null
+            return
+        }
+        federatedLoginOffer = offer.copy(showDialog = true)
+    }
+
+    fun respondToFederatedLoginOffer(
+        token: Long,
+        choice: FederatedLoginPromptChoice,
+    ) {
+        val offer = federatedLoginOffer?.takeIf { it.token == token } ?: return
+        federatedLoginOffer = null
+        if (choice == FederatedLoginPromptChoice.Deny || !isCurrentFederatedLoginOffer(offer)) {
+            return
+        }
+        if (choice == FederatedLoginPromptChoice.AllowForProfile && offer.isPrivate) return
+        updateSitePrivacyOverrides(
+            tabId = offer.tabId,
+            persistently = choice == FederatedLoginPromptChoice.AllowForProfile,
+        ) { current, _ ->
+            current.copy(thirdPartyLoginAllowed = true)
+        }
+    }
+
+    fun revokeFederatedLoginCompatibility(tabId: String): Boolean =
+        updateSitePrivacyOverrides(tabId) { current, _ ->
+            current.copy(thirdPartyLoginAllowed = null)
+        }
 
     fun createProfile(emoji: String, isolationEnabled: Boolean = false): String? {
         if (!profilesEnabled) return null
@@ -3587,6 +3641,7 @@ class BrowserController(
     fun moveTabToProfile(tabId: String, profileId: String): Boolean {
         if (!profilesEnabled) return false
         val sourceTab = tabs.firstOrNull { it.id == tabId } ?: return false
+        if (isSessionEphemeralTab(tabId)) return false
         if (sourceTab.profileId == profileId || profiles.none { it.id == profileId }) return false
         val targetIsSynced = isSyncedProfile(profileId)
         val targetSyncs = isSyncTargetProfile(profileId)
@@ -4054,6 +4109,7 @@ class BrowserController(
         if (index < 0) return null
         val tab = tabs[index]
         if (isSyncedProfile(tab.profileId)) return null
+        if (isSessionEphemeralTab(tabId)) return null
         if (!SnoozeRules.canSnooze(tab, wakeAtMillis, nowMillis)) return null
         val updatedSnoozed = (snoozedTabs.filterNot { it.tab.id == tabId } +
             SnoozedTab(tab, wakeAtMillis, nowMillis))
@@ -4232,6 +4288,7 @@ class BrowserController(
     }
 
     fun setTabPinned(tabId: String, isPinned: Boolean): Boolean {
+        if (isSessionEphemeralTab(tabId)) return false
         val updatedTabs = TabPinningRules.withPinnedState(
             tabs = activeTabs,
             tabId = tabId,
@@ -4246,6 +4303,7 @@ class BrowserController(
 
     fun reorderTab(tabId: String, destinationIndex: Int): Boolean {
         if (automaticTabSortingEnabled) return false
+        if (isSessionEphemeralTab(tabId)) return false
         val updatedTabs = TabReorderingRules.move(
             tabs = activeTabs,
             tabId = tabId,
@@ -5010,6 +5068,7 @@ class BrowserController(
     private fun updateSitePrivacyOverrides(
         tabId: String,
         reloadAffectedPages: Boolean = true,
+        persistently: Boolean = true,
         transform: (SitePrivacyOverrides, String) -> SitePrivacyOverrides,
     ): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
@@ -5019,7 +5078,7 @@ class BrowserController(
         if (updated == current) return false
 
         val affectedTabIds = linkedSetOf(tabId)
-        if (tab.isIncognito) {
+        if (tab.isIncognito || !persistently) {
             val byHost = SitePrivacyOverrideRules.withOverride(
                 temporarySitePrivacyOverrides[tabId].orEmpty(),
                 host,
@@ -5042,6 +5101,13 @@ class BrowserController(
                 permanentSitePrivacyOverrides + (tab.profileId to byHost)
             }
             store.saveSitePrivacyOverrides(permanentSitePrivacyOverrides)
+            temporarySitePrivacyOverrides.computeIfPresent(tabId) { _, overrides ->
+                SitePrivacyOverrideRules.withOverride(
+                    current = overrides,
+                    host = host,
+                    overrides = SitePrivacyOverrides(),
+                ).takeIf(Map<String, SitePrivacyOverrides>::isNotEmpty)
+            }
             tabs.asSequence()
                 .filter { candidate -> candidate.profileId == tab.profileId && !candidate.isIncognito }
                 .forEach { candidate ->
@@ -5559,6 +5625,8 @@ class BrowserController(
         pendingPopunderNavigations.clear()
         transientPopupTabIds.clear()
         blockedPopupOffer = null
+        federatedLoginOffer = null
+        federatedLoginOfferKeys.clear()
         cancelAllPendingBlockingStarts()
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
@@ -5580,6 +5648,8 @@ class BrowserController(
         temporaryDesktopViewDomains.clear()
         savePersistentFilterRules()
         persist()
+        federatedLoginPopupTabIds.clear()
+        federatedLoginCompatibilityTabIds.clear()
         destroyLinkPeekPreviewWebViews()
         if (tabs.any(BrowserTab::isIncognito)) prepareIncognitoProfileForRemoval()
         configuredServiceWorkerProfiles.toList().forEach(::clearProfileServiceWorkerClient)
@@ -5705,6 +5775,7 @@ class BrowserController(
         pendingFileChooser?.identity?.tabId?.let(::add)
         addAll(pendingPreviewCaptures.keys)
         addAll(transientPopupTabIds)
+        addAll(activeFederatedLoginFlowTabIds())
         blockedPopupOffer?.popupTabId?.let(::add)
         pendingPopupNavigations.forEach { (popupTabId, pending) ->
             add(popupTabId)
@@ -5914,6 +5985,10 @@ class BrowserController(
             if (handlePendingPopunderOpenerNavigation(tabId, view, url)) return
             if (findInPageSession?.webView === view) closeFindInPage()
             beginMainFrameTlsNavigation(tabId, view, url)
+            if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
+            if (tabId in federatedLoginCompatibilityTabIds &&
+                !FederatedLoginRules.isProviderNavigation(url)
+            ) federatedLoginCompatibilityTabIds.remove(tabId)
             committedRecallPages.remove(tabId)
             userScriptRuntime.clearMenuCommands(view)
             clearWebMediaForTab(tabId)
@@ -6002,6 +6077,11 @@ class BrowserController(
             request: WebResourceRequest,
         ): WebResourceResponse? {
             val requestContext = protectionRequestContexts[tabId] ?: return null
+            detectFederatedLoginRequest(
+                tabId = tabId,
+                requestUrl = request.url.toString(),
+                requestContext = requestContext,
+            )
             return interceptProtectedSubresourceRequest(
                 tabId = tabId,
                 request = request,
@@ -8144,6 +8224,9 @@ class BrowserController(
             openerTabId = openerTabId,
             transientPopup = true,
         ) ?: return false
+        if (isFederatedLoginCompatibilityEnabled(openerTab, openerUrl)) {
+            federatedLoginCompatibilityTabIds += popupTabId
+        }
         val pendingPopup = PendingPopupNavigation(
             openerTabId = openerTabId,
             openerUrl = openerUrl,
@@ -8201,6 +8284,8 @@ class BrowserController(
         val index = tabs.indexOfFirst { tab -> tab.id == tabId }
         if (index < 0) {
             transientPopupTabIds.remove(tabId)
+            federatedLoginPopupTabIds.remove(tabId)
+            federatedLoginCompatibilityTabIds.remove(tabId)
             return
         }
         removeTabResources(tabId)
@@ -8214,11 +8299,20 @@ class BrowserController(
     ): PopupNavigationDecision {
         val pending = pendingPopupNavigations[tabId]
             ?: return PopupNavigationDecision.Allow
+        if (
+            isFederatedLoginCompatibilityEnabled(pending.openerTabId, pending.openerUrl) &&
+            FederatedLoginRules.isProviderNavigation(targetUrl)
+        ) {
+            federatedLoginPopupTabIds += tabId
+        }
         val decision = PopupNavigationRules.decide(
             pending = pending,
             targetUrl = targetUrl,
             blockerEnabled = workerSettings.blockAdsAndTrackers,
             filterDecision = { popupUrl, openerUrl ->
+                if (isFederatedLoginCompatibilityEnabled(pending.openerTabId, openerUrl) &&
+                    FederatedLoginRules.isProviderNavigation(popupUrl)
+                ) return@decide PopupFilterDecision.Allow
                 val candyDecision = matcherFor(pending.isIncognito).decideHosts(
                     requestHost = CandyHostCanonicalizer.webHost(popupUrl),
                     pageHost = CandyHostCanonicalizer.webHost(openerUrl),
@@ -8552,7 +8646,12 @@ class BrowserController(
 
     private fun persistWebViewState(tabId: String, webView: WebView) {
         val tab = tabs.firstOrNull { it.id == tabId }
-        if (tab == null || tab.isIncognito || tab.url == BLANK_URL) {
+        if (
+            tab == null ||
+            tab.isIncognito ||
+            tab.url == BLANK_URL ||
+            isSessionEphemeralTab(tabId)
+        ) {
             webViewStateRepository.delete(tabId)
             return
         }
@@ -8644,6 +8743,7 @@ class BrowserController(
     }
 
     private fun reconcileCandyTrailHistory(tabId: String, view: WebView, isReload: Boolean) {
+        if (isSessionEphemeralTab(tabId)) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         val history = view.copyBackForwardList()
         if (history.currentIndex !in 0 until history.size) return
@@ -8678,6 +8778,7 @@ class BrowserController(
     }
 
     private fun updateCandyTrailPage(tabId: String, url: String, title: String) {
+        if (isSessionEphemeralTab(tabId)) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (isSyncedProfile(tab.profileId)) return
         if (tabId in suppressedCandyTrailTabIds || pageUrls[tabId] != url) return
@@ -8709,6 +8810,7 @@ class BrowserController(
 
     private fun setCandyTrail(tab: BrowserTab, trail: CandyTrail) {
         if (isSyncedProfile(tab.profileId)) return
+        if (isSessionEphemeralTab(tab.id)) return
         if (candyTrails[tab.id] == trail) return
         candyTrailGenerations[tab.id] = candyTrailGenerations.getOrDefault(tab.id, 0) + 1
         candyTrails[tab.id] = trail
@@ -8716,6 +8818,7 @@ class BrowserController(
     }
 
     private fun recordHistory(tabId: String, url: String, title: String): Boolean {
+        if (isSessionEphemeralTab(tabId)) return false
         val tab = tabs.firstOrNull { it.id == tabId }?.takeUnless(BrowserTab::isIncognito)
             ?: return false
         if (isSyncedProfile(tab.profileId)) return false
@@ -8737,7 +8840,7 @@ class BrowserController(
     private fun capturePageForRecall(tabId: String, view: WebView, url: String) {
         if (
             !isActivityStarted || !isRecallEnabled || recallDisablePending ||
-            browsingDataClearPending
+            browsingDataClearPending || isSessionEphemeralTab(tabId)
         ) return
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
             ?.takeUnless(BrowserTab::isIncognito)
@@ -8773,6 +8876,7 @@ class BrowserController(
             if (
                 destroyed ||
                 currentTab == null ||
+                isSessionEphemeralTab(tabId) ||
                 !RecallRules.isCurrent(
                     expected = identity,
                     actual = actualIdentity,
@@ -8796,7 +8900,7 @@ class BrowserController(
     }
 
     private fun recordCommittedRecallPage(tabId: String, view: WebView, url: String) {
-        if (!isActivityStarted) return
+        if (!isActivityStarted || isSessionEphemeralTab(tabId)) return
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
             ?.takeUnless(BrowserTab::isIncognito)
             ?: return
@@ -8829,6 +8933,10 @@ class BrowserController(
         onComplete: () -> Unit = {},
         acceptAfterDeparture: Boolean = false,
     ) {
+        if (isSessionEphemeralTab(tabId)) {
+            onComplete()
+            return
+        }
         pendingPreviewCaptures[tabId]?.let { pending ->
             if (!pending.uiCompleted) {
                 pending.completionCallbacks += onComplete
@@ -8956,6 +9064,7 @@ class BrowserController(
 
     private fun isCurrentPreviewCapture(request: PendingPreviewCapture): Boolean =
         !destroyed &&
+            !isSessionEphemeralTab(request.tabId) &&
             previewEpoch == request.previewEpoch &&
             webViews[request.tabId] === request.webView &&
             navigationGenerations.getOrDefault(request.tabId, 0) == request.navigationGeneration &&
@@ -9172,7 +9281,9 @@ class BrowserController(
         val tab = tabs.firstOrNull { it.id == tabId }
         if (bitmap.isRecycled || tab == null) return
         favicons[tabId] = bitmap
-        if (!tab.isIncognito) faviconRepository.save(tabId, bitmap)
+        if (!tab.isIncognito && !isSessionEphemeralTab(tabId)) {
+            faviconRepository.save(tabId, bitmap)
+        }
     }
 
     private fun invalidateFavicon(tabId: String) {
@@ -9252,8 +9363,29 @@ class BrowserController(
 
     private fun persistableTabs(source: Collection<BrowserTab>): List<BrowserTab> =
         source.filterNot { tab ->
-            tab.id in transientPopupTabIds || isSyncedProfile(tab.profileId)
+            isSessionEphemeralTab(tab.id) || isSyncedProfile(tab.profileId)
         }
+
+    private fun isSessionEphemeralTab(tabId: String): Boolean =
+        tabId in transientPopupTabIds || tabId in federatedLoginPopupTabIds
+
+    private fun activeFederatedLoginFlowTabIds(): Set<String> = buildSet {
+        federatedLoginPopupTabIds.forEach { popupTabId ->
+            add(popupTabId)
+            tabs.firstOrNull { tab -> tab.id == popupTabId }
+                ?.openerTabId
+                ?.let(::add)
+        }
+    }
+
+    private fun syncProtectedRuntimeTabIds(): Set<String> = buildSet {
+        addAll(activeFederatedLoginFlowTabIds())
+        addAll(transientPopupTabIds)
+        pendingPopupNavigations.forEach { (popupTabId, pending) ->
+            add(popupTabId)
+            add(pending.openerTabId)
+        }
+    }
 
     private fun savePersistentFilterRules() {
         candyRuleRepository.save(filterRules.filterNot { it.id in ephemeralRuleIds })
@@ -9317,6 +9449,7 @@ class BrowserController(
                 nowMillis = System.currentTimeMillis(),
                 maxTabs = linkedCapacity,
                 locallyPendingCandyIds = locallyPendingSyncCandyIds,
+                protectedRuntimeTabIds = syncProtectedRuntimeTabIds(),
             )
             reconciliation.removedRuntimeTabIds.forEach(::removeTabResources)
             replaceProfileTabs(boundProfileId, reconciliation.tabs)
@@ -9339,6 +9472,7 @@ class BrowserController(
                 nowMillis = System.currentTimeMillis(),
                 maxTabs = remainingCapacity,
                 locallyPendingCandyIds = locallyPendingSyncCandyIds,
+                protectedRuntimeTabIds = syncProtectedRuntimeTabIds(),
             )
             remainingCapacity = (remainingCapacity - reconciliation.tabs.size).coerceAtLeast(0)
             val selectedRuntimeTabId = existingProfile?.selectedTabId
@@ -9394,6 +9528,7 @@ class BrowserController(
             if (
                 tab.profileId == profileId &&
                 !tab.isIncognito &&
+                !isSessionEphemeralTab(tab.id) &&
                 tab.syncCandyId == null &&
                 (tab.url == BLANK_URL || BrowserUriPolicy.normalizeHttpUrl(tab.url) != null)
             ) {
@@ -9402,11 +9537,17 @@ class BrowserController(
                 assignedCandyIds += candyId
             }
         }
-        tabs.filter { tab -> tab.profileId == profileId && !tab.isIncognito }
+        tabs.filter { tab ->
+            tab.profileId == profileId && !tab.isIncognito && !isSessionEphemeralTab(tab.id)
+        }
             .forEach { tab ->
                 val candyId = tab.syncCandyId ?: return@forEach
                 if (candyId !in assignedCandyIds) return@forEach
-                val tabIndex = tabs.filter { it.profileId == profileId && !it.isIncognito }
+                val tabIndex = tabs.filter { candidate ->
+                    candidate.profileId == profileId &&
+                        !candidate.isIncognito &&
+                        !isSessionEphemeralTab(candidate.id)
+                }
                     .indexOfFirst { it.id == tab.id }
                 val outbound = SyncedProfileRuntimeRules.outboundTab(
                     tab = tab,
@@ -9426,10 +9567,15 @@ class BrowserController(
     }
 
     private fun markSyncedTabPending(tab: BrowserTab) {
+        if (isSessionEphemeralTab(tab.id)) return
         tab.syncCandyId?.let(locallyPendingSyncCandyIds::add)
     }
 
     private fun scheduleSyncedTabNavigation(tabId: String) {
+        if (isSessionEphemeralTab(tabId)) {
+            pendingSyncNavigationRunnables.remove(tabId)?.let(mainHandler::removeCallbacks)
+            return
+        }
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (!isSyncTargetProfile(tab.profileId) || tab.isIncognito) return
         remoteSyncNavigationUrls[tabId]?.let { expectedUrl ->
@@ -9446,9 +9592,12 @@ class BrowserController(
     }
 
     private fun enqueueSyncedTab(tabId: String) {
+        if (isSessionEphemeralTab(tabId)) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         val targetDeviceId = syncTargetDeviceId(tab.profileId) ?: return
-        val tabIndex = tabs.filter { it.profileId == tab.profileId }.indexOfFirst { it.id == tabId }
+        val tabIndex = tabs.filter { candidate ->
+            candidate.profileId == tab.profileId && !isSessionEphemeralTab(candidate.id)
+        }.indexOfFirst { it.id == tabId }
         if (tabIndex < 0) return
         val outbound = SyncedProfileRuntimeRules.outboundTab(tab, tabIndex, selectedTabId) ?: return
         val remote = syncState.profiles.firstOrNull { it.deviceId == targetDeviceId }
@@ -9473,6 +9622,7 @@ class BrowserController(
     }
 
     private fun enqueueSyncedTabClose(tab: BrowserTab) {
+        if (isSessionEphemeralTab(tab.id)) return
         val candyId = tab.syncCandyId ?: return
         val targetDeviceId = syncTargetDeviceId(tab.profileId) ?: return
         pendingSyncNavigationRunnables.remove(tab.id)?.let(mainHandler::removeCallbacks)
@@ -9488,7 +9638,9 @@ class BrowserController(
 
     private fun enqueueSyncedTabOrder(profileId: String) {
         val targetDeviceId = syncTargetDeviceId(profileId) ?: return
-        val orderedCandyIds = tabs.filter { it.profileId == profileId }
+        val orderedCandyIds = tabs.filter { tab ->
+            tab.profileId == profileId && !isSessionEphemeralTab(tab.id)
+        }
             .mapNotNull(BrowserTab::syncCandyId)
         syncRepository.mutate(
             SyncPendingMutation.Reorder(
@@ -9500,6 +9652,7 @@ class BrowserController(
     }
 
     private fun enqueueSyncedTabPinned(tabId: String, pinned: Boolean) {
+        if (isSessionEphemeralTab(tabId)) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         val candyId = tab.syncCandyId ?: return
         val targetDeviceId = syncTargetDeviceId(tab.profileId) ?: return
@@ -9558,6 +9711,7 @@ class BrowserController(
     }
 
     private fun rememberSelectedTab(profileId: String, tabId: String) {
+        if (isSessionEphemeralTab(tabId)) return
         val index = profiles.indexOfFirst { it.id == profileId }
         if (index >= 0 && profiles[index].selectedTabId != tabId) {
             profiles[index] = profiles[index].copy(selectedTabId = tabId)
@@ -9581,7 +9735,7 @@ class BrowserController(
             selectedTabId = selectedTabId,
             lifetime = inactiveTabLifetime,
             nowMillis = nowMillis,
-        )
+        ) - activeFederatedLoginFlowTabIds()
         return removeTabs(
             tabIds = expiredIds,
             nowMillis = nowMillis,
@@ -9591,14 +9745,17 @@ class BrowserController(
 
     private fun closeTabsOnBackground(
         nowMillis: Long = System.currentTimeMillis(),
-    ): Boolean = removeTabs(
-        tabIds = TabRetentionRules.tabIdsToCloseOnBackground(
+    ): Boolean {
+        val closeIds = TabRetentionRules.tabIdsToCloseOnBackground(
             tabs = tabs,
             lifetime = inactiveTabLifetime,
-        ),
-        nowMillis = nowMillis,
-        persistChanges = true,
-    )
+        ) - activeFederatedLoginFlowTabIds()
+        return removeTabs(
+            tabIds = closeIds,
+            nowMillis = nowMillis,
+            persistChanges = true,
+        )
+    }
 
     private fun removeTabs(
         tabIds: Set<String>,
@@ -9672,7 +9829,10 @@ class BrowserController(
             pending.openerTabId == tabId || pending.popupTabId == tabId
         }
         transientPopupTabIds.remove(tabId)
+        federatedLoginPopupTabIds.remove(tabId)
+        federatedLoginCompatibilityTabIds.remove(tabId)
         if (blockedPopupOffer?.popupTabId == tabId) blockedPopupOffer = null
+        if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
         cancelPendingBlockingStart(tabId)
         pendingCandyTrailRestoreIds.remove(tabId)
         suppressedCandyTrailTabIds.remove(tabId)
@@ -9705,7 +9865,10 @@ class BrowserController(
             pending.openerTabId == tab.id || pending.popupTabId == tab.id
         }
         transientPopupTabIds.remove(tab.id)
+        federatedLoginPopupTabIds.remove(tab.id)
+        federatedLoginCompatibilityTabIds.remove(tab.id)
         if (blockedPopupOffer?.popupTabId == tab.id) blockedPopupOffer = null
+        if (federatedLoginOffer?.tabId == tab.id) federatedLoginOffer = null
         cancelPendingBlockingStart(tab.id)
         pendingCandyTrailRestoreIds.remove(tab.id)
         suppressedCandyTrailTabIds.remove(tab.id)
@@ -9822,7 +9985,10 @@ class BrowserController(
         ?: webViews[tabId]?.url
         ?: tabs.firstOrNull { it.id == tabId }?.url
 
-    private fun clearPrivacyDataForTab(tabId: String) {
+    private fun clearPrivacyDataForTab(
+        tabId: String,
+        clearTemporarySiteOverrides: Boolean = true,
+    ) {
         synchronized(privacyEventLock) {
             protectionRequestContexts.remove(tabId)
             pendingBlockedCounts.remove(tabId)
@@ -9832,11 +9998,56 @@ class BrowserController(
         reportedAllowedDecisions.remove(tabId)
         pendingConsentCssUrls.remove(tabId)
         temporarySiteExceptions.remove(tabId)
-        temporarySitePrivacyOverrides.remove(tabId)
+        if (clearTemporarySiteOverrides) temporarySitePrivacyOverrides.remove(tabId)
+        federatedLoginOfferKeys.remove(tabId)
         updateTab(tabId) { tab ->
             if (tab.blockedCount == 0) tab else tab.copy(blockedCount = 0)
         }
         siteExceptionRevision++
+    }
+
+    private fun detectFederatedLoginRequest(
+        tabId: String,
+        requestUrl: String,
+        requestContext: ProtectionRequestContext,
+    ) {
+        if (!workerSettings.blockThirdPartyCookies) return
+        val pageHost = requestContext.pageHost ?: return
+        val provider = FederatedLoginRules.providerForSubresource(
+            requestUrl = requestUrl,
+            pageUrl = "https://$pageHost/",
+        ) ?: return
+        mainHandler.post {
+            if (destroyed || selectedTabId != tabId) return@post
+            val tab = tabs.firstOrNull { it.id == tabId } ?: return@post
+            val currentHost = PrivacyRequestSanitizer.webHost(pageUrls[tabId] ?: tab.url)
+            if (currentHost != pageHost || tab.profileId != requestContext.profileId) return@post
+            if (navigationGenerations[tabId] != requestContext.navigationGeneration) return@post
+            if (isFederatedLoginCompatibilityEnabled(tab, pageUrls[tabId])) return@post
+            val offerKey = "$pageHost:${provider.name}"
+            if (federatedLoginOfferKeys[tabId] == offerKey) return@post
+            federatedLoginOfferKeys[tabId] = offerKey
+            federatedLoginOfferSequence++
+            federatedLoginOffer = FederatedLoginOffer(
+                token = federatedLoginOfferSequence,
+                tabId = tabId,
+                profileId = tab.profileId,
+                pageHost = pageHost,
+                provider = provider,
+                isPrivate = tab.isIncognito,
+                navigationGeneration = requestContext.navigationGeneration,
+            )
+        }
+    }
+
+    private fun isCurrentFederatedLoginOffer(offer: FederatedLoginOffer): Boolean {
+        val tab = tabs.firstOrNull { it.id == offer.tabId } ?: return false
+        val currentHost = PrivacyRequestSanitizer.webHost(pageUrls[tab.id] ?: tab.url)
+        return selectedTabId == tab.id &&
+            tab.profileId == offer.profileId &&
+            tab.isIncognito == offer.isPrivate &&
+            currentHost == offer.pageHost &&
+            navigationGenerations[tab.id] == offer.navigationGeneration
     }
 
     private fun isSiteProtectionPaused(tabId: String, pageUrl: String?): Boolean {
@@ -9879,6 +10090,7 @@ class BrowserController(
             pageHost = pageHost,
             cookieBannerRemovalDisabled = pageHost == null ||
                 isCookieBannerRemovalDisabled(tab, pageHost),
+            navigationGeneration = navigationGenerations.getOrDefault(tab.id, 0),
         )
     }
 
@@ -9892,12 +10104,13 @@ class BrowserController(
         }
     }
 
-    private fun sitePrivacyOverridesFor(tab: BrowserTab): Map<String, SitePrivacyOverrides> =
-        if (tab.isIncognito) {
-            temporarySitePrivacyOverrides[tab.id].orEmpty()
-        } else {
-            permanentSitePrivacyOverrides[tab.profileId].orEmpty()
-        }
+    private fun sitePrivacyOverridesFor(tab: BrowserTab): Map<String, SitePrivacyOverrides> {
+        val temporary = temporarySitePrivacyOverrides[tab.id].orEmpty()
+        if (tab.isIncognito) return temporary
+        val permanent = permanentSitePrivacyOverrides[tab.profileId].orEmpty()
+        if (temporary.isEmpty()) return permanent
+        return permanent + temporary
+    }
 
     private fun forcedVerticalScrollHostsForTab(
         tabId: String,
@@ -9958,6 +10171,16 @@ class BrowserController(
     private fun isSafeAreaForced(tab: BrowserTab, host: String): Boolean =
         SitePrivacyOverrideRules.forceSafeArea(sitePrivacyOverridesFor(tab)[host])
 
+    private fun isFederatedLoginCompatibilityEnabled(tab: BrowserTab, pageUrl: String?): Boolean {
+        val host = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url) ?: return false
+        return SitePrivacyOverrideRules.thirdPartyLoginAllowed(sitePrivacyOverridesFor(tab)[host])
+    }
+
+    private fun isFederatedLoginCompatibilityEnabled(tabId: String, pageUrl: String?): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return isFederatedLoginCompatibilityEnabled(tab, pageUrl)
+    }
+
     private fun isSafeAreaForced(tabId: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         val host = PrivacyRequestSanitizer.webHost(pageUrls[tabId] ?: tab.url) ?: return false
@@ -9975,6 +10198,7 @@ class BrowserController(
         val acceptThirdPartyCookies = PrivacyPolicyRules.acceptsThirdPartyCookies(
             blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
             sitePaused = isSiteProtectionPaused(tabId, pageUrl),
+            thirdPartyLoginAllowed = isFederatedLoginCompatibilityEnabled(tabId, pageUrl),
         )
         cookieManagerFor(webView).setAcceptThirdPartyCookies(webView, acceptThirdPartyCookies)
     }
@@ -10124,7 +10348,7 @@ class BrowserController(
                 blockedPopupOffer?.popupTabId == tabId
         }
         transientIds.forEach(::discardTransientPopup)
-        val retainedTabIds = tabIds - transientIds
+        val retainedTabIds = tabIds - transientIds - federatedLoginPopupTabIds
         pendingPopunderNavigations.entries.removeAll { (_, pending) ->
             pending.openerTabId in tabIds || pending.popupTabId in tabIds
         }
@@ -10132,7 +10356,7 @@ class BrowserController(
         retainedTabIds.forEach { tabId ->
             cancelPendingBlockingStart(tabId)
             clearPermissionActivity(tabId)
-            clearPrivacyDataForTab(tabId)
+            clearPrivacyDataForTab(tabId, clearTemporarySiteOverrides = false)
             candyTrailHistoryBindings.remove(tabId)
             pendingCandyTrailTargets.remove(tabId)
             webViews[tabId]?.let { webView -> persistWebViewState(tabId, webView) }
@@ -10423,16 +10647,22 @@ class BrowserController(
 
     private fun applyDesktopViewPolicy(tab: BrowserTab, webView: WebView, pageUrl: String?) {
         val enabled = isDesktopView(tab, pageUrl)
+        val federatedLoginCompatibility = tab.id in federatedLoginCompatibilityTabIds ||
+            isFederatedLoginCompatibilityEnabled(tab, pageUrl)
         val defaultUserAgent = WebSettings.getDefaultUserAgent(activity)
-        val desiredUserAgent = if (enabled) {
-            DesktopSiteRules.desktopUserAgent(defaultUserAgent)
-        } else {
-            defaultUserAgent
+        val desiredUserAgent = when {
+            enabled -> DesktopSiteRules.desktopUserAgent(defaultUserAgent)
+            federatedLoginCompatibility -> FederatedLoginRules.compatibleUserAgent(defaultUserAgent)
+            else -> defaultUserAgent
         }
         val defaultMetadata = defaultUserAgentMetadata(webView.settings)
         with(webView.settings) {
             if (userAgentString != desiredUserAgent) {
-                userAgentString = if (enabled) desiredUserAgent else null
+                userAgentString = if (enabled || federatedLoginCompatibility) {
+                    desiredUserAgent
+                } else {
+                    null
+                }
             }
             if (useWideViewPort != enabled) useWideViewPort = enabled
             if (loadWithOverviewMode != enabled) loadWithOverviewMode = enabled
@@ -10558,6 +10788,7 @@ class BrowserController(
         val storageKey: String,
         val pageHost: String?,
         val cookieBannerRemovalDisabled: Boolean,
+        val navigationGeneration: Int,
         val pendingFilterHits: ConcurrentHashMap<String, AtomicInteger> = ConcurrentHashMap(),
     )
 

@@ -805,4 +805,13 @@
     <string name="sync_error_wrong_passphrase">La phrase E2EE ne peut pas déverrouiller cet espace de travail.</string>
     <string name="sync_error_incompatible">Ce serveur ne prend pas en charge le protocole sécurisé requis.</string>
     <string name="sync_error_failed">La configuration a échoué. Vérifiez la connexion et réessayez.</string>
+    <string name="federated_login_detected">Connexion %1$s détectée · Cookies tiers bloqués</string>
+    <string name="federated_login_options">Options</string>
+    <string name="federated_login_dialog_title">Se connecter avec %1$s</string>
+    <string name="federated_login_dialog_message">Pour faciliter la connexion, Candy autorise les cookies tiers pour %1$s et y utilise un mode de compatibilité. Cette autorisation s’applique à tous les services intégrés de ce site.</string>
+    <string name="federated_login_private_note">Dans un onglet privé, cette autorisation ne peut s’appliquer qu’à l’onglet actuel.</string>
+    <string name="federated_login_allow_for_tab">Autoriser pour l’onglet</string>
+    <string name="federated_login_allow_for_profile">Autoriser pour le profil</string>
+    <string name="federated_login_deny">Ne pas autoriser</string>
+    <string name="federated_login_revoke">Bloquer à nouveau les cookies tiers</string>
 </resources>
