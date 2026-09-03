@@ -227,6 +227,7 @@ class BrowserSessionStoreInstrumentedTest {
 
         val settings = AppearanceSettings(
             appearanceMode = BrowserAppearanceMode.Amoled,
+            forceDarkWebsites = true,
             colorPalette = BrowserColorPalette.Candy,
             surfaceStyle = BrowserSurfaceStyle.Frosted,
             shapeStyle = BrowserShapeStyle.Angular,
@@ -243,6 +244,7 @@ class BrowserSessionStoreInstrumentedTest {
     fun corruptAppearanceSettingsFallBackPerField() {
         preferences.edit()
             .putString("appearance_mode", "unknown")
+            .putString("force_dark_websites", "invalid")
             .putString("color_palette", "candy")
             .putString("surface_style", "unknown")
             .putString("shape_style", "extra_rounded")

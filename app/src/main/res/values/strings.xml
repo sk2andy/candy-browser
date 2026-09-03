@@ -241,6 +241,8 @@
     <string name="appearance_mode_light">Light</string>
     <string name="appearance_mode_dark">Dark</string>
     <string name="appearance_mode_amoled">AMOLED</string>
+    <string name="settings_force_dark_websites">Force dark mode on websites</string>
+    <string name="settings_force_dark_websites_summary">With a dark browser appearance, automatically darkens websites without their own dark theme. Can cause display issues.</string>
     <string name="settings_color_palette">Color palette</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>

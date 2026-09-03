@@ -231,6 +231,8 @@
     <string name="appearance_mode_light">Hell</string>
     <string name="appearance_mode_dark">Dunkel</string>
     <string name="appearance_mode_amoled">AMOLED</string>
+    <string name="settings_force_dark_websites">Dunkelmodus auf Websites erzwingen</string>
+    <string name="settings_force_dark_websites_summary">Bei dunkler Browserdarstellung werden Websites ohne eigenes dunkles Design automatisch abgedunkelt. Kann zu Darstellungsfehlern führen.</string>
     <string name="settings_color_palette">Farbwelt</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>

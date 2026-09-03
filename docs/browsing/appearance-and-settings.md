@@ -22,6 +22,7 @@
 | Setting | Values | Default |
 | --- | --- | --- |
 | Appearance | System, light, dark, AMOLED | System |
+| Force dark mode on websites | Off, on | Off |
 | Color palette | Material You, Candy, neutral | Material You |
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
@@ -65,6 +66,10 @@ Frosted exposes three persisted controls while selected:
   while System follows the device setting. Live changes reload active pages against the new Android
   theme without replacing the browser controller or persisting its in-memory private tabs. An open
   Link Peek closes before its ephemeral preview WebView is released.
+- WebView algorithmic darkening is off by default. The optional **Force dark mode on websites**
+  setting allows WebView to recolor sites without their own dark theme while the effective app
+  appearance is dark. Websites can still respond to `prefers-color-scheme`; forced darkening may
+  cause display issues by altering author-defined colors and image assets.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
 - Each top-level settings destination has a distinct leading icon on the settings home page.
 - Candy Recall is an explicit opt-in under Protection & data. Its summary states that readable text

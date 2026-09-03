@@ -751,6 +751,9 @@ class BrowserSessionStore internal constructor(
             appearanceMode = BrowserAppearanceMode.fromStableId(
                 preferences.getString(KEY_APPEARANCE_MODE, null),
             ),
+            forceDarkWebsites = runCatching {
+                preferences.getBoolean(KEY_FORCE_DARK_WEBSITES, false)
+            }.getOrDefault(false),
             colorPalette = BrowserColorPalette.fromStableId(
                 preferences.getString(KEY_COLOR_PALETTE, null),
             ),
@@ -780,6 +783,7 @@ class BrowserSessionStore internal constructor(
         val normalized = settings.normalized()
         preferences.edit()
             .putString(KEY_APPEARANCE_MODE, normalized.appearanceMode.stableId)
+            .putBoolean(KEY_FORCE_DARK_WEBSITES, normalized.forceDarkWebsites)
             .putString(KEY_COLOR_PALETTE, normalized.colorPalette.stableId)
             .putString(KEY_SURFACE_STYLE, normalized.surfaceStyle.stableId)
             .putString(KEY_SHAPE_STYLE, normalized.shapeStyle.stableId)
@@ -934,6 +938,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
+        const val KEY_FORCE_DARK_WEBSITES = "force_dark_websites"
         const val KEY_COLOR_PALETTE = "color_palette"
         const val KEY_SURFACE_STYLE = "surface_style"
         const val KEY_SHAPE_STYLE = "shape_style"

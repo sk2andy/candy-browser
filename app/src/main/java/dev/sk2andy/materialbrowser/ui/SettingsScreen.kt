@@ -115,6 +115,7 @@ internal enum class SettingsDestination {
 
 internal object AppearanceSettingsTestTags {
     const val AppearanceMode = "appearance_settings_mode"
+    const val ForceDarkWebsites = "appearance_settings_force_dark_websites"
     const val ColorPalette = "appearance_settings_palette"
     const val SurfaceStyle = "appearance_settings_surface"
     const val ShapeStyle = "appearance_settings_shape"
@@ -529,6 +530,16 @@ internal fun AppearanceSettingsPage(
                 }
             }
         }
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.settings_force_dark_websites),
+            subtitle = stringResource(R.string.settings_force_dark_websites_summary),
+            checked = settings.forceDarkWebsites,
+            onCheckedChange = { enabled ->
+                onSettingsChanged(settings.copy(forceDarkWebsites = enabled))
+            },
+            modifier = Modifier.testTag(AppearanceSettingsTestTags.ForceDarkWebsites),
+        )
         SettingsPageSpacer()
         Box {
             SettingsChoice(

@@ -7,13 +7,17 @@ import android.webkit.WebView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,6 +56,76 @@ class AppearanceWebThemeInstrumentedTest {
             val darkWebView = loadThemeProbe(scenario)
             assertTrue(darkWebView !== lightWebView)
             assertTrue(awaitWebsiteColorScheme(scenario, expected = "dark"))
+        }
+    }
+
+    @Test
+    fun darkAppearanceKeepsAlgorithmicWebContentDarkeningDisabled() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING))
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            updateAppearance(scenario, BrowserAppearanceMode.Dark)
+            assertTrue(awaitNightResources(scenario, expectedDark = true))
+
+            scenario.onActivity { activity ->
+                val settings = activity.browserControllerForTesting()
+                    .selectedWebViewForTesting()
+                    .settings
+                assertFalse(WebSettingsCompat.isAlgorithmicDarkeningAllowed(settings))
+            }
+        }
+    }
+
+    @Test
+    fun forceDarkWebsiteSettingUpdatesActiveWebViewsInPlace() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING))
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            updateAppearance(scenario, BrowserAppearanceMode.Dark)
+            assertTrue(awaitNightResources(scenario, expectedDark = true))
+
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                val mainWebView = controller.selectedWebViewForTesting()
+                val linkPeekWebView = controller.createLinkPeekPreviewWebView(
+                    url = "https://theme.example/link-peek",
+                    onProgressChanged = {},
+                    onCommittedUrlChanged = {},
+                )
+                assertTrue(controller.openExternalLinkPreview("https://theme.example/external"))
+                val externalPreviewState = requireNotNull(controller.externalLinkPreviewState)
+                val externalPreviewWebView =
+                    requireNotNull(controller.externalLinkPreviewWebViewForTesting())
+
+                controller.updateAppearanceSettings(
+                    controller.appearanceSettings.copy(forceDarkWebsites = true),
+                )
+
+                assertTrue(controller.selectedWebViewForTesting() === mainWebView)
+                assertTrue(
+                    controller.externalLinkPreviewWebViewForTesting() === externalPreviewWebView,
+                )
+                assertTrue(controller.activeLinkPeekPreviewCountForTesting == 1)
+                val activeWebViews = listOf(mainWebView, linkPeekWebView, externalPreviewWebView)
+                activeWebViews.forEach { webView ->
+                    assertTrue(WebSettingsCompat.isAlgorithmicDarkeningAllowed(webView.settings))
+                }
+
+                controller.updateAppearanceSettings(
+                    controller.appearanceSettings.copy(forceDarkWebsites = false),
+                )
+
+                assertTrue(controller.selectedWebViewForTesting() === mainWebView)
+                assertTrue(
+                    controller.externalLinkPreviewWebViewForTesting() === externalPreviewWebView,
+                )
+                activeWebViews.forEach { webView ->
+                    assertFalse(WebSettingsCompat.isAlgorithmicDarkeningAllowed(webView.settings))
+                }
+
+                controller.releaseLinkPeekPreviewWebView(linkPeekWebView)
+                controller.dismissExternalLinkPreview(externalPreviewState.sessionId)
+            }
         }
     }
 

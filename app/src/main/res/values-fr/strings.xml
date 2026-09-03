@@ -231,6 +231,8 @@
     <string name="appearance_mode_light">Clair</string>
     <string name="appearance_mode_dark">Sombre</string>
     <string name="appearance_mode_amoled">AMOLED</string>
+    <string name="settings_force_dark_websites">Forcer le mode sombre sur les sites Web</string>
+    <string name="settings_force_dark_websites_summary">Avec une apparence sombre du navigateur, assombrit automatiquement les sites sans thème sombre. Peut causer des problèmes d’affichage.</string>
     <string name="settings_color_palette">Palette de couleurs</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
