@@ -52,18 +52,36 @@ class BrowserUriPolicyTest {
     }
 
     @Test
-    fun `external navigation accepts user driven app links`() {
+    fun `external navigation accepts user driven special scheme links`() {
         assertTrue(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
-                scheme = "https",
+                scheme = "folo",
                 isForMainFrame = true,
                 hasGesture = true,
                 isRedirect = false,
             ),
         )
-        assertTrue(
+    }
+
+    @Test
+    fun `web navigation stays in current webview`() {
+        listOf("http", "https", "HTTPS").forEach { scheme ->
+            assertFalse(
+                ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                    scheme = scheme,
+                    isForMainFrame = true,
+                    hasGesture = true,
+                    isRedirect = false,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `external navigation rejects missing scheme`() {
+        assertFalse(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
-                scheme = "folo",
+                scheme = null,
                 isForMainFrame = true,
                 hasGesture = true,
                 isRedirect = false,

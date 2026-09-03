@@ -70,7 +70,7 @@ object ExternalNavigationPolicy {
     ): Boolean {
         if (!isForMainFrame) return false
         val normalizedScheme = scheme?.lowercase()?.takeIf(String::isNotBlank) ?: return false
-        if (normalizedScheme == "http" || normalizedScheme == "https") return hasGesture
+        if (normalizedScheme == "http" || normalizedScheme == "https") return false
         if (
             normalizedScheme != "intent" &&
             !BrowserUriPolicy.canOpenExternally(normalizedScheme)

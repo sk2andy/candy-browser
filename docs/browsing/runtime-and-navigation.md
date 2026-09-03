@@ -16,7 +16,7 @@
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy. The optional external-link preview keeps the page memory-only until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
-| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links to non-browser apps; allow safe main-frame special-scheme redirects; block unsafe/internal schemes and subframes |
+| Web link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep HTTP(S) navigation in the current WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
 | Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; apply desktop user agent and viewport before navigation |
@@ -44,8 +44,10 @@
   backgrounding pauses their live WebView and resumes it on return, while tab/session, History,
   Recall, Candy Trail, WebView-state, and preview persistence exclude them. Process death therefore
   restores the opener instead of an identity-provider page.
-- Resolve external intents on every handoff attempt so apps installed while Candy remains open are
-  immediately eligible. Show handoff feedback only after Android accepts the external launch.
+- Resolve external intents on every permitted handoff attempt so apps installed while Candy remains
+  open are immediately eligible. Show handoff feedback only after Android accepts the external launch.
+- Keep all HTTP(S) links in the current WebView without resolving an Android activity. Users can
+  hand the loaded page to another app through the explicit **Open in external app** action.
 - Carry user intent across script-driven handoffs with a short-lived, tab-bound grant after a
   tapped HTTP(S) navigation. Consume the grant on the first special-scheme launch attempt.
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
