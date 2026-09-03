@@ -4,14 +4,20 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group android:translateX="-18.9">
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M35.1,48.98H40.73L49.5,29.85C51.21,26.16 54.9,23.78 58.95,23.78H86.85C90.9,23.78 94.59,26.16 96.3,29.85L105.08,48.98H110.7A3.83,3.83 0,0 1,110.7 56.63H35.1A3.83,3.83 0,0 1,35.1 48.98Z" />
-        <path
-            android:fillColor="@android:color/transparent"
-            android:pathData="M37.13,63A13.5,13.5 0,1 0,64.13 63A13.5,13.5 0,1 0,37.13 63M79.88,63A13.5,13.5 0,1 0,106.88 63A13.5,13.5 0,1 0,79.88 63"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeWidth="7" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.49"
+        android:scaleY="0.49">
+        <group android:translateX="-18.9">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M35.1,48.98H40.73L49.5,29.85C51.21,26.16 54.9,23.78 58.95,23.78H86.85C90.9,23.78 94.59,26.16 96.3,29.85L105.08,48.98H110.7A3.83,3.83 0,0 1,110.7 56.63H35.1A3.83,3.83 0,0 1,35.1 48.98Z" />
+            <path
+                android:fillColor="@android:color/transparent"
+                android:pathData="M37.13,63A13.5,13.5 0,1 0,64.13 63A13.5,13.5 0,1 0,37.13 63M79.88,63A13.5,13.5 0,1 0,106.88 63A13.5,13.5 0,1 0,79.88 63"
+                android:strokeColor="#FF000000"
+                android:strokeWidth="7" />
+        </group>
     </group>
 </vector>
