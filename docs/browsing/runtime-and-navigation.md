@@ -17,6 +17,7 @@
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy. The optional external-link preview keeps the page memory-only until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
+| APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank WebView page |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
 | Desktop view | `DesktopSiteRules` / `DesktopNavigationRules` → controller → WebView settings | Store registrable domains per profile; coordinate user-agent changes with the target navigation |
@@ -57,6 +58,13 @@
 - Carry user intent across script-driven handoffs with a short-lived, tab-bound grant after a
   tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff and is
   consumed by the first accepted external launch attempt.
+- Route only user-tapped main-frame APK links and their authorized redirects into downloads.
+  Passive navigation, subframes, malformed URLs, and embedded credentials remain blocked from this
+  shortcut. External previews retain one bounded, memory-only download grant for the exact active
+  main-frame URL and its observed redirect chain until its first download, completion, error, or
+  expiry, so a slow authorized redirect cannot lose user intent or authorize unrelated content.
+  Server-declared APK downloads continue through the WebView download listener, and requests with a
+  sanitized `.apk` filename always use the Android package MIME type.
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.

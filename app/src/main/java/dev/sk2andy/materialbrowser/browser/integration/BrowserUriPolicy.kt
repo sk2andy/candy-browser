@@ -83,6 +83,93 @@ object ExternalNavigationPolicy {
     }
 }
 
+/** Routes an explicit APK navigation to the download pipeline before WebView renders it. */
+object ApkDownloadNavigationRules {
+    fun shouldRoute(
+        url: String?,
+        isForMainFrame: Boolean,
+        hasGesture: Boolean,
+        isRedirect: Boolean,
+        hasUserNavigationGrant: Boolean = false,
+    ): Boolean {
+        if (!isForMainFrame) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        val extension = runCatching {
+            URI(safeUrl).path.substringAfterLast('.', missingDelimiterValue = "")
+        }.getOrNull()
+        if (!extension.equals("apk", ignoreCase = true)) return false
+        return hasGesture || (isRedirect && hasUserNavigationGrant)
+    }
+}
+
+internal data class ExternalPreviewDownloadGrant(
+    val currentUrl: String,
+    val allowedUrls: Set<String>,
+    val expiresAtElapsedRealtime: Long,
+)
+
+/** Binds preview downloads to one user-authorized main-frame navigation and redirect chain. */
+internal object ExternalPreviewDownloadGrantRules {
+    fun start(
+        url: String?,
+        nowElapsedRealtime: Long,
+    ): ExternalPreviewDownloadGrant? {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
+        return ExternalPreviewDownloadGrant(
+            currentUrl = safeUrl,
+            allowedUrls = setOf(safeUrl),
+            expiresAtElapsedRealtime = nowElapsedRealtime + MAX_LIFETIME_MILLIS,
+        )
+    }
+
+    fun followRedirect(
+        grant: ExternalPreviewDownloadGrant,
+        url: String?,
+        isForMainFrame: Boolean,
+        isRedirect: Boolean,
+        nowElapsedRealtime: Long,
+    ): ExternalPreviewDownloadGrant? {
+        if (!isForMainFrame) return grant
+        if (!isRedirect || !isActive(grant, nowElapsedRealtime)) return null
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
+        if (safeUrl !in grant.allowedUrls && grant.allowedUrls.size >= MAX_URLS) return null
+        return grant.copy(
+            currentUrl = safeUrl,
+            allowedUrls = grant.allowedUrls + safeUrl,
+        )
+    }
+
+    fun canConsume(
+        grant: ExternalPreviewDownloadGrant?,
+        url: String?,
+        nowElapsedRealtime: Long,
+    ): Boolean {
+        if (grant == null || !isActive(grant, nowElapsedRealtime)) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        return safeUrl == grant.currentUrl && safeUrl in grant.allowedUrls
+    }
+
+    fun shouldClearForMainFrameCallback(
+        grant: ExternalPreviewDownloadGrant,
+        callbackUrl: String?,
+        currentWebViewUrl: String?,
+        nowElapsedRealtime: Long,
+    ): Boolean {
+        if (!isActive(grant, nowElapsedRealtime)) return true
+        val safeCallbackUrl = BrowserUriPolicy.normalizeHttpUrl(callbackUrl) ?: return false
+        val safeCurrentUrl = BrowserUriPolicy.normalizeHttpUrl(currentWebViewUrl) ?: return false
+        return safeCallbackUrl == grant.currentUrl && safeCurrentUrl == grant.currentUrl
+    }
+
+    private fun isActive(
+        grant: ExternalPreviewDownloadGrant,
+        nowElapsedRealtime: Long,
+    ): Boolean = grant.expiresAtElapsedRealtime >= nowElapsedRealtime
+
+    internal const val MAX_LIFETIME_MILLIS = 120_000L
+    private const val MAX_URLS = 10
+}
+
 /** Link Peek never hands non-web navigation to another app or internal WebView scheme. */
 object LinkPeekPreviewNavigationPolicy {
     fun shouldBlock(url: String?): Boolean = BrowserUriPolicy.normalizeHttpUrl(url) == null
