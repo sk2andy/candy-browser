@@ -61,6 +61,7 @@ data class SiteProtectionState(
     val forcePageZooming: Boolean = false,
     val forceSafeArea: Boolean = false,
     val thirdPartyLoginAllowed: Boolean = false,
+    val captchaCompatibilityAllowed: Boolean = false,
 )
 
 data class SitePrivacyOverrides(
@@ -69,13 +70,15 @@ data class SitePrivacyOverrides(
     val forcePageZooming: Boolean? = null,
     val forceSafeArea: Boolean? = null,
     val thirdPartyLoginAllowed: Boolean? = null,
+    val captchaCompatibilityAllowed: Boolean? = null,
 ) {
     val isDefault: Boolean
         get() = cookieBannerRemovalDisabled == null &&
             forceVerticalScrolling == null &&
             forcePageZooming == null &&
             forceSafeArea == null &&
-            thirdPartyLoginAllowed == null
+            thirdPartyLoginAllowed == null &&
+            captchaCompatibilityAllowed == null
 }
 
 object SitePrivacyOverrideRules {
@@ -95,6 +98,9 @@ object SitePrivacyOverrideRules {
 
     fun thirdPartyLoginAllowed(overrides: SitePrivacyOverrides?): Boolean =
         overrides?.thirdPartyLoginAllowed ?: false
+
+    fun captchaCompatibilityAllowed(overrides: SitePrivacyOverrides?): Boolean =
+        overrides?.captchaCompatibilityAllowed ?: false
 
     fun cookieBannerRemovalDisabled(
         overrides: SitePrivacyOverrides?,
@@ -477,5 +483,7 @@ object PrivacyPolicyRules {
         blockThirdPartyCookies: Boolean,
         sitePaused: Boolean,
         thirdPartyLoginAllowed: Boolean = false,
-    ): Boolean = !blockThirdPartyCookies || sitePaused || thirdPartyLoginAllowed
+        captchaCompatibilityAllowed: Boolean = false,
+    ): Boolean = !blockThirdPartyCookies || sitePaused || thirdPartyLoginAllowed ||
+        captchaCompatibilityAllowed
 }

@@ -580,6 +580,12 @@ class BrowserController(
     }
 
     @VisibleForTesting
+    fun detectCaptchaForTesting(requestUrl: String) {
+        val context = protectionRequestContexts[selectedTabId] ?: return
+        detectCaptchaRequest(selectedTabId, requestUrl, context)
+    }
+
+    @VisibleForTesting
     fun acceptsThirdPartyCookiesForTesting(tabId: String = selectedTabId): Boolean {
         val webView = webViewFor(tabId)
         return cookieManagerFor(webView).acceptThirdPartyCookies(webView)
@@ -695,6 +701,11 @@ class BrowserController(
         private set
     private var federatedLoginOfferSequence = 0L
     private val federatedLoginOfferKeys = ConcurrentHashMap<String, String>()
+    internal var captchaCompatibilityOffer by mutableStateOf<CaptchaCompatibilityOffer?>(null)
+        private set
+    private var captchaCompatibilityOfferSequence = 0L
+    private val captchaCompatibilityOfferKeys =
+        ConcurrentHashMap<String, MutableSet<String>>()
     private val federatedLoginPopupTabIds = mutableSetOf<String>()
     private val federatedLoginCompatibilityTabIds = mutableSetOf<String>()
     private val pageUrls = ConcurrentHashMap<String, String>()
@@ -1188,6 +1199,7 @@ class BrowserController(
             forcePageZooming = isPageZoomingForced(tab, host),
             forceSafeArea = isSafeAreaForced(tab, host),
             thirdPartyLoginAllowed = isFederatedLoginCompatibilityEnabled(tab, pageUrls[tabId]),
+            captchaCompatibilityAllowed = isCaptchaCompatibilityEnabled(tab, pageUrls[tabId]),
         )
     }
 
@@ -3435,6 +3447,41 @@ class BrowserController(
     fun revokeFederatedLoginCompatibility(tabId: String): Boolean =
         updateSitePrivacyOverrides(tabId) { current, _ ->
             current.copy(thirdPartyLoginAllowed = null)
+        }
+
+    fun showCaptchaCompatibilityOptions(token: Long) {
+        val offer = captchaCompatibilityOffer?.takeIf { it.token == token } ?: return
+        if (!isCurrentCaptchaCompatibilityOffer(offer)) {
+            captchaCompatibilityOffer = null
+            return
+        }
+        captchaCompatibilityOffer = offer.copy(showDialog = true)
+    }
+
+    fun respondToCaptchaCompatibilityOffer(
+        token: Long,
+        choice: CaptchaCompatibilityPromptChoice,
+    ) {
+        val offer = captchaCompatibilityOffer?.takeIf { it.token == token } ?: return
+        captchaCompatibilityOffer = null
+        if (choice == CaptchaCompatibilityPromptChoice.Deny ||
+            !isCurrentCaptchaCompatibilityOffer(offer)
+        ) return
+        if (choice == CaptchaCompatibilityPromptChoice.AllowForProfile && offer.isPrivate) return
+        updateSitePrivacyOverrides(
+            tabId = offer.tabId,
+            persistently = choice == CaptchaCompatibilityPromptChoice.AllowForProfile,
+        ) { current, _ ->
+            current.copy(captchaCompatibilityAllowed = true)
+        }
+    }
+
+    fun revokeThirdPartyCookieCompatibility(tabId: String): Boolean =
+        updateSitePrivacyOverrides(tabId) { current, _ ->
+            current.copy(
+                thirdPartyLoginAllowed = null,
+                captchaCompatibilityAllowed = null,
+            )
         }
 
     fun createProfile(emoji: String, isolationEnabled: Boolean = false): String? {
@@ -5720,6 +5767,8 @@ class BrowserController(
         blockedPopupOffer = null
         federatedLoginOffer = null
         federatedLoginOfferKeys.clear()
+        captchaCompatibilityOffer = null
+        captchaCompatibilityOfferKeys.clear()
         cancelAllPendingBlockingStarts()
         cancelPendingPermissionAccess()
         cancelPendingFileChooser()
@@ -6099,6 +6148,7 @@ class BrowserController(
             if (findInPageSession?.webView === view) closeFindInPage()
             beginMainFrameTlsNavigation(tabId, view, url)
             if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
+            if (captchaCompatibilityOffer?.tabId == tabId) captchaCompatibilityOffer = null
             if (tabId in federatedLoginCompatibilityTabIds &&
                 !FederatedLoginRules.isProviderNavigation(url)
             ) federatedLoginCompatibilityTabIds.remove(tabId)
@@ -6198,6 +6248,11 @@ class BrowserController(
         ): WebResourceResponse? {
             val requestContext = protectionRequestContexts[tabId] ?: return null
             detectFederatedLoginRequest(
+                tabId = tabId,
+                requestUrl = request.url.toString(),
+                requestContext = requestContext,
+            )
+            detectCaptchaRequest(
                 tabId = tabId,
                 requestUrl = request.url.toString(),
                 requestContext = requestContext,
@@ -9973,6 +10028,7 @@ class BrowserController(
         federatedLoginCompatibilityTabIds.remove(tabId)
         if (blockedPopupOffer?.popupTabId == tabId) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
+        if (captchaCompatibilityOffer?.tabId == tabId) captchaCompatibilityOffer = null
         cancelPendingBlockingStart(tabId)
         pendingCandyTrailRestoreIds.remove(tabId)
         suppressedCandyTrailTabIds.remove(tabId)
@@ -10009,6 +10065,7 @@ class BrowserController(
         federatedLoginCompatibilityTabIds.remove(tab.id)
         if (blockedPopupOffer?.popupTabId == tab.id) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tab.id) federatedLoginOffer = null
+        if (captchaCompatibilityOffer?.tabId == tab.id) captchaCompatibilityOffer = null
         cancelPendingBlockingStart(tab.id)
         pendingCandyTrailRestoreIds.remove(tab.id)
         suppressedCandyTrailTabIds.remove(tab.id)
@@ -10140,6 +10197,7 @@ class BrowserController(
         temporarySiteExceptions.remove(tabId)
         if (clearTemporarySiteOverrides) temporarySitePrivacyOverrides.remove(tabId)
         federatedLoginOfferKeys.remove(tabId)
+        captchaCompatibilityOfferKeys.remove(tabId)
         updateTab(tabId) { tab ->
             if (tab.blockedCount == 0) tab else tab.copy(blockedCount = 0)
         }
@@ -10181,6 +10239,60 @@ class BrowserController(
     }
 
     private fun isCurrentFederatedLoginOffer(offer: FederatedLoginOffer): Boolean {
+        val tab = tabs.firstOrNull { it.id == offer.tabId } ?: return false
+        val currentHost = PrivacyRequestSanitizer.webHost(pageUrls[tab.id] ?: tab.url)
+        return selectedTabId == tab.id &&
+            tab.profileId == offer.profileId &&
+            tab.isIncognito == offer.isPrivate &&
+            currentHost == offer.pageHost &&
+            navigationGenerations[tab.id] == offer.navigationGeneration
+    }
+
+    private fun detectCaptchaRequest(
+        tabId: String,
+        requestUrl: String,
+        requestContext: ProtectionRequestContext,
+    ) {
+        if (!workerSettings.blockThirdPartyCookies) return
+        val pageHost = requestContext.pageHost ?: return
+        val provider = CaptchaCompatibilityRules.providerForSubresource(
+            requestUrl = requestUrl,
+            pageUrl = "https://$pageHost/",
+        ) ?: return
+        mainHandler.post {
+            if (destroyed || selectedTabId != tabId || !workerSettings.blockThirdPartyCookies) {
+                return@post
+            }
+            val tab = tabs.firstOrNull { it.id == tabId } ?: return@post
+            val pageUrl = pageUrls[tabId] ?: tab.url
+            val currentHost = PrivacyRequestSanitizer.webHost(pageUrl)
+            if (currentHost != pageHost || tab.profileId != requestContext.profileId) return@post
+            if (navigationGenerations[tabId] != requestContext.navigationGeneration) return@post
+            if (isSiteProtectionPaused(tabId, pageUrl) ||
+                isFederatedLoginCompatibilityEnabled(tab, pageUrl) ||
+                isCaptchaCompatibilityEnabled(tab, pageUrl)
+            ) return@post
+            val offerKey = "${requestContext.navigationGeneration}:$pageHost:${provider.name}"
+            val tabOfferKeys = captchaCompatibilityOfferKeys.computeIfAbsent(tabId) {
+                ConcurrentHashMap.newKeySet()
+            }
+            if (!tabOfferKeys.add(offerKey)) return@post
+            captchaCompatibilityOfferSequence++
+            captchaCompatibilityOffer = CaptchaCompatibilityOffer(
+                token = captchaCompatibilityOfferSequence,
+                tabId = tabId,
+                profileId = tab.profileId,
+                pageHost = pageHost,
+                provider = provider,
+                isPrivate = tab.isIncognito,
+                navigationGeneration = requestContext.navigationGeneration,
+            )
+        }
+    }
+
+    private fun isCurrentCaptchaCompatibilityOffer(
+        offer: CaptchaCompatibilityOffer,
+    ): Boolean {
         val tab = tabs.firstOrNull { it.id == offer.tabId } ?: return false
         val currentHost = PrivacyRequestSanitizer.webHost(pageUrls[tab.id] ?: tab.url)
         return selectedTabId == tab.id &&
@@ -10321,6 +10433,18 @@ class BrowserController(
         return isFederatedLoginCompatibilityEnabled(tab, pageUrl)
     }
 
+    private fun isCaptchaCompatibilityEnabled(tab: BrowserTab, pageUrl: String?): Boolean {
+        val host = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url) ?: return false
+        return SitePrivacyOverrideRules.captchaCompatibilityAllowed(
+            sitePrivacyOverridesFor(tab)[host],
+        )
+    }
+
+    private fun isCaptchaCompatibilityEnabled(tabId: String, pageUrl: String?): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return isCaptchaCompatibilityEnabled(tab, pageUrl)
+    }
+
     private fun isSafeAreaForced(tabId: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         val host = PrivacyRequestSanitizer.webHost(pageUrls[tabId] ?: tab.url) ?: return false
@@ -10339,6 +10463,7 @@ class BrowserController(
             blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
             sitePaused = isSiteProtectionPaused(tabId, pageUrl),
             thirdPartyLoginAllowed = isFederatedLoginCompatibilityEnabled(tabId, pageUrl),
+            captchaCompatibilityAllowed = isCaptchaCompatibilityEnabled(tabId, pageUrl),
         )
         cookieManagerFor(webView).setAcceptThirdPartyCookies(webView, acceptThirdPartyCookies)
     }

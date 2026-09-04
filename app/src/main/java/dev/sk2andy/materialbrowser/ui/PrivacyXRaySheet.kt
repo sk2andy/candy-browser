@@ -191,7 +191,7 @@ internal fun PrivacyXRaySheet(
     blurTarget: BlurTarget? = null,
     onPause: (persistently: Boolean) -> Unit,
     onResume: () -> Unit,
-    onRevokeFederatedLoginCompatibility: () -> Unit = {},
+    onRevokeThirdPartyCookieCompatibility: () -> Unit = {},
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
         { _, _, _ -> },
     onOpenStudio: (ruleId: String?) -> Unit = {},
@@ -245,7 +245,7 @@ internal fun PrivacyXRaySheet(
                     view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                     onResume()
                 },
-                onRevokeFederatedLoginCompatibility = onRevokeFederatedLoginCompatibility,
+                onRevokeThirdPartyCookieCompatibility = onRevokeThirdPartyCookieCompatibility,
                 onRuleAction = onRuleAction,
                 onOpenStudio = onOpenStudio,
             )
@@ -307,7 +307,7 @@ internal fun PrivacyXRayContent(
     siteState: SiteProtectionState,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
-    onRevokeFederatedLoginCompatibility: () -> Unit = {},
+    onRevokeThirdPartyCookieCompatibility: () -> Unit = {},
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
         { _, _, _ -> },
     onOpenStudio: (ruleId: String?) -> Unit = {},
@@ -437,7 +437,7 @@ internal fun PrivacyXRayContent(
         PrivacyPolicyCard(
             settings = blockerSettings,
             siteState = siteState,
-            onRevokeFederatedLoginCompatibility = onRevokeFederatedLoginCompatibility,
+            onRevokeThirdPartyCookieCompatibility = onRevokeThirdPartyCookieCompatibility,
         )
         siteState.host?.let {
             Spacer(Modifier.height(18.dp))
@@ -749,7 +749,7 @@ private fun PrivacyDomainBar(
 private fun PrivacyPolicyCard(
     settings: BlockerSettings,
     siteState: SiteProtectionState,
-    onRevokeFederatedLoginCompatibility: () -> Unit,
+    onRevokeThirdPartyCookieCompatibility: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -768,12 +768,13 @@ private fun PrivacyPolicyCard(
             PolicyRow(
                 stringResource(R.string.privacy_third_party_cookie_policy),
                 active = settings.blockThirdPartyCookies && !siteState.isPaused &&
-                    !siteState.thirdPartyLoginAllowed,
+                    !siteState.thirdPartyLoginAllowed &&
+                    !siteState.captchaCompatibilityAllowed,
                 activeLabel = stringResource(R.string.privacy_policy_blocked),
                 inactiveLabel = stringResource(R.string.privacy_policy_allowed),
             )
-            if (siteState.thirdPartyLoginAllowed) {
-                TextButton(onClick = onRevokeFederatedLoginCompatibility) {
+            if (siteState.thirdPartyLoginAllowed || siteState.captchaCompatibilityAllowed) {
+                TextButton(onClick = onRevokeThirdPartyCookieCompatibility) {
                     Text(stringResource(R.string.federated_login_revoke))
                 }
             }

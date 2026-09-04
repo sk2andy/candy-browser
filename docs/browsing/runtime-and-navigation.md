@@ -21,6 +21,7 @@
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
 | Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; apply desktop user agent and viewport before navigation |
 | Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
+| CAPTCHA compatibility | `CaptchaCompatibilityRules` → controller → Snackbar and `AlertDialog` | Detect strict cross-site Cloudflare, Google reCAPTCHA, or hCaptcha endpoints; allow third-party cookies only after explicit consent |
 | Local userscript | `UserScriptRules` → AndroidX WebKit document-start handler | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 
 ## Invariants
@@ -110,6 +111,7 @@
 | Force page zooming | Removes viewport `user-scalable`, minimum-scale and maximum-scale restrictions while preserving other viewport directives |
 | Force safe area | Keeps the WebView below the top system-bar/display-cutout inset while scrolling and ignores `viewport-fit=cover` for that host |
 | Federated-login compatibility | Allows third-party cookies for the exact site host, removes WebView-only user-agent markers, and permits user-initiated popups only to recognized identity-provider authentication paths |
+| CAPTCHA compatibility | Allows third-party cookies for the exact site host without changing the user agent or popup policy |
 
 - Compatibility overrides match the exact current host. Regular tabs persist them per profile;
   private tabs keep them in memory for that tab only.
@@ -120,6 +122,11 @@
   memory-only. A profile grant is persisted for the exact host and applies to matching regular tabs.
   Private tabs never expose or persist the profile grant. Privacy X-Ray shows the resulting cookie
   policy and provides a host-scoped action to revoke the grant.
+- A detected cross-site Cloudflare, Google reCAPTCHA/Enterprise, or hCaptcha client first produces
+  the same Snackbar-to-dialog consent flow. Detection requires HTTPS plus a recognized provider host
+  and path; lookalike, first-party, malformed, and generic vendor requests do not prompt. CAPTCHA
+  grants use the same exact-host tab/profile/private boundaries, but affect only third-party-cookie
+  policy. They never enable federated-login user-agent or popup compatibility.
 - Federated-login popup exceptions require all three conditions: a user gesture, an active grant on
   the opener site, and a recognized HTTPS provider authentication path. The compatibility identity
   used for the provider user agent is removed when the popup leaves the provider. Its separate

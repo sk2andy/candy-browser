@@ -264,6 +264,13 @@ class PrivacyXRayTest {
                 thirdPartyLoginAllowed = true,
             ),
         )
+        assertTrue(
+            PrivacyPolicyRules.acceptsThirdPartyCookies(
+                blockThirdPartyCookies = true,
+                sitePaused = false,
+                captchaCompatibilityAllowed = true,
+            ),
+        )
     }
 
     @Test

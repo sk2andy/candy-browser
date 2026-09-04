@@ -814,4 +814,12 @@
     <string name="federated_login_allow_for_profile">Für das Profil erlauben</string>
     <string name="federated_login_deny">Nicht erlauben</string>
     <string name="federated_login_revoke">Drittanbieter-Cookies wieder blockieren</string>
+    <string name="captcha_compatibility_detected">%1$s-Prüfung erkannt · Drittanbieter-Cookies blockiert</string>
+    <string name="captcha_compatibility_options">Optionen</string>
+    <string name="captcha_compatibility_dialog_title">%1$s-Prüfung erlauben?</string>
+    <string name="captcha_compatibility_dialog_message">Um diese Prüfung abzuschließen, erlaubt Candy Drittanbieter-Cookies für %1$s. Die Freigabe gilt für alle eingebetteten Dienste dieser Website.</string>
+    <string name="captcha_compatibility_private_note">In privaten Tabs kann die Freigabe nur für den aktuellen Tab gelten.</string>
+    <string name="captcha_compatibility_allow_for_tab">Für den Tab erlauben</string>
+    <string name="captcha_compatibility_allow_for_profile">Für das Profil erlauben</string>
+    <string name="captcha_compatibility_deny">Nicht erlauben</string>
 </resources>

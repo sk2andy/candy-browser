@@ -15,4 +15,5 @@
 | Candy Rules and Filter Studio | `CandyRule*Test`, `FilterStudioScreenInstrumentedTest` |
 | X-Ray and permissions | `PrivacyXRayTest`, `permissions/*Test`, matching UI instrumented tests |
 | Federated-login cookie exception | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest` |
+| CAPTCHA cookie exception | `CaptchaCompatibilityRulesTest`, `CaptchaCompatibilityPromptInstrumentedTest`, `BrowserControllerCaptchaCompatibilityInstrumentedTest` |
 | Generated assets and audits | `scripts/test_*`, `scripts/*.test.mjs`, `blocking/*AssetInstrumentedTest` |

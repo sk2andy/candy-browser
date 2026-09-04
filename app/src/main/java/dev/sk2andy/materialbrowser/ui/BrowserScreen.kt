@@ -279,6 +279,8 @@ import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewCommitResult
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
 import dev.sk2andy.materialbrowser.browser.FederatedLoginOffer
 import dev.sk2andy.materialbrowser.browser.FederatedLoginPromptChoice
+import dev.sk2andy.materialbrowser.browser.CaptchaCompatibilityOffer
+import dev.sk2andy.materialbrowser.browser.CaptchaCompatibilityPromptChoice
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
@@ -693,6 +695,11 @@ internal fun BrowserScreen(
         controller.federatedLoginOffer?.provider?.displayName.orEmpty(),
     )
     val federatedLoginOptionsLabel = stringResource(R.string.federated_login_options)
+    val captchaDetectedMessage = stringResource(
+        R.string.captcha_compatibility_detected,
+        controller.captchaCompatibilityOffer?.provider?.displayName.orEmpty(),
+    )
+    val captchaOptionsLabel = stringResource(R.string.captcha_compatibility_options)
     val toggleFavoriteWithFeedback: (String) -> Unit = { tabId ->
         controller.toggleFavorite(tabId)?.let { mutation ->
             rootView.performConfirmHaptic()
@@ -759,6 +766,32 @@ internal fun BrowserScreen(
                 controller.respondToFederatedLoginOffer(
                     offer.token,
                     FederatedLoginPromptChoice.Deny,
+                )
+            }
+        }
+    }
+    val captchaCompatibilityOffer = controller.captchaCompatibilityOffer
+    LaunchedEffect(captchaCompatibilityOffer?.token) {
+        val offer = captchaCompatibilityOffer?.takeUnless(
+            CaptchaCompatibilityOffer::showDialog,
+        ) ?: return@LaunchedEffect
+        var optionsOpened = false
+        try {
+            val result = feedbackSnackbarHostState.showSnackbar(
+                message = captchaDetectedMessage,
+                actionLabel = captchaOptionsLabel,
+                withDismissAction = true,
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                optionsOpened = true
+                controller.showCaptchaCompatibilityOptions(offer.token)
+            }
+        } finally {
+            if (!optionsOpened) {
+                controller.respondToCaptchaCompatibilityOffer(
+                    offer.token,
+                    CaptchaCompatibilityPromptChoice.Deny,
                 )
             }
         }
@@ -2237,8 +2270,8 @@ internal fun BrowserScreen(
                         controller.pauseSiteProtection(tabId, persistently)
                     },
                     onResume = { controller.resumeSiteProtection(tabId) },
-                    onRevokeFederatedLoginCompatibility = {
-                        controller.revokeFederatedLoginCompatibility(tabId)
+                    onRevokeThirdPartyCookieCompatibility = {
+                        controller.revokeThirdPartyCookieCompatibility(tabId)
                     },
                     onRuleAction = { domain, action, siteScoped ->
                         val rule = controller.addFilterRuleFromXRay(
@@ -2312,6 +2345,17 @@ internal fun BrowserScreen(
                     offer = offer,
                     onChoice = { choice ->
                         controller.respondToFederatedLoginOffer(offer.token, choice)
+                    },
+                )
+            }
+
+        controller.captchaCompatibilityOffer
+            ?.takeIf(CaptchaCompatibilityOffer::showDialog)
+            ?.let { offer ->
+                CaptchaCompatibilityPromptDialog(
+                    offer = offer,
+                    onChoice = { choice ->
+                        controller.respondToCaptchaCompatibilityOffer(offer.token, choice)
                     },
                 )
             }

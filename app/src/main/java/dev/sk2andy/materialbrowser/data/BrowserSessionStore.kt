@@ -402,6 +402,10 @@ class BrowserSessionStore internal constructor(
                         "thirdPartyLoginAllowedOverride",
                         false,
                     ).takeIf { item.has("thirdPartyLoginAllowedOverride") },
+                    captchaCompatibilityAllowed = item.optBoolean(
+                        "captchaCompatibilityAllowedOverride",
+                        false,
+                    ).takeIf { item.has("captchaCompatibilityAllowedOverride") },
                 ),
             )
         }.mapNotNull { (profileId, host, overrides) ->
@@ -455,6 +459,9 @@ class BrowserSessionStore internal constructor(
                     }
                     overrides.thirdPartyLoginAllowed?.let { enabled ->
                         item.put("thirdPartyLoginAllowedOverride", enabled)
+                    }
+                    overrides.captchaCompatibilityAllowed?.let { enabled ->
+                        item.put("captchaCompatibilityAllowedOverride", enabled)
                     }
                 }
         }

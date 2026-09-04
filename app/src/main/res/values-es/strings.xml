@@ -819,4 +819,12 @@
     <string name="federated_login_allow_for_profile">Permitir para el perfil</string>
     <string name="federated_login_deny">No permitir</string>
     <string name="federated_login_revoke">Volver a bloquear cookies de terceros</string>
+    <string name="captcha_compatibility_detected">Verificación de %1$s detectada · Cookies de terceros bloqueadas</string>
+    <string name="captcha_compatibility_options">Opciones</string>
+    <string name="captcha_compatibility_dialog_title">¿Permitir la verificación de %1$s?</string>
+    <string name="captcha_compatibility_dialog_message">Para completar esta verificación, Candy permite cookies de terceros para %1$s. Este permiso se aplica a todos los servicios integrados en este sitio web.</string>
+    <string name="captcha_compatibility_private_note">En pestañas privadas, este permiso solo se puede conceder para la pestaña actual.</string>
+    <string name="captcha_compatibility_allow_for_tab">Permitir para la pestaña</string>
+    <string name="captcha_compatibility_allow_for_profile">Permitir para el perfil</string>
+    <string name="captcha_compatibility_deny">No permitir</string>
 </resources>
