@@ -810,6 +810,8 @@ class BrowserController(
         }
     private val temporaryAlwaysBlockPopupDomains = mutableStateMapOf<String, Set<String>>()
     private val defaultUserAgentMetadataBySettings = WeakHashMap<WebSettings, UserAgentMetadata>()
+    private val desktopNavigationOverrideTokens = WeakHashMap<WebView, Long>()
+    private var desktopNavigationOverrideSequence = 0L
     private val profileDeletionCoordinator =
         WebViewProfileDeletionCoordinator(store, ::tryDeleteNamedWebViewProfile)
     private val previewRepository = TabPreviewRepository.get(activity)
@@ -2101,8 +2103,14 @@ class BrowserController(
         val runtime = externalLinkPreviewRuntime
             ?.takeIf { it.sessionId == sessionId }
             ?: return false
-        if (!runtime.webView.canGoBack()) return false
-        runtime.webView.goBack()
+        val webView = runtime.webView.takeIf(WebView::canGoBack) ?: return false
+        val history = webView.copyBackForwardList()
+        val targetUrl = history.getItemAtIndex(history.currentIndex - 1)?.url ?: return false
+        invalidatePendingDesktopNavigationOverride(webView)
+        webView.stopLoading()
+        applyDesktopViewPolicy(runtime.policyTab, webView, targetUrl)
+        webView.stopLoading()
+        webView.goBack()
         return true
     }
 
@@ -2319,7 +2327,6 @@ class BrowserController(
             synchronized(privacyEventLock) {
                 protectionRequestContexts[policyTab.id] = protectionState.get().requestContext
             }
-            applyDesktopViewPolicy(policyTab, view, safeUrl)
             applyExternalLinkPreviewCookiePolicy(policyTab, protectionState.get(), view)
             if (findInPageSession?.webView === view) closeFindInPage()
             updateExternalLinkPreviewState(sessionId, view) { current ->
@@ -2335,12 +2342,25 @@ class BrowserController(
         override fun onPageCommitVisible(view: WebView, url: String) {
             val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
             updateExternalLinkPreviewState(sessionId, view) { current ->
-                current.copy(currentUrl = safeUrl, canGoBack = view.canGoBack())
+                current.copy(
+                    currentUrl = safeUrl,
+                    canGoBack = view.canGoBack(),
+                )
             }
         }
 
         override fun onPageFinished(view: WebView, url: String) {
             val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
+            applyFinishedNavigationDesktopViewPolicy(
+                tab = policyTab,
+                webView = view,
+                pageUrl = safeUrl,
+                isCurrent = {
+                    externalLinkPreviewRuntime?.let { runtime ->
+                        runtime.sessionId == sessionId && runtime.webView === view
+                    } == true
+                },
+            )
             updateExternalLinkPreviewState(sessionId, view) { current ->
                 current.copy(
                     currentUrl = safeUrl,
@@ -2355,7 +2375,10 @@ class BrowserController(
             val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url ?: view.url) ?: return
             if (findInPageSession?.webView === view) closeFindInPage()
             updateExternalLinkPreviewState(sessionId, view) { current ->
-                current.copy(currentUrl = safeUrl, canGoBack = view.canGoBack())
+                current.copy(
+                    currentUrl = safeUrl,
+                    canGoBack = view.canGoBack(),
+                )
             }
         }
 
@@ -2377,12 +2400,26 @@ class BrowserController(
             view: WebView,
             request: WebResourceRequest,
         ): Boolean {
+            if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
             val targetUrl = request.url.toString()
-            val shouldBlock = LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)
-            if (!shouldBlock && request.isForMainFrame) {
-                applyDesktopViewPolicy(policyTab, view, targetUrl)
-            }
-            return shouldBlock
+            if (LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)) return true
+            return overrideWebRequestedNavigationForDesktopView(
+                tab = policyTab,
+                webView = view,
+                request = request,
+                isCurrent = {
+                    externalLinkPreviewRuntime?.let { runtime ->
+                        runtime.sessionId == sessionId && runtime.webView === view
+                    } == true
+                },
+                navigate = { url, headers ->
+                    view.stopLoading()
+                    applyDesktopViewPolicy(policyTab, view, url)
+                    view.stopLoading()
+                    applyExternalLinkPreviewCookiePolicy(policyTab, protectionState.get(), view)
+                    loadUrl(view, url, headers)
+                },
+            )
         }
     }
 
@@ -2431,21 +2468,32 @@ class BrowserController(
         onCommittedUrlChanged: (String) -> Unit,
     ) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-            BrowserUriPolicy.normalizeHttpUrl(url)?.let { safeUrl ->
-                tabs.firstOrNull { tab -> tab.id == sourceTabId }
-                    ?.let { tab ->
-                        LinkPeekProtectionState(
-                            pageUrl = safeUrl,
-                            requestContext = protectionRequestContextFor(tab, safeUrl),
-                        )
-                    }
-                    ?.let(protectionState::set)
-            }
-            applyDesktopViewPolicy(sourceTabId, view, url)
+            val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
+            val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return
+            protectionState.set(
+                LinkPeekProtectionState(
+                    pageUrl = safeUrl,
+                    requestContext = protectionRequestContextFor(sourceTab, safeUrl),
+                ),
+            )
         }
 
         override fun onPageCommitVisible(view: WebView, url: String) {
             BrowserUriPolicy.normalizeHttpUrl(url)?.let(onCommittedUrlChanged)
+        }
+
+        override fun onPageFinished(view: WebView, url: String) {
+            val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
+            val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return
+            applyFinishedNavigationDesktopViewPolicy(
+                tab = sourceTab,
+                webView = view,
+                pageUrl = safeUrl,
+                isCurrent = {
+                    linkPeekPreviewAssignments.containsKey(view) &&
+                        tabs.any { tab -> tab.id == sourceTabId }
+                },
+            )
         }
 
         override fun shouldInterceptRequest(
@@ -2466,12 +2514,25 @@ class BrowserController(
             view: WebView,
             request: WebResourceRequest,
         ): Boolean {
+            if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
             val targetUrl = request.url.toString()
-            val shouldBlock = LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)
-            if (!shouldBlock && request.isForMainFrame) {
-                applyDesktopViewPolicy(sourceTabId, view, targetUrl)
-            }
-            return shouldBlock
+            if (LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)) return true
+            val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return true
+            return overrideWebRequestedNavigationForDesktopView(
+                tab = sourceTab,
+                webView = view,
+                request = request,
+                isCurrent = {
+                    linkPeekPreviewAssignments.containsKey(view) &&
+                        tabs.any { tab -> tab.id == sourceTabId }
+                },
+                navigate = { url, headers ->
+                    view.stopLoading()
+                    applyDesktopViewPolicy(sourceTab, view, url)
+                    view.stopLoading()
+                    loadUrl(view, url, headers)
+                },
+            )
         }
     }
 
@@ -4599,7 +4660,7 @@ class BrowserController(
         val targetIndex = CandyTrailHistoryReconciler.indexOfNode(binding, nodeId)
         val delta = targetIndex?.minus(binding.currentIndex)
         if (delta != null && delta != 0) {
-            applySiteProtectionForNavigation(tabId, existingWebView, node.url)
+            prepareWebViewForNavigation(tabId, existingWebView, node.url)
             existingWebView.goBackOrForward(delta)
         } else if (delta == null || existingWebView.url != node.url) {
             applyMediaPlaybackPolicy(tabId, existingWebView)
@@ -4621,7 +4682,8 @@ class BrowserController(
         ) {
             leaveSiteCapsule()
         }
-        targetUrl?.let { applySiteProtectionForNavigation(selectedTabId, webView, it) }
+        if (targetUrl == null) return
+        prepareWebViewForNavigation(selectedTabId, webView, targetUrl)
         webView.goBack()
     }
     fun goForward() {
@@ -4631,9 +4693,8 @@ class BrowserController(
             pendingCandyTrailTargets[selectedTabId] = targetNodeId
         }
         val history = webView.copyBackForwardList()
-        history.getItemAtIndex(history.currentIndex + 1)?.url?.let { targetUrl ->
-            applySiteProtectionForNavigation(selectedTabId, webView, targetUrl)
-        }
+        val targetUrl = history.getItemAtIndex(history.currentIndex + 1)?.url ?: return
+        prepareWebViewForNavigation(selectedTabId, webView, targetUrl)
         webView.goForward()
     }
     fun reload() {
@@ -6265,6 +6326,7 @@ class BrowserController(
                 openCapsuleTargetInFullCandy(tabId, view, url)
                 return
             }
+            if (tabs.none { candidate -> candidate.id == tabId }) return
             pageUrls[tabId] = url
             applyDomainMutePolicy(tabId, view, url)
             updateProtectionRequestContext(tabId, url)
@@ -6302,6 +6364,13 @@ class BrowserController(
         override fun onPageFinished(view: WebView, url: String) {
             if (isPendingInitialBlank(tabId, url)) return
             if (isQuarantinedPopup(tabId)) return
+            val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
+            applyFinishedNavigationDesktopViewPolicy(
+                tab = tab,
+                webView = view,
+                pageUrl = url,
+                isCurrent = { webViews[tabId] === view },
+            )
             if (url != BLANK_URL) suppressedInitialBlankTabIds.remove(tabId)
             pageUrls[tabId] = url
             updateNavigationState(tabId, view)
@@ -6364,6 +6433,7 @@ class BrowserController(
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
             if (request.isForMainFrame && isQuarantinedPopup(tabId)) {
                 view.stopLoading()
                 return true
@@ -6408,12 +6478,37 @@ class BrowserController(
                         return true
                     }
                     if (request.isForMainFrame) {
+                        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
+                            ?: return true
+                        if (
+                            overrideWebRequestedNavigationForDesktopView(
+                                tab = tab,
+                                webView = view,
+                                request = request,
+                                isCurrent = { webViews[tabId] === view },
+                                navigate = { url, headers ->
+                                    loadUrlWithProtectionNow(tabId, view, url, headers)
+                                },
+                            )
+                        ) return true
                         applySiteProtectionForNavigation(tabId, view, request.url.toString())
                     }
                     return false
                 }
                 return when (CapsuleNavigationRules.decide(capsule, request.url.toString())) {
                     CapsuleNavigationDecision.StayInCapsule -> {
+                        if (
+                            overrideWebRequestedNavigationForDesktopView(
+                                tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
+                                    ?: return true,
+                                webView = view,
+                                request = request,
+                                isCurrent = { webViews[tabId] === view },
+                                navigate = { url, headers ->
+                                    loadUrlWithProtectionNow(tabId, view, url, headers)
+                                },
+                            )
+                        ) return true
                         applySiteProtectionForNavigation(tabId, view, request.url.toString())
                         false
                     }
@@ -10594,7 +10689,6 @@ class BrowserController(
         webView: WebView,
         pageUrl: String,
     ) {
-        applyDesktopViewPolicy(tabId, webView, pageUrl)
         applyCookiePolicy(tabId, webView, pageUrl)
         installSiteCompatibilityDocumentStartScripts(tabId, webView, pageUrl)
         installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
@@ -10607,6 +10701,7 @@ class BrowserController(
 
     private fun loadUrlWithProtection(tabId: String, webView: WebView, pageUrl: String) {
         if (!blockingStartGate.isReady) {
+            invalidatePendingDesktopNavigationOverride(webView)
             enqueueBlockingStart(
                 tabId,
                 PendingBlockingStart(
@@ -10635,9 +10730,14 @@ class BrowserController(
         suppressedInitialBlankTabIds.clear()
     }
 
-    private fun loadUrlWithProtectionNow(tabId: String, webView: WebView, pageUrl: String) {
-        applySiteProtectionForNavigation(tabId, webView, pageUrl)
-        webView.loadUrl(pageUrl)
+    private fun loadUrlWithProtectionNow(
+        tabId: String,
+        webView: WebView,
+        pageUrl: String,
+        additionalHeaders: Map<String, String> = emptyMap(),
+    ) {
+        prepareWebViewForNavigation(tabId, webView, pageUrl)
+        loadUrl(webView, pageUrl, additionalHeaders)
     }
 
     private fun resumePendingBlockingStarts(pendingStarts: Map<String, PendingBlockingStart>) {
@@ -10655,6 +10755,7 @@ class BrowserController(
     private fun reloadTabWithProtection(tabId: String) {
         val webView = webViewFor(tabId)
         val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
+        invalidatePendingDesktopNavigationOverride(webView)
         if (!blockingStartGate.isReady && pageUrl != null && pageUrl != BLANK_URL) {
             enqueueBlockingStart(
                 tabId,
@@ -10666,6 +10767,7 @@ class BrowserController(
             )
             return
         }
+        webView.stopLoading()
         updateProtectionRequestContext(tabId, pageUrl)
         applyDesktopViewPolicy(tabId, webView, pageUrl)
         applyCookiePolicy(tabId, webView, pageUrl)
@@ -10892,6 +10994,7 @@ class BrowserController(
         removeUserScripts(webView)
         webView.removeJavascriptInterface(WebContentTopInsetScript.bridgeName)
         defaultUserAgentMetadataBySettings.remove(webView.settings)
+        desktopNavigationOverrideTokens.remove(webView)
         webView.setOnScrollChangeListener(null)
         (webView.parent as? FrameLayout)?.removeView(webView)
         webView.stopLoading()
@@ -11008,6 +11111,74 @@ class BrowserController(
         return PopupSiteRules.shouldAlwaysBlock(pageUrl, domains.orEmpty())
     }
 
+    private fun prepareWebViewForNavigation(
+        tabId: String,
+        webView: WebView,
+        pageUrl: String,
+    ) {
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
+        invalidatePendingDesktopNavigationOverride(webView)
+        webView.stopLoading()
+        applyDesktopViewPolicy(tab, webView, pageUrl)
+        webView.stopLoading()
+        applySiteProtectionForNavigation(tabId, webView, pageUrl)
+    }
+
+    private fun overrideWebRequestedNavigationForDesktopView(
+        tab: BrowserTab,
+        webView: WebView,
+        request: WebResourceRequest,
+        isCurrent: () -> Boolean,
+        navigate: (String, Map<String, String>) -> Unit,
+    ): Boolean {
+        if (!request.isForMainFrame) return false
+        val overrideToken = invalidatePendingDesktopNavigationOverride(webView)
+        if (!request.method.equals("GET", ignoreCase = true)) return false
+        val targetUrl = request.url.toString()
+        if (isDesktopViewUserAgentApplied(tab, webView, targetUrl)) return false
+        val sourceUrl = webView.url
+        val headers = runCatching { request.requestHeaders }
+            .getOrNull()
+            .orEmpty()
+            .filterKeys { name ->
+                !name.equals("User-Agent", ignoreCase = true) &&
+                    !name.startsWith("Sec-CH-UA", ignoreCase = true)
+            }
+        mainHandler.post {
+            if (!destroyed &&
+                desktopNavigationOverrideTokens[webView] == overrideToken &&
+                isCurrent() &&
+                webView.url == sourceUrl
+            ) {
+                navigate(targetUrl, headers)
+            }
+        }
+        return true
+    }
+
+    private fun invalidatePendingDesktopNavigationOverride(webView: WebView): Long {
+        desktopNavigationOverrideSequence++
+        return desktopNavigationOverrideSequence.also { token ->
+            desktopNavigationOverrideTokens[webView] = token
+        }
+    }
+
+    private fun loadUrl(webView: WebView, url: String, additionalHeaders: Map<String, String>) {
+        if (additionalHeaders.isEmpty()) webView.loadUrl(url)
+        else webView.loadUrl(url, additionalHeaders)
+    }
+
+    private fun applyFinishedNavigationDesktopViewPolicy(
+        tab: BrowserTab,
+        webView: WebView,
+        pageUrl: String,
+        isCurrent: () -> Boolean,
+    ) {
+        if (isDesktopViewUserAgentApplied(tab, webView, pageUrl)) return
+        if (!isCurrent() || webView.url != pageUrl || webView.progress < 100) return
+        applyDesktopViewPolicy(tab, webView, pageUrl)
+    }
+
     private fun reloadDesktopViewDomain(
         profileId: String,
         isIncognito: Boolean,
@@ -11021,6 +11192,11 @@ class BrowserController(
             .mapNotNull { tab -> webViews[tab.id]?.let { webView -> tab.id to webView } }
             .forEach { (tabId, webView) ->
                 webView.stopLoading()
+                applyDesktopViewPolicy(
+                    tabId = tabId,
+                    webView = webView,
+                    pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url,
+                )
                 reloadTabWithProtection(tabId)
             }
     }
@@ -11034,12 +11210,7 @@ class BrowserController(
         val enabled = isDesktopView(tab, pageUrl)
         val federatedLoginCompatibility = tab.id in federatedLoginCompatibilityTabIds ||
             isFederatedLoginCompatibilityEnabled(tab, pageUrl)
-        val defaultUserAgent = WebSettings.getDefaultUserAgent(activity)
-        val desiredUserAgent = when {
-            enabled -> DesktopSiteRules.desktopUserAgent(defaultUserAgent)
-            federatedLoginCompatibility -> FederatedLoginRules.compatibleUserAgent(defaultUserAgent)
-            else -> defaultUserAgent
-        }
+        val desiredUserAgent = desiredDesktopViewUserAgent(tab, pageUrl)
         val defaultMetadata = defaultUserAgentMetadata(webView.settings)
         with(webView.settings) {
             if (userAgentString != desiredUserAgent) {
@@ -11055,8 +11226,33 @@ class BrowserController(
         applyDesktopUserAgentMetadata(webView.settings, enabled, defaultMetadata)
     }
 
+    private fun isDesktopViewUserAgentApplied(
+        tab: BrowserTab,
+        webView: WebView,
+        pageUrl: String?,
+    ): Boolean {
+        return webView.settings.userAgentString == desiredDesktopViewUserAgent(tab, pageUrl)
+    }
+
+    private fun desiredDesktopViewUserAgent(
+        tab: BrowserTab,
+        pageUrl: String?,
+    ): String {
+        val enabled = isDesktopView(tab, pageUrl)
+        val federatedLoginCompatibility = tab.id in federatedLoginCompatibilityTabIds ||
+            isFederatedLoginCompatibilityEnabled(tab, pageUrl)
+        val defaultUserAgent = WebSettings.getDefaultUserAgent(activity)
+        return when {
+            enabled -> DesktopSiteRules.desktopUserAgent(defaultUserAgent)
+            federatedLoginCompatibility -> FederatedLoginRules.compatibleUserAgent(defaultUserAgent)
+            else -> defaultUserAgent
+        }
+    }
+
     private fun defaultUserAgentMetadata(settings: WebSettings): UserAgentMetadata? {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.USER_AGENT_METADATA)) return null
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.USER_AGENT_METADATA)) {
+            return null
+        }
         return defaultUserAgentMetadataBySettings[settings] ?: runCatching {
             WebSettingsCompat.getUserAgentMetadata(settings)
         }.getOrNull()?.also { metadata ->
