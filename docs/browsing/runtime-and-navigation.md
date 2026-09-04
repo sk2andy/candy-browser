@@ -19,7 +19,7 @@
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
-| Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; coordinate user-agent changes with the target navigation |
+| Desktop view | `DesktopSiteRules` / `DesktopNavigationRules` → controller → WebView settings | Store registrable domains per profile; coordinate user-agent changes with the target navigation |
 | Always block pop-ups | `PopupSiteRules` → controller → `onCreateWindow` | Reject every popup synchronously for configured registrable opener domains; persist regular state per profile and keep private state memory-only |
 | Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
 | CAPTCHA compatibility | `CaptchaCompatibilityRules` → controller → Snackbar and `AlertDialog` | Detect strict cross-site Cloudflare, Google reCAPTCHA, or hCaptcha endpoints; allow third-party cookies only after explicit consent |
@@ -71,8 +71,8 @@
 - Stop the active load before changing desktop-view user-agent settings for controller-owned loads,
   reloads, and History traversal. When a web-requested main-frame GET changes user-agent policy,
   cancel that not-yet-started target and post one controller-owned load with the target policy;
-  preserve request headers except `User-Agent` and `Sec-CH-UA*`. Never replay a committed navigation,
-  convert POST to GET, or mutate the user agent inside `shouldOverrideUrlLoading`. For non-overridable flows,
+  let WebView rebuild request headers instead of copying intercepted headers. Never replay a committed
+  navigation, convert POST to GET, or mutate the user agent inside `shouldOverrideUrlLoading`. For non-overridable flows,
   apply the target policy only after completion for future requests. Android WebView otherwise
   restarts the page when its user agent changes during loading, which can race Back/Forward, return
   a clicked link to the page being left, or repeat a one-time request. Reload matching open tabs only
