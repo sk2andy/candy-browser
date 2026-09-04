@@ -67,7 +67,8 @@ object SystemWebViewCredentials {
             webView.settings,
             WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_BROWSER,
         )
-        WebAuthenticationSupport.ENABLED_FOR_BROWSER
+        val appliedSupport = WebSettingsCompat.getWebAuthenticationSupport(webView.settings)
+        CredentialFeaturePolicy.configuredSupport(appliedSupport)
     } catch (_: RuntimeException) {
         // Provider could change between feature detection and settings access. Keep default mode.
         WebAuthenticationSupport.CONFIGURATION_FAILED
@@ -94,4 +95,11 @@ internal enum class WebAuthenticationMode {
 internal object CredentialFeaturePolicy {
     fun webAuthenticationMode(featureSupported: Boolean): WebAuthenticationMode =
         if (featureSupported) WebAuthenticationMode.BROWSER else WebAuthenticationMode.NONE
+
+    fun configuredSupport(appliedSupport: Int): WebAuthenticationSupport =
+        if (appliedSupport == WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_BROWSER) {
+            WebAuthenticationSupport.ENABLED_FOR_BROWSER
+        } else {
+            WebAuthenticationSupport.CONFIGURATION_FAILED
+        }
 }

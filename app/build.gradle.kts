@@ -427,6 +427,9 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.core:core-ktx:1.15.0")
+    // Credentials 1.6+ publishes Kotlin 2.1 metadata. Keep 1.5 until this project upgrades its
+    // Kotlin 1.9 compiler; both versions expose the WebView runtime contract used here.
+    implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.webkit:webkit:1.16.0") {
@@ -445,6 +448,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     "fullImplementation"("com.google.android.gms:play-services-code-scanner:16.1.0")
+    "fullImplementation"("androidx.credentials:credentials-play-services-auth:1.5.0")
     "fullImplementation"("com.google.android.gms:play-services-cast-framework:21.4.0") {
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
     }
