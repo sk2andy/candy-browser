@@ -19,6 +19,7 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
+import org.junit.Assume.assumeTrue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -91,6 +92,7 @@ class DesktopViewInstrumentedTest {
         activityRule.scenario.onActivity { activity ->
             clearPreferences(activity)
             var controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(controller.isProfileIsolationSupported)
             val regularTabId = controller.createTab("https://news.example.test/")
             val privateTabId = controller.createTab(
                 initialUrl = "https://private.example.test/",
@@ -346,7 +348,7 @@ class DesktopViewInstrumentedTest {
     }
 
     private companion object {
-        const val TAP_COORDINATE = 50f
+        const val TAP_COORDINATE = 150f
     }
 
     private class LocalPageServer : Closeable {
