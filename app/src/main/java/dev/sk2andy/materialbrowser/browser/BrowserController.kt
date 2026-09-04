@@ -456,6 +456,8 @@ class BrowserController(
         private set
     var searchSuggestionProvider by mutableStateOf(defaultSearchSuggestionProvider())
         private set
+    var isHistorySuggestionsEnabled by mutableStateOf(true)
+        private set
     var dismissResistancePercent by mutableIntStateOf(40)
         private set
     var tabOverviewMode by mutableStateOf(TabOverviewMode.Hero)
@@ -1453,6 +1455,7 @@ class BrowserController(
         searchSuggestionProvider = store.loadSearchSuggestionProvider(
             fallback = defaultSearchSuggestionProvider(),
         )
+        isHistorySuggestionsEnabled = store.loadHistorySuggestionsEnabled()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
@@ -4716,7 +4719,8 @@ class BrowserController(
         }
         if (
             !isRecallEnabled || recallDisablePending || browsingDataClearPending ||
-            tab.isIncognito || recallQuery == null
+            tab.isIncognito || recallQuery == null ||
+            !RecallRules.canSearchFromAddress(query, isHistorySuggestionsEnabled)
         ) {
             onComplete(emptyList())
             return
@@ -4736,6 +4740,10 @@ class BrowserController(
         ) { matches ->
             val current = tabs.firstOrNull { candidate -> candidate.id == expectedTabId }
             val accepted = isRecallEnabled && !recallDisablePending && !browsingDataClearPending &&
+                RecallRules.canSearchFromAddress(
+                    expectedInput,
+                    isHistorySuggestionsEnabled,
+                ) &&
                 !destroyed &&
                 selectedTabId == expectedTabId &&
                 current?.isIncognito == false &&
@@ -4765,6 +4773,7 @@ class BrowserController(
             isIncognito = selectedTab.isIncognito,
             query = query,
             limit = limit,
+            includeHistory = isHistorySuggestionsEnabled,
         )
 
     fun addressDomainCompletion(query: String): String? = BrowsingLibraryRules.domainCompletion(
@@ -4774,6 +4783,7 @@ class BrowserController(
         selectedTabId = selectedTabId,
         isIncognito = selectedTab.isIncognito,
         query = query,
+        includeHistory = isHistorySuggestionsEnabled,
     )
 
     val isSelectedTabFavorite: Boolean
@@ -5330,6 +5340,11 @@ class BrowserController(
     fun updateSearchSuggestionProvider(provider: SearchSuggestionProvider) {
         searchSuggestionProvider = provider
         store.saveSearchSuggestionProvider(provider)
+    }
+
+    fun updateHistorySuggestionsEnabled(enabled: Boolean) {
+        isHistorySuggestionsEnabled = enabled
+        store.saveHistorySuggestionsEnabled(enabled)
     }
 
     fun updateDismissResistancePercent(percent: Int) {

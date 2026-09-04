@@ -334,6 +334,8 @@
     <string name="settings_search_engine">Search engine</string>
     <string name="settings_ai_mode_toggle_title">Show AI Mode logo</string>
     <string name="settings_ai_mode_toggle_subtitle">Tap the logo in the address bar to switch the current query between Google Search and AI Mode.</string>
+    <string name="settings_history_suggestions_title">Show browsing history suggestions</string>
+    <string name="settings_history_suggestions_summary">Include matching pages from this profile’s saved history and automatic Candy Recall results in the address bar. Open tabs and favorite address completion stay available.</string>
     <string name="settings_search_suggestions">Search suggestions</string>
     <string name="settings_search_suggestions_summary">After three characters, typed search text is sent to this provider. Disabled in private tabs.</string>
     <string name="settings_search_suggestions_none_summary">Suggestions stay local. No typed text is sent to a suggestion provider.</string>

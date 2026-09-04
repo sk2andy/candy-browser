@@ -24,7 +24,7 @@
 
 - A canonical URL is retained once per profile with its latest title and visit time. The combined history remains bounded to 250 entries.
 - Legacy rows without `profileId` migrate to the Candy profile. Malformed non-web rows remain excluded by history rules.
-- Address suggestions and domain completion receive only the selected tab's profile history. One regular profile cannot reveal another profile's visits there.
+- Address suggestions and domain completion receive only the selected tab's profile history. One regular profile cannot reveal another profile's visits there. The enabled-by-default **Show browsing history suggestions** search setting can remove saved-history rows, automatic Candy Recall results and history-derived completion without deleting history; matching open tabs, favorite-derived completion and explicit `>recall` queries remain available.
 - Private tabs and federated-login popup tabs never reach the repository. Link Peek remains
   read-only and does not record visits.
 - Candy Recall is a separate disabled-by-default local index. It never indexes or searches private tabs or Link Peek. History search queries Recall only for the regular profiles selected on this screen.

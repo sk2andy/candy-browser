@@ -14,6 +14,7 @@ import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,10 +34,12 @@ class SearchSettingsScreenInstrumentedTest {
                     searxngSettings = settings,
                     isAiModeToggleVisible = false,
                     searchSuggestionProvider = SearchSuggestionProvider.SearXNG,
+                    isHistorySuggestionsEnabled = true,
                     onSearchEngineChanged = {},
                     onSearxngSettingsChanged = { settings = it },
                     onAiModeToggleVisibleChanged = {},
                     onSearchSuggestionProviderChanged = {},
+                    onHistorySuggestionsEnabledChanged = {},
                     onBack = {},
                 )
             }
@@ -54,5 +57,58 @@ class SearchSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(SearchSettingsTestTags.SearxngFallback).performClick()
         composeRule.onNodeWithText("Brave Search").performClick()
         assertEquals(SearchSuggestionProvider.Brave, settings.suggestionFallback)
+    }
+
+    @Test
+    fun historySuggestionsSwitchEmitsDisabledState() {
+        var enabled by mutableStateOf(true)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                SearchSettingsPage(
+                    searchEngine = SearchEngine.Google,
+                    searxngSettings = SearxngSettings(),
+                    isAiModeToggleVisible = false,
+                    searchSuggestionProvider = SearchSuggestionProvider.Google,
+                    isHistorySuggestionsEnabled = enabled,
+                    onSearchEngineChanged = {},
+                    onSearxngSettingsChanged = {},
+                    onAiModeToggleVisibleChanged = {},
+                    onSearchSuggestionProviderChanged = {},
+                    onHistorySuggestionsEnabledChanged = { enabled = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SearchSettingsTestTags.HistorySuggestions).performClick()
+
+        assertFalse(enabled)
+    }
+
+    @Test
+    fun googleCanBeSelectedAsSuggestionProvider() {
+        var provider by mutableStateOf(SearchSuggestionProvider.DuckDuckGo)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                SearchSettingsPage(
+                    searchEngine = SearchEngine.DuckDuckGo,
+                    searxngSettings = SearxngSettings(),
+                    isAiModeToggleVisible = false,
+                    searchSuggestionProvider = provider,
+                    isHistorySuggestionsEnabled = true,
+                    onSearchEngineChanged = {},
+                    onSearxngSettingsChanged = {},
+                    onAiModeToggleVisibleChanged = {},
+                    onSearchSuggestionProviderChanged = { provider = it },
+                    onHistorySuggestionsEnabledChanged = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SearchSettingsTestTags.SuggestionProvider).performClick()
+        composeRule.onNodeWithText("Google").performClick()
+
+        assertEquals(SearchSuggestionProvider.Google, provider)
     }
 }

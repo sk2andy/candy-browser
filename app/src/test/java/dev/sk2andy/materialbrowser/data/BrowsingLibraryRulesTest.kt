@@ -300,6 +300,26 @@ class BrowsingLibraryRulesTest {
     }
 
     @Test
+    fun `disabled history suggestions keep matching open tabs`() {
+        val suggestions = BrowsingLibraryRules.addressSuggestions(
+            history = listOf(
+                HistoryEntry("https://history.example/", "History match", 30),
+            ),
+            tabs = listOf(
+                browserTab(id = "current", url = BLANK_URL),
+                browserTab(id = "open", url = "https://open.example/", title = "Open match"),
+            ),
+            selectedTabId = "current",
+            isIncognito = false,
+            query = "match",
+            limit = 6,
+            includeHistory = false,
+        )
+
+        assertEquals(listOf("open"), suggestions.map(AddressSuggestion::openTabId))
+    }
+
+    @Test
     fun `address suggestions isolate regular and incognito tabs`() {
         val tabs = listOf(
             browserTab(id = "current-private", url = BLANK_URL, isIncognito = true),
@@ -374,6 +394,39 @@ class BrowsingLibraryRulesTest {
         )
 
         assertEquals("github.com", completion)
+    }
+
+    @Test
+    fun `disabled history completion keeps favorite completion`() {
+        val completion = BrowsingLibraryRules.domainCompletion(
+            history = listOf(
+                HistoryEntry("https://history-only.example/", "History", 30),
+            ),
+            favorites = listOf(
+                FavoriteEntry("https://favorite-match.example/", "Favorite", 20),
+            ),
+            tabs = listOf(browserTab(id = "current", url = BLANK_URL)),
+            selectedTabId = "current",
+            isIncognito = false,
+            query = "fav",
+            includeHistory = false,
+        )
+
+        assertEquals("favorite-match.example", completion)
+        assertEquals(
+            null,
+            BrowsingLibraryRules.domainCompletion(
+                history = listOf(
+                    HistoryEntry("https://history-only.example/", "History", 30),
+                ),
+                favorites = emptyList(),
+                tabs = listOf(browserTab(id = "current", url = BLANK_URL)),
+                selectedTabId = "current",
+                isIncognito = false,
+                query = "history",
+                includeHistory = false,
+            ),
+        )
     }
 
     @Test

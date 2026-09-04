@@ -592,6 +592,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_SEARCH_SUGGESTION_PROVIDER, provider.stableId).apply()
     }
 
+    fun loadHistorySuggestionsEnabled(): Boolean =
+        preferences.getBoolean(KEY_HISTORY_SUGGESTIONS_ENABLED, true)
+
+    fun saveHistorySuggestionsEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_HISTORY_SUGGESTIONS_ENABLED, enabled).apply()
+    }
+
     fun loadDismissResistancePercent(): Int =
         preferences.getInt(
             KEY_DISMISS_RESISTANCE_START_PERCENT,
@@ -939,6 +946,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_AI_MODE_TOGGLE_VISIBLE = "ai_mode_toggle_visible"
         const val KEY_RECALL_ENABLED = "recall_enabled"
         const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
+        const val KEY_HISTORY_SUGGESTIONS_ENABLED = "history_suggestions_enabled"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
         const val KEY_TAB_LIST_STARTS_AT_BOTTOM = "tab_list_starts_at_bottom"

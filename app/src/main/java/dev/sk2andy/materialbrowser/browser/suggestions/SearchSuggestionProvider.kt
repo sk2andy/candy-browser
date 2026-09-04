@@ -23,6 +23,11 @@ enum class SearchSuggestionProvider(
 ) {
     None("none", null),
     DuckDuckGo("duckduckgo", "https://duckduckgo.com/ac/?q=%s&type=list"),
+    Google(
+        "google",
+        "https://suggestqueries.google.com/complete/search?client=firefox&" +
+            "ie=utf-8&oe=utf-8&q=%s",
+    ),
     Brave("brave", "https://search.brave.com/api/suggest?q=%s"),
     Ecosia("ecosia", "https://ac.ecosia.org/autocomplete?q=%s&type=list"),
     Qwant("qwant", "https://api.qwant.com/v3/suggest/?q=%s&client=opensearch"),

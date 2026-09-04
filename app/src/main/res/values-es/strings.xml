@@ -327,6 +327,8 @@
     <string name="settings_search_engine">Motor de búsqueda</string>
     <string name="settings_ai_mode_toggle_title">Mostrar el logotipo de Modo IA</string>
     <string name="settings_ai_mode_toggle_subtitle">Toca el logotipo de la barra de direcciones para alternar la consulta actual entre la búsqueda de Google y Modo IA.</string>
+    <string name="settings_history_suggestions_title">Mostrar sugerencias del historial</string>
+    <string name="settings_history_suggestions_summary">Incluye en la barra de direcciones páginas coincidentes del historial guardado de este perfil y resultados automáticos de Candy Recall. Las pestañas abiertas y el autocompletado de favoritos siguen disponibles.</string>
     <string name="settings_search_suggestions">Sugerencias de búsqueda</string>
     <string name="settings_search_suggestions_summary">A partir de tres caracteres, el texto se envía a este proveedor. Desactivado en pestañas privadas.</string>
     <string name="settings_search_suggestions_none_summary">Las sugerencias permanecen locales. No se envía texto a ningún proveedor.</string>

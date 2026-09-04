@@ -24,6 +24,28 @@ class RecallRulesTest {
     }
 
     @Test
+    fun `disabled history suggestions keep only explicit recall address search`() {
+        assertFalse(
+            RecallRules.canSearchFromAddress(
+                input = "browser history",
+                historySuggestionsEnabled = false,
+            ),
+        )
+        assertTrue(
+            RecallRules.canSearchFromAddress(
+                input = ">recall browser history",
+                historySuggestionsEnabled = false,
+            ),
+        )
+        assertTrue(
+            RecallRules.canSearchFromAddress(
+                input = "browser history",
+                historySuggestionsEnabled = true,
+            ),
+        )
+    }
+
+    @Test
     fun `match expression uses bounded prefix terms with implicit conjunction`() {
         assertEquals("candy* browser*", RecallRules.matchExpression("Candy, browser!"))
     }

@@ -8,7 +8,7 @@ so it can be searched later.
 
 | Entry point | Scope | Behavior |
 | --- | --- | --- |
-| Normal address input | Active regular profile | Two or more meaningful words return at most two Recall matches in a localized **From your history** section before remote web suggestions. |
+| Normal address input | Active regular profile | With **Show browsing history suggestions** enabled, two or more meaningful words return at most two Recall matches in a localized **From your history** section before remote web suggestions. |
 | `>recall <query>` | Active regular profile | Searches only the local Recall index. It never falls through to navigation or a remote search/suggestion request. |
 | History search | Profiles selected in History | Existing title, host and URL matches are combined with full-text Recall matches and bounded matching excerpts. |
 
@@ -25,6 +25,10 @@ Peek, and federated-login popup pages never enter it.
 | Browser integration | Committed-page extraction, stale callback rejection, active-profile address queries and cleanup wiring | `browser/BrowserController.kt` |
 | Address and History UI | Section ordering, local-only command submission and matching excerpts | `ui/BrowserScreen.kt`, `HistoryActivity.kt`, `ui/HistoryScreen.kt` |
 | Setting | Disabled-by-default opt-in and clear-on-disable action | `data/BrowserSessionStore.kt`, `ui/SettingsScreen.kt` |
+
+The separate enabled-by-default **Show browsing history suggestions** setting controls automatic
+Recall matches in the address editor without disabling or deleting the Recall index. Explicit
+`>recall` commands and History search remain available while history suggestions are hidden.
 
 ## Indexing and ranking
 
