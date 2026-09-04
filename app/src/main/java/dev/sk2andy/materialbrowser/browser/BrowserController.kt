@@ -140,11 +140,14 @@ import dev.sk2andy.materialbrowser.browser.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryRequest
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryResult
+import dev.sk2andy.materialbrowser.browser.integration.ApkDownloadNavigationRules
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.integration.DefaultBrowserRole
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.browser.integration.ExternalLaunchResult
 import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationPolicy
+import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGrant
+import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGrantRules
 import dev.sk2andy.materialbrowser.browser.integration.LinkPeekPreviewNavigationPolicy
 import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
 import dev.sk2andy.materialbrowser.browser.integration.PageShareRequest
@@ -2159,6 +2162,7 @@ class BrowserController(
         val webView = runtime.webView.takeIf(WebView::canGoBack) ?: return false
         val history = webView.copyBackForwardList()
         val targetUrl = history.getItemAtIndex(history.currentIndex - 1)?.url ?: return false
+        runtime.downloadGrant = null
         invalidatePendingDesktopNavigationOverride(webView)
         webView.stopLoading()
         applyDesktopViewPolicy(runtime.policyTab, webView, targetUrl)
@@ -2341,6 +2345,41 @@ class BrowserController(
             policyTab = policyTab,
             protectionState = protectionState,
         )
+        webView.setDownloadListener externalDownload@{
+            url,
+            userAgent,
+            contentDisposition,
+            mimeType,
+            _,
+            ->
+            val runtime = externalLinkPreviewRuntime
+                ?.takeIf { current ->
+                    current.sessionId == state.sessionId && current.webView === webView
+                }
+                ?: return@externalDownload
+            if (
+                !ExternalPreviewDownloadGrantRules.canConsume(
+                    grant = runtime.downloadGrant,
+                    url = url,
+                    nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                )
+            ) return@externalDownload
+            runtime.downloadGrant = null
+            val request = BrowserDownloadRequestFactory.create(
+                url = url,
+                contentDisposition = contentDisposition,
+                mimeType = mimeType,
+                userAgent = userAgent,
+                cookies = cookieManagerFor(webView).getCookie(url),
+                referrer = webView.url,
+            ) ?: return@externalDownload
+            if (!BrowserDownloadRequestFactory.isAndroidPackage(request)) {
+                return@externalDownload
+            }
+            externalNavigationGrantExpirations.remove(runtime.policyTab.id)
+            routeDownload(request, runtime.policyTab.id)?.let(::showDownloadResult)
+            mainHandler.post { dismissExternalLinkPreview(state.sessionId) }
+        }
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
                 updateExternalLinkPreviewState(state.sessionId, view) { current ->
@@ -2404,6 +2443,23 @@ class BrowserController(
         }
 
         override fun onPageFinished(view: WebView, url: String) {
+            externalLinkPreviewRuntime
+                ?.takeIf { runtime ->
+                    runtime.sessionId == sessionId && runtime.webView === view
+                }
+                ?.let { runtime ->
+                    val grant = runtime.downloadGrant ?: return@let
+                    if (
+                        ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
+                            grant = grant,
+                            callbackUrl = url,
+                            currentWebViewUrl = view.url,
+                            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                        )
+                    ) {
+                        runtime.downloadGrant = null
+                    }
+                }
             val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
             applyFinishedNavigationDesktopViewPolicy(
                 tab = policyTab,
@@ -2450,6 +2506,31 @@ class BrowserController(
             )
         }
 
+        override fun onReceivedError(
+            view: WebView,
+            request: WebResourceRequest,
+            error: WebResourceError,
+        ) {
+            if (!request.isForMainFrame) return
+            externalLinkPreviewRuntime
+                ?.takeIf { runtime ->
+                    runtime.sessionId == sessionId && runtime.webView === view
+                }
+                ?.let { runtime ->
+                    val grant = runtime.downloadGrant ?: return@let
+                    if (
+                        ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
+                            grant = grant,
+                            callbackUrl = request.url.toString(),
+                            currentWebViewUrl = view.url,
+                            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                        )
+                    ) {
+                        runtime.downloadGrant = null
+                    }
+                }
+        }
+
         override fun shouldOverrideUrlLoading(
             view: WebView,
             request: WebResourceRequest,
@@ -2457,6 +2538,43 @@ class BrowserController(
             if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
             val targetUrl = request.url.toString()
             if (LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)) return true
+            val runtime = externalLinkPreviewRuntime?.takeIf { runtime ->
+                runtime.sessionId == sessionId && runtime.webView === view
+            } ?: return true
+            val nowElapsedRealtime = SystemClock.elapsedRealtime()
+            if (request.isForMainFrame && request.hasGesture()) {
+                runtime.downloadGrant = ExternalPreviewDownloadGrantRules.start(
+                    url = targetUrl,
+                    nowElapsedRealtime = nowElapsedRealtime,
+                )
+            } else {
+                runtime.downloadGrant = runtime.downloadGrant?.let { grant ->
+                    ExternalPreviewDownloadGrantRules.followRedirect(
+                        grant = grant,
+                        url = targetUrl,
+                        isForMainFrame = request.isForMainFrame,
+                        isRedirect = request.isRedirect,
+                        nowElapsedRealtime = nowElapsedRealtime,
+                    )
+                }
+            }
+            if (
+                ApkDownloadNavigationRules.shouldRoute(
+                    url = targetUrl,
+                    isForMainFrame = request.isForMainFrame,
+                    hasGesture = request.hasGesture(),
+                    isRedirect = request.isRedirect,
+                    hasUserNavigationGrant = ExternalPreviewDownloadGrantRules.canConsume(
+                        grant = runtime.downloadGrant,
+                        url = targetUrl,
+                        nowElapsedRealtime = nowElapsedRealtime,
+                    ),
+                ) && routeExplicitDownloadNavigation(policyTab.id, view, targetUrl)
+            ) {
+                runtime.downloadGrant = null
+                mainHandler.post { dismissExternalLinkPreview(sessionId) }
+                return true
+            }
             return overrideWebRequestedNavigationForDesktopView(
                 tab = policyTab,
                 webView = view,
@@ -2495,6 +2613,26 @@ class BrowserController(
         ) return
         runtime.hasStarted = true
         val state = externalLinkPreviewState?.takeIf { it.sessionId == runtime.sessionId } ?: return
+        runtime.downloadGrant = ExternalPreviewDownloadGrantRules.start(
+            url = state.currentUrl,
+            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+        )
+        if (
+            ApkDownloadNavigationRules.shouldRoute(
+                url = state.currentUrl,
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ) && routeExplicitDownloadNavigation(
+                tabId = runtime.policyTab.id,
+                webView = runtime.webView,
+                url = state.currentUrl,
+            )
+        ) {
+            runtime.downloadGrant = null
+            mainHandler.post { dismissExternalLinkPreview(state.sessionId) }
+            return
+        }
         runtime.webView.loadUrl(state.currentUrl)
     }
 
@@ -2515,6 +2653,7 @@ class BrowserController(
         externalLinkPreviewRuntime = null
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
+            externalNavigationGrantExpirations.remove(policyTabId)
             synchronized(privacyEventLock) {
                 protectionRequestContexts.remove(policyTabId)?.let(::flushPendingFilterHits)
             }
@@ -6534,6 +6673,22 @@ class BrowserController(
                             expirationElapsedRealtime = externalNavigationGrantExpirations[tabId],
                             nowElapsedRealtime = SystemClock.elapsedRealtime(),
                         )
+                    if (
+                        ApkDownloadNavigationRules.shouldRoute(
+                            url = request.url.toString(),
+                            isForMainFrame = request.isForMainFrame,
+                            hasGesture = request.hasGesture(),
+                            isRedirect = request.isRedirect,
+                            hasUserNavigationGrant = hasUserNavigationGrant,
+                        ) && routeExplicitDownloadNavigation(
+                            tabId = tabId,
+                            webView = view,
+                            url = request.url.toString(),
+                        )
+                    ) {
+                        externalNavigationGrantExpirations.remove(tabId)
+                        return true
+                    }
                     val canTryAppLink = ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                         scheme = scheme,
                         isForMainFrame = request.isForMainFrame,
@@ -8967,6 +9122,21 @@ class BrowserController(
             }
             routeDownload(request, tabId)?.let(::showDownloadResult)
         }
+
+    private fun routeExplicitDownloadNavigation(
+        tabId: String,
+        webView: WebView,
+        url: String,
+    ): Boolean {
+        val request = BrowserDownloadRequestFactory.create(
+            url = url,
+            userAgent = webView.settings.userAgentString,
+            cookies = cookieManagerFor(webView).getCookie(url),
+            referrer = webView.url,
+        ) ?: return false
+        routeDownload(request, tabId)?.let(::showDownloadResult)
+        return true
+    }
 
     private fun routeDownload(request: BrowserDownloadRequest, tabId: String): DownloadActionResult? =
         when (downloadSettings.managerMode) {
@@ -11449,6 +11619,7 @@ class BrowserController(
         val profileAssignment: WebViewProfileAssignment,
         val webView: WebView,
         var hasStarted: Boolean = false,
+        var downloadGrant: ExternalPreviewDownloadGrant? = null,
     )
 }
 
