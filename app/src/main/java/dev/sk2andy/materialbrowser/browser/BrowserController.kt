@@ -392,6 +392,7 @@ class BrowserController(
     private val onWebMediaStateChanged: () -> Unit = {},
     private val onWebPictureInPictureRequested: () -> Boolean = { false },
     private val onWebPictureInPictureRequestTimedOut: () -> Unit = {},
+    private val deferWebViewRuntimeStartup: Boolean = false,
 ) {
     val tabs = mutableStateListOf<BrowserTab>()
     val profiles = mutableStateListOf<BrowserProfile>()
@@ -516,14 +517,27 @@ class BrowserController(
         private set
     internal var castMediaCandidate by mutableStateOf<CastMediaCandidate?>(null)
         private set
-    val isProfileIsolationSupported: Boolean =
-        WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
+    private var isWebViewRuntimeReady = !deferWebViewRuntimeStartup
+    val isProfileIsolationSupported: Boolean
+        get() = isProfileIsolationSupportedState
+    private var isProfileIsolationSupportedState by mutableStateOf(
+        !deferWebViewRuntimeStartup &&
+            WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE),
+    )
     val canOpenLinkInPrivate: Boolean
         get() = isProfileIsolationSupported && !isSyncedProfile(activeProfileId)
-    val isVideoAutoplayBlockingSupported: Boolean =
-        WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
-    val isUserScriptSupported: Boolean =
-        WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD)
+    val isVideoAutoplayBlockingSupported: Boolean
+        get() = isVideoAutoplayBlockingSupportedState
+    private var isVideoAutoplayBlockingSupportedState by mutableStateOf(
+        !deferWebViewRuntimeStartup &&
+            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT),
+    )
+    val isUserScriptSupported: Boolean
+        get() = isUserScriptSupportedState
+    private var isUserScriptSupportedState by mutableStateOf(
+        !deferWebViewRuntimeStartup &&
+            WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD),
+    )
     val activeSiteCapsule: SiteCapsule?
         get() = activeCapsuleId?.let { id -> siteCapsules.firstOrNull { it.id == id } }
     val isCapsulePinningSupported: Boolean
@@ -838,6 +852,7 @@ class BrowserController(
     private val toppingCatalogRepository = ToppingCatalogRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
     private val blockingStartGate = BlockingStartGate<PendingBlockingStart>()
+    private var isBundledBlockingPrepared = false
     private val suppressedInitialBlankTabIds = mutableSetOf<String>()
     private val bundledSitePrivacyDefaults = BundledSitePrivacyDefaults.load(activity)
     private val downloadManager = BrowserDownloadManager(activity)
@@ -1460,7 +1475,7 @@ class BrowserController(
         semanticRuleKey(left) == semanticRuleKey(right)
 
     init {
-        deletePendingWebViewProfiles()
+        if (isWebViewRuntimeReady) deletePendingWebViewProfiles()
         filterRules += candyRuleRepository.load()
         userScripts += userScriptRepository.load()
         rebuildCandyMatcher()
@@ -1614,26 +1629,16 @@ class BrowserController(
         )
         // Incognito tabs are never restored. Remove data left by process death before
         // any private WebView can reuse the old profile.
-        clearIncognitoProfile()
+        if (isWebViewRuntimeReady) clearIncognitoProfile()
         restorePersistedPreviews()
         restorePersistedFavicons()
         restorePersistedCandyTrails()
-        WebView.setWebContentsDebuggingEnabled(false)
+        if (isWebViewRuntimeReady) WebView.setWebContentsDebuggingEnabled(false)
         contentBlocker.onBundledBlockingReady {
             mainHandler.post {
                 if (destroyed) return@post
-                configureServiceWorkerBlocking()
-                val pendingStarts = blockingStartGate.markReady()
-                webViews.forEach { (tabId, webView) ->
-                    tabs.firstOrNull { tab -> tab.id == tabId }?.let { tab ->
-                        configureProfileServiceWorkerBlocking(profileAssignmentFor(tab), webView)
-                    }
-                }
-                externalLinkPreviewRuntime?.let { runtime ->
-                    configureProfileServiceWorkerBlocking(runtime.profileAssignment, runtime.webView)
-                    startExternalLinkPreviewIfReady(runtime)
-                }
-                resumePendingBlockingStarts(pendingStarts)
+                isBundledBlockingPrepared = true
+                completeBlockingStartupIfReady()
             }
         }
         mainHandler.post {
@@ -1658,7 +1663,45 @@ class BrowserController(
         }
     }
 
+    internal fun onWebViewProcessReady() {
+        if (destroyed || isWebViewRuntimeReady) return
+        isProfileIsolationSupportedState =
+            WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
+        isVideoAutoplayBlockingSupportedState =
+            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+        isUserScriptSupportedState =
+            WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD)
+        isVideoAutoplayBlocked =
+            isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
+        isWebViewRuntimeReady = true
+        deletePendingWebViewProfiles()
+        clearIncognitoProfile()
+        WebView.setWebContentsDebuggingEnabled(false)
+        completeBlockingStartupIfReady()
+        webViewRevision++
+    }
+
+    private fun completeBlockingStartupIfReady() {
+        if (!isWebViewRuntimeReady || !isBundledBlockingPrepared || blockingStartGate.isReady) return
+        configureServiceWorkerBlocking()
+        val pendingStarts = blockingStartGate.markReady()
+        webViews.forEach { (tabId, webView) ->
+            tabs.firstOrNull { tab -> tab.id == tabId }?.let { tab ->
+                configureProfileServiceWorkerBlocking(profileAssignmentFor(tab), webView)
+            }
+        }
+        externalLinkPreviewRuntime?.let { runtime ->
+            configureProfileServiceWorkerBlocking(runtime.profileAssignment, runtime.webView)
+            startExternalLinkPreviewIfReady(runtime)
+        }
+        resumePendingBlockingStarts(pendingStarts)
+    }
+
     fun attachSelectedWebView(container: FrameLayout) {
+        if (!isWebViewRuntimeReady) {
+            container.removeAllViews()
+            return
+        }
         val webView = webViewFor(selectedTabId)
         if (webView.parent === container && container.childCount == 1) {
             return
@@ -2056,14 +2099,23 @@ class BrowserController(
         prepareMediaForTabDeparture(selectedTabId)
         webViews[selectedTabId]?.let(::pauseWebView)
         val sessionId = ++nextExternalLinkPreviewSessionId
-        createExternalLinkPreviewRuntime(
-            state = ExternalLinkPreviewState(
-                sessionId = sessionId,
-                generation = 0,
-                currentUrl = safeUrl,
-                targetProfileId = targetProfileId,
-            ),
+        externalLinkPreviewState = ExternalLinkPreviewState(
+            sessionId = sessionId,
+            generation = 0,
+            currentUrl = safeUrl,
+            targetProfileId = targetProfileId,
         )
+        return true
+    }
+
+    fun prepareExternalLinkPreview(sessionId: Long): Boolean {
+        if (!isWebViewRuntimeReady) return false
+        externalLinkPreviewRuntime?.let { runtime ->
+            return runtime.sessionId == sessionId
+        }
+        val state = externalLinkPreviewState?.takeIf { it.sessionId == sessionId }
+            ?: return false
+        createExternalLinkPreviewRuntime(state)
         return true
     }
 
@@ -2079,16 +2131,17 @@ class BrowserController(
         if (targetProfileId == current.targetProfileId) return false
         val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(current.currentUrl) ?: return false
         releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
-        createExternalLinkPreviewRuntime(
-            state = current.copy(
-                generation = current.generation + 1,
-                currentUrl = safeUrl,
-                targetProfileId = targetProfileId,
-                progress = 0,
-                isLoading = true,
-                canGoBack = false,
-            ),
+        val updatedState = current.copy(
+            generation = current.generation + 1,
+            currentUrl = safeUrl,
+            targetProfileId = targetProfileId,
+            progress = 0,
+            isLoading = true,
+            canGoBack = false,
+            isWebViewReady = false,
         )
+        if (isWebViewRuntimeReady) createExternalLinkPreviewRuntime(updatedState)
+        else externalLinkPreviewState = updatedState
         return true
     }
 
@@ -2300,7 +2353,6 @@ class BrowserController(
         webView.isEnabled = true
         webView.isLongClickable = true
         webView.importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_AUTO
-        externalLinkPreviewState = state
         externalLinkPreviewRuntime = ExternalLinkPreviewRuntime(
             sessionId = state.sessionId,
             generation = state.generation,
@@ -2308,6 +2360,7 @@ class BrowserController(
             profileAssignment = profileAssignment,
             webView = webView,
         )
+        externalLinkPreviewState = state.copy(isWebViewReady = true)
         if (!isActivityResumed) pauseWebView(webView)
     }
 
@@ -5758,7 +5811,7 @@ class BrowserController(
     }
 
     private fun resumeWebViewsAfterTransferPreparationFailure() {
-        if (externalLinkPreviewRuntime == null) {
+        if (externalLinkPreviewState == null) {
             webViews[selectedTabId]?.let { webView -> resumeWebView(selectedTabId, webView) }
         }
         fullscreenVideoSession
@@ -5772,6 +5825,7 @@ class BrowserController(
     }
 
     private fun flushCookieStores() {
+        if (!isWebViewRuntimeReady) return
         CookieManager.getInstance().flush()
         (
             webViews.values +
@@ -5800,7 +5854,7 @@ class BrowserController(
         pruneStaleTabs(nowMillis, persistChanges = false)
         touchTab(selectedTabId, nowMillis)
         persist()
-        if (externalLinkPreviewRuntime == null) {
+        if (externalLinkPreviewState == null) {
             webViews[selectedTabId]?.let { resumeWebView(selectedTabId, it) }
         }
         fullscreenVideoSession
@@ -5977,8 +6031,9 @@ class BrowserController(
         committedRecallPages.clear()
         externalNavigationGrantExpirations.clear()
         mainFrameTlsNavigations.clear()
-        clearIncognitoProfile()
+        if (isWebViewRuntimeReady) clearIncognitoProfile()
         if (
+            isWebViewRuntimeReady &&
             WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) &&
             WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST)
         ) {

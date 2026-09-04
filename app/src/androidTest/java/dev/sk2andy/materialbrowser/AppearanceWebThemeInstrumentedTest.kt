@@ -94,6 +94,7 @@ class AppearanceWebThemeInstrumentedTest {
                 )
                 assertTrue(controller.openExternalLinkPreview("https://theme.example/external"))
                 val externalPreviewState = requireNotNull(controller.externalLinkPreviewState)
+                assertTrue(controller.prepareExternalLinkPreview(externalPreviewState.sessionId))
                 val externalPreviewWebView =
                     requireNotNull(controller.externalLinkPreviewWebViewForTesting())
 

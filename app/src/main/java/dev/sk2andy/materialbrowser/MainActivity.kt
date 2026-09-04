@@ -58,8 +58,10 @@ import dev.sk2andy.materialbrowser.browser.MAX_TABS
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
+import dev.sk2andy.materialbrowser.browser.WebViewProcessStartup
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
+import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
@@ -214,13 +216,25 @@ class MainActivity : AppCompatActivity() {
             recoveryMarker = appDataRestoreRecoveryMarker(),
         )
         enableEdgeToEdge()
+        val isColdExternalLinkPreviewLaunch =
+            savedInstanceState == null &&
+                IncomingBrowserIntent.from(intent) != null &&
+                BrowserSessionStore(this).loadExternalLinkPreviewEnabled()
+        val shouldStartWebViewAsynchronously =
+            isColdExternalLinkPreviewLaunch && WebViewProcessStartup.isUnused
+        if (shouldStartWebViewAsynchronously) WebViewProcessStartup.start(applicationContext)
+        val deferWebViewRuntimeStartup = WebViewProcessStartup.shouldDeferWebViewRuntime
+        if (!deferWebViewRuntimeStartup) WebViewProcessStartup.markReady()
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
         onboardingVisible = onboardingRequired
         releaseNotesStore = ReleaseNotesStore(this)
-        releaseNotesContent = ReleaseNotesRepository(this).load(
-            BuildConfig.RELEASE_NOTES_VERSION,
-        )
+        if (
+            intent.action == Intent.ACTION_MAIN ||
+            savedInstanceState?.getBoolean(STATE_RELEASE_NOTES_VISIBLE) == true
+        ) {
+            loadReleaseNotesContent()
+        }
         val releaseNotesRequired = shouldPresentReleaseNotes(
             isNewLaunch = savedInstanceState == null,
             intentAction = intent.action,
@@ -242,6 +256,7 @@ class MainActivity : AppCompatActivity() {
             },
             onFullImmersiveModeChanged = { applyBrowserSystemUi() },
             onWebMediaStateChanged = {
+                ensureMediaControllers()
                 if (::webMediaSystemSession.isInitialized) {
                     webMediaSystemSession.publish(browserController.systemWebMediaState)
                 }
@@ -252,18 +267,12 @@ class MainActivity : AppCompatActivity() {
             },
             onWebPictureInPictureRequested = ::onPictureInPictureRequested,
             onWebPictureInPictureRequestTimedOut = ::cancelPictureInPictureTransition,
+            deferWebViewRuntimeStartup = deferWebViewRuntimeStartup,
         )
-        castSessionController = CastSessionController(
-            context = this,
-            onMediaLoaded = { candidate -> browserController.pauseCastMedia(candidate) },
-        ).also { it.updateCandidate(browserController.castMediaCandidate) }
-        webMediaSystemSession = WebMediaSystemSession(
-            context = this,
-            onPlay = browserController::playActiveWebMedia,
-            onPause = browserController::pauseActiveWebMedia,
-            onStop = browserController::stopActiveWebMedia,
-            onSeekTo = browserController::seekActiveWebMedia,
-        )
+        if (deferWebViewRuntimeStartup) {
+            WebViewProcessStartup.whenReady(browserController::onWebViewProcessReady)
+        }
+        if (!isColdExternalLinkPreviewLaunch) ensureMediaControllers()
         applyBrowserSystemUi()
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             browserController.onWindowInsetsChanged(insets)
@@ -395,13 +404,18 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 Box(modifier = Modifier.fillMaxSize()) {
+                    val castController = if (::castSessionController.isInitialized) {
+                        castSessionController
+                    } else {
+                        null
+                    }
                     BrowserScreen(
                         controller = browserController,
-                        castUiState = castSessionController.state,
-                        onToggleCastPlayback = castSessionController::togglePlayback,
-                        onSeekCast = castSessionController::seekTo,
-                        onCastVolumeChange = castSessionController::setDeviceVolume,
-                        onDisconnectCast = castSessionController::disconnect,
+                        castUiState = castController?.state ?: CastUiState(),
+                        onToggleCastPlayback = { castController?.togglePlayback() },
+                        onSeekCast = { positionMillis -> castController?.seekTo(positionMillis) },
+                        onCastVolumeChange = { volume -> castController?.setDeviceVolume(volume) },
+                        onDisconnectCast = { castController?.disconnect() },
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         incomingBrowserNavigationRequestId =
                             incomingBrowserNavigationRequestId,
@@ -559,6 +573,7 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         showAppDataTransferResult(intent)
         openIntent(intent)
+        if (intent.action == Intent.ACTION_MAIN) loadReleaseNotesContent()
         if (
             shouldPresentReleaseNotes(
                 isNewLaunch = true,
@@ -1349,14 +1364,46 @@ class MainActivity : AppCompatActivity() {
     private fun shouldPresentReleaseNotes(
         isNewLaunch: Boolean,
         intentAction: String?,
-    ): Boolean = ReleaseNotesPresentationRules.shouldPresent(
-        isNewLaunch = isNewLaunch,
-        isLauncherLaunch = intentAction == Intent.ACTION_MAIN,
-        isAppUpdate = isUpdatedInstallation(),
-        contentAvailable = releaseNotesContent != null,
-        currentVersionCode = BuildConfig.VERSION_CODE.toLong(),
-        lastPresentedVersionCode = releaseNotesStore.lastPresentedVersionCode(),
-    )
+    ): Boolean {
+        if (!isNewLaunch || intentAction != Intent.ACTION_MAIN || releaseNotesContent == null) {
+            return false
+        }
+        return ReleaseNotesPresentationRules.shouldPresent(
+            isNewLaunch = true,
+            isLauncherLaunch = true,
+            isAppUpdate = isUpdatedInstallation(),
+            contentAvailable = true,
+            currentVersionCode = BuildConfig.VERSION_CODE.toLong(),
+            lastPresentedVersionCode = releaseNotesStore.lastPresentedVersionCode(),
+        )
+    }
+
+    private fun loadReleaseNotesContent() {
+        if (releaseNotesContent != null) return
+        releaseNotesContent = ReleaseNotesRepository(this).load(
+            BuildConfig.RELEASE_NOTES_VERSION,
+        )
+    }
+
+    private fun ensureMediaControllers() {
+        if (!::browserController.isInitialized) return
+        if (!::castSessionController.isInitialized) {
+            castSessionController = CastSessionController(
+                context = this,
+                onMediaLoaded = { candidate -> browserController.pauseCastMedia(candidate) },
+            )
+        }
+        castSessionController.updateCandidate(browserController.castMediaCandidate)
+        if (!::webMediaSystemSession.isInitialized) {
+            webMediaSystemSession = WebMediaSystemSession(
+                context = this,
+                onPlay = browserController::playActiveWebMedia,
+                onPause = browserController::pauseActiveWebMedia,
+                onStop = browserController::stopActiveWebMedia,
+                onSeekTo = browserController::seekActiveWebMedia,
+            )
+        }
+    }
 
     private fun applyBrowserSystemUi() {
         val fullscreenVideoExpanded = ::browserController.isInitialized &&
