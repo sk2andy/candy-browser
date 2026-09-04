@@ -2370,6 +2370,7 @@ class BrowserController(
         protectionState: AtomicReference<LinkPeekProtectionState>,
     ) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+            invalidatePendingDesktopNavigationOverride(view)
             val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
             protectionState.set(
                 LinkPeekProtectionState(
@@ -2521,6 +2522,7 @@ class BrowserController(
         onCommittedUrlChanged: (String) -> Unit,
     ) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+            invalidatePendingDesktopNavigationOverride(view)
             val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
             val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return
             protectionState.set(
@@ -6349,6 +6351,7 @@ class BrowserController(
 
     private fun browserWebViewClient(tabId: String) = object : WebViewClient() {
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+            invalidatePendingDesktopNavigationOverride(view)
             if (isPendingInitialBlank(tabId, url)) return
             if (isQuarantinedPopup(tabId)) {
                 view.stopLoading()
@@ -11191,7 +11194,6 @@ class BrowserController(
         if (!request.method.equals("GET", ignoreCase = true)) return false
         val targetUrl = request.url.toString()
         if (isDesktopViewUserAgentApplied(tab, webView, targetUrl)) return false
-        val sourceUrl = webView.url
         val headers = runCatching { request.requestHeaders }
             .getOrNull()
             .orEmpty()
@@ -11202,8 +11204,7 @@ class BrowserController(
         mainHandler.post {
             if (!destroyed &&
                 desktopNavigationOverrideTokens[webView] == overrideToken &&
-                isCurrent() &&
-                webView.url == sourceUrl
+                isCurrent()
             ) {
                 navigate(targetUrl, headers)
             }

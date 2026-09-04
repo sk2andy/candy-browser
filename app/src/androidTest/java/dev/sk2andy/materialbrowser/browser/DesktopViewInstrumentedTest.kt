@@ -1,11 +1,15 @@
 package dev.sk2andy.materialbrowser.browser
 
 import android.content.Context
+import android.os.SystemClock
+import android.view.MotionEvent
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -164,6 +168,99 @@ class DesktopViewInstrumentedTest {
         }
     }
 
+    @Test
+    fun desktopToggleAndRedirectedResultClickDoNotReturnToSearchPage() {
+        LocalPageServer().use { server ->
+            lateinit var tabId: String
+            lateinit var webView: WebView
+            activityRule.scenario.onActivity { activity ->
+                clearPreferences(activity)
+                val controller = BrowserController(activity).also { this.controller = it }
+                tabId = controller.createTab(server.regularUrl)
+                val container = FrameLayout(activity)
+                activity.setContentView(container)
+                controller.attachSelectedWebView(container)
+                webView = controller.selectedWebViewForTesting()
+            }
+            awaitLoadedUrl(tabId, server.regularUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = true)
+
+            tapRedirectTarget(webView)
+            awaitLoadedUrl(tabId, server.desktopUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = true)
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.selectedWebViewForTesting() === webView)
+            }
+            awaitCanGoBack(webView)
+
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.setDesktopView(tabId, true))
+            }
+            awaitLoadedUrl(tabId, server.desktopUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = false)
+            awaitHistory(server.regularUrl, server.desktopUrl, currentIndex = 1)
+            awaitCanGoBack(webView)
+
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.selectedTab.canGoBack)
+                controller!!.goBack()
+            }
+            awaitLoadedUrl(tabId, server.regularUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = true)
+
+            tapRedirectTarget(webView)
+            awaitLoadedUrl(tabId, server.desktopUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = false)
+            awaitHistory(server.regularUrl, server.desktopUrl, currentIndex = 1)
+        }
+    }
+
+    private fun awaitCanGoBack(webView: WebView) {
+        val deadline = System.currentTimeMillis() + 10_000L
+        var latestHistory = ""
+        while (System.currentTimeMillis() < deadline) {
+            val canGoBack = AtomicReference(false)
+            activityRule.scenario.onActivity {
+                canGoBack.set(webView.canGoBack())
+                val history = webView.copyBackForwardList()
+                latestHistory =
+                    List(history.size) { index -> history.getItemAtIndex(index).url.orEmpty() }
+                        .toString() + "@${history.currentIndex}"
+            }
+            if (canGoBack.get()) return
+            Thread.sleep(50L)
+        }
+        throw AssertionError("WebView did not report canGoBack; history=$latestHistory")
+    }
+
+    private fun tapRedirectTarget(webView: WebView) {
+        val coordinates = AtomicReference<Pair<Float, Float>>()
+        activityRule.scenario.onActivity {
+            val location = IntArray(2)
+            webView.getLocationOnScreen(location)
+            coordinates.set(
+                location[0] + TAP_COORDINATE to location[1] + TAP_COORDINATE,
+            )
+        }
+        val (x, y) = coordinates.get()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val downTime = SystemClock.uptimeMillis()
+        listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP).forEach { action ->
+            MotionEvent.obtain(
+                downTime,
+                SystemClock.uptimeMillis(),
+                action,
+                x,
+                y,
+                0,
+            ).let { event ->
+                instrumentation.sendPointerSync(event)
+                event.recycle()
+            }
+        }
+        instrumentation.waitForIdleSync()
+    }
+
     private fun awaitLoadedUrl(tabId: String, expectedUrl: String) {
         val deadline = System.currentTimeMillis() + 10_000L
         val actualUrl = AtomicReference<String?>()
@@ -248,6 +345,10 @@ class DesktopViewInstrumentedTest {
         ).edit().clear().commit()
     }
 
+    private companion object {
+        const val TAP_COORDINATE = 50f
+    }
+
     private class LocalPageServer : Closeable {
         private val serverSocket = ServerSocket(
             0,
@@ -263,9 +364,13 @@ class DesktopViewInstrumentedTest {
             "http://regular.localhost:${serverSocket.localPort}/regular.html"
         val desktopUrl: String =
             "http://desktop.localhost:${serverSocket.localPort}/desktop.html"
+        private val redirectUrl: String =
+            "http://regular.localhost:${serverSocket.localPort}/redirect"
 
         private fun body(userAgent: String): ByteArray = (
                 "<!doctype html><html><body>" +
+                    "<a id=redirect-target href=\"$redirectUrl\" " +
+                    "style=\"display:block;width:200px;height:200px\">Redirect target</a>" +
                     "<a id=target href=\"$desktopUrl\">Target</a>" +
                     "<meta id=request-ua content=\"${userAgent.htmlEscaped()}\">" +
                     "</body></html>"
@@ -292,8 +397,25 @@ class DesktopViewInstrumentedTest {
                                 0
                             }
                         }
-                        connection.getOutputStream().use { output ->
+                        connection.getOutputStream().use response@{ output ->
                             val requestHeaders = requestBytes.toString(Charsets.US_ASCII.name())
+                            val requestPath = requestHeaders.lineSequence()
+                                .firstOrNull()
+                                ?.split(' ')
+                                ?.getOrNull(1)
+                            if (requestPath == "/redirect") {
+                                output.write(
+                                    (
+                                        "HTTP/1.1 302 Found\r\n" +
+                                            "Location: $desktopUrl\r\n" +
+                                            "Content-Length: 0\r\n" +
+                                            "Cache-Control: no-store\r\n" +
+                                            "Connection: close\r\n\r\n"
+                                        ).toByteArray(Charsets.US_ASCII),
+                                )
+                                output.flush()
+                                return@response
+                            }
                             val userAgent = requestHeaders.lineSequence()
                                 .firstOrNull { line ->
                                     line.startsWith("User-Agent:", ignoreCase = true)
