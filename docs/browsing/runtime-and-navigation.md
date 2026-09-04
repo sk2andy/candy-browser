@@ -42,6 +42,9 @@
   the preview WebView when its target profile changes and reload the final normalized HTTP(S) URL
   when promoting it to a regular tab. Preview loads still use the selected profile's cookies and
   DOM storage, so the feature is disposable UI rather than a private-browsing mode.
+- On a cold external-link preview launch, start WebView and registrable-domain initialization in
+  parallel off the main thread. Keep the native preview chrome interactive until both are ready,
+  and defer unrelated Cast, media-session, and release-note initialization from this launch path.
 - Keep federated-login popup tabs session-ephemeral for their complete window lifetime. App
   backgrounding pauses their live WebView and resumes it on return, while tab/session, History,
   Recall, Candy Trail, WebView-state, and preview persistence exclude them. Process death therefore
