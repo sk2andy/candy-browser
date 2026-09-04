@@ -16,10 +16,11 @@
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy. The optional external-link preview keeps the page memory-only until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
-| Web link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep HTTP(S) navigation in the current WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
+| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
-| Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; apply desktop user agent and viewport before navigation |
+| Desktop view | `DesktopSiteRules` → controller → WebView settings | Store registrable domains per profile; coordinate user-agent changes with the target navigation |
+| Always block pop-ups | `PopupSiteRules` → controller → `onCreateWindow` | Reject every popup synchronously for configured registrable opener domains; persist regular state per profile and keep private state memory-only |
 | Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
 | CAPTCHA compatibility | `CaptchaCompatibilityRules` → controller → Snackbar and `AlertDialog` | Detect strict cross-site Cloudflare, Google reCAPTCHA, or hCaptcha endpoints; allow third-party cookies only after explicit consent |
 | Local userscript | `UserScriptRules` → AndroidX WebKit document-start handler | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
@@ -47,18 +48,32 @@
   restores the opener instead of an identity-provider page.
 - Resolve external intents on every permitted handoff attempt so apps installed while Candy remains
   open are immediately eligible. Show handoff feedback only after Android accepts the external launch.
-- Keep all HTTP(S) links in the current WebView without resolving an Android activity. Users can
-  hand the loaded page to another app through the explicit **Open in external app** action.
+- Offer user-tapped HTTP(S) links to Android only when a direct non-browser default handler can
+  receive them. Requiring both a default and a non-browser handler prevents browser/chooser loops;
+  unavailable or ambiguous app links continue in the current WebView.
 - Carry user intent across script-driven handoffs with a short-lived, tab-bound grant after a
-  tapped HTTP(S) navigation. Consume the grant on the first special-scheme launch attempt.
+  tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff and is
+  consumed by the first accepted external launch attempt.
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.
+- Keep private always-block-popup domains memory-only; persist regular domains per profile only.
 - Keep `CREDENTIAL_MANAGER_SET_ORIGIN` declared while WebViews use browser WebAuthn mode. Android
-  Credential Manager requires it before a browser can request passkeys for a website origin.
+  Credential Manager requires it before a browser can request passkeys for a website origin. Ship
+  the AndroidX Credential Manager runtime in both distributions and its Google Password Manager
+  fallback only in the full distribution. Credential providers must separately trust Candy's
+  package and release signing certificate in their privileged-browser allowlist.
 - Never register userscript handlers on private or Link Peek WebViews. Userscript source is global
   regular-browser configuration, not private session state.
-- Apply desktop-view settings before main-frame navigation and reload matching open tabs when the domain preference changes.
+- Stop the active load before changing desktop-view user-agent settings for controller-owned loads,
+  reloads, and History traversal. When a web-requested main-frame GET changes user-agent policy,
+  cancel that not-yet-started target and post one controller-owned load with the target policy;
+  preserve request headers except `User-Agent` and `Sec-CH-UA*`. Never replay a committed navigation,
+  convert POST to GET, or mutate the user agent inside `shouldOverrideUrlLoading`. For non-overridable flows,
+  apply the target policy only after completion for future requests. Android WebView otherwise
+  restarts the page when its user agent changes during loading, which can race Back/Forward, return
+  a clicked link to the page being left, or repeat a one-time request. Reload matching open tabs only
+  when the user explicitly changes the domain preference.
 - Keep the WebView's measured frame stable while normal pages scroll. A document-start root spacer
   starts normal flow content below the status bar and scrolls away in Chromium's own render path,
   without changing layout params or redispatching insets from the scroll callback. Explicit
@@ -197,7 +212,8 @@ WebView request state.
 | Input/URL policy | Matching JVM rule test |
 | WebView settings or callbacks | Focused browser instrumented test |
 | Federated login | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, and popup-blocker regression tests |
-| Browser WebAuthn manifest contract | `SystemWebViewCredentialsInstrumentedTest` on API 34+ |
+| CAPTCHA compatibility | `CaptchaCompatibilityRulesTest`, `CaptchaCompatibilityPromptInstrumentedTest`, `BrowserControllerCaptchaCompatibilityInstrumentedTest`, and `BrowserSessionStoreInstrumentedTest` |
+| Browser WebAuthn runtime, provider setting and manifest contract | `SystemWebViewCredentialsInstrumentedTest` on API 34+ |
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Web media, fullscreen and PiP policy | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` on API 34+ |
