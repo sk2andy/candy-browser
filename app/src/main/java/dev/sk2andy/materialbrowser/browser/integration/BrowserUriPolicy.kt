@@ -53,7 +53,7 @@ object BrowserUriPolicy {
     private const val MAX_EXTERNAL_URI_LENGTH = 32_768
 }
 
-/** Limits automatic app handoffs to user-driven links and main-frame server redirects. */
+/** Limits automatic app handoffs to user-driven links and their main-frame redirect chains. */
 object ExternalNavigationPolicy {
     fun isUserNavigationGrantActive(
         expirationElapsedRealtime: Long?,
@@ -70,7 +70,9 @@ object ExternalNavigationPolicy {
     ): Boolean {
         if (!isForMainFrame) return false
         val normalizedScheme = scheme?.lowercase()?.takeIf(String::isNotBlank) ?: return false
-        if (normalizedScheme == "http" || normalizedScheme == "https") return false
+        if (normalizedScheme == "http" || normalizedScheme == "https") {
+            return hasGesture || (isRedirect && hasUserNavigationGrant)
+        }
         if (
             normalizedScheme != "intent" &&
             !BrowserUriPolicy.canOpenExternally(normalizedScheme)

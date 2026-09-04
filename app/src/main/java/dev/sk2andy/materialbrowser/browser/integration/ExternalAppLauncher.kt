@@ -18,7 +18,10 @@ class ExternalAppLauncher(private val context: Context) {
             ?: return ExternalLaunchResult.Unsupported
         val target = Intent(Intent.ACTION_VIEW, Uri.parse(normalized))
             .addCategory(Intent.CATEGORY_BROWSABLE)
-            .addFlags(Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER)
+            .addFlags(
+                Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER or
+                    Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT,
+            )
         return launchDirect(target, fallbackUrl = null)
     }
 

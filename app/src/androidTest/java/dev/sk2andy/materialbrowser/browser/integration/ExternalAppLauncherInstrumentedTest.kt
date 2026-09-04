@@ -21,6 +21,31 @@ class ExternalAppLauncherInstrumentedTest {
     private val launcher = ExternalAppLauncher(context)
 
     @Test
+    fun webLinksRequireDirectNonBrowserDefaultHandler() {
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            launcher.openWebUrlExternally("https://example.com/article"),
+        )
+
+        val launchedIntent = requireNotNull(context.lastIntent)
+        assertEquals(Intent.ACTION_VIEW, launchedIntent.action)
+        assertEquals("https://example.com/article", launchedIntent.dataString)
+        assertTrue(launchedIntent.categories.orEmpty().contains(Intent.CATEGORY_BROWSABLE))
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0)
+    }
+
+    @Test
+    fun webLinkWithoutDirectAppHandlerFallsBackToCurrentWebView() {
+        context.launchFailure = ActivityNotFoundException()
+
+        assertEquals(
+            ExternalLaunchResult.Unsupported,
+            launcher.openWebUrlExternally("https://example.com/article"),
+        )
+    }
+
+    @Test
     fun retriesAgainstCurrentInstalledAppsWithoutCachingHandlers() {
         context.launchFailure = ActivityNotFoundException()
         assertEquals(

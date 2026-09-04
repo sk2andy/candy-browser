@@ -6386,11 +6386,17 @@ class BrowserController(
                         externalNavigationGrantExpirations[tabId] =
                             SystemClock.elapsedRealtime() + EXTERNAL_NAVIGATION_GRANT_MILLIS
                     }
+                    val hasUserNavigationGrant =
+                        ExternalNavigationPolicy.isUserNavigationGrantActive(
+                            expirationElapsedRealtime = externalNavigationGrantExpirations[tabId],
+                            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                        )
                     val canTryAppLink = ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                         scheme = scheme,
                         isForMainFrame = request.isForMainFrame,
                         hasGesture = request.hasGesture(),
                         isRedirect = request.isRedirect,
+                        hasUserNavigationGrant = hasUserNavigationGrant,
                     )
                     if (
                         canTryAppLink &&

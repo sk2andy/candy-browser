@@ -52,7 +52,15 @@ class BrowserUriPolicyTest {
     }
 
     @Test
-    fun `external navigation accepts user driven special scheme links`() {
+    fun `external navigation accepts user driven web and special scheme links`() {
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
         assertTrue(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = "folo",
@@ -64,13 +72,13 @@ class BrowserUriPolicyTest {
     }
 
     @Test
-    fun `web navigation stays in current webview`() {
+    fun `passive web navigation stays in current webview`() {
         listOf("http", "https", "HTTPS").forEach { scheme ->
             assertFalse(
                 ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                     scheme = scheme,
                     isForMainFrame = true,
-                    hasGesture = true,
+                    hasGesture = false,
                     isRedirect = false,
                 ),
             )
@@ -114,6 +122,28 @@ class BrowserUriPolicyTest {
         assertTrue(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = "candy-app",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = false,
+                hasUserNavigationGrant = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `web redirect accepts recent user navigation grant only`() {
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+                hasUserNavigationGrant = true,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
                 isForMainFrame = true,
                 hasGesture = false,
                 isRedirect = false,
