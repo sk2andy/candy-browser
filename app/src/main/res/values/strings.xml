@@ -765,6 +765,7 @@
     <string name="action_translate_page">Translate page</string>
     <string name="settings_translation_provider">Page translation provider</string>
     <string name="settings_translation_provider_summary">On translate, the full page address is sent to this provider. Private tabs do not store translation state.</string>
+    <string name="settings_translation_provider_google_summary">Google Translate may show a blank page on some websites. Candy uses Google’s website translator, not Chrome’s built-in translation. Choose Yandex if this happens. The full page address is sent to Google.</string>
     <string name="settings_translation_provider_kagi_summary">Kagi Translate currently requires an active Kagi subscription. On translate, the full page address is sent to Kagi.</string>
     <string name="settings_external_link_preview_title">Preview links from other apps</string>
     <string name="settings_external_link_preview_subtitle">Open external links without creating a new tab first.</string>

@@ -1201,10 +1201,13 @@ internal fun BrowserSettingsPage(
         }
         Text(
             stringResource(
-                if (pageTranslationProvider == PageTranslationProvider.Kagi) {
-                    R.string.settings_translation_provider_kagi_summary
-                } else {
-                    R.string.settings_translation_provider_summary
+                when (pageTranslationProvider) {
+                    PageTranslationProvider.Google ->
+                        R.string.settings_translation_provider_google_summary
+                    PageTranslationProvider.Yandex ->
+                        R.string.settings_translation_provider_summary
+                    PageTranslationProvider.Kagi ->
+                        R.string.settings_translation_provider_kagi_summary
                 },
             ),
             modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),

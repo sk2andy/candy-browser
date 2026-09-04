@@ -516,15 +516,15 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
-    fun pageTranslationProviderRoundTripsAndUnknownValueFallsBackToGoogle() {
+    fun pageTranslationProviderRoundTripsAndUnknownValueUsesDefault() {
         val store = BrowserSessionStore(context)
-        assertEquals(PageTranslationProvider.Google, store.loadPageTranslationProvider())
+        assertEquals(PageTranslationProvider.Yandex, store.loadPageTranslationProvider())
 
         store.savePageTranslationProvider(PageTranslationProvider.Kagi)
         assertEquals(PageTranslationProvider.Kagi, store.loadPageTranslationProvider())
 
         preferences.edit().putString("page_translation_provider", "unknown").commit()
-        assertEquals(PageTranslationProvider.Google, store.loadPageTranslationProvider())
+        assertEquals(PageTranslationProvider.Yandex, store.loadPageTranslationProvider())
     }
 
     @Test

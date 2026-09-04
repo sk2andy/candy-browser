@@ -757,6 +757,7 @@
     <string name="action_translate_page">Traduzir página</string>
     <string name="settings_translation_provider">Fornecedor de tradução de páginas</string>
     <string name="settings_translation_provider_summary">Ao traduzir, o endereço completo da página é enviado a este fornecedor. Os separadores privados não guardam o estado da tradução.</string>
+    <string name="settings_translation_provider_google_summary">O Google Tradutor pode apresentar uma página em branco em alguns sites. O Candy utiliza o tradutor de sites da Google, não a tradução integrada do Chrome. Se isso acontecer, escolha Yandex. O endereço completo da página é enviado à Google.</string>
     <string name="settings_translation_provider_kagi_summary">O Kagi Translate requer atualmente uma subscrição Kagi ativa. Ao traduzir, o endereço completo da página é enviado à Kagi.</string>
     <string name="settings_external_link_preview_title">Pré-visualizar ligações de outras aplicações</string>
     <string name="settings_external_link_preview_subtitle">Abrir ligações externas sem criar primeiro um novo separador.</string>

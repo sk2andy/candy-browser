@@ -35,6 +35,19 @@ class PageTranslationRulesTest {
     }
 
     @Test
+    fun `default provider routes reported page through yandex`() {
+        assertEquals(
+            "https://translate.yandex.com/translate?url=" +
+                "https%3A%2F%2Fmt.cc%2Fdownload&lang=en",
+            PageTranslationRules.buildTranslationUrl(
+                provider = PageTranslationProvider.fromStableId(null),
+                sourceUrl = "https://mt.cc/download",
+                targetLanguage = "en",
+            ),
+        )
+    }
+
+    @Test
     fun `kagi translation uses website route and preserves source location`() {
         assertEquals(
             "https://translate.kagi.com/example.com/chapter?id=7&to=pt#part-2",
@@ -162,9 +175,10 @@ class PageTranslationRulesTest {
     }
 
     @Test
-    fun `unknown provider id falls back to google`() {
-        assertEquals(PageTranslationProvider.Google, PageTranslationProvider.fromStableId(null))
-        assertEquals(PageTranslationProvider.Google, PageTranslationProvider.fromStableId("other"))
+    fun `unknown provider id uses compatible default`() {
+        assertEquals(PageTranslationProvider.Yandex, PageTranslationProvider.fromStableId(null))
+        assertEquals(PageTranslationProvider.Yandex, PageTranslationProvider.fromStableId("other"))
+        assertEquals(PageTranslationProvider.Google, PageTranslationProvider.fromStableId("google"))
         assertEquals(PageTranslationProvider.Yandex, PageTranslationProvider.fromStableId("yandex"))
         assertEquals(PageTranslationProvider.Kagi, PageTranslationProvider.fromStableId("kagi"))
     }

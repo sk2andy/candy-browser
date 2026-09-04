@@ -752,6 +752,7 @@
     <string name="action_translate_page">Seite übersetzen</string>
     <string name="settings_translation_provider">Anbieter für Seitenübersetzung</string>
     <string name="settings_translation_provider_summary">Beim Übersetzen wird die vollständige Seitenadresse an diesen Anbieter gesendet. Private Tabs speichern keinen Übersetzungsstatus.</string>
+    <string name="settings_translation_provider_google_summary">Google Translate kann bei manchen Websites eine leere Seite anzeigen. Candy nutzt Googles Website-Übersetzer, nicht die integrierte Übersetzung von Chrome. Wähle in diesem Fall Yandex. Die vollständige Seitenadresse wird an Google gesendet.</string>
     <string name="settings_translation_provider_kagi_summary">Kagi Translate erfordert derzeit ein aktives Kagi-Abo. Beim Übersetzen wird die vollständige Seitenadresse an Kagi gesendet.</string>
     <string name="settings_external_link_preview_title">Links aus anderen Apps als Vorschau öffnen</string>
     <string name="settings_external_link_preview_subtitle">Externe Links zunächst öffnen, ohne einen neuen Tab anzulegen.</string>

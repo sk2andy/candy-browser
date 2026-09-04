@@ -757,6 +757,7 @@
     <string name="action_translate_page">Traducir página</string>
     <string name="settings_translation_provider">Proveedor de traducción de páginas</string>
     <string name="settings_translation_provider_summary">Al traducir, se envía la dirección completa de la página a este proveedor. Las pestañas privadas no guardan el estado de traducción.</string>
+    <string name="settings_translation_provider_google_summary">Google Translate puede mostrar una página en blanco en algunos sitios web. Candy usa el traductor de sitios web de Google, no la traducción integrada de Chrome. Si ocurre, elige Yandex. La dirección completa de la página se envía a Google.</string>
     <string name="settings_translation_provider_kagi_summary">Kagi Translate requiere actualmente una suscripción activa a Kagi. Al traducir, se envía la dirección completa de la página a Kagi.</string>
     <string name="settings_external_link_preview_title">Previsualizar enlaces de otras aplicaciones</string>
     <string name="settings_external_link_preview_subtitle">Abrir enlaces externos sin crear primero una pestaña nueva.</string>

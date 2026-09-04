@@ -111,6 +111,9 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_translation_provider_google_summary),
+        ).assertIsDisplayed()
         composeRule.onNodeWithTag(BrowserSettingsTestTags.TranslationProvider).performClick()
         composeRule.onNode(
             hasText(PageTranslationProvider.Google.displayName) and
