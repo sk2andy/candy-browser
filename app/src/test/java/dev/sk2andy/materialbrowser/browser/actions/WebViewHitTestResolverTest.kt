@@ -17,11 +17,13 @@ class WebViewHitTestResolverTest {
 
         assertEquals("https://example.com/article", target?.linkUrl)
         assertTrue(requireNotNull(target).canOpenLinkInBackground)
+        assertTrue(target.canDownloadLink)
         assertFalse(target.canDownloadImage)
         assertEquals(
             WebContentAction.OpenLinkInBackground("https://example.com/article"),
             target.openLinkInBackgroundAction(),
         )
+        assertEquals("application/octet-stream", target.downloadLinkAction()?.request?.mimeType)
     }
 
     @Test
@@ -35,7 +37,25 @@ class WebViewHitTestResolverTest {
 
         assertEquals("https://example.com/article", target?.linkUrl)
         assertEquals("https://cdn.example.com/full.png", target?.imageUrl)
-        assertEquals("full.png", target?.downloadImageAction()?.request?.fileName)
+        assertTrue(requireNotNull(target).canDownloadLink)
+        assertEquals("full.png", target.downloadImageAction()?.request?.fileName)
+    }
+
+    @Test
+    fun `text and JSON anchors expose built-in download requests`() {
+        val textTarget = WebViewHitTestResolver.resolve(
+            hitType = WebView.HitTestResult.SRC_ANCHOR_TYPE,
+            extra = "https://example.com/readme.txt",
+        )
+        val jsonTarget = WebViewHitTestResolver.resolve(
+            hitType = WebView.HitTestResult.SRC_ANCHOR_TYPE,
+            extra = "https://example.com/data.json?download=1",
+        )
+
+        assertEquals("text/plain", textTarget?.downloadLinkAction()?.request?.mimeType)
+        assertEquals("readme.txt", textTarget?.downloadLinkAction()?.request?.fileName)
+        assertEquals("application/json", jsonTarget?.downloadLinkAction()?.request?.mimeType)
+        assertEquals("data.json", jsonTarget?.downloadLinkAction()?.request?.fileName)
     }
 
     @Test

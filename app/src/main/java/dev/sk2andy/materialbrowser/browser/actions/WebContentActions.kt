@@ -10,7 +10,6 @@ import androidx.compose.runtime.setValue
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
-import java.net.URI
 
 data class WebContentTarget(
     val linkUrl: String? = null,
@@ -22,8 +21,24 @@ data class WebContentTarget(
     val canDownloadImage: Boolean
         get() = imageUrl != null
 
+    val canDownloadLink: Boolean
+        get() = linkUrl != null
+
     fun openLinkInBackgroundAction(): WebContentAction.OpenLinkInBackground? =
         linkUrl?.let { WebContentAction.OpenLinkInBackground(it) }
+
+    fun downloadLinkAction(
+        userAgent: String? = null,
+        cookies: String? = null,
+        referrer: String? = null,
+    ): WebContentAction.DownloadLink? = linkUrl?.let { url ->
+        BrowserDownloadRequestFactory.create(
+            url = url,
+            userAgent = userAgent,
+            cookies = cookies,
+            referrer = referrer,
+        )?.let { WebContentAction.DownloadLink(it) }
+    }
 
     fun downloadImageAction(
         userAgent: String? = null,
@@ -32,28 +47,17 @@ data class WebContentTarget(
     ): WebContentAction.DownloadImage? = imageUrl?.let { url ->
         BrowserDownloadRequestFactory.create(
             url = url,
-            mimeType = imageMimeType(url),
             userAgent = userAgent,
             cookies = cookies,
             referrer = referrer,
         )?.let { WebContentAction.DownloadImage(it) }
     }
-
-    private fun imageMimeType(url: String): String? = when (
-        runCatching { URI(url).path.substringAfterLast('.').lowercase() }.getOrNull()
-    ) {
-        "jpg", "jpeg" -> "image/jpeg"
-        "png" -> "image/png"
-        "gif" -> "image/gif"
-        "webp" -> "image/webp"
-        "avif" -> "image/avif"
-        "svg" -> "image/svg+xml"
-        else -> null
-    }
 }
 
 sealed interface WebContentAction {
     data class OpenLinkInBackground(val url: String) : WebContentAction
+
+    data class DownloadLink(val request: BrowserDownloadRequest) : WebContentAction
 
     data class DownloadImage(val request: BrowserDownloadRequest) : WebContentAction
 }
@@ -102,6 +106,9 @@ class WebContentActionState {
     var target by mutableStateOf<WebContentTarget?>(null)
         private set
 
+    var sourceTabId by mutableStateOf<String?>(null)
+        private set
+
     var lastDownload by mutableStateOf<DownloadActionResult?>(null)
         private set
 
@@ -126,10 +133,13 @@ class WebContentActionState {
     val isLinkPeekVisible: Boolean
         get() = target?.linkUrl != null
 
-    fun show(target: WebContentTarget) {
+    fun show(target: WebContentTarget, sourceTabId: String? = null) {
         revision++
-        val sameLink = this.target?.linkUrl != null && this.target?.linkUrl == target.linkUrl
+        val sameLink = this.target?.linkUrl != null &&
+            this.target?.linkUrl == target.linkUrl &&
+            this.sourceTabId == sourceTabId
         this.target = target
+        this.sourceTabId = sourceTabId
         if (!sameLink) {
             isLinkPeekCommitting = false
             updateLinkPeek(progress = 0f, armed = false)
@@ -139,6 +149,7 @@ class WebContentActionState {
     fun dismiss() {
         revision++
         target = null
+        sourceTabId = null
         isLinkPeekCommitting = false
         updateLinkPeek(progress = 0f, armed = false)
     }

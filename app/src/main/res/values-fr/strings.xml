@@ -226,6 +226,7 @@
     <string name="link_peek_title">Aperçu du lien</string>
     <string name="action_open_in_new_tab">Ouvrir dans un nouvel onglet</string>
     <string name="action_open_link_in_private_tab">Ouvrir le lien dans un onglet privé</string>
+    <string name="action_download_link">Télécharger le lien</string>
     <string name="action_download_image">Télécharger l’image</string>
     <string name="download_notification_description">Téléchargement</string>
     <string name="settings_title">Paramètres</string>

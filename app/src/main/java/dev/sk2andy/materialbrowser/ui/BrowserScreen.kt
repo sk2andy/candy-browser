@@ -2562,6 +2562,7 @@ internal fun BrowserScreen(
                 controller.shareLink(currentUrl)
             },
             canOpenInPrivate = controller.canOpenLinkInPrivate,
+            onDownloadLink = controller::downloadContextLink,
             onDownloadImage = linkTarget.takeIf { it?.canDownloadImage == true }?.let {
                 controller::downloadContextImage
             },

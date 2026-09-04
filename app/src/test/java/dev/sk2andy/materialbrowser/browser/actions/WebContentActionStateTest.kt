@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.browser.actions
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,16 +32,34 @@ class WebContentActionStateTest {
     @Test
     fun `dismiss atomically clears target and gesture state`() {
         val state = WebContentActionState()
-        state.show(WebContentTarget(linkUrl = "https://example.com"))
+        state.show(
+            target = WebContentTarget(linkUrl = "https://example.com"),
+            sourceTabId = "source-tab",
+        )
         state.updateLinkPeek(progress = 1f, armed = true)
 
         state.dismiss()
 
         assertFalse(state.isVisible)
         assertFalse(state.isLinkPeekVisible)
+        assertNull(state.sourceTabId)
         assertEquals(0f, state.linkPeekProgress, 0.001f)
         assertFalse(state.isLinkPeekArmed)
         assertFalse(state.isLinkPeekCommitting)
+    }
+
+    @Test
+    fun `source tab change invalidates link peek progress`() {
+        val state = WebContentActionState()
+        val target = WebContentTarget(linkUrl = "https://example.com/file.json")
+        state.show(target = target, sourceTabId = "regular-tab")
+        state.updateLinkPeek(progress = 0.75f, armed = true)
+
+        state.show(target = target, sourceTabId = "private-tab")
+
+        assertEquals("private-tab", state.sourceTabId)
+        assertEquals(0f, state.linkPeekProgress, 0.001f)
+        assertFalse(state.isLinkPeekArmed)
     }
 
     @Test

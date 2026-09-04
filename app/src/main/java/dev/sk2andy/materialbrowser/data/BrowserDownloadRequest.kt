@@ -24,7 +24,7 @@ object BrowserDownloadRequestFactory {
         referrer: String? = null,
     ): BrowserDownloadRequest? {
         if (!SafeDownloadValues.isHttpUrl(url)) return null
-        val safeMimeType = SafeDownloadValues.mimeType(mimeType)
+        val safeMimeType = SafeDownloadValues.mimeType(mimeType, url)
         return BrowserDownloadRequest(
             url = url,
             fileName = SafeDownloadValues.fileName(url, contentDisposition, safeMimeType),
@@ -51,13 +51,15 @@ internal object SafeDownloadValues {
             uri.userInfo == null
     }.getOrDefault(false)
 
-    fun mimeType(value: String?): String {
+    fun mimeType(value: String?, url: String? = null): String {
         val candidate = value
             ?.substringBefore(';')
             ?.trim()
             ?.lowercase(Locale.ROOT)
             .orEmpty()
-        return candidate.takeIf(mimeTypePattern::matches) ?: "application/octet-stream"
+        return candidate.takeIf(mimeTypePattern::matches)
+            ?: mimeTypeFromUrl(url)
+            ?: "application/octet-stream"
     }
 
     fun header(value: String?, maxLength: Int = 4_096): String? = value
@@ -148,6 +150,24 @@ internal object SafeDownloadValues {
     private fun hasExtension(value: String): Boolean {
         val extension = value.substringAfterLast('.', missingDelimiterValue = "")
         return extension.matches(Regex("^[a-zA-Z0-9][a-zA-Z0-9+_-]{0,9}$"))
+    }
+
+    private fun mimeTypeFromUrl(value: String?): String? = runCatching {
+        URI(value ?: return null).path.substringAfterLast('.').lowercase(Locale.ROOT)
+    }.getOrNull()?.let { extension ->
+        when (extension) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "gif" -> "image/gif"
+            "webp" -> "image/webp"
+            "avif" -> "image/avif"
+            "svg" -> "image/svg+xml"
+            "pdf" -> "application/pdf"
+            "txt" -> "text/plain"
+            "html", "htm" -> "text/html"
+            "json" -> "application/json"
+            else -> null
+        }
     }
 
     private fun extensionForMimeType(mimeType: String): String? = when (mimeType) {

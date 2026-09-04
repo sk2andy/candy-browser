@@ -47,6 +47,21 @@ class BrowserDownloadRequestFactoryTest {
     }
 
     @Test
+    fun `infers text and JSON MIME types from downloadable link paths`() {
+        val textRequest = BrowserDownloadRequestFactory.create(
+            url = "https://example.com/notes.txt?raw=1",
+        )
+        val jsonRequest = BrowserDownloadRequestFactory.create(
+            url = "https://example.com/export.JSON",
+        )
+
+        assertEquals("text/plain", textRequest?.mimeType)
+        assertEquals("notes.txt", textRequest?.fileName)
+        assertEquals("application/json", jsonRequest?.mimeType)
+        assertEquals("export.JSON", jsonRequest?.fileName)
+    }
+
+    @Test
     fun `drops injected headers and bounds file name`() {
         val request = BrowserDownloadRequestFactory.create(
             url = "https://example.com/${"a".repeat(200)}.png",

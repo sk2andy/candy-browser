@@ -3805,18 +3805,42 @@ class BrowserController(
     }
 
     fun downloadContextImage() {
+        val tabId = currentContentActionTabId() ?: return
         val target = contentActions.target ?: return
         val imageUrl = target.imageUrl ?: return
-        val selectedWebView = webViews[selectedTabId]
+        val selectedWebView = webViews[tabId]
         val action = target.downloadImageAction(
             userAgent = selectedWebView?.settings?.userAgentString,
-            cookies = cookiesFor(selectedTabId, imageUrl),
-            referrer = referrerFor(selectedTabId),
+            cookies = cookiesFor(tabId, imageUrl),
+            referrer = referrerFor(tabId),
         ) ?: return
-        val result = routeDownload(action.request, selectedTabId)
+        val result = routeDownload(action.request, tabId)
         result?.let(contentActions::reportDownload)
         contentActions.dismiss()
         result?.let(::showDownloadResult)
+    }
+
+    fun downloadContextLink() {
+        val tabId = currentContentActionTabId() ?: return
+        val target = contentActions.target ?: return
+        val linkUrl = target.linkUrl ?: return
+        val selectedWebView = webViews[tabId]
+        val action = target.downloadLinkAction(
+            userAgent = selectedWebView?.settings?.userAgentString,
+            cookies = cookiesFor(tabId, linkUrl),
+            referrer = referrerFor(tabId),
+        ) ?: return
+        val result = routeDownload(action.request, tabId)
+        result?.let(contentActions::reportDownload)
+        contentActions.dismiss()
+        result?.let(::showDownloadResult)
+    }
+
+    private fun currentContentActionTabId(): String? {
+        val tabId = contentActions.sourceTabId
+        if (tabId == selectedTabId && tabs.any { tab -> tab.id == tabId }) return tabId
+        contentActions.dismiss()
+        return null
     }
 
     fun confirmDownloadChoice(managerId: String?) {
@@ -6058,7 +6082,7 @@ class BrowserController(
                     hitType = hitType,
                     extra = hitExtra,
                 ) ?: return@setOnLongClickListener false
-                contentActions.show(target)
+                contentActions.show(target, tabId)
                 return@setOnLongClickListener true
             }
 
@@ -6081,7 +6105,7 @@ class BrowserController(
                         extra = hitExtra,
                         focusedLinkUrl = message.data.getString("url"),
                         focusedImageUrl = message.data.getString("src"),
-                    )?.let(contentActions::show)
+                    )?.let { target -> contentActions.show(target, tabId) }
                 }
                 true
             }
@@ -10796,6 +10820,9 @@ class BrowserController(
     }
 
     private fun updateSelectedTabId(tabId: String) {
+        if (contentActions.sourceTabId != null && contentActions.sourceTabId != tabId) {
+            contentActions.dismiss()
+        }
         selectedTabId = tabId
     }
 

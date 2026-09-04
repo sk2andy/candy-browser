@@ -7,6 +7,7 @@ import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import org.junit.Assume.assumeTrue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,7 +25,8 @@ class LinkPeekTabOpeningInstrumentedTest {
                 val originalIds = controller.tabs.mapTo(mutableSetOf(), BrowserTab::id)
 
                 controller.contentActions.show(
-                    WebContentTarget(linkUrl = "https://example.com/link-peek-target"),
+                    target = WebContentTarget(linkUrl = "https://example.com/link-peek-target"),
+                    sourceTabId = sourceTabId,
                 )
                 controller.openContextLinkInBackground()
 
@@ -56,7 +58,10 @@ class LinkPeekTabOpeningInstrumentedTest {
                 val sourceTabId = controller.selectedTabId
                 val originalIds = controller.tabs.mapTo(mutableSetOf(), BrowserTab::id)
                 val previewUrl = "https://example.com/link-peek-private"
-                controller.contentActions.show(WebContentTarget(linkUrl = previewUrl))
+                controller.contentActions.show(
+                    target = WebContentTarget(linkUrl = previewUrl),
+                    sourceTabId = sourceTabId,
+                )
 
                 assertTrue(controller.openLinkInPrivate(previewUrl))
 
@@ -69,6 +74,29 @@ class LinkPeekTabOpeningInstrumentedTest {
                 assertTrue(created.isIncognito)
                 assertFalse(controller.contentActions.isVisible)
                 controller.closeTab(created.id)
+            }
+        }
+    }
+
+    @Test
+    fun switchingTabsDismissesSourceBoundLinkPeek() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                val sourceTabId = controller.selectedTabId
+                val targetTabId = requireNotNull(
+                    controller.createBackgroundTab("https://example.com/other"),
+                )
+                controller.contentActions.show(
+                    target = WebContentTarget(linkUrl = "https://example.com/data.json"),
+                    sourceTabId = sourceTabId,
+                )
+
+                controller.selectTab(targetTabId)
+
+                assertFalse(controller.contentActions.isVisible)
+                assertNull(controller.contentActions.sourceTabId)
+                controller.closeTab(sourceTabId)
             }
         }
     }

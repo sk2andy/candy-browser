@@ -128,6 +128,39 @@ class LinkPeekOverlayInstrumentedTest {
     }
 
     @Test
+    fun downloadActionsAreShownAndForwardClicks() {
+        val linkDownloads = AtomicInteger()
+        val imageDownloads = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                LinkPeekOverlay(
+                    url = "https://example.com/data.json",
+                    progress = 0f,
+                    armed = false,
+                    createPreviewWebView = ::previewWebView,
+                    releasePreviewWebView = WebView::destroy,
+                    onOpen = {},
+                    onDownloadLink = linkDownloads::incrementAndGet,
+                    onDownloadImage = imageDownloads::incrementAndGet,
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(LinkPeekTestTags.DownloadLink)
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .performClick()
+        composeRule.onNodeWithTag(LinkPeekTestTags.DownloadImage)
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .performClick()
+
+        assertEquals(1, linkDownloads.get())
+        assertEquals(1, imageDownloads.get())
+    }
+
+    @Test
     fun newTabTargetPulsesBeforeArmingAndStrengthensWithoutMovingWhenArmed() {
         val armed = mutableStateOf(false)
         composeRule.mainClock.autoAdvance = false

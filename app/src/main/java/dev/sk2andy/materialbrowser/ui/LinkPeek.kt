@@ -85,6 +85,8 @@ internal object LinkPeekTestTags {
     const val CopyLink = "link_peek_copy_link"
     const val OpenPrivate = "link_peek_open_private"
     const val Share = "link_peek_share"
+    const val DownloadLink = "link_peek_download_link"
+    const val DownloadImage = "link_peek_download_image"
 }
 
 @Composable
@@ -102,6 +104,7 @@ internal fun LinkPeekOverlay(
     onOpenInPrivate: (String) -> Unit = {},
     onShare: (String) -> Unit = {},
     canOpenInPrivate: Boolean = true,
+    onDownloadLink: (() -> Unit)? = null,
     onDownloadImage: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
@@ -347,10 +350,22 @@ internal fun LinkPeekOverlay(
                             onRelease = releasePreviewWebView,
                         )
                     }
+                    if (onDownloadLink != null) {
+                        Text(
+                            stringResource(R.string.action_download_link),
+                            modifier = Modifier
+                                .testTag(LinkPeekTestTags.DownloadLink)
+                                .clickable(onClick = onDownloadLink)
+                                .padding(horizontal = 18.dp, vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                     if (onDownloadImage != null) {
                         Text(
                             stringResource(R.string.action_download_image),
                             modifier = Modifier
+                                .testTag(LinkPeekTestTags.DownloadImage)
                                 .clickable(onClick = onDownloadImage)
                                 .padding(horizontal = 18.dp, vertical = 8.dp),
                             color = MaterialTheme.colorScheme.primary,
