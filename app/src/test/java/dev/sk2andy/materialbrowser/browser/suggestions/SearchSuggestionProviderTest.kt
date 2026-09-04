@@ -43,6 +43,11 @@ class SearchSuggestionProviderTest {
             SearchSuggestionProvider.Kagi.buildSuggestionUrl("candy & browser"),
         )
         assertEquals(
+            "https://suggestqueries.google.com/complete/search?client=firefox&" +
+                "ie=utf-8&oe=utf-8&q=candy%20%26%20browser",
+            SearchSuggestionProvider.Google.buildSuggestionUrl("candy & browser"),
+        )
+        assertEquals(
             "https://search.example/autocompleter?q=candy%20%26%20browser",
             SearchSuggestionProvider.SearXNG.buildSuggestionUrl(
                 query = "candy & browser",
@@ -109,6 +114,10 @@ class SearchSuggestionProviderTest {
         assertEquals(
             listOf("candy browser", "candy recipe"),
             parseSearchSuggestions("""["candy browser","candy recipe"]""", "candy"),
+        )
+        assertEquals(
+            listOf("münchen wetter"),
+            parseSearchSuggestions("""["münchen",["münchen wetter"]]""", "münchen"),
         )
     }
 

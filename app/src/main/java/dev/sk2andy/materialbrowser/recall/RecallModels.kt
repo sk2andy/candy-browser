@@ -83,6 +83,9 @@ internal object RecallRules {
             trimmed[EXPLICIT_COMMAND.length].isWhitespace()
     }
 
+    fun canSearchFromAddress(input: String, historySuggestionsEnabled: Boolean): Boolean =
+        historySuggestionsEnabled || isExplicitCommand(input)
+
     fun matchExpression(query: String): String? {
         val terms = meaningfulTerms(query).take(MAX_QUERY_TERMS)
         if (terms.isEmpty()) return null

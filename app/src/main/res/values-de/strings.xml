@@ -325,6 +325,8 @@
     <string name="settings_search_engine">Suchmaschine</string>
     <string name="settings_ai_mode_toggle_title">AI-Mode-Logo anzeigen</string>
     <string name="settings_ai_mode_toggle_subtitle">Tippe auf das Logo in der Adressleiste, um die aktuelle Anfrage zwischen Google-Suche und AI Mode umzuschalten.</string>
+    <string name="settings_history_suggestions_title">Browserverlauf als Vorschläge anzeigen</string>
+    <string name="settings_history_suggestions_summary">Passende Seiten aus dem gespeicherten Verlauf dieses Profils und automatische Candy-Recall-Treffer in der Adressleiste anzeigen. Offene Tabs und die Vervollständigung favorisierter Adressen bleiben verfügbar.</string>
     <string name="settings_search_suggestions">Suchvorschläge</string>
     <string name="settings_search_suggestions_summary">Ab drei Zeichen wird der eingegebene Suchtext an diesen Anbieter gesendet. In privaten Tabs deaktiviert.</string>
     <string name="settings_search_suggestions_none_summary">Vorschläge bleiben lokal. Es wird kein eingegebener Text an einen Vorschlagsanbieter gesendet.</string>

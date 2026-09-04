@@ -151,6 +151,8 @@ internal object BrowserSettingsTestTags {
 internal object SearchSettingsTestTags {
     const val SearxngInstanceUrl = "search_settings_searxng_instance_url"
     const val SearxngFallback = "search_settings_searxng_fallback"
+    const val HistorySuggestions = "search_settings_history_suggestions"
+    const val SuggestionProvider = "search_settings_suggestion_provider"
 }
 
 internal object TabSettingsTestTags {
@@ -174,6 +176,7 @@ internal fun SettingsScreen(
     searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
+    isHistorySuggestionsEnabled: Boolean,
     isRecallEnabled: Boolean,
     tabOverviewMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
@@ -211,6 +214,7 @@ internal fun SettingsScreen(
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
+    onHistorySuggestionsEnabledChanged: (Boolean) -> Unit,
     onRecallEnabledChanged: (Boolean) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
@@ -285,10 +289,13 @@ internal fun SettingsScreen(
                     searxngSettings = searxngSettings,
                     isAiModeToggleVisible = isAiModeToggleVisible,
                     searchSuggestionProvider = searchSuggestionProvider,
+                    isHistorySuggestionsEnabled = isHistorySuggestionsEnabled,
                     onSearchEngineChanged = onSearchEngineChanged,
                     onSearxngSettingsChanged = onSearxngSettingsChanged,
                     onAiModeToggleVisibleChanged = onAiModeToggleVisibleChanged,
                     onSearchSuggestionProviderChanged = onSearchSuggestionProviderChanged,
+                    onHistorySuggestionsEnabledChanged =
+                        onHistorySuggestionsEnabledChanged,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 
@@ -750,10 +757,12 @@ internal fun SearchSettingsPage(
     searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
+    isHistorySuggestionsEnabled: Boolean,
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
+    onHistorySuggestionsEnabledChanged: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     var searchEngineMenuExpanded by remember { mutableStateOf(false) }
@@ -847,12 +856,21 @@ internal fun SearchSettingsPage(
             )
         }
         SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.settings_history_suggestions_title),
+            subtitle = stringResource(R.string.settings_history_suggestions_summary),
+            checked = isHistorySuggestionsEnabled,
+            onCheckedChange = onHistorySuggestionsEnabledChanged,
+            modifier = Modifier.testTag(SearchSettingsTestTags.HistorySuggestions),
+        )
+        SettingsPageSpacer()
         Box {
             SettingsChoice(
                 title = stringResource(R.string.settings_search_suggestions),
                 value = searchSuggestionProvider.displayName(),
                 expanded = searchSuggestionMenuExpanded,
                 onClick = { searchSuggestionMenuExpanded = true },
+                modifier = Modifier.testTag(SearchSettingsTestTags.SuggestionProvider),
             )
             SettingsDropdown(
                 expanded = searchSuggestionMenuExpanded,
@@ -1739,6 +1757,7 @@ private fun TabOverviewMode.displayName(): String = when (this) {
 private fun SearchSuggestionProvider.displayName(): String = when (this) {
     SearchSuggestionProvider.None -> stringResource(R.string.search_suggestion_provider_none)
     SearchSuggestionProvider.DuckDuckGo -> "DuckDuckGo"
+    SearchSuggestionProvider.Google -> "Google"
     SearchSuggestionProvider.Brave -> "Brave Search"
     SearchSuggestionProvider.Ecosia -> "Ecosia"
     SearchSuggestionProvider.Qwant -> "Qwant"

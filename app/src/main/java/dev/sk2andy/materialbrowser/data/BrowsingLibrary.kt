@@ -100,6 +100,7 @@ internal object BrowsingLibraryRules {
         isIncognito: Boolean,
         query: String,
         limit: Int,
+        includeHistory: Boolean = true,
     ): List<AddressSuggestion> {
         val openTabsByUrl = tabs.asSequence()
             .filter { tab ->
@@ -121,7 +122,7 @@ internal object BrowsingLibraryRules {
                     ),
                 )
             }
-            if (!isIncognito) {
+            if (!isIncognito && includeHistory) {
                 history.forEach { entry ->
                     val key = urlKey(entry.url)
                     if (key != null && key !in openTabsByUrl) add(entry)
@@ -148,6 +149,7 @@ internal object BrowsingLibraryRules {
         selectedTabId: String,
         isIncognito: Boolean,
         query: String,
+        includeHistory: Boolean = true,
     ): String? {
         val value = query.trim()
         val prefix = value.lowercase(Locale.ROOT)
@@ -167,10 +169,12 @@ internal object BrowsingLibraryRules {
                 .forEach(::add)
             if (!isIncognito) {
                 favorites.asSequence().map(FavoriteEntry::url).forEach(::add)
-                history.asSequence()
-                    .sortedByDescending(HistoryEntry::lastVisitedAt)
-                    .map(HistoryEntry::url)
-                    .forEach(::add)
+                if (includeHistory) {
+                    history.asSequence()
+                        .sortedByDescending(HistoryEntry::lastVisitedAt)
+                        .map(HistoryEntry::url)
+                        .forEach(::add)
+                }
             }
         }
         return candidateUrls.asSequence()

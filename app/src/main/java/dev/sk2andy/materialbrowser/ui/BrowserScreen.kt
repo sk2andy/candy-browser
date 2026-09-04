@@ -916,6 +916,7 @@ internal fun BrowserScreen(
         selectedTab.profileId,
         selectedTab.isIncognito,
         controller.isRecallEnabled,
+        controller.isHistorySuggestionsEnabled,
     ) {
         localRecallMatches = emptyList()
         if (!addressEditorVisible) return@LaunchedEffect
@@ -2084,6 +2085,7 @@ internal fun BrowserScreen(
                 searxngSettings = controller.searxngSettings,
                 isAiModeToggleVisible = controller.isAiModeToggleVisible,
                 searchSuggestionProvider = controller.searchSuggestionProvider,
+                isHistorySuggestionsEnabled = controller.isHistorySuggestionsEnabled,
                 isRecallEnabled = controller.isRecallEnabled,
                 tabOverviewMode = controller.tabOverviewMode,
                 tabListStartsAtBottom = controller.tabListStartsAtBottom,
@@ -2138,6 +2140,8 @@ internal fun BrowserScreen(
                 onSearxngSettingsChanged = controller::updateSearxngSettings,
                 onAiModeToggleVisibleChanged = controller::updateAiModeToggleVisible,
                 onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
+                onHistorySuggestionsEnabledChanged =
+                    controller::updateHistorySuggestionsEnabled,
                 onRecallEnabledChanged = controller::updateRecallEnabled,
                 onTabOverviewModeChanged = controller::updateTabOverviewMode,
                 onTabListStartsAtBottomChanged = controller::updateTabListStartsAtBottom,

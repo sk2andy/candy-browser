@@ -205,11 +205,24 @@ class BrowserSessionStoreInstrumentedTest {
             store.loadSearchSuggestionProvider(fallback = SearchSuggestionProvider.None),
         )
 
-        store.saveSearchSuggestionProvider(SearchSuggestionProvider.Brave)
+        store.saveSearchSuggestionProvider(SearchSuggestionProvider.Google)
         assertEquals(
-            SearchSuggestionProvider.Brave,
+            SearchSuggestionProvider.Google,
             store.loadSearchSuggestionProvider(fallback = SearchSuggestionProvider.None),
         )
+    }
+
+    @Test
+    fun historySuggestionsDefaultToEnabledAndRoundTrip() {
+        val store = BrowserSessionStore(context)
+
+        assertTrue(store.loadHistorySuggestionsEnabled())
+
+        store.saveHistorySuggestionsEnabled(false)
+        assertFalse(store.loadHistorySuggestionsEnabled())
+
+        store.saveHistorySuggestionsEnabled(true)
+        assertTrue(store.loadHistorySuggestionsEnabled())
     }
 
     @Test
