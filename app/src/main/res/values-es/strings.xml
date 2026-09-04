@@ -109,6 +109,8 @@
     <string name="action_mute_domain">Silenciar este sitio</string>
     <string name="action_desktop_view">Vista de escritorio</string>
     <string name="action_desktop_view_description">Solicitar la versión de escritorio para este dominio</string>
+    <string name="action_always_block_popups">Bloquear siempre las ventanas emergentes</string>
+    <string name="action_always_block_popups_description">Bloquear sin preguntar todas las ventanas emergentes que abra este dominio</string>
     <string name="browser_menu_title">Menú</string>
     <string name="browser_menu_page_group">Página</string>
     <string name="browser_menu_browser_group">Navegador</string>

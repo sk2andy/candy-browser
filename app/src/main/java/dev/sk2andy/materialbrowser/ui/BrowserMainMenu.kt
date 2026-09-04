@@ -84,6 +84,8 @@ private data class BrowserMainMenuPresentation(
     val canTranslatePage: Boolean,
     val canToggleDomainMute: Boolean,
     val isDomainMuted: Boolean,
+    val canToggleAlwaysBlockPopups: Boolean,
+    val isAlwaysBlockPopupsEnabled: Boolean,
     val canToggleDesktopView: Boolean,
     val isDesktopView: Boolean,
     val canToggleCookieBannerRemoval: Boolean,
@@ -115,6 +117,8 @@ internal fun BrowserMainMenu(
     canTranslatePage: Boolean,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
+    canToggleAlwaysBlockPopups: Boolean,
+    isAlwaysBlockPopupsEnabled: Boolean,
     canToggleDesktopView: Boolean,
     isDesktopView: Boolean,
     canToggleCookieBannerRemoval: Boolean,
@@ -146,6 +150,7 @@ internal fun BrowserMainMenu(
     onTranslate: () -> Unit,
     onFindInPage: () -> Unit = {},
     onDomainMutedChange: (Boolean) -> Unit,
+    onAlwaysBlockPopupsChange: (Boolean) -> Unit,
     onDesktopViewChange: (Boolean) -> Unit,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
     onForceVerticalScrollingChange: (Boolean) -> Unit,
@@ -200,6 +205,8 @@ internal fun BrowserMainMenu(
         canTranslatePage = canTranslatePage,
         canToggleDomainMute = canToggleDomainMute,
         isDomainMuted = isDomainMuted,
+        canToggleAlwaysBlockPopups = canToggleAlwaysBlockPopups,
+        isAlwaysBlockPopupsEnabled = isAlwaysBlockPopupsEnabled,
         canToggleDesktopView = canToggleDesktopView,
         isDesktopView = isDesktopView,
         canToggleCookieBannerRemoval = canToggleCookieBannerRemoval,
@@ -531,6 +538,17 @@ internal fun BrowserMainMenu(
                         )
                     }
                 }
+                BrowserMenuToggleItem(
+                    label = stringResource(R.string.action_always_block_popups),
+                    supportingText = stringResource(
+                        R.string.action_always_block_popups_description,
+                    ),
+                    checked = presentation.isAlwaysBlockPopupsEnabled,
+                    enabled = presentation.canToggleAlwaysBlockPopups,
+                    onCheckedChange = onAlwaysBlockPopupsChange,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.AlwaysBlockPopups),
+                    shape = innerCorners,
+                )
                 BrowserMenuToggleItem(
                     label = stringResource(R.string.action_desktop_view),
                     supportingText = stringResource(R.string.action_desktop_view_description),
@@ -1215,6 +1233,7 @@ internal object BrowserMainMenuTestTags {
     const val SnoozedTabs = "browser_main_menu_snoozed_tabs"
     const val DockAddressBar = "browser_main_menu_dock_address_bar"
     const val CookieBannerRemoval = "browser_main_menu_cookie_banner_removal"
+    const val AlwaysBlockPopups = "browser_main_menu_always_block_popups"
     const val ForceVerticalScrolling = "browser_main_menu_force_vertical_scrolling"
     const val DesktopView = "browser_main_menu_desktop_view"
     const val FindInPage = "browser_main_menu_find_in_page"

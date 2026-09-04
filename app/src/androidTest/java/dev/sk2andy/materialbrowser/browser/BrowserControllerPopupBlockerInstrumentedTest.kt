@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -92,6 +93,81 @@ class BrowserControllerPopupBlockerInstrumentedTest {
                     .onCreateWindow(source, false, false, message),
             )
             assertEquals(1, browserController.tabs.size)
+        }
+    }
+
+    @Test
+    fun alwaysBlockPopupDomainRejectsUserGestureWithoutOffer() {
+        activityRule.scenario.onActivity { activity ->
+            val browserController = freshController(activity)
+            browserController.selectedWebViewForTesting().loadDataWithBaseURL(
+                "https://video.example.com/watch",
+                "<html><body>opener</body></html>",
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        awaitDocumentHost("video.example.com")
+        await { controller?.isBundledBlockingReadyForTesting() == true }
+
+        activityRule.scenario.onActivity {
+            val browserController = requireNotNull(controller)
+            assertTrue(browserController.setSelectedAlwaysBlockPopups(true))
+            assertTrue(browserController.isSelectedAlwaysBlockPopups)
+            val source = browserController.selectedWebViewForTesting()
+            val transport = source.WebViewTransport()
+            val message = Message.obtain(Handler(Looper.getMainLooper())).apply {
+                obj = transport
+            }
+
+            assertTrue(
+                !requireNotNull(source.webChromeClient)
+                    .onCreateWindow(source, false, true, message),
+            )
+            assertEquals(null, transport.webView)
+            assertEquals(1, browserController.tabs.size)
+            assertEquals(0, browserController.pendingPopupCountForTesting)
+            assertEquals(null, browserController.blockedPopupOffer)
+        }
+    }
+
+    @Test
+    fun regularAlwaysBlockPreferenceIsStoredWhilePrivateStateStaysMemoryOnly() {
+        var localProfileId = ""
+        var privateTabId = ""
+        activityRule.scenario.onActivity { activity ->
+            val browserController = freshController(activity)
+            assumeTrue(browserController.isProfileIsolationSupported)
+            localProfileId = requireNotNull(browserController.createProfile("🛡️"))
+            privateTabId = browserController.selectedTabId
+            assertTrue(browserController.setBlankTabIncognito(true))
+            assertTrue(browserController.tabs.first { it.id == privateTabId }.isIncognito)
+            browserController.selectedWebViewForTesting().loadDataWithBaseURL(
+                "https://private.example.org/watch",
+                "<html><body>private</body></html>",
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        awaitDocumentHost("private.example.org")
+
+        activityRule.scenario.onActivity { activity ->
+            val browserController = requireNotNull(controller)
+            assertTrue(browserController.setAlwaysBlockPopups(privateTabId, true))
+            assertTrue(browserController.isAlwaysBlockPopupsEnabled(privateTabId))
+            val regularTabId = browserController.createTab(
+                initialUrl = "https://video.example.com/watch",
+                isIncognito = false,
+            )
+            assertTrue(!browserController.tabs.first { it.id == regularTabId }.isIncognito)
+            assertTrue(browserController.setAlwaysBlockPopups(regularTabId, true))
+            assertTrue(browserController.isAlwaysBlockPopupsEnabled(regularTabId))
+            assertEquals(
+                mapOf(localProfileId to setOf("example.com")),
+                BrowserSessionStore(activity).loadAlwaysBlockPopupDomains(),
+            )
         }
     }
 

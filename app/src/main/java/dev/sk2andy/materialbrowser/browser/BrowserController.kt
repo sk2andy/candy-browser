@@ -804,6 +804,11 @@ class BrowserController(
         putAll(store.loadDesktopViewDomains())
     }
     private val temporaryDesktopViewDomains = mutableStateMapOf<String, Set<String>>()
+    private val permanentAlwaysBlockPopupDomains =
+        mutableStateMapOf<String, Set<String>>().apply {
+            putAll(store.loadAlwaysBlockPopupDomains())
+        }
+    private val temporaryAlwaysBlockPopupDomains = mutableStateMapOf<String, Set<String>>()
     private val defaultUserAgentMetadataBySettings = WeakHashMap<WebSettings, UserAgentMetadata>()
     private val profileDeletionCoordinator =
         WebViewProfileDeletionCoordinator(store, ::tryDeleteNamedWebViewProfile)
@@ -908,6 +913,12 @@ class BrowserController(
     val isSelectedDomainMuted: Boolean
         get() = isDomainMuted(selectedTabId)
 
+    val canToggleSelectedAlwaysBlockPopups: Boolean
+        get() = canToggleAlwaysBlockPopups(selectedTabId)
+
+    val isSelectedAlwaysBlockPopups: Boolean
+        get() = isAlwaysBlockPopupsEnabled(selectedTabId)
+
     val canToggleSelectedDesktopView: Boolean
         get() = canToggleDesktopView(selectedTabId)
 
@@ -924,6 +935,17 @@ class BrowserController(
         siteExceptionRevision
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         return isDomainMuted(tab, pageUrls[tabId] ?: tab.url)
+    }
+
+    fun canToggleAlwaysBlockPopups(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        return PopupSiteRules.domainForUrl(pageUrl) != null
+    }
+
+    fun isAlwaysBlockPopupsEnabled(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return isAlwaysBlockPopupsEnabled(tab, pageUrls[tabId] ?: tab.url)
     }
 
     fun canToggleDesktopView(tabId: String): Boolean {
@@ -1506,6 +1528,8 @@ class BrowserController(
         store.saveMutedDomains(permanentMutedDomains.toMap())
         permanentDesktopViewDomains.keys.retainAll(restoredProfileIds)
         store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
+        permanentAlwaysBlockPopupDomains.keys.retainAll(restoredProfileIds)
+        store.saveAlwaysBlockPopupDomains(permanentAlwaysBlockPopupDomains.toMap())
         activeProfileId = if (profilesEnabled) {
             restoredActiveProfileId.takeIf { id -> profiles.any { it.id == id } }
         } else {
@@ -3680,6 +3704,10 @@ class BrowserController(
             store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
         }
         temporaryDesktopViewDomains.remove(profileId)
+        if (permanentAlwaysBlockPopupDomains.remove(profileId) != null) {
+            store.saveAlwaysBlockPopupDomains(permanentAlwaysBlockPopupDomains.toMap())
+        }
+        temporaryAlwaysBlockPopupDomains.remove(profileId)
         permissionRepository.removeProfile(profileId)
         permissionRevision++
         val webViewProfileName = WebViewProfileRules.isolatedProfileName(profileId)
@@ -5394,6 +5422,32 @@ class BrowserController(
 
     fun setSelectedDomainMuted(muted: Boolean): Boolean = setDomainMuted(selectedTabId, muted)
 
+    fun setSelectedAlwaysBlockPopups(enabled: Boolean): Boolean =
+        setAlwaysBlockPopups(selectedTabId, enabled)
+
+    fun setAlwaysBlockPopups(tabId: String, enabled: Boolean): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        val domain = PopupSiteRules.domainForUrl(pageUrl) ?: return false
+        if (isAlwaysBlockPopupsEnabled(tab, pageUrl) == enabled) return false
+        val domainsByProfile = if (tab.isIncognito) {
+            temporaryAlwaysBlockPopupDomains
+        } else {
+            permanentAlwaysBlockPopupDomains
+        }
+        val updated = PopupSiteRules.withAlwaysBlockState(
+            current = domainsByProfile[tab.profileId].orEmpty(),
+            domain = domain,
+            enabled = enabled,
+        )
+        if (updated.isEmpty()) domainsByProfile.remove(tab.profileId)
+        else domainsByProfile[tab.profileId] = updated
+        if (!tab.isIncognito) {
+            store.saveAlwaysBlockPopupDomains(permanentAlwaysBlockPopupDomains.toMap())
+        }
+        return true
+    }
+
     fun setDomainMuted(tabId: String, muted: Boolean): Boolean {
         if (!isDomainMuteSupported) return false
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
@@ -5517,6 +5571,9 @@ class BrowserController(
         temporaryDesktopViewDomains.clear()
         permanentDesktopViewDomains.clear()
         store.saveDesktopViewDomains(emptyMap())
+        temporaryAlwaysBlockPopupDomains.clear()
+        permanentAlwaysBlockPopupDomains.clear()
+        store.saveAlwaysBlockPopupDomains(emptyMap())
         siteExceptionRevision++
         webViews.forEach { (tabId, webView) ->
             val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
@@ -5827,6 +5884,7 @@ class BrowserController(
         temporarySitePrivacyOverrides.clear()
         temporaryMutedDomains.clear()
         temporaryDesktopViewDomains.clear()
+        temporaryAlwaysBlockPopupDomains.clear()
         savePersistentFilterRules()
         persist()
         federatedLoginPopupTabIds.clear()
@@ -8449,6 +8507,7 @@ class BrowserController(
             ?: return false
         val openerTab = tabs.firstOrNull { tab -> tab.id == openerTabId } ?: return false
         val openerUrl = pageUrls[openerTabId] ?: source.url ?: openerTab.url
+        if (isAlwaysBlockPopupsEnabled(openerTab, openerUrl)) return false
         if (workerSettings.blockAdsAndTrackers &&
             !isSiteProtectionPaused(openerTabId, openerUrl) &&
             contentBlocker.shouldBlockPopupWithoutTarget(openerUrl)
@@ -10731,6 +10790,7 @@ class BrowserController(
         incognitoRuleHits.clear()
         temporaryMutedDomains.clear()
         temporaryDesktopViewDomains.clear()
+        temporaryAlwaysBlockPopupDomains.clear()
         permissionRepository.clearPrivateSession()
         permissionRevision++
         if (ephemeralRuleIds.isNotEmpty()) {
@@ -10931,6 +10991,15 @@ class BrowserController(
             permanentDesktopViewDomains[tab.profileId]
         }
         return DesktopSiteRules.isDesktopView(pageUrl, desktopDomains.orEmpty())
+    }
+
+    private fun isAlwaysBlockPopupsEnabled(tab: BrowserTab, pageUrl: String?): Boolean {
+        val domains = if (tab.isIncognito) {
+            temporaryAlwaysBlockPopupDomains[tab.profileId]
+        } else {
+            permanentAlwaysBlockPopupDomains[tab.profileId]
+        }
+        return PopupSiteRules.shouldAlwaysBlock(pageUrl, domains.orEmpty())
     }
 
     private fun reloadDesktopViewDomain(

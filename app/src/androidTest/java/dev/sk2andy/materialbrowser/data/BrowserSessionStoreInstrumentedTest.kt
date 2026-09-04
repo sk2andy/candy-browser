@@ -799,6 +799,29 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun alwaysBlockPopupDomainsRoundTripByProfileAsRegistrableDomains() {
+        val store = BrowserSessionStore(context)
+        store.saveAlwaysBlockPopupDomains(
+            mapOf(
+                "candy" to setOf("Video.News.Example.co.uk", "unsafe host"),
+                "work" to setOf("stream.example"),
+                "" to setOf("ignored.example"),
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "candy" to setOf("example.co.uk"),
+                "work" to setOf("stream.example"),
+            ),
+            store.loadAlwaysBlockPopupDomains(),
+        )
+
+        preferences.edit().putString("always_block_popup_domains", "not-json").commit()
+        assertEquals(emptyMap<String, Set<String>>(), store.loadAlwaysBlockPopupDomains())
+    }
+
+    @Test
     fun sitePrivacyOverridesRoundTripAtomicallyWithoutDefaultOrUnsafeEntries() {
         val store = BrowserSessionStore(context)
         store.saveSitePrivacyOverrides(

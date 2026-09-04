@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.PopupSiteRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -372,6 +373,24 @@ class BrowserSessionStore internal constructor(
             hostsByProfile = domainsByProfile,
             normalizeHost = DesktopSiteRules::normalizedDomain,
             limit = DesktopSiteRules.MAX_PER_PROFILE,
+        )
+    }
+
+    @Synchronized
+    fun loadAlwaysBlockPopupDomains(): Map<String, Set<String>> =
+        loadProfileHosts(
+            key = KEY_ALWAYS_BLOCK_POPUP_DOMAINS,
+            normalizeHost = PopupSiteRules::normalizedDomain,
+            limit = PopupSiteRules.MAX_PER_PROFILE,
+        )
+
+    @Synchronized
+    fun saveAlwaysBlockPopupDomains(domainsByProfile: Map<String, Set<String>>) {
+        saveProfileHosts(
+            key = KEY_ALWAYS_BLOCK_POPUP_DOMAINS,
+            hostsByProfile = domainsByProfile,
+            normalizeHost = PopupSiteRules::normalizedDomain,
+            limit = PopupSiteRules.MAX_PER_PROFILE,
         )
     }
 
@@ -931,6 +950,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_SITE_EXCEPTIONS = "site_exceptions"
         const val KEY_MUTED_DOMAINS = "muted_domains"
         const val KEY_DESKTOP_VIEW_DOMAINS = "desktop_view_domains"
+        const val KEY_ALWAYS_BLOCK_POPUP_DOMAINS = "always_block_popup_domains"
         const val KEY_SITE_PRIVACY_OVERRIDES = "site_privacy_overrides"
         const val KEY_HISTORY = "history"
         const val KEY_HISTORY_RECORDING_MODE = "history_recording_mode"
