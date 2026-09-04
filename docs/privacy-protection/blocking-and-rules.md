@@ -25,8 +25,12 @@ windows remain rejected by existing WebView policy. A same-site first target sta
 bounded five-second window so a delayed cross-site advertising hop cannot bypass policy.
 Site pause, profile, and private-tab ownership come from actual opener. Cross-site windows without a
 matching rule honor the user gesture and open normally; explicit popup rules still block matching
-targets. Popunder rules use a bounded five-second correlation window between the surviving child and
-a redirected opener, then close the listed opener. Regex filters, redirects, `$important`, arbitrary
+targets. A per-domain **Always block pop-ups** override rejects every `onCreateWindow` request from
+the registrable opener domain before Candy creates a popup tab. This strict override is independent
+of site pause, filter allow rules, and federated-login compatibility, and never offers an **Open**
+action. Regular tabs persist it per profile; private tabs keep it in memory until the private session
+ends. Popunder rules use a bounded five-second correlation window between the surviving child and a
+redirected opener, then close the listed opener. Regex filters, redirects, `$important`, arbitrary
 JavaScript, and trusted uBO scriptlets fail closed.
 
 The EasyList and uAssets cosmetic compilers include their supported global standard-CSS subsets.

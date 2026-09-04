@@ -50,6 +50,7 @@ class BrowserMainMenuInstrumentedTest {
         val dockActions = AtomicInteger()
         val cookieChanges = AtomicInteger()
         val scrollChanges = AtomicInteger()
+        val popupChanges = AtomicInteger()
         val desktopViewChanges = AtomicInteger()
         val zoomChanges = AtomicInteger()
         val safeAreaChanges = AtomicInteger()
@@ -68,6 +69,7 @@ class BrowserMainMenuInstrumentedTest {
                     var expanded by remember { mutableStateOf(true) }
                     var cookieRemovalEnabled by remember { mutableStateOf(false) }
                     var forceVerticalScrolling by remember { mutableStateOf(false) }
+                    var alwaysBlockPopups by remember { mutableStateOf(false) }
                     var desktopView by remember { mutableStateOf(false) }
                     var forcePageZooming by remember { mutableStateOf(false) }
                     var forceSafeArea by remember { mutableStateOf(false) }
@@ -91,6 +93,8 @@ class BrowserMainMenuInstrumentedTest {
                             canTranslatePage = true,
                             canToggleDomainMute = true,
                             isDomainMuted = false,
+                            canToggleAlwaysBlockPopups = true,
+                            isAlwaysBlockPopupsEnabled = alwaysBlockPopups,
                             canToggleDesktopView = true,
                             isDesktopView = desktopView,
                             canToggleCookieBannerRemoval = true,
@@ -115,6 +119,10 @@ class BrowserMainMenuInstrumentedTest {
                             onOpenReader = {},
                             onTranslate = {},
                             onDomainMutedChange = {},
+                            onAlwaysBlockPopupsChange = { enabled ->
+                                popupChanges.incrementAndGet()
+                                alwaysBlockPopups = enabled
+                            },
                             onDesktopViewChange = { enabled ->
                                 desktopViewChanges.incrementAndGet()
                                 desktopView = enabled
@@ -172,6 +180,7 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasText(context.getString(R.string.action_print))) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.CookieBannerRemoval)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForceVerticalScrolling)) and
+                hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.AlwaysBlockPopups)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.DesktopView)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForcePageZooming)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.ForceSafeArea)) and
@@ -235,6 +244,13 @@ class BrowserMainMenuInstrumentedTest {
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling).assertIsOn()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.AlwaysBlockPopups)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsOff()
+            .performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.AlwaysBlockPopups).assertIsOn()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView)
             .performScrollTo()
             .assertIsDisplayed()
@@ -259,6 +275,7 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
         assertEquals(1, cookieChanges.get())
         assertEquals(1, scrollChanges.get())
+        assertEquals(1, popupChanges.get())
         assertEquals(1, desktopViewChanges.get())
         assertEquals(1, zoomChanges.get())
         assertEquals(1, safeAreaChanges.get())
@@ -324,6 +341,8 @@ class BrowserMainMenuInstrumentedTest {
                     canTranslatePage = false,
                     canToggleDomainMute = false,
                     isDomainMuted = false,
+                    canToggleAlwaysBlockPopups = false,
+                    isAlwaysBlockPopupsEnabled = false,
                     canToggleDesktopView = false,
                     isDesktopView = false,
                     canToggleCookieBannerRemoval = false,
@@ -349,6 +368,7 @@ class BrowserMainMenuInstrumentedTest {
                     onOpenReader = {},
                     onTranslate = {},
                     onDomainMutedChange = {},
+                    onAlwaysBlockPopupsChange = {},
                     onDesktopViewChange = {},
                     onCookieBannerRemovalEnabledChange = {},
                     onForceVerticalScrollingChange = {},
@@ -377,6 +397,8 @@ class BrowserMainMenuInstrumentedTest {
             .assertDoesNotExist()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceVerticalScrolling)
             .assertDoesNotExist()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.AlwaysBlockPopups)
+            .assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DesktopView)
             .assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForcePageZooming)
@@ -384,6 +406,7 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ToppingsGroup).assertExists()
         composeRule.onNodeWithText("Password helper").assertExists()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.userScriptCommand("reveal"))
+            .performScrollTo()
             .performClick()
         assertEquals(1, invocations.get())
     }

@@ -109,6 +109,8 @@
     <string name="action_mute_domain">Couper le son de ce site</string>
     <string name="action_desktop_view">Version pour ordinateur</string>
     <string name="action_desktop_view_description">Demander la version pour ordinateur pour ce domaine</string>
+    <string name="action_always_block_popups">Toujours bloquer les fenêtres pop-up</string>
+    <string name="action_always_block_popups_description">Bloquer sans confirmation toutes les fenêtres pop-up ouvertes par ce domaine</string>
     <string name="browser_menu_title">Menu</string>
     <string name="browser_menu_page_group">Page</string>
     <string name="browser_menu_browser_group">Navigateur</string>
