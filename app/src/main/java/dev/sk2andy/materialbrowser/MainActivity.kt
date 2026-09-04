@@ -60,9 +60,9 @@ import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.WebViewProcessStartup
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
+import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
-import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
@@ -134,6 +134,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingAppDataImport by mutableStateOf<AppDataImportPreview?>(null)
     private var appDataImportLoading = false
     private var appDataTransferActive = false
+    private var activityDestroyed = false
     private var appliedNightConfiguration = Configuration.UI_MODE_NIGHT_UNDEFINED
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -256,14 +257,16 @@ class MainActivity : AppCompatActivity() {
             },
             onFullImmersiveModeChanged = { applyBrowserSystemUi() },
             onWebMediaStateChanged = {
-                ensureMediaControllers()
-                if (::webMediaSystemSession.isInitialized) {
-                    webMediaSystemSession.publish(browserController.systemWebMediaState)
+                if (!activityDestroyed) {
+                    ensureMediaControllers()
+                    if (::webMediaSystemSession.isInitialized) {
+                        webMediaSystemSession.publish(browserController.systemWebMediaState)
+                    }
+                    if (::castSessionController.isInitialized) {
+                        castSessionController.updateCandidate(browserController.castMediaCandidate)
+                    }
+                    updatePictureInPictureParams()
                 }
-                if (::castSessionController.isInitialized) {
-                    castSessionController.updateCandidate(browserController.castMediaCandidate)
-                }
-                updatePictureInPictureParams()
             },
             onWebPictureInPictureRequested = ::onPictureInPictureRequested,
             onWebPictureInPictureRequestTimedOut = ::cancelPictureInPictureTransition,
@@ -747,6 +750,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        activityDestroyed = true
         if (appDataTransferActive) {
             super.onDestroy()
             return
@@ -1386,7 +1390,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun ensureMediaControllers() {
-        if (!::browserController.isInitialized) return
+        if (activityDestroyed || !::browserController.isInitialized) return
         if (!::castSessionController.isInitialized) {
             castSessionController = CastSessionController(
                 context = this,
