@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -51,7 +52,9 @@ class ExternalLinkPreviewBarInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.Open).performClick()
+        composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.Open)
+            .assertIsEnabled()
+            .performClick()
         composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.Profile).performClick()
         composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.profile("work")).performClick()
         composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.Overflow).performClick()

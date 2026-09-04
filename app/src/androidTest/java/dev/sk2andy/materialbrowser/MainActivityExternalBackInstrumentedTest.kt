@@ -88,9 +88,11 @@ class MainActivityExternalBackInstrumentedTest {
                 ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
             waitUntil { browserController.externalLinkPreviewState != null }
+            waitUntil { browserController.externalLinkPreviewWebViewForTesting() != null }
             scenario.onActivity { activity ->
                 assertEquals(1, browserController.tabs.size)
                 assertEquals(EXTERNAL_URL, browserController.externalLinkPreviewState?.currentUrl)
+                assertEquals(true, browserController.externalLinkPreviewState?.isWebViewReady)
                 activity.onBackPressedDispatcher.onBackPressed()
             }
 
@@ -167,7 +169,7 @@ class MainActivityExternalBackInstrumentedTest {
     }
 
     @Test
-    fun committingPreviewCreatesExactlyOneRegularTab() {
+    fun deferredPreviewCanCommitImmediatelyAndCreatesExactlyOneRegularTab() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         clearSession(context)
         GestureOnboardingStore(context).markCompleted()
@@ -176,17 +178,26 @@ class MainActivityExternalBackInstrumentedTest {
             Intent(context, MainActivity::class.java).setAction(Intent.ACTION_MAIN),
         ).use { scenario ->
             scenario.onActivity { activity ->
-                val controller = activity.browserControllerForTesting()
-                assertTrue(controller.openExternalLinkPreview(EXTERNAL_URL))
-                val preview = requireNotNull(controller.externalLinkPreviewState)
+                val controller = BrowserController(
+                    activity = activity,
+                    deferWebViewRuntimeStartup = true,
+                )
+                try {
+                    assertTrue(controller.openExternalLinkPreview(EXTERNAL_URL))
+                    val preview = requireNotNull(controller.externalLinkPreviewState)
+                    assertEquals(false, preview.isWebViewReady)
+                    assertEquals(null, controller.externalLinkPreviewWebViewForTesting())
 
-                val result = controller.commitExternalLinkPreview(preview.sessionId)
+                    val result = controller.commitExternalLinkPreview(preview.sessionId)
 
-                assertTrue(result is ExternalLinkPreviewCommitResult.Opened)
-                assertEquals(null, controller.externalLinkPreviewState)
-                assertEquals(2, controller.tabs.size)
-                assertEquals(EXTERNAL_URL, controller.selectedTab.url)
-                assertEquals(false, controller.selectedTab.isIncognito)
+                    assertTrue(result is ExternalLinkPreviewCommitResult.Opened)
+                    assertEquals(null, controller.externalLinkPreviewState)
+                    assertEquals(2, controller.tabs.size)
+                    assertEquals(EXTERNAL_URL, controller.selectedTab.url)
+                    assertEquals(false, controller.selectedTab.isIncognito)
+                } finally {
+                    controller.destroy()
+                }
             }
         }
     }

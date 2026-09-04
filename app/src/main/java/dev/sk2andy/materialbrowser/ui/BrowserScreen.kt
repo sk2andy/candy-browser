@@ -2650,8 +2650,10 @@ private fun ExternalLinkPreviewScreen(
     } else {
         controller.profiles.take(1)
     }
-    LaunchedEffect(state.sessionId) {
+    val webViewRevision = controller.webViewRevision
+    LaunchedEffect(state.sessionId, webViewRevision) {
         onTabOverviewPortraitLockChanged(false)
+        controller.prepareExternalLinkPreview(state.sessionId)
     }
     BackHandler {
         when {
@@ -2783,7 +2785,6 @@ private fun ExternalLinkPreviewViewport(
     val statusBarTint = MaterialTheme.colorScheme.surface.toArgb()
     val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
-    controller.externalLinkPreviewState?.generation
     AndroidView(
         factory = { context -> StatusBarFrostedGlassHost(context) },
         update = { host ->
@@ -2793,7 +2794,11 @@ private fun ExternalLinkPreviewViewport(
                 tint = statusBarTint,
                 visible = true,
             )
-            controller.attachExternalLinkPreview(host.blurTarget)
+            if (controller.externalLinkPreviewState?.isWebViewReady == true) {
+                controller.attachExternalLinkPreview(host.blurTarget)
+            } else {
+                controller.detachExternalLinkPreview(host.blurTarget)
+            }
         },
         onRelease = { host ->
             controller.detachExternalLinkPreview(host.blurTarget)
