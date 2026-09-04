@@ -2,12 +2,18 @@ package dev.sk2andy.materialbrowser.browser
 
 import android.content.Context
 import android.webkit.WebSettings
+import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import java.io.ByteArrayOutputStream
+import java.io.Closeable
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -105,10 +111,225 @@ class DesktopViewInstrumentedTest {
         }
     }
 
+    @Test
+    fun linkAndHistoryNavigationSurviveDesktopUserAgentChanges() {
+        LocalPageServer().use { server ->
+            lateinit var tabId: String
+            lateinit var webView: WebView
+            activityRule.scenario.onActivity { activity ->
+                clearPreferences(activity)
+                BrowserSessionStore(activity).saveDesktopViewDomains(
+                    mapOf(DEFAULT_PROFILE_ID to setOf("desktop.localhost")),
+                )
+                val controller = BrowserController(activity).also { this.controller = it }
+                tabId = controller.createTab(server.regularUrl)
+                webView = controller.selectedWebViewForTesting()
+            }
+            awaitLoadedUrl(tabId, server.regularUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = true)
+
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript("document.getElementById('target').click()", null)
+            }
+            awaitLoadedUrl(tabId, server.desktopUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = false)
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.isDesktopView(tabId))
+                assertFalse(webView.settings.userAgentString.contains("Android", ignoreCase = true))
+            }
+
+            awaitHistory(server.regularUrl, server.desktopUrl, currentIndex = 1)
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.selectedTab.canGoBack)
+                controller!!.goBack()
+            }
+            awaitLoadedUrl(tabId, server.regularUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = true)
+            activityRule.scenario.onActivity {
+                assertFalse(controller!!.isDesktopView(tabId))
+                assertTrue(webView.settings.userAgentString.contains("Android", ignoreCase = true))
+                assertTrue(controller!!.selectedTab.canGoForward)
+                controller!!.goForward()
+            }
+            awaitLoadedUrl(tabId, server.desktopUrl)
+            awaitDocumentUserAgent(webView, expectsAndroid = false)
+            awaitHistory(server.regularUrl, server.desktopUrl, currentIndex = 1)
+
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.isDesktopView(tabId))
+                assertFalse(webView.settings.userAgentString.contains("Android", ignoreCase = true))
+                assertTrue(webView.settings.useWideViewPort)
+                assertTrue(webView.settings.loadWithOverviewMode)
+            }
+        }
+    }
+
+    private fun awaitLoadedUrl(tabId: String, expectedUrl: String) {
+        val deadline = System.currentTimeMillis() + 10_000L
+        val actualUrl = AtomicReference<String?>()
+        val actualHistory = AtomicReference<String>()
+        while (System.currentTimeMillis() < deadline) {
+            val loaded = AtomicReference(false)
+            activityRule.scenario.onActivity {
+                val currentController = controller ?: return@onActivity
+                val tab = currentController.activeTabs.firstOrNull { candidate ->
+                    candidate.id == tabId
+                }
+                val webView = currentController.selectedWebViewForTesting()
+                actualUrl.set(webView.url)
+                val history = webView.copyBackForwardList()
+                actualHistory.set(
+                    List(history.size) { index -> history.getItemAtIndex(index).url.orEmpty() }
+                        .toString() + "@${history.currentIndex}",
+                )
+                loaded.set(tab?.url == expectedUrl && webView.url == expectedUrl && !tab.isLoading)
+            }
+            if (loaded.get()) return
+            Thread.sleep(50L)
+        }
+        throw AssertionError(
+            "WebView did not finish $expectedUrl; current=${actualUrl.get()}, " +
+                "history=${actualHistory.get()}",
+        )
+    }
+
+    private fun awaitHistory(regularUrl: String, desktopUrl: String, currentIndex: Int) {
+        val expectedUrls = listOf(regularUrl, desktopUrl)
+        val deadline = System.currentTimeMillis() + 10_000L
+        var latestUrls = emptyList<String>()
+        var latestIndex = -1
+        while (System.currentTimeMillis() < deadline) {
+            val matches = AtomicReference(false)
+            activityRule.scenario.onActivity {
+                val history = controller!!.selectedWebViewForTesting().copyBackForwardList()
+                latestUrls = List(history.size) { index -> history.getItemAtIndex(index).url.orEmpty() }
+                latestIndex = history.currentIndex
+                matches.set(latestUrls == expectedUrls && latestIndex == currentIndex)
+            }
+            if (matches.get()) return
+            Thread.sleep(50L)
+        }
+        throw AssertionError(
+            "WebView history did not become $expectedUrls@$currentIndex; " +
+                "current=$latestUrls@$latestIndex",
+        )
+    }
+
+    private fun awaitDocumentUserAgent(webView: WebView, expectsAndroid: Boolean) {
+        val deadline = System.currentTimeMillis() + 10_000L
+        val actualUserAgent = AtomicReference<String?>()
+        val expectedKind = if (expectsAndroid) "android" else "desktop"
+        while (System.currentTimeMillis() < deadline) {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "(() => {" +
+                        "const ua = document.getElementById('request-ua')?.content || '';" +
+                        "return ua.length === 0 ? 'missing' : " +
+                        "(ua.includes('Android') ? 'android' : 'desktop');" +
+                        "})()",
+                ) { value ->
+                    actualUserAgent.set(value)
+                }
+            }
+            val value = actualUserAgent.get()
+            if (value == "\"$expectedKind\"") return
+            Thread.sleep(50L)
+        }
+        throw AssertionError(
+            "Document request user agent did not become $expectedKind; " +
+                "current=${actualUserAgent.get()}",
+        )
+    }
+
     private fun clearPreferences(activity: ComponentActivity) {
         activity.getSharedPreferences(
             BrowserSessionStore.PREFERENCES_NAME,
             Context.MODE_PRIVATE,
         ).edit().clear().commit()
+    }
+
+    private class LocalPageServer : Closeable {
+        private val serverSocket = ServerSocket(
+            0,
+            8,
+            InetAddress.getByName("0.0.0.0"),
+        )
+        private val serverThread = Thread({ serve() }, "candy-desktop-view-test-server").apply {
+            isDaemon = true
+            start()
+        }
+
+        val regularUrl: String =
+            "http://regular.localhost:${serverSocket.localPort}/regular.html"
+        val desktopUrl: String =
+            "http://desktop.localhost:${serverSocket.localPort}/desktop.html"
+
+        private fun body(userAgent: String): ByteArray = (
+                "<!doctype html><html><body>" +
+                    "<a id=target href=\"$desktopUrl\">Target</a>" +
+                    "<meta id=request-ua content=\"${userAgent.htmlEscaped()}\">" +
+                    "</body></html>"
+                ).toByteArray(Charsets.UTF_8)
+
+        private fun serve() {
+            while (!serverSocket.isClosed) {
+                val socket = runCatching { serverSocket.accept() }.getOrNull() ?: return
+                socket.use { connection ->
+                    connection.soTimeout = 2_000
+                    runCatching {
+                        val input = connection.getInputStream()
+                        val requestBytes = ByteArrayOutputStream()
+                        var matchedHeaderBytes = 0
+                        while (matchedHeaderBytes < HTTP_HEADER_END.size) {
+                            val next = input.read()
+                            if (next < 0) break
+                            requestBytes.write(next)
+                            matchedHeaderBytes = if (
+                                next == HTTP_HEADER_END[matchedHeaderBytes].toInt()
+                            ) {
+                                matchedHeaderBytes + 1
+                            } else {
+                                0
+                            }
+                        }
+                        connection.getOutputStream().use { output ->
+                            val requestHeaders = requestBytes.toString(Charsets.US_ASCII.name())
+                            val userAgent = requestHeaders.lineSequence()
+                                .firstOrNull { line ->
+                                    line.startsWith("User-Agent:", ignoreCase = true)
+                                }
+                                ?.substringAfter(':')
+                                ?.trim()
+                                .orEmpty()
+                            val responseBody = body(userAgent)
+                            val headers = (
+                                "HTTP/1.1 200 OK\r\n" +
+                                    "Content-Type: text/html; charset=utf-8\r\n" +
+                                    "Content-Length: ${responseBody.size}\r\n" +
+                                    "Cache-Control: no-store\r\n" +
+                                    "Connection: close\r\n\r\n"
+                                ).toByteArray(Charsets.US_ASCII)
+                            output.write(headers)
+                            output.write(responseBody)
+                            output.flush()
+                        }
+                    }
+                }
+            }
+        }
+
+        override fun close() {
+            serverSocket.close()
+            serverThread.join(2_000L)
+        }
+
+        private companion object {
+            val HTTP_HEADER_END = byteArrayOf(13, 10, 13, 10)
+
+            fun String.htmlEscaped(): String = replace("&", "&amp;")
+                .replace("\"", "&quot;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+        }
     }
 }
