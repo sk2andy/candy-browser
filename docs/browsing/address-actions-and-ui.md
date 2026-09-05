@@ -1,5 +1,15 @@
 # Address actions and UI
 
+## Cross-platform presentation
+
+Target architecture uses one Compose Multiplatform address component. Address-bar state, presentation
+modes, action ordering and content remain one Compose component model.
+`CandyTheme` supplies platform design and motion tokens. `CandyChromeSurface` owns the replaceable material
+boundary, so Android can render Material 3/frosted chrome and iOS can render native Liquid Glass without a
+second address-bar implementation. Platform-specific animation `if` branches do not belong in address
+components; named values live in `CandyMotionScheme`. Current Android-only source still contains Android
+haptics and window integration; those move behind platform ports during the KMP extraction.
+
 ## Address flow
 
 | Concern | Source | Rule |

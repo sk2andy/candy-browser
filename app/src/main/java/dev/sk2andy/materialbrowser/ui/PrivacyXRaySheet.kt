@@ -91,7 +91,6 @@ import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import eightbitlab.com.blurview.BlurTarget
 import kotlinx.coroutines.delay
 
 internal object PrivacyXRayTestTags {
@@ -188,7 +187,7 @@ internal fun PrivacyXRaySheet(
     snapshot: PrivacyXRaySnapshot,
     blockerSettings: BlockerSettings,
     siteState: SiteProtectionState,
-    blurTarget: BlurTarget? = null,
+    backdropSource: CandyChromeBackdropSource? = null,
     onPause: (persistently: Boolean) -> Unit,
     onResume: () -> Unit,
     onRevokeThirdPartyCookieCompatibility: () -> Unit = {},
@@ -213,8 +212,8 @@ internal fun PrivacyXRaySheet(
             .semantics { paneTitle = title },
         containerColor = Color.Transparent,
         dragHandle = {
-            BrowserChromeSurface(
-                blurTarget = blurTarget,
+            CandyChromeSurface(
+                backdropSource = backdropSource,
                 tokens = chromeTokens,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RectangleShape,
@@ -229,8 +228,8 @@ internal fun PrivacyXRaySheet(
             }
         },
     ) {
-        BrowserChromeSurface(
-            blurTarget = blurTarget,
+        CandyChromeSurface(
+            backdropSource = backdropSource,
             tokens = chromeTokens,
             modifier = Modifier.fillMaxWidth(),
             shape = RectangleShape,

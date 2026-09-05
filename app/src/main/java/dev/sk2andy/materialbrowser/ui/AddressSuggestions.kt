@@ -73,7 +73,6 @@ import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import eightbitlab.com.blurview.BlurTarget
 
 @Composable
 internal fun WebContentContextSheet(
@@ -128,7 +127,7 @@ internal fun AddressSuggestions(
     onFill: (AddressSuggestionItem) -> Unit,
     rootHeightPx: Float,
     bottomBarTopPx: FloatState,
-    blurTarget: BlurTarget? = null,
+    backdropSource: CandyChromeBackdropSource? = null,
     modifier: Modifier = Modifier,
 ) {
     if (suggestions.isEmpty()) return
@@ -158,8 +157,8 @@ internal fun AddressSuggestions(
         tonalElevation = 12.dp,
         shadowElevation = 12.dp,
     )
-    BrowserChromeSurface(
-        blurTarget = blurTarget,
+    CandyChromeSurface(
+        backdropSource = backdropSource,
         tokens = chromeTokens,
         modifier = modifier
             .padding(horizontal = 12.dp)
@@ -598,4 +597,3 @@ private fun CommandIcon(kind: BrowserCommandKind, tint: Color) {
         )
     }
 }
-

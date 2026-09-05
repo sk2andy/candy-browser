@@ -22,7 +22,7 @@ import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.RecallRepository
 import dev.sk2andy.materialbrowser.data.SnoozedTabStore
 import dev.sk2andy.materialbrowser.ui.HistoryScreen
-import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import dev.sk2andy.materialbrowser.recall.RecallRules
 import kotlinx.coroutines.Dispatchers
@@ -66,7 +66,7 @@ class HistoryActivity : ComponentActivity() {
         setContent {
             val appearanceDark = appearanceSettings.usesDarkColors(isSystemInDarkTheme())
             SideEffect { applyAppearanceSystemBars(appearanceDark) }
-            MaterialBrowserTheme(settings = appearanceSettings) {
+            CandyTheme(settings = appearanceSettings) {
                 HistoryScreen(
                     profiles = profiles,
                     activeProfileId = activeProfileId,

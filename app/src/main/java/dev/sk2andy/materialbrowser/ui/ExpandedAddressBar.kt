@@ -98,14 +98,15 @@ import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
-import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
-import eightbitlab.com.blurview.BlurTarget
+import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
+import dev.sk2andy.materialbrowser.ui.theme.addressFieldContainerColor
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 
 @Composable
 internal fun ExpandedBottomBarContent(
     tab: BrowserTab,
     pageTranslationProvider: PageTranslationProvider,
-    blurTarget: BlurTarget?,
+    backdropSource: CandyChromeBackdropSource?,
     actionLayout: AddressBarActionLayout,
     showCastButton: Boolean,
     showQrScanner: Boolean,
@@ -196,6 +197,8 @@ internal fun ExpandedBottomBarContent(
     onOverviewGestureStarted: () -> Unit,
     onOverviewGestureCancelled: () -> Unit,
 ) {
+    val motionScheme = LocalCandyMotionScheme.current
+    val addressChromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
     val tabDragState = rememberDraggableState(onTabDrag)
     val keyboard = LocalSoftwareKeyboardController.current
     val windowInfo = LocalWindowInfo.current
@@ -284,8 +287,10 @@ internal fun ExpandedBottomBarContent(
             ) {
             AnimatedVisibility(
                 visible = visibleActionLayout.beforeAddress.isNotEmpty() && !editorUsesFullWidth,
-                enter = fadeIn(tween(120)) + expandHorizontally(tween(180)),
-                exit = fadeOut(tween(80)) + shrinkHorizontally(tween(180)),
+                enter = fadeIn(tween(motionScheme.addressBarActionFadeInMillis)) +
+                    expandHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
+                exit = fadeOut(tween(motionScheme.addressBarActionFadeOutMillis)) +
+                    shrinkHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     visibleActionLayout.beforeAddress.forEach { action ->
@@ -314,12 +319,8 @@ internal fun ExpandedBottomBarContent(
                         enabled = !editing,
                         onDragStopped = { velocity -> onTabDragStopped(velocity) },
                     ),
-                shape = MaterialTheme.shapes.extraLarge,
-                color = browserChromeColor(
-                    MaterialTheme.colorScheme.surfaceContainerLowest,
-                    frostedAlpha = 0.22f,
-                    role = BrowserChromeSurfaceRole.AddressBar,
-                ),
+                shape = RoundedCornerShape(addressChromeTokens.cornerRadius),
+                color = addressFieldContainerColor(),
             ) {
                 Box {
                     if (editing) {
@@ -495,8 +496,10 @@ internal fun ExpandedBottomBarContent(
             }
             AnimatedVisibility(
                 visible = !editorUsesFullWidth,
-                enter = fadeIn(tween(120)) + expandHorizontally(tween(180)),
-                exit = fadeOut(tween(80)) + shrinkHorizontally(tween(180)),
+                enter = fadeIn(tween(motionScheme.addressBarActionFadeInMillis)) +
+                    expandHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
+                exit = fadeOut(tween(motionScheme.addressBarActionFadeOutMillis)) +
+                    shrinkHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (!editing || tab.url != BLANK_URL) {
@@ -529,7 +532,7 @@ internal fun ExpandedBottomBarContent(
                             }
                             BrowserMainMenu(
                                 expanded = menuExpanded,
-                                blurTarget = blurTarget,
+                                backdropSource = backdropSource,
                                 onDismissRequest = { onMenuExpandedChange(false) },
                                 pageSubtitle = if (tab.url == BLANK_URL) {
                                     stringResource(R.string.new_tab_title)
@@ -626,13 +629,14 @@ internal fun AddressAiModeToggle(
     onSelectedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val motionScheme = LocalCandyMotionScheme.current
     val containerColor by animateColorAsState(
         targetValue = if (selected) {
             MaterialTheme.colorScheme.primary
         } else {
             Color.Transparent
         },
-        animationSpec = tween(160),
+        animationSpec = tween(motionScheme.addressBarToggleColorMillis),
         label = "Address AI mode container color",
     )
     val contentColor by animateColorAsState(
@@ -641,7 +645,7 @@ internal fun AddressAiModeToggle(
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        animationSpec = tween(160),
+        animationSpec = tween(motionScheme.addressBarToggleColorMillis),
         label = "Address AI mode content color",
     )
     IconToggleButton(
@@ -777,4 +781,3 @@ internal fun AddressEditorBackdrop(
         }
     }
 }
-

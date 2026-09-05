@@ -50,7 +50,6 @@ import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import eightbitlab.com.blurview.BlurTarget
 
 internal object BrowserMainMenuMotion {
     const val EXIT_DURATION_MILLIS = 160
@@ -89,7 +88,7 @@ internal data class BrowserMainMenuPresentation(
 @Composable
 internal fun BrowserMainMenu(
     expanded: Boolean,
-    blurTarget: BlurTarget?,
+    backdropSource: CandyChromeBackdropSource?,
     onDismissRequest: () -> Unit,
     pageSubtitle: String,
     canGoBack: Boolean,
@@ -262,8 +261,8 @@ internal fun BrowserMainMenu(
         onDismissRequest = onDismissRequest,
         properties = PopupProperties(focusable = true),
     ) {
-        BrowserChromeSurface(
-            blurTarget = blurTarget,
+        CandyChromeSurface(
+            backdropSource = backdropSource,
             tokens = chromeTokens,
             modifier = Modifier
                 .width(menuWidth)

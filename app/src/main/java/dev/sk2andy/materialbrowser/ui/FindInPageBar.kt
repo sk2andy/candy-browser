@@ -39,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import eightbitlab.com.blurview.BlurTarget
 
 @Composable
 internal fun FindInPageBar(
@@ -60,7 +59,7 @@ internal fun FindInPageBar(
     onNextMatch: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    blurTarget: BlurTarget? = null,
+    backdropSource: CandyChromeBackdropSource? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -73,8 +72,8 @@ internal fun FindInPageBar(
         }
     }
 
-    BrowserChromeSurface(
-        blurTarget = blurTarget,
+    CandyChromeSurface(
+        backdropSource = backdropSource,
         tokens = chromeTokens,
         modifier = modifier
             .widthIn(max = 600.dp)

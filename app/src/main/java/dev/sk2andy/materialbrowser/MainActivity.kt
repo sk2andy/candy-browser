@@ -73,7 +73,7 @@ import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
-import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -326,7 +326,7 @@ class MainActivity : AppCompatActivity() {
                 applyAppearanceNightMode(appearanceSettings.appearanceMode)
                 applyAppearanceSystemBars(appearanceDark)
             }
-            MaterialBrowserTheme(settings = appearanceSettings) {
+            CandyTheme(settings = appearanceSettings) {
                 val launcherShortcutState = LauncherShortcutRules.state(
                     profiles = browserController.localBrowserProfiles,
                     tabs = browserController.tabs.toList(),

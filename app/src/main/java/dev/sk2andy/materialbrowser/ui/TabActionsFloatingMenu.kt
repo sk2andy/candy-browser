@@ -70,7 +70,6 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import eightbitlab.com.blurview.BlurTarget
 
 internal object TabActionsMenuMotion {
     const val ENTER_DURATION_MILLIS = 120
@@ -92,7 +91,7 @@ private data class TabActionsMenuPresentation(
 @Composable
 internal fun TabActionsFloatingMenu(
     tab: BrowserTab?,
-    blurTarget: BlurTarget? = null,
+    backdropSource: CandyChromeBackdropSource? = null,
     profiles: List<BrowserProfile>,
     isFavorite: Boolean,
     canToggleDomainMute: Boolean,
@@ -200,8 +199,8 @@ internal fun TabActionsFloatingMenu(
                 label = "Tab actions menu visibility",
             ) {
                 val presentedTab = presented.tab
-                BrowserChromeSurface(
-                    blurTarget = blurTarget,
+                CandyChromeSurface(
+                    backdropSource = backdropSource,
                     tokens = chromeTokens,
                     modifier = Modifier
                         .width(menuWidth)
@@ -293,4 +292,3 @@ internal fun TabActionsFloatingMenu(
         }
     }
 }
-

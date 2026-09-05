@@ -157,7 +157,7 @@ internal fun ExternalLinkPreviewScreen(
                 onPreviousMatch = { controller.findNextInPage(forward = false) },
                 onNextMatch = { controller.findNextInPage(forward = true) },
                 onClose = controller::closeFindInPage,
-                blurTarget = blurTarget,
+                backdropSource = blurTarget.asCandyChromeBackdropSource(),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
@@ -190,7 +190,7 @@ private fun ExternalLinkPreviewChrome(
         state = state,
         profiles = profiles,
         isDesktopView = controller.isExternalLinkPreviewDesktopView,
-        blurTarget = null,
+        backdropSource = null,
         rootBottomInWindowPx = rootBottomInWindowPx,
         onDismissPreview = {
             if (controller.dismissExternalLinkPreview(state.sessionId)) {
@@ -827,4 +827,3 @@ internal fun BlankTabPreview(
         }
     }
 }
-

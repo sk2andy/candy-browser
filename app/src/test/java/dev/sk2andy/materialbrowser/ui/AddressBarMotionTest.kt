@@ -6,12 +6,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import dev.sk2andy.materialbrowser.ui.theme.CandyMotionSchemes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AddressBarMotionTest {
+    private val materialMotion = CandyMotionSchemes.MaterialExpressive
+
     @Test
     fun `compact and expanded width targets stay valid across viewport sizes`() {
         listOf(288.dp, 328.dp, 568.dp).forEach { maxWidth ->
@@ -115,10 +118,11 @@ class AddressBarMotionTest {
             ),
         )
         assertEquals(
-            AddressBarMotion.FADE_THROUGH_EXIT_MILLIS,
+            materialMotion.addressBarFadeThroughExitMillis,
             AddressBarMotion.exitDurationMillis(
                 AddressBarPresentation.Compact,
                 AddressBarPresentation.Expanded,
+                materialMotion,
             ),
         )
     }
@@ -128,7 +132,7 @@ class AddressBarMotionTest {
         listOf(288.dp, 328.dp, 568.dp).forEach { expandedWidth ->
             listOf(184.dp to expandedWidth, expandedWidth to 184.dp).forEach { (start, end) ->
                 val animation = TargetBasedAnimation(
-                    animationSpec = AddressBarMotion.containerAnimationSpec,
+                    animationSpec = AddressBarMotion.containerAnimationSpec(materialMotion),
                     typeConverter = Dp.VectorConverter,
                     initialValue = start,
                     targetValue = end,
@@ -180,7 +184,7 @@ class AddressBarMotionTest {
     fun `dock progress spring has intermediate frames toward overview and back`() {
         listOf(0f to 1f, 1f to 0f).forEach { (start, end) ->
             val animation = TargetBasedAnimation(
-                animationSpec = AddressBarMotion.dockProgressAnimationSpec,
+                animationSpec = AddressBarMotion.dockProgressAnimationSpec(materialMotion),
                 typeConverter = Float.VectorConverter,
                 initialValue = start,
                 targetValue = end,

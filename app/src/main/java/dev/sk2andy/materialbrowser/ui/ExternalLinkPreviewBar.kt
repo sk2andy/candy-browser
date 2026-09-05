@@ -48,7 +48,6 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import eightbitlab.com.blurview.BlurTarget
 
 internal object ExternalLinkPreviewTestTags {
     const val Bar = "external_link_preview_bar"
@@ -70,7 +69,7 @@ internal fun ExternalLinkPreviewBar(
     state: ExternalLinkPreviewState,
     profiles: List<BrowserProfile>,
     isDesktopView: Boolean,
-    blurTarget: BlurTarget?,
+    backdropSource: CandyChromeBackdropSource?,
     rootBottomInWindowPx: Int,
     onDismissPreview: () -> Unit,
     onOpenInCandy: () -> Unit,
@@ -111,8 +110,8 @@ internal fun ExternalLinkPreviewBar(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        BrowserChromeSurface(
-            blurTarget = blurTarget,
+        CandyChromeSurface(
+            backdropSource = backdropSource,
             tokens = chromeTokens,
             modifier = Modifier
                 .fillMaxWidth()

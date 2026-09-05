@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
+import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -39,6 +40,7 @@ internal fun rememberAddressBarDockInteractionState(
     onPlacementChanged: (AddressBarDockPlacement) -> Unit,
     onRestoreAndEdit: () -> Unit,
 ): AddressBarDockInteractionState {
+    val motionScheme = LocalCandyMotionScheme.current
     val hapticView = LocalView.current
     val hapticScope = rememberCoroutineScope()
     val currentPlacement by rememberUpdatedState(placement)
@@ -116,7 +118,7 @@ internal fun rememberAddressBarDockInteractionState(
         animate(
             initialValue = 0f,
             targetValue = 1f,
-            animationSpec = AddressBarMotion.dockProgressAnimationSpec,
+            animationSpec = AddressBarMotion.dockProgressAnimationSpec(motionScheme),
         ) { progress, _ ->
             position = initialPosition + (targetPosition - initialPosition) * progress
         }
@@ -186,7 +188,7 @@ internal fun rememberAddressBarDockInteractionState(
                 animate(
                     initialValue = 0f,
                     targetValue = 1f,
-                    animationSpec = AddressBarMotion.dockBreakawayAnimationSpec,
+                    animationSpec = AddressBarMotion.dockBreakawayAnimationSpec(motionScheme),
                 ) { progress, _ ->
                     breakawaySpringOffset = initialSpringOffset * (1f - progress)
                 }

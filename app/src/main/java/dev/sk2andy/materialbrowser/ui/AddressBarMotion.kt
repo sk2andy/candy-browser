@@ -1,8 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -21,6 +19,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import dev.sk2andy.materialbrowser.ui.theme.CandyMotionScheme
+import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 
 @Immutable
 internal data class AddressBarMotionState(
@@ -30,31 +30,24 @@ internal data class AddressBarMotionState(
 )
 
 internal object AddressBarMotion {
-    const val FADE_THROUGH_EXIT_MILLIS = 80
-    const val FADE_THROUGH_ENTER_MILLIS = 120
-    const val QUICK_FADE_OUT_MILLIS = 50
-    const val QUICK_FADE_IN_MILLIS = 70
-
-    private const val CONTAINER_DAMPING_RATIO = 0.88f
-    private const val CONTAINER_STIFFNESS = 600f
     val OVERVIEW_WIDTH = 112.dp
 
-    val containerAnimationSpec: SpringSpec<Dp>
-        get() = spring(
-            dampingRatio = CONTAINER_DAMPING_RATIO,
-            stiffness = CONTAINER_STIFFNESS,
+    fun containerAnimationSpec(motionScheme: CandyMotionScheme): SpringSpec<Dp> =
+        spring(
+            dampingRatio = motionScheme.addressBarContainerDampingRatio,
+            stiffness = motionScheme.addressBarContainerStiffness,
         )
 
-    val dockProgressAnimationSpec: SpringSpec<Float>
-        get() = spring(
-            dampingRatio = CONTAINER_DAMPING_RATIO,
-            stiffness = CONTAINER_STIFFNESS,
+    fun dockProgressAnimationSpec(motionScheme: CandyMotionScheme): SpringSpec<Float> =
+        spring(
+            dampingRatio = motionScheme.addressBarDockDampingRatio,
+            stiffness = motionScheme.addressBarDockStiffness,
         )
 
-    val dockBreakawayAnimationSpec: SpringSpec<Float>
-        get() = spring(
-            dampingRatio = 0.46f,
-            stiffness = 520f,
+    fun dockBreakawayAnimationSpec(motionScheme: CandyMotionScheme): SpringSpec<Float> =
+        spring(
+            dampingRatio = motionScheme.addressBarBreakawayDampingRatio,
+            stiffness = motionScheme.addressBarBreakawayStiffness,
         )
 
     fun widthTarget(
@@ -121,19 +114,21 @@ internal object AddressBarMotion {
     fun exitDurationMillis(
         initial: AddressBarPresentation,
         target: AddressBarPresentation,
+        motionScheme: CandyMotionScheme,
     ): Int = if (usesFadeThrough(initial, target)) {
-        FADE_THROUGH_EXIT_MILLIS
+        motionScheme.addressBarFadeThroughExitMillis
     } else {
-        QUICK_FADE_OUT_MILLIS
+        motionScheme.addressBarQuickFadeOutMillis
     }
 
     fun enterDurationMillis(
         initial: AddressBarPresentation,
         target: AddressBarPresentation,
+        motionScheme: CandyMotionScheme,
     ): Int = if (usesFadeThrough(initial, target)) {
-        FADE_THROUGH_ENTER_MILLIS
+        motionScheme.addressBarFadeThroughEnterMillis
     } else {
-        QUICK_FADE_IN_MILLIS
+        motionScheme.addressBarQuickFadeInMillis
     }
 }
 
@@ -147,6 +142,7 @@ internal fun rememberAddressBarMotionState(
     verticalTravel: Dp,
     dockPosition: Offset,
 ): AddressBarMotionState {
+    val motionScheme = LocalCandyMotionScheme.current
     val width by animateDpAsState(
         targetValue = AddressBarMotion.widthTarget(
             presentation = presentation,
@@ -155,12 +151,12 @@ internal fun rememberAddressBarMotionState(
             feedbackWidth = feedbackWidth,
             edgeTabWidth = edgeTabWidth,
         ),
-        animationSpec = AddressBarMotion.containerAnimationSpec,
+        animationSpec = AddressBarMotion.containerAnimationSpec(motionScheme),
         label = "Adressleistenbreite beim Scrollen und Parken",
     )
     val height by animateDpAsState(
         targetValue = AddressBarMotion.heightTarget(presentation),
-        animationSpec = AddressBarMotion.containerAnimationSpec,
+        animationSpec = AddressBarMotion.containerAnimationSpec(motionScheme),
         label = "Adressleistenhöhe beim Parken",
     )
     val dockOffset = AddressBarMotion.dockOffsetForPosition(
@@ -178,10 +174,11 @@ internal fun AddressBarPresentationTransition(
     modifier: Modifier = Modifier,
     content: @Composable (AddressBarPresentation) -> Unit,
 ) {
+    val motionScheme = LocalCandyMotionScheme.current
     var displayedPresentation by remember { mutableStateOf(presentation) }
     val contentAlpha = remember { Animatable(1f) }
 
-    LaunchedEffect(presentation) {
+    LaunchedEffect(presentation, motionScheme) {
         if (presentation == displayedPresentation) {
             contentAlpha.animateTo(
                 targetValue = 1f,
@@ -189,8 +186,9 @@ internal fun AddressBarPresentationTransition(
                     durationMillis = AddressBarMotion.enterDurationMillis(
                         initial = displayedPresentation,
                         target = presentation,
+                        motionScheme = motionScheme,
                     ),
-                    easing = LinearOutSlowInEasing,
+                    easing = motionScheme.addressBarFadeInEasing,
                 ),
             )
             return@LaunchedEffect
@@ -203,8 +201,9 @@ internal fun AddressBarPresentationTransition(
                 durationMillis = AddressBarMotion.exitDurationMillis(
                     initial = initialPresentation,
                     target = presentation,
+                    motionScheme = motionScheme,
                 ),
-                easing = FastOutLinearInEasing,
+                easing = motionScheme.addressBarFadeOutEasing,
             ),
         )
         displayedPresentation = presentation
@@ -215,8 +214,9 @@ internal fun AddressBarPresentationTransition(
                 durationMillis = AddressBarMotion.enterDurationMillis(
                     initial = initialPresentation,
                     target = presentation,
+                    motionScheme = motionScheme,
                 ),
-                easing = LinearOutSlowInEasing,
+                easing = motionScheme.addressBarFadeInEasing,
             ),
         )
     }
