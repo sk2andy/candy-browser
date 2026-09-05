@@ -7,6 +7,7 @@ data class ExternalLinkPreviewState(
     val generation: Int,
     val currentUrl: String,
     val targetProfileId: String,
+    val appHandoffExpiresAtElapsedRealtime: Long? = null,
     val isWebViewReady: Boolean = false,
     val progress: Int = 0,
     val isLoading: Boolean = true,

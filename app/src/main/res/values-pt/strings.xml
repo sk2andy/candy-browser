@@ -430,6 +430,7 @@
     <string name="error_unsafe_site_blocked">Site não seguro bloqueado</string>
     <string name="error_renderer_crashed">O processador web terminou inesperadamente</string>
     <string name="error_renderer_terminated">O processador web foi terminado pelo sistema</string>
+    <string name="toast_webview_startup_failed">Não foi possível iniciar o conteúdo Web. Atualize o Android System WebView e tente novamente.</string>
     <string name="toast_download_type_unsupported">Tipo de transferência não suportado</string>
     <string name="toast_download_started">Transferência iniciada: %1$s</string>
     <string name="toast_download_handed_off">Enviado para %1$s</string>
