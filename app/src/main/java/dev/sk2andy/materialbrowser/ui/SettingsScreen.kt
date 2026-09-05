@@ -140,6 +140,7 @@ internal fun SettingsScreen(
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
+    onOpenFirefoxExtensions: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -173,6 +174,7 @@ internal fun SettingsScreen(
                     downloadSummary = downloadSettings.displayName(externalDownloadManagers),
                     onDestinationChanged = onDestinationChanged,
                     onDismiss = onDismiss,
+                    onOpenFirefoxExtensions = onOpenFirefoxExtensions,
                 )
 
                 SettingsDestination.Search -> SearchSettingsPage(

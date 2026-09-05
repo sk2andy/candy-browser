@@ -7,6 +7,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.TaskAction
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 abstract class GenerateLauncherShortcutResources : DefaultTask() {
     @get:Input
@@ -54,6 +55,7 @@ abstract class GenerateLauncherShortcutResources : DefaultTask() {
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 val releaseKeystorePropertiesFile = rootProject.file("keystore.properties")
@@ -226,17 +228,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     packaging {
@@ -424,23 +424,24 @@ tasks.matching { it.name == "preFossReleaseBuild" }.configureEach {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.core:core-ktx:1.15.0")
-    // Credentials 1.6+ publishes Kotlin 2.1 metadata. Keep 1.5 until this project upgrades its
-    // Kotlin 1.9 compiler; both versions expose the WebView runtime contract used here.
+    // Keep the currently verified Credential Manager runtime until the browser-engine migration
+    // has its own compatibility pass.
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.webkit:webkit:1.16.0") {
-        // WebKit is Java-only, but 1.16.0 publishes a Kotlin 2.1 stdlib dependency. Keep this
-        // project on its compiler-compatible Kotlin 1.9 stdlib until the toolchain is upgraded.
+        // WebKit is Java-only. Avoid pulling an additional stdlib copy into both distributions.
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
     }
     implementation("com.google.guava:guava:33.2.1-android")
     implementation("com.github.Dimezis:BlurView:version-3.2.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.lambdapioneer.argon2kt:argon2kt:1.6.0")
+    implementation("org.mozilla.geckoview:geckoview:140.0.20250707120347")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material-icons-core")

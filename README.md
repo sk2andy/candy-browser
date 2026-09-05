@@ -5,14 +5,14 @@
 <h1 align="center">Candy Browser</h1>
 
 <p align="center">
-  A gesture-first Android browser with Material 3 Expressive design, local privacy tools,
-  and a tab system built for visual navigation.
+  A gesture-first browser with shared Kotlin behavior, Android Gecko/WebExtension support,
+  an iOS WKWebView/Liquid Glass target, and local privacy tools.
 </p>
 
 <p align="center">
   <a href="https://github.com/sk2andy/candy-browser/releases"><img alt="Release" src="https://img.shields.io/github/v/release/sk2andy/candy-browser?display_name=tag&sort=semver"></a>
   <img alt="Android 13+" src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white">
-  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-1.9.24-7F52FF?logo=kotlin&logoColor=white">
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.4.10-7F52FF?logo=kotlin&logoColor=white">
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white">
   <a href="LICENSE"><img alt="License: MPL 2.0" src="https://img.shields.io/badge/License-MPL%202.0-orange.svg"></a>
 </p>

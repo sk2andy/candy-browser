@@ -59,6 +59,7 @@ internal fun BrowserSettingsOverlay(
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
+    onOpenFirefoxExtensions: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val toppingCatalogResult = controller.toppingCatalogResult
@@ -301,6 +302,7 @@ internal fun BrowserSettingsOverlay(
             onClearData = onClearData,
             onOpenLegalUrl = onOpenLegalUrl,
             onDismiss = onDismiss,
+            onOpenFirefoxExtensions = onOpenFirefoxExtensions,
             modifier = Modifier.predictiveBackSurface(
                     predictiveBackProgress,
                     predictiveBackEdgeSign,

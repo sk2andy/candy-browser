@@ -150,6 +150,11 @@
             android:theme="@android:style/Theme.NoDisplay" />
 
         <activity
+            android:name=".GeckoBrowserActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".AppDataTransferActivity"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:excludeFromRecents="true"

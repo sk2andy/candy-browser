@@ -435,6 +435,9 @@ class MainActivity : AppCompatActivity() {
                                 arrayOf("application/zip", "application/octet-stream"),
                             )
                         },
+                        onOpenFirefoxExtensions = {
+                            startActivity(GeckoBrowserActivity.createIntent(this@MainActivity))
+                        },
                         openAddressEditorOnLaunch = startupPresentation.openAddressEditor,
                         launcherAddressEditorRequestId = launcherAddressEditorRequestId,
                     )
