@@ -169,30 +169,27 @@ internal fun ExternalLinkPreviewBar(
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
-                    VerticalDivider(
-                        modifier = Modifier
-                            .height(24.dp)
-                            .width(1.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                    Box {
-                        IconButton(
-                            onClick = {
-                                if (profiles.size > 1) profileMenuExpanded = true
-                            },
-                            enabled = profiles.size > 1,
+                    if (profiles.size > 1) {
+                        VerticalDivider(
                             modifier = Modifier
-                                .size(48.dp)
-                                .testTag(ExternalLinkPreviewTestTags.Profile)
-                                .semantics { contentDescription = profileDescription },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = targetProfile?.emoji.orEmpty(),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                                if (profiles.size > 1) {
+                                .height(24.dp)
+                                .width(1.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                        Box {
+                            IconButton(
+                                onClick = { profileMenuExpanded = true },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .testTag(ExternalLinkPreviewTestTags.Profile)
+                                    .semantics { contentDescription = profileDescription },
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = targetProfile?.emoji.orEmpty(),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
                                     Icon(
                                         imageVector = Icons.Default.ArrowDropDown,
                                         contentDescription = null,
@@ -201,36 +198,36 @@ internal fun ExternalLinkPreviewBar(
                                     )
                                 }
                             }
-                        }
-                        DropdownMenu(
-                            expanded = profileMenuExpanded,
-                            onDismissRequest = { profileMenuExpanded = false },
-                        ) {
-                            profiles.forEachIndexed { index, profile ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            buildString {
-                                                append(index + 1)
-                                                append(" · ")
-                                                append(profile.emoji)
-                                                if (profile.isolationEnabled) append("  🔒")
-                                            },
-                                        )
-                                    },
-                                    leadingIcon = if (profile.id == state.targetProfileId) {
-                                        { Icon(Icons.Default.Check, contentDescription = null) }
-                                    } else {
-                                        null
-                                    },
-                                    onClick = {
-                                        profileMenuExpanded = false
-                                        onSelectProfile(profile.id)
-                                    },
-                                    modifier = Modifier.testTag(
-                                        ExternalLinkPreviewTestTags.profile(profile.id),
-                                    ),
-                                )
+                            DropdownMenu(
+                                expanded = profileMenuExpanded,
+                                onDismissRequest = { profileMenuExpanded = false },
+                            ) {
+                                profiles.forEachIndexed { index, profile ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                buildString {
+                                                    append(index + 1)
+                                                    append(" · ")
+                                                    append(profile.emoji)
+                                                    if (profile.isolationEnabled) append("  🔒")
+                                                },
+                                            )
+                                        },
+                                        leadingIcon = if (profile.id == state.targetProfileId) {
+                                            { Icon(Icons.Default.Check, contentDescription = null) }
+                                        } else {
+                                            null
+                                        },
+                                        onClick = {
+                                            profileMenuExpanded = false
+                                            onSelectProfile(profile.id)
+                                        },
+                                        modifier = Modifier.testTag(
+                                            ExternalLinkPreviewTestTags.profile(profile.id),
+                                        ),
+                                    )
+                                }
                             }
                         }
                     }

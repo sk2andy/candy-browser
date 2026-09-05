@@ -40,7 +40,8 @@
 - Keep external-link preview sessions, URLs, WebViews, progress, and target-profile selection out of
   tab/session, history, Candy Trail, favicon, WebView-state, and tab-preview persistence. Recreate
   the preview WebView when its target profile changes and reload the final normalized HTTP(S) URL
-  when promoting it to a regular tab. Preview loads still use the selected profile's cookies and
+  when promoting it to a regular tab. Show the profile chooser only when multiple profiles exist.
+  Preview loads still use the selected profile's cookies and
   DOM storage, so the feature is disposable UI rather than a private-browsing mode.
 - On a cold external-link preview launch, start WebView and registrable-domain initialization in
   parallel off the main thread. Keep the native preview chrome interactive until both are ready,
