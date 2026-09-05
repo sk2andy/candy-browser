@@ -854,4 +854,26 @@
     <string name="http_auth_show_password">Passwort anzeigen</string>
     <string name="http_auth_hide_password">Passwort ausblenden</string>
     <string name="http_auth_sign_in">Anmelden</string>
+    <string name="gecko_extensions_title">Firefox-Erweiterungen</string>
+    <string name="gecko_extensions_summary">Mit Gecko surfen und Mozilla-signierte Add-ons installieren</string>
+    <string name="gecko_invalid_address">Diese Adresse kann nicht geöffnet werden.</string>
+    <string name="gecko_extension_invalid_xpi">Verwende eine direkte HTTPS-Adresse zu einem von Mozilla signierten XPI-Paket.</string>
+    <string name="gecko_extension_action_rejected">Candy hat diese Erweiterungsaktion abgelehnt.</string>
+    <string name="gecko_extension_action_failed">Die Firefox-Erweiterungsaktion ist fehlgeschlagen.</string>
+    <string name="gecko_extensions_manager_summary">Mozilla-signierte XPI-Pakete für den Gecko-Browser</string>
+    <string name="gecko_extensions_empty">Noch keine Firefox-Erweiterung installiert.</string>
+    <string name="gecko_extension_install">Erweiterung installieren</string>
+    <string name="gecko_extension_install_hint">Füge die HTTPS-Adresse eines von Mozilla signierten XPI-Pakets ein.</string>
+    <string name="gecko_extension_install_confirm">Prüfen und installieren</string>
+    <string name="gecko_extension_allow_private">In privaten Tabs erlauben</string>
+    <string name="gecko_extension_allow_private_too">Auch in privaten Tabs erlauben</string>
+    <string name="gecko_extension_update">Erweiterung aktualisieren</string>
+    <string name="gecko_extension_uninstall">Erweiterung deinstallieren</string>
+    <string name="gecko_extension_permission_intro">Die Erweiterung fordert folgenden Zugriff an:</string>
+    <string name="gecko_extension_no_permissions">Keine zusätzlichen Berechtigungen gemeldet.</string>
+    <string name="gecko_address_or_search">Adresse oder Suche</string>
+    <string name="gecko_stop_loading">Laden stoppen</string>
+    <string name="gecko_reload">Neu laden</string>
+    <string name="action_allow">Erlauben</string>
+    <string name="action_deny">Ablehnen</string>
 </resources>

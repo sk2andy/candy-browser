@@ -859,4 +859,26 @@
     <string name="http_auth_show_password">Mostrar palavra-passe</string>
     <string name="http_auth_hide_password">Ocultar palavra-passe</string>
     <string name="http_auth_sign_in">Iniciar sessão</string>
+    <string name="gecko_extensions_title">Extensões do Firefox</string>
+    <string name="gecko_extensions_summary">Navegue com o Gecko e instale extensões assinadas pela Mozilla</string>
+    <string name="gecko_invalid_address">Não é possível abrir este endereço.</string>
+    <string name="gecko_extension_invalid_xpi">Utilize um URL HTTPS direto para um pacote XPI assinado pela Mozilla.</string>
+    <string name="gecko_extension_action_rejected">O Candy rejeitou esta ação da extensão.</string>
+    <string name="gecko_extension_action_failed">A ação da extensão do Firefox falhou.</string>
+    <string name="gecko_extensions_manager_summary">Pacotes XPI assinados pela Mozilla para o navegador Gecko</string>
+    <string name="gecko_extensions_empty">Ainda não está instalada nenhuma extensão do Firefox.</string>
+    <string name="gecko_extension_install">Instalar extensão</string>
+    <string name="gecko_extension_install_hint">Cole o endereço HTTPS de um pacote XPI assinado pela Mozilla.</string>
+    <string name="gecko_extension_install_confirm">Verificar e instalar</string>
+    <string name="gecko_extension_allow_private">Permitir em separadores privados</string>
+    <string name="gecko_extension_allow_private_too">Permitir também em separadores privados</string>
+    <string name="gecko_extension_update">Atualizar extensão</string>
+    <string name="gecko_extension_uninstall">Desinstalar extensão</string>
+    <string name="gecko_extension_permission_intro">A extensão solicita o seguinte acesso:</string>
+    <string name="gecko_extension_no_permissions">Não foram indicadas permissões adicionais.</string>
+    <string name="gecko_address_or_search">Endereço ou pesquisa</string>
+    <string name="gecko_stop_loading">Parar carregamento</string>
+    <string name="gecko_reload">Recarregar</string>
+    <string name="action_allow">Permitir</string>
+    <string name="action_deny">Recusar</string>
 </resources>

@@ -1,5 +1,11 @@
 # Toppings (local userscripts)
 
+Toppings are the cross-platform lightweight customization model. Android's primary WebView runtime
+uses the implementation below; the iOS vertical slice consumes the shared metadata/injection plan
+and installs it as a main-frame `WKUserScript` in a named `WKContentWorld`. Android Gecko separately
+supports Mozilla-signed Firefox WebExtensions. See [`platform-engines.md`](platform-engines.md) for
+the engine boundary; WebExtensions and Toppings intentionally remain different capability models.
+
 ## Ownership
 
 | Layer | Responsibility | Main code |

@@ -859,4 +859,26 @@
     <string name="http_auth_show_password">Mostrar contraseña</string>
     <string name="http_auth_hide_password">Ocultar contraseña</string>
     <string name="http_auth_sign_in">Iniciar sesión</string>
+    <string name="gecko_extensions_title">Extensiones de Firefox</string>
+    <string name="gecko_extensions_summary">Navega con Gecko e instala complementos firmados por Mozilla</string>
+    <string name="gecko_invalid_address">No se puede abrir esta dirección.</string>
+    <string name="gecko_extension_invalid_xpi">Usa una URL HTTPS directa a un paquete XPI firmado por Mozilla.</string>
+    <string name="gecko_extension_action_rejected">Candy ha rechazado esta acción de la extensión.</string>
+    <string name="gecko_extension_action_failed">La acción de la extensión de Firefox ha fallado.</string>
+    <string name="gecko_extensions_manager_summary">Paquetes XPI firmados por Mozilla para el navegador Gecko</string>
+    <string name="gecko_extensions_empty">Todavía no hay ninguna extensión de Firefox instalada.</string>
+    <string name="gecko_extension_install">Instalar extensión</string>
+    <string name="gecko_extension_install_hint">Pega la dirección HTTPS de un paquete XPI firmado por Mozilla.</string>
+    <string name="gecko_extension_install_confirm">Verificar e instalar</string>
+    <string name="gecko_extension_allow_private">Permitir en pestañas privadas</string>
+    <string name="gecko_extension_allow_private_too">Permitir también en pestañas privadas</string>
+    <string name="gecko_extension_update">Actualizar extensión</string>
+    <string name="gecko_extension_uninstall">Desinstalar extensión</string>
+    <string name="gecko_extension_permission_intro">La extensión solicita el siguiente acceso:</string>
+    <string name="gecko_extension_no_permissions">No se han indicado permisos adicionales.</string>
+    <string name="gecko_address_or_search">Dirección o búsqueda</string>
+    <string name="gecko_stop_loading">Detener carga</string>
+    <string name="gecko_reload">Volver a cargar</string>
+    <string name="action_allow">Permitir</string>
+    <string name="action_deny">Denegar</string>
 </resources>

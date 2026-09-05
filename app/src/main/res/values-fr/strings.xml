@@ -859,4 +859,26 @@
     <string name="http_auth_show_password">Afficher le mot de passe</string>
     <string name="http_auth_hide_password">Masquer le mot de passe</string>
     <string name="http_auth_sign_in">Se connecter</string>
+    <string name="gecko_extensions_title">Extensions Firefox</string>
+    <string name="gecko_extensions_summary">Naviguer avec Gecko et installer des extensions signées par Mozilla</string>
+    <string name="gecko_invalid_address">Cette adresse ne peut pas être ouverte.</string>
+    <string name="gecko_extension_invalid_xpi">Utilisez une URL HTTPS directe vers un paquet XPI signé par Mozilla.</string>
+    <string name="gecko_extension_action_rejected">Candy a refusé cette action d’extension.</string>
+    <string name="gecko_extension_action_failed">L’action de l’extension Firefox a échoué.</string>
+    <string name="gecko_extensions_manager_summary">Paquets XPI signés par Mozilla pour le navigateur Gecko</string>
+    <string name="gecko_extensions_empty">Aucune extension Firefox n’est encore installée.</string>
+    <string name="gecko_extension_install">Installer une extension</string>
+    <string name="gecko_extension_install_hint">Collez l’adresse HTTPS d’un paquet XPI signé par Mozilla.</string>
+    <string name="gecko_extension_install_confirm">Vérifier et installer</string>
+    <string name="gecko_extension_allow_private">Autoriser dans les onglets privés</string>
+    <string name="gecko_extension_allow_private_too">Autoriser aussi dans les onglets privés</string>
+    <string name="gecko_extension_update">Mettre à jour l’extension</string>
+    <string name="gecko_extension_uninstall">Désinstaller l’extension</string>
+    <string name="gecko_extension_permission_intro">L’extension demande l’accès suivant :</string>
+    <string name="gecko_extension_no_permissions">Aucune autorisation supplémentaire signalée.</string>
+    <string name="gecko_address_or_search">Adresse ou recherche</string>
+    <string name="gecko_stop_loading">Arrêter le chargement</string>
+    <string name="gecko_reload">Recharger</string>
+    <string name="action_allow">Autoriser</string>
+    <string name="action_deny">Refuser</string>
 </resources>

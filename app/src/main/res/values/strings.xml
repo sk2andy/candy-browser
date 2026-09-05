@@ -867,4 +867,26 @@
     <string name="captcha_compatibility_allow_for_tab">Allow for tab</string>
     <string name="captcha_compatibility_allow_for_profile">Allow for profile</string>
     <string name="captcha_compatibility_deny">Don’t allow</string>
+    <string name="gecko_extensions_title">Firefox extensions</string>
+    <string name="gecko_extensions_summary">Browse with Gecko and install Mozilla-signed add-ons</string>
+    <string name="gecko_invalid_address">This address cannot be opened.</string>
+    <string name="gecko_extension_invalid_xpi">Use a direct HTTPS URL to a Mozilla-signed XPI package.</string>
+    <string name="gecko_extension_action_rejected">Candy rejected this extension action.</string>
+    <string name="gecko_extension_action_failed">The Firefox extension action failed.</string>
+    <string name="gecko_extensions_manager_summary">Mozilla-signed XPI packages for the Gecko browser</string>
+    <string name="gecko_extensions_empty">No Firefox extension installed yet.</string>
+    <string name="gecko_extension_install">Install extension</string>
+    <string name="gecko_extension_install_hint">Paste the HTTPS address of a Mozilla-signed XPI package.</string>
+    <string name="gecko_extension_install_confirm">Verify and install</string>
+    <string name="gecko_extension_allow_private">Allow in private tabs</string>
+    <string name="gecko_extension_allow_private_too">Also allow in private tabs</string>
+    <string name="gecko_extension_update">Update extension</string>
+    <string name="gecko_extension_uninstall">Uninstall extension</string>
+    <string name="gecko_extension_permission_intro">The extension requests the following access:</string>
+    <string name="gecko_extension_no_permissions">No additional permissions reported.</string>
+    <string name="gecko_address_or_search">Address or search</string>
+    <string name="gecko_stop_loading">Stop loading</string>
+    <string name="gecko_reload">Reload</string>
+    <string name="action_allow">Allow</string>
+    <string name="action_deny">Deny</string>
 </resources>
