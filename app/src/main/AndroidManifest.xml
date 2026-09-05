@@ -39,6 +39,7 @@
         <package android:name="idm.internet.download.manager.plus" />
         <package android:name="idm.internet.download.manager.adm.lite" />
         <package android:name="com.dv.adm" />
+        <package android:name="com.tachibana.downloader" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="http" />

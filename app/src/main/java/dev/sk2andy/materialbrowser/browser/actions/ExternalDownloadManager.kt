@@ -185,6 +185,7 @@ class ExternalDownloadManager(private val context: Context) {
         )
         val GENERIC_MANAGER_PACKAGES = setOf(
             "com.dv.adm",
+            "com.tachibana.downloader",
         )
         const val ONE_DM_ACTIVITY = "idm.internet.download.manager.Downloader"
         const val EXTRA_FILENAME = "extra_filename"
