@@ -432,6 +432,7 @@
     <string name="error_unsafe_site_blocked">Sitio web no seguro bloqueado</string>
     <string name="error_renderer_crashed">El renderizador web se detuvo inesperadamente</string>
     <string name="error_renderer_terminated">El sistema detuvo el renderizador web</string>
+    <string name="toast_webview_startup_failed">No se pudo iniciar el contenido web. Actualiza Android System WebView e inténtalo de nuevo.</string>
     <string name="toast_download_type_unsupported">Tipo de descarga no compatible</string>
     <string name="toast_download_started">Descarga iniciada: %1$s</string>
     <string name="toast_download_handed_off">Enviado a %1$s</string>

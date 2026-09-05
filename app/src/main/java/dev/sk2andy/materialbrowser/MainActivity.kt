@@ -59,6 +59,7 @@ import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.WebViewProcessStartup
+import dev.sk2andy.materialbrowser.browser.WebViewStartupRules
 import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
@@ -217,12 +218,14 @@ class MainActivity : AppCompatActivity() {
             recoveryMarker = appDataRestoreRecoveryMarker(),
         )
         enableEdgeToEdge()
-        val isColdExternalLinkPreviewLaunch =
-            savedInstanceState == null &&
-                IncomingBrowserIntent.from(intent) != null &&
-                BrowserSessionStore(this).loadExternalLinkPreviewEnabled()
-        val shouldStartWebViewAsynchronously =
-            isColdExternalLinkPreviewLaunch && WebViewProcessStartup.isUnused
+        val isColdStart = savedInstanceState == null
+        val hasIncomingBrowserRequest = IncomingBrowserIntent.from(intent) != null
+        val isColdExternalLinkLaunch = isColdStart && hasIncomingBrowserRequest
+        val shouldStartWebViewAsynchronously = WebViewStartupRules.shouldStartAsynchronously(
+            isColdStart = isColdStart,
+            hasIncomingBrowserRequest = hasIncomingBrowserRequest,
+            isWebViewProcessUnused = WebViewProcessStartup.isUnused,
+        )
         if (shouldStartWebViewAsynchronously) WebViewProcessStartup.start(applicationContext)
         val deferWebViewRuntimeStartup = WebViewProcessStartup.shouldDeferWebViewRuntime
         if (!deferWebViewRuntimeStartup) WebViewProcessStartup.markReady()
@@ -273,9 +276,12 @@ class MainActivity : AppCompatActivity() {
             deferWebViewRuntimeStartup = deferWebViewRuntimeStartup,
         )
         if (deferWebViewRuntimeStartup) {
-            WebViewProcessStartup.whenReady(browserController::onWebViewProcessReady)
+            WebViewProcessStartup.whenReady(
+                onReady = browserController::onWebViewProcessReady,
+                onFailure = ::onWebViewProcessStartupFailed,
+            )
         }
-        if (!isColdExternalLinkPreviewLaunch) ensureMediaControllers()
+        if (!isColdExternalLinkLaunch) ensureMediaControllers()
         applyBrowserSystemUi()
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             browserController.onWindowInsetsChanged(insets)
@@ -300,7 +306,16 @@ class MainActivity : AppCompatActivity() {
             IncomingBrowserIntent.from(intent)?.let { request ->
                 if (
                     browserController.isExternalLinkPreviewEnabled &&
-                    browserController.openExternalLinkPreview(request.url)
+                    browserController.openExternalLinkPreview(
+                        url = request.url,
+                        restoredAppHandoffExpirationElapsedRealtime = savedInstanceState
+                            .getLong(STATE_EXTERNAL_LINK_PREVIEW_APP_HANDOFF_EXPIRATION)
+                            .takeIf {
+                                savedInstanceState.containsKey(
+                                    STATE_EXTERNAL_LINK_PREVIEW_APP_HANDOFF_EXPIRATION,
+                                )
+                            },
+                    )
                 ) {
                     incomingBrowserNavigationRequestId++
                 }
@@ -775,6 +790,14 @@ class MainActivity : AppCompatActivity() {
             STATE_EXTERNAL_LINK_PREVIEW_ACTIVE,
             browserController.externalLinkPreviewState != null,
         )
+        browserController.externalLinkPreviewState
+            ?.appHandoffExpiresAtElapsedRealtime
+            ?.let { expiration ->
+                outState.putLong(
+                    STATE_EXTERNAL_LINK_PREVIEW_APP_HANDOFF_EXPIRATION,
+                    expiration,
+                )
+            }
         externalLaunchTabId?.let { outState.putString(STATE_EXTERNAL_LAUNCH_TAB_ID, it) }
         outState.putBoolean(STATE_RELEASE_NOTES_VISIBLE, releaseNotesVisible)
         super.onSaveInstanceState(outState)
@@ -1054,13 +1077,22 @@ class MainActivity : AppCompatActivity() {
         incomingRequest?.let { request ->
             if (
                 browserController.isExternalLinkPreviewEnabled &&
-                browserController.openExternalLinkPreview(request.url)
+                browserController.openExternalLinkPreview(
+                    url = request.url,
+                    allowInitialAppHandoff = true,
+                )
             ) {
                 incomingBrowserNavigationRequestId++
                 return
             }
             browserController.dismissExternalLinkPreview()
-            if (!browserController.openUrl(request.url, inNewTab = true)) return
+            if (
+                !browserController.openUrl(
+                    url = request.url,
+                    inNewTab = true,
+                    authorizeInitialExternalNavigation = true,
+                )
+            ) return
             externalLaunchTabId = browserController.selectedTabId
             incomingBrowserNavigationRequestId++
         }
@@ -1422,6 +1454,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun onWebViewProcessStartupFailed() {
+        if (activityDestroyed) return
+        Toast.makeText(this, R.string.toast_webview_startup_failed, Toast.LENGTH_LONG).show()
+        finish()
+    }
+
     private fun applyBrowserSystemUi() {
         val fullscreenVideoExpanded = ::browserController.isInitialized &&
             browserController.isFullscreenVideoExpanded
@@ -1450,6 +1488,8 @@ class MainActivity : AppCompatActivity() {
         const val STATE_CAPSULE_ID = "active_site_capsule_id"
         const val STATE_CAPSULE_TAB_ID = "active_site_capsule_tab_id"
         const val STATE_EXTERNAL_LINK_PREVIEW_ACTIVE = "external_link_preview_active"
+        const val STATE_EXTERNAL_LINK_PREVIEW_APP_HANDOFF_EXPIRATION =
+            "external_link_preview_app_handoff_expiration"
         const val STATE_EXTERNAL_LAUNCH_TAB_ID = "external_launch_tab_id"
         const val STATE_RELEASE_NOTES_VISIBLE = "release_notes_visible"
         const val VIDEO_ASPECT_WIDTH = 16

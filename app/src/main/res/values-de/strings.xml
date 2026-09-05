@@ -427,6 +427,7 @@
     <string name="error_unsafe_site_blocked">Unsichere Website blockiert</string>
     <string name="error_renderer_crashed">Web-Renderer wurde unerwartet beendet</string>
     <string name="error_renderer_terminated">Web-Renderer wurde vom System beendet</string>
+    <string name="toast_webview_startup_failed">Webinhalte konnten nicht gestartet werden. Android System WebView aktualisieren und erneut versuchen.</string>
     <string name="toast_download_type_unsupported">Download-Typ nicht unterstützt</string>
     <string name="toast_download_started">Download gestartet: %1$s</string>
     <string name="toast_download_handed_off">An %1$s übergeben</string>

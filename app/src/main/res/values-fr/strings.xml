@@ -432,6 +432,7 @@
     <string name="error_unsafe_site_blocked">Site web dangereux bloqué</string>
     <string name="error_renderer_crashed">Le moteur de rendu web s’est arrêté de manière inattendue</string>
     <string name="error_renderer_terminated">Le moteur de rendu web a été arrêté par le système</string>
+    <string name="toast_webview_startup_failed">Le contenu web n’a pas pu démarrer. Mettez à jour Android System WebView, puis réessayez.</string>
     <string name="toast_download_type_unsupported">Type de téléchargement non pris en charge</string>
     <string name="toast_download_started">Téléchargement démarré : %1$s</string>
     <string name="toast_download_handed_off">Envoyé à %1$s</string>

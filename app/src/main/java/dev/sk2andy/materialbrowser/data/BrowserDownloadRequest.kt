@@ -24,10 +24,16 @@ object BrowserDownloadRequestFactory {
         referrer: String? = null,
     ): BrowserDownloadRequest? {
         if (!SafeDownloadValues.isHttpUrl(url)) return null
-        val safeMimeType = SafeDownloadValues.mimeType(mimeType, url)
+        val candidateMimeType = SafeDownloadValues.mimeType(mimeType, url)
+        val fileName = SafeDownloadValues.fileName(url, contentDisposition, candidateMimeType)
+        val safeMimeType = if (fileName.endsWith(".apk", ignoreCase = true)) {
+            ANDROID_PACKAGE_MIME_TYPE
+        } else {
+            candidateMimeType
+        }
         return BrowserDownloadRequest(
             url = url,
-            fileName = SafeDownloadValues.fileName(url, contentDisposition, safeMimeType),
+            fileName = fileName,
             mimeType = safeMimeType,
             userAgent = SafeDownloadValues.header(userAgent),
             cookies = SafeDownloadValues.header(cookies, MAX_COOKIE_LENGTH),
@@ -35,7 +41,12 @@ object BrowserDownloadRequestFactory {
         )
     }
 
+    fun isAndroidPackage(request: BrowserDownloadRequest): Boolean =
+        request.mimeType.equals(ANDROID_PACKAGE_MIME_TYPE, ignoreCase = true) ||
+            request.fileName.endsWith(".apk", ignoreCase = true)
+
     private const val MAX_COOKIE_LENGTH = 16_384
+    internal const val ANDROID_PACKAGE_MIME_TYPE = "application/vnd.android.package-archive"
 }
 
 internal object SafeDownloadValues {
@@ -166,6 +177,7 @@ internal object SafeDownloadValues {
             "txt" -> "text/plain"
             "html", "htm" -> "text/html"
             "json" -> "application/json"
+            "apk" -> BrowserDownloadRequestFactory.ANDROID_PACKAGE_MIME_TYPE
             else -> null
         }
     }
@@ -181,6 +193,7 @@ internal object SafeDownloadValues {
         "text/plain" -> "txt"
         "text/html" -> "html"
         "application/json" -> "json"
+        BrowserDownloadRequestFactory.ANDROID_PACKAGE_MIME_TYPE -> "apk"
         else -> null
     }
 }

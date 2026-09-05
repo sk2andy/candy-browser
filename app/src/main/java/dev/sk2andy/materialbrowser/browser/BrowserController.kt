@@ -140,11 +140,16 @@ import dev.sk2andy.materialbrowser.browser.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryRequest
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryResult
+import dev.sk2andy.materialbrowser.browser.integration.ApkDownloadNavigationRules
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.integration.DefaultBrowserRole
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.browser.integration.ExternalLaunchResult
+import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationGrant
+import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationGrantRules
 import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationPolicy
+import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGrant
+import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGrantRules
 import dev.sk2andy.materialbrowser.browser.integration.LinkPeekPreviewNavigationPolicy
 import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
 import dev.sk2andy.materialbrowser.browser.integration.PageShareRequest
@@ -393,6 +398,7 @@ class BrowserController(
     private val onWebPictureInPictureRequested: () -> Boolean = { false },
     private val onWebPictureInPictureRequestTimedOut: () -> Unit = {},
     private val deferWebViewRuntimeStartup: Boolean = false,
+    private val externalApps: ExternalAppLauncher = ExternalAppLauncher(activity),
 ) {
     val tabs = mutableStateListOf<BrowserTab>()
     val profiles = mutableStateListOf<BrowserProfile>()
@@ -696,7 +702,9 @@ class BrowserController(
     private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
-    private val externalNavigationGrantExpirations = mutableMapOf<String, Long>()
+    private val externalNavigationGrants = mutableMapOf<String, ExternalNavigationGrant>()
+    private val pendingInitialExternalNavigationGrants =
+        mutableMapOf<String, ExternalNavigationGrant>()
     private val mainFrameTlsNavigations = mutableMapOf<String, MainFrameTlsNavigation>()
     private var webContentRequestGeneration = 0L
     private val desktopViewportScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
@@ -862,7 +870,6 @@ class BrowserController(
     private val downloadManager = BrowserDownloadManager(activity)
     private val externalDownloadManager = ExternalDownloadManager(activity)
     private val queuedDownloadChoices = ArrayDeque<PendingDownloadChoice>()
-    private val externalApps = ExternalAppLauncher(activity)
     private val assistantSummary = AssistantSummaryLauncher(activity)
     private val pageShare = PageShareLauncher(activity)
     private val commandCatalog = AndroidCommandCatalog(activity)
@@ -1047,6 +1054,7 @@ class BrowserController(
         ) {
             cancelPendingPermissionAccess(tabId)
             removeActivePermissionsForTab(tabId)
+            clearExternalNavigationAuthorization(tabId)
             webViews[tabId]?.reload()
         } else if (
             pendingPermissionAccess?.let { access ->
@@ -1071,6 +1079,7 @@ class BrowserController(
         if (pendingPermissionAccess?.site == site) cancelPendingPermissionAccess(tabId)
         if (activePermissions.hasSite(tabId, site)) {
             removeActivePermissionsForTab(tabId)
+            clearExternalNavigationAuthorization(tabId)
             webViews[tabId]?.reload()
         }
         geolocationPermissionsFor(tabId)?.clear(normalizedOrigin)
@@ -2090,8 +2099,20 @@ class BrowserController(
         if (linkPeekPreviewAssignments.remove(webView) != null) destroyWebView(webView)
     }
 
-    fun openExternalLinkPreview(url: String): Boolean {
+    fun openExternalLinkPreview(
+        url: String,
+        allowInitialAppHandoff: Boolean = false,
+        restoredAppHandoffExpirationElapsedRealtime: Long? = null,
+    ): Boolean {
         val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return false
+        val nowElapsedRealtime = SystemClock.elapsedRealtime()
+        val appHandoffExpiration = restoredAppHandoffExpirationElapsedRealtime
+            ?.takeIf { expiration -> expiration >= nowElapsedRealtime }
+            ?: if (allowInitialAppHandoff) {
+                nowElapsedRealtime + ExternalNavigationGrantRules.MAX_LIFETIME_MILLIS
+            } else {
+                null
+            }
         val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
             profiles = profiles,
             profilesEnabled = profilesEnabled,
@@ -2109,6 +2130,7 @@ class BrowserController(
             generation = 0,
             currentUrl = safeUrl,
             targetProfileId = targetProfileId,
+            appHandoffExpiresAtElapsedRealtime = appHandoffExpiration,
         )
         return true
     }
@@ -2140,6 +2162,7 @@ class BrowserController(
             generation = current.generation + 1,
             currentUrl = safeUrl,
             targetProfileId = targetProfileId,
+            appHandoffExpiresAtElapsedRealtime = null,
             progress = 0,
             isLoading = true,
             canGoBack = false,
@@ -2164,6 +2187,9 @@ class BrowserController(
         val webView = runtime.webView.takeIf(WebView::canGoBack) ?: return false
         val history = webView.copyBackForwardList()
         val targetUrl = history.getItemAtIndex(history.currentIndex - 1)?.url ?: return false
+        runtime.downloadGrant = null
+        externalNavigationGrants.remove(runtime.policyTab.id)
+        clearExternalLinkPreviewAppHandoff(sessionId)
         invalidatePendingDesktopNavigationOverride(webView)
         webView.stopLoading()
         applyDesktopViewPolicy(runtime.policyTab, webView, targetUrl)
@@ -2284,6 +2310,7 @@ class BrowserController(
         createExternalLinkPreviewRuntime(
             state.copy(
                 generation = state.generation + 1,
+                appHandoffExpiresAtElapsedRealtime = null,
                 progress = 0,
                 isLoading = true,
                 canGoBack = false,
@@ -2346,6 +2373,41 @@ class BrowserController(
             policyTab = policyTab,
             protectionState = protectionState,
         )
+        webView.setDownloadListener externalDownload@{
+            url,
+            userAgent,
+            contentDisposition,
+            mimeType,
+            _,
+            ->
+            val runtime = externalLinkPreviewRuntime
+                ?.takeIf { current ->
+                    current.sessionId == state.sessionId && current.webView === webView
+                }
+                ?: return@externalDownload
+            if (
+                !ExternalPreviewDownloadGrantRules.canConsume(
+                    grant = runtime.downloadGrant,
+                    url = url,
+                    nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                )
+            ) return@externalDownload
+            runtime.downloadGrant = null
+            val request = BrowserDownloadRequestFactory.create(
+                url = url,
+                contentDisposition = contentDisposition,
+                mimeType = mimeType,
+                userAgent = userAgent,
+                cookies = cookieManagerFor(webView).getCookie(url),
+                referrer = webView.url,
+            ) ?: return@externalDownload
+            if (!BrowserDownloadRequestFactory.isAndroidPackage(request)) {
+                return@externalDownload
+            }
+            externalNavigationGrants.remove(runtime.policyTab.id)
+            routeDownload(request, runtime.policyTab.id)?.let(::showDownloadResult)
+            mainHandler.post { dismissExternalLinkPreview(state.sessionId) }
+        }
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
                 updateExternalLinkPreviewState(state.sessionId, view) { current ->
@@ -2409,6 +2471,32 @@ class BrowserController(
         }
 
         override fun onPageFinished(view: WebView, url: String) {
+            externalLinkPreviewRuntime
+                ?.takeIf { runtime ->
+                    runtime.sessionId == sessionId && runtime.webView === view
+                }
+                ?.let { runtime ->
+                    if (
+                        clearExternalNavigationGrantForCallback(
+                            tabId = runtime.policyTab.id,
+                            callbackUrl = url,
+                            currentWebViewUrl = view.url,
+                        )
+                    ) {
+                        clearExternalLinkPreviewAppHandoff(sessionId)
+                    }
+                    val grant = runtime.downloadGrant ?: return@let
+                    if (
+                        ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
+                            grant = grant,
+                            callbackUrl = url,
+                            currentWebViewUrl = view.url,
+                            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                        )
+                    ) {
+                        runtime.downloadGrant = null
+                    }
+                }
             val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
             applyFinishedNavigationDesktopViewPolicy(
                 tab = policyTab,
@@ -2455,40 +2543,198 @@ class BrowserController(
             )
         }
 
+        override fun onReceivedError(
+            view: WebView,
+            request: WebResourceRequest,
+            error: WebResourceError,
+        ) {
+            if (!request.isForMainFrame) return
+            externalLinkPreviewRuntime
+                ?.takeIf { runtime ->
+                    runtime.sessionId == sessionId && runtime.webView === view
+                }
+                ?.let { runtime ->
+                    if (
+                        clearExternalNavigationGrantForCallback(
+                            tabId = runtime.policyTab.id,
+                            callbackUrl = request.url.toString(),
+                            currentWebViewUrl = view.url,
+                        )
+                    ) {
+                        clearExternalLinkPreviewAppHandoff(sessionId)
+                    }
+                    val grant = runtime.downloadGrant ?: return@let
+                    if (
+                        ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
+                            grant = grant,
+                            callbackUrl = request.url.toString(),
+                            currentWebViewUrl = view.url,
+                            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                        )
+                    ) {
+                        runtime.downloadGrant = null
+                    }
+                }
+        }
+
         override fun shouldOverrideUrlLoading(
             view: WebView,
             request: WebResourceRequest,
         ): Boolean {
+            val runtime = externalLinkPreviewRuntime?.takeIf { runtime ->
+                runtime.sessionId == sessionId && runtime.webView === view
+            } ?: return true
             if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
             val targetUrl = request.url.toString()
-            if (LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)) return true
-            return overrideWebRequestedNavigationForDesktopView(
-                tab = policyTab,
-                webView = view,
-                request = request,
-                isCurrent = {
-                    externalLinkPreviewRuntime?.let { runtime ->
-                        runtime.sessionId == sessionId && runtime.webView === view
-                    } == true
-                },
-                navigate = { url ->
-                    view.stopLoading()
-                    applyDesktopViewPolicy(policyTab, view, url)
-                    view.stopLoading()
-                    val targetProtectionState = LinkPeekProtectionState(
-                        pageUrl = url,
-                        requestContext = protectionRequestContextFor(policyTab, url),
+            val scheme = request.url.scheme?.lowercase()
+            val nowElapsedRealtime = SystemClock.elapsedRealtime()
+            if (scheme == "http" || scheme == "https") {
+                if (request.isForMainFrame && request.hasGesture()) {
+                    runtime.downloadGrant = ExternalPreviewDownloadGrantRules.start(
+                        url = targetUrl,
+                        nowElapsedRealtime = nowElapsedRealtime,
                     )
-                    protectionState.set(targetProtectionState)
-                    synchronized(privacyEventLock) {
-                        protectionRequestContexts[policyTab.id] =
-                            targetProtectionState.requestContext
+                } else {
+                    runtime.downloadGrant = runtime.downloadGrant?.let { grant ->
+                        ExternalPreviewDownloadGrantRules.followRedirect(
+                            grant = grant,
+                            url = targetUrl,
+                            isForMainFrame = request.isForMainFrame,
+                            isRedirect = request.isRedirect,
+                            nowElapsedRealtime = nowElapsedRealtime,
+                        )
                     }
-                    applyExternalLinkPreviewCookiePolicy(policyTab, targetProtectionState, view)
-                    view.loadUrl(url)
-                },
+                }
+                updateExternalNavigationGrant(
+                    tabId = policyTab.id,
+                    url = targetUrl,
+                    isForMainFrame = request.isForMainFrame,
+                    hasGesture = request.hasGesture(),
+                    isRedirect = request.isRedirect,
+                    nowElapsedRealtime = nowElapsedRealtime,
+                )
+                val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
+                    grant = externalNavigationGrants[policyTab.id],
+                    nowElapsedRealtime = nowElapsedRealtime,
+                )
+                if (
+                    ApkDownloadNavigationRules.shouldRoute(
+                        url = targetUrl,
+                        isForMainFrame = request.isForMainFrame,
+                        hasGesture = request.hasGesture(),
+                        isRedirect = request.isRedirect,
+                        hasUserNavigationGrant = ExternalPreviewDownloadGrantRules.canConsume(
+                            grant = runtime.downloadGrant,
+                            url = targetUrl,
+                            nowElapsedRealtime = nowElapsedRealtime,
+                        ),
+                    ) && routeExplicitDownloadNavigation(policyTab.id, view, targetUrl)
+                ) {
+                    runtime.downloadGrant = null
+                    externalNavigationGrants.remove(policyTab.id)
+                    clearExternalLinkPreviewAppHandoff(sessionId)
+                    mainHandler.post { dismissExternalLinkPreview(sessionId) }
+                    return true
+                }
+                if (
+                    ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                        scheme = scheme,
+                        isForMainFrame = request.isForMainFrame,
+                        hasGesture = request.hasGesture(),
+                        isRedirect = request.isRedirect,
+                        hasUserNavigationGrant = hasUserNavigationGrant,
+                    ) && externalApps.openWebUrlExternally(targetUrl) ==
+                    ExternalLaunchResult.Launched
+                ) {
+                    runtime.downloadGrant = null
+                    externalNavigationGrants.remove(policyTab.id)
+                    clearExternalLinkPreviewAppHandoff(sessionId)
+                    showExternalAppOpenedToast()
+                    return true
+                }
+                return overrideWebRequestedNavigationForDesktopView(
+                    tab = policyTab,
+                    webView = view,
+                    request = request,
+                    isCurrent = {
+                        externalLinkPreviewRuntime?.let { current ->
+                            current.sessionId == sessionId && current.webView === view
+                        } == true
+                    },
+                    navigate = { url ->
+                        navigateExternalLinkPreview(
+                            runtime = runtime,
+                            protectionState = protectionState,
+                            url = url,
+                            preserveExternalNavigationGrant = true,
+                        )
+                    },
+                )
+            }
+            val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
+                grant = externalNavigationGrants[policyTab.id],
+                nowElapsedRealtime = nowElapsedRealtime,
             )
+            if (
+                !ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                    scheme = scheme,
+                    isForMainFrame = request.isForMainFrame,
+                    hasGesture = request.hasGesture(),
+                    isRedirect = request.isRedirect,
+                    hasUserNavigationGrant = hasUserNavigationGrant,
+                )
+            ) {
+                return true
+            }
+            runtime.downloadGrant = null
+            externalNavigationGrants.remove(policyTab.id)
+            clearExternalLinkPreviewAppHandoff(sessionId)
+            return when (val result = externalApps.open(request.url)) {
+                ExternalLaunchResult.Launched -> {
+                    showExternalAppOpenedToast()
+                    true
+                }
+                is ExternalLaunchResult.OpenInBrowser -> {
+                    navigateExternalLinkPreview(runtime, protectionState, result.url)
+                    true
+                }
+                ExternalLaunchResult.Unsupported -> {
+                    Toast.makeText(
+                        activity,
+                        activity.getString(R.string.toast_no_matching_app),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    true
+                }
+            }
         }
+    }
+
+    private fun navigateExternalLinkPreview(
+        runtime: ExternalLinkPreviewRuntime,
+        protectionState: AtomicReference<LinkPeekProtectionState>,
+        url: String,
+        preserveExternalNavigationGrant: Boolean = false,
+    ) {
+        val webView = runtime.webView
+        val policyTab = runtime.policyTab
+        if (!preserveExternalNavigationGrant) {
+            externalNavigationGrants.remove(policyTab.id)
+            clearExternalLinkPreviewAppHandoff(runtime.sessionId)
+        }
+        webView.stopLoading()
+        applyDesktopViewPolicy(policyTab, webView, url)
+        webView.stopLoading()
+        val targetProtectionState = LinkPeekProtectionState(
+            pageUrl = url,
+            requestContext = protectionRequestContextFor(policyTab, url),
+        )
+        protectionState.set(targetProtectionState)
+        synchronized(privacyEventLock) {
+            protectionRequestContexts[policyTab.id] = targetProtectionState.requestContext
+        }
+        applyExternalLinkPreviewCookiePolicy(policyTab, targetProtectionState, webView)
+        webView.loadUrl(url)
     }
 
     private fun startExternalLinkPreviewIfReady(runtime: ExternalLinkPreviewRuntime) {
@@ -2500,6 +2746,35 @@ class BrowserController(
         ) return
         runtime.hasStarted = true
         val state = externalLinkPreviewState?.takeIf { it.sessionId == runtime.sessionId } ?: return
+        runtime.downloadGrant = ExternalPreviewDownloadGrantRules.start(
+            url = state.currentUrl,
+            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+        )
+        state.appHandoffExpiresAtElapsedRealtime?.let { expiration ->
+            val grant = ExternalNavigationGrant(
+                currentUrl = state.currentUrl,
+                expiresAtElapsedRealtime = expiration,
+            )
+            if (ExternalNavigationGrantRules.isActive(grant, SystemClock.elapsedRealtime())) {
+                externalNavigationGrants[runtime.policyTab.id] = grant
+            }
+        }
+        if (
+            ApkDownloadNavigationRules.shouldRoute(
+                url = state.currentUrl,
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ) && routeExplicitDownloadNavigation(
+                tabId = runtime.policyTab.id,
+                webView = runtime.webView,
+                url = state.currentUrl,
+            )
+        ) {
+            runtime.downloadGrant = null
+            mainHandler.post { dismissExternalLinkPreview(state.sessionId) }
+            return
+        }
         runtime.webView.loadUrl(state.currentUrl)
     }
 
@@ -2514,12 +2789,20 @@ class BrowserController(
         externalLinkPreviewState = transform(state)
     }
 
+    private fun clearExternalLinkPreviewAppHandoff(sessionId: Long) {
+        val state = externalLinkPreviewState?.takeIf { it.sessionId == sessionId } ?: return
+        if (state.appHandoffExpiresAtElapsedRealtime != null) {
+            externalLinkPreviewState = state.copy(appHandoffExpiresAtElapsedRealtime = null)
+        }
+    }
+
     private fun releaseExternalLinkPreviewRuntime(resumeSelectedTab: Boolean) {
         val runtime = externalLinkPreviewRuntime
         if (findInPageSession?.webView === runtime?.webView) closeFindInPage()
         externalLinkPreviewRuntime = null
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
+            externalNavigationGrants.remove(policyTabId)
             synchronized(privacyEventLock) {
                 protectionRequestContexts.remove(policyTabId)?.let(::flushPendingFilterHits)
             }
@@ -2826,6 +3109,7 @@ class BrowserController(
         searchMode: SearchMode = SearchMode.Web,
     ) {
         bottomBarCompactStates[selectedTabId] = false
+        clearExternalNavigationAuthorization(selectedTabId)
         val externalUri = BrowserUriPolicy.normalizeExternalUri(input)?.let(Uri::parse)
         val target = when (val result = externalUri?.let(externalApps::open)) {
             ExternalLaunchResult.Launched -> {
@@ -2879,11 +3163,19 @@ class BrowserController(
         }
     }
 
-    fun openUrl(url: String, inNewTab: Boolean = false): Boolean {
+    fun openUrl(
+        url: String,
+        inNewTab: Boolean = false,
+        authorizeInitialExternalNavigation: Boolean = false,
+    ): Boolean {
         leaveSiteCapsule()
         if (inNewTab) {
             val previousTabId = selectedTabId
-            return createTab(url, openerTabId = previousTabId) != previousTabId
+            return createTab(
+                initialUrl = url,
+                openerTabId = previousTabId,
+                authorizeInitialExternalNavigation = authorizeInitialExternalNavigation,
+            ) != previousTabId
         }
         submitAddress(url)
         return true
@@ -3037,6 +3329,7 @@ class BrowserController(
             }
             setBlankTabIncognito(false)
             cancelPendingBlockingStart(selectedTabId)
+            clearExternalNavigationAuthorization(selectedTabId)
             webViewFor(selectedTabId).loadUrl(BLANK_URL)
         } else if (!selectedTab.isFreshBlankTab) {
             val previousTabId = selectedTabId
@@ -3472,6 +3765,7 @@ class BrowserController(
         initialUrl: String = BLANK_URL,
         isIncognito: Boolean = selectedTab.isIncognito,
         openerTabId: String? = null,
+        authorizeInitialExternalNavigation: Boolean = false,
     ): String {
         val nowMillis = System.currentTimeMillis()
         if (!prepareTabCreation(nowMillis = nowMillis)) {
@@ -3502,6 +3796,14 @@ class BrowserController(
             isIncognito = isIncognito && !isSyncedProfile(activeProfileId),
             openerTabId = openerTabId,
         )
+        if (authorizeInitialExternalNavigation) {
+            ExternalNavigationGrantRules.start(
+                url = resolvedUrl,
+                nowElapsedRealtime = SystemClock.elapsedRealtime(),
+            )?.let { grant ->
+                pendingInitialExternalNavigationGrants[tab.id] = grant
+            }
+        }
         tabs += tab
         markSyncedTabPending(tab)
         updateSelectedTabId(tab.id)
@@ -4092,6 +4394,71 @@ class BrowserController(
             activity.getString(R.string.toast_opening_external_app),
             Toast.LENGTH_SHORT,
         ).show()
+    }
+
+    private fun updateExternalNavigationGrant(
+        tabId: String,
+        url: String,
+        isForMainFrame: Boolean,
+        hasGesture: Boolean,
+        isRedirect: Boolean,
+        nowElapsedRealtime: Long,
+    ) {
+        val updatedGrant = if (isForMainFrame && hasGesture) {
+            ExternalNavigationGrantRules.start(url, nowElapsedRealtime)
+        } else {
+            externalNavigationGrants[tabId]?.let { grant ->
+                ExternalNavigationGrantRules.followRedirect(
+                    grant = grant,
+                    url = url,
+                    isForMainFrame = isForMainFrame,
+                    isRedirect = isRedirect,
+                    nowElapsedRealtime = nowElapsedRealtime,
+                )
+            }
+        }
+        if (updatedGrant == null) externalNavigationGrants.remove(tabId)
+        else externalNavigationGrants[tabId] = updatedGrant
+    }
+
+    private fun clearExternalNavigationGrantForCallback(
+        tabId: String,
+        callbackUrl: String?,
+        currentWebViewUrl: String?,
+        nowElapsedRealtime: Long = SystemClock.elapsedRealtime(),
+    ): Boolean {
+        val grant = externalNavigationGrants[tabId] ?: return false
+        if (
+            ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
+                grant = grant,
+                callbackUrl = callbackUrl,
+                currentWebViewUrl = currentWebViewUrl,
+                nowElapsedRealtime = nowElapsedRealtime,
+            )
+        ) {
+            externalNavigationGrants.remove(tabId)
+            return true
+        }
+        return false
+    }
+
+    private fun clearExternalNavigationAuthorization(tabId: String) {
+        externalNavigationGrants.remove(tabId)
+        pendingInitialExternalNavigationGrants.remove(tabId)
+    }
+
+    private fun activatePendingInitialExternalNavigationGrant(
+        tabId: String,
+        pageUrl: String,
+        nowElapsedRealtime: Long = SystemClock.elapsedRealtime(),
+    ) {
+        val pendingGrant = pendingInitialExternalNavigationGrants.remove(tabId) ?: return
+        if (
+            pendingGrant.currentUrl == BrowserUriPolicy.normalizeHttpUrl(pageUrl) &&
+            ExternalNavigationGrantRules.isActive(pendingGrant, nowElapsedRealtime)
+        ) {
+            externalNavigationGrants[tabId] = pendingGrant
+        }
     }
 
     fun openPageExternally(tabId: String) {
@@ -4802,6 +5169,7 @@ class BrowserController(
 
     fun stopLoading() {
         cancelPendingBlockingStart(selectedTabId)
+        clearExternalNavigationAuthorization(selectedTabId)
         webViews[selectedTabId]?.stopLoading()
         updateTab(selectedTabId) { it.copy(isLoading = false) }
     }
@@ -4809,6 +5177,7 @@ class BrowserController(
     fun clearCacheAndReload(): Boolean {
         val tabId = selectedTabId
         if (selectedTab.url == BLANK_URL) return false
+        clearExternalNavigationAuthorization(tabId)
         val webView = webViewFor(tabId)
         updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
         WebViewCommandActions.clearCacheAndReload(webView)
@@ -4818,6 +5187,7 @@ class BrowserController(
     fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean {
         val tabId = selectedTabId
         if (selectedTab.url == BLANK_URL) return false
+        clearExternalNavigationAuthorization(tabId)
         val webView = webViewFor(tabId)
         val cookieManager = WebViewProfileCookies.managerFor(webView) ?: return false
         val navigationGeneration = navigationGenerations[tabId]
@@ -5307,12 +5677,14 @@ class BrowserController(
         if (cookieConsentSettingChanged && !settings.hideCookieConsent) {
             webViews.forEach { (tabId, webView) ->
                 if (tabId in transientPopupTabIds) return@forEach
+                clearExternalNavigationAuthorization(tabId)
                 updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
                 webView.reload()
             }
         } else if (requestFilterSettingChanged) {
             webViews.forEach { (tabId, webView) ->
                 if (tabId in transientPopupTabIds) return@forEach
+                clearExternalNavigationAuthorization(tabId)
                 updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
                 webView.reload()
             }
@@ -6069,7 +6441,8 @@ class BrowserController(
         edgeToEdgePages.clear()
         navigationGenerations.clear()
         committedRecallPages.clear()
-        externalNavigationGrantExpirations.clear()
+        externalNavigationGrants.clear()
+        pendingInitialExternalNavigationGrants.clear()
         mainFrameTlsNavigations.clear()
         if (isWebViewRuntimeReady) clearIncognitoProfile()
         if (
@@ -6115,6 +6488,7 @@ class BrowserController(
                 } else {
                     val restored = initialUrlOverride == null && initialUrl != BLANK_URL &&
                         restoreWebViewStateWithProtection(tab, webView)
+                    if (restored) pendingInitialExternalNavigationGrants.remove(tabId)
                     if (!restored && initialUrl != BLANK_URL) {
                         updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
                         loadUrlWithProtection(tabId, webView, initialUrl)
@@ -6200,7 +6574,7 @@ class BrowserController(
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
         committedRecallPages.remove(tabId)
-        externalNavigationGrantExpirations.remove(tabId)
+        clearExternalNavigationAuthorization(tabId)
         mainFrameTlsNavigations.remove(tabId)
         pageUrls.remove(tabId)
         bottomBarCompactStates.remove(tabId)
@@ -6460,7 +6834,13 @@ class BrowserController(
         override fun onPageFinished(view: WebView, url: String) {
             if (isPendingInitialBlank(tabId, url)) return
             if (isQuarantinedPopup(tabId)) return
+            if (webViews[tabId] !== view) return
             val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
+            clearExternalNavigationGrantForCallback(
+                tabId = tabId,
+                callbackUrl = url,
+                currentWebViewUrl = view.url,
+            )
             applyFinishedNavigationDesktopViewPolicy(
                 tab = tab,
                 webView = view,
@@ -6529,6 +6909,7 @@ class BrowserController(
         }
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            if (tabs.none { tab -> tab.id == tabId } || webViews[tabId] !== view) return true
             if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
             if (request.isForMainFrame && isQuarantinedPopup(tabId)) {
                 view.stopLoading()
@@ -6548,15 +6929,35 @@ class BrowserController(
                 val capsule = activeCapsuleForTab(tabId)
                     ?.takeIf { request.isForMainFrame }
                 if (capsule == null) {
-                    if (request.isForMainFrame && request.hasGesture()) {
-                        externalNavigationGrantExpirations[tabId] =
-                            SystemClock.elapsedRealtime() + EXTERNAL_NAVIGATION_GRANT_MILLIS
-                    }
-                    val hasUserNavigationGrant =
-                        ExternalNavigationPolicy.isUserNavigationGrantActive(
-                            expirationElapsedRealtime = externalNavigationGrantExpirations[tabId],
-                            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                    val nowElapsedRealtime = SystemClock.elapsedRealtime()
+                    updateExternalNavigationGrant(
+                        tabId = tabId,
+                        url = request.url.toString(),
+                        isForMainFrame = request.isForMainFrame,
+                        hasGesture = request.hasGesture(),
+                        isRedirect = request.isRedirect,
+                        nowElapsedRealtime = nowElapsedRealtime,
+                    )
+                    val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
+                        grant = externalNavigationGrants[tabId],
+                        nowElapsedRealtime = nowElapsedRealtime,
+                    )
+                    if (
+                        ApkDownloadNavigationRules.shouldRoute(
+                            url = request.url.toString(),
+                            isForMainFrame = request.isForMainFrame,
+                            hasGesture = request.hasGesture(),
+                            isRedirect = request.isRedirect,
+                            hasUserNavigationGrant = hasUserNavigationGrant,
+                        ) && routeExplicitDownloadNavigation(
+                            tabId = tabId,
+                            webView = view,
+                            url = request.url.toString(),
                         )
+                    ) {
+                        externalNavigationGrants.remove(tabId)
+                        return true
+                    }
                     val canTryAppLink = ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                         scheme = scheme,
                         isForMainFrame = request.isForMainFrame,
@@ -6569,7 +6970,7 @@ class BrowserController(
                         externalApps.openWebUrlExternally(request.url.toString()) ==
                         ExternalLaunchResult.Launched
                     ) {
-                        externalNavigationGrantExpirations.remove(tabId)
+                        externalNavigationGrants.remove(tabId)
                         showExternalAppOpenedToast()
                         return true
                     }
@@ -6583,7 +6984,12 @@ class BrowserController(
                                 request = request,
                                 isCurrent = { webViews[tabId] === view },
                                 navigate = { url ->
-                                    loadUrlWithProtectionNow(tabId, view, url)
+                                    loadUrlWithProtectionNow(
+                                        tabId = tabId,
+                                        webView = view,
+                                        pageUrl = url,
+                                        preserveExternalNavigationGrant = true,
+                                    )
                                 },
                             )
                         ) return true
@@ -6617,9 +7023,8 @@ class BrowserController(
                     CapsuleNavigationDecision.UseExistingUriPolicy -> false
                 }
             }
-            val grantExpiration = externalNavigationGrantExpirations[tabId]
-            val hasUserNavigationGrant = ExternalNavigationPolicy.isUserNavigationGrantActive(
-                expirationElapsedRealtime = grantExpiration,
+            val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
+                grant = externalNavigationGrants[tabId],
                 nowElapsedRealtime = SystemClock.elapsedRealtime(),
             )
             if (
@@ -6633,7 +7038,7 @@ class BrowserController(
             ) {
                 return true
             }
-            externalNavigationGrantExpirations.remove(tabId)
+            externalNavigationGrants.remove(tabId)
             return when (val result = externalApps.open(request.url)) {
                 ExternalLaunchResult.Launched -> {
                     showExternalAppOpenedToast()
@@ -6660,10 +7065,14 @@ class BrowserController(
             request: WebResourceRequest,
             error: WebResourceError,
         ) {
-            if (request.isForMainFrame) {
-                updateTab(tabId) {
-                    it.copy(isLoading = false, error = error.description.toString())
-                }
+            if (!request.isForMainFrame || webViews[tabId] !== view) return
+            clearExternalNavigationGrantForCallback(
+                tabId = tabId,
+                callbackUrl = request.url.toString(),
+                currentWebViewUrl = view.url,
+            )
+            updateTab(tabId) {
+                it.copy(isLoading = false, error = error.description.toString())
             }
         }
 
@@ -6683,6 +7092,7 @@ class BrowserController(
                 )
             ) return
             mainFrameTlsNavigations.remove(tabId)
+            externalNavigationGrants.remove(tabId)
             updateTab(tabId) {
                 it.copy(isLoading = false, error = activity.getString(R.string.error_unsafe_tls_blocked))
             }
@@ -6696,6 +7106,8 @@ class BrowserController(
             callback: SafeBrowsingResponse,
         ) {
             callback.backToSafety(true)
+            if (webViews[tabId] !== view) return
+            clearExternalNavigationAuthorization(tabId)
             updateTab(tabId) {
                 it.copy(isLoading = false, error = activity.getString(R.string.error_unsafe_site_blocked))
             }
@@ -6723,7 +7135,7 @@ class BrowserController(
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
             committedRecallPages.remove(tabId)
-            externalNavigationGrantExpirations.remove(tabId)
+            externalNavigationGrants.remove(tabId)
             mainFrameTlsNavigations.remove(tabId)
             candyTrailHistoryBindings.remove(tabId)
             pendingCandyTrailTargets.remove(tabId)
@@ -8991,6 +9403,21 @@ class BrowserController(
             routeDownload(request, tabId)?.let(::showDownloadResult)
         }
 
+    private fun routeExplicitDownloadNavigation(
+        tabId: String,
+        webView: WebView,
+        url: String,
+    ): Boolean {
+        val request = BrowserDownloadRequestFactory.create(
+            url = url,
+            userAgent = webView.settings.userAgentString,
+            cookies = cookieManagerFor(webView).getCookie(url),
+            referrer = webView.url,
+        ) ?: return false
+        routeDownload(request, tabId)?.let(::showDownloadResult)
+        return true
+    }
+
     private fun routeDownload(request: BrowserDownloadRequest, tabId: String): DownloadActionResult? =
         when (downloadSettings.managerMode) {
             DownloadManagerMode.BuiltIn -> downloadManager.enqueue(request)
@@ -10308,7 +10735,7 @@ class BrowserController(
         webViewProfileKeys.remove(tabId)
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
-        externalNavigationGrantExpirations.remove(tabId)
+        clearExternalNavigationAuthorization(tabId)
         mainFrameTlsNavigations.remove(tabId)
         pageUrls.remove(tabId)
         bottomBarCompactStates.remove(tabId)
@@ -10830,8 +11257,15 @@ class BrowserController(
         tabId: String,
         webView: WebView,
         pageUrl: String,
+        preserveExternalNavigationGrant: Boolean = false,
     ) {
-        prepareWebViewForNavigation(tabId, webView, pageUrl)
+        prepareWebViewForNavigation(
+            tabId = tabId,
+            webView = webView,
+            pageUrl = pageUrl,
+            preserveExternalNavigationGrant = preserveExternalNavigationGrant,
+        )
+        activatePendingInitialExternalNavigationGrant(tabId, pageUrl)
         webView.loadUrl(pageUrl)
     }
 
@@ -10850,6 +11284,7 @@ class BrowserController(
     private fun reloadTabWithProtection(tabId: String) {
         val webView = webViewFor(tabId)
         val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
+        clearExternalNavigationAuthorization(tabId)
         invalidatePendingDesktopNavigationOverride(webView)
         if (!blockingStartGate.isReady && pageUrl != null && pageUrl != BLANK_URL) {
             enqueueBlockingStart(
@@ -10931,6 +11366,7 @@ class BrowserController(
             webViewProfileKeys.remove(tabId)
             edgeToEdgePages.remove(tabId)
             navigationGenerations.remove(tabId)
+            clearExternalNavigationAuthorization(tabId)
             mainFrameTlsNavigations.remove(tabId)
             pageUrls.remove(tabId)
         }
@@ -11211,8 +11647,10 @@ class BrowserController(
         tabId: String,
         webView: WebView,
         pageUrl: String,
+        preserveExternalNavigationGrant: Boolean = false,
     ) {
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
+        if (!preserveExternalNavigationGrant) externalNavigationGrants.remove(tabId)
         invalidatePendingDesktopNavigationOverride(webView)
         webView.stopLoading()
         applyDesktopViewPolicy(tab, webView, pageUrl)
@@ -11492,7 +11930,6 @@ class BrowserController(
         const val PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS = 2_000L
         const val WEB_PICTURE_IN_PICTURE_FULLSCREEN_CLEANUP_DELAY_MILLIS = 250L
         const val WEB_PICTURE_IN_PICTURE_REQUEST_TIMEOUT_MILLIS = 5_000L
-        const val EXTERNAL_NAVIGATION_GRANT_MILLIS = 15_000L
         const val WEB_PERMISSION_REQUEST_CODE = 7_041
         const val FILE_CHOOSER_REQUEST_CODE = 7_042
     }
@@ -11544,6 +11981,7 @@ class BrowserController(
         val profileAssignment: WebViewProfileAssignment,
         val webView: WebView,
         var hasStarted: Boolean = false,
+        var downloadGrant: ExternalPreviewDownloadGrant? = null,
     )
 }
 
