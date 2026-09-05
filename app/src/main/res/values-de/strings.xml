@@ -845,4 +845,13 @@
     <string name="captcha_compatibility_allow_for_tab">Für den Tab erlauben</string>
     <string name="captcha_compatibility_allow_for_profile">Für das Profil erlauben</string>
     <string name="captcha_compatibility_deny">Nicht erlauben</string>
+    <string name="http_auth_dialog_title">Anmelden</string>
+    <string name="http_auth_dialog_message">%1$s erfordert einen Benutzernamen und ein Passwort.</string>
+    <string name="http_auth_dialog_realm">Bereich: %1$s</string>
+    <string name="http_auth_dialog_insecure_warning">Diese Seite verwendet kein HTTPS. Ihre Zugangsdaten könnten offengelegt werden.</string>
+    <string name="http_auth_username">Benutzername</string>
+    <string name="http_auth_password">Passwort</string>
+    <string name="http_auth_show_password">Passwort anzeigen</string>
+    <string name="http_auth_hide_password">Passwort ausblenden</string>
+    <string name="http_auth_sign_in">Anmelden</string>
 </resources>
