@@ -98,8 +98,8 @@ class BrowserUriPolicyTest {
     }
 
     @Test
-    fun `external navigation accepts special scheme server redirects`() {
-        assertTrue(
+    fun `external navigation rejects passive special scheme redirects without a grant`() {
+        assertFalse(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = "folo",
                 isForMainFrame = true,
@@ -107,12 +107,25 @@ class BrowserUriPolicyTest {
                 isRedirect = true,
             ),
         )
-        assertTrue(
+        assertFalse(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = "intent",
                 isForMainFrame = true,
                 hasGesture = false,
                 isRedirect = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation accepts special scheme redirect with user grant`() {
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "folo",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+                hasUserNavigationGrant = true,
             ),
         )
     }
@@ -170,6 +183,202 @@ class BrowserUriPolicyTest {
             ExternalNavigationPolicy.isUserNavigationGrantActive(
                 expirationElapsedRealtime = null,
                 nowElapsedRealtime = 1L,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation grant ignores stale terminal callback`() {
+        val initialUrl = "https://example.com/start"
+        val redirectUrl = "https://example.com/redirected"
+        val started = requireNotNull(
+            ExternalNavigationGrantRules.start(
+                url = initialUrl,
+                nowElapsedRealtime = 1_000L,
+            ),
+        )
+        val redirected = requireNotNull(
+            ExternalNavigationGrantRules.followRedirect(
+                grant = started,
+                url = redirectUrl,
+                isForMainFrame = true,
+                isRedirect = true,
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+
+        assertFalse(
+            ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
+                grant = redirected,
+                callbackUrl = initialUrl,
+                currentWebViewUrl = redirectUrl,
+                nowElapsedRealtime = 1_002L,
+            ),
+        )
+        assertTrue(
+            ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
+                grant = redirected,
+                callbackUrl = redirectUrl,
+                currentWebViewUrl = redirectUrl,
+                nowElapsedRealtime = 1_002L,
+            ),
+        )
+    }
+
+    @Test
+    fun `APK downloads accept taps and their authorized redirect`() {
+        assertTrue(
+            ApkDownloadNavigationRules.shouldRoute(
+                url = "https://github.com/example/app/releases/latest/download/App.apk",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
+        assertTrue(
+            ApkDownloadNavigationRules.shouldRoute(
+                url = "https://github.com/example/app/releases/download/v1/App.APK",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+                hasUserNavigationGrant = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `APK downloads reject passive untrusted and subframe navigation`() {
+        assertFalse(
+            ApkDownloadNavigationRules.shouldRoute(
+                url = "https://example.com/App.apk",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+            ),
+        )
+        assertFalse(
+            ApkDownloadNavigationRules.shouldRoute(
+                url = "https://example.com/App.apk",
+                isForMainFrame = false,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
+        assertFalse(
+            ApkDownloadNavigationRules.shouldRoute(
+                url = "https://example.com/release-notes",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
+        assertFalse(
+            ApkDownloadNavigationRules.shouldRoute(
+                url = "https://user:secret@example.com/App.apk",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `preview download grant follows only main frame redirects`() {
+        val initialUrl = "https://example.com/releases/latest"
+        val redirectUrl = "https://downloads.example.com/App.apk"
+        val grant = requireNotNull(
+            ExternalPreviewDownloadGrantRules.start(
+                url = initialUrl,
+                nowElapsedRealtime = 1_000L,
+            ),
+        )
+
+        val redirected = requireNotNull(
+            ExternalPreviewDownloadGrantRules.followRedirect(
+                grant = grant,
+                url = redirectUrl,
+                isForMainFrame = true,
+                isRedirect = true,
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+
+        assertFalse(
+            ExternalPreviewDownloadGrantRules.canConsume(
+                grant = redirected,
+                url = initialUrl,
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+        assertTrue(
+            ExternalPreviewDownloadGrantRules.canConsume(
+                grant = redirected,
+                url = redirectUrl,
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+        assertEquals(
+            redirected,
+            ExternalPreviewDownloadGrantRules.followRedirect(
+                grant = redirected,
+                url = "https://attacker.example/Injected.apk",
+                isForMainFrame = false,
+                isRedirect = true,
+                nowElapsedRealtime = 1_002L,
+            ),
+        )
+        assertNull(
+            ExternalPreviewDownloadGrantRules.followRedirect(
+                grant = redirected,
+                url = "https://attacker.example/Injected.apk",
+                isForMainFrame = true,
+                isRedirect = false,
+                nowElapsedRealtime = 1_002L,
+            ),
+        )
+    }
+
+    @Test
+    fun `preview download grant rejects stale callbacks and expires`() {
+        val redirectUrl = "https://downloads.example.com/App.apk"
+        val started = requireNotNull(
+            ExternalPreviewDownloadGrantRules.start(
+                url = "https://example.com/releases/latest",
+                nowElapsedRealtime = 1_000L,
+            ),
+        )
+        val redirected = requireNotNull(
+            ExternalPreviewDownloadGrantRules.followRedirect(
+                grant = started,
+                url = redirectUrl,
+                isForMainFrame = true,
+                isRedirect = true,
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+
+        assertFalse(
+            ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
+                grant = redirected,
+                callbackUrl = started.currentUrl,
+                currentWebViewUrl = redirectUrl,
+                nowElapsedRealtime = 1_002L,
+            ),
+        )
+        assertTrue(
+            ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
+                grant = redirected,
+                callbackUrl = redirectUrl,
+                currentWebViewUrl = redirectUrl,
+                nowElapsedRealtime = 1_002L,
+            ),
+        )
+        assertFalse(
+            ExternalPreviewDownloadGrantRules.canConsume(
+                grant = redirected,
+                url = redirectUrl,
+                nowElapsedRealtime =
+                    1_000L + ExternalPreviewDownloadGrantRules.MAX_LIFETIME_MILLIS + 1L,
             ),
         )
     }

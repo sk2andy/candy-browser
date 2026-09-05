@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -59,6 +60,42 @@ class BrowserDownloadRequestFactoryTest {
         assertEquals("notes.txt", textRequest?.fileName)
         assertEquals("application/json", jsonRequest?.mimeType)
         assertEquals("export.JSON", jsonRequest?.fileName)
+    }
+
+    @Test
+    fun `infers Android package MIME type from APK link`() {
+        val request = BrowserDownloadRequestFactory.create(
+            url = "https://example.com/releases/latest/download/App.apk",
+        )
+
+        assertEquals("application/vnd.android.package-archive", request?.mimeType)
+        assertEquals("App.apk", request?.fileName)
+        assertTrue(BrowserDownloadRequestFactory.isAndroidPackage(requireNotNull(request)))
+        val genericServerRequest = BrowserDownloadRequestFactory.create(
+            url = "https://example.com/download?id=1",
+            contentDisposition = "attachment; filename=App.apk",
+            mimeType = "application/octet-stream",
+        )
+        assertEquals("application/vnd.android.package-archive", genericServerRequest?.mimeType)
+        assertEquals("App.apk", genericServerRequest?.fileName)
+        assertTrue(
+            BrowserDownloadRequestFactory.isAndroidPackage(
+                BrowserDownloadRequest(
+                    url = "https://example.com/download?id=1",
+                    fileName = "App.apk",
+                    mimeType = "application/octet-stream",
+                ),
+            ),
+        )
+        assertFalse(
+            BrowserDownloadRequestFactory.isAndroidPackage(
+                BrowserDownloadRequest(
+                    url = "https://example.com/download?id=1",
+                    fileName = "archive.zip",
+                    mimeType = "application/zip",
+                ),
+            ),
+        )
     }
 
     @Test

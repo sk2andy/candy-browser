@@ -75,8 +75,10 @@ class MainActivityExternalBackInstrumentedTest {
 
         ActivityScenario.launch<MainActivity>(launchIntent).use { scenario ->
             lateinit var browserController: BrowserController
+            lateinit var scenarioIntent: Intent
             scenario.onActivity { activity ->
                 browserController = activity.browserControllerForTesting()
+                scenarioIntent = activity.intent
                 browserController.updateExternalLinkPreviewEnabled(true)
             }
             context.startActivity(
@@ -101,12 +103,7 @@ class MainActivityExternalBackInstrumentedTest {
                 assertEquals(null, browserController.externalLinkPreviewState)
                 assertEquals(1, browserController.tabs.size)
             }
-            context.startActivity(
-                Intent(context, MainActivity::class.java)
-                    .setAction(Intent.ACTION_MAIN)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-            scenario.onActivity { }
+            scenario.onActivity { activity -> activity.intent = scenarioIntent }
         }
     }
 
@@ -125,11 +122,15 @@ class MainActivityExternalBackInstrumentedTest {
                 MainActivity::class.java,
             ),
         ).use { scenario ->
+            var appHandoffExpiration = 0L
             scenario.onActivity { activity ->
-                val previewUrl = activity.browserControllerForTesting()
-                    .externalLinkPreviewState
-                    ?.currentUrl
-                assertEquals(EXTERNAL_URL, previewUrl)
+                val preview = requireNotNull(
+                    activity.browserControllerForTesting().externalLinkPreviewState,
+                )
+                assertEquals(EXTERNAL_URL, preview.currentUrl)
+                appHandoffExpiration = requireNotNull(
+                    preview.appHandoffExpiresAtElapsedRealtime,
+                )
             }
 
             scenario.recreate()
@@ -137,6 +138,10 @@ class MainActivityExternalBackInstrumentedTest {
             scenario.onActivity { activity ->
                 val controller = activity.browserControllerForTesting()
                 assertEquals(EXTERNAL_URL, controller.externalLinkPreviewState?.currentUrl)
+                assertEquals(
+                    appHandoffExpiration,
+                    controller.externalLinkPreviewState?.appHandoffExpiresAtElapsedRealtime,
+                )
                 assertEquals(1, controller.tabs.size)
             }
         }
