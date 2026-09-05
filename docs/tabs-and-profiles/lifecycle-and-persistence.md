@@ -16,6 +16,7 @@
 | State | Storage | Rule |
 | --- | --- | --- |
 | Tabs and selection | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Exclude incognito and live federated-login popup tabs; fall back to most recently accessed persistent tab |
+| Profile wallpapers | `BrowserSessionStore`, `ProfileWallpaperStore` | Persist separate bounded crop/zoom metadata and Candy-owned, size-bounded image files for the new-tab and tab-switcher slots. Keep the active new-tab image in memory and load the switcher image only while its overview is used. |
 | Overview ordering preferences | `BrowserSessionStore` | Persist list-bottom anchoring and automatic recent-use sorting; both default off |
 | Startup home preference | `BrowserSessionStore` | Defaults off; regular launcher opens can add and select a blank tab without discarding restored tabs |
 | History and favorites | `BrowsingHistoryRepository`, `BrowserSessionStore`, `BrowsingLibrary` | Keep local, bounded, canonicalized records; history is owned by a regular profile and can be viewed across a user-selected profile set |
@@ -48,5 +49,9 @@
   first and reject manual reorder mutations.
 - End an owning fullscreen-video session before its tab or WebView is removed. Private sessions end
   when selection leaves their tab; regular sessions may remain transiently attached as a mini-player.
+- Remove both owned wallpaper files when deleting a profile. A missing or corrupt file clears only
+  that slot's stale profile metadata and falls back to the normal surface. Wallpaper never renders
+  for private or synced runtime profiles. Legacy single-wallpaper data is atomically copied into
+  both slots before its original file is removed.
 - Never reassign history when deleting a profile; delete that profile's rows. Private tabs never
   enter history, and address suggestions only consume history for the selected tab's profile.

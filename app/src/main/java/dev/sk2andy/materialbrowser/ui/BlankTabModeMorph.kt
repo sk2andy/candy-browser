@@ -105,6 +105,7 @@ internal fun Modifier.blankTabModeBackground(
     regularCenterColor: Color,
     incognitoCenterColor: Color,
     edgeColor: Color,
+    wallpaper: ProfileWallpaperRuntime? = null,
 ): Modifier = drawWithCache {
     val center = Offset(size.width / 2f, size.height / 2f)
     val origin = revealOriginInRoot.takeIf { it.x.isFinite() && it.y.isFinite() } ?: center
@@ -137,7 +138,15 @@ internal fun Modifier.blankTabModeBackground(
         )
     }
     onDrawBehind {
-        drawRect(regularBrush)
+        if (wallpaper == null) {
+            drawRect(regularBrush)
+        } else {
+            drawProfileWallpaper(
+                bitmap = wallpaper.bitmap,
+                wallpaper = wallpaper.wallpaper,
+                scrimAlpha = 0.42f,
+            )
+        }
         if (revealRadius > 0f) {
             clipPath(revealPath) { drawRect(incognitoBrush) }
         }

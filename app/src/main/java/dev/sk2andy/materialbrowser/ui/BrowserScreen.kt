@@ -98,6 +98,8 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -156,6 +158,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
@@ -180,6 +183,7 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
@@ -274,6 +278,10 @@ import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PageTranslationRules
+import dev.sk2andy.materialbrowser.browser.ProfileWallpaperEditorContract
+import dev.sk2andy.materialbrowser.browser.ProfileWallpaperEditorRequest
+import dev.sk2andy.materialbrowser.browser.ProfileWallpaperTarget
+import dev.sk2andy.materialbrowser.browser.wallpaperFor
 import dev.sk2andy.materialbrowser.browser.RootTabBackResult
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewCommitResult
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
@@ -546,6 +554,24 @@ internal fun BrowserScreen(
         exitHeroVisible = overviewExitHeroVisible,
     )
     val selectedTab = controller.selectedTab
+    val activeLocalProfile = controller.localBrowserProfiles
+        .firstOrNull { profile -> profile.id == controller.activeProfileId }
+    val profileWallpaperRuntime = activeLocalProfile
+        ?.newTabWallpaper
+        ?.let { wallpaper ->
+            controller.activeProfileWallpaperBitmap
+                ?.takeIf { bitmap -> !bitmap.isRecycled }
+                ?.asImageBitmap()
+                ?.let { bitmap -> ProfileWallpaperRuntime(bitmap, wallpaper) }
+        }
+    val tabSwitcherWallpaperRuntime = activeLocalProfile
+        ?.tabSwitcherWallpaper
+        ?.let { wallpaper ->
+            controller.activeProfileTabSwitcherWallpaperBitmap
+                ?.takeIf { bitmap -> !bitmap.isRecycled }
+                ?.asImageBitmap()
+                ?.let { bitmap -> ProfileWallpaperRuntime(bitmap, wallpaper) }
+        }
     val selectedSiteState = controller.siteProtectionState(selectedTab.id)
     val selectedSiteHasHost = selectedSiteState.host != null
     val canToggleSelectedCookieBannerRemoval = selectedSiteHasHost &&
@@ -651,6 +677,29 @@ internal fun BrowserScreen(
         if (result == CapsuleSaveResult.PinRequested || result == CapsuleSaveResult.Updated) {
             rootView.performConfirmHaptic()
         }
+    }
+    val profileWallpaperEditorLauncher = rememberLauncherForActivityResult(
+        contract = ProfileWallpaperEditorContract(),
+    ) { submission ->
+        if (submission != null) {
+            controller.updateProfileWallpaper(
+                submission.profileId,
+                submission.target,
+                submission.wallpaper,
+            )
+        }
+        controller.restoreActiveProfileWallpapersAfterEditing()
+    }
+    fun openProfileWallpaperEditor(profileId: String, wallpaperTarget: ProfileWallpaperTarget) {
+        val profile = controller.localBrowserProfiles.firstOrNull { it.id == profileId } ?: return
+        controller.releaseActiveProfileWallpaperForEditing(profileId)
+        profileWallpaperEditorLauncher.launch(
+            ProfileWallpaperEditorRequest(
+                profileId = profile.id,
+                target = wallpaperTarget,
+                wallpaper = profile.wallpaperFor(wallpaperTarget),
+            ),
+        )
     }
     fun openSiteCapsuleEditor(existing: SiteCapsule?, sourceTab: BrowserTab?) {
         if (existing == null && sourceTab == null) return
@@ -816,11 +865,14 @@ internal fun BrowserScreen(
             overviewEntryHeroCompleted = false
             overviewExitHeroVisible = false
             tabOverviewOpening = true
-            controller.prepareTabOverview prepared@{
-                if (!tabOverviewOpening) return@prepared
-                tabOverviewOpening = false
-                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                    tabOverviewVisible = true
+            controller.loadActiveProfileTabSwitcherWallpaper wallpaperReady@{
+                if (!tabOverviewOpening) return@wallpaperReady
+                controller.prepareTabOverview prepared@{
+                    if (!tabOverviewOpening) return@prepared
+                    tabOverviewOpening = false
+                    if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                        tabOverviewVisible = true
+                    }
                 }
             }
         }
@@ -834,6 +886,7 @@ internal fun BrowserScreen(
         overviewExitHeroVisible = false
         tabOverviewOpening = false
         tabOverviewVisible = false
+        controller.releaseActiveProfileTabSwitcherWallpaper()
     }
     LaunchedEffect(incomingBrowserNavigationRequestId) {
         if (incomingBrowserNavigationRequestId != 0) closeTabOverview()
@@ -1424,36 +1477,38 @@ internal fun BrowserScreen(
                     ),
                 ),
         )
-        BrowserViewport(
-            controller = controller,
-            webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
-            selectedTab = selectedTab,
-            dragOffset = browserDragOffset,
-            travelDistance = tabSwitchTravelPx,
-            rootHeightPx = browserHeightPx,
-            bottomBarTopPx = bottomBarTopPx,
-            handoff = tabHandoff,
-            handoffAlpha = tabHandoffAlpha.value,
-            liveFrameTabId = liveFrameTabId,
-            tabOverviewVisible = tabOverviewVisible,
-            onLiveFrame = reportLiveFrame,
-            onSearch = if (showInteractiveBlankStart) {
-                { addressEditorVisible = false }
-            } else {
-                openAddressEditor
-            },
-            onFavorite = { url ->
-                addressEditorVisible = false
-                controller.submitAddress(url)
-            },
-            blankTabModeProgress = blankTabModeProgress,
-            blankTabModeRevealOrigin = blankTabModeRevealOrigin,
-            onRetry = controller::retryFailedPage,
-            onBlurTargetAttached = { target -> browserContentBlurTarget = target },
-            onBlurTargetReleased = { target ->
-                if (browserContentBlurTarget === target) browserContentBlurTarget = null
-            },
-        )
+        CompositionLocalProvider(LocalProfileWallpaper provides profileWallpaperRuntime) {
+            BrowserViewport(
+                controller = controller,
+                webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
+                selectedTab = selectedTab,
+                dragOffset = browserDragOffset,
+                travelDistance = tabSwitchTravelPx,
+                rootHeightPx = browserHeightPx,
+                bottomBarTopPx = bottomBarTopPx,
+                handoff = tabHandoff,
+                handoffAlpha = tabHandoffAlpha.value,
+                liveFrameTabId = liveFrameTabId,
+                tabOverviewVisible = tabOverviewVisible,
+                onLiveFrame = reportLiveFrame,
+                onSearch = if (showInteractiveBlankStart) {
+                    { addressEditorVisible = false }
+                } else {
+                    openAddressEditor
+                },
+                onFavorite = { url ->
+                    addressEditorVisible = false
+                    controller.submitAddress(url)
+                },
+                blankTabModeProgress = blankTabModeProgress,
+                blankTabModeRevealOrigin = blankTabModeRevealOrigin,
+                onRetry = controller::retryFailedPage,
+                onBlurTargetAttached = { target -> browserContentBlurTarget = target },
+                onBlurTargetReleased = { target ->
+                    if (browserContentBlurTarget === target) browserContentBlurTarget = null
+                },
+            )
+        }
 
         controller.findInPageState?.let { findState ->
             val matchPosition = FindInPageRules.displayPosition(findState)
@@ -1494,6 +1549,7 @@ internal fun BrowserScreen(
                 showStartContent = selectedTab.url == BLANK_URL,
                 modeProgress = blankTabModeProgress,
                 revealOriginInRoot = blankTabModeRevealOrigin,
+                wallpaper = profileWallpaperRuntime.takeUnless { selectedTab.isIncognito },
                 onDismiss = { addressEditorVisible = false },
             )
             if (commandFeedback == null) {
@@ -1896,85 +1952,90 @@ internal fun BrowserScreen(
             )
         }
 
-        TabOverview(
-            controller = controller,
-            visible = tabOverviewVisible,
-            bottomBarTopPx = bottomBarTopPx,
-            onClose = closeTabOverview,
-            onSelect = {
-                val target = controller.activeTabs.firstOrNull { tab -> tab.id == it }
-                if (target != null && target.id != controller.selectedTabId) {
-                    liveFrameTabId = null
-                    tabHandoff = TabHandoff(
-                        tabId = target.id,
-                        preview = controller.previews[target.id].takeUnless { target.isIncognito },
-                        title = target.title,
-                        favicon = controller.favicons[target.id],
-                        isIncognito = target.isIncognito,
-                        previewTopInsetPx = controller.previewTopInsetPx(target.id),
-                    )
-                    controller.selectTab(target.id)
-                } else {
-                    controller.selectTab(it)
-                }
-            },
-            onNewTab = {
-                val previousTabId = controller.selectedTabId
-                openNewTabAndEdit()
-                if (controller.selectedTabId != previousTabId) closeTabOverview()
-            },
-            onOpenSettings = {
-                settingsDestination = SettingsDestination.Home
-                settingsVisible = true
-            },
-            onOpenSyncSettings = {
-                settingsDestination = SettingsDestination.Sync
-                settingsVisible = true
-            },
-            destinationChromeVisible = overviewDestinationChromeVisible,
-            onEntryHeroStarted = { animated ->
-                overviewMorphJob?.cancel()
-                overviewMorphProgress.floatValue = 0f
-                overviewEntryHeroCompleted = false
-                if (animated) {
-                    overviewMorphJob = overviewGestureScope.launch {
-                        val progress = Animatable(0f)
-                        progress.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(
-                                durationMillis = TabOverviewHeroRules.ENTRY_DURATION_MILLIS,
-                                easing = FastOutSlowInEasing,
-                            ),
-                        ) { overviewMorphProgress.floatValue = value }
+        CompositionLocalProvider(LocalProfileWallpaper provides profileWallpaperRuntime) {
+            TabOverview(
+                controller = controller,
+                backgroundWallpaper = tabSwitcherWallpaperRuntime,
+                visible = tabOverviewVisible,
+                bottomBarTopPx = bottomBarTopPx,
+                onClose = closeTabOverview,
+                onSelect = {
+                    val target = controller.activeTabs.firstOrNull { tab -> tab.id == it }
+                    if (target != null && target.id != controller.selectedTabId) {
+                        liveFrameTabId = null
+                        tabHandoff = TabHandoff(
+                            tabId = target.id,
+                            preview = controller.previews[target.id]
+                                .takeUnless { target.isIncognito },
+                            title = target.title,
+                            favicon = controller.favicons[target.id],
+                            isIncognito = target.isIncognito,
+                            previewTopInsetPx = controller.previewTopInsetPx(target.id),
+                        )
+                        controller.selectTab(target.id)
+                    } else {
+                        controller.selectTab(it)
                     }
-                } else {
-                    overviewMorphProgress.floatValue = 1f
-                }
-            },
-            onEntryHeroCompleted = { overviewEntryHeroCompleted = true },
-            onExitHeroVisibilityChanged = { overviewExitHeroVisible = it },
-            candyTrailTabId = candyTrailTabId,
-            candyTrailSourceBounds = candyTrailSourceBounds,
-            candyTrailBackProgress = candyTrailBackProgress.value,
-            candyTrailBackEdgeSign = candyTrailBackEdgeSign,
-            candyTrailPredictiveBackCommitted = candyTrailPredictiveBackCommitted,
-            onOpenCandyTrail = { tabId, bounds ->
-                candyTrailSourceBounds = bounds
-                candyTrailTabId = tabId
-            },
-            onCloseCandyTrail = {
-                candyTrailTabId = null
-                candyTrailSourceBounds = null
-            },
-            onToggleFavoriteTab = toggleFavoriteWithFeedback,
-            onAddSiteCapsule = { tabId ->
-                openSiteCapsuleEditor(
-                    existing = null,
-                    sourceTab = controller.tabs.firstOrNull { it.id == tabId },
-                )
-            },
-            onSnoozeTab = { tabId -> snoozeTabId = tabId },
-        )
+                },
+                onNewTab = {
+                    val previousTabId = controller.selectedTabId
+                    openNewTabAndEdit()
+                    if (controller.selectedTabId != previousTabId) closeTabOverview()
+                },
+                onOpenSettings = {
+                    settingsDestination = SettingsDestination.Home
+                    settingsVisible = true
+                },
+                onOpenSyncSettings = {
+                    settingsDestination = SettingsDestination.Sync
+                    settingsVisible = true
+                },
+                onEditProfileWallpaper = ::openProfileWallpaperEditor,
+                destinationChromeVisible = overviewDestinationChromeVisible,
+                onEntryHeroStarted = { animated ->
+                    overviewMorphJob?.cancel()
+                    overviewMorphProgress.floatValue = 0f
+                    overviewEntryHeroCompleted = false
+                    if (animated) {
+                        overviewMorphJob = overviewGestureScope.launch {
+                            val progress = Animatable(0f)
+                            progress.animateTo(
+                                targetValue = 1f,
+                                animationSpec = tween(
+                                    durationMillis = TabOverviewHeroRules.ENTRY_DURATION_MILLIS,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            ) { overviewMorphProgress.floatValue = value }
+                        }
+                    } else {
+                        overviewMorphProgress.floatValue = 1f
+                    }
+                },
+                onEntryHeroCompleted = { overviewEntryHeroCompleted = true },
+                onExitHeroVisibilityChanged = { overviewExitHeroVisible = it },
+                candyTrailTabId = candyTrailTabId,
+                candyTrailSourceBounds = candyTrailSourceBounds,
+                candyTrailBackProgress = candyTrailBackProgress.value,
+                candyTrailBackEdgeSign = candyTrailBackEdgeSign,
+                candyTrailPredictiveBackCommitted = candyTrailPredictiveBackCommitted,
+                onOpenCandyTrail = { tabId, bounds ->
+                    candyTrailSourceBounds = bounds
+                    candyTrailTabId = tabId
+                },
+                onCloseCandyTrail = {
+                    candyTrailTabId = null
+                    candyTrailSourceBounds = null
+                },
+                onToggleFavoriteTab = toggleFavoriteWithFeedback,
+                onAddSiteCapsule = { tabId ->
+                    openSiteCapsuleEditor(
+                        existing = null,
+                        sourceTab = controller.tabs.firstOrNull { it.id == tabId },
+                    )
+                },
+                onSnoozeTab = { tabId -> snoozeTabId = tabId },
+            )
+        }
 
         SnoozeTabDialog(
             tab = snoozeTabId?.let { id -> controller.tabs.firstOrNull { it.id == id } },
@@ -3389,6 +3450,7 @@ private fun NewTabPage(
     explicitSafeDrawingPadding: PaddingValues? = null,
 ) {
     val colors = MaterialTheme.colorScheme
+    val profileWallpaper = LocalProfileWallpaper.current.takeUnless { incognito }
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
     val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
     val incognitoIconAlpha = BlankTabModeMorphRules.incognitoIconAlpha(boundedProgress)
@@ -3403,25 +3465,46 @@ private fun NewTabPage(
                 regularCenterColor = colors.primaryContainer,
                 incognitoCenterColor = colors.inverseSurface,
                 edgeColor = colors.surface,
-            )
-            .then(
-                if (explicitSafeDrawingPadding != null) {
-                    Modifier.padding(explicitSafeDrawingPadding)
-                } else {
-                    Modifier.safeDrawingPadding()
-                },
+                wallpaper = profileWallpaper,
             ),
     ) {
-        Column(
+        if (profileWallpaper != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(colors.surface.copy(alpha = 0.92f)),
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                    .background(colors.surface.copy(alpha = 0.92f)),
+            )
+        }
+        Box(
             modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(0.86f)
-                .heightIn(max = 520.dp)
-                .then(if (interactive) Modifier.verticalScroll(scrollState) else Modifier)
-                .padding(vertical = BlankTabModeMorphRules.HERO_SHADOW_CLEARANCE_DP.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .then(
+                    if (explicitSafeDrawingPadding != null) {
+                        Modifier.padding(explicitSafeDrawingPadding)
+                    } else {
+                        Modifier.safeDrawingPadding()
+                    },
+                ),
         ) {
-            Surface(
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(0.86f)
+                    .heightIn(max = 520.dp)
+                    .then(if (interactive) Modifier.verticalScroll(scrollState) else Modifier)
+                    .padding(vertical = BlankTabModeMorphRules.HERO_SHADOW_CLEARANCE_DP.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Surface(
                 onClick = onSearch,
                 enabled = interactive,
                 modifier = Modifier
@@ -3464,35 +3547,41 @@ private fun NewTabPage(
                     )
                 }
             }
-            if (!incognito && favorites.isNotEmpty()) {
-                Column(
+                if (!incognito && favorites.isNotEmpty()) {
+                    Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .graphicsLayer {
                             alpha = favoritesAlpha().coerceIn(0f, 1f)
                         },
-                ) {
-                    Spacer(Modifier.height(28.dp))
-                    Text(
+                    ) {
+                        Spacer(Modifier.height(28.dp))
+                        Text(
                         stringResource(R.string.favorites_title),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .background(
+                                color = Color.Black.copy(alpha = 0.82f),
+                                shape = RoundedCornerShape(8.dp),
+                            )
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.titleMedium,
-                        color = colors.onSurface,
+                        color = if (profileWallpaper == null) colors.onSurface else Color.White,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Surface(
+                        Spacer(Modifier.height(8.dp))
+                        Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(24.dp),
                         color = colors.surfaceContainerHigh.copy(alpha = 0.9f),
                         tonalElevation = 8.dp,
-                    ) {
-                        Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                            ExpressiveFavoriteRows(
+                        ) {
+                            Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                                ExpressiveFavoriteRows(
                                 favorites = favorites,
                                 onFavorite = onFavorite,
                                 enabled = interactive,
-                            )
+                                )
+                            }
                         }
                     }
                 }
@@ -4099,6 +4188,7 @@ private fun AddressBarParkIcon(
 
 internal object TabOverviewChromeTestTags {
     const val Root = "tab_overview_root"
+    const val Background = "tab_overview_background"
     const val HeroPager = "tab_overview_hero_pager"
     const val Grid = "tab_overview_grid"
     const val List = "tab_overview_list"
@@ -5012,6 +5102,7 @@ private fun AddressEditorBackdrop(
     showStartContent: Boolean,
     modeProgress: Float,
     revealOriginInRoot: Offset,
+    wallpaper: ProfileWallpaperRuntime?,
     onDismiss: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -5025,6 +5116,7 @@ private fun AddressEditorBackdrop(
             regularCenterColor = colors.primaryContainer,
             incognitoCenterColor = colors.inverseSurface,
             edgeColor = colors.surface,
+            wallpaper = wallpaper,
         )
     } else {
         Modifier.background(
@@ -5612,6 +5704,7 @@ private fun CommandIcon(kind: BrowserCommandKind, tint: Color) {
 @Composable
 internal fun TabOverview(
     controller: BrowserController,
+    backgroundWallpaper: ProfileWallpaperRuntime? = null,
     visible: Boolean,
     bottomBarTopPx: FloatState,
     onClose: () -> Unit,
@@ -5619,6 +5712,7 @@ internal fun TabOverview(
     onNewTab: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenSyncSettings: () -> Unit = onOpenSettings,
+    onEditProfileWallpaper: (String, ProfileWallpaperTarget) -> Unit = { _, _ -> },
     destinationChromeVisible: Boolean,
     onEntryHeroStarted: (Boolean) -> Unit,
     onEntryHeroCompleted: () -> Unit,
@@ -5636,6 +5730,9 @@ internal fun TabOverview(
 ) {
     val rootView = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val overviewWallpaper = backgroundWallpaper.takeUnless {
+        controller.selectedTab.isIncognito
+    }
     val overviewTabs = controller.activeTabs
     val initialPage = remember {
         overviewTabs.indexOfFirst { it.id == controller.selectedTabId }.coerceAtLeast(0)
@@ -6309,7 +6406,8 @@ internal fun TabOverview(
             heroVisible = false
         }
 
-        Box(
+        TabOverviewBackground(
+            wallpaper = overviewWallpaper,
             modifier = Modifier
                 .fillMaxSize()
                 .then(if (visible) Modifier.testTag(TabOverviewChromeTestTags.Root) else Modifier)
@@ -6322,16 +6420,7 @@ internal fun TabOverview(
                     } else {
                         0f
                     }
-                }
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer,
-                            MaterialTheme.colorScheme.surface,
-                        ),
-                    ),
-                ),
+                },
         )
 
         Column(
@@ -6439,6 +6528,7 @@ internal fun TabOverview(
                                     pagerState.scrollToPage(0)
                                 }
                                 if (controller.selectProfile(profileId)) {
+                                    controller.loadActiveProfileTabSwitcherWallpaper()
                                     val selectedIndex = controller.activeTabs
                                         .indexOfFirst { it.id == controller.selectedTabId }
                                         .coerceAtLeast(0)
@@ -7573,6 +7663,11 @@ internal fun TabOverview(
                 profileActionsProfileId = null
                 emojiPickerTargetId = target.id
             },
+            onCustomizeWallpaper = { wallpaperTarget ->
+                val target = actionProfile ?: return@ProfileActionsSheet
+                profileActionsProfileId = null
+                onEditProfileWallpaper(target.id, wallpaperTarget)
+            },
             onDelete = {
                 val target = actionProfile ?: return@ProfileActionsSheet
                 profileActionsProfileId = null
@@ -7648,6 +7743,55 @@ internal fun TabOverview(
         )
     }
 
+}
+
+@Composable
+internal fun TabOverviewBackground(
+    wallpaper: ProfileWallpaperRuntime?,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val backgroundModifier = if (wallpaper == null) {
+        Modifier.background(
+            Brush.linearGradient(
+                colors = listOf(
+                    colors.primaryContainer,
+                    colors.tertiaryContainer,
+                    colors.surface,
+                ),
+            ),
+        )
+    } else {
+        Modifier.drawBehind {
+            drawProfileWallpaper(
+                bitmap = wallpaper.bitmap,
+                wallpaper = wallpaper.wallpaper,
+                scrimAlpha = 0.54f,
+            )
+        }
+    }
+    Box(
+        modifier = modifier
+            .testTag(TabOverviewChromeTestTags.Background)
+            .then(backgroundModifier),
+    ) {
+        if (wallpaper != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(colors.surface.copy(alpha = 0.92f)),
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                    .background(colors.surface.copy(alpha = 0.92f)),
+            )
+        }
+    }
 }
 
 @Composable
@@ -9715,6 +9859,7 @@ private fun ProfileActionsSheet(
     canDelete: Boolean,
     isolationSupported: Boolean,
     onChangeEmoji: () -> Unit,
+    onCustomizeWallpaper: (ProfileWallpaperTarget) -> Unit,
     onDelete: () -> Unit,
     onIsolationChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
@@ -9745,6 +9890,18 @@ private fun ProfileActionsSheet(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.action_change_profile_icon))
+            }
+            TextButton(
+                onClick = { onCustomizeWallpaper(ProfileWallpaperTarget.NewTab) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.action_customize_new_tab_wallpaper))
+            }
+            TextButton(
+                onClick = { onCustomizeWallpaper(ProfileWallpaperTarget.TabSwitcher) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.action_customize_tab_switcher_wallpaper))
             }
             SettingsSwitch(
                 title = stringResource(R.string.settings_profile_isolation_title),
