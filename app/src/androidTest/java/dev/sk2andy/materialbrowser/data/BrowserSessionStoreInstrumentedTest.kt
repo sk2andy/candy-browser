@@ -7,6 +7,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -117,6 +118,16 @@ class BrowserSessionStoreInstrumentedTest {
                 emoji = "💼",
                 selectedTabId = "work-tab",
                 isolationEnabled = true,
+                newTabWallpaper = ProfileWallpaper(
+                    zoom = 2.25f,
+                    normalizedPanX = -0.4f,
+                    normalizedPanY = 0.6f,
+                ),
+                tabSwitcherWallpaper = ProfileWallpaper(
+                    zoom = 1.5f,
+                    normalizedPanX = 0.2f,
+                    normalizedPanY = -0.3f,
+                ),
             ),
         )
 
@@ -357,6 +368,42 @@ class BrowserSessionStoreInstrumentedTest {
         val profile = BrowserSessionStore(context).loadProfiles().first.single()
 
         assertFalse(profile.isolationEnabled)
+        assertNull(profile.newTabWallpaper)
+        assertNull(profile.tabSwitcherWallpaper)
+    }
+
+    @Test
+    fun invalidWallpaperTransformIsBoundedDuringRestore() {
+        preferences.edit()
+            .putString(
+                "profiles",
+                """[{"id":"candy","emoji":"🍬","wallpaper":{"zoom":99,"normalizedPanX":-9,"normalizedPanY":8}}]""",
+            )
+            .commit()
+
+        val profile = BrowserSessionStore(context).loadProfiles().first.single()
+        val newTabWallpaper = requireNotNull(profile.newTabWallpaper)
+        val tabSwitcherWallpaper = requireNotNull(profile.tabSwitcherWallpaper)
+
+        assertEquals(4f, newTabWallpaper.zoom, 0f)
+        assertEquals(-1f, newTabWallpaper.normalizedPanX, 0f)
+        assertEquals(1f, newTabWallpaper.normalizedPanY, 0f)
+        assertEquals(newTabWallpaper, tabSwitcherWallpaper)
+    }
+
+    @Test
+    fun explicitTargetFieldsDoNotResurrectLegacyWallpaper() {
+        preferences.edit()
+            .putString(
+                "profiles",
+                """[{"id":"candy","emoji":"🍬","wallpaper":{"zoom":2},"newTabWallpaper":null,"tabSwitcherWallpaper":{"zoom":3}}]""",
+            )
+            .commit()
+
+        val profile = BrowserSessionStore(context).loadProfiles().first.single()
+
+        assertNull(profile.newTabWallpaper)
+        assertEquals(3f, requireNotNull(profile.tabSwitcherWallpaper).zoom, 0f)
     }
 
     @Test
