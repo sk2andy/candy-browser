@@ -697,6 +697,8 @@ class BrowserController(
     private val externalNavigationGrantExpirations = mutableMapOf<String, Long>()
     private val mainFrameTlsNavigations = mutableMapOf<String, MainFrameTlsNavigation>()
     private var webContentRequestGeneration = 0L
+    private val desktopViewportScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
+    private val desktopViewportScriptOrigins = mutableMapOf<WebView, Set<String>>()
     private val forcedPageZoomScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
@@ -6028,6 +6030,8 @@ class BrowserController(
         webViews.clear()
         residentWebViewAccessOrder.clear()
         webViewProfileKeys.clear()
+        desktopViewportScriptHandlers.clear()
+        desktopViewportScriptOrigins.clear()
         forcedPageZoomScriptHandlers.clear()
         forcedVerticalScrollScriptHandlers.clear()
         cosmeticScriptHandlers.clear()
@@ -11058,6 +11062,7 @@ class BrowserController(
             ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
         removeWebMediaBridge(webView)
         genericCosmeticBridges.remove(webView)
+        removeDesktopViewportDocumentStartScript(webView)
         removeSiteCompatibilityDocumentStartScripts(webView)
         removeWebContentTopInsetDocumentStartScript(webView)
         webContentTopInsetNativeFallbacks.remove(webView)
@@ -11206,6 +11211,7 @@ class BrowserController(
         if (!request.isForMainFrame) return false
         val overrideToken = invalidatePendingDesktopNavigationOverride(webView)
         val targetUrl = request.url.toString()
+        installDesktopViewportDocumentStartScript(tab, webView, targetUrl)
         if (
             !DesktopNavigationRules.shouldReplayForUserAgentChange(
                 isForMainFrame = request.isForMainFrame,
@@ -11238,8 +11244,10 @@ class BrowserController(
         pageUrl: String,
         isCurrent: () -> Boolean,
     ) {
+        if (!isCurrent() || webView.url != pageUrl) return
+        injectDesktopViewportFallback(tab, webView, pageUrl)
+        if (webView.progress < 100) return
         if (isDesktopViewUserAgentApplied(tab, webView, pageUrl)) return
-        if (!isCurrent() || webView.url != pageUrl || webView.progress < 100) return
         applyDesktopViewPolicy(tab, webView, pageUrl)
     }
 
@@ -11288,6 +11296,7 @@ class BrowserController(
             if (loadWithOverviewMode != enabled) loadWithOverviewMode = enabled
         }
         applyDesktopUserAgentMetadata(webView.settings, enabled, defaultMetadata)
+        installDesktopViewportDocumentStartScript(tab, webView, pageUrl)
     }
 
     private fun isDesktopViewUserAgentApplied(
@@ -11333,6 +11342,23 @@ class BrowserController(
         val desiredMetadata = if (enabled) {
             UserAgentMetadata.Builder(defaultMetadata)
                 .setMobile(false)
+                .setPlatform("Linux")
+                .setPlatformVersion("")
+                .setArchitecture("x86")
+                .setModel("")
+                .setBitness(64)
+                .setWow64(false)
+                .let { builder ->
+                    if (
+                        WebViewFeature.isFeatureSupported(
+                            WebViewFeature.USER_AGENT_METADATA_FORM_FACTORS,
+                        )
+                    ) {
+                        builder.setFormFactors(listOf(UserAgentMetadata.FORM_FACTOR_DESKTOP))
+                    } else {
+                        builder
+                    }
+                }
                 .build()
         } else {
             defaultMetadata
@@ -11342,6 +11368,56 @@ class BrowserController(
         }.getOrNull()
         if (currentMetadata == desiredMetadata) return
         runCatching { WebSettingsCompat.setUserAgentMetadata(settings, desiredMetadata) }
+    }
+
+    private fun installDesktopViewportDocumentStartScript(
+        tab: BrowserTab,
+        view: WebView,
+        pageUrl: String?,
+    ) {
+        removeDesktopViewportDocumentStartScript(view)
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
+        val domains = desktopViewDomains(tab)
+        val script = DesktopViewportScript.create(domains)
+        if (script.isEmpty()) return
+        val allowedOrigins = DesktopViewportScript.allowedOrigins(domains).toMutableSet()
+        if (isDesktopView(tab, pageUrl)) {
+            CandyDocumentStartOrigin.fromUrl(pageUrl)?.let(allowedOrigins::add)
+        }
+        runCatching {
+            WebViewCompat.addDocumentStartJavaScript(
+                view,
+                script,
+                allowedOrigins,
+            )
+        }.getOrNull()?.let { handler ->
+            desktopViewportScriptHandlers[view] = handler
+            desktopViewportScriptOrigins[view] = allowedOrigins.toSet()
+        }
+    }
+
+    private fun injectDesktopViewportFallback(tab: BrowserTab, view: WebView, pageUrl: String?) {
+        if (!isDesktopView(tab, pageUrl)) return
+        if (DesktopViewportScript.covers(pageUrl, desktopViewportScriptOrigins[view].orEmpty())) {
+            return
+        }
+        val domain = DesktopSiteRules.domainForUrl(pageUrl) ?: return
+        DesktopViewportScript.create(setOf(domain))
+            .takeIf(String::isNotEmpty)
+            ?.let { script -> view.evaluateJavascript(script, null) }
+    }
+
+    private fun desktopViewDomains(tab: BrowserTab): Set<String> = if (tab.isIncognito) {
+        temporaryDesktopViewDomains[tab.profileId].orEmpty()
+    } else {
+        permanentDesktopViewDomains[tab.profileId].orEmpty()
+    }
+
+    private fun removeDesktopViewportDocumentStartScript(view: WebView) {
+        desktopViewportScriptOrigins.remove(view)
+        desktopViewportScriptHandlers.remove(view)?.let { handler ->
+            runCatching(handler::remove)
+        }
     }
 
     private fun refreshDomainMuteForProfile(profileId: String, isIncognito: Boolean) {

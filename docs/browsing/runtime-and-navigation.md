@@ -19,7 +19,7 @@
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
-| Desktop view | `DesktopSiteRules` / `DesktopNavigationRules` → controller → WebView settings | Store registrable domains per profile; coordinate user-agent changes with the target navigation |
+| Desktop view | `DesktopSiteRules` / `DesktopNavigationRules` / `DesktopViewportScript` → controller → WebView settings | Store registrable domains per profile; coordinate desktop user-agent, client hints and wide viewport changes with the target navigation |
 | Always block pop-ups | `PopupSiteRules` → controller → `onCreateWindow` | Reject every popup synchronously for configured registrable opener domains; persist regular state per profile and keep private state memory-only |
 | Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
 | CAPTCHA compatibility | `CaptchaCompatibilityRules` → controller → Snackbar and `AlertDialog` | Detect strict cross-site Cloudflare, Google reCAPTCHA, or hCaptcha endpoints; allow third-party cookies only after explicit consent |
@@ -60,6 +60,10 @@
 - Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
 - Keep private tab state memory-only and skip remote suggestions for private input.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.
+- Desktop view must present one coherent desktop identity: desktop user-agent text, Linux desktop
+  client hints, and a 980-CSS-pixel layout viewport. Rewrite mobile viewport sizing only for
+  configured registrable domains, preserve unrelated directives such as `viewport-fit`, and restore
+  page defaults through the required reload when desktop view is disabled.
 - Keep private always-block-popup domains memory-only; persist regular domains per profile only.
 - Keep `CREDENTIAL_MANAGER_SET_ORIGIN` declared while WebViews use browser WebAuthn mode. Android
   Credential Manager requires it before a browser can request passkeys for a website origin. Ship
