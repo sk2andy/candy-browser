@@ -6,7 +6,7 @@
 | --- | --- |
 | ZIP format, bounds and path validation | `data/AppDataArchiveRules.kt`, `data/AppDataArchiveCodec.kt` |
 | Import staging and rollback swap | `data/AppDataArchiveStaging.kt`, `data/AppDataArchiveRestore.kt` |
-| Storage Access Framework launch and confirmation UI | `MainActivity.kt`, `ui/SettingsScreen.kt`, `ui/AppDataArchiveDialogs.kt` |
+| Storage Access Framework launch and confirmation UI | `MainActivity.kt`, `ui/ProtectionSettingsPage.kt`, `ui/AppDataArchiveDialogs.kt` |
 | Cold export/import process | `AppDataTransferActivity.kt` |
 | Android Auto Backup policy | `res/xml/data_extraction_rules.xml` |
 

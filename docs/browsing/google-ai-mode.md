@@ -35,8 +35,8 @@ experience can still vary by Google account, language, region, and provider roll
 | URL-versus-search classification | [`AddressResolver.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/AddressResolver.kt) |
 | Toggle visibility and guarded mode selection | [`AddressAiModeRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/commands/AddressAiModeRules.kt) |
 | Global visibility preference and submission wiring | `BrowserSessionStore`, `BrowserController` |
-| Editor-session selection, icon semantics, and submission actions | `BrowserScreen`, `AddressAiModeToggle` |
-| Settings presentation | `SettingsScreen` |
+| Editor-session selection, address-chrome wiring, icon semantics, and submission actions | `BrowserScreen`, `BrowserAddressChrome`, `AddressAiModeToggle` |
+| Settings presentation | `SearchSettingsPage` |
 
 Only the global `ai_mode_toggle_visible` preference is persisted. Active AI Mode selection is
 memory-only editor state and resets when the editor closes, the tab changes, or the input stops
@@ -59,4 +59,3 @@ being an eligible search query.
 | Capability gating, visibility, and guarded mode selection | `AddressAiModeRulesTest` |
 | Persisted visibility preference | `BrowserSessionStoreInstrumentedTest` |
 | Toggle semantics and interaction | `AddressAiModeToggleInstrumentedTest` |
-

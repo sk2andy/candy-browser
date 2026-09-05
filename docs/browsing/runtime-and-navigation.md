@@ -4,9 +4,11 @@
 
 | Layer | Responsibility | Entry points |
 | --- | --- | --- |
-| Activity | Android lifecycle, incoming intents, permission/file chooser launchers, root theme, fullscreen video and system picture-in-picture | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt) |
+| Activity | Android lifecycle, incoming intents, permission/file chooser launchers and root composition | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt) |
+| Activity support | System PiP state, launcher-shortcut dispatch, userscript import, update prompt and appearance night mode | [`MainActivityPictureInPictureController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivityPictureInPictureController.kt), [`LauncherShortcutIntentHandler.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/LauncherShortcutIntentHandler.kt), [`UserScriptImporter.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/UserScriptImporter.kt), [`AppUpdatePrompt.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/AppUpdatePrompt.kt), [`AppearanceNightMode.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/AppearanceNightMode.kt) |
 | Controller | WebView creation, tab/profile state, navigation, persistence coordination, platform and fullscreen-video callbacks | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
-| Compose | Render controller state and forward user actions | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt), [`StatusBarFrostedGlass.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/StatusBarFrostedGlass.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
+| Compose root | Read controller state, own transient screen state and route browser surfaces | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt) |
+| Compose surfaces | Host WebView/preview content, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
 | Policies | Resolve input, URLs, settings, media, file chooser and external routes | [`browser/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/) |
 
 ## Navigation paths
@@ -29,7 +31,10 @@
 
 ## Invariants
 
-- Keep activity-result and lifecycle ownership in `MainActivity`; keep browser state in `BrowserController`.
+- Keep activity-result registration and lifecycle ownership in `MainActivity`; focused activity helpers
+  receive explicit callbacks and must not become independent lifecycle owners. Keep browser state in
+  `BrowserController`, transient root UI state in `BrowserScreen`, and focused composables stateless
+  except for their existing local presentation state.
 - Keep separate browser intent filters for untyped HTTP(S) links and HTTP(S) links carrying the
   `text/html` MIME type. Adding a MIME type to the untyped filter makes ordinary links ineligible.
 - Show WebView custom views above browser chrome and enable sensor rotation for their lifetime.

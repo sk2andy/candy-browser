@@ -20,7 +20,8 @@ Canvas-only players, unsupported DRM surfaces and hostile player scripts remain 
 
 | Owner | Responsibility | Main source |
 | --- | --- | --- |
-| Android Activity | PiP capability, params, auto-enter, explicit entry, mode callbacks and return layout | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt) |
+| Android Activity | Lifecycle callback forwarding and browser-system-UI coordination | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt) |
+| Android PiP coordinator | PiP capability, params, auto-enter, explicit entry, mode state and return layout | [`MainActivityPictureInPictureController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivityPictureInPictureController.kt) |
 | Browser controller | Channel identity, eligibility, presentation pinning, fullscreen session identity, lifecycle cleanup and media publication | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
 | Native contract and rules | Bounded bridge parsing, commands, request eligibility and media scoring | [`WebMediaContract.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/WebMediaContract.kt) |
 | Document-start bridge | HTML media telemetry, PiP compatibility API, playback commands, presentation styles and iframe relay | [`WebMediaBridgeScript.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/WebMediaBridgeScript.kt) |
