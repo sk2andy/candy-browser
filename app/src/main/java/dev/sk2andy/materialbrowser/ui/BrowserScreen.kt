@@ -2409,6 +2409,16 @@ internal fun BrowserScreen(
             )
         }
 
+        controller.httpAuthPrompt?.let { prompt ->
+            HttpAuthPromptDialog(
+                prompt = prompt,
+                onSubmit = { username, password ->
+                    controller.respondToHttpAuthPrompt(prompt.id, username, password)
+                },
+                onCancel = { controller.cancelHttpAuthPrompt(prompt.id) },
+            )
+        }
+
         controller.federatedLoginOffer
             ?.takeIf(FederatedLoginOffer::showDialog)
             ?.let { offer ->

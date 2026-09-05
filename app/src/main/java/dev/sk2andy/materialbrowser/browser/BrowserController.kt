@@ -21,6 +21,7 @@ import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
 import android.webkit.GeolocationPermissions
+import android.webkit.HttpAuthHandler
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
@@ -136,6 +137,8 @@ import dev.sk2andy.materialbrowser.browser.commands.CommandCookieScope
 import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
 import dev.sk2andy.materialbrowser.browser.commands.WebViewCommandActions
 import dev.sk2andy.materialbrowser.browser.commands.WebViewProfileCookies
+import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPrompt
+import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPromptRules
 import dev.sk2andy.materialbrowser.browser.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryRequest
@@ -524,6 +527,8 @@ class BrowserController(
         private set
     var permissionPrompt by mutableStateOf<PermissionPrompt?>(null)
         private set
+    var httpAuthPrompt by mutableStateOf<HttpAuthPrompt?>(null)
+        private set
     internal var fullscreenVideoState by mutableStateOf<FullscreenVideoState?>(null)
         private set
     internal var webMediaState by mutableStateOf<WebMediaState?>(null)
@@ -790,6 +795,8 @@ class BrowserController(
     private var pendingPermissionAccess: PendingPermissionAccess? = null
     private var pendingFileChooser: PendingFileChooser? = null
     private var permissionPromptSequence = 0L
+    private var pendingHttpAuthChallenge: PendingHttpAuthChallenge? = null
+    private var httpAuthPromptSequence = 0L
     private var permissionRevision by mutableIntStateOf(0)
     private val protectionRequestContexts = ConcurrentHashMap<String, ProtectionRequestContext>()
     private var isActivityResumed = false
@@ -1135,6 +1142,24 @@ class BrowserController(
             pending.allowed + prompted
         }
         continuePermissionAccess(pending.copy(allowed = allowed, prompted = emptySet()))
+    }
+
+    fun respondToHttpAuthPrompt(promptId: Long, username: String, password: String) {
+        val pending = pendingHttpAuthChallenge?.takeIf { it.promptId == promptId } ?: return
+        if (!isHttpAuthChallengeCurrent(pending)) {
+            cancelPendingHttpAuthChallenge()
+            return
+        }
+        pendingHttpAuthChallenge = null
+        httpAuthPrompt = null
+        runCatching { pending.handler.proceed(username, password) }
+            .onFailure { runCatching { pending.handler.cancel() } }
+        scheduleResidentWebViewTrim()
+    }
+
+    fun cancelHttpAuthPrompt(promptId: Long) {
+        if (pendingHttpAuthChallenge?.promptId != promptId) return
+        cancelPendingHttpAuthChallenge()
     }
 
     fun onRuntimePermissionResult(results: Map<String, Boolean>) {
@@ -5320,6 +5345,7 @@ class BrowserController(
 
     fun stopLoading() {
         cancelPendingBlockingStart(selectedTabId)
+        cancelPendingHttpAuthChallenge(selectedTabId)
         clearExternalNavigationAuthorization(selectedTabId)
         webViews[selectedTabId]?.stopLoading()
         updateTab(selectedTabId) { it.copy(isLoading = false) }
@@ -5328,6 +5354,7 @@ class BrowserController(
     fun clearCacheAndReload(): Boolean {
         val tabId = selectedTabId
         if (selectedTab.url == BLANK_URL) return false
+        cancelPendingHttpAuthChallenge(tabId)
         clearExternalNavigationAuthorization(tabId)
         val webView = webViewFor(tabId)
         updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
@@ -6192,6 +6219,7 @@ class BrowserController(
         if (browsingDataClearPending) return
         browsingDataClearPending = true
         cancelPendingPermissionAccess()
+        cancelPendingHttpAuthChallenge()
         cancelPendingFileChooser()
         activePermissions.clear()
         permissionRepository.clearAll()
@@ -6472,6 +6500,7 @@ class BrowserController(
             closeTabsOnBackground()
         }
         if (pendingPermissionAccess?.awaitingRuntime != true) cancelPendingPermissionAccess()
+        cancelPendingHttpAuthChallenge()
         activePermissions.clear()
         permissionRevision++
         persistWebViewStates()
@@ -6543,6 +6572,7 @@ class BrowserController(
         captchaCompatibilityOfferKeys.clear()
         cancelAllPendingBlockingStarts()
         cancelPendingPermissionAccess()
+        cancelPendingHttpAuthChallenge()
         cancelPendingFileChooser()
         fileChooserValidationExecutor.shutdownNow()
         profileWallpaperLoadGeneration++
@@ -6697,6 +6727,7 @@ class BrowserController(
         pendingWebPictureInPictureRequest?.key?.tabId?.let(::add)
         activeWebPictureInPictureRequest?.key?.tabId?.let(::add)
         pendingPermissionAccess?.identity?.tabId?.let(::add)
+        pendingHttpAuthChallenge?.tabId?.let(::add)
         pendingFileChooser?.identity?.tabId?.let(::add)
         addAll(pendingPreviewCaptures.keys)
         addAll(transientPopupTabIds)
@@ -6929,6 +6960,7 @@ class BrowserController(
             if (handlePendingPopunderOpenerNavigation(tabId, view, url)) return
             if (findInPageSession?.webView === view) closeFindInPage()
             beginMainFrameTlsNavigation(tabId, view, url)
+            cancelStaleHttpAuthChallenge(tabId, view)
             if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
             if (captchaCompatibilityOffer?.tabId == tabId) captchaCompatibilityOffer = null
             if (tabId in federatedLoginCompatibilityTabIds &&
@@ -7252,6 +7284,46 @@ class BrowserController(
             }
         }
 
+        override fun onReceivedHttpAuthRequest(
+            view: WebView,
+            handler: HttpAuthHandler,
+            host: String?,
+            realm: String?,
+        ) {
+            val details = HttpAuthPromptRules.challengeDetails(
+                host = host,
+                realm = realm,
+                pageUrl = pageUrls[tabId] ?: view.url,
+            )
+            if (details == null ||
+                destroyed ||
+                !isActivityResumed ||
+                selectedTabId != tabId ||
+                webViews[tabId] !== view ||
+                navigationGenerations[tabId] == null
+            ) {
+                handler.cancel()
+                return
+            }
+            cancelPendingHttpAuthChallenge()
+            val promptId = ++httpAuthPromptSequence
+            pendingHttpAuthChallenge = PendingHttpAuthChallenge(
+                promptId = promptId,
+                tabId = tabId,
+                webView = view,
+                navigationGeneration = requireNotNull(navigationGenerations[tabId]),
+                handler = handler,
+            )
+            httpAuthPrompt = HttpAuthPrompt(
+                id = promptId,
+                tabId = tabId,
+                host = details.host,
+                realm = details.realm,
+                isPageSecure = details.isPageSecure,
+            )
+            scheduleResidentWebViewTrim()
+        }
+
         @RequiresApi(Build.VERSION_CODES.O_MR1)
         override fun onSafeBrowsingHit(
             view: WebView,
@@ -7269,6 +7341,7 @@ class BrowserController(
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
             cancelPendingBlockingStart(tabId)
+            cancelPendingHttpAuthChallenge(tabId, view)
             fullscreenVideoSession
                 ?.takeIf { session -> session.tabId == tabId && session.webView === view }
                 ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
@@ -8773,6 +8846,35 @@ class BrowserController(
         permissionRevision++
         scheduleResidentWebViewTrim()
     }
+
+    private fun cancelPendingHttpAuthChallenge(
+        tabId: String? = null,
+        webView: WebView? = null,
+    ) {
+        val pending = pendingHttpAuthChallenge ?: return
+        if (tabId != null && pending.tabId != tabId) return
+        if (webView != null && pending.webView !== webView) return
+        pendingHttpAuthChallenge = null
+        httpAuthPrompt = null
+        runCatching { pending.handler.cancel() }
+        scheduleResidentWebViewTrim()
+    }
+
+    private fun cancelStaleHttpAuthChallenge(tabId: String, webView: WebView) {
+        val pending = pendingHttpAuthChallenge ?: return
+        if (pending.tabId != tabId || pending.webView !== webView) return
+        if (pending.navigationGeneration != navigationGenerations[tabId]) {
+            cancelPendingHttpAuthChallenge(tabId)
+        }
+    }
+
+    private fun isHttpAuthChallengeCurrent(pending: PendingHttpAuthChallenge): Boolean =
+        !destroyed &&
+            isActivityResumed &&
+            selectedTabId == pending.tabId &&
+            webViews[pending.tabId] === pending.webView &&
+            tabs.any { tab -> tab.id == pending.tabId } &&
+            navigationGenerations[pending.tabId] == pending.navigationGeneration
 
     private fun dropCanceledPermissionAccess(requestToken: Any) {
         val pending = pendingPermissionAccess ?: return
@@ -11436,6 +11538,7 @@ class BrowserController(
     }
 
     private fun reloadTabWithProtection(tabId: String) {
+        cancelPendingHttpAuthChallenge(tabId)
         val webView = webViewFor(tabId)
         val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
         clearExternalNavigationAuthorization(tabId)
@@ -11665,6 +11768,7 @@ class BrowserController(
     }
 
     private fun destroyWebView(webView: WebView) {
+        cancelPendingHttpAuthChallenge(webView = webView)
         if (findInPageSession?.webView === webView) closeFindInPage()
         fullscreenVideoSession
             ?.takeIf { session -> session.webView === webView }
@@ -11690,6 +11794,7 @@ class BrowserController(
     }
 
     private fun updateSelectedTabId(tabId: String) {
+        if (selectedTabId != tabId) cancelPendingHttpAuthChallenge()
         if (contentActions.sourceTabId != null && contentActions.sourceTabId != tabId) {
             contentActions.dismiss()
         }
@@ -11804,6 +11909,7 @@ class BrowserController(
         preserveExternalNavigationGrant: Boolean = false,
     ) {
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
+        cancelPendingHttpAuthChallenge(tabId)
         if (!preserveExternalNavigationGrant) externalNavigationGrants.remove(tabId)
         invalidatePendingDesktopNavigationOverride(webView)
         webView.stopLoading()
@@ -12099,6 +12205,14 @@ class BrowserController(
         val promptId: Long?,
         val awaitingRuntime: Boolean,
         val delivery: PermissionResponseDelivery,
+    )
+
+    private data class PendingHttpAuthChallenge(
+        val promptId: Long,
+        val tabId: String,
+        val webView: WebView,
+        val navigationGeneration: Int,
+        val handler: HttpAuthHandler,
     )
 
     private enum class PendingPermissionKind {

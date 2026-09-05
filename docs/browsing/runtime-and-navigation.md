@@ -24,6 +24,7 @@
 | Always block pop-ups | `PopupSiteRules` → controller → `onCreateWindow` | Reject every popup synchronously for configured registrable opener domains; persist regular state per profile and keep private state memory-only |
 | Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
 | CAPTCHA compatibility | `CaptchaCompatibilityRules` → controller → Snackbar and `AlertDialog` | Detect strict cross-site Cloudflare, Google reCAPTCHA, or hCaptcha endpoints; allow third-party cookies only after explicit consent |
+| HTTP Basic authentication | `HttpAuthPromptRules` → `BrowserController` → `HttpAuthPromptDialog` | Prompt only for a selected, resumed tab when challenge host matches current top-level HTTP(S) host; keep credentials memory-only and warn on cleartext HTTP |
 | Local userscript | `UserScriptRules` → AndroidX WebKit document-start handler | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 
 ## Invariants
@@ -85,6 +86,13 @@
   the AndroidX Credential Manager runtime in both distributions and its Google Password Manager
   fallback only in the full distribution. Credential providers must separately trust Candy's
   package and release signing certificate in their privileged-browser allowlist.
+- Handle HTTP Basic authentication through WebView's `HttpAuthHandler` only on main thread. Keep
+  entered credentials out of app storage and logs. Cancel a pending challenge when its tab,
+  WebView, navigation, selection, or activity lifetime becomes stale. Reject cross-host
+  subresource challenges because WebView does not expose a main-frame flag for this callback.
+  Cleartext HTTP remains usable for legacy and self-hosted sites, but its prompt warns that
+  credentials can be exposed. WebView reports challenge hostname but not scheme or port, so Candy
+  can reject cross-host subresource challenges but cannot distinguish same-host protection spaces.
 - Never register userscript handlers on private or Link Peek WebViews. Userscript source is global
   regular-browser configuration, not private session state.
 - Stop the active load before changing desktop-view user-agent settings for controller-owned loads,

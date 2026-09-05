@@ -783,6 +783,15 @@
     <string name="cast_volume">Device volume</string>
     <string name="popup_blocked">Popup blocked</string>
     <string name="action_open_popup">Open</string>
+    <string name="http_auth_dialog_title">Sign in</string>
+    <string name="http_auth_dialog_message">%1$s requires a username and password.</string>
+    <string name="http_auth_dialog_realm">Realm: %1$s</string>
+    <string name="http_auth_dialog_insecure_warning">This page is not using HTTPS. Your credentials could be exposed.</string>
+    <string name="http_auth_username">Username</string>
+    <string name="http_auth_password">Password</string>
+    <string name="http_auth_show_password">Show password</string>
+    <string name="http_auth_hide_password">Hide password</string>
+    <string name="http_auth_sign_in">Sign in</string>
     <string name="action_translate_page">Translate page</string>
     <string name="settings_translation_provider">Page translation provider</string>
     <string name="settings_translation_provider_summary">On translate, the full page address is sent to this provider. Private tabs do not store translation state.</string>
