@@ -30,6 +30,7 @@ and restore-root discovery enforce the same exclusions.
 | Candy settings | Appearance, search, downloads, protection and domain-specific settings |
 | Browser state | Regular tabs, profiles, history, favorites, trails, snoozes and previews |
 | Local content | Reader library, Site Capsules, icons, userscripts and Candy Rules |
+| Profile presentation | Separate per-profile new-tab and tab-switcher wallpaper images with independent crop/zoom metadata |
 | Website state | Best-effort raw WebView cookies, local storage, IndexedDB, CacheStorage and profile permissions |
 
 Private in-memory state, Android runtime permissions, default-browser role, notification
@@ -86,3 +87,8 @@ contain login tokens,
 are provider-specific and can exceed Android's 25 MB cloud quota. The manual ZIP remains the
 full, user-controlled route for cookies and website storage. Auto Backup timing and restore
 availability are controlled by Android and the active backup transport.
+
+Profile wallpaper files remain outside cloud backup to avoid consuming Android's small shared
+quota with user images. Each slot's profile metadata can still restore through shared preferences;
+Candy removes only the metadata whose corresponding image is absent. Device-to-device transfer and
+the manual ZIP archive include both Candy-owned wallpaper files per configured profile.

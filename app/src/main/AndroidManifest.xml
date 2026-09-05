@@ -167,6 +167,11 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ProfileWallpaperEditorActivity"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
+            android:exported="false" />
+
+        <activity
             android:name=".HistoryActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
