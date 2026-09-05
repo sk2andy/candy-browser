@@ -175,6 +175,38 @@ class BrowserControllerApkDownloadInstrumentedTest {
         }
     }
 
+    @Test
+    fun staleRegularWebViewCannotRouteApkDownload() {
+        val apkUrl = "https://downloads.example.invalid/Stale-${System.nanoTime()}.apk"
+        downloadUrls += apkUrl
+
+        activityRule.scenario.onActivity { activity ->
+            activity.getSharedPreferences(
+                BrowserSessionStore.PREFERENCES_NAME,
+                Context.MODE_PRIVATE,
+            ).edit().clear().commit()
+            val browserController = BrowserController(activity).also { controller = it }
+            val staleTabId = browserController.selectedTabId
+            val staleWebView = browserController.selectedWebViewForTesting()
+            val staleClient = staleWebView.webViewClient
+            browserController.createTab()
+            browserController.closeTab(staleTabId)
+
+            assertTrue(
+                staleClient.shouldOverrideUrlLoading(
+                    staleWebView,
+                    TestWebResourceRequest(
+                        url = apkUrl,
+                        hasGesture = true,
+                    ),
+                ),
+            )
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        assertTrue(downloadRows(apkUrl).isEmpty())
+    }
+
     private fun awaitPreviewLoaded(expectedUrl: String) {
         val deadline = SystemClock.uptimeMillis() + TIMEOUT_MILLIS
         while (SystemClock.uptimeMillis() < deadline) {

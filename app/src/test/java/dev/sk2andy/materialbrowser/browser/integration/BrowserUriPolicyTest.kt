@@ -98,8 +98,8 @@ class BrowserUriPolicyTest {
     }
 
     @Test
-    fun `external navigation accepts special scheme server redirects`() {
-        assertTrue(
+    fun `external navigation rejects passive special scheme redirects without a grant`() {
+        assertFalse(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = "folo",
                 isForMainFrame = true,
@@ -107,12 +107,25 @@ class BrowserUriPolicyTest {
                 isRedirect = true,
             ),
         )
-        assertTrue(
+        assertFalse(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = "intent",
                 isForMainFrame = true,
                 hasGesture = false,
                 isRedirect = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation accepts special scheme redirect with user grant`() {
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "folo",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+                hasUserNavigationGrant = true,
             ),
         )
     }
@@ -170,6 +183,44 @@ class BrowserUriPolicyTest {
             ExternalNavigationPolicy.isUserNavigationGrantActive(
                 expirationElapsedRealtime = null,
                 nowElapsedRealtime = 1L,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation grant ignores stale terminal callback`() {
+        val initialUrl = "https://example.com/start"
+        val redirectUrl = "https://example.com/redirected"
+        val started = requireNotNull(
+            ExternalNavigationGrantRules.start(
+                url = initialUrl,
+                nowElapsedRealtime = 1_000L,
+            ),
+        )
+        val redirected = requireNotNull(
+            ExternalNavigationGrantRules.followRedirect(
+                grant = started,
+                url = redirectUrl,
+                isForMainFrame = true,
+                isRedirect = true,
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+
+        assertFalse(
+            ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
+                grant = redirected,
+                callbackUrl = initialUrl,
+                currentWebViewUrl = redirectUrl,
+                nowElapsedRealtime = 1_002L,
+            ),
+        )
+        assertTrue(
+            ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
+                grant = redirected,
+                callbackUrl = redirectUrl,
+                currentWebViewUrl = redirectUrl,
+                nowElapsedRealtime = 1_002L,
             ),
         )
     }

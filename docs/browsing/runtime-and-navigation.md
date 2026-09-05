@@ -16,7 +16,7 @@
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy. The optional external-link preview keeps the page memory-only until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
-| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
+| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank WebView page |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
@@ -43,9 +43,11 @@
   the preview WebView when its target profile changes and reload the final normalized HTTP(S) URL
   when promoting it to a regular tab. Preview loads still use the selected profile's cookies and
   DOM storage, so the feature is disposable UI rather than a private-browsing mode.
-- On a cold external-link preview launch, start WebView and registrable-domain initialization in
-  parallel off the main thread. Keep the native preview chrome interactive until both are ready,
-  and defer unrelated Cast, media-session, and release-note initialization from this launch path.
+- On every cold external `ACTION_VIEW` launch, start WebView and registrable-domain initialization
+  in parallel off the main thread, whether external preview is enabled or not. Keep native browser
+  chrome interactive until both are ready, and defer unrelated Cast, media-session, and release-note
+  initialization from this launch path. If asynchronous WebView startup fails, avoid further WebView
+  API calls, show terminal feedback, and return to the caller instead of leaving an endless loader.
 - Keep federated-login popup tabs session-ephemeral for their complete window lifetime. App
   backgrounding pauses their live WebView and resumes it on return, while tab/session, History,
   Recall, Candy Trail, WebView-state, and preview persistence exclude them. Process death therefore
@@ -55,9 +57,13 @@
 - Offer user-tapped HTTP(S) links to Android only when a direct non-browser default handler can
   receive them. Requiring both a default and a non-browser handler prevents browser/chooser loops;
   unavailable or ambiguous app links continue in the current WebView.
-- Carry user intent across script-driven handoffs with a short-lived, tab-bound grant after a
-  tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff and is
-  consumed by the first accepted external launch attempt.
+- Carry user intent across script-driven handoffs with a short-lived, tab- and WebView-bound grant
+  after a tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff,
+  ends on page completion or error, and is consumed by the first accepted external launch attempt.
+  A passive special-scheme redirect without this grant stays blocked.
+- Treat a newly delivered external `ACTION_VIEW` as the same bounded user intent for its initial
+  redirect chain, with or without external preview. Preserve only its original expiry across Activity
+  recreation; replacing, reloading, stopping, or navigating away from its WebView revokes it.
 - Route only user-tapped main-frame APK links and their authorized redirects into downloads.
   Passive navigation, subframes, malformed URLs, and embedded credentials remain blocked from this
   shortcut. External previews retain one bounded, memory-only download grant for the exact active

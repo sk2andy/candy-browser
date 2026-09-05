@@ -79,8 +79,59 @@ object ExternalNavigationPolicy {
         ) {
             return false
         }
-        return hasGesture || isRedirect || hasUserNavigationGrant
+        return hasGesture || hasUserNavigationGrant
     }
+}
+
+internal data class ExternalNavigationGrant(
+    val currentUrl: String,
+    val expiresAtElapsedRealtime: Long,
+)
+
+/** Binds one external app handoff to the active user-driven main-frame navigation. */
+internal object ExternalNavigationGrantRules {
+    fun start(
+        url: String?,
+        nowElapsedRealtime: Long,
+    ): ExternalNavigationGrant? {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
+        return ExternalNavigationGrant(
+            currentUrl = safeUrl,
+            expiresAtElapsedRealtime = nowElapsedRealtime + MAX_LIFETIME_MILLIS,
+        )
+    }
+
+    fun followRedirect(
+        grant: ExternalNavigationGrant,
+        url: String?,
+        isForMainFrame: Boolean,
+        isRedirect: Boolean,
+        nowElapsedRealtime: Long,
+    ): ExternalNavigationGrant? {
+        if (!isForMainFrame) return grant.takeIf { isActive(it, nowElapsedRealtime) }
+        if (!isRedirect || !isActive(grant, nowElapsedRealtime)) return null
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
+        return grant.copy(currentUrl = safeUrl)
+    }
+
+    fun isActive(
+        grant: ExternalNavigationGrant?,
+        nowElapsedRealtime: Long,
+    ): Boolean = grant != null && grant.expiresAtElapsedRealtime >= nowElapsedRealtime
+
+    fun shouldClearForMainFrameCallback(
+        grant: ExternalNavigationGrant,
+        callbackUrl: String?,
+        currentWebViewUrl: String?,
+        nowElapsedRealtime: Long,
+    ): Boolean {
+        if (!isActive(grant, nowElapsedRealtime)) return true
+        val safeCallbackUrl = BrowserUriPolicy.normalizeHttpUrl(callbackUrl) ?: return false
+        val safeCurrentUrl = BrowserUriPolicy.normalizeHttpUrl(currentWebViewUrl) ?: return false
+        return safeCallbackUrl == grant.currentUrl && safeCurrentUrl == grant.currentUrl
+    }
+
+    internal const val MAX_LIFETIME_MILLIS = 15_000L
 }
 
 /** Routes an explicit APK navigation to the download pipeline before WebView renders it. */

@@ -10,9 +10,17 @@ import androidx.webkit.WebViewStartUpResult
 import androidx.webkit.WebViewStartupException
 import java.util.concurrent.Executors
 
+internal object WebViewStartupRules {
+    fun shouldStartAsynchronously(
+        isColdStart: Boolean,
+        hasIncomingBrowserRequest: Boolean,
+        isWebViewProcessUnused: Boolean,
+    ): Boolean = isColdStart && hasIncomingBrowserRequest && isWebViewProcessUnused
+}
+
 internal object WebViewProcessStartup {
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val readyCallbacks = mutableListOf<() -> Unit>()
+    private val callbacks = mutableListOf<StartupCallbacks>()
     private var state = State.Unused
 
     val isPending: Boolean
@@ -57,14 +65,16 @@ internal object WebViewProcessStartup {
         )
     }
 
-    fun whenReady(callback: () -> Unit) {
+    fun whenReady(
+        onReady: () -> Unit,
+        onFailure: () -> Unit = {},
+    ) {
         check(Looper.myLooper() == Looper.getMainLooper())
         when (state) {
-            State.Ready -> callback()
-            State.Pending -> readyCallbacks += callback
-            State.Unused,
-            State.Failed,
-            -> Unit
+            State.Ready -> onReady()
+            State.Failed -> onFailure()
+            State.Pending -> callbacks += StartupCallbacks(onReady, onFailure)
+            State.Unused -> Unit
         }
     }
 
@@ -77,9 +87,9 @@ internal object WebViewProcessStartup {
         mainHandler.post {
             if (state == State.Pending) {
                 state = State.Ready
-                val callbacks = readyCallbacks.toList()
-                readyCallbacks.clear()
-                callbacks.forEach { callback -> callback() }
+                val pendingCallbacks = callbacks.toList()
+                callbacks.clear()
+                pendingCallbacks.forEach { callback -> callback.onReady() }
             }
             afterCompletion()
         }
@@ -89,7 +99,9 @@ internal object WebViewProcessStartup {
         mainHandler.post {
             if (state == State.Pending) {
                 state = State.Failed
-                readyCallbacks.clear()
+                val pendingCallbacks = callbacks.toList()
+                callbacks.clear()
+                pendingCallbacks.forEach { callback -> callback.onFailure() }
             }
             afterCompletion()
         }
@@ -101,6 +113,11 @@ internal object WebViewProcessStartup {
         Ready,
         Failed,
     }
+
+    private data class StartupCallbacks(
+        val onReady: () -> Unit,
+        val onFailure: () -> Unit,
+    )
 
     private const val DOMAIN_WARM_UP_HOST = "example.com"
 }
