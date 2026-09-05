@@ -64,4 +64,34 @@ class ExternalLinkPreviewBarInstrumentedTest {
         assertEquals("work", selectedProfileId)
         assertTrue(shared)
     }
+
+    @Test
+    fun compactBarHidesProfileSelectionWhenOnlyOneProfileExists() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ExternalLinkPreviewBar(
+                    state = ExternalLinkPreviewState(
+                        sessionId = 1,
+                        generation = 0,
+                        currentUrl = "https://example.com/path",
+                        targetProfileId = "default",
+                    ),
+                    profiles = listOf(BrowserProfile(id = "default", emoji = "🍬")),
+                    isDesktopView = false,
+                    blurTarget = null,
+                    rootBottomInWindowPx = 0,
+                    onDismissPreview = {},
+                    onOpenInCandy = {},
+                    onSelectProfile = {},
+                    onShare = {},
+                    onCopyLink = {},
+                    onFindInPage = {},
+                    onDesktopViewChange = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.Open).assertIsEnabled()
+        composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.Profile).assertDoesNotExist()
+    }
 }
