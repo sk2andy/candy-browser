@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.webkit.UserAgentMetadata
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -69,7 +70,23 @@ class DesktopViewInstrumentedTest {
             assertTrue(webView.settings.useWideViewPort)
             assertTrue(webView.settings.loadWithOverviewMode)
             if (defaultMetadata != null) {
-                assertFalse(WebSettingsCompat.getUserAgentMetadata(webView.settings).isMobile)
+                val desktopMetadata = WebSettingsCompat.getUserAgentMetadata(webView.settings)
+                assertFalse(desktopMetadata.isMobile)
+                assertEquals("Linux", desktopMetadata.platform)
+                assertEquals("", desktopMetadata.platformVersion)
+                assertEquals("x86", desktopMetadata.architecture)
+                assertEquals("", desktopMetadata.model)
+                assertEquals(64, desktopMetadata.bitness)
+                if (
+                    WebViewFeature.isFeatureSupported(
+                        WebViewFeature.USER_AGENT_METADATA_FORM_FACTORS,
+                    )
+                ) {
+                    assertEquals(
+                        listOf(UserAgentMetadata.FORM_FACTOR_DESKTOP),
+                        desktopMetadata.formFactors,
+                    )
+                }
             }
 
             assertTrue(controller.setDesktopView(tabId, false))
@@ -84,6 +101,65 @@ class DesktopViewInstrumentedTest {
                     WebSettingsCompat.getUserAgentMetadata(webView.settings),
                 )
             }
+        }
+    }
+
+    @Test
+    fun desktopViewOverridesMobileViewportAndRestoresPageDefault() {
+        LocalPageServer().use { server ->
+            lateinit var tabId: String
+            lateinit var webView: WebView
+            activityRule.scenario.onActivity { activity ->
+                clearPreferences(activity)
+                val controller = BrowserController(activity).also { this.controller = it }
+                tabId = controller.createTab(server.regularUrl)
+                val container = FrameLayout(activity)
+                activity.setContentView(container)
+                controller.attachSelectedWebView(container)
+                webView = controller.selectedWebViewForTesting()
+            }
+            awaitLoadedUrl(tabId, server.regularUrl)
+            awaitDocumentViewport(webView, expectsDesktop = false)
+            awaitInitialViewport(webView, expectsDesktop = false)
+
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.setDesktopView(tabId, true))
+            }
+            awaitDocumentViewport(webView, expectsDesktop = true)
+            awaitInitialViewport(webView, expectsDesktop = true)
+            awaitViewportContent(
+                webView,
+                "width=980, viewport-fit=cover, user-scalable=yes, maximum-scale=10",
+            )
+
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.setForcePageZooming(tabId, true))
+            }
+            awaitDocumentViewport(webView, expectsDesktop = true)
+            awaitInitialViewport(webView, expectsDesktop = true)
+            awaitViewportContent(
+                webView,
+                "width=980, viewport-fit=cover, user-scalable=yes, maximum-scale=10",
+            )
+
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "document.querySelector('meta[name=viewport]').content = " +
+                        "'width=device-width, initial-scale=1, user-scalable=no'",
+                    null,
+                )
+            }
+            awaitDocumentViewport(webView, expectsDesktop = true)
+            awaitViewportContent(
+                webView,
+                "width=980, user-scalable=yes, maximum-scale=10",
+            )
+
+            activityRule.scenario.onActivity {
+                assertTrue(controller!!.setDesktopView(tabId, false))
+            }
+            awaitDocumentViewport(webView, expectsDesktop = false)
+            awaitInitialViewport(webView, expectsDesktop = false)
         }
     }
 
@@ -340,6 +416,72 @@ class DesktopViewInstrumentedTest {
         )
     }
 
+    private fun awaitDocumentViewport(webView: WebView, expectsDesktop: Boolean) {
+        val deadline = System.currentTimeMillis() + 10_000L
+        val actualViewport = AtomicReference<String?>()
+        val expectedKind = if (expectsDesktop) "desktop" else "mobile"
+        while (System.currentTimeMillis() < deadline) {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "JSON.stringify({" +
+                        "kind: window.innerWidth >= 900 ? 'desktop' : 'mobile'," +
+                        "width: window.innerWidth," +
+                        "viewport: document.querySelector('meta[name=viewport]')?.content || ''" +
+                        "})",
+                ) { value -> actualViewport.set(value) }
+            }
+            val result = actualViewport.get()
+            val hasExpectedKind = result?.contains(
+                "\\\"kind\\\":\\\"$expectedKind\\\"",
+            ) == true
+            val hasExpectedWidth = !expectsDesktop || result?.contains("\\\"width\\\":980") == true
+            if (hasExpectedKind && hasExpectedWidth) {
+                return
+            }
+            Thread.sleep(50L)
+        }
+        throw AssertionError(
+            "Document viewport did not become $expectedKind; current=${actualViewport.get()}",
+        )
+    }
+
+    private fun awaitViewportContent(webView: WebView, expectedContent: String) {
+        val deadline = System.currentTimeMillis() + 10_000L
+        val actualContent = AtomicReference<String?>()
+        while (System.currentTimeMillis() < deadline) {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "document.querySelector('meta[name=viewport]')?.content || ''",
+                ) { value -> actualContent.set(value) }
+            }
+            if (actualContent.get() == "\"$expectedContent\"") return
+            Thread.sleep(50L)
+        }
+        throw AssertionError(
+            "Document viewport content did not become $expectedContent; " +
+                "current=${actualContent.get()}",
+        )
+    }
+
+    private fun awaitInitialViewport(webView: WebView, expectsDesktop: Boolean) {
+        val deadline = System.currentTimeMillis() + 10_000L
+        val actualViewport = AtomicReference<String?>()
+        val expectedKind = if (expectsDesktop) "desktop" else "mobile"
+        while (System.currentTimeMillis() < deadline) {
+            activityRule.scenario.onActivity {
+                webView.evaluateJavascript(
+                    "document.documentElement.dataset.initialLayout || 'missing'",
+                ) { value -> actualViewport.set(value) }
+            }
+            if (actualViewport.get() == "\"$expectedKind\"") return
+            Thread.sleep(50L)
+        }
+        throw AssertionError(
+            "Initial document viewport did not become $expectedKind; " +
+                "current=${actualViewport.get()}",
+        )
+    }
+
     private fun clearPreferences(activity: ComponentActivity) {
         activity.getSharedPreferences(
             BrowserSessionStore.PREFERENCES_NAME,
@@ -370,7 +512,12 @@ class DesktopViewInstrumentedTest {
             "http://regular.localhost:${serverSocket.localPort}/redirect"
 
         private fun body(userAgent: String): ByteArray = (
-                "<!doctype html><html><body>" +
+                "<!doctype html><html><head>" +
+                    "<meta name=viewport content=\"width=device-width, initial-scale=1, " +
+                    "maximum-scale=1, user-scalable=no, viewport-fit=cover\">" +
+                    "<script>document.documentElement.dataset.initialLayout = " +
+                    "innerWidth >= 900 ? 'desktop' : 'mobile';</script>" +
+                    "</head><body>" +
                     "<a id=redirect-target href=\"$redirectUrl\" " +
                     "style=\"display:block;width:200px;height:200px\">Redirect target</a>" +
                     "<a id=target href=\"$desktopUrl\">Target</a>" +
