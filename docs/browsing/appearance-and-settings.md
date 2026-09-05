@@ -7,13 +7,14 @@
 | Model | Stable, persisted appearance choices and safe fallback values | `data/AppearanceSettings.kt` |
 | Persistence | Global appearance preference round trips | `data/BrowserSessionStore.kt` |
 | State | Observable selection and update wiring | `browser/BrowserController.kt` |
-| Theme | Color schemes, Android night resources, website color-scheme preference, surface treatment, shape tokens and AMOLED surfaces | `MainActivity`, `ui/theme/MaterialBrowserTheme.kt` |
-| UI | Appearance destination and live selection controls | `ui/SettingsScreen.kt` |
+| Theme | Color schemes, Android night resources, root/system-bar wiring, website color-scheme preference, surface treatment, shape tokens and AMOLED surfaces | `MainActivity.kt`, `AppearanceNightMode.kt`, `browser/BrowserController.kt`, `browser/WebViewSettings.kt`, `ui/theme/MaterialBrowserTheme.kt` |
+| Settings routing | Destination transition and callback wiring | `ui/SettingsScreen.kt`, `ui/SettingsHomePage.kt`, `ui/SettingsComponents.kt` |
+| Appearance UI | Appearance destination and live selection controls | `ui/AppearanceSettingsPage.kt` |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
 | Page scroll bar | Persisted opt-in, WebView scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, `BrowserWebView`, `ui/WebViewScrollBar` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
 | Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
-| App data archive | SAF launch and confirmation stay in the activity; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
+| App data archive | SAF launch and confirmation stay in the activity and Protection page; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `ui/ProtectionSettingsPage.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
 | Android backup | Encrypted cloud and device-transfer inclusion policy | `res/xml/data_extraction_rules.xml`, [`app-data-archive.md`](app-data-archive.md#android-auto-backup) |
 | Candy Recall | Disabled-by-default local readable-page indexing and clear-on-disable behavior | `BrowserSessionStore`, `RecallRepository`, [`recall.md`](recall.md) |
 

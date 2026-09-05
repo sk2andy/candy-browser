@@ -9,9 +9,9 @@
 | Commands | [`browser/commands/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/commands/) | Build commands from current context, match deterministically, dispatch through actions |
 | Candy Recall | [`recall.md`](recall.md), [`RecallModels.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/recall/RecallModels.kt), [`RecallRepository.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/RecallRepository.kt) | When opted in, a regular-tab query with at least two meaningful words shows at most two active-profile local matches under **From your history**, before remote suggestions. `>recall <query>` searches only that local index. Recall is absent in private tabs. |
 | Search suggestions | [`SearchSuggestionProvider.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/suggestions/SearchSuggestionProvider.kt), [`searxng.md`](searxng.md) | None, DuckDuckGo, Google, Brave, Ecosia, Qwant, Startpage, Kagi and SearXNG share bounded reads and provider-isolated caches. Every provider and fallback call stays disabled for private tabs. |
-| History suggestions | `BrowserSessionStore`, `BrowserController`, `SettingsScreen` | Search settings can hide saved active-profile history rows, automatic Candy Recall results and history-derived domain completion. The enabled-by-default global preference does not hide matching open tabs, favorite-derived completion or an explicit `>recall` query. |
+| History suggestions | `BrowserSessionStore`, `BrowserController`, `SearchSettingsPage` | Search settings can hide saved active-profile history rows, automatic Candy Recall results and history-derived domain completion. The enabled-by-default global preference does not hide matching open tabs, favorite-derived completion or an explicit `>recall` query. |
 | Presentation | [`ui/AddressBarPresentationRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarPresentationRules.kt), [`ui/AddressBarInsetRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarInsetRules.kt) | Resolve UI mode with pure rules before composing; subtract any platform-applied IME resize before padding bottom chrome |
-| Blank-tab editor | `ui/BrowserScreen.kt` | Keep regular-tab favorites visible and actionable while address input is focused; hide them in private mode. Keep the private-mode toggle immediately after the address input, including while the focused editor uses the full available width. |
+| Blank-tab editor | `ui/NewTabPage.kt`, `ui/ExpandedAddressBar.kt` | Keep regular-tab favorites visible and actionable while address input is focused; hide them in private mode. Keep the private-mode toggle immediately after the address input, including while the focused editor uses the full available width. |
 | QR scanner | `ui/QrCodeScanner.kt`, `src/full/ui/QrCodeScanner.kt` | The `full` flavor delegates explicit scans to Google Code Scanner. The F-Droid `foss` flavor hides the action and contains no scanner SDK. |
 
 ## Configurable expanded actions
@@ -22,7 +22,7 @@
 | Available actions | [`AddressBarActions.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarActions.kt) | Favorite, pin, desktop view, forced vertical scrolling, Reader Studio, find in page, tabs, share, print, new tab, reload/stop, close tab, back, forward and right parking share the same runtime availability rules as their menu equivalents. Unavailable actions stay visible but disabled. |
 | Editing | [`AddressBarActionEditor.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarActionEditor.kt), [`AddressBarActionEditorRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/AddressBarActionEditorRules.kt) | Tabs & gestures opens a drag editor with a fixed preview and a scrollable available palette. A long press lifts an action through breakaway resistance. Slots are derived deterministically from measured action bounds and canonicalized against the layout with the dragged action removed, so its two raw neighbors become one plus-marked target at the vacated center. Other valid gaps remain gently wiggling, shape-morphing bubbles; the active target grows, settles to its static hit anchor and slot changes tick. A palette tile keeps its label while moving freely, then fades the label and springs to the 48dp toolbar size as it snaps toward a slot. Toolbar drops keep the real item hidden until its final post-layout bounds are measured, then spring the overlay directly to that button center before handoff. Returning an action expands it toward its measured palette tile while its label fades back in. Accepted drops confirm and rejected/full drops reject haptically. Moving an action removes it from its old location, so the palette and address bar cannot contain duplicates. Accessibility custom actions provide equivalent placement and removal. |
 | Persistence and migration | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Stable wire names persist the two ordered sides. Unknown, duplicate or excess values are normalized independently of Compose. The former tab-button visibility preference migrates once into the new layout and is then removed. |
-| Temporary controls | `ui/BrowserScreen.kt`, `ui/BrowserMainMenu.kt` | Cast and blank-editor controls consume the same icon budget. Cast may temporarily displace the last configured action; any displaced action that has no ordinary menu equivalent is exposed in **More** for that state. |
+| Temporary controls | `ui/BrowserBottomBar.kt`, `ui/ExpandedAddressBar.kt`, `ui/BrowserMainMenu.kt` | Cast and blank-editor controls consume the same icon budget. Cast may temporarily displace the last configured action; any displaced action that has no ordinary menu equivalent is exposed in **More** for that state. |
 
 The parked compact pill remains intentionally action-free. When address input takes the full editor
 width, configured actions retain the existing horizontal fade/shrink transition and return when the
@@ -49,6 +49,21 @@ editor closes.
 | Long-press page content | [`WebContentActions.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/WebContentActions.kt) | Normalize link/image URLs before background open or download. Renderable `.txt` and `.json` links remain viewable on normal taps and can be sent explicitly to the configured download manager from Link Peek. |
 | Share/download/assistant/external app | [`browser/integration/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/integration/), [`browser/actions/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/) | Construct bounded requests, then let Android adapters launch them |
 | Page translation | [`page-translation.md`](page-translation.md), [`PageTranslation.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/PageTranslation.kt) | Validate and encode the current HTTP(S) URL, then navigate only to the explicitly selected provider |
+
+## UI source ownership
+
+| Surface | Owner |
+| --- | --- |
+| Root state, effects, Back priority and surface routing | `ui/BrowserScreen.kt` |
+| Address chrome orchestration and tab-swipe presentation | `ui/BrowserAddressChrome.kt` |
+| Popup, federated-login and CAPTCHA offer feedback | `ui/BrowserOfferSnackbarEffects.kt` |
+| Browser dialogs, Link Peek and content-action overlays | `ui/BrowserTransientOverlays.kt` |
+| WebView and external-preview hosting | `ui/BrowserViewport.kt` |
+| New-tab content | `ui/NewTabPage.kt` |
+| Compact and docked address chrome | `ui/BrowserBottomBar.kt` |
+| Expanded editor and actions | `ui/ExpandedAddressBar.kt` |
+| Recall, navigation, search and command suggestions | `ui/AddressSuggestions.kt` |
+| Main-menu presentation | `ui/BrowserMainMenu.kt`, `ui/BrowserMenuComponents.kt`, `ui/TabActionsMenuContent.kt` |
 
 External download routing supports the built-in downloader, per-download selection, or one persisted
 verified manager. Verified external targets are 1DM, ADM, and Download Navi. ADM and Download Navi

@@ -7,7 +7,7 @@
 | User action | `ui/BrowserMainMenu.kt` | **Translate page** is enabled in the main `…` menu for supported HTTP(S) pages and disabled otherwise. |
 | URL policy | `browser/PageTranslation.kt` | Validate the source with `BrowserUriPolicy`, bound it, encode it, and build one provider URL. |
 | Navigation | `browser/BrowserController.kt` | Route the provider URL through existing browser navigation. Ordinary tabs keep it in the selected tab; Site Capsules may open a full Candy tab at their navigation boundary. |
-| Provider choice | `ui/SettingsScreen.kt`, `data/BrowserSessionStore.kt` | Persist a global Google Translate, Yandex Translate, or Kagi Translate choice; Yandex is the compatibility-oriented default and invalid-value fallback. |
+| Provider choice | `ui/BrowserSettingsPage.kt`, `data/BrowserSessionStore.kt` | Persist a global Google Translate, Yandex Translate, or Kagi Translate choice; Yandex is the compatibility-oriented default and invalid-value fallback. |
 
 The target language follows the first configured Android locale. All providers detect the source
 language. Their translated page UI can select another target language.

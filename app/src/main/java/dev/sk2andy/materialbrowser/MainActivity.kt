@@ -2,28 +2,23 @@ package dev.sk2andy.materialbrowser
 
 import android.Manifest
 import android.app.Activity
-import android.app.PictureInPictureParams
 import android.app.PictureInPictureUiState
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Process
-import android.util.Rational
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
@@ -32,62 +27,44 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
-import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
-import dev.sk2andy.materialbrowser.browser.MAX_TABS
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.WebViewProcessStartup
 import dev.sk2andy.materialbrowser.browser.WebViewStartupRules
-import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
-import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
-import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutTarget
-import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
-import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
-import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.AppDataArchiveEnvironment
 import dev.sk2andy.materialbrowser.data.AppDataArchiveRules
 import dev.sk2andy.materialbrowser.data.AppDataArchiveRestore
 import dev.sk2andy.materialbrowser.data.AppDataArchiveStaging
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
-import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesContent
 import dev.sk2andy.materialbrowser.data.ReleaseNotesRepository
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
 import dev.sk2andy.materialbrowser.data.SnoozeWakeNotifier
-import dev.sk2andy.materialbrowser.data.UserScriptImportReader
-import dev.sk2andy.materialbrowser.data.UserScriptImportResult
 import dev.sk2andy.materialbrowser.ui.AppDataExportWarningDialog
 import dev.sk2andy.materialbrowser.ui.AppDataImportConfirmationDialog
 import dev.sk2andy.materialbrowser.ui.AppDataImportPreview
@@ -97,9 +74,6 @@ import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
-import dev.sk2andy.materialbrowser.update.AvailableAppUpdate
-import dev.sk2andy.materialbrowser.update.AppReleaseChannel
-import dev.sk2andy.materialbrowser.update.GitHubAppUpdateChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -113,18 +87,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webMediaSystemSession: WebMediaSystemSession
     private lateinit var castSessionController: CastSessionController
     private lateinit var releaseNotesStore: ReleaseNotesStore
+    private lateinit var pictureInPictureController: MainActivityPictureInPictureController
+    private lateinit var userScriptImporter: UserScriptImporter
+    private lateinit var launcherShortcutIntentHandler: LauncherShortcutIntentHandler
     private val launcherShortcutPublisher by lazy {
         LauncherShortcutPublisher(applicationContext)
     }
     private var releaseNotesContent: ReleaseNotesContent? = null
     private var videoOnlyPresentation by mutableStateOf(false)
-    private var fullscreenVideoBounds: Rect? = null
-    private var pictureInPictureSourceRectHint: Rect? = null
-    private var appliedPictureInPictureState: AppliedPictureInPictureState? = null
-    private var pictureInPictureReturnLayoutListener: View.OnLayoutChangeListener? = null
-    private var pictureInPictureReturnInProgress = false
-    private var pictureInPictureStartedFullscreen = false
-    private var pictureInPictureModeEntered = false
     private var isTabOverviewPortraitLocked = false
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
@@ -155,7 +125,7 @@ class MainActivity : AppCompatActivity() {
     private val userScriptImportLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
-        if (uri != null && ::browserController.isInitialized) importUserScript(uri)
+        if (uri != null && ::userScriptImporter.isInitialized) userScriptImporter.import(uri)
     }
     private val appDataExportLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
@@ -275,6 +245,25 @@ class MainActivity : AppCompatActivity() {
             onWebPictureInPictureRequestTimedOut = ::cancelPictureInPictureTransition,
             deferWebViewRuntimeStartup = deferWebViewRuntimeStartup,
         )
+        pictureInPictureController = MainActivityPictureInPictureController(
+            activity = this,
+            browserController = browserController,
+            isVideoOnlyPresentation = { videoOnlyPresentation },
+            setVideoOnlyPresentation = { videoOnlyPresentation = it },
+            applyBrowserSystemUi = ::applyBrowserSystemUi,
+        )
+        userScriptImporter = UserScriptImporter(
+            context = this,
+            lifecycleScope = lifecycleScope,
+            browserController = browserController,
+        )
+        launcherShortcutIntentHandler = LauncherShortcutIntentHandler(
+            context = this,
+            browserController = browserController,
+            publisher = launcherShortcutPublisher,
+            onNavigationRequested = { incomingBrowserNavigationRequestId++ },
+            onAddressEditorRequested = { launcherAddressEditorRequestId++ },
+        )
         if (deferWebViewRuntimeStartup) {
             WebViewProcessStartup.whenReady(
                 onReady = browserController::onWebViewProcessReady,
@@ -347,13 +336,6 @@ class MainActivity : AppCompatActivity() {
                 var splashVisible by remember {
                     mutableStateOf(startupPresentation.showSplash)
                 }
-                var updateCheckCompleted by rememberSaveable { mutableStateOf(false) }
-                var availableUpdateVersion by rememberSaveable { mutableStateOf<String?>(null) }
-                var availableUpdateUrl by rememberSaveable { mutableStateOf<String?>(null) }
-                var availableUpdateFileName by rememberSaveable { mutableStateOf<String?>(null) }
-                var updateDialogDismissed by rememberSaveable { mutableStateOf(false) }
-                val updateChecker = remember { GitHubAppUpdateChecker() }
-                val updateDownloadManager = remember { BrowserDownloadManager(this) }
                 val fullscreenVideoState = browserController.fullscreenVideoState
                 val selectedTabId = browserController.selectedTabId
                 val webViewVideoOnlyPresentation = fullscreenVideoState?.let { state ->
@@ -363,11 +345,6 @@ class MainActivity : AppCompatActivity() {
                             videoOnlyPresentation = true,
                         )
                 } == true
-                val availableUpdate = availableUpdateVersion?.let { version ->
-                    val url = availableUpdateUrl ?: return@let null
-                    val fileName = availableUpdateFileName ?: return@let null
-                    AvailableAppUpdate(version, url, fileName)
-                }
                 val showReleaseNotes = releaseNotesVisible &&
                     releaseNotesContent != null &&
                     !onboardingVisible &&
@@ -381,26 +358,6 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(launcherShortcutState) {
                     launcherShortcutPublisher.publishSerially(launcherShortcutState)
-                }
-                LaunchedEffect(updateCheckCompleted) {
-                    if (updateCheckCompleted) return@LaunchedEffect
-                    if (
-                        BuildConfig.ENABLE_GITHUB_UPDATES &&
-                        !BuildConfig.FOSS_DISTRIBUTION
-                    ) {
-                        val releaseChannel = AppReleaseChannel.forUserCertificateTrust(
-                            BuildConfig.TRUST_USER_CERTIFICATES,
-                        )
-                        updateChecker.findAvailableUpdate(
-                            currentVersionName = BuildConfig.VERSION_NAME,
-                            channel = releaseChannel,
-                        )?.let { update ->
-                            availableUpdateVersion = update.versionName
-                            availableUpdateUrl = update.downloadUrl
-                            availableUpdateFileName = update.fileName
-                        }
-                    }
-                    updateCheckCompleted = true
                 }
                 LaunchedEffect(showReleaseNotes) {
                     if (showReleaseNotes) {
@@ -516,42 +473,13 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                 }
-                if (
-                    availableUpdate != null &&
-                    !updateDialogDismissed &&
-                    !onboardingVisible &&
-                    !releaseNotesVisible &&
-                    !splashVisible &&
-                    !videoOnlyPresentation
-                ) {
-                    AppUpdateDialog(
-                        update = availableUpdate,
-                        onDismiss = { updateDialogDismissed = true },
-                        onDownload = {
-                            val result = updateDownloadManager.enqueue(
-                                BrowserDownloadRequest(
-                                    url = availableUpdate.downloadUrl,
-                                    fileName = availableUpdate.fileName,
-                                    mimeType = AvailableAppUpdate.APK_MIME_TYPE,
-                                ),
-                            )
-                            Toast.makeText(
-                                this,
-                                when (result) {
-                                    is DownloadActionResult.Enqueued ->
-                                        getString(R.string.toast_download_started, result.fileName)
-                                    is DownloadActionResult.HandedOff ->
-                                        getString(R.string.toast_download_handed_off, result.appName)
-                                    is DownloadActionResult.Failed -> result.message
-                                },
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                            if (result is DownloadActionResult.Enqueued) {
-                                updateDialogDismissed = true
-                            }
-                        },
-                    )
-                }
+                AppUpdatePrompt(
+                    context = this,
+                    visible = !onboardingVisible &&
+                        !releaseNotesVisible &&
+                        !splashVisible &&
+                        !videoOnlyPresentation,
+                )
                 if (appDataExportWarningVisible) {
                     AppDataExportWarningDialog(
                         onDismiss = { appDataExportWarningVisible = false },
@@ -675,17 +603,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPictureInPictureRequested(): Boolean {
-        if (appDataTransferActive) return false
-        if (!canEnterPictureInPicture()) return false
-        prepareForPictureInPictureTransition()
-        val entered = enterPictureInPictureMode(
-            buildPictureInPictureParams(
-                autoEnterEnabled = true,
-                sourceRectHint = eligiblePictureInPictureSourceRect(true),
-            ),
-        )
-        if (!entered) cancelPictureInPictureTransition()
-        return entered
+        if (appDataTransferActive || !::pictureInPictureController.isInitialized) return false
+        return pictureInPictureController.requestPictureInPicture()
     }
 
     override fun onPictureInPictureModeChanged(
@@ -693,37 +612,14 @@ class MainActivity : AppCompatActivity() {
         newConfig: Configuration,
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-        if (appDataTransferActive) return
-        if (isInPictureInPictureMode) {
-            pictureInPictureModeEntered = true
-            videoOnlyPresentation = true
-        }
-        browserController.onPictureInPictureModeChanged(isInPictureInPictureMode)
-        if (isInPictureInPictureMode) {
-            pictureInPictureReturnInProgress = false
-            cancelPictureInPictureReturnLayoutWait()
-            if (pictureInPictureStartedFullscreen) {
-                pictureInPictureSourceRectHint = pictureInPictureSourceRect(
-                    maximumWindowContentBounds(),
-                )
-            }
-        } else {
-            pictureInPictureReturnInProgress = true
-            completePictureInPictureReturnAfterLayout(newConfig)
-        }
-        applyBrowserSystemUi()
-        updatePictureInPictureParams()
+        if (appDataTransferActive || !::pictureInPictureController.isInitialized) return
+        pictureInPictureController.onModeChanged(isInPictureInPictureMode, newConfig)
     }
 
     override fun onPictureInPictureUiStateChanged(pipState: PictureInPictureUiState) {
         super.onPictureInPictureUiStateChanged(pipState)
-        if (appDataTransferActive) return
-        if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM &&
-            pipState.isTransitioningToPip
-        ) {
-            prepareForPictureInPictureTransition()
-        }
+        if (appDataTransferActive || !::pictureInPictureController.isInitialized) return
+        pictureInPictureController.onUiStateChanged(pipState)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -739,31 +635,19 @@ class MainActivity : AppCompatActivity() {
             browserController.onAppearanceConfigurationChanged()
         }
         applyBrowserSystemUi()
-        if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
-            pictureInPictureSourceRectHint = pictureInPictureSourceRect(
-                maximumWindowContentBounds(),
-            )
-            updatePictureInPictureParams()
+        if (::pictureInPictureController.isInitialized) {
+            pictureInPictureController.onConfigurationChanged()
         }
     }
 
     override fun onResume() {
         super.onResume()
         if (appDataTransferActive) return
-        reconcilePictureInPictureStateOnResume()
+        if (::pictureInPictureController.isInitialized) {
+            pictureInPictureController.reconcileStateOnResume()
+        }
         if (::browserController.isInitialized) browserController.onResume()
         updatePictureInPictureParams()
-    }
-
-    private fun reconcilePictureInPictureStateOnResume() {
-        if (
-            !isInPictureInPictureMode &&
-            !pictureInPictureModeEntered &&
-            !pictureInPictureReturnInProgress &&
-            videoOnlyPresentation
-        ) {
-            cancelPictureInPictureTransition()
-        }
     }
 
     override fun onDestroy() {
@@ -772,7 +656,7 @@ class MainActivity : AppCompatActivity() {
             super.onDestroy()
             return
         }
-        cancelPictureInPictureReturnLayoutWait()
+        if (::pictureInPictureController.isInitialized) pictureInPictureController.onDestroy()
         if (::castSessionController.isInitialized) castSessionController.release()
         if (::browserController.isInitialized) browserController.destroy()
         if (::webMediaSystemSession.isInitialized) webMediaSystemSession.release()
@@ -801,113 +685,6 @@ class MainActivity : AppCompatActivity() {
         externalLaunchTabId?.let { outState.putString(STATE_EXTERNAL_LAUNCH_TAB_ID, it) }
         outState.putBoolean(STATE_RELEASE_NOTES_VISIBLE, releaseNotesVisible)
         super.onSaveInstanceState(outState)
-    }
-
-    private fun importUserScript(uri: Uri) {
-        lifecycleScope.launch {
-            val importResult = withContext(Dispatchers.IO) {
-                UserScriptImportReader.read(contentResolver, uri)
-            }
-            when (importResult) {
-                is UserScriptImportResult.Loaded -> {
-                    val parsedName = (
-                        UserScriptParser.parse(
-                            id = "import-preview",
-                            source = importResult.source,
-                        ) as? UserScriptParseResult.Accepted
-                        )?.script?.name
-                    browserController.saveUserScript(
-                        id = null,
-                        source = importResult.source,
-                    ) { outcome ->
-                        val message = userScriptImportMessage(
-                            feedback = UserScriptImportFeedbackRules.from(outcome),
-                            importedName = parsedName,
-                        )
-                        Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
-                    }
-                }
-                else -> UserScriptImportFeedbackRules.from(importResult)?.let { feedback ->
-                    Toast.makeText(
-                        this@MainActivity,
-                        userScriptImportMessage(feedback),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-            }
-        }
-    }
-
-    private fun userScriptImportMessage(
-        feedback: UserScriptImportFeedback,
-        importedName: String? = null,
-    ): String = when (feedback) {
-        UserScriptImportFeedback.Imported -> getString(
-            R.string.userscript_import_success,
-            importedName ?: getString(R.string.userscript_title),
-        )
-        UserScriptImportFeedback.LimitReached -> getString(
-            R.string.userscript_error_limit,
-            UserScriptParser.MAX_SCRIPTS,
-        )
-        UserScriptImportFeedback.EmptyFile -> getString(R.string.userscript_import_error_empty)
-        UserScriptImportFeedback.FileTooLarge -> getString(
-            R.string.userscript_import_error_too_large,
-            UserScriptParser.MAX_SOURCE_BYTES / 1_024,
-        )
-        UserScriptImportFeedback.InvalidUtf8 -> getString(
-            R.string.userscript_import_error_invalid_utf8,
-        )
-        UserScriptImportFeedback.UnreadableFile -> getString(
-            R.string.userscript_import_error_unreadable,
-        )
-        UserScriptImportFeedback.InvalidMetadata -> getString(
-            R.string.userscript_import_error_invalid_metadata,
-        )
-        UserScriptImportFeedback.MissingName -> getString(
-            R.string.userscript_import_error_missing_name,
-        )
-        UserScriptImportFeedback.NameTooLong -> getString(
-            R.string.userscript_import_error_name_too_long,
-            UserScriptParser.MAX_NAME_CHARS,
-        )
-        UserScriptImportFeedback.MissingScope -> getString(
-            R.string.userscript_import_error_missing_scope,
-        )
-        UserScriptImportFeedback.TooManyMetadataValues -> getString(
-            R.string.userscript_import_error_too_many_metadata_values,
-            UserScriptParser.MAX_PATTERNS_PER_KIND,
-        )
-        UserScriptImportFeedback.InvalidScope -> getString(
-            R.string.userscript_import_error_invalid_scope,
-        )
-        UserScriptImportFeedback.InvalidRunAt -> getString(
-            R.string.userscript_import_error_invalid_run_at,
-        )
-        UserScriptImportFeedback.UnsupportedGrant -> getString(
-            R.string.userscript_import_error_unsupported_grant,
-        )
-        UserScriptImportFeedback.InvalidDependency -> getString(
-            R.string.userscript_import_error_invalid_dependency,
-        )
-        UserScriptImportFeedback.TooManyDependencies -> getString(
-            R.string.userscript_import_error_too_many_dependencies,
-        )
-        UserScriptImportFeedback.DependencyUnavailable -> getString(
-            R.string.userscript_import_error_dependency_unavailable,
-        )
-        UserScriptImportFeedback.DependencyTooLarge -> getString(
-            R.string.userscript_import_error_dependency_too_large,
-        )
-        UserScriptImportFeedback.DependencyInvalidUtf8 -> getString(
-            R.string.userscript_import_error_dependency_invalid_utf8,
-        )
-        UserScriptImportFeedback.DependencyIntegrityMismatch -> getString(
-            R.string.userscript_import_error_dependency_integrity,
-        )
-        UserScriptImportFeedback.SaveFailed -> getString(
-            R.string.userscript_import_error_save_failed,
-        )
     }
 
     private fun startAppDataExport(destination: Uri) {
@@ -1048,7 +825,7 @@ class MainActivity : AppCompatActivity() {
         externalLaunchTabId = null
         val incomingRequest = IncomingBrowserIntent.from(intent)
         if (incomingRequest == null) browserController.dismissExternalLinkPreview()
-        if (openLauncherShortcut(intent)) return
+        if (launcherShortcutIntentHandler.open(intent)) return
         if (intent.action == SnoozeWakeNotifier.ACTION_OPEN_RESTORED_TAB) {
             intent.getStringExtra(SnoozeWakeNotifier.EXTRA_TAB_ID)?.let { tabId ->
                 browserController.openSnoozedWakeTab(tabId)
@@ -1109,104 +886,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun openLauncherShortcut(intent: Intent): Boolean {
-        val target = LauncherShortcutRules.resolve(
-            action = intent.action,
-            profileId = intent.getStringExtra(LauncherShortcutRules.EXTRA_PROFILE_ID),
-            availableProfileIds = browserController.localBrowserProfiles
-                .mapTo(mutableSetOf()) { it.id },
-            profilesEnabled = browserController.profilesEnabled,
-        ) ?: return if (intent.action == LauncherShortcutRules.ACTION_OPEN_PROFILE) {
-            Toast.makeText(this, R.string.command_feedback_rejected, Toast.LENGTH_SHORT).show()
-            true
-        } else {
-            false
-        }
-        val completed = when (target) {
-            LauncherShortcutTarget.NewTab -> createLauncherTab(isIncognito = false)
-            LauncherShortcutTarget.NewPrivateTab -> createPrivateLauncherTab()
-            is LauncherShortcutTarget.Profile -> {
-                val selected = target.profileId == browserController.activeProfileId ||
-                    browserController.selectProfile(target.profileId)
-                if (selected) browserController.leaveSiteCapsule()
-                selected
-            }
-        }
-        if (completed) {
-            launcherShortcutPublisher.reportUsed(target)
-            incomingBrowserNavigationRequestId++
-        }
-        return true
-    }
-
-    private fun createPrivateLauncherTab(): Boolean {
-        val targetProfileId = LauncherShortcutRules.privateTargetProfileId(
-            profiles = browserController.profiles.toList(),
-            activeProfileId = browserController.activeProfileId,
-            profileIsolationSupported = browserController.isProfileIsolationSupported,
-        )
-        if (targetProfileId == null) {
-            Toast.makeText(
-                this,
-                R.string.toast_incognito_unsupported,
-                Toast.LENGTH_SHORT,
-            ).show()
-            return false
-        }
-        if (!browserController.prepareTabCreation(targetProfileId)) {
-            Toast.makeText(
-                this,
-                getString(R.string.toast_tab_limit_reached, MAX_TABS),
-                Toast.LENGTH_SHORT,
-            ).show()
-            return false
-        }
-        if (
-            targetProfileId != browserController.activeProfileId &&
-            !browserController.selectProfile(targetProfileId)
-        ) {
-            return false
-        }
-        return createLauncherTab(isIncognito = true)
-    }
-
-    private fun createLauncherTab(isIncognito: Boolean): Boolean {
-        val previousTabId = browserController.selectedTabId
-        val createdTabId = browserController.createTab(isIncognito = isIncognito)
-        if (createdTabId == previousTabId) return false
-        launcherAddressEditorRequestId++
-        return true
-    }
-
     @VisibleForTesting
     fun browserControllerForTesting(): BrowserController = browserController
 
-    private fun applyAppearanceNightMode(appearanceMode: BrowserAppearanceMode) {
-        val nightMode = when (appearanceMode) {
-            BrowserAppearanceMode.System -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            BrowserAppearanceMode.Light -> AppCompatDelegate.MODE_NIGHT_NO
-            BrowserAppearanceMode.Dark,
-            BrowserAppearanceMode.Amoled,
-            -> AppCompatDelegate.MODE_NIGHT_YES
-        }
-        if (delegate.localNightMode != nightMode) delegate.localNightMode = nightMode
-    }
-
     @VisibleForTesting
     fun prepareForPictureInPictureTransitionForTesting() {
-        prepareForPictureInPictureTransition()
+        pictureInPictureController.prepareForTransition()
     }
 
     @VisibleForTesting
-    fun isPictureInPictureEligibleForTesting(): Boolean = canEnterPictureInPicture()
+    fun isPictureInPictureEligibleForTesting(): Boolean = pictureInPictureController.isEligible()
 
     @VisibleForTesting
     fun pictureInPictureSourceRectHintForTesting(): Rect? =
-        appliedPictureInPictureState?.sourceRectHint?.let(::Rect)
+        pictureInPictureController.appliedSourceRectHint()
 
     @VisibleForTesting
     fun reconcilePictureInPictureStateOnResumeForTesting() {
-        reconcilePictureInPictureStateOnResume()
+        pictureInPictureController.reconcileStateOnResume()
     }
 
     @VisibleForTesting
@@ -1216,192 +913,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onFullscreenVideoBoundsChanged(bounds: Rect) {
-        if (fullscreenVideoBounds == bounds) return
-        fullscreenVideoBounds = Rect(bounds)
-        if (isInPictureInPictureMode && pictureInPictureStartedFullscreen) {
-            pictureInPictureSourceRectHint = pictureInPictureSourceRect(
-                maximumWindowContentBounds(),
-            )
-        }
-        updatePictureInPictureParams()
+        pictureInPictureController.onFullscreenVideoBoundsChanged(bounds)
     }
 
     private fun prepareForPictureInPictureTransition() {
-        if (!::browserController.isInitialized || !canEnterPictureInPicture()) return
-        if (!videoOnlyPresentation) {
-            pictureInPictureStartedFullscreen = isCurrentWindowFullscreen()
-            pictureInPictureSourceRectHint = currentPictureInPictureSourceRect()
+        if (::pictureInPictureController.isInitialized) {
+            pictureInPictureController.prepareForTransition()
         }
-        videoOnlyPresentation = true
-        browserController.prepareForPictureInPicture()
-        updatePictureInPictureParams()
     }
 
     private fun cancelPictureInPictureTransition() {
-        pictureInPictureReturnInProgress = false
-        pictureInPictureStartedFullscreen = false
-        pictureInPictureModeEntered = false
-        cancelPictureInPictureReturnLayoutWait()
-        videoOnlyPresentation = false
-        pictureInPictureSourceRectHint = null
-        browserController.cancelPictureInPictureTransition()
-        updatePictureInPictureParams()
-    }
-
-    private fun completePictureInPictureReturnAfterLayout(configuration: Configuration) {
-        cancelPictureInPictureReturnLayoutWait()
-        val decorView = window.decorView
-        val density = resources.displayMetrics.density
-        val targetWidth = (configuration.screenWidthDp * density).toInt()
-        val targetHeight = (configuration.screenHeightDp * density).toInt()
-        val tolerance = (PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP * density).toInt()
-        fun isExpandedLayout(width: Int, height: Int): Boolean =
-            FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
-                width = width,
-                height = height,
-                targetWidth = targetWidth,
-                targetHeight = targetHeight,
-                tolerance = tolerance,
-            )
-        if (isExpandedLayout(decorView.width, decorView.height)) {
-            finishPictureInPictureReturn()
-            return
+        if (::pictureInPictureController.isInitialized) {
+            pictureInPictureController.cancelTransition()
         }
-        val listener = View.OnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
-            if (!isInPictureInPictureMode && isExpandedLayout(right - left, bottom - top)) {
-                cancelPictureInPictureReturnLayoutWait()
-                finishPictureInPictureReturn()
-            }
-        }
-        pictureInPictureReturnLayoutListener = listener
-        decorView.addOnLayoutChangeListener(listener)
-        decorView.postDelayed(
-            {
-                if (
-                    pictureInPictureReturnLayoutListener === listener &&
-                    !isInPictureInPictureMode
-                ) {
-                    cancelPictureInPictureReturnLayoutWait()
-                    finishPictureInPictureReturn()
-                }
-            },
-            PICTURE_IN_PICTURE_RETURN_LAYOUT_TIMEOUT_MILLIS,
-        )
-    }
-
-    private fun cancelPictureInPictureReturnLayoutWait() {
-        val listener = pictureInPictureReturnLayoutListener ?: return
-        window.decorView.removeOnLayoutChangeListener(listener)
-        pictureInPictureReturnLayoutListener = null
-    }
-
-    private fun finishPictureInPictureReturn() {
-        pictureInPictureReturnInProgress = false
-        pictureInPictureStartedFullscreen = false
-        pictureInPictureModeEntered = false
-        videoOnlyPresentation = false
-        pictureInPictureSourceRectHint = null
-        browserController.completePictureInPictureReturn()
-        applyBrowserSystemUi()
-        updatePictureInPictureParams()
     }
 
     private fun updatePictureInPictureParams() {
-        if (!supportsPictureInPicture()) return
-        val autoEnterEnabled = canEnterPictureInPicture()
-        val sourceRectHint = eligiblePictureInPictureSourceRect(autoEnterEnabled)
-        val nextState = AppliedPictureInPictureState(autoEnterEnabled, sourceRectHint)
-        if (appliedPictureInPictureState == nextState) return
-        appliedPictureInPictureState = nextState
-        setPictureInPictureParams(
-            buildPictureInPictureParams(autoEnterEnabled, sourceRectHint),
-        )
+        if (::pictureInPictureController.isInitialized) pictureInPictureController.updateParams()
     }
-
-    private fun buildPictureInPictureParams(
-        autoEnterEnabled: Boolean,
-        sourceRectHint: Rect?,
-    ): PictureInPictureParams {
-        val builder = PictureInPictureParams.Builder()
-            .setAspectRatio(Rational(VIDEO_ASPECT_WIDTH, VIDEO_ASPECT_HEIGHT))
-            .setAutoEnterEnabled(autoEnterEnabled)
-            .setSeamlessResizeEnabled(true)
-            .setSourceRectHint(sourceRectHint)
-        return builder.build()
-    }
-
-    private fun eligiblePictureInPictureSourceRect(autoEnterEnabled: Boolean): Rect? =
-        currentPictureInPictureSourceRect()
-            ?.takeIf {
-                autoEnterEnabled &&
-                    !it.isEmpty
-            }
-            ?.let(::Rect)
-
-    private fun currentPictureInPictureSourceRect(): Rect? {
-        pictureInPictureSourceRectHint?.let { return Rect(it) }
-        val windowBounds = Rect()
-        val visibleBounds = if (
-            window.decorView.getGlobalVisibleRect(windowBounds) && !windowBounds.isEmpty
-        ) {
-            windowBounds
-        } else {
-            fullscreenVideoBounds ?: return null
-        }
-        return pictureInPictureSourceRect(visibleBounds)
-    }
-
-    private fun pictureInPictureSourceRect(bounds: Rect): Rect? {
-        val sourceBounds = FullscreenVideoRules.pictureInPictureSourceBounds(
-            windowBounds = FullscreenVideoBounds(
-                left = bounds.left,
-                top = bounds.top,
-                right = bounds.right,
-                bottom = bounds.bottom,
-            ),
-            aspectWidth = VIDEO_ASPECT_WIDTH,
-            aspectHeight = VIDEO_ASPECT_HEIGHT,
-        ) ?: return null
-        return Rect(
-            sourceBounds.left,
-            sourceBounds.top,
-            sourceBounds.right,
-            sourceBounds.bottom,
-        )
-    }
-
-    private fun maximumWindowContentBounds(): Rect {
-        val bounds = windowManager.maximumWindowMetrics.bounds
-        return Rect(0, 0, bounds.width(), bounds.height())
-    }
-
-    private fun isCurrentWindowFullscreen(): Boolean {
-        val visibleBounds = Rect()
-        if (!window.decorView.getGlobalVisibleRect(visibleBounds) || visibleBounds.isEmpty) {
-            return false
-        }
-        val maximumBounds = windowManager.maximumWindowMetrics.bounds
-        val tolerance = (
-            PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP *
-                resources.displayMetrics.density
-            ).toInt()
-        return FullscreenVideoRules.isPictureInPictureReturnLayoutReady(
-            width = visibleBounds.width(),
-            height = visibleBounds.height(),
-            targetWidth = maximumBounds.width(),
-            targetHeight = maximumBounds.height(),
-            tolerance = tolerance,
-        )
-    }
-
-    private fun canEnterPictureInPicture(): Boolean =
-        supportsPictureInPicture() &&
-            ::browserController.isInitialized &&
-            browserController.isPictureInPictureEligible
-
-    private fun supportsPictureInPicture(): Boolean = packageManager.hasSystemFeature(
-        PackageManager.FEATURE_PICTURE_IN_PICTURE,
-    )
 
     @Suppress("DEPRECATION")
     private fun isUpdatedInstallation(): Boolean = runCatching {
@@ -1492,44 +1021,5 @@ class MainActivity : AppCompatActivity() {
             "external_link_preview_app_handoff_expiration"
         const val STATE_EXTERNAL_LAUNCH_TAB_ID = "external_launch_tab_id"
         const val STATE_RELEASE_NOTES_VISIBLE = "release_notes_visible"
-        const val VIDEO_ASPECT_WIDTH = 16
-        const val VIDEO_ASPECT_HEIGHT = 9
-        const val PICTURE_IN_PICTURE_RETURN_LAYOUT_TOLERANCE_DP = 8
-        const val PICTURE_IN_PICTURE_RETURN_LAYOUT_TIMEOUT_MILLIS = 3_000L
     }
-}
-
-private data class AppliedPictureInPictureState(
-    val autoEnterEnabled: Boolean,
-    val sourceRectHint: Rect?,
-)
-
-@Composable
-private fun AppUpdateDialog(
-    update: AvailableAppUpdate,
-    onDismiss: () -> Unit,
-    onDownload: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.update_available_title)) },
-        text = {
-            Text(
-                stringResource(
-                    R.string.update_available_message,
-                    update.versionName,
-                ),
-            )
-        },
-        confirmButton = {
-            Button(onClick = onDownload) {
-                Text(stringResource(R.string.action_download_update))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_later))
-            }
-        },
-    )
 }

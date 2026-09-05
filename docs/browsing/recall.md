@@ -23,8 +23,8 @@ Peek, and federated-login popup pages never enter it.
 | Extraction | Bounded normal-page DOM text extraction and WebView result parsing | `recall/RecallExtraction.kt` |
 | Persistence and ranking | Serialized SQLite FTS4 writes, profile-scoped queries, deterministic lexical ranking and pruning | `data/RecallRepository.kt` |
 | Browser integration | Committed-page extraction, stale callback rejection, active-profile address queries and cleanup wiring | `browser/BrowserController.kt` |
-| Address and History UI | Section ordering, local-only command submission and matching excerpts | `ui/BrowserScreen.kt`, `HistoryActivity.kt`, `ui/HistoryScreen.kt` |
-| Setting | Disabled-by-default opt-in and clear-on-disable action | `data/BrowserSessionStore.kt`, `ui/SettingsScreen.kt` |
+| Address and History UI | Section ordering, local-only command submission and matching excerpts | `ui/AddressSuggestions.kt`, `HistoryActivity.kt`, `ui/HistoryScreen.kt` |
+| Setting | Disabled-by-default opt-in and clear-on-disable action | `data/BrowserSessionStore.kt`, `ui/ProtectionSettingsPage.kt` |
 
 The separate enabled-by-default **Show browsing history suggestions** setting controls automatic
 Recall matches in the address editor without disabling or deleting the Recall index. Explicit
@@ -84,6 +84,6 @@ returns bounded results to the main thread.
 | --- | --- |
 | Query parsing, bounds, canonical HTTP(S) eligibility and stale identities | `recall/RecallRulesTest`, `recall/RecallExtractionParserTest` |
 | FTS ranking across the full bound, profile isolation, pruning, corruption, cleanup races and full storage deletion | `data/RecallRepositoryInstrumentedTest` |
-| Disabled-by-default setting and clear behavior | `BrowserSessionStoreInstrumentedTest`, `ui/SettingsScreenInstrumentedTest` |
+| Disabled-by-default setting and clear behavior | `BrowserSessionStoreInstrumentedTest`, `ui/RecallSettingsInstrumentedTest` |
 | Address section, local-only command and History excerpts | Address/History rule tests and focused Compose instrumented tests |
 | Manual and Android transfer exclusion | `AppDataArchiveRulesTest`, `AppDataArchiveCodecTest`, Android resource validation in lint/assemble |
