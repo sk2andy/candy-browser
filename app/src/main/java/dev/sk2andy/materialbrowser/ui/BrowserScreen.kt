@@ -99,6 +99,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -5740,6 +5741,9 @@ internal fun TabOverview(
 ) {
     val rootView = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    // Frosted content moves into a nested ComposeView whose parent already consumed these insets.
+    val statusBarInsets = WindowInsets.statusBars
+    val navigationBarInsets = WindowInsets.navigationBars
     val overviewWallpaper = backgroundWallpaper.takeUnless {
         controller.selectedTab.isIncognito
     }
@@ -6418,6 +6422,8 @@ internal fun TabOverview(
 
         TabOverviewBackground(
             wallpaper = overviewWallpaper,
+            statusBarInsets = statusBarInsets,
+            navigationBarInsets = navigationBarInsets,
             modifier = Modifier
                 .fillMaxSize()
                 .then(if (visible) Modifier.testTag(TabOverviewChromeTestTags.Root) else Modifier)
@@ -6489,8 +6495,8 @@ internal fun TabOverview(
                         0f
                     }
                 }
-                .statusBarsPadding()
-                .navigationBarsPadding()
+                .windowInsetsPadding(statusBarInsets)
+                .windowInsetsPadding(navigationBarInsets)
                 .then(
                     if (
                         candyTrailTransition.currentState != null ||
@@ -7281,7 +7287,7 @@ internal fun TabOverview(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
+                    .windowInsetsPadding(statusBarInsets)
                     .padding(
                         top = TAB_OVERVIEW_TOP_SPACING +
                             PROFILE_SWITCHER_LAYOUT_HEIGHT +
@@ -7765,6 +7771,8 @@ internal fun TabOverview(
 @Composable
 internal fun TabOverviewBackground(
     wallpaper: ProfileWallpaperRuntime?,
+    statusBarInsets: WindowInsets = WindowInsets.statusBars,
+    navigationBarInsets: WindowInsets = WindowInsets.navigationBars,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -7797,14 +7805,14 @@ internal fun TabOverviewBackground(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .windowInsetsTopHeight(statusBarInsets)
                     .background(colors.surface.copy(alpha = 0.92f)),
             )
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                    .windowInsetsBottomHeight(navigationBarInsets)
                     .background(colors.surface.copy(alpha = 0.92f)),
             )
         }
