@@ -50,6 +50,12 @@ editor closes.
 | Share/download/assistant/external app | [`browser/integration/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/integration/), [`browser/actions/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/) | Construct bounded requests, then let Android adapters launch them |
 | Page translation | [`page-translation.md`](page-translation.md), [`PageTranslation.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/PageTranslation.kt) | Validate and encode the current HTTP(S) URL, then navigate only to the explicitly selected provider |
 
+External download routing supports the built-in downloader, per-download selection, or one persisted
+verified manager. Verified external targets are 1DM, ADM, and Download Navi. ADM and Download Navi
+receive only the normalized HTTP(S) URL and MIME type through an explicit `ACTION_VIEW` intent. 1DM
+session sharing remains separately opt-in and is never allowed for private tabs. If a selected app is
+missing or cannot be started, Candy falls back to the built-in downloader.
+
 ## Change pattern
 
 1. Add or change deterministic behavior in a focused rule/model.

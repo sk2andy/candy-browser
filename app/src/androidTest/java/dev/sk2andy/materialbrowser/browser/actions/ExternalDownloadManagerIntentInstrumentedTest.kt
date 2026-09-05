@@ -45,28 +45,40 @@ class ExternalDownloadManagerIntentInstrumentedTest {
     }
 
     @Test
-    fun genericManagerNeverReceivesSessionData() {
-        val app = ExternalDownloadManagerApp(
-            id = "view|com.example.downloader|com.example.downloader.MainActivity",
-            packageName = "com.example.downloader",
-            activityName = "com.example.downloader.MainActivity",
-            label = "Downloader",
-            protocol = ExternalDownloadProtocol.View,
-            isOneDm = false,
-        )
-
+    fun naviUsesGenericViewProtocolWithoutSessionData() {
         val intent = manager.createIntent(
             request,
-            app,
+            naviApp(),
             BrowserDownloadSettings(shareSessionDataWithOneDm = true),
             allowSessionData = true,
         )
 
         assertEquals("https://example.com/private.pdf", intent.dataString)
         assertEquals("application/pdf", intent.type)
+        assertEquals(NAVI_PACKAGE, intent.component?.packageName)
+        assertEquals(NAVI_ACTIVITY, intent.component?.className)
         assertFalse(intent.hasExtra("extra_cookies"))
         assertFalse(intent.hasExtra("extra_useragent"))
         assertFalse(intent.hasExtra("extra_referer"))
+    }
+
+    @Test
+    fun installedNaviIsDiscoveredAndResolvable() {
+        assumeTrue("Requires real Download Navi installation", isPackageInstalled(NAVI_PACKAGE))
+
+        val navi = manager.discover(request).firstOrNull { it.packageName == NAVI_PACKAGE }
+
+        assertNotNull(navi)
+        assertFalse(requireNotNull(navi).isOneDm)
+        assertEquals(NAVI_ACTIVITY, navi.activityName)
+        assertNotNull(
+            manager.createIntent(
+                request,
+                navi,
+                BrowserDownloadSettings(shareSessionDataWithOneDm = true),
+                allowSessionData = true,
+            ).resolveActivity(context.packageManager),
+        )
     }
 
     @Test
@@ -113,11 +125,25 @@ class ExternalDownloadManagerIntentInstrumentedTest {
         isOneDm = true,
     )
 
+    private fun naviApp() = ExternalDownloadManagerApp(
+        id = "view|$NAVI_PACKAGE",
+        packageName = NAVI_PACKAGE,
+        activityName = NAVI_ACTIVITY,
+        label = "Download Navi",
+        protocol = ExternalDownloadProtocol.View,
+        isOneDm = false,
+    )
+
     private fun isPackageInstalled(packageName: String): Boolean {
         require(packageName.matches(Regex("[A-Za-z0-9._]+")))
         val output = ParcelFileDescriptor.AutoCloseInputStream(
             instrumentation.uiAutomation.executeShellCommand("pm path $packageName"),
         ).bufferedReader().use { it.readText() }
         return output.lineSequence().any { it.startsWith("package:") }
+    }
+
+    private companion object {
+        const val NAVI_PACKAGE = "com.tachibana.downloader"
+        const val NAVI_ACTIVITY = "com.tachibana.downloader.ui.adddownload.AddDownloadActivity"
     }
 }
