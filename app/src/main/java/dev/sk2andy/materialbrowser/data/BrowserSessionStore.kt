@@ -13,6 +13,8 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
+import dev.sk2andy.materialbrowser.browser.ProfileWallpaperRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -141,6 +143,10 @@ class BrowserSessionStore internal constructor(
                             val id = item.optString("id").trim()
                             val emoji = item.optString("emoji").trim()
                             if (id.isNotEmpty() && emoji.isNotEmpty() && none { it.id == id }) {
+                                val legacyWallpaper = item.optJSONObject("wallpaper")
+                                    ?.toProfileWallpaper()
+                                val hasTargetWallpapers = item.has("newTabWallpaper") ||
+                                    item.has("tabSwitcherWallpaper")
                                 add(
                                     BrowserProfile(
                                         id = id,
@@ -148,6 +154,18 @@ class BrowserSessionStore internal constructor(
                                         selectedTabId = item.optString("selectedTabId")
                                             .takeIf(String::isNotBlank),
                                         isolationEnabled = item.optBoolean("isolationEnabled", false),
+                                        newTabWallpaper = if (hasTargetWallpapers) {
+                                            item.optJSONObject("newTabWallpaper")
+                                                ?.toProfileWallpaper()
+                                        } else {
+                                            legacyWallpaper
+                                        },
+                                        tabSwitcherWallpaper = if (hasTargetWallpapers) {
+                                            item.optJSONObject("tabSwitcherWallpaper")
+                                                ?.toProfileWallpaper()
+                                        } else {
+                                            legacyWallpaper
+                                        },
                                     ),
                                 )
                             }
@@ -172,7 +190,15 @@ class BrowserSessionStore internal constructor(
                     .put("id", profile.id)
                     .put("emoji", profile.emoji)
                     .put("selectedTabId", profile.selectedTabId)
-                    .put("isolationEnabled", profile.isolationEnabled),
+                    .put("isolationEnabled", profile.isolationEnabled)
+                    .put(
+                        "newTabWallpaper",
+                        profile.newTabWallpaper.toJson(),
+                    )
+                    .put(
+                        "tabSwitcherWallpaper",
+                        profile.tabSwitcherWallpaper.toJson(),
+                    ),
             )
         }
         preferences.edit()
@@ -981,3 +1007,21 @@ class BrowserSessionStore internal constructor(
         const val MAX_DISMISS_RESISTANCE_START_PERCENT = 90
     }
 }
+
+private fun JSONObject.toProfileWallpaper(): ProfileWallpaper = ProfileWallpaperRules.sanitize(
+    ProfileWallpaper(
+        zoom = optDouble("zoom", 1.0).toFloat(),
+        normalizedPanX = optDouble("normalizedPanX", 0.0).toFloat(),
+        normalizedPanY = optDouble("normalizedPanY", 0.0).toFloat(),
+    ),
+)
+
+private fun ProfileWallpaper?.toJson(): Any = this
+    ?.let(ProfileWallpaperRules::sanitize)
+    ?.let { wallpaper ->
+        JSONObject()
+            .put("zoom", wallpaper.zoom.toDouble())
+            .put("normalizedPanX", wallpaper.normalizedPanX.toDouble())
+            .put("normalizedPanY", wallpaper.normalizedPanY.toDouble())
+    }
+    ?: JSONObject.NULL
