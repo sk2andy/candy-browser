@@ -488,6 +488,8 @@ class BrowserController(
         private set
     var isStartupAnimationEnabled by mutableStateOf(true)
         private set
+    var isOpenHomeOnStartupEnabled by mutableStateOf(false)
+        private set
     var isScrollBarEnabled by mutableStateOf(false)
         private set
     var isVideoAutoplayBlocked by mutableStateOf(false)
@@ -1515,6 +1517,7 @@ class BrowserController(
         addressBarActionLayout = store.loadAddressBarActionLayout()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         isStartupAnimationEnabled = store.loadStartupAnimationEnabled()
+        isOpenHomeOnStartupEnabled = store.loadOpenHomeOnStartupEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
         isVideoAutoplayBlocked =
             isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
@@ -3041,6 +3044,16 @@ class BrowserController(
                 submitAddress(BLANK_URL)
             }
         }
+    }
+
+    fun openNormalHome(): Boolean {
+        leaveSiteCapsule()
+        StartupHomeRules.reusableBlankTabId(activeTabs)?.let { tabId ->
+            if (selectedTabId != tabId) selectTab(tabId)
+            return true
+        }
+        val previousTabId = selectedTabId
+        return createTab(BLANK_URL, isIncognito = false) != previousTabId
     }
 
     fun upsertSiteCapsule(draft: SiteCapsuleDraft, sourceFavicon: Bitmap? = null): CapsuleSaveResult {
@@ -5081,6 +5094,12 @@ class BrowserController(
         if (isStartupAnimationEnabled == enabled) return
         isStartupAnimationEnabled = enabled
         store.saveStartupAnimationEnabled(enabled)
+    }
+
+    fun updateOpenHomeOnStartupEnabled(enabled: Boolean) {
+        if (isOpenHomeOnStartupEnabled == enabled) return
+        isOpenHomeOnStartupEnabled = enabled
+        store.saveOpenHomeOnStartupEnabled(enabled)
     }
 
     fun updateScrollBarEnabled(enabled: Boolean) {

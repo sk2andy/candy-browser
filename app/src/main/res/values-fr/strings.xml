@@ -346,6 +346,8 @@
     <string name="settings_section_browser">Navigateur</string>
     <string name="settings_startup_animation_title">Animation de démarrage</string>
     <string name="settings_startup_animation_subtitle">Affiche l’animation Candy lors d’un lancement normal. Désactivez-la pour ouvrir immédiatement la barre d’adresse.</string>
+    <string name="settings_open_home_on_startup_title">Ouvrir la page d’accueil au démarrage</string>
+    <string name="settings_open_home_on_startup_subtitle">Affiche un nouvel onglet vide plutôt que le dernier onglet actif à l’ouverture de Candy.</string>
     <string name="settings_full_immersive_mode_title">Mode immersif plein écran</string>
     <string name="settings_full_immersive_mode_subtitle">Masque les barres d’état et de navigation. Balayez depuis un bord pour les afficher temporairement.</string>
     <string name="settings_scroll_bar_title">Barre de défilement déplaçable</string>

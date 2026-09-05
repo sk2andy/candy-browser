@@ -27,6 +27,7 @@
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
 | Startup animation | Off, on | On |
+| Open home page on startup | Off, on | Off |
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Google Translate |
 
@@ -52,6 +53,11 @@ Frosted exposes three persisted controls while selected:
   on a cold launcher start and opens the address editor immediately on cold and warm launcher
   starts. External launches, activity recreation, and first-run onboarding do not force the editor
   open.
+- Open home page on startup is global and disabled by default. When enabled, normal cold and warm
+  launcher opens select a fresh blank tab while keeping restored tabs. An existing fresh regular
+  blank tab in the active profile is reused. At the tab limit, the current tab remains unchanged.
+  External links, launcher shortcuts, Site Capsules, and activity recreation keep their own
+  destinations.
 - Unknown stored values fall back per field; one corrupt value does not discard valid choices.
 - AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.

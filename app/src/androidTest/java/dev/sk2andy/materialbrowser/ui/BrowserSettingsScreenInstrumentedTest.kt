@@ -88,6 +88,37 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
+    fun openHomeOnStartupSwitchUpdatesSetting() {
+        var enabled by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isOpenHomeOnStartupEnabled = enabled,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onOpenHomeOnStartupEnabledChanged = { enabled = it },
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.OpenHomeOnStartup).performClick()
+
+        assertTrue(enabled)
+    }
+
+    @Test
     fun translationProviderChoiceUpdatesSetting() {
         var provider by mutableStateOf(PageTranslationProvider.Google)
         composeRule.setContent {

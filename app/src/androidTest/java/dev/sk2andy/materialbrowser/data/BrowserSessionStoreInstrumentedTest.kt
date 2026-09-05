@@ -176,6 +176,19 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun openHomeOnStartupDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadOpenHomeOnStartupEnabled())
+
+        store.saveOpenHomeOnStartupEnabled(true)
+        assertTrue(store.loadOpenHomeOnStartupEnabled())
+
+        store.saveOpenHomeOnStartupEnabled(false)
+        assertFalse(store.loadOpenHomeOnStartupEnabled())
+    }
+
+    @Test
     fun aiModeToggleDefaultsToHiddenAndRoundTripsVisibleState() {
         val store = BrowserSessionStore(context)
 

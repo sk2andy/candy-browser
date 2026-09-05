@@ -343,6 +343,8 @@
     <string name="settings_section_browser">Browser</string>
     <string name="settings_startup_animation_title">Startanimation</string>
     <string name="settings_startup_animation_subtitle">Zeigt die Candy-Animation beim normalen App-Start. Deaktivieren, um die Adressleiste sofort zu öffnen.</string>
+    <string name="settings_open_home_on_startup_title">Beim Start Startseite öffnen</string>
+    <string name="settings_open_home_on_startup_subtitle">Zeigt beim Öffnen von Candy einen neuen leeren Tab statt des zuletzt aktiven Tabs.</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>
     <string name="settings_full_immersive_mode_subtitle">Blendet Status- und Navigationsleiste aus. Vom Bildschirmrand wischen, um sie kurz einzublenden.</string>
     <string name="settings_scroll_bar_title">Ziehbare Scrollleiste</string>
