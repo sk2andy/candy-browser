@@ -7513,6 +7513,8 @@ internal fun TabOverview(
             isDomainMuted = actionTab?.let { tab ->
                 controller.isDomainMuted(tab.id)
             } == true,
+            canCloseAllTabs = controller.activeTabs.any(TabDeletionRules::canDelete),
+            hasPinnedTabs = controller.activeTabs.any(BrowserTab::isPinned),
             onToggleFavorite = {
                 val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
@@ -7647,6 +7649,11 @@ internal fun TabOverview(
                 val target = actionTab ?: return@TabActionsFloatingMenu
                 tabActionsTabId = null
                 onSnoozeTab(target.id)
+            },
+            onCloseAllTabs = {
+                actionTab ?: return@TabActionsFloatingMenu
+                tabActionsTabId = null
+                if (controller.closeAllTabs() > 0) rootView.performConfirmHaptic()
             },
             onDismiss = { tabActionsTabId = null },
         )
@@ -9654,6 +9661,8 @@ private data class TabActionsMenuPresentation(
     val isFavorite: Boolean,
     val canToggleDomainMute: Boolean,
     val isDomainMuted: Boolean,
+    val canCloseAllTabs: Boolean,
+    val hasPinnedTabs: Boolean,
 )
 
 @Composable
@@ -9664,6 +9673,8 @@ internal fun TabActionsFloatingMenu(
     isFavorite: Boolean,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
+    canCloseAllTabs: Boolean,
+    hasPinnedTabs: Boolean,
     onToggleFavorite: () -> Unit,
     onOpenCandyTrail: () -> Unit,
     onTogglePinned: () -> Unit,
@@ -9675,6 +9686,7 @@ internal fun TabActionsFloatingMenu(
     onAddSiteCapsule: () -> Unit,
     onSummarize: () -> Unit,
     onSnooze: () -> Unit,
+    onCloseAllTabs: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     BackHandler(enabled = tab != null, onBack = onDismiss)
@@ -9699,6 +9711,8 @@ internal fun TabActionsFloatingMenu(
             isFavorite = isFavorite,
             canToggleDomainMute = canToggleDomainMute,
             isDomainMuted = isDomainMuted,
+            canCloseAllTabs = canCloseAllTabs,
+            hasPinnedTabs = hasPinnedTabs,
         )
     }
     var presentation by remember { mutableStateOf(requestedPresentation) }
@@ -9795,6 +9809,8 @@ internal fun TabActionsFloatingMenu(
                                 (presentedTab.url.startsWith("https://") ||
                                     presentedTab.url.startsWith("http://")),
                             canSnooze = !presentedTab.isIncognito,
+                            canCloseAllTabs = presented.canCloseAllTabs,
+                            hasPinnedTabs = presented.hasPinnedTabs,
                             onToggleFavorite = onToggleFavorite,
                             onTogglePinned = onTogglePinned,
                             onShare = onShare,
@@ -9805,6 +9821,7 @@ internal fun TabActionsFloatingMenu(
                             onAddSiteCapsule = onAddSiteCapsule,
                             onSummarize = onSummarize,
                             onSnooze = onSnooze,
+                            onCloseAllTabs = onCloseAllTabs,
                             compactToolbar = compactToolbar,
                             profileContent = {
                                 val targetProfiles = profiles.filter {
