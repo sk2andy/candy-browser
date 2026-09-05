@@ -101,8 +101,8 @@ import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
+import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import eightbitlab.com.blurview.BlurTarget
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
@@ -121,7 +121,7 @@ internal fun BrowserBottomBar(
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     commandFeedback: AddressCommandFeedback?,
-    blurTarget: BlurTarget?,
+    backdropSource: CandyChromeBackdropSource?,
     blurSourceVisible: Boolean,
     feedbackGesturesEnabled: Boolean,
     onBack: () -> Unit,
@@ -237,28 +237,41 @@ internal fun BrowserBottomBar(
         .bounds
         .height()
     val chromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
-    LaunchedEffect(addressBarPulseNonce) {
+    val motionScheme = LocalCandyMotionScheme.current
+    LaunchedEffect(addressBarPulseNonce, motionScheme) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
         pulseScale.snapTo(1f)
         pulseScale.animateTo(
-            targetValue = 1.055f,
-            animationSpec = spring(dampingRatio = 0.48f, stiffness = 650f),
+            targetValue = motionScheme.addressBarPulseScale,
+            animationSpec = spring(
+                dampingRatio = motionScheme.addressBarPulseOutDampingRatio,
+                stiffness = motionScheme.addressBarPulseOutStiffness,
+            ),
         )
         pulseScale.animateTo(
             targetValue = 1f,
-            animationSpec = spring(dampingRatio = 0.42f, stiffness = 520f),
+            animationSpec = spring(
+                dampingRatio = motionScheme.addressBarPulseBackDampingRatio,
+                stiffness = motionScheme.addressBarPulseBackStiffness,
+            ),
         )
     }
-    LaunchedEffect(newTabPulseNonce) {
+    LaunchedEffect(newTabPulseNonce, motionScheme) {
         if (newTabPulseNonce == 0) return@LaunchedEffect
         newTabPulseScale.snapTo(1f)
         newTabPulseScale.animateTo(
-            targetValue = 1.11f,
-            animationSpec = spring(dampingRatio = 0.6f, stiffness = 720f),
+            targetValue = motionScheme.newTabPulseScale,
+            animationSpec = spring(
+                dampingRatio = motionScheme.newTabPulseOutDampingRatio,
+                stiffness = motionScheme.newTabPulseOutStiffness,
+            ),
         )
         newTabPulseScale.animateTo(
             targetValue = 1f,
-            animationSpec = spring(dampingRatio = 0.72f, stiffness = 620f),
+            animationSpec = spring(
+                dampingRatio = motionScheme.newTabPulseBackDampingRatio,
+                stiffness = motionScheme.newTabPulseBackStiffness,
+            ),
         )
     }
     val compactWidth = with(density) {
@@ -284,7 +297,7 @@ internal fun BrowserBottomBar(
             AddressCommandFeedbackTone.Reject -> MaterialTheme.colorScheme.errorContainer
             null -> chromeTokens.containerColor
         },
-        animationSpec = tween(160),
+        animationSpec = tween(motionScheme.addressBarFeedbackColorMillis),
         label = "Address command feedback color",
     )
     BoxWithConstraints(
@@ -327,9 +340,12 @@ internal fun BrowserBottomBar(
         val dockStretchProgress by animateFloatAsState(
             targetValue = dockInteraction.normalAnchorResistanceProgress,
             animationSpec = if (dockInteraction.normalAnchorResistanceProgress == 0f) {
-                spring(dampingRatio = 0.42f, stiffness = 480f)
+                spring(
+                    dampingRatio = motionScheme.addressBarResistanceDampingRatio,
+                    stiffness = motionScheme.addressBarResistanceStiffness,
+                )
             } else {
-                tween(durationMillis = 40)
+                tween(durationMillis = motionScheme.addressBarResistanceFollowMillis)
             },
             label = "Adresspille Widerstand",
         )
@@ -349,8 +365,8 @@ internal fun BrowserBottomBar(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter,
         ) {
-            BrowserChromeSurface(
-                blurTarget = blurTarget,
+            CandyChromeSurface(
+                backdropSource = backdropSource,
                 tokens = chromeTokens,
                 modifier = Modifier
                     .offset(x = dockOffset.x, y = dockOffset.y)
@@ -394,7 +410,6 @@ internal fun BrowserBottomBar(
                             TransformOrigin(0.5f, 1f)
                         }
                     },
-                shape = MaterialTheme.shapes.extraLarge,
                 containerColor = barColor,
                 backdropBlurEnabled = commandFeedback == null &&
                     blurSourceVisible &&
@@ -460,7 +475,7 @@ internal fun BrowserBottomBar(
                             AddressBarPresentation.Expanded -> ExpandedBottomBarContent(
                                 tab = tab,
                                 pageTranslationProvider = pageTranslationProvider,
-                                blurTarget = blurTarget.takeIf { blurSourceVisible },
+                                backdropSource = backdropSource.takeIf { blurSourceVisible },
                                 actionLayout = actionLayout,
                                 showCastButton = showCastButton,
                                 showQrScanner = showQrScanner,
@@ -1015,4 +1030,3 @@ internal fun Modifier.addressBarVerticalGesture(
         }
     }
 }
-

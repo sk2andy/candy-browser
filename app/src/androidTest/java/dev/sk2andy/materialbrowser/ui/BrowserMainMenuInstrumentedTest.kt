@@ -76,7 +76,7 @@ class BrowserMainMenuInstrumentedTest {
                     Box {
                         BrowserMainMenu(
                             expanded = expanded,
-                            blurTarget = null,
+                            backdropSource = null,
                             onDismissRequest = {
                                 if (expanded) dismissals.incrementAndGet()
                                 expanded = false
@@ -327,7 +327,7 @@ class BrowserMainMenuInstrumentedTest {
             MaterialBrowserTheme {
                 BrowserMainMenu(
                     expanded = true,
-                    blurTarget = null,
+                    backdropSource = null,
                     onDismissRequest = {},
                     pageSubtitle = "New tab",
                     canGoBack = false,

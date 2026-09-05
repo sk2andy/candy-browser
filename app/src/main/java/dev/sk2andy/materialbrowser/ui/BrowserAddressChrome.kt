@@ -119,6 +119,7 @@ internal fun BoxScope.BrowserAddressChrome(
     val context = LocalContext.current
     val density = LocalDensity.current
     val rootView = LocalView.current
+    val chromeBackdropSource = browserContentBlurTarget.asCandyChromeBackdropSource()
     val qrScanFailureMessage = stringResource(R.string.toast_qr_scan_failed)
     val qrScanner = rememberQrCodeScanner()
     var qrScanInProgress by remember { mutableStateOf(false) }
@@ -145,7 +146,7 @@ internal fun BoxScope.BrowserAddressChrome(
                 onFill = fillAddressFromSuggestion,
                 rootHeightPx = browserHeightPx,
                 bottomBarTopPx = bottomBarTopPx,
-                blurTarget = browserContentBlurTarget,
+                backdropSource = chromeBackdropSource,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -175,7 +176,7 @@ internal fun BoxScope.BrowserAddressChrome(
         userScriptMenuCommands = controller.selectedUserScriptMenuCommands,
         onUserScriptMenuCommand = controller::invokeUserScriptMenuCommand,
         commandFeedback = commandFeedback,
-        blurTarget = browserContentBlurTarget,
+        backdropSource = chromeBackdropSource,
         blurSourceVisible = browserContentBlurTarget != null && !tabOverviewVisible,
         feedbackGesturesEnabled = !addressEditorVisible && !settingsVisible,
         onBack = controller::goBack,

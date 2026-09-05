@@ -69,7 +69,7 @@ class RecallAddressSuggestionsInstrumentedTest {
                         onFill = {},
                         rootHeightPx = 2_000f,
                         bottomBarTopPx = bottomBarTopPx,
-                        blurTarget = blurTarget,
+                        backdropSource = blurTarget.asCandyChromeBackdropSource(),
                     )
                 }
             }

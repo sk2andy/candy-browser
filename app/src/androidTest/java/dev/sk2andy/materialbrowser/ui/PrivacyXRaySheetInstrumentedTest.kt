@@ -144,7 +144,7 @@ class PrivacyXRaySheetInstrumentedTest {
                             host = "private.example",
                             canPersist = false,
                         ),
-                        blurTarget = blurTarget,
+                        backdropSource = blurTarget.asCandyChromeBackdropSource(),
                         onPause = { persistently ->
                             if (!persistently) temporaryPauses.incrementAndGet()
                         },

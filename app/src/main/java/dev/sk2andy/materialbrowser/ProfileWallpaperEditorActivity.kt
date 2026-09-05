@@ -24,7 +24,7 @@ import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.ProfileWallpaperStore
 import dev.sk2andy.materialbrowser.ui.ProfileWallpaperEditorScreen
-import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -89,7 +89,7 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
             val appearanceDark = appearanceSettings.usesDarkColors(isSystemInDarkTheme())
             val imageBitmap = remember(bitmap) { bitmap?.asImageBitmap() }
             SideEffect { applyAppearanceSystemBars(appearanceDark) }
-            MaterialBrowserTheme(settings = appearanceSettings) {
+            CandyTheme(settings = appearanceSettings) {
                 ProfileWallpaperEditorScreen(
                     bitmap = imageBitmap,
                     wallpaperTarget = wallpaperTarget,

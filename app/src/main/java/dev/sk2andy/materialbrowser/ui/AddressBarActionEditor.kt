@@ -85,6 +85,7 @@ import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
 import dev.sk2andy.materialbrowser.data.AddressBarActionSide
+import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -166,6 +167,7 @@ internal fun AddressBarActionEditorPage(
     fullMessage: String,
     actionLabel: (AddressBarAction) -> String,
 ) {
+    val motionScheme = LocalCandyMotionScheme.current
     val view = LocalView.current
     val density = LocalDensity.current
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -283,7 +285,7 @@ internal fun AddressBarActionEditorPage(
             animate(
                 initialValue = 0f,
                 targetValue = 1f,
-                animationSpec = AddressBarMotion.dockBreakawayAnimationSpec,
+                animationSpec = AddressBarMotion.dockBreakawayAnimationSpec(motionScheme),
             ) { progress, _ ->
                 breakawayCorrection = initialCorrection * (1f - progress)
             }

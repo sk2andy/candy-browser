@@ -1153,7 +1153,7 @@ internal fun BrowserScreen(
                 onPreviousMatch = { controller.findNextInPage(forward = false) },
                 onNextMatch = { controller.findNextInPage(forward = true) },
                 onClose = controller::closeFindInPage,
-                blurTarget = browserContentBlurTarget,
+                backdropSource = browserContentBlurTarget.asCandyChromeBackdropSource(),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()

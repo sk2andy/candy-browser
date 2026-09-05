@@ -24,6 +24,9 @@ import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
+import dev.sk2andy.materialbrowser.ui.CandyChromeSurfaceRenderer
+import dev.sk2andy.materialbrowser.ui.LocalCandyChromeSurfaceRenderer
+import dev.sk2andy.materialbrowser.ui.androidCandyChromeSurfaceRenderer
 
 private val CandyLightColors = lightColorScheme(
     primary = Color(0xFF6548C5),
@@ -134,8 +137,11 @@ private val NeutralDarkColors = darkColorScheme(
 private val LocalAppearanceSettings = staticCompositionLocalOf { AppearanceSettings() }
 
 @Composable
-fun MaterialBrowserTheme(
+internal fun CandyTheme(
     settings: AppearanceSettings = AppearanceSettings(),
+    designLanguage: CandyDesignLanguage = CandyDesignLanguage.MaterialExpressive,
+    chromeSurfaceRenderer: CandyChromeSurfaceRenderer =
+        androidCandyChromeSurfaceRenderer(designLanguage),
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -161,9 +167,24 @@ fun MaterialBrowserTheme(
         CompositionLocalProvider(
             LocalContentColor provides colorScheme.onSurface,
             LocalAppearanceSettings provides settings,
+            LocalCandyDesignLanguage provides designLanguage,
+            LocalCandyMotionScheme provides CandyMotionSchemes.forDesignLanguage(designLanguage),
+            LocalCandyChromeSurfaceRenderer provides chromeSurfaceRenderer,
             content = content,
         )
     }
+}
+
+@Composable
+fun MaterialBrowserTheme(
+    settings: AppearanceSettings = AppearanceSettings(),
+    content: @Composable () -> Unit,
+) {
+    CandyTheme(
+        settings = settings,
+        designLanguage = CandyDesignLanguage.MaterialExpressive,
+        content = content,
+    )
 }
 
 internal fun browserShapes(style: BrowserShapeStyle): Shapes = when (style) {
@@ -218,12 +239,24 @@ internal fun browserChromeColor(
     }
 }
 
+@Composable
+internal fun addressFieldContainerColor(): Color =
+    when (LocalCandyDesignLanguage.current) {
+        CandyDesignLanguage.LiquidGlass -> Color.Transparent
+        CandyDesignLanguage.MaterialExpressive -> browserChromeColor(
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            frostedAlpha = 0.22f,
+            role = BrowserChromeSurfaceRole.AddressBar,
+        )
+    }
+
 internal enum class BrowserChromeSurfaceRole {
     General,
     AddressBar,
 }
 
 internal data class BrowserChromeSurfaceTokens(
+    val treatment: CandyChromeTreatment,
     val containerColor: Color,
     val tonalElevation: Dp,
     val shadowElevation: Dp,
@@ -244,6 +277,7 @@ internal fun browserChromeSurfaceTokens(
         BrowserChromeSurfaceRole.AddressBar -> settings.frostedAddressBarTransparencyPercent
     }
     val specification = BrowserChromeSurfaceRules.resolve(
+        designLanguage = LocalCandyDesignLanguage.current,
         surfaceStyle = settings.surfaceStyle,
         appearanceMode = settings.appearanceMode,
         darkColors = colors.surface.luminance() < 0.5f,
@@ -259,6 +293,7 @@ internal fun browserChromeSurfaceTokens(
         colors.surfaceContainerHigh
     }
     return BrowserChromeSurfaceTokens(
+        treatment = specification.treatment,
         containerColor = lerp(
             baseContainerColor,
             colors.primary,
@@ -268,20 +303,19 @@ internal fun browserChromeSurfaceTokens(
         shadowElevation = specification.shadowElevationDp.dp,
         blurRadiusPx = specification.blurRadiusPx,
         backdropBlurEnabled = specification.backdropBlurEnabled,
-        cornerRadius = when (settings.shapeStyle) {
-            BrowserShapeStyle.Angular -> 16.dp
-            BrowserShapeStyle.Rounded -> 28.dp
-            BrowserShapeStyle.ExtraRounded -> 36.dp
-        },
-        largeCornerRadius = when (settings.shapeStyle) {
-            BrowserShapeStyle.Angular -> 12.dp
-            BrowserShapeStyle.Rounded -> 20.dp
-            BrowserShapeStyle.ExtraRounded -> 28.dp
-        },
+        cornerRadius = BrowserChromeSurfaceRules.cornerRadius(
+            designLanguage = LocalCandyDesignLanguage.current,
+            shapeStyle = settings.shapeStyle,
+        ).dp,
+        largeCornerRadius = BrowserChromeSurfaceRules.largeCornerRadius(
+            designLanguage = LocalCandyDesignLanguage.current,
+            shapeStyle = settings.shapeStyle,
+        ).dp,
     )
 }
 
 internal data class BrowserChromeSurfaceSpecification(
+    val treatment: CandyChromeTreatment,
     val primaryTintFraction: Float,
     val containerAlpha: Float,
     val tonalElevationDp: Int,
@@ -292,12 +326,33 @@ internal data class BrowserChromeSurfaceSpecification(
 
 internal object BrowserChromeSurfaceRules {
     fun resolve(
+        designLanguage: CandyDesignLanguage = CandyDesignLanguage.MaterialExpressive,
         surfaceStyle: BrowserSurfaceStyle,
         appearanceMode: BrowserAppearanceMode,
         darkColors: Boolean,
         frostedTransparencyPercent: Int,
         frostedBlurPercent: Int,
     ): BrowserChromeSurfaceSpecification = when {
+        designLanguage == CandyDesignLanguage.LiquidGlass &&
+            appearanceMode != BrowserAppearanceMode.Amoled -> {
+            val normalizedTransparency = frostedTransparencyPercent.coerceIn(
+                AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT,
+                AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT,
+            )
+            val normalizedBlur = frostedBlurPercent.coerceIn(
+                AppearanceSettings.MIN_FROSTED_BLUR_PERCENT,
+                AppearanceSettings.MAX_FROSTED_BLUR_PERCENT,
+            )
+            BrowserChromeSurfaceSpecification(
+                treatment = CandyChromeTreatment.PlatformNative,
+                primaryTintFraction = if (darkColors) 0.06f else 0.02f,
+                containerAlpha = (1f - normalizedTransparency / 100f).coerceAtLeast(0.2f),
+                tonalElevationDp = 0,
+                shadowElevationDp = 4,
+                blurRadiusPx = MAX_FROSTED_BLUR_RADIUS_PX * normalizedBlur / 100f,
+                backdropBlurEnabled = true,
+            )
+        }
         surfaceStyle == BrowserSurfaceStyle.Frosted &&
             appearanceMode != BrowserAppearanceMode.Amoled -> {
             val normalizedTransparency = frostedTransparencyPercent.coerceIn(
@@ -309,6 +364,7 @@ internal object BrowserChromeSurfaceRules {
                 AppearanceSettings.MAX_FROSTED_BLUR_PERCENT,
             )
             BrowserChromeSurfaceSpecification(
+                treatment = CandyChromeTreatment.Backdrop,
                 primaryTintFraction = if (darkColors) 0.08f else 0.025f,
                 containerAlpha = 1f - normalizedTransparency / 100f,
                 tonalElevationDp = 2,
@@ -318,6 +374,7 @@ internal object BrowserChromeSurfaceRules {
             )
         }
         else -> BrowserChromeSurfaceSpecification(
+            treatment = CandyChromeTreatment.Opaque,
             primaryTintFraction = 0f,
             containerAlpha = 1f,
             tonalElevationDp = 12,
@@ -325,6 +382,30 @@ internal object BrowserChromeSurfaceRules {
             blurRadiusPx = 0f,
             backdropBlurEnabled = false,
         )
+    }
+
+    fun cornerRadius(
+        designLanguage: CandyDesignLanguage,
+        shapeStyle: BrowserShapeStyle,
+    ): Int = when (designLanguage) {
+        CandyDesignLanguage.LiquidGlass -> 28
+        CandyDesignLanguage.MaterialExpressive -> when (shapeStyle) {
+            BrowserShapeStyle.Angular -> 16
+            BrowserShapeStyle.Rounded -> 28
+            BrowserShapeStyle.ExtraRounded -> 36
+        }
+    }
+
+    fun largeCornerRadius(
+        designLanguage: CandyDesignLanguage,
+        shapeStyle: BrowserShapeStyle,
+    ): Int = when (designLanguage) {
+        CandyDesignLanguage.LiquidGlass -> 22
+        CandyDesignLanguage.MaterialExpressive -> when (shapeStyle) {
+            BrowserShapeStyle.Angular -> 12
+            BrowserShapeStyle.Rounded -> 20
+            BrowserShapeStyle.ExtraRounded -> 28
+        }
     }
 
     private const val MAX_FROSTED_BLUR_RADIUS_PX = 36f

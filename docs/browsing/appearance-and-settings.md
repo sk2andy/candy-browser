@@ -7,7 +7,7 @@
 | Model | Stable, persisted appearance choices and safe fallback values | `data/AppearanceSettings.kt` |
 | Persistence | Global appearance preference round trips | `data/BrowserSessionStore.kt` |
 | State | Observable selection and update wiring | `browser/BrowserController.kt` |
-| Theme | Color schemes, Android night resources, root/system-bar wiring, website color-scheme preference, surface treatment, shape tokens and AMOLED surfaces | `MainActivity.kt`, `AppearanceNightMode.kt`, `browser/BrowserController.kt`, `browser/WebViewSettings.kt`, `ui/theme/MaterialBrowserTheme.kt` |
+| Theme | Platform design language, color schemes, motion, Android night resources, root/system-bar wiring, website color-scheme preference, surface treatment, shape tokens and AMOLED surfaces | `MainActivity.kt`, `AppearanceNightMode.kt`, `browser/BrowserController.kt`, `browser/WebViewSettings.kt`, `ui/theme/CandyDesignSystem.kt`, `ui/theme/MaterialBrowserTheme.kt` |
 | Settings routing | Destination transition and callback wiring | `ui/SettingsScreen.kt`, `ui/SettingsHomePage.kt`, `ui/SettingsComponents.kt` |
 | Appearance UI | Appearance destination and live selection controls | `ui/AppearanceSettingsPage.kt` |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
@@ -33,6 +33,25 @@
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Google Translate |
 
 ### Surface semantics
+
+Candy owns one semantic UI component tree. Platform design changes below that tree:
+
+| Layer | Shared owner | Platform responsibility |
+| --- | --- | --- |
+| Browser component | Address state, actions, layout slots, accessibility | None |
+| `CandyTheme` | Design-language selection and appearance settings | Root selects Material Expressive or Liquid Glass |
+| Motion scheme | Transition meaning and named motion tokens | Design language supplies spring and fade values |
+| `CandyChromeSurface` | Semantic chrome boundary and content slot | Renderer draws Android Material/frosted chrome or iOS Liquid Glass |
+
+`MaterialBrowserTheme` remains a compatibility wrapper for Android tests and callers. New app roots use
+`CandyTheme`. Components must not branch on the operating system; they read design and motion tokens or
+delegate to `CandyChromeSurfaceRenderer`.
+
+The current repository contains only the Android target. This change is the preparatory Compose
+Multiplatform seam; its renderer remains Material 3 plus `BlurView`. The Liquid Glass token set marks
+surfaces with the semantic `CandyChromeTreatment.PlatformNative`. After the KMP source sets exist, iOS must
+provide a UIKit-backed renderer behind the same Compose surface contract. Address-bar state and layout do
+not get copied.
 
 | Surface | Browser chrome treatment |
 | --- | --- |

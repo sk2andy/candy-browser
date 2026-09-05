@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,8 +23,10 @@ import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,8 +68,8 @@ class BrowserContentBlurTargetInstrumentedTest {
                         )
                     }
                     target?.let { blurTarget ->
-                        BrowserChromeSurface(
-                            blurTarget = blurTarget,
+                        CandyChromeSurface(
+                            backdropSource = blurTarget.asCandyChromeBackdropSource(),
                             tokens = browserChromeSurfaceTokens(),
                             modifier = Modifier.size(160.dp),
                             shape = MaterialTheme.shapes.extraLarge,
@@ -134,7 +137,48 @@ class BrowserContentBlurTargetInstrumentedTest {
         assertSame(webTarget.get(), currentTarget.get())
     }
 
+    @Test
+    fun semanticChromeSurfaceUsesProvidedPlatformRenderer() {
+        val rendered = AtomicBoolean(false)
+
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                val tokens = browserChromeSurfaceTokens()
+                CompositionLocalProvider(
+                    LocalCandyChromeSurfaceRenderer provides CandyChromeSurfaceRenderer {
+                            _,
+                            actualTokens,
+                            modifier,
+                            _,
+                            _,
+                            _,
+                            _,
+                            content,
+                        ->
+                        rendered.set(actualTokens == tokens)
+                        Box(modifier.testTag(CUSTOM_RENDERER_TAG)) {
+                            content()
+                        }
+                    },
+                ) {
+                    CandyChromeSurface(
+                        backdropSource = null,
+                        tokens = tokens,
+                        modifier = Modifier.size(160.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
+                    ) {
+                        Text("Custom")
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(CUSTOM_RENDERER_TAG).assertIsDisplayed()
+        assertTrue(rendered.get())
+    }
+
     private companion object {
+        const val CUSTOM_RENDERER_TAG = "custom_chrome_renderer"
         const val SOURCE_TAG = "browser_content_blur_source"
     }
 }

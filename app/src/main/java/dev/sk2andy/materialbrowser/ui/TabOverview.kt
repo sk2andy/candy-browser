@@ -1944,7 +1944,7 @@ internal fun TabOverview(
         }
         TabActionsFloatingMenu(
             tab = actionTab,
-            blurTarget = overviewBlurTarget,
+            backdropSource = overviewBlurTarget.asCandyChromeBackdropSource(),
             profiles = if (controller.profilesEnabled) {
                 controller.profiles
             } else {
@@ -2291,4 +2291,3 @@ private fun TabOverviewEdgeAction(
         }
     }
 }
-

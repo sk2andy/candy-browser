@@ -69,7 +69,7 @@ internal fun BoxScope.BrowserModalSurfaces(
                 snapshot = controller.privacySnapshot(tabId),
                 blockerSettings = controller.blockerSettings,
                 siteState = controller.siteProtectionState(tabId),
-                blurTarget = browserContentBlurTarget,
+                backdropSource = browserContentBlurTarget.asCandyChromeBackdropSource(),
                 onPause = { persistently ->
                     controller.pauseSiteProtection(tabId, persistently)
                 },

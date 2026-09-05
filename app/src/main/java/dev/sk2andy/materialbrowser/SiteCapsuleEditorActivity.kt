@@ -11,7 +11,7 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorContract
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.SiteCapsuleEditorScreen
-import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 
 class SiteCapsuleEditorActivity : ComponentActivity() {
     private var isFullImmersiveModeEnabled = false
@@ -35,7 +35,7 @@ class SiteCapsuleEditorActivity : ComponentActivity() {
         setContent {
             val appearanceDark = appearanceSettings.usesDarkColors(isSystemInDarkTheme())
             SideEffect { applyAppearanceSystemBars(appearanceDark) }
-            MaterialBrowserTheme(settings = appearanceSettings) {
+            CandyTheme(settings = appearanceSettings) {
                 SiteCapsuleEditorScreen(
                     request = request,
                     onSubmit = { submission ->
