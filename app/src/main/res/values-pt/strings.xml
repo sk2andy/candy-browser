@@ -62,6 +62,8 @@
     <string name="tab_actions_title">Opções do separador</string>
     <string name="action_pin_tab">Fixar separador</string>
     <string name="action_remove_pin">Remover fixação</string>
+    <string name="action_close_all_tabs">Fechar todos os separadores</string>
+    <string name="close_all_tabs_pinned_supporting_text">Os separadores fixados permanecem abertos</string>
     <string name="candy_trail_title">Candy Trail</string>
     <string name="action_open_candy_trail">Abrir Candy Trail</string>
     <string name="candy_trail_empty">Este percurso começa depois de abrir a primeira página.</string>

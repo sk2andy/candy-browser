@@ -66,6 +66,8 @@
     <string name="tab_actions_title">Tab options</string>
     <string name="action_pin_tab">Pin tab</string>
     <string name="action_remove_pin">Remove pin</string>
+    <string name="action_close_all_tabs">Close all tabs</string>
+    <string name="close_all_tabs_pinned_supporting_text">Pinned tabs stay open</string>
     <string name="candy_trail_title">Candy Trail</string>
     <string name="action_open_candy_trail">Open Candy Trail</string>
     <string name="candy_trail_empty">This journey starts after the first page opens.</string>

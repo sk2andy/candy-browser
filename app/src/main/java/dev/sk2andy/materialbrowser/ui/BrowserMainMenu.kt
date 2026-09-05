@@ -795,6 +795,8 @@ internal fun TabActionsMenuContent(
     isDomainMuted: Boolean,
     canAddSiteCapsule: Boolean,
     canSnooze: Boolean,
+    canCloseAllTabs: Boolean,
+    hasPinnedTabs: Boolean,
     onToggleFavorite: () -> Unit,
     onTogglePinned: () -> Unit,
     onShare: () -> Unit,
@@ -805,6 +807,7 @@ internal fun TabActionsMenuContent(
     onAddSiteCapsule: () -> Unit,
     onSummarize: () -> Unit,
     onSnooze: () -> Unit,
+    onCloseAllTabs: () -> Unit,
     modifier: Modifier = Modifier,
     compactToolbar: Boolean = false,
     profileContent: @Composable ColumnScope.() -> Unit = {},
@@ -972,6 +975,22 @@ internal fun TabActionsMenuContent(
             )
         }
         profileContent()
+        Spacer(Modifier.height(8.dp))
+        MenuRow(
+            label = stringResource(R.string.action_close_all_tabs),
+            iconRes = R.drawable.ic_delete_outline,
+            enabled = canCloseAllTabs,
+            shape = outerCorners,
+            modifier = Modifier.testTag(TabActionsMenuTestTags.CloseAllTabs),
+            containerColor = colors.errorContainer,
+            contentColor = colors.onErrorContainer,
+            supportingText = if (hasPinnedTabs) {
+                stringResource(R.string.close_all_tabs_pinned_supporting_text)
+            } else {
+                null
+            },
+            onClick = onCloseAllTabs,
+        )
     }
 }
 
@@ -1251,6 +1270,7 @@ internal object TabActionsMenuTestTags {
     const val PageGroup = "tab_actions_menu_page_group"
     const val CandyGroup = "tab_actions_menu_candy_group"
     const val Trail = "tab_actions_menu_trail"
+    const val CloseAllTabs = "tab_actions_menu_close_all_tabs"
 }
 
 internal object DomainMuteMenuTestTags {

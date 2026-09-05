@@ -81,6 +81,31 @@ class BrowserControllerProfilesInstrumentedTest {
         }
     }
 
+    @Test
+    fun closeAllTabsOnlyClosesDeletableTabsInActiveProfile() {
+        activityRule.scenario.onActivity { activity ->
+            val profiles = profiles()
+            resetAndSeed(activity, profiles, profiles.last().id)
+            val controller = BrowserController(activity).also { this.controller = it }
+            val backgroundTabId = requireNotNull(
+                controller.createBackgroundTab("https://example.com/second"),
+            )
+            assertTrue(controller.setTabPinned("work-tab", true))
+
+            assertEquals(1, controller.closeAllTabs())
+            assertEquals(listOf("work-tab"), controller.activeTabs.map(BrowserTab::id))
+            assertTrue(controller.tabs.any { it.id == "home-tab" })
+            assertTrue(controller.tabs.none { it.id == backgroundTabId })
+
+            assertTrue(controller.setTabPinned("work-tab", false))
+            assertEquals(1, controller.closeAllTabs())
+            assertEquals(1, controller.activeTabs.size)
+            assertEquals(BLANK_URL, controller.activeTabs.single().url)
+            assertTrue(controller.activeTabs.none { it.id == "work-tab" })
+            assertTrue(controller.tabs.any { it.id == "home-tab" })
+        }
+    }
+
     private fun resetAndSeed(
         activity: ComponentActivity,
         profiles: List<BrowserProfile>,

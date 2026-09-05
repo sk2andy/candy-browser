@@ -4919,6 +4919,17 @@ class BrowserController(
         persist()
     }
 
+    fun closeAllTabs(): Int {
+        val tabIds = TabDeletionRules.deletableTabIds(activeTabs)
+        if (tabIds.isEmpty()) return 0
+        removeTabs(
+            tabIds = tabIds,
+            nowMillis = System.currentTimeMillis(),
+            persistChanges = true,
+        )
+        return tabIds.size
+    }
+
     fun closeSelectedRootTab(): RootTabBackResult {
         val closingTab = tabs.firstOrNull { it.id == selectedTabId }
             ?: return RootTabBackResult.ShowTabOverview
