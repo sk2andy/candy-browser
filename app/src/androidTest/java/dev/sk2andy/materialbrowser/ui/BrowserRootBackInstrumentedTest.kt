@@ -2,7 +2,9 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.content.Context
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -10,14 +12,20 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -109,6 +117,79 @@ class BrowserRootBackInstrumentedTest {
         composeRule.runOnIdle {
             assertFalse(portraitLocked.get())
         }
+    }
+
+    @Test
+    fun frostedTabOverviewKeepsClearSystemBarSpacing() {
+        val browserController = createController()
+        val surfaceStyle = mutableStateOf(BrowserSurfaceStyle.Clear)
+        val safeInsets = AtomicReference<Insets?>()
+        val windowHeight = AtomicInteger()
+        val windowWidth = AtomicInteger()
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.enableEdgeToEdge()
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme(
+                settings = AppearanceSettings(
+                    surfaceStyle = surfaceStyle.value,
+                    frostedTransparencyPercent = 50,
+                    frostedAddressBarTransparencyPercent = 40,
+                    frostedBlurPercent = 70,
+                ),
+            ) {
+                BrowserScreen(controller = browserController)
+            }
+        }
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertExists()
+        composeRule.activityRule.scenario.onActivity { activity ->
+            windowHeight.set(activity.window.decorView.height)
+            windowWidth.set(activity.window.decorView.width)
+            safeInsets.set(
+                ViewCompat.getRootWindowInsets(activity.window.decorView)?.getInsets(
+                    WindowInsetsCompat.Type.systemBars() or
+                        WindowInsetsCompat.Type.displayCutout(),
+                ),
+            )
+        }
+        val clearProfileBounds = composeRule
+            .onNodeWithTag(ProfileSwitcherTestTags.Switcher)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInWindow
+        val clearBarBounds = composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.Bar)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInWindow
+        val insets = requireNotNull(safeInsets.get())
+        assertTrue(windowHeight.get() > windowWidth.get())
+        assertTrue(insets.top > 0)
+        assertTrue(insets.bottom > 0)
+        assertTrue(clearProfileBounds.top >= insets.top)
+        assertTrue(clearBarBounds.bottom <= windowHeight.get() - insets.bottom)
+
+        composeRule.runOnIdle { surfaceStyle.value = BrowserSurfaceStyle.Frosted }
+        composeRule.waitForIdle()
+
+        val frostedProfileBounds = composeRule
+            .onNodeWithTag(ProfileSwitcherTestTags.Switcher)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInWindow
+        val frostedBarBounds = composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.Bar)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInWindow
+        assertEquals(clearProfileBounds.top, frostedProfileBounds.top, 1f)
+        assertEquals(clearBarBounds.bottom, frostedBarBounds.bottom, 1f)
+        assertTrue(frostedProfileBounds.top >= insets.top)
+        assertTrue(frostedBarBounds.bottom <= windowHeight.get() - insets.bottom)
     }
 
     @Test
