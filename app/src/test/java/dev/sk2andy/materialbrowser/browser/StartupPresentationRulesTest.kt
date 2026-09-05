@@ -106,4 +106,26 @@ class StartupPresentationRulesTest {
             ),
         )
     }
+
+    @Test
+    fun `home page opens only for enabled launcher launches`() {
+        assertTrue(
+            StartupPresentationRules.shouldOpenHomePage(
+                isLauncherLaunch = true,
+                isOpenHomeOnStartupEnabled = true,
+            ),
+        )
+        assertFalse(
+            StartupPresentationRules.shouldOpenHomePage(
+                isLauncherLaunch = true,
+                isOpenHomeOnStartupEnabled = false,
+            ),
+        )
+        assertFalse(
+            StartupPresentationRules.shouldOpenHomePage(
+                isLauncherLaunch = false,
+                isOpenHomeOnStartupEnabled = true,
+            ),
+        )
+    }
 }

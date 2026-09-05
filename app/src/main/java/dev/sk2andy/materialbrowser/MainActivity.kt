@@ -295,6 +295,7 @@ class MainActivity : AppCompatActivity() {
             }
         } else if (savedInstanceState == null) {
             openIntent(intent)
+            openHomePageForLauncherLaunch(intent)
         } else if (restoreExternalLinkPreview) {
             IncomingBrowserIntent.from(intent)?.let { request ->
                 if (
@@ -576,6 +577,7 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         showAppDataTransferResult(intent)
         openIntent(intent)
+        openHomePageForLauncherLaunch(intent)
         if (intent.action == Intent.ACTION_MAIN) loadReleaseNotesContent()
         if (
             shouldPresentReleaseNotes(
@@ -1061,6 +1063,17 @@ class MainActivity : AppCompatActivity() {
             if (!browserController.openUrl(request.url, inNewTab = true)) return
             externalLaunchTabId = browserController.selectedTabId
             incomingBrowserNavigationRequestId++
+        }
+    }
+
+    private fun openHomePageForLauncherLaunch(intent: Intent) {
+        if (
+            StartupPresentationRules.shouldOpenHomePage(
+                isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
+                isOpenHomeOnStartupEnabled = browserController.isOpenHomeOnStartupEnabled,
+            )
+        ) {
+            browserController.openNormalHome()
         }
     }
 

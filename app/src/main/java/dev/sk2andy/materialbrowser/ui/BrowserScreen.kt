@@ -2103,6 +2103,7 @@ internal fun BrowserScreen(
                 isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
                 isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
                 isStartupAnimationEnabled = controller.isStartupAnimationEnabled,
+                isOpenHomeOnStartupEnabled = controller.isOpenHomeOnStartupEnabled,
                 isScrollBarEnabled = controller.isScrollBarEnabled,
                 isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
                 isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
@@ -2161,6 +2162,8 @@ internal fun BrowserScreen(
                     controller::updateFullImmersiveModeEnabled,
                 onStartupAnimationEnabledChanged =
                     controller::updateStartupAnimationEnabled,
+                onOpenHomeOnStartupEnabledChanged =
+                    controller::updateOpenHomeOnStartupEnabled,
                 onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
                 onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
                 onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,

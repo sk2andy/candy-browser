@@ -34,4 +34,9 @@ internal object StartupPresentationRules {
         !isStartupAnimationEnabled &&
         !isOnboardingRequired &&
         !isReleaseNotesRequired
+
+    fun shouldOpenHomePage(
+        isLauncherLaunch: Boolean,
+        isOpenHomeOnStartupEnabled: Boolean,
+    ): Boolean = isLauncherLaunch && isOpenHomeOnStartupEnabled
 }

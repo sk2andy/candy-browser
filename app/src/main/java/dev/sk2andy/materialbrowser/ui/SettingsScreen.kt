@@ -143,6 +143,7 @@ internal object ProtectionSettingsTestTags {
 
 internal object BrowserSettingsTestTags {
     const val StartupAnimation = "browser_settings_startup_animation"
+    const val OpenHomeOnStartup = "browser_settings_open_home_on_startup"
     const val ScrollBar = "browser_settings_scroll_bar"
     const val TranslationProvider = "browser_settings_translation_provider"
     const val ExternalLinkPreview = "browser_settings_external_link_preview"
@@ -191,6 +192,7 @@ internal fun SettingsScreen(
     isExternalLinkPreviewEnabled: Boolean = false,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
+    isOpenHomeOnStartupEnabled: Boolean = false,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
@@ -226,6 +228,7 @@ internal fun SettingsScreen(
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
+    onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
@@ -361,6 +364,7 @@ internal fun SettingsScreen(
                     isExternalLinkPreviewEnabled = isExternalLinkPreviewEnabled,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
                     isStartupAnimationEnabled = isStartupAnimationEnabled,
+                    isOpenHomeOnStartupEnabled = isOpenHomeOnStartupEnabled,
                     isScrollBarEnabled = isScrollBarEnabled,
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
@@ -369,6 +373,8 @@ internal fun SettingsScreen(
                         onExternalLinkPreviewEnabledChanged,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
+                    onOpenHomeOnStartupEnabledChanged =
+                        onOpenHomeOnStartupEnabledChanged,
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
                     onPageTranslationProviderChanged = onPageTranslationProviderChanged,
@@ -1138,6 +1144,7 @@ internal fun BrowserSettingsPage(
     isExternalLinkPreviewEnabled: Boolean = false,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
+    isOpenHomeOnStartupEnabled: Boolean = false,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
@@ -1145,6 +1152,7 @@ internal fun BrowserSettingsPage(
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
+    onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
@@ -1162,6 +1170,14 @@ internal fun BrowserSettingsPage(
             checked = isStartupAnimationEnabled,
             onCheckedChange = onStartupAnimationEnabledChanged,
             modifier = Modifier.testTag(BrowserSettingsTestTags.StartupAnimation),
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_open_home_on_startup_title),
+            subtitle = stringResource(R.string.settings_open_home_on_startup_subtitle),
+            checked = isOpenHomeOnStartupEnabled,
+            onCheckedChange = onOpenHomeOnStartupEnabledChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.OpenHomeOnStartup),
         )
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(
