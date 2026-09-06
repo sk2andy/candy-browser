@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -76,6 +77,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import kotlinx.coroutines.Job
@@ -91,16 +93,20 @@ internal fun TabCard(
     cardWidth: Dp,
     cardAspectRatio: Float,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
 ) {
     Card(
         modifier = Modifier
             .width(cardWidth)
             .aspectRatio(cardAspectRatio)
             .then(modifier)
-            .clickable(
-                onClick = onClick,
-                role = Role.Button,
+            .then(
+                onClick?.let { action ->
+                    Modifier.clickable(
+                        onClick = action,
+                        role = Role.Button,
+                    )
+                } ?: Modifier,
             ),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
@@ -134,6 +140,8 @@ internal fun CompactTabGrid(
     gridState: LazyGridState,
     layout: TabOverviewGridRules.Layout,
     tabs: List<BrowserTab>,
+    stacksByTabId: Map<String, TabStack>,
+    stackPreviewTabsByStackId: Map<String, BrowserTab>,
     visible: Boolean,
     selectedTabId: String,
     initialTabId: String,
@@ -144,6 +152,8 @@ internal fun CompactTabGrid(
     heroCompleted: Boolean,
     heroVisible: Boolean,
     exitHeroTabId: String?,
+    stackOverviewMotion: TabStackOverviewMotion?,
+    stackOverviewMotionProgress: () -> Float,
     dismissResistanceFraction: Float,
     interactionsEnabled: Boolean,
     reorderSessionId: String?,
@@ -158,14 +168,22 @@ internal fun CompactTabGrid(
     onPreviewBounds: (BrowserTab, Rect) -> Unit,
     onPreviewBoundsDisposed: (BrowserTab, Rect?) -> Unit,
     onSelect: (BrowserTab, Rect) -> Unit,
+    onOpenStack: (String) -> Unit,
+    onToggleStack: (String, String) -> Unit,
     onCloseTab: (BrowserTab) -> Unit,
     onSwipeDismissStart: (BrowserTab) -> Boolean,
     onSwipeDismissEnd: (BrowserTab) -> Unit,
     onSwipeDismiss: (BrowserTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
-    LaunchedEffect(visible, initialTabId, selectedTabId, tabs.size) {
+    val selectedIndex = tabs.indexOfFirst { tab ->
+        tab.id == selectedTabId ||
+            stacksByTabId[tab.id]
+                ?.takeIf(TabStack::isCollapsed)
+                ?.tabIds
+                ?.contains(selectedTabId) == true
+    }.coerceAtLeast(0)
+    LaunchedEffect(visible, initialTabId, selectedTabId) {
         if (!visible || tabs.isEmpty()) return@LaunchedEffect
         withFrameNanos { }
         if (gridState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
@@ -223,12 +241,20 @@ internal fun CompactTabGrid(
                 key = { _, tab -> tab.id },
                 contentType = { _, _ -> "tab-grid-card" },
             ) { _, tab ->
+                val stack = stacksByTabId[tab.id]
+                val displayTab = stack
+                    ?.takeIf(TabStack::isCollapsed)
+                    ?.let { stackPreviewTabsByStackId[it.id] }
+                    ?: tab
                 CompactGridTabItem(
                     tab = tab,
-                    preview = previews[tab.id],
-                    favicon = favicons[tab.id],
+                    displayTab = displayTab,
+                    stack = stack,
+                    preview = previews[displayTab.id],
+                    favicon = favicons[displayTab.id],
                     favorites = favorites,
-                    selected = tab.id == selectedTabId,
+                    selected = tab.id == selectedTabId ||
+                        stack?.tabIds?.contains(selectedTabId) == true,
                     initial = tab.id == initialTabId,
                     heroProgress = heroProgress,
                     heroCompleted = heroCompleted,
@@ -245,7 +271,13 @@ internal fun CompactTabGrid(
                     onPreviewBoundsDisposed = { bounds ->
                         onPreviewBoundsDisposed(tab, bounds)
                     },
-                    onSelect = { bounds -> onSelect(tab, bounds) },
+                    onSelect = { bounds ->
+                        if (stack?.isCollapsed == true) onOpenStack(stack.id)
+                        else onSelect(tab, bounds)
+                    },
+                    onToggleStack = {
+                        stack?.let { onToggleStack(it.id, tab.id) }
+                    },
                     onClose = { onCloseTab(tab) },
                     onSwipeDismissStart = { onSwipeDismissStart(tab) },
                     onSwipeDismissEnd = { onSwipeDismissEnd(tab) },
@@ -255,10 +287,22 @@ internal fun CompactTabGrid(
                             if (reorderSessionId == null) Modifier.animateItem() else Modifier,
                         )
                         .zIndex(if (reorderDraggedTabId == tab.id) 6f else 0f)
+                        .zIndex(
+                            TabStackMotionRules.overviewZIndex(
+                                isMotionMember = tab.id in
+                                    stackOverviewMotion?.memberIds.orEmpty(),
+                                isAnchor = tab.id == stackOverviewMotion?.anchorTabId,
+                            ),
+                        )
                         .tabReorderVisualMotion(
                             sessionId = reorderSessionId,
                             isDragged = reorderDraggedTabId == tab.id,
                             targetOffset = reorderTranslation(tab.id),
+                        )
+                        .tabStackOverviewMotion(
+                            tabId = tab.id,
+                            motion = stackOverviewMotion,
+                            progress = stackOverviewMotionProgress,
                         )
                         .testTag(SnoozeTestTags.overviewTab(tab.id)),
                 )
@@ -329,6 +373,8 @@ internal fun CompactTabGrid(
 @Composable
 private fun CompactGridTabItem(
     tab: BrowserTab,
+    displayTab: BrowserTab,
+    stack: TabStack?,
     preview: Bitmap?,
     favicon: Bitmap?,
     favorites: List<FavoriteEntry>,
@@ -346,6 +392,7 @@ private fun CompactGridTabItem(
     onPreviewBounds: (Rect) -> Unit,
     onPreviewBoundsDisposed: (Rect?) -> Unit,
     onSelect: (Rect) -> Unit,
+    onToggleStack: () -> Unit,
     onClose: () -> Unit,
     onSwipeDismissStart: () -> Boolean,
     onSwipeDismissEnd: () -> Unit,
@@ -425,8 +472,13 @@ private fun CompactGridTabItem(
             dismissHapticPlayed = true
         }
     }
+    TabStackCardFrame(
+        stack = stack,
+        previewAspectRatio = previewAspectRatio,
+        modifier = modifier,
+    ) {
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .onGloballyPositioned { coordinates ->
                 val bounds = coordinates.boundsInRoot()
@@ -464,6 +516,7 @@ private fun CompactGridTabItem(
                 enabled = interactionsEnabled &&
                     heroCompleted &&
                     !heroVisible &&
+                    stack?.isCollapsed != true &&
                     TabDeletionRules.canDelete(tab),
                 onDragStarted = {
                     breakFreeJob?.cancel()
@@ -574,19 +627,31 @@ private fun CompactGridTabItem(
                 },
         ) {
             TabPreviewContent(
-                tab = tab,
+                tab = displayTab,
                 preview = preview,
                 favicon = favicon,
                 favorites = favorites,
             )
-            GridTabPreviewChrome(
-                tab = tab,
-                favicon = favicon,
-                interactionsEnabled = interactionsEnabled,
-                onClose = onClose,
-                modifier = Modifier.fillMaxSize(),
-            )
+            if (stack?.isCollapsed != true) {
+                GridTabPreviewChrome(
+                    tab = tab,
+                    favicon = favicon,
+                    interactionsEnabled = interactionsEnabled,
+                    onClose = onClose,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            if (stack != null) {
+                TabStackMarker(
+                    stack = stack,
+                    tabId = tab.id,
+                    onToggleCollapsed = onToggleStack,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp),
+                )
+            }
         }
     }
+    }
 }
-

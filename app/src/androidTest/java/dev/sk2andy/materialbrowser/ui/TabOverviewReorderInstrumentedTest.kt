@@ -26,6 +26,7 @@ import androidx.compose.ui.test.up
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -38,6 +39,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.absoluteValue
 
 @RunWith(AndroidJUnit4::class)
 class TabOverviewReorderInstrumentedTest {
@@ -61,6 +63,247 @@ class TabOverviewReorderInstrumentedTest {
 
     @Test
     fun gridTabsReorderAfterLongPressDrag() = verifyReorder(TabOverviewMode.Grid)
+
+    @Test
+    fun heroStackCollapseExpandOpensConfiguredFolder() {
+        lateinit var browserController: BrowserController
+        lateinit var selectedTabId: String
+        lateinit var stackedTabId: String
+        lateinit var stackId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            selectedTabId = browserController.selectedTabId
+            stackedTabId = requireNotNull(
+                browserController.createBackgroundTab("https://stacked-hero.example"),
+            )
+            browserController.createBackgroundTab("https://adjacent-hero.example")
+            browserController.updateTabOverviewMode(TabOverviewMode.Hero)
+            stackId = requireNotNull(
+                browserController.createTabStack(
+                    tabIds = listOf(selectedTabId, stackedTabId),
+                    name = "Research",
+                    color = TabStackColor.Blueberry,
+                    previewTabId = stackedTabId,
+                ),
+            )
+            assertTrue(browserController.toggleTabStackCollapsed(stackId))
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(stackedTabId)).assertDoesNotExist()
+        composeRule.onNodeWithTag(TabStackTestTags.collapsedCard(stackId)).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).performClick()
+        composeRule.onNodeWithTag(TabStackTestTags.Folder).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.FolderGrid).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.folderTab(stackedTabId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.folderTab(selectedTabId)).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(TabStackTestTags.marker(stackId, selectedTabId)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(stackedTabId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.marker(stackId, stackedTabId)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).assertDoesNotExist()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(stackedTabId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.More).performClick()
+        composeRule.onNodeWithTag(SnoozeTestTags.TabActions).assertIsDisplayed()
+    }
+
+    @Test
+    fun distantHeroStackMemberFoldsFromVisibleEdgeIntoTrigger() {
+        lateinit var browserController: BrowserController
+        lateinit var anchorTabId: String
+        lateinit var distantTabId: String
+        lateinit var stackId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            anchorTabId = browserController.selectedTabId
+            repeat(4) { index ->
+                browserController.createBackgroundTab("https://between-$index.example")
+            }
+            distantTabId = requireNotNull(
+                browserController.createBackgroundTab("https://distant-stack.example"),
+            )
+            browserController.previews[distantTabId] = solidPreview(
+                android.graphics.Color.MAGENTA,
+            )
+            browserController.updateTabOverviewMode(TabOverviewMode.Hero)
+            stackId = requireNotNull(
+                browserController.createTabStack(
+                    tabIds = listOf(anchorTabId, distantTabId),
+                    name = "Distant",
+                    color = TabStackColor.Blueberry,
+                ),
+            )
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+        val anchorCenterX = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(anchorTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .center
+            .x
+
+        composeRule.mainClock.autoAdvance = false
+        composeRule
+            .onNodeWithTag(TabStackTestTags.marker(stackId, anchorTabId))
+            .performClick()
+        repeat(3) { composeRule.mainClock.advanceTimeByFrame() }
+
+        val startingBounds = composeRule
+            .onNodeWithTag(TabStackTestTags.motionCard(distantTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val startingDistance = (startingBounds.center.x - anchorCenterX).absoluteValue
+        val rootWidth = rootBounds.width
+        assertTrue(
+            "Distant stack member did not start near visible edge: $startingDistance",
+            startingDistance < rootWidth * 0.7f,
+        )
+        val visibleLeft = maxOf(startingBounds.left, rootBounds.left)
+        val visibleRight = minOf(startingBounds.right, rootBounds.right)
+        val visiblePixel = composeRule.onRoot().captureToImage().toPixelMap()[
+            ((visibleLeft + visibleRight) / 2f).toInt(),
+            startingBounds.center.y.toInt(),
+        ]
+        assertTrue(
+            "Distant stack preview was not drawn at visible edge: $visiblePixel",
+            visiblePixel.red > visiblePixel.green + 0.12f &&
+                visiblePixel.blue > visiblePixel.green + 0.12f,
+        )
+
+        composeRule.mainClock.advanceTimeBy(112L)
+        val movingDistance = composeRule
+            .onNodeWithTag(TabStackTestTags.motionCard(distantTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .center
+            .x
+            .minus(anchorCenterX)
+            .absoluteValue
+        assertTrue(
+            "Distant stack member did not move toward trigger: $startingDistance -> $movingDistance",
+            movingDistance < startingDistance,
+        )
+
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(distantTabId)).assertDoesNotExist()
+    }
+
+    @Test
+    fun gridStackCollapseExpandPreservesCardsAndBlocksReorder() {
+        lateinit var browserController: BrowserController
+        lateinit var selectedTabId: String
+        lateinit var stackedTabId: String
+        lateinit var adjacentTabId: String
+        lateinit var destinationTabId: String
+        lateinit var stackId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            selectedTabId = browserController.selectedTabId
+            stackedTabId = requireNotNull(
+                browserController.createBackgroundTab("https://stacked-grid.example"),
+            )
+            adjacentTabId = requireNotNull(
+                browserController.createBackgroundTab("https://adjacent-grid.example"),
+            )
+            destinationTabId = requireNotNull(
+                browserController.createBackgroundTab("https://destination-grid.example"),
+            )
+            browserController.updateTabOverviewMode(TabOverviewMode.Grid)
+            stackId = requireNotNull(
+                browserController.createTabStack(
+                    tabIds = listOf(selectedTabId, stackedTabId),
+                    name = "Research",
+                    color = TabStackColor.Blueberry,
+                ),
+            )
+            assertTrue(browserController.toggleTabStackCollapsed(stackId))
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId))
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(stackedTabId))
+            .assertDoesNotExist()
+        composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(destinationTabId))
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(TabStackTestTags.collapsedCard(stackId))
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId))
+            .performTouchInput { click(center) }
+        composeRule.onNodeWithTag(TabStackTestTags.Folder).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.folderTab(selectedTabId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.folderTab(stackedTabId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.previewChoice(stackedTabId)).performClick()
+        composeRule.runOnIdle {
+            assertEquals(stackedTabId, browserController.activeTabStacks.single().previewTabId)
+        }
+        composeRule.onNodeWithTag(TabStackTestTags.folderTab(selectedTabId)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(TabStackTestTags.Folder).assertDoesNotExist()
+
+        composeRule
+            .onNodeWithTag(TabStackTestTags.marker(stackId, selectedTabId))
+            .performClick()
+        composeRule.waitForIdle()
+        composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(stackedTabId))
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithTag(TabStackTestTags.marker(stackId, selectedTabId))
+            .performClick()
+        composeRule.waitForIdle()
+        val originalOrder = browserController.activeTabs.map(BrowserTab::id)
+        val sourceNode = composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId))
+        val sourceBounds = sourceNode.fetchSemanticsNode().boundsInRoot
+        val destinationBounds = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(destinationTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+        sourceNode.performTouchInput {
+            down(center)
+            advanceEventTime(700L)
+            moveTo(
+                Offset(
+                    x = destinationBounds.center.x - sourceBounds.left,
+                    y = destinationBounds.center.y - sourceBounds.top,
+                ),
+                delayMillis = 240L,
+            )
+            up()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(originalOrder, browserController.activeTabs.map(BrowserTab::id))
+            assertEquals(
+                listOf(selectedTabId, adjacentTabId, destinationTabId),
+                browserController.gridOverviewTabs.map(BrowserTab::id),
+            )
+        }
+    }
 
     @Test
     fun listTabsReorderAfterLongPressDrag() = verifyReorder(TabOverviewMode.List)

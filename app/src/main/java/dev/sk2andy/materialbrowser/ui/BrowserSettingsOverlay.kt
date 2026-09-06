@@ -154,6 +154,7 @@ internal fun BrowserSettingsOverlay(
             isHistorySuggestionsEnabled = controller.isHistorySuggestionsEnabled,
             isRecallEnabled = controller.isRecallEnabled,
             tabOverviewMode = controller.tabOverviewMode,
+            tabStackFolderMode = controller.tabStackFolderMode,
             tabListStartsAtBottom = controller.tabListStartsAtBottom,
             automaticTabSortingEnabled = controller.automaticTabSortingEnabled,
             dismissResistancePercent = controller.dismissResistancePercent,
@@ -211,6 +212,7 @@ internal fun BrowserSettingsOverlay(
                 controller::updateHistorySuggestionsEnabled,
             onRecallEnabledChanged = controller::updateRecallEnabled,
             onTabOverviewModeChanged = controller::updateTabOverviewMode,
+            onTabStackFolderModeChanged = controller::updateTabStackFolderMode,
             onTabListStartsAtBottomChanged = controller::updateTabListStartsAtBottom,
             onAutomaticTabSortingEnabledChanged =
                 controller::updateAutomaticTabSortingEnabled,

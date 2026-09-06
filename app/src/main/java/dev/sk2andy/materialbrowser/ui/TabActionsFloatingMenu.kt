@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -111,6 +112,7 @@ internal fun TabActionsFloatingMenu(
     onSummarize: () -> Unit,
     onSnooze: () -> Unit,
     onCloseAllTabs: () -> Unit,
+    stackContent: @Composable ColumnScope.() -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     BackHandler(enabled = tab != null, onBack = onDismiss)
@@ -248,6 +250,7 @@ internal fun TabActionsFloatingMenu(
                             onCloseAllTabs = onCloseAllTabs,
                             compactToolbar = compactToolbar,
                             profileContent = {
+                                stackContent()
                                 val targetProfiles = profiles.filter {
                                     it.id != presentedTab.profileId
                                 }
@@ -293,4 +296,3 @@ internal fun TabActionsFloatingMenu(
         }
     }
 }
-
