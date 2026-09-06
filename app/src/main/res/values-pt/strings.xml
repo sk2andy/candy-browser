@@ -865,6 +865,7 @@
     <string name="gecko_extension_invalid_xpi">Utilize um URL HTTPS direto para um pacote XPI assinado pela Mozilla.</string>
     <string name="gecko_extension_action_rejected">O Candy rejeitou esta ação da extensão.</string>
     <string name="gecko_extension_action_failed">A ação da extensão do Firefox falhou.</string>
+    <string name="gecko_extension_private_management_disabled">As extensões não podem ser alteradas enquanto estiver selecionado um separador privado.</string>
     <string name="gecko_extensions_manager_summary">Pacotes XPI assinados pela Mozilla para o navegador Gecko</string>
     <string name="gecko_extensions_empty">Ainda não está instalada nenhuma extensão do Firefox.</string>
     <string name="gecko_extension_install">Instalar extensão</string>

@@ -145,13 +145,13 @@ internal fun BrowserTransientOverlays(
             committing = controller.contentActions.isLinkPeekCommitting,
             newTabTargetBounds = addressNewTabButtonBounds,
             createPreviewWebView = { onProgressChanged, onCommittedUrlChanged ->
-                controller.createLinkPeekPreviewWebView(
+                controller.createLinkPeekPreviewView(
                     url = requireNotNull(linkTarget?.linkUrl),
                     onProgressChanged = onProgressChanged,
                     onCommittedUrlChanged = onCommittedUrlChanged,
                 )
             },
-            releasePreviewWebView = controller::releaseLinkPeekPreviewWebView,
+            releasePreviewWebView = controller::releaseLinkPeekPreviewView,
             onCommitRequested = controller.contentActions::startLinkPeekCommit,
             onOpen = {
                 rootView.performConfirmHaptic()

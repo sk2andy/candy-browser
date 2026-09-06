@@ -124,7 +124,8 @@ internal fun BoxScope.BrowserAddressChrome(
     val qrScanner = rememberQrCodeScanner()
     var qrScanInProgress by remember { mutableStateOf(false) }
     val selectedSiteState = controller.siteProtectionState(selectedTab.id)
-    val selectedSiteHasHost = selectedSiteState.host != null
+    val selectedSiteHasHost = controller.supportsPageContentActions &&
+        selectedSiteState.host != null
     val canToggleSelectedCookieBannerRemoval = selectedSiteHasHost &&
         controller.blockerSettings.hideCookieConsent &&
         !selectedSiteState.isPaused
@@ -173,7 +174,12 @@ internal fun BoxScope.BrowserAddressChrome(
             (controller.castMediaCandidate != null || castUiState.isConnected),
         showQrScanner = !BuildConfig.FOSS_DISTRIBUTION,
         tabCount = controller.activeTabs.size,
-        userScriptMenuCommands = controller.selectedUserScriptMenuCommands,
+        userScriptMenuCommands = if (controller.isUserScriptSupported) {
+            controller.selectedUserScriptMenuCommands
+        } else {
+            emptyList()
+        },
+        supportsPageContentActions = controller.supportsPageContentActions,
         onUserScriptMenuCommand = controller::invokeUserScriptMenuCommand,
         commandFeedback = commandFeedback,
         backdropSource = chromeBackdropSource,
@@ -302,7 +308,7 @@ internal fun BoxScope.BrowserAddressChrome(
                     spring(dampingRatio = 0.82f, stiffness = 520f)
                 },
             ) { browserDragOffset.floatValue = value }
-            if (shouldSwitch && targetTab != null) {
+            if (shouldSwitch) {
                 onLiveFrameCleared()
                 tabHandoffAlpha.snapTo(1f)
                 onTabHandoffChanged(

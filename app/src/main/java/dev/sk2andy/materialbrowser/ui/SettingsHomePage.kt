@@ -20,7 +20,7 @@ internal fun SettingsHomePage(
     downloadSummary: String,
     onDestinationChanged: (SettingsDestination) -> Unit,
     onDismiss: () -> Unit,
-    onOpenFirefoxExtensions: () -> Unit = {},
+    onOpenFirefoxExtensions: (() -> Unit)? = null,
 ) {
     SettingsPage(
         title = stringResource(R.string.settings_title),
@@ -75,13 +75,15 @@ internal fun SettingsHomePage(
             onClick = { onDestinationChanged(SettingsDestination.Userscripts) },
         )
         SettingsPageSpacer()
-        SettingsLink(
-            icon = ImageVector.vectorResource(R.drawable.ic_symbol_extension),
-            title = stringResource(R.string.gecko_extensions_title),
-            subtitle = stringResource(R.string.gecko_extensions_summary),
-            onClick = onOpenFirefoxExtensions,
-        )
-        SettingsPageSpacer()
+        onOpenFirefoxExtensions?.let { openExtensions ->
+            SettingsLink(
+                icon = ImageVector.vectorResource(R.drawable.ic_symbol_extension),
+                title = stringResource(R.string.gecko_extensions_title),
+                subtitle = stringResource(R.string.gecko_extensions_summary),
+                onClick = openExtensions,
+            )
+            SettingsPageSpacer()
+        }
         SettingsLink(
             icon = Icons.Default.Favorite,
             title = stringResource(R.string.capsule_settings_title),

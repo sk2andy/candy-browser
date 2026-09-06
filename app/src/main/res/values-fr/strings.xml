@@ -865,6 +865,7 @@
     <string name="gecko_extension_invalid_xpi">Utilisez une URL HTTPS directe vers un paquet XPI signé par Mozilla.</string>
     <string name="gecko_extension_action_rejected">Candy a refusé cette action d’extension.</string>
     <string name="gecko_extension_action_failed">L’action de l’extension Firefox a échoué.</string>
+    <string name="gecko_extension_private_management_disabled">Les extensions ne peuvent pas être modifiées lorsqu’un onglet privé est sélectionné.</string>
     <string name="gecko_extensions_manager_summary">Paquets XPI signés par Mozilla pour le navigateur Gecko</string>
     <string name="gecko_extensions_empty">Aucune extension Firefox n’est encore installée.</string>
     <string name="gecko_extension_install">Installer une extension</string>

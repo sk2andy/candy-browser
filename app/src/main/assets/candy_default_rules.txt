@@ -5,7 +5,7 @@ candy-rules:1
 # Methodology: docs/audits/top-300-blocking.md
 # Live evidence: 300 isolated Android WebView profiles plus targeted web.de/gmx.net/nytimes.com probes.
 # Upstream corroboration: EasyList/uAssets selectors, pinned source revisions in bundled assets.
-# Rule count: 48
+# Rule count: 49
 rule	css	origin	nytimes.com	I2ZpZGVzLWJhbm5lci1jb250YWluZXI	nytimes-fides-banner	*	Candy Cookies	1
 rule	css	origin	nytimes.com	I2ZpZGVzLW92ZXJsYXk	nytimes-fides-overlay	*	Candy Cookies	1
 rule	css	origin	nytimes.com	LmZpZGVzLW1vZGFsLW92ZXJsYXk	nytimes-fides-modal-overlay	*	Candy Cookies	1
@@ -28,6 +28,7 @@ rule	css	origin	msn.com	I2NtcC1iYW5uZXItc2Rr	msn-cmp-banner	*	Candy Cookies	1
 rule	css	origin	opera.com	I2Nvb2tpZS1jb25zZW50	opera-cookie-consent	*	Candy Cookies	1
 rule	css	origin	wordpress.com	LmE4Yy1jb29raWUtYmFubmVy	wordpress-cookie-banner	*	Candy Cookies	1
 rule	css	origin	gravatar.com	LmE4Yy1jb29raWUtYmFubmVy	gravatar-cookie-banner	*	Candy Cookies	1
+rule	css	origin	reddit.com	I2RhdGEtcHJvdGVjdGlvbi1jb25zZW50LWRpYWxvZw	reddit-data-protection-consent-dialog	*	Candy Cookies	1
 rule	css	origin	europa.eu	Lnd0LWNjay0tY29udGFpbmVy	europa-cookie-container	*	Candy Cookies	1
 rule	css	origin	shopify.com	I2R1eC1wcml2YWN5	shopify-privacy-banner	*	Candy Cookies	1
 rule	css	origin	forbes.com	I2tldGNoLWJhbm5lcg	forbes-ketch-banner	*	Candy Cookies	1

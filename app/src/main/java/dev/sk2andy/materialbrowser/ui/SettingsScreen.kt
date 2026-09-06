@@ -140,7 +140,7 @@ internal fun SettingsScreen(
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
-    onOpenFirefoxExtensions: () -> Unit = {},
+    onOpenFirefoxExtensions: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(

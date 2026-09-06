@@ -4,6 +4,8 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 plugins {
     id("com.android.library")
     kotlin("multiplatform")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.compose") version "1.8.2"
 }
 
 kotlin {
@@ -23,6 +25,14 @@ kotlin {
     }
 
     sourceSets {
+        commonMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.materialIconsExtended)
+            implementation(compose.ui)
+        }
+
         commonTest.dependencies {
             implementation(kotlin("test"))
         }

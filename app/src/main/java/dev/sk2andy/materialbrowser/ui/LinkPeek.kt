@@ -1,6 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
-import android.webkit.WebView
+import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -90,14 +90,14 @@ internal object LinkPeekTestTags {
 }
 
 @Composable
-internal fun LinkPeekOverlay(
+internal fun <T : View> LinkPeekOverlay(
     url: String,
     progress: Float,
     armed: Boolean,
     committing: Boolean = false,
     newTabTargetBounds: Rect? = null,
-    createPreviewWebView: ((Int) -> Unit, (String) -> Unit) -> WebView,
-    releasePreviewWebView: (WebView) -> Unit,
+    createPreviewWebView: ((Int) -> Unit, (String) -> Unit) -> T,
+    releasePreviewWebView: (T) -> Unit,
     onOpen: () -> Unit,
     onCommitRequested: () -> Unit = onOpen,
     onCopyLink: (String) -> Unit = {},

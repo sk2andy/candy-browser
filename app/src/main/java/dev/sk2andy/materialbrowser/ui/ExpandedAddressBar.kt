@@ -188,6 +188,7 @@ internal fun ExpandedBottomBarContent(
     onOpenCandyTrail: () -> Unit,
     onSnooze: () -> Unit,
     onAddSiteCapsule: () -> Unit,
+    supportsPageContentActions: Boolean,
     canDock: Boolean,
     onDock: () -> Unit,
     onParkRight: () -> Unit,
@@ -242,7 +243,8 @@ internal fun ExpandedBottomBarContent(
         canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
         isForceVerticalScrollingEnabled = isForceVerticalScrollingEnabled,
         canUsePageActions = tab.url != BLANK_URL,
-        canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
+        canOpenReader = supportsPageContentActions &&
+            ReaderStudioSessionRules.isSupportedSource(tab.url),
         canCloseTab = TabDeletionRules.canDelete(tab),
         canParkRight = canDock,
         newTabPulseScale = newTabPulseScale,
@@ -546,7 +548,9 @@ internal fun ExpandedBottomBarContent(
                                 isFavorite = isFavorite,
                                 isPinned = isPinned,
                                 canUsePageActions = tab.url != BLANK_URL,
-                                canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
+                                canUseDocumentActions = tab.url != BLANK_URL,
+                                canOpenReader = supportsPageContentActions &&
+                                    ReaderStudioSessionRules.isSupportedSource(tab.url),
                                 canTranslatePage = PageTranslationRules.canTranslate(
                                     provider = pageTranslationProvider,
                                     sourceUrl = tab.url,
