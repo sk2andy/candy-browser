@@ -4,6 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onNodeWithTag
@@ -14,9 +17,11 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -31,6 +36,65 @@ class TabSettingsScreenInstrumentedTest {
     val composeRule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test
+    fun linkLongPressChoiceShowsAllActionsAndUpdatesSetting() {
+        var action by mutableStateOf(LinkLongPressAction.LinkPeek)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsAndGesturesSettingsPage(
+                    inactiveTabLifetime = InactiveTabLifetime.Never,
+                    residentTabLimit = 10,
+                    tabOverviewMode = TabOverviewMode.Grid,
+                    tabStackFolderMode = TabOverviewMode.Grid,
+                    tabListStartsAtBottom = false,
+                    automaticTabSortingEnabled = false,
+                    dismissResistancePercent = 40,
+                    profilesEnabled = true,
+                    isAddressBarDockingEnabled = true,
+                    linkLongPressAction = action,
+                    onInactiveTabLifetimeChanged = {},
+                    onResidentTabLimitChanged = {},
+                    onTabOverviewModeChanged = {},
+                    onTabStackFolderModeChanged = {},
+                    onTabListStartsAtBottomChanged = {},
+                    onAutomaticTabSortingEnabledChanged = {},
+                    onDismissResistancePercentChanged = {},
+                    onProfilesEnabledChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
+                    onLinkLongPressActionChanged = { action = it },
+                    onAddressBarActions = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TabSettingsTestTags.LinkLongPressAction)
+            .performScrollTo()
+            .performClick()
+
+        val actions = listOf(
+            LinkLongPressAction.LinkPeek to R.string.link_peek_title,
+            LinkLongPressAction.CopyLink to R.string.external_link_preview_copy_link,
+            LinkLongPressAction.OpenInNewTab to R.string.action_open_in_new_tab,
+            LinkLongPressAction.OpenInPrivateTab to R.string.action_open_link_in_private_tab,
+            LinkLongPressAction.Share to R.string.action_share,
+        )
+        actions.forEach { (candidate, label) ->
+            composeRule.onNode(
+                hasText(context.getString(label)) and
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.Selected,
+                        candidate == LinkLongPressAction.LinkPeek,
+                    ),
+            ).assertExists()
+        }
+        composeRule.onNodeWithText(
+            context.getString(R.string.external_link_preview_copy_link),
+        ).performClick()
+
+        assertEquals(LinkLongPressAction.CopyLink, action)
+    }
 
     @Test
     fun residentTabSliderUpdatesDisplayedLimit() {

@@ -22,6 +22,7 @@ import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
@@ -62,6 +63,7 @@ internal fun SettingsScreen(
     residentTabLimit: Int,
     searchEngine: SearchEngine,
     pageTranslationProvider: PageTranslationProvider,
+    linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
     searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
@@ -102,6 +104,7 @@ internal fun SettingsScreen(
     onResidentTabLimitChanged: (Int) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
+    onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
@@ -202,6 +205,7 @@ internal fun SettingsScreen(
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
                     isAddressBarDockingEnabled = isAddressBarDockingEnabled,
+                    linkLongPressAction = linkLongPressAction,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
                     onTabOverviewModeChanged = onTabOverviewModeChanged,
@@ -212,6 +216,7 @@ internal fun SettingsScreen(
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onAddressBarDockingEnabledChanged = onAddressBarDockingEnabledChanged,
+                    onLinkLongPressActionChanged = onLinkLongPressActionChanged,
                     onAddressBarActions = {
                         onDestinationChanged(SettingsDestination.AddressBarActions)
                     },

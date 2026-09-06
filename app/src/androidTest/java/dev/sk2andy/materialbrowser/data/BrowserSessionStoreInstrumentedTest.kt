@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
@@ -875,6 +876,20 @@ class BrowserSessionStoreInstrumentedTest {
 
         store.saveFullImmersiveModeEnabled(false)
         assertFalse(store.loadFullImmersiveModeEnabled())
+    }
+
+    @Test
+    fun linkLongPressActionDefaultsToPeekAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertEquals(LinkLongPressAction.LinkPeek, store.loadLinkLongPressAction())
+
+        LinkLongPressAction.entries.forEach { action ->
+            store.saveLinkLongPressAction(action)
+            assertEquals(action, store.loadLinkLongPressAction())
+        }
+
+        preferences.edit().putString("link_long_press_action", "broken").commit()
+        assertEquals(LinkLongPressAction.LinkPeek, store.loadLinkLongPressAction())
     }
 
     @Test

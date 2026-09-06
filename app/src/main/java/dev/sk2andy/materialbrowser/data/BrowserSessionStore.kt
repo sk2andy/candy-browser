@@ -22,6 +22,7 @@ import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.sync.SyncTabRules
 import org.json.JSONArray
@@ -811,6 +812,14 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_EXTERNAL_LINK_PREVIEW_ENABLED, enabled).apply()
     }
 
+    fun loadLinkLongPressAction(): LinkLongPressAction = LinkLongPressAction.fromStableId(
+        preferences.getString(KEY_LINK_LONG_PRESS_ACTION, null),
+    )
+
+    fun saveLinkLongPressAction(action: LinkLongPressAction) {
+        preferences.edit().putString(KEY_LINK_LONG_PRESS_ACTION, action.stableId).apply()
+    }
+
     fun loadAddressBarActionLayout(): AddressBarActionLayout {
         if (!preferences.contains(KEY_ADDRESS_BAR_ACTION_LAYOUT)) {
             val legacyTabButtonVisible = runCatching {
@@ -1080,6 +1089,7 @@ class BrowserSessionStore internal constructor(
             "address_bar_dock_vertical_fraction"
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
+        const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
