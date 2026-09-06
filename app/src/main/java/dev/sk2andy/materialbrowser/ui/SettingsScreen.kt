@@ -136,6 +136,8 @@ internal object SearchSettingsTestTags {
 
 internal object TabSettingsTestTags {
     const val ResidentTabLimit = "tab_settings_resident_limit"
+    const val OverviewMode = "tab_settings_overview_mode"
+    const val StackFolderMode = "tab_settings_stack_folder_mode"
     const val ListStartsAtBottom = "tab_settings_list_starts_at_bottom"
     const val AutomaticSorting = "tab_settings_automatic_sorting"
     const val AddressBarDocking = "tab_settings_address_bar_docking"
@@ -156,6 +158,7 @@ internal fun SettingsScreen(
     searchSuggestionProvider: SearchSuggestionProvider,
     isRecallEnabled: Boolean,
     tabOverviewMode: TabOverviewMode,
+    tabStackFolderMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
     automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
@@ -185,6 +188,7 @@ internal fun SettingsScreen(
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onRecallEnabledChanged: (Boolean) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
+    onTabStackFolderModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
@@ -261,6 +265,7 @@ internal fun SettingsScreen(
                     inactiveTabLifetime = inactiveTabLifetime,
                     residentTabLimit = residentTabLimit,
                     tabOverviewMode = tabOverviewMode,
+                    tabStackFolderMode = tabStackFolderMode,
                     tabListStartsAtBottom = tabListStartsAtBottom,
                     automaticTabSortingEnabled = automaticTabSortingEnabled,
                     dismissResistancePercent = dismissResistancePercent,
@@ -270,6 +275,7 @@ internal fun SettingsScreen(
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
                     onTabOverviewModeChanged = onTabOverviewModeChanged,
+                    onTabStackFolderModeChanged = onTabStackFolderModeChanged,
                     onTabListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
                     onAutomaticTabSortingEnabledChanged =
                         onAutomaticTabSortingEnabledChanged,
@@ -831,6 +837,7 @@ internal fun TabsAndGesturesSettingsPage(
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
     tabOverviewMode: TabOverviewMode,
+    tabStackFolderMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
     automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
@@ -840,6 +847,7 @@ internal fun TabsAndGesturesSettingsPage(
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
+    onTabStackFolderModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
@@ -850,6 +858,7 @@ internal fun TabsAndGesturesSettingsPage(
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
     var overviewModeMenuExpanded by remember { mutableStateOf(false) }
+    var stackFolderModeMenuExpanded by remember { mutableStateOf(false) }
     var resistancePercent by remember(dismissResistancePercent) {
         mutableFloatStateOf(dismissResistancePercent.toFloat())
     }
@@ -862,7 +871,7 @@ internal fun TabsAndGesturesSettingsPage(
     ) {
         SettingsSectionTitle(stringResource(R.string.settings_section_tabs))
         Spacer(Modifier.height(8.dp))
-        Box {
+        Box(modifier = Modifier.testTag(TabSettingsTestTags.OverviewMode)) {
             SettingsChoice(
                 title = stringResource(R.string.settings_tab_overview_mode),
                 value = tabOverviewMode.displayName(),
@@ -880,6 +889,30 @@ internal fun TabsAndGesturesSettingsPage(
                         onClick = {
                             overviewModeMenuExpanded = false
                             onTabOverviewModeChanged(mode)
+                        },
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(modifier = Modifier.testTag(TabSettingsTestTags.StackFolderMode)) {
+            SettingsChoice(
+                title = stringResource(R.string.settings_tab_stack_folder_mode),
+                value = tabStackFolderMode.displayName(),
+                expanded = stackFolderModeMenuExpanded,
+                onClick = { stackFolderModeMenuExpanded = true },
+            )
+            SettingsDropdown(
+                expanded = stackFolderModeMenuExpanded,
+                onDismissRequest = { stackFolderModeMenuExpanded = false },
+            ) {
+                TabOverviewMode.entries.forEach { mode ->
+                    SettingsDropdownItem(
+                        label = mode.displayName(),
+                        selected = mode == tabStackFolderMode,
+                        onClick = {
+                            stackFolderModeMenuExpanded = false
+                            onTabStackFolderModeChanged(mode)
                         },
                     )
                 }

@@ -219,6 +219,7 @@ import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabReorderingRules
+import dev.sk2andy.materialbrowser.data.TabStackRules
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.TabPreviewQuality
@@ -372,6 +373,7 @@ class BrowserController(
     private val onWebPictureInPictureRequestTimedOut: () -> Unit = {},
 ) {
     val tabs = mutableStateListOf<BrowserTab>()
+    val tabStacks = mutableStateListOf<TabStack>()
     val profiles = mutableStateListOf<BrowserProfile>()
     val previews = mutableStateMapOf<String, Bitmap>()
     val favicons = mutableStateMapOf<String, Bitmap>()
@@ -434,6 +436,8 @@ class BrowserController(
     var dismissResistancePercent by mutableIntStateOf(40)
         private set
     var tabOverviewMode by mutableStateOf(TabOverviewMode.Hero)
+        private set
+    var tabStackFolderMode by mutableStateOf(TabOverviewMode.Grid)
         private set
     var tabListStartsAtBottom by mutableStateOf(false)
         private set
@@ -775,6 +779,27 @@ class BrowserController(
                 activeTabs
             }
         }
+
+    val activeTabStacks: List<TabStack>
+        get() = TabStackRules.sanitized(tabStacks, activeTabs)
+
+    val stackAwareOverviewTabs: List<BrowserTab>
+        get() = TabStackRules.visibleTabs(
+            tabs = activeTabs,
+            stacks = activeTabStacks,
+        )
+
+    val gridOverviewTabs: List<BrowserTab>
+        get() = stackAwareOverviewTabs
+
+    fun tabStackFor(tabId: String): TabStack? =
+        activeTabStacks.firstOrNull { stack -> tabId in stack.tabIds }
+
+    fun stackAwareOverviewTabId(tabId: String): String = TabStackRules.visibleTabId(
+        tabId = tabId,
+        tabs = activeTabs,
+        stacks = activeTabStacks,
+    )
 
     val canToggleSelectedDomainMute: Boolean
         get() = canToggleDomainMute(selectedTabId)
@@ -1326,6 +1351,7 @@ class BrowserController(
         searchSuggestionProvider = store.loadSearchSuggestionProvider()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
+        tabStackFolderMode = store.loadTabStackFolderMode()
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
         automaticTabSortingEnabled = store.loadAutomaticTabSortingEnabled()
         isAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
@@ -1446,6 +1472,7 @@ class BrowserController(
                 touchTab(selectedTabId, nowMillis)
             }
         }
+        tabStacks += store.loadTabStacks(tabs)
         persist()
         webViewStateRepository.prune(
             (tabs.asSequence() + snoozedTabs.asSequence().map(SnoozedTab::tab))
@@ -3411,6 +3438,7 @@ class BrowserController(
         if (index < 0) return null
         val tab = tabs[index]
         if (!SnoozeRules.canSnooze(tab, wakeAtMillis, nowMillis)) return null
+        val originalTabStack = tabStacks.firstOrNull { tabId in it.tabIds }
         val updatedSnoozed = (snoozedTabs.filterNot { it.tab.id == tabId } +
             SnoozedTab(tab, wakeAtMillis, nowMillis))
             .sortedWith(compareBy<SnoozedTab>({ it.wakeAtMillis }, { it.tab.id }))
@@ -3473,6 +3501,10 @@ class BrowserController(
             replacementTabId = replacementTabId,
             touchedTabBefore = touchedTabBefore,
             touchedTabAfter = touchedTabAfter,
+            originalTabStack = originalTabStack,
+            tabStackAfterSnooze = originalTabStack?.let { original ->
+                tabStacks.firstOrNull { it.id == original.id }
+            },
         )
     }
 
@@ -3499,6 +3531,17 @@ class BrowserController(
         result.removedReplacementTabId?.let(::removeTabResources)
         tabs.clear()
         tabs += result.tabs
+        token.originalTabStack?.let { originalStack ->
+            val restoredStacks = TabStackRules.restoreSnoozedMember(
+                stacks = tabStacks,
+                tabs = tabs,
+                restoredTabId = result.restoredTab.id,
+                originalStack = originalStack,
+                stackAfterSnooze = token.tabStackAfterSnooze,
+            )
+            tabStacks.clear()
+            tabStacks += restoredStacks
+        }
         snoozedTabs.clear()
         snoozedTabs += result.snoozedTabs
         updateSelectedTabId(result.selectedTabId)
@@ -3590,6 +3633,96 @@ class BrowserController(
         )
         if (updatedTabs == activeTabs) return false
         replaceProfileTabs(activeProfileId, updatedTabs)
+        persist()
+        return true
+    }
+
+    fun createTabStack(
+        tabIds: List<String>,
+        name: String,
+        color: TabStackColor,
+        previewTabId: String? = null,
+    ): String? {
+        val activeTabIds = activeTabs.mapTo(hashSetOf(), BrowserTab::id)
+        if (tabIds.any { it !in activeTabIds }) return null
+        val stackId = UUID.randomUUID().toString()
+        val updated = TabStackRules.create(
+            stacks = tabStacks,
+            tabs = tabs,
+            tabIds = tabIds,
+            stackId = stackId,
+            name = name,
+            color = color,
+            previewTabId = previewTabId,
+        ) ?: return null
+        tabStacks.replaceWith(updated)
+        persist()
+        return stackId
+    }
+
+    fun addTabToStack(tabId: String, stackId: String): Boolean {
+        val updated = TabStackRules.addTab(
+            stacks = tabStacks,
+            tabs = tabs,
+            tabId = tabId,
+            stackId = stackId,
+        ) ?: return false
+        if (updated == tabStacks) return false
+        tabStacks.replaceWith(updated)
+        persist()
+        return true
+    }
+
+    fun updateTabStack(
+        stackId: String,
+        tabIds: List<String>,
+        name: String,
+        color: TabStackColor,
+        previewTabId: String? = null,
+    ): Boolean {
+        val activeTabIds = activeTabs.mapTo(hashSetOf(), BrowserTab::id)
+        if (tabIds.any { it !in activeTabIds }) return false
+        val updated = TabStackRules.update(
+            stacks = tabStacks,
+            tabs = tabs,
+            stackId = stackId,
+            tabIds = tabIds,
+            name = name,
+            color = color,
+            previewTabId = previewTabId,
+        ) ?: return false
+        if (updated == tabStacks) return false
+        tabStacks.replaceWith(updated)
+        persist()
+        return true
+    }
+
+    fun removeTabFromStack(tabId: String): Boolean {
+        val updated = TabStackRules.removeTab(tabStacks, tabId)
+        if (updated == tabStacks) return false
+        tabStacks.replaceWith(updated)
+        persist()
+        return true
+    }
+
+    fun toggleTabStackCollapsed(stackId: String, triggerTabId: String? = null): Boolean {
+        val updated = TabStackRules.toggleCollapsed(
+            stacks = tabStacks,
+            stackId = stackId,
+            triggerTabId = triggerTabId,
+        ) ?: return false
+        tabStacks.replaceWith(updated)
+        persist()
+        return true
+    }
+
+    fun setTabStackPreview(stackId: String, tabId: String): Boolean {
+        if (activeTabStacks.none { stack -> stack.id == stackId && tabId in stack.tabIds }) {
+            return false
+        }
+        val updated = TabStackRules.setPreviewTab(tabStacks, stackId, tabId) ?: return false
+        if (updated == tabStacks) return false
+        tabStacks.replaceWith(updated)
         persist()
         return true
     }
@@ -4389,6 +4522,11 @@ class BrowserController(
     fun updateTabOverviewMode(mode: TabOverviewMode) {
         tabOverviewMode = mode
         store.saveTabOverviewMode(mode)
+    }
+
+    fun updateTabStackFolderMode(mode: TabOverviewMode) {
+        tabStackFolderMode = mode
+        store.saveTabStackFolderMode(mode)
     }
 
     fun updateTabListStartsAtBottom(enabled: Boolean) {
@@ -8444,9 +8582,17 @@ class BrowserController(
     }
 
     private fun persist() {
+        val reconciledStacks = TabStackRules.sanitized(tabStacks, tabs)
+        if (reconciledStacks != tabStacks) tabStacks.replaceWith(reconciledStacks)
         store.saveTabs(persistableTabs(tabs), selectedTabId)
+        store.saveTabStacks(tabStacks, tabs)
         store.saveProfiles(profiles.toList(), activeProfileId)
         savePersistentFilterRules()
+    }
+
+    private fun <T> MutableList<T>.replaceWith(values: List<T>) {
+        clear()
+        addAll(values)
     }
 
     private fun persistableTabs(source: Collection<BrowserTab>): List<BrowserTab> =

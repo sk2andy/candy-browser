@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.isFreshBlankTab
 import java.time.DayOfWeek
 import java.time.Instant
@@ -26,6 +27,8 @@ data class SnoozeUndoToken(
     val replacementTabId: String?,
     val touchedTabBefore: BrowserTab?,
     val touchedTabAfter: BrowserTab?,
+    val originalTabStack: TabStack? = null,
+    val tabStackAfterSnooze: TabStack? = null,
 )
 
 enum class SnoozePreset {
