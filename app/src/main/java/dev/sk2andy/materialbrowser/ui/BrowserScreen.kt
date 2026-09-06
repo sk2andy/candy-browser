@@ -357,13 +357,11 @@ internal fun BrowserScreen(
                 navigationMode = submission.navigationMode,
                 chromeMode = submission.chromeMode,
                 iconMode = submission.iconMode,
+                iconEmoji = submission.iconEmoji,
+                iconColor = submission.iconColor,
             ),
-            sourceFavicon = if (existing == null) {
-                submission.sourceTabId?.let { controller.favicons[it] }
-                    ?: submission.sourceFavicon
-            } else {
-                null
-            },
+            sourceFavicon = submission.sourceTabId?.let { controller.favicons[it] }
+                ?: submission.sourceFavicon,
         )
         if (controller.activeProfileId != previousProfileId) {
             controller.selectProfile(previousProfileId)
@@ -411,6 +409,14 @@ internal fun BrowserScreen(
             sourceTab?.url?.let(AddressResolver::displayText).orEmpty()
         }
         val sourceUrl = existing?.startUrl ?: sourceTab?.url.orEmpty()
+        val storedSourceIcon = existing?.let { capsule ->
+            controller.siteCapsuleSourceIcon(capsule.id)
+        }
+        val legacyRenderedIcon = existing
+            ?.takeIf { capsule ->
+                capsule.iconMode == CapsuleIconMode.Favicon && storedSourceIcon == null
+            }
+            ?.let { capsule -> controller.siteCapsuleRenderedIcon(capsule.id) }
         siteCapsuleEditorLauncher.launch(
             SiteCapsuleEditorRequest(
                 existing = existing,
@@ -427,11 +433,10 @@ internal fun BrowserScreen(
                 canCreateDedicatedProfile = controller.profilesEnabled &&
                     controller.localBrowserProfiles.size < MAX_PROFILES &&
                     controller.tabs.size < MAX_TABS,
-                previewIcon = if (existing?.iconMode == CapsuleIconMode.Favicon) {
-                    controller.siteCapsuleIcon(existing.id)
-                } else {
-                    sourceTab?.let { controller.favicons[it.id] }
-                },
+                previewIcon = storedSourceIcon
+                    ?: legacyRenderedIcon
+                    ?: sourceTab?.let { controller.favicons[it.id] },
+                previewIconIsRendered = legacyRenderedIcon != null,
             ),
         )
         rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)

@@ -79,6 +79,9 @@ Frosted exposes three persisted controls while selected:
   setting allows WebView to recolor sites without their own dark theme while the effective app
   appearance is dark. Websites can still respond to `prefers-color-scheme`; forced darkening may
   cause display issues by altering author-defined colors and image assets.
+- Website canvas colors remain WebView-owned. Candy does not apply a separate light or dark
+  background behind page content, so transparent documents keep their author-defined foreground
+  and canvas contrast in light, dark and forced-dark configurations.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
 - Each top-level settings destination has a distinct leading icon on the settings home page.
 - Candy Recall is an explicit opt-in under Protection & data. Its summary states that readable text

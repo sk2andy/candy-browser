@@ -52,6 +52,42 @@ class SiteCapsuleEditorContractInstrumentedTest {
     }
 
     @Test
+    fun editRequestRestoresCapsuleOwnedIconCustomization() {
+        val existing = SiteCapsule(
+            id = "04a74ad8-7533-460c-bfbf-a135968940d5",
+            name = "Mail",
+            startUrl = "https://mail.example",
+            profileId = "candy",
+            iconEmoji = "📬",
+            iconColor = CapsuleIconColor.Charcoal,
+            createdAtMillis = 10L,
+            updatedAtMillis = 20L,
+        )
+        val request = SiteCapsuleEditorRequest(
+            existing = existing,
+            sourceTabId = null,
+            sourceTitle = existing.name,
+            sourceUrl = existing.startUrl,
+            profiles = listOf(BrowserProfile("candy", "🍬")),
+            activeProfileId = "candy",
+            profileIsolationSupported = true,
+            pinningSupported = true,
+            canCreate = true,
+            canCreateDedicatedProfile = true,
+            previewIcon = null,
+            previewIconIsRendered = true,
+        )
+
+        val decoded = requireNotNull(
+            SiteCapsuleEditorContract.requestFrom(contract.createIntent(context, request)),
+        )
+
+        assertEquals("📬", decoded.existing?.iconEmoji)
+        assertEquals(CapsuleIconColor.Charcoal, decoded.existing?.iconColor)
+        assertTrue(decoded.previewIconIsRendered)
+    }
+
+    @Test
     fun submissionRoundTripsAndCanceledResultReturnsNull() {
         val sourceFavicon = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
         val submission = SiteCapsuleEditorSubmission(
@@ -66,6 +102,8 @@ class SiteCapsuleEditorContractInstrumentedTest {
             navigationMode = CapsuleNavigationMode.SameRegistrableDomain,
             chromeMode = CapsuleChromeMode.Minimal,
             iconMode = CapsuleIconMode.ProfileFallback,
+            iconEmoji = "📬",
+            iconColor = CapsuleIconColor.Sky,
             sourceFavicon = sourceFavicon,
         )
         val resultIntent = SiteCapsuleEditorContract.resultIntent(submission)

@@ -5,7 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
@@ -111,6 +110,7 @@ import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 import dev.sk2andy.materialbrowser.capsule.CapsuleDeletionRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconRenderer
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconUpdateRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
 import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationDecision
@@ -2140,8 +2140,6 @@ class BrowserController(
                 -> WebViewCompat.setProfile(this, profileAssignment.storageKey)
             }
             configureProfileServiceWorkerBlocking(profileAssignment, this)
-            val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-            setBackgroundColor(if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE)
             with(settings) {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -2433,10 +2431,6 @@ class BrowserController(
             -> WebViewCompat.setProfile(webView, profileAssignment.storageKey)
         }
         configureProfileServiceWorkerBlocking(profileAssignment, webView)
-        val nightMode = webView.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        webView.setBackgroundColor(
-            if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE,
-        )
         with(webView.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -3448,7 +3442,7 @@ class BrowserController(
             isSyncedProfile(draft.profileId)
         ) return CapsuleSaveResult.Invalid
         val nowMillis = System.currentTimeMillis()
-        val capsule = if (existing == null) {
+        val proposedCapsule = if (existing == null) {
             SiteCapsuleRules.create(
                 draft = draft,
                 id = UUID.randomUUID().toString(),
@@ -3463,23 +3457,41 @@ class BrowserController(
                 multiProfileSupported = isProfileIsolationSupported,
             )
         } ?: return CapsuleSaveResult.Invalid
+        val storedIcon = siteCapsuleIconStore.load(proposedCapsule.id)
+        val storedSourceFavicon = siteCapsuleIconStore.loadSource(proposedCapsule.id)
+        val iconCustomizationChanged = existing == null ||
+            existing.iconMode != proposedCapsule.iconMode ||
+            existing.iconEmoji != proposedCapsule.iconEmoji ||
+            existing.iconColor != proposedCapsule.iconColor
+        val capsule = proposedCapsule.copy(
+            iconMode = CapsuleIconUpdateRules.resolveMode(
+                requestedMode = proposedCapsule.iconMode,
+                hasSourceFavicon = sourceFavicon != null || storedSourceFavicon != null,
+                hasRenderedIcon = storedIcon != null,
+                customizationChanged = iconCustomizationChanged,
+            ),
+        )
         val updated = siteCapsules.filterNot { it.id == capsule.id } + capsule
         siteCapsules.clear()
         siteCapsules += SiteCapsuleRules.bounded(updated)
         siteCapsuleStore.save(siteCapsules)
-        val profileEmoji = profiles.firstOrNull { it.id == capsule.profileId }?.emoji.orEmpty()
-        val storedIcon = siteCapsuleIconStore.load(capsule.id)
+        if (sourceFavicon != null) siteCapsuleIconStore.saveSource(capsule.id, sourceFavicon)
         val icon = if (
             capsule.iconMode == CapsuleIconMode.Favicon &&
-            sourceFavicon == null &&
+            sourceFavicon == null && storedSourceFavicon == null &&
             storedIcon != null
         ) {
             storedIcon
         } else {
             CapsuleIconRenderer.render(
                 name = capsule.name,
-                profileEmoji = profileEmoji,
-                favicon = sourceFavicon.takeIf { capsule.iconMode == CapsuleIconMode.Favicon },
+                iconEmoji = capsule.iconEmoji,
+                iconColor = capsule.iconColor,
+                favicon = if (capsule.iconMode == CapsuleIconMode.Favicon) {
+                    sourceFavicon ?: storedSourceFavicon
+                } else {
+                    null
+                },
             )
         }
         siteCapsuleIconStore.save(capsule.id, icon)
@@ -3565,7 +3577,10 @@ class BrowserController(
         return true
     }
 
-    fun siteCapsuleIcon(capsuleId: String): Bitmap? = siteCapsuleIconStore.load(capsuleId)
+    fun siteCapsuleSourceIcon(capsuleId: String): Bitmap? =
+        siteCapsuleIconStore.loadSource(capsuleId)
+
+    fun siteCapsuleRenderedIcon(capsuleId: String): Bitmap? = siteCapsuleIconStore.load(capsuleId)
 
     internal fun refreshToppingCatalog() {
         val generation = ++toppingCatalogRefreshGeneration
@@ -3817,13 +3832,15 @@ class BrowserController(
             val icon = if (capsule.iconMode == CapsuleIconMode.ProfileFallback) {
                 CapsuleIconRenderer.render(
                     name = capsule.name,
-                    profileEmoji = fallbackProfile.emoji,
+                    iconEmoji = capsule.iconEmoji,
+                    iconColor = capsule.iconColor,
                     favicon = null,
                 )
             } else {
                 siteCapsuleIconStore.load(capsule.id) ?: CapsuleIconRenderer.render(
                     name = capsule.name,
-                    profileEmoji = fallbackProfile.emoji,
+                    iconEmoji = capsule.iconEmoji,
+                    iconColor = capsule.iconColor,
                     favicon = null,
                 )
             }
@@ -4704,6 +4721,12 @@ class BrowserController(
                 Toast.LENGTH_SHORT,
             ).show()
         }
+    }
+
+    fun openIncomingAppLink(url: String): Boolean {
+        if (externalApps.openWebUrlExternally(url) != ExternalLaunchResult.Launched) return false
+        showExternalAppOpenedToast()
+        return true
     }
 
     fun summarizeSelectedPageWithAssistant() = summarizePageWithAssistant(selectedTabId)
@@ -7015,8 +7038,6 @@ class BrowserController(
             genericCosmeticBridges[this] = bridge
             addJavascriptInterface(bridge, GenericCosmeticScript.BRIDGE_NAME)
         }
-        val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        setBackgroundColor(if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE)
         with(settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
