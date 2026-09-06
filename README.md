@@ -241,22 +241,24 @@ Use the filtered setup link so Obtainium always selects the standard certificate
 
 <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="48" alt="Get it on Obtainium"></a>
 
-All GitHub APK channels use the same application ID and signing key. Obtainium can track only one
-of them at a time. Do not add the unfiltered repository URL: the release contains three installable
-APKs, and choosing the wrong asset can silently switch the installed feature set or certificate-trust
-policy.
+The standard and User CA channels use separate application IDs, so both can stay installed and keep
+independent profiles, settings, and caches. Keep the asset filter: it prevents Obtainium from
+selecting a different channel than the configured app.
 
 ### F-Droid
 
-Candy includes a `foss` distribution flavor for the official F-Droid repository. It removes Google
-Play services, Google Cast, Google Code Scanner, and Candy's GitHub update checker. Remote search
-suggestions default to off. F-Droid builds this variant from tagged public source and verifies it
-against Candy's upstream-signed FOSS APK.
+Candy includes a separately installable `foss` distribution flavor for the official F-Droid
+repository. It uses the application ID `dev.sk2andy.materialbrowser.foss`, removes Google Play
+services, Google Cast, Google Code Scanner, and Candy's GitHub update checker, and keeps its profiles,
+settings, and caches isolated from the other channels. Remote search suggestions default to off.
+F-Droid builds this variant from tagged public source and verifies it against Candy's upstream-signed
+FOSS APK.
 
-The first prepared F-Droid release is `0.31`. Submission files and the remaining maintainer steps
-live in [`distribution/fdroid`](distribution/fdroid/README.md). Candy publishes a signed FOSS
-reference APK so F-Droid can verify its source build and preserve update compatibility with the
-upstream signing key.
+The isolated F-Droid listing starts with `0.37`; older FOSS APKs used the universal application ID
+and cannot become versions of the new package. Submission files and maintainer steps live in
+[`distribution/fdroid`](distribution/fdroid/README.md). Candy publishes a signed FOSS reference APK
+so F-Droid can verify its source build and preserve update compatibility with the upstream signing
+key.
 
 Releases contain three APK channels:
 
@@ -264,12 +266,19 @@ Releases contain three APK channels:
 | --- | --- | --- |
 | `-release.apk` | Android system CAs only | Recommended default |
 | `-foss-release.apk` | Android system CAs only | F-Droid reproducible-build reference without proprietary Google integrations |
-| `-user-ca-release.apk` | System CAs plus every CA in Android's user store | Explicit opt-in for HTTPS filtering/proxy tools such as AdGuard |
+| `-ca-release.apk` | System CAs plus every CA in Android's user store | Explicit opt-in for HTTPS filtering/proxy tools such as AdGuard |
 
-The User CA build has the same application ID and signing key as the other builds, so installing it
-replaces another channel without clearing Candy's data. Its launcher label and the warning under
-**Settings → Protection & data** identify the broader trust policy. Updates stay on the installed
-channel.
+The standard build uses `dev.sk2andy.materialbrowser`, the FOSS build uses
+`dev.sk2andy.materialbrowser.foss`, and the User CA build uses
+`dev.sk2andy.materialbrowser.ca`. Android therefore installs all three side by side with isolated
+app data. Their launcher labels and badged icons distinguish the channels; the warning under
+**Settings → Protection & data** additionally identifies the User CA build's broader trust policy.
+Updates stay on the installed channel.
+
+Releases through v0.36 used the standard application ID for all three APKs. Android cannot migrate
+an installed package to a different application ID, so the isolated FOSS and CA channels start with
+fresh app data. The new CA asset name is `-ca-release.apk`; legacy CA installs therefore do not get
+offered an incompatible package as an in-place update.
 
 **Security warning:** a trusted user CA can inspect and modify all HTTPS traffic made by Candy,
 including normal and private tabs, suggestions, filter subscriptions, and update metadata. Only
@@ -278,7 +287,7 @@ that controls its private key. APK signature verification still protects Candy u
 signed by another key.
 
 Advanced users who intentionally need this channel can use the
-[filtered User CA Obtainium setup](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%20User%20CA%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-user-ca-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D).
+[filtered User CA Obtainium setup](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.ca%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20CA%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-ca-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D).
 
 ## Build from source
 
@@ -302,7 +311,7 @@ python3 scripts/test_network_security_apks.py
 ```
 
 Debug APK: `app/build/outputs/apk/full/debug/app-full-debug.apk`. It installs as
-`dev.sk2andy.materialbrowser.debug`, uses the label `Candy Browser Debug`, and has a badged launcher
+`dev.sk2andy.materialbrowser.linkpeek`, uses the label `Candy Link Peek`, and has a badged launcher
 icon, so it can stay installed beside the release app.
 
 ### Signed release builds
@@ -346,9 +355,9 @@ Signed local APK: `app/build/outputs/apk/full/localRelease/app-full-localRelease
 `localRelease` installs beside the GitHub build as `dev.sk2andy.materialbrowser.local` and uses a
 separate launcher icon and the label `Candy Browser Local`. GitHub update prompts are disabled for
 this side-by-side build because production APKs cannot update its package. The GitHub release
-workflow uses `assembleFullRelease`, `assembleFossRelease`, and `assembleFullUserCaRelease`; all
-preserve the production application ID and icon. A separate workflow signs and publishes the FOSS
-output from explicitly allowlisted release tags.
+workflow uses `assembleFullRelease`, `assembleFossRelease`, and `assembleFullUserCaRelease`; those
+outputs use the standard, `.foss`, and `.ca` application IDs and matching launcher identities. A
+separate workflow signs and publishes the FOSS output from explicitly allowlisted release tags.
 
 ### GitHub releases
 

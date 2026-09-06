@@ -32,15 +32,19 @@ jobs:
           case "$RELEASE_TAG" in
             v0.31)
               expected_commit="724187d01e7472fa9e7151ebe825fdd18acb199d"
+              expected_application_id="dev.sk2andy.materialbrowser"
               ;;
             v0.32)
               expected_commit="65a93dc6b962cbae492226ac896dac60026939ef"
+              expected_application_id="dev.sk2andy.materialbrowser"
               ;;
             v0.33)
               expected_commit="4d7400de2ee3316743e69fefe396fe5807ad0b9d"
+              expected_application_id="dev.sk2andy.materialbrowser"
               ;;
             v0.36)
               expected_commit="3721a82f351dacea522be36773df45c36cede965"
+              expected_application_id="dev.sk2andy.materialbrowser"
               ;;
             *)
               echo "Release tag is not explicitly allowlisted." >&2
@@ -49,6 +53,7 @@ jobs:
           esac
 
           echo "EXPECTED_COMMIT=${expected_commit}" >> "$GITHUB_ENV"
+          echo "EXPECTED_APPLICATION_ID=${expected_application_id}" >> "$GITHUB_ENV"
 
       - name: Check out release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -138,15 +143,19 @@ jobs:
           case "$RELEASE_TAG" in
             v0.31)
               expected_commit="724187d01e7472fa9e7151ebe825fdd18acb199d"
+              expected_application_id="dev.sk2andy.materialbrowser"
               ;;
             v0.32)
               expected_commit="65a93dc6b962cbae492226ac896dac60026939ef"
+              expected_application_id="dev.sk2andy.materialbrowser"
               ;;
             v0.33)
               expected_commit="4d7400de2ee3316743e69fefe396fe5807ad0b9d"
+              expected_application_id="dev.sk2andy.materialbrowser"
               ;;
             v0.36)
               expected_commit="3721a82f351dacea522be36773df45c36cede965"
+              expected_application_id="dev.sk2andy.materialbrowser"
               ;;
             *)
               echo "Release tag is not explicitly allowlisted." >&2
@@ -163,6 +172,7 @@ jobs:
             echo "Tag ${RELEASE_TAG} does not resolve to the pinned release commit." >&2
             exit 1
           fi
+          echo "EXPECTED_APPLICATION_ID=${expected_application_id}" >> "$GITHUB_ENV"
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
 
       - name: Restore release keystore
@@ -244,7 +254,7 @@ jobs:
           badging="$("$aapt" dump badging "$unsigned_apk")"
           package_name="$(printf '%s\n' "$badging" | sed -nE "s/^package: name='([^']+)'.*$/\1/p")"
           version_name="$(printf '%s\n' "$badging" | sed -nE "s/^package: .*versionName='([^']+)'.*$/\1/p")"
-          if [[ "$package_name" != "dev.sk2andy.materialbrowser" ]]; then
+          if [[ "$package_name" != "$EXPECTED_APPLICATION_ID" ]]; then
             echo "Unexpected application ID: ${package_name}" >&2
             exit 1
           fi

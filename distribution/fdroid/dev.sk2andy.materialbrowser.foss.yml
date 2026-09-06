@@ -14,21 +14,9 @@ Repo: https://github.com/sk2andy/candy-browser.git
 Binaries: https://github.com/sk2andy/candy-browser/releases/download/v%v/CandyBrowser-v%v-foss-release.apk
 
 Builds:
-  - versionName: '0.31'
-    versionCode: 31000
-    commit: 724187d01e7472fa9e7151ebe825fdd18acb199d
-    subdir: app
-    gradle:
-      - foss
-  - versionName: '0.32'
-    versionCode: 32000
-    commit: 65a93dc6b962cbae492226ac896dac60026939ef
-    subdir: app
-    gradle:
-      - foss
-  - versionName: '0.33'
-    versionCode: 33000
-    commit: 4d7400de2ee3316743e69fefe396fe5807ad0b9d
+  - versionName: '0.37'
+    versionCode: 37000
+    commit: v0.37
     subdir: app
     gradle:
       - foss
@@ -38,5 +26,5 @@ AllowedAPKSigningKeys: e65082d293039290b24b6ef689996cf42f8e8b61966a2ebe4f49d9f8e
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+(\.[0-9]+){1,2}$
 UpdateCheckData: gradle.properties|candy.versionCode=(\d+)|.|candy.versionName=(.+)
-CurrentVersion: '0.33'
-CurrentVersionCode: 33000
+CurrentVersion: '0.37'
+CurrentVersionCode: 37000

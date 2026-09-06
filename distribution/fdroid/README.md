@@ -1,34 +1,37 @@
 # F-Droid submission
 
 Candy's `foss` flavor is the only variant intended for the official F-Droid repository. It uses the
-same application ID as the GitHub build but excludes Google Play services, Google Cast, Google Code
-Scanner, and the GitHub self-updater. New FOSS installs keep remote search suggestions disabled
-until the user explicitly chooses a provider.
+isolated application ID `dev.sk2andy.materialbrowser.foss` and excludes Google Play services,
+Google Cast, Google Code Scanner, and the GitHub self-updater. New FOSS installs keep remote search
+suggestions disabled until the user explicitly chooses a provider.
 
 ## Submission
 
+The isolated listing starts at v0.37. Do not copy the v0.31–v0.36 build blocks from the former
+`dev.sk2andy.materialbrowser` submission: those APKs use the universal application ID and are not
+valid versions of `dev.sk2andy.materialbrowser.foss`.
+
 1. Run the `Release Android APK` workflow. It must create the version tag from the exact commit that
    contains the matching `candy.versionName` and `candy.versionCode` values.
-2. For releases created before signed FOSS assets were enabled, run the backfill workflow from the
-   default branch:
+2. Allowlist the immutable tag commit in `publish-fdroid-reference.yml`, then publish its signed FOSS
+   reference APK:
 
    ```bash
-   gh workflow run publish-fdroid-reference.yml -f tag=v0.31
-   gh workflow run publish-fdroid-reference.yml -f tag=v0.32
+   gh workflow run publish-fdroid-reference.yml -f tag=v0.37
    ```
 
 3. Verify that each signed FOSS asset uses the pinned certificate fingerprint and matches the
    independently built F-Droid APK byte for byte apart from signing.
-4. Copy `dev.sk2andy.materialbrowser.yml` into a fork of `fdroid/fdroiddata` as
-   `metadata/dev.sk2andy.materialbrowser.yml`.
+4. Copy `dev.sk2andy.materialbrowser.foss.yml` into a fork of `fdroid/fdroiddata` as
+   `metadata/dev.sk2andy.materialbrowser.foss.yml`.
 5. Validate from the fdroiddata checkout:
 
    ```bash
    fdroid readmeta
-   fdroid rewritemeta dev.sk2andy.materialbrowser
-   fdroid checkupdates dev.sk2andy.materialbrowser
-   fdroid lint dev.sk2andy.materialbrowser
-   fdroid build -v -l dev.sk2andy.materialbrowser
+   fdroid rewritemeta dev.sk2andy.materialbrowser.foss
+   fdroid checkupdates dev.sk2andy.materialbrowser.foss
+   fdroid lint dev.sk2andy.materialbrowser.foss
+   fdroid build -v -l dev.sk2andy.materialbrowser.foss
    ```
 
 6. Open a merge request against `fdroid/fdroiddata`. Include the successful local-build log and
