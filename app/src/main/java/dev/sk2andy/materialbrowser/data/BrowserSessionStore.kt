@@ -820,6 +820,25 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_LINK_LONG_PRESS_ACTION, action.stableId).apply()
     }
 
+    fun loadLinkPeekActionLayout(): LinkPeekActionLayout {
+        val stored = preferences.getString(KEY_LINK_PEEK_ACTION_LAYOUT, null)
+            ?: return LinkPeekActionLayout.Default
+        return runCatching {
+            val encoded = JSONArray(stored)
+            LinkPeekActionLayoutRules.fromWireValues(
+                List(encoded.length()) { index -> encoded.opt(index) as? String },
+            )
+        }.getOrDefault(LinkPeekActionLayout.Default)
+    }
+
+    fun saveLinkPeekActionLayout(layout: LinkPeekActionLayout) {
+        val normalized = LinkPeekActionLayoutRules.normalize(layout)
+        val encoded = JSONArray().apply {
+            normalized.actions.forEach { action -> put(action?.wireValue ?: JSONObject.NULL) }
+        }
+        preferences.edit().putString(KEY_LINK_PEEK_ACTION_LAYOUT, encoded.toString()).apply()
+    }
+
     fun loadAddressBarActionLayout(): AddressBarActionLayout {
         if (!preferences.contains(KEY_ADDRESS_BAR_ACTION_LAYOUT)) {
             val legacyTabButtonVisible = runCatching {
@@ -1090,6 +1109,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
+        const val KEY_LINK_PEEK_ACTION_LAYOUT = "link_peek_action_layout"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"

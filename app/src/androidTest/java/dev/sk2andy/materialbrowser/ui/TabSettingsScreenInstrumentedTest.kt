@@ -38,6 +38,44 @@ class TabSettingsScreenInstrumentedTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
+    fun linkPeekActionEditorEntryInvokesCallback() {
+        val opened = AtomicBoolean()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsAndGesturesSettingsPage(
+                    inactiveTabLifetime = InactiveTabLifetime.Never,
+                    residentTabLimit = 10,
+                    tabOverviewMode = TabOverviewMode.Grid,
+                    tabStackFolderMode = TabOverviewMode.Grid,
+                    tabListStartsAtBottom = false,
+                    automaticTabSortingEnabled = false,
+                    dismissResistancePercent = 40,
+                    profilesEnabled = true,
+                    isAddressBarDockingEnabled = true,
+                    onInactiveTabLifetimeChanged = {},
+                    onResidentTabLimitChanged = {},
+                    onTabOverviewModeChanged = {},
+                    onTabStackFolderModeChanged = {},
+                    onTabListStartsAtBottomChanged = {},
+                    onAutomaticTabSortingEnabledChanged = {},
+                    onDismissResistancePercentChanged = {},
+                    onProfilesEnabledChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
+                    onLinkPeekActions = { opened.set(true) },
+                    onAddressBarActions = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.settings_link_peek_actions_title))
+            .performScrollTo()
+            .performClick()
+
+        assertTrue(opened.get())
+    }
+
+    @Test
     fun linkLongPressChoiceShowsAllActionsAndUpdatesSetting() {
         var action by mutableStateOf(LinkLongPressAction.LinkPeek)
         composeRule.setContent {

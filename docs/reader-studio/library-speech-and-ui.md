@@ -16,6 +16,11 @@
 | Reading progress | 0–1 |
 | Private reader state | Fresh in-memory state; no settings, progress or snapshots persisted |
 
+Link Peek can extract the fully loaded, committed preview WebView and save its sanitized reader
+document directly for offline reading. The extraction remains bound to the preview WebView,
+content revision, committed URL and source tab; stale results are rejected. Private previews never
+write reader snapshots.
+
 ## Speech
 
 | Piece | Responsibility |
@@ -27,4 +32,3 @@
 - Drive state transitions through `ReaderSpeechEvent`; keep Android callbacks out of reducer logic.
 - Close speech controller with screen/session lifecycle.
 - Test reducer/library behavior on JVM; test store, TTS wiring and Compose semantics only where platform behavior matters.
-

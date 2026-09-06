@@ -263,6 +263,7 @@
     <string name="action_open_link_background_tab">Abrir ligação num novo separador em segundo plano</string>
     <string name="link_peek_title">Pré-visualização da ligação</string>
     <string name="action_open_in_new_tab">Abrir num novo separador</string>
+    <string name="action_open_in_new_tab_and_switch">Abrir num novo separador e mudar</string>
     <string name="action_open_link_in_private_tab">Abrir ligação num separador anónimo</string>
     <string name="action_download_link">Transferir ligação</string>
     <string name="action_download_image">Transferir imagem</string>
@@ -398,6 +399,13 @@
     <string name="settings_make_default_browser">Definir o Candy Browser como navegador predefinido</string>
     <string name="settings_section_gestures">Gestos</string>
     <string name="settings_link_long_press_action">Ação ao premir uma ligação sem soltar</string>
+    <string name="settings_link_peek_actions_title">Botões do Link Peek</string>
+    <string name="settings_link_peek_actions_summary">Escolha e organize até três ações rápidas</string>
+    <string name="settings_link_peek_actions_instructions">Prima sem soltar e arraste ações para espaços vazios. Arraste uma de volta para Ações disponíveis para deixar o espaço vazio. O + pulsante permanece sempre no terceiro espaço e abre um separador em segundo plano.</string>
+    <string name="settings_link_peek_actions_available">Ações disponíveis</string>
+    <string name="settings_link_peek_actions_empty_slot">Espaço vazio</string>
+    <string name="settings_link_peek_actions_move_to_slot">Mover para o espaço</string>
+    <string name="settings_link_peek_actions_move_to_available">Mover para ações disponíveis</string>
     <string name="settings_address_bar_actions_title">Botões da barra de endereço</string>
     <string name="settings_address_bar_actions_summary">Escolha e organize até três botões à volta do campo de endereço.</string>
     <string name="settings_address_bar_actions_instructions">Mantenha um botão premido e arraste-o para a esquerda ou direita do campo. Mais fica fixo e conta como quarto botão.</string>
@@ -801,6 +809,7 @@
     <string name="reader_extraction_invalid">A página mudou ou devolveu conteúdo inválido. Tente novamente ou volte ao original.</string>
     <string name="reader_retry">Tentar novamente</string>
     <string name="reader_save_offline">Guardar offline</string>
+    <string name="reader_saved_offline_confirmation">Guardado para leitura offline</string>
     <string name="reader_offline_short">Offline</string>
     <string name="reader_theme_system">Sistema</string>
     <string name="reader_theme_paper">Papel</string>

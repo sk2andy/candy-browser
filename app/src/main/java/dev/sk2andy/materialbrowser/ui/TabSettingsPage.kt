@@ -63,6 +63,7 @@ internal fun TabsAndGesturesSettingsPage(
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
+    onLinkPeekActions: () -> Unit = {},
     onAddressBarActions: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -237,6 +238,13 @@ internal fun TabsAndGesturesSettingsPage(
                 }
             }
         }
+        Spacer(Modifier.height(2.dp))
+        SettingsLink(
+            icon = ImageVector.vectorResource(R.drawable.ic_symbol_open_in_new),
+            title = stringResource(R.string.settings_link_peek_actions_title),
+            subtitle = stringResource(R.string.settings_link_peek_actions_summary),
+            onClick = onLinkPeekActions,
+        )
         Spacer(Modifier.height(2.dp))
         SettingsLink(
             icon = ImageVector.vectorResource(R.drawable.ic_switch_to_tab),

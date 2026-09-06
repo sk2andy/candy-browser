@@ -893,6 +893,46 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun linkPeekActionLayoutDefaultsRoundTripsAndNormalizesStoredValues() {
+        val store = BrowserSessionStore(context)
+        assertEquals(LinkPeekActionLayout.Default, store.loadLinkPeekActionLayout())
+
+        val layout = LinkPeekActionLayout(
+            listOf(
+                LinkPeekAction.ReaderLater,
+                null,
+                LinkPeekAction.OpenForeground,
+            ),
+        )
+        store.saveLinkPeekActionLayout(layout)
+        assertEquals(layout, store.loadLinkPeekActionLayout())
+
+        preferences.edit().putString(
+            "link_peek_action_layout",
+            """["copy","open_private","share"]""",
+        ).commit()
+        assertEquals(LinkPeekActionLayout.Default, store.loadLinkPeekActionLayout())
+
+        preferences.edit().putString(
+            "link_peek_action_layout",
+            """["favorite","favorite","broken"]""",
+        ).commit()
+        assertEquals(
+            LinkPeekActionLayout(
+                listOf(
+                    LinkPeekAction.Favorite,
+                    null,
+                    null,
+                ),
+            ),
+            store.loadLinkPeekActionLayout(),
+        )
+
+        preferences.edit().putString("link_peek_action_layout", "broken").commit()
+        assertEquals(LinkPeekActionLayout.Default, store.loadLinkPeekActionLayout())
+    }
+
+    @Test
     fun videoAutoplayBlockingDefaultsOffAndRoundTrips() {
         val store = BrowserSessionStore(context)
         assertFalse(store.loadVideoAutoplayBlocked())
