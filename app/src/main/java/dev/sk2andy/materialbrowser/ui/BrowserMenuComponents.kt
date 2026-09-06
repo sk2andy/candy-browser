@@ -333,6 +333,7 @@ internal object BrowserMainMenuTestTags {
     const val Favorite = "browser_main_menu_favorite"
     const val Pin = "browser_main_menu_pin"
     const val PageGroup = "browser_main_menu_page_group"
+    const val DuplicateTab = "browser_main_menu_duplicate_tab"
     const val Translate = "browser_main_menu_translate"
     const val CandyGroup = "browser_main_menu_candy_group"
     const val ToppingsGroup = "browser_main_menu_toppings_group"

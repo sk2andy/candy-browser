@@ -59,6 +59,8 @@
     <string name="cd_move_fullscreen_video">Video verschieben</string>
     <string name="cd_close_named_tab">%1$s schließen</string>
     <string name="action_switch_to_tab">Zum Tab wechseln</string>
+    <string name="action_duplicate_tab">Tab duplizieren</string>
+    <string name="duplicate_tab_url_only_disclaimer">Öffnet diese URL in einem neuen Tab. JavaScript- und Formularzustand werden nicht kopiert.</string>
     <string name="tab_actions_title">Tab-Optionen</string>
     <string name="tab_stacks_title">Candy-Stapel</string>
     <string name="action_create_tab_stack">Neuer Stapel</string>

@@ -151,6 +151,7 @@ internal fun BrowserBottomBar(
     onReload: () -> Unit,
     onStop: () -> Unit,
     onNewTab: () -> Unit,
+    onDuplicateTab: () -> Unit,
     onFindInPage: () -> Unit,
     onCloseTab: () -> Unit,
     onToggleIncognito: () -> Unit,
@@ -494,6 +495,7 @@ internal fun BrowserBottomBar(
                                 onReload = onReload,
                                 onStop = onStop,
                                 onNewTab = onNewTab,
+                                onDuplicateTab = onDuplicateTab,
                                 onFindInPage = onFindInPage,
                                 onCloseTab = onCloseTab,
                                 newTabPulseScale = newTabPulseScale.value,
@@ -1015,4 +1017,3 @@ internal fun Modifier.addressBarVerticalGesture(
         }
     }
 }
-

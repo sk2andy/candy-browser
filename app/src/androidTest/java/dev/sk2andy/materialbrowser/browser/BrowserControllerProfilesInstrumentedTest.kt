@@ -11,6 +11,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -103,6 +104,58 @@ class BrowserControllerProfilesInstrumentedTest {
             assertEquals(BLANK_URL, controller.activeTabs.single().url)
             assertTrue(controller.activeTabs.none { it.id == "work-tab" })
             assertTrue(controller.tabs.any { it.id == "home-tab" })
+        }
+    }
+
+    @Test
+    fun duplicateSelectedTabKeepsProfileAndRespectsCapacity() {
+        activityRule.scenario.onActivity { activity ->
+            val profiles = profiles()
+            resetAndSeed(activity, profiles, profiles.last().id)
+            val controller = BrowserController(activity).also { this.controller = it }
+
+            assertNull(controller.duplicateSelectedTab())
+
+            val sourceId = controller.createTab("https://example.com/articles/42")
+            val duplicateId = requireNotNull(controller.duplicateSelectedTab())
+            val duplicate = controller.activeTabs.first { it.id == duplicateId }
+            assertFalse(duplicateId == sourceId)
+            assertEquals("https://example.com/articles/42", duplicate.url)
+            assertEquals(profiles.last().id, duplicate.profileId)
+            assertFalse(duplicate.isIncognito)
+            assertEquals(duplicateId, controller.selectedTabId)
+
+            repeat(MAX_TABS - controller.tabs.size) { index ->
+                controller.createTab("https://capacity.example/$index")
+            }
+            val selectedAtCapacity = controller.selectedTabId
+
+            assertNull(controller.duplicateSelectedTab())
+            assertEquals(MAX_TABS, controller.tabs.size)
+            assertEquals(selectedAtCapacity, controller.selectedTabId)
+        }
+    }
+
+    @Test
+    fun duplicateSelectedPrivateTabKeepsPrivacyMode() {
+        activityRule.scenario.onActivity { activity ->
+            val profiles = profiles()
+            resetAndSeed(activity, profiles, profiles.last().id)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(controller.isProfileIsolationSupported)
+            val sourceId = controller.createTab(
+                initialUrl = "https://private.example/path",
+                isIncognito = true,
+            )
+
+            val duplicateId = requireNotNull(controller.duplicateSelectedTab())
+            val duplicate = controller.activeTabs.first { it.id == duplicateId }
+
+            assertFalse(duplicateId == sourceId)
+            assertEquals("https://private.example/path", duplicate.url)
+            assertEquals(profiles.last().id, duplicate.profileId)
+            assertTrue(duplicate.isIncognito)
+            assertEquals(duplicateId, controller.selectedTabId)
         }
     }
 

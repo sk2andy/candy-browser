@@ -139,6 +139,7 @@ internal fun ExpandedBottomBarContent(
     onReload: () -> Unit,
     onStop: () -> Unit,
     onNewTab: () -> Unit,
+    onDuplicateTab: () -> Unit,
     onFindInPage: () -> Unit,
     onCloseTab: () -> Unit,
     newTabPulseScale: Float,
@@ -580,6 +581,7 @@ internal fun ExpandedBottomBarContent(
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 onTabs = onTabs,
                                 onNewTab = onNewTab,
+                                onDuplicateTab = onDuplicateTab,
                                 onCloseTab = onCloseTab,
                                 onBack = onBack,
                                 onForward = onForward,
@@ -777,4 +779,3 @@ internal fun AddressEditorBackdrop(
         }
     }
 }
-

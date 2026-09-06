@@ -59,6 +59,8 @@
     <string name="cd_move_fullscreen_video">Déplacer la vidéo</string>
     <string name="cd_close_named_tab">Fermer %1$s</string>
     <string name="action_switch_to_tab">Accéder à l’onglet</string>
+    <string name="action_duplicate_tab">Dupliquer l’onglet</string>
+    <string name="duplicate_tab_url_only_disclaimer">Ouvre cette URL dans un nouvel onglet. L’état JavaScript et celui des formulaires ne sont pas copiés.</string>
     <string name="tab_actions_title">Options de l’onglet</string>
     <string name="tab_stacks_title">Piles Candy</string>
     <string name="action_create_tab_stack">Nouvelle pile</string>

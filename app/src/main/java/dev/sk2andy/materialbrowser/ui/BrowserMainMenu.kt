@@ -123,6 +123,7 @@ internal fun BrowserMainMenu(
     userScriptMenuCommands: List<UserScriptMenuCommand> = emptyList(),
     onTabs: () -> Unit = {},
     onNewTab: () -> Unit = {},
+    onDuplicateTab: () -> Unit = {},
     onCloseTab: () -> Unit = {},
     onBack: () -> Unit,
     onForward: () -> Unit,
@@ -409,14 +410,23 @@ internal fun BrowserMainMenu(
                     )
                 }
                 MenuRow(
-                    label = stringResource(R.string.reader_open_action),
-                    iconRes = R.drawable.ic_reader_align_start,
-                    enabled = presentation.canOpenReader,
+                    label = stringResource(R.string.action_duplicate_tab),
+                    iconRes = R.drawable.ic_content_copy,
+                    enabled = presentation.canUsePageActions,
                     shape = if (overflowAddressBarActions.isEmpty()) {
                         firstItemShape
                     } else {
                         innerCorners
                     },
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.DuplicateTab),
+                    supportingText = stringResource(R.string.duplicate_tab_url_only_disclaimer),
+                    onClick = { dismissThen(onDuplicateTab) },
+                )
+                MenuRow(
+                    label = stringResource(R.string.reader_open_action),
+                    iconRes = R.drawable.ic_reader_align_start,
+                    enabled = presentation.canOpenReader,
+                    shape = innerCorners,
                     onClick = { dismissThen(onOpenReader) },
                 )
                 MenuRow(

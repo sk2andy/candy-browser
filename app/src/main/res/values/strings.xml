@@ -63,6 +63,8 @@
     <string name="cd_move_fullscreen_video">Move video</string>
     <string name="cd_close_named_tab">Close %1$s</string>
     <string name="action_switch_to_tab">Switch to tab</string>
+    <string name="action_duplicate_tab">Duplicate tab</string>
+    <string name="duplicate_tab_url_only_disclaimer">Opens this URL in a new tab. JavaScript and form state aren’t copied.</string>
     <string name="tab_actions_title">Tab options</string>
     <string name="tab_stacks_title">Candy Stacks</string>
     <string name="action_create_tab_stack">New stack</string>

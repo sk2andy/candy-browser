@@ -3919,6 +3919,16 @@ class BrowserController(
         return tab.id
     }
 
+    fun duplicateSelectedTab(): String? {
+        val sourceTab = selectedTab
+        if (sourceTab.url == BLANK_URL) return null
+        val duplicateTabId = createTab(
+            initialUrl = sourceTab.url,
+            isIncognito = sourceTab.isIncognito,
+        )
+        return duplicateTabId.takeUnless { it == sourceTab.id }
+    }
+
     fun createBackgroundTab(
         initialUrl: String,
         openerTabId: String? = null,

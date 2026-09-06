@@ -59,6 +59,8 @@
     <string name="cd_move_fullscreen_video">Mover vídeo</string>
     <string name="cd_close_named_tab">Cerrar %1$s</string>
     <string name="action_switch_to_tab">Cambiar a la pestaña</string>
+    <string name="action_duplicate_tab">Duplicar pestaña</string>
+    <string name="duplicate_tab_url_only_disclaimer">Abre esta URL en una pestaña nueva. No se copian el estado de JavaScript ni de los formularios.</string>
     <string name="tab_actions_title">Opciones de la pestaña</string>
     <string name="tab_stacks_title">Pilas Candy</string>
     <string name="action_create_tab_stack">Nueva pila</string>
