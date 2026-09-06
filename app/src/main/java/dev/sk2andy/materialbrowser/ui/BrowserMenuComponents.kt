@@ -37,15 +37,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
+import eightbitlab.com.blurview.BlurTarget
 
 @Composable
 internal fun BrowserMainMenuFavoriteAction(
     presentation: BrowserMainMenuPresentation,
+    blurTarget: BlurTarget?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     MenuToolbarAction(
         label = stringResource(R.string.action_favorite),
+        blurTarget = blurTarget,
         iconRes = if (presentation.isFavorite) {
             R.drawable.ic_symbol_favorite_filled
         } else {
@@ -68,6 +72,7 @@ internal fun BrowserMainMenuFavoriteAction(
 @Composable
 internal fun BrowserMainMenuPinAction(
     isPinned: Boolean,
+    blurTarget: BlurTarget?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,6 +80,7 @@ internal fun BrowserMainMenuPinAction(
         label = stringResource(
             if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
         ),
+        blurTarget = blurTarget,
         iconRes = R.drawable.ic_push_pin,
         accessibilityLabel = stringResource(
             if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
@@ -89,6 +95,7 @@ internal fun BrowserMainMenuPinAction(
 internal fun MenuToolbarAction(
     label: String,
     @DrawableRes iconRes: Int,
+    blurTarget: BlurTarget?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -97,6 +104,10 @@ internal fun MenuToolbarAction(
     horizontalContent: Boolean = false,
 ) {
     val colors = MaterialTheme.colorScheme
+    val chromeTokens = browserChromeSurfaceTokens().copy(
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+    )
     val containerColor = if (selected) colors.primaryContainer else colors.surfaceContainerHighest
     val accessibilityModifier = if (accessibilityLabel != null) {
         Modifier.semantics(mergeDescendants = true) {
@@ -111,14 +122,16 @@ internal fun MenuToolbarAction(
         selected -> colors.onPrimaryContainer
         else -> colors.onSurface
     }
-    Surface(
-        onClick = onClick,
+    BrowserChromeSurface(
+        blurTarget = blurTarget,
+        tokens = chromeTokens,
         modifier = modifier
             .heightIn(min = 64.dp)
             .then(accessibilityModifier),
+        onClick = onClick,
         enabled = enabled,
         shape = MaterialTheme.shapes.large,
-        color = browserChromeColor(containerColor),
+        containerColor = browserChromeColor(containerColor),
         contentColor = contentColor,
     ) {
         if (horizontalContent) {

@@ -32,7 +32,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -46,7 +45,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
@@ -170,19 +168,6 @@ internal fun NewTabPage(
                         },
                     ) {
                         Spacer(Modifier.height(28.dp))
-                        Text(
-                        stringResource(R.string.favorites_title),
-                        modifier = Modifier
-                            .background(
-                                color = Color.Black.copy(alpha = 0.82f),
-                                shape = RoundedCornerShape(8.dp),
-                            )
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (profileWallpaper == null) colors.onSurface else Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                        Spacer(Modifier.height(8.dp))
                         Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(24.dp),
@@ -203,4 +188,3 @@ internal fun NewTabPage(
         }
     }
 }
-
