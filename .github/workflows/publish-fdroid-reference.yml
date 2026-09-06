@@ -46,6 +46,10 @@ jobs:
               expected_commit="3721a82f351dacea522be36773df45c36cede965"
               expected_application_id="dev.sk2andy.materialbrowser"
               ;;
+            v0.37)
+              expected_commit="f00a2143756de372a5ea434d87cf46d0ed6fb339"
+              expected_application_id="dev.sk2andy.materialbrowser.foss"
+              ;;
             *)
               echo "Release tag is not explicitly allowlisted." >&2
               exit 1
@@ -156,6 +160,10 @@ jobs:
             v0.36)
               expected_commit="3721a82f351dacea522be36773df45c36cede965"
               expected_application_id="dev.sk2andy.materialbrowser"
+              ;;
+            v0.37)
+              expected_commit="f00a2143756de372a5ea434d87cf46d0ed6fb339"
+              expected_application_id="dev.sk2andy.materialbrowser.foss"
               ;;
             *)
               echo "Release tag is not explicitly allowlisted." >&2
