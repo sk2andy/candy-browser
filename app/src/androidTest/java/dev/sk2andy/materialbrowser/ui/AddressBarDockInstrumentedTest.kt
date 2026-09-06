@@ -171,6 +171,68 @@ class AddressBarDockInstrumentedTest {
     }
 
     @Test
+    fun parkedPillSnapsVisiblyToNormalAddressBarAnchorOnDrag() {
+        lateinit var interaction: AddressBarDockInteractionState
+        val settledPlacement = AtomicReference<AddressBarDockPlacement>()
+        val confirmHaptics = AtomicInteger()
+        val sessionStore = BrowserSessionStore(composeRule.activity)
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                interaction = rememberAddressBarDockInteractionState(
+                    presentation = AddressBarPresentation.Docked,
+                    placement = AddressBarDockPlacement(
+                        edge = AddressBarDockEdge.Right,
+                        verticalFraction = 0.5f,
+                    ),
+                    enabled = true,
+                    horizontalTravelPx = 200f,
+                    verticalTravelPx = 400f,
+                    density = Density(1f),
+                    onPlacementChanged = { placement ->
+                        settledPlacement.set(placement)
+                        sessionStore.saveAddressBarDockPlacement(placement)
+                    },
+                    onRestoreAndEdit = {},
+                    haptics = AddressBarDockHaptics(
+                        startMovement = {},
+                        stopMovement = {},
+                        confirm = { confirmHaptics.incrementAndGet() },
+                    ),
+                )
+                Box(Modifier.size(width = 52.dp, height = 48.dp)) {
+                    AddressBarEdgeTab(
+                        edge = AddressBarDockEdge.Right,
+                        onRestore = interaction.onRestoreClick,
+                        dockDragEnabled = true,
+                        onDockDragStarted = interaction.onDragStarted,
+                        onDockDrag = interaction.onDrag,
+                        onDockDragStopped = interaction.onDragStopped,
+                        onDockDragCancelled = interaction.onDragCancelled,
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
+            .performTouchInput {
+                swipe(
+                    start = center,
+                    end = Offset(center.x, center.y + 260f),
+                    durationMillis = 300,
+                )
+            }
+
+        composeRule.runOnIdle {
+            assertEquals(0f, interaction.position.y, 0.001f)
+            assertEquals(0f, settledPlacement.get().verticalFraction, 0.001f)
+            assertEquals(settledPlacement.get(), sessionStore.loadAddressBarDockPlacement())
+            assertEquals(2, confirmHaptics.get())
+        }
+        composeRule.mainClock.autoAdvance = true
+    }
+
+    @Test
     fun normalAnchorStretchesBeforeSpringCatchUp() {
         lateinit var interaction: AddressBarDockInteractionState
         composeRule.mainClock.autoAdvance = false

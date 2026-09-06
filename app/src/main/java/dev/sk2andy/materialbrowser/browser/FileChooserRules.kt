@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser
 
+import android.content.Intent
+import android.provider.MediaStore
 import java.net.URI
 
 data class FileChooserIdentity(
@@ -54,6 +56,26 @@ object FileChooserRules {
         val actualCategory = actual.substringBefore('/')
         return accepted.any { expected ->
             expected == actual || expected == "$actualCategory/*"
+        }
+    }
+
+    internal fun captureAction(
+        capture: BrowserEngineFileCapture,
+        mimeTypes: List<String>,
+    ): String? {
+        if (capture == BrowserEngineFileCapture.None) return null
+        val accepted = mimeTypes
+            .asSequence()
+            .flatMap { value -> value.split(',').asSequence() }
+            .map(String::trim)
+            .map(String::lowercase)
+            .toSet()
+        return when {
+            accepted.any { value -> value == "image/*" || value.startsWith("image/") } ->
+                MediaStore.ACTION_IMAGE_CAPTURE
+            accepted.any { value -> value == "video/*" || value.startsWith("video/") } ->
+                MediaStore.ACTION_VIDEO_CAPTURE
+            else -> null
         }
     }
 

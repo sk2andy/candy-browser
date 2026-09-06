@@ -2,10 +2,9 @@ package dev.sk2andy.materialbrowser.browser
 
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
+import dev.sk2andy.materialbrowser.shared.browser.BrowserUrlRules
 import java.net.IDN
 import java.net.URI
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 data class SearxngSettings(
     val instanceUrl: String = "",
@@ -45,7 +44,13 @@ object SearxngRules {
     fun buildSearchUrl(
         instanceUrl: String,
         query: String,
-    ): String? = buildEndpointUrl(instanceUrl, "search", query)
+    ): String? {
+        val normalizedInstanceUrl = normalizedInstanceUrl(instanceUrl) ?: return null
+        return SearchEngine.SearXNG.buildSearchUrl(
+            query = query,
+            searxngInstanceUrl = normalizedInstanceUrl,
+        ).takeUnless { it == BLANK_URL }
+    }
 
     fun buildSuggestionUrl(
         instanceUrl: String,
@@ -62,4 +67,4 @@ object SearxngRules {
 }
 
 internal fun String.urlEncoded(): String =
-    URLEncoder.encode(this, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+    BrowserUrlRules.encodeSearchQuery(this)

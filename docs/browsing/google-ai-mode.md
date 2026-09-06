@@ -31,7 +31,7 @@ experience can still vary by Google account, language, region, and provider roll
 
 | Concern | Owner |
 | --- | --- |
-| Provider capability and URL template | [`SearchEngine.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/SearchEngine.kt) |
+| Provider capability and URL template | [`SearchEngine.kt`](../../shared/src/commonMain/kotlin/dev/sk2andy/materialbrowser/browser/SearchEngine.kt) |
 | URL-versus-search classification | [`AddressResolver.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/AddressResolver.kt) |
 | Toggle visibility and guarded mode selection | [`AddressAiModeRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/commands/AddressAiModeRules.kt) |
 | Global visibility preference and submission wiring | `BrowserSessionStore`, `BrowserController` |

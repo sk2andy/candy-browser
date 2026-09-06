@@ -9,16 +9,15 @@ import java.security.KeyPairGenerator
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.security.spec.ECGenParameterSpec
+import java.time.Clock
+import java.time.Instant
 import java.util.Base64
+import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import org.json.JSONObject
-
-fun interface SyncRecoveryKeyDeriver {
-    fun derive(passphrase: ByteArray, kdf: SyncRecoveryKdf): ByteArray
-}
 
 class AndroidArgon2RecoveryKeyDeriver : SyncRecoveryKeyDeriver {
     override fun derive(passphrase: ByteArray, kdf: SyncRecoveryKdf): ByteArray {
@@ -53,8 +52,18 @@ class AndroidArgon2RecoveryKeyDeriver : SyncRecoveryKeyDeriver {
 
 class SyncCrypto(
     private val random: SecureRandom = SecureRandom(),
-) {
-    fun generateDeviceIdentity(): SyncDeviceIdentity {
+    private val clock: Clock = Clock.systemUTC(),
+) : SyncCryptoProvider {
+    override fun randomBytes(size: Int): ByteArray {
+        require(size in 1..1_024)
+        return ByteArray(size).also(random::nextBytes)
+    }
+
+    override fun newChangeId(): String = UUID.randomUUID().toString()
+
+    override fun nowIso8601(): String = Instant.now(clock).toString()
+
+    override fun generateDeviceIdentity(): SyncDeviceIdentity {
         val generator = KeyPairGenerator.getInstance("EC")
         generator.initialize(ECGenParameterSpec("secp256r1"), random)
         val pair = generator.generateKeyPair()
@@ -66,10 +75,10 @@ class SyncCrypto(
         )
     }
 
-    fun fingerprint(publicKeySpki: ByteArray): String =
+    override fun fingerprint(publicKeySpki: ByteArray): String =
         SyncBase64.encode(MessageDigest.getInstance("SHA-256").digest(publicKeySpki))
 
-    fun createRecoveryEnvelope(
+    override fun createRecoveryEnvelope(
         recoveryKey: ByteArray,
         workspaceKey: ByteArray,
         workspaceId: String,
@@ -82,21 +91,23 @@ class SyncCrypto(
         ).let { SyncRecoveryEnvelope(nonce = it.nonce, ciphertext = it.ciphertext) }
     }
 
-    fun unlockRecoveryEnvelope(
+    override fun unlockRecoveryEnvelope(
         recoveryKey: ByteArray,
         envelope: SyncRecoveryEnvelope,
         workspaceId: String,
-    ): ByteArray {
+    ): ByteArray? {
         require(envelope.cryptoVersion == 1)
-        return decryptAes(
-            key = recoveryKey,
-            encrypted = SyncEncryptedValue(envelope.nonce, envelope.ciphertext),
-            aad = "candy-sync/recovery-envelope/v1/$workspaceId".utf8(),
-            maxCiphertextBytes = 48,
-        ).also { require(it.size == 32) }
+        return runCatching {
+            decryptAes(
+                key = recoveryKey,
+                encrypted = SyncEncryptedValue(envelope.nonce, envelope.ciphertext),
+                aad = "candy-sync/recovery-envelope/v1/$workspaceId".utf8(),
+                maxCiphertextBytes = 48,
+            ).also { require(it.size == 32) }
+        }.getOrNull()
     }
 
-    fun encryptDeviceName(
+    override fun encryptDeviceName(
         workspaceKey: ByteArray,
         workspaceId: String,
         fingerprint: String,
@@ -117,7 +128,7 @@ class SyncCrypto(
         }
     }
 
-    fun decryptDeviceName(
+    override fun decryptDeviceName(
         workspaceKey: ByteArray,
         workspaceId: String,
         fingerprint: String,
@@ -141,7 +152,7 @@ class SyncCrypto(
         }
     }
 
-    fun encryptDeviceIcon(
+    override fun encryptDeviceIcon(
         workspaceKey: ByteArray,
         workspaceId: String,
         fingerprint: String,
@@ -167,7 +178,7 @@ class SyncCrypto(
         }
     }
 
-    fun decryptDeviceIcon(
+    override fun decryptDeviceIcon(
         workspaceKey: ByteArray,
         workspaceId: String,
         fingerprint: String,
@@ -191,7 +202,7 @@ class SyncCrypto(
         }
     }
 
-    fun encryptTabSnapshot(
+    override fun encryptTabSnapshot(
         workspaceKey: ByteArray,
         metadata: SyncEncryptedChange,
         snapshot: SyncTabSnapshot,
@@ -212,7 +223,7 @@ class SyncCrypto(
         }
     }
 
-    fun decryptTabSnapshot(
+    override fun decryptTabSnapshot(
         workspaceKey: ByteArray,
         change: SyncEncryptedChange,
     ): SyncTabSnapshot {
@@ -234,7 +245,7 @@ class SyncCrypto(
         }
     }
 
-    fun encryptTabMutation(
+    override fun encryptTabMutation(
         workspaceKey: ByteArray,
         metadata: SyncEncryptedDelta,
         mutation: SyncPendingMutation,
@@ -260,7 +271,7 @@ class SyncCrypto(
         }
     }
 
-    fun decryptTabMutation(
+    override fun decryptTabMutation(
         workspaceKey: ByteArray,
         change: SyncEncryptedDelta,
     ): SyncPendingMutation {
@@ -388,23 +399,6 @@ class SyncCrypto(
         } finally {
             pseudoRandomKey.fill(0)
         }
-    }
-}
-
-object SyncBase64 {
-    private val encoder = Base64.getUrlEncoder().withoutPadding()
-    private val decoder = Base64.getUrlDecoder()
-    private val pattern = Regex("[A-Za-z0-9_-]+")
-
-    fun encode(value: ByteArray): String = encoder.encodeToString(value)
-
-    fun decode(value: String, expectedBytes: Int? = null, maxBytes: Int = 524_288): ByteArray {
-        require(value.isNotEmpty() && value.length <= ((maxBytes * 4L + 2L) / 3L).toInt())
-        require(pattern.matches(value) && !value.contains('='))
-        val decoded = runCatching { decoder.decode(value) }.getOrElse { throw IllegalArgumentException("Invalid base64url") }
-        require(decoded.size <= maxBytes)
-        if (expectedBytes != null) require(decoded.size == expectedBytes)
-        return decoded
     }
 }
 

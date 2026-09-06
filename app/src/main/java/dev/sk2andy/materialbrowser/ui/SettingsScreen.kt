@@ -1,18 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.zIndex
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
@@ -30,26 +20,11 @@ import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRouter
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
-
-internal enum class SettingsDestination {
-    Home,
-    Search,
-    TabsAndGestures,
-    AddressBarActions,
-    Appearance,
-    Browser,
-    Downloads,
-    Userscripts,
-    ToppingCatalog,
-    SiteCapsules,
-    Sync,
-    ProtectionAndData,
-    AboutLegal,
-}
 
 @Composable
 internal fun SettingsScreen(
@@ -143,32 +118,10 @@ internal fun SettingsScreen(
     onOpenFirefoxExtensions: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier
-            .fillMaxSize()
-            .zIndex(20f),
-        color = MaterialTheme.colorScheme.surface,
-    ) {
-        AnimatedContent(
-            targetState = destination,
-            modifier = Modifier.fillMaxSize(),
-            transitionSpec = {
-                if (
-                    targetState == SettingsDestination.Home ||
-                    initialState == SettingsDestination.ToppingCatalog &&
-                    targetState == SettingsDestination.Userscripts ||
-                    initialState == SettingsDestination.AddressBarActions &&
-                    targetState == SettingsDestination.TabsAndGestures
-                ) {
-                    (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith
-                        (slideOutHorizontally { width -> width } + fadeOut())
-                } else {
-                    (slideInHorizontally { width -> width } + fadeIn()) togetherWith
-                        (slideOutHorizontally { width -> -width / 3 } + fadeOut())
-                }
-            },
-            label = "Settings destination",
-        ) { currentDestination ->
+    SettingsRouter(
+        destination = destination,
+        modifier = modifier,
+    ) { currentDestination ->
             when (currentDestination) {
                 SettingsDestination.Home -> SettingsHomePage(
                     downloadSummary = downloadSettings.displayName(externalDownloadManagers),
@@ -344,4 +297,3 @@ internal fun SettingsScreen(
             }
         }
     }
-}

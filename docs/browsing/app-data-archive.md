@@ -12,10 +12,10 @@
 
 ## Archive format
 
-Candy archive format v1 is a ZIP with `manifest.json` as its first entry and persistent app
+Candy archive format v2 is a ZIP with `manifest.json` as its first entry and persistent app
 files under `data/`. The manifest records archive format, application ID, Candy version,
-Android SDK, WebView version and export time. ZIP entry CRCs are verified while staging and
-again while extracting.
+Android SDK, WebView version, export time and typed `websiteState=candy-owned-only` contract.
+ZIP entry CRCs are verified while staging and again while extracting.
 
 The exporter walks the app data directory rather than maintaining a list of individual
 settings. New SharedPreferences, file stores, databases and WebView profile files therefore
@@ -31,7 +31,7 @@ and restore-root discovery enforce the same exclusions.
 | Browser state | Regular tabs, profiles, history, favorites, trails, snoozes and previews |
 | Local content | Reader library, Site Capsules, icons, userscripts and Candy Rules |
 | Profile presentation | Separate per-profile new-tab and tab-switcher wallpaper images with independent crop/zoom metadata |
-| Website state | Best-effort raw WebView cookies, local storage, IndexedDB, CacheStorage and profile permissions |
+| Website state | Not exported as raw engine bytes. Candy-owned tab URL, profile, history, favorites, trails and settings stay portable; opaque Gecko/WebView sessions, cookies, local storage, IndexedDB, CacheStorage and profile permissions stay device/engine-local. |
 
 Private in-memory state, Android runtime permissions, default-browser role, notification
 settings, system password/passkey stores, public downloads and APK assets are not portable
@@ -53,9 +53,12 @@ local Recall index so old page text cannot coexist with imported History.
   archive.
 - Unknown archive-format versions are rejected. Candy, application ID, Android SDK or WebView
   mismatches show an explicit warning before the user can continue.
-- Raw Chromium/WebView storage has no public portable serialization API. Cookies and website
-  storage are best-effort across Android or WebView versions and may be discarded by WebView
-  after a mismatched import.
+- Raw Chromium/WebView and Gecko storage has no cross-engine portable serialization API. Format v2
+  excludes known opaque engine roots, including Gecko session snapshots and legacy WebView state.
+  Format v1 is accepted only as a migration: Candy-owned files restore, while recognized opaque
+  engine paths are skipped and `LegacyWebsiteStateExcluded` is reported by archive inspection and
+  extraction. Unknown format versions still reject. This prevents silent website-state loss and
+  never mislabels Chromium bytes as portable Gecko state.
 - Import replaces all current persistent roots. A same-filesystem backup is kept during the
   root swap and restored on failure. A durable journal outside archived roots makes an
   interrupted swap roll back before normal app startup.

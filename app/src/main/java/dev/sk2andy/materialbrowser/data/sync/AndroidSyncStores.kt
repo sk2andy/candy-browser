@@ -8,8 +8,11 @@ import android.util.AtomicFile
 import dev.sk2andy.materialbrowser.data.writeSafely
 import dev.sk2andy.materialbrowser.sync.SyncBase64
 import dev.sk2andy.materialbrowser.sync.SyncCache
+import dev.sk2andy.materialbrowser.sync.SyncCacheStore
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
+import dev.sk2andy.materialbrowser.sync.SyncSettingsStore
 import dev.sk2andy.materialbrowser.sync.SyncVaultSecrets
+import dev.sk2andy.materialbrowser.sync.SyncVaultStore
 import java.io.File
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -17,24 +20,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import org.json.JSONObject
-
-interface SyncSettingsStore {
-    fun load(): SyncConnectionSettings?
-    fun save(value: SyncConnectionSettings): Boolean
-    fun clear(): Boolean
-}
-
-interface SyncVaultStore {
-    fun load(): SyncVaultSecrets?
-    fun save(value: SyncVaultSecrets): Boolean
-    fun clear()
-}
-
-interface SyncCacheStore {
-    fun load(): SyncCache
-    fun save(value: SyncCache): Boolean
-    fun clear()
-}
 
 class AndroidSyncSettingsStore internal constructor(
     private val preferences: SharedPreferences,

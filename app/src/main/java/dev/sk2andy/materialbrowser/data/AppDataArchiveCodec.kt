@@ -35,12 +35,18 @@ internal data class AppDataArchiveInspection(
 ) {
     val archivedRootNames: Set<String>
         get() = entries.mapTo(mutableSetOf()) { entry -> entry.relativePath.substringBefore('/') }
+
+    val websiteState: AppDataArchiveWebsiteState
+        get() = AppDataArchiveRules.websiteStateFor(manifest.formatVersion, entries)
 }
 
 internal data class AppDataArchiveExtraction(
     val manifest: AppDataArchiveManifest,
     val entries: List<AppDataArchiveEntry>,
-)
+) {
+    val websiteState: AppDataArchiveWebsiteState
+        get() = AppDataArchiveRules.websiteStateFor(manifest.formatVersion, entries)
+}
 
 internal enum class AppDataArchiveFailure {
     SourceNotDirectory,
@@ -58,6 +64,7 @@ internal enum class AppDataArchiveFailure {
     TargetNotEmpty,
     TargetSymbolicLink,
     EmptyArchive,
+    UnsupportedLegacyWebsiteState,
     ArchiveIo,
 }
 
@@ -134,7 +141,16 @@ internal object AppDataArchiveCodec {
         val archive = readArchive(
             input = input,
             requireSupportedFormatBeforeEntries = true,
-            consumeEntry = { relativePath, isDirectory, entryInput ->
+            consumeEntry = { manifest, relativePath, isDirectory, entryInput ->
+                if (AppDataArchiveRules.isEngineSpecificWebsiteState(relativePath)) {
+                    if (manifest.formatVersion != AppDataArchiveRules.LEGACY_FORMAT_VERSION) {
+                        throw AppDataArchiveException(
+                            AppDataArchiveFailure.UnsupportedLegacyWebsiteState,
+                            relativePath,
+                        )
+                    }
+                    return@readArchive
+                }
                 val destination = safeDestination(target, relativePath)
                 ensureNoSymbolicLinkInPath(target, destination)
                 if (isDirectory) {
@@ -245,7 +261,7 @@ internal object AppDataArchiveCodec {
     private fun readArchive(
         input: InputStream,
         requireSupportedFormatBeforeEntries: Boolean,
-        consumeEntry: ((String, Boolean, InputStream) -> Unit)? = null,
+        consumeEntry: ((AppDataArchiveManifest, String, Boolean, InputStream) -> Unit)? = null,
     ): ReadArchiveResult {
         val zipInput = ZipInputStream(
             BufferedInputStream(NonClosingInputStream(input)),
@@ -337,7 +353,7 @@ internal object AppDataArchiveCodec {
                     entryName = zipEntry.name,
                     crc = crc,
                 )
-                consumeEntry?.invoke(relativePath, zipEntry.isDirectory, countingInput)
+                consumeEntry?.invoke(manifest, relativePath, zipEntry.isDirectory, countingInput)
                     ?: countingInput.copyTo(DiscardingOutputStream)
                 countingInput.drain()
                 val size = countingInput.byteCount
@@ -536,6 +552,7 @@ internal object AppDataArchiveCodec {
         .put("webViewVersion", webViewVersion ?: JSONObject.NULL)
         .put("sdkInt", sdkInt)
         .put("exportedAtEpochMillis", exportedAtEpochMillis)
+        .put("websiteState", websiteState.toWireValue())
         .toString()
 
     private fun parseManifest(bytes: ByteArray): AppDataArchiveManifest {
@@ -545,8 +562,9 @@ internal object AppDataArchiveCodec {
             .decode(ByteBuffer.wrap(bytes))
             .toString()
         val json = JSONObject(text)
+        val formatVersion = json.requiredLong("formatVersion").toIntExact()
         return AppDataArchiveManifest(
-            formatVersion = json.requiredLong("formatVersion").toIntExact(),
+            formatVersion = formatVersion,
             packageName = json.requiredNonBlankString("packageName"),
             appVersionName = json.requiredNonBlankString("appVersionName"),
             appVersionCode = json.requiredLong("appVersionCode").also { require(it >= 0L) },
@@ -558,6 +576,13 @@ internal object AppDataArchiveCodec {
             sdkInt = json.requiredLong("sdkInt").toIntExact().also { require(it >= 0) },
             exportedAtEpochMillis = json.requiredLong("exportedAtEpochMillis")
                 .also { require(it >= 0L) },
+            websiteState = when (formatVersion) {
+                AppDataArchiveRules.LEGACY_FORMAT_VERSION ->
+                    AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded
+                AppDataArchiveRules.FORMAT_VERSION ->
+                    json.requiredNonBlankString("websiteState").toWebsiteState()
+                else -> AppDataArchiveWebsiteState.CandyOwnedOnly
+            },
         )
     }
 
@@ -579,7 +604,10 @@ internal object AppDataArchiveCodec {
     }
 
     private fun ensureSupportedManifest(manifest: AppDataArchiveManifest) {
-        if (manifest.formatVersion != AppDataArchiveRules.FORMAT_VERSION) {
+        if (
+            manifest.formatVersion != AppDataArchiveRules.FORMAT_VERSION &&
+            manifest.formatVersion != AppDataArchiveRules.LEGACY_FORMAT_VERSION
+        ) {
             throw AppDataArchiveException(AppDataArchiveFailure.UnsupportedFormatVersion)
         }
         if (manifest.packageName.isBlank() ||
@@ -594,6 +622,23 @@ internal object AppDataArchiveCodec {
         ) {
             throw AppDataArchiveException(AppDataArchiveFailure.InvalidManifest)
         }
+        if (
+            manifest.formatVersion == AppDataArchiveRules.FORMAT_VERSION &&
+            manifest.websiteState != AppDataArchiveWebsiteState.CandyOwnedOnly
+        ) {
+            throw AppDataArchiveException(AppDataArchiveFailure.InvalidManifest)
+        }
+    }
+
+    private fun AppDataArchiveWebsiteState.toWireValue(): String = when (this) {
+        AppDataArchiveWebsiteState.CandyOwnedOnly -> "candy-owned-only"
+        AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded -> "legacy-website-state-excluded"
+    }
+
+    private fun String.toWebsiteState(): AppDataArchiveWebsiteState = when (this) {
+        "candy-owned-only" -> AppDataArchiveWebsiteState.CandyOwnedOnly
+        "legacy-website-state-excluded" -> AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded
+        else -> error("Unknown website-state contract")
     }
 
     private data class SourceEntry(

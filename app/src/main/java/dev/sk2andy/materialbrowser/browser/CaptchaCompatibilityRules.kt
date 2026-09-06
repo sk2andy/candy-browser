@@ -68,4 +68,10 @@ object CaptchaCompatibilityRules {
     )
     private const val HCAPTCHA_HOST = "js.hcaptcha.com"
     private const val HCAPTCHA_API_PATH = "/1/api.js"
+
+    internal val compatibilityRequestHosts = setOf(
+        CLOUDFLARE_CHALLENGE_HOST,
+        *GOOGLE_RECAPTCHA_HOSTS.toTypedArray(),
+        HCAPTCHA_HOST,
+    )
 }

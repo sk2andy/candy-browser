@@ -8,13 +8,42 @@ Android picture-in-picture. The shorter product-level contract remains in
 
 | Trigger | Source surface | Presentation path |
 | --- | --- | --- |
-| Top-level page calls `requestPictureInPicture()` | HTML5 video in main frame | Trusted bridge request → pinned WebView → explicit Android PiP |
-| Embedded page calls `requestPictureInPicture()` | HTML5 video in HTTP(S) iframe | User-activated Chromium custom view → explicit Android PiP |
-| User backgrounds Candy with visible video playing | Top-level HTML5 video | Active channel → isolated WebView presentation → Android auto-enter PiP |
-| User backgrounds Candy with visible embedded video playing | HTML5 video in HTTP(S) iframe | Frame visibility relay → isolated iframe chain and video → Android auto-enter PiP |
-| User changes tabs while eligible video plays | Top-level or embedded HTML5 video | Same isolated WebView presentation → in-app mini-player |
+| Gecko fullscreen video enters Android PiP | Selected regular Gecko tab with active, playing video | Gecko `MediaSession.Delegate` metadata → same GeckoView reparented into Candy's fullscreen host → Android PiP |
+| User switches tabs while Gecko fullscreen video plays | Selected regular Gecko tab | Same GeckoView stays in Candy's mini-player host |
 
 Canvas-only players, unsupported DRM surfaces and hostile player scripts remain best-effort.
+
+Gecko's native media-session delegate supplies playback state, transport commands and fullscreen
+element metadata.
+Candy only offers PiP after Gecko has reported an active, playing, fullscreen video with non-zero
+dimensions and at least one video track. The existing GeckoView and GeckoSession are moved into the
+fullscreen host; Candy never creates a second renderer or a second address bar.
+
+Android's PiP mode callback must also be forwarded to Gecko's `CompositorController`. Without this
+signal Android can create the PiP window while Gecko's texture compositor stops producing frames,
+which leaves a white, non-playing surface. Candy forwards enter and exit exactly once to the owning
+session. Candy pre-arms Gecko immediately before the system entry call, then treats the platform
+mode callback as confirmation; a rejected transition rolls the signal back. It also keeps only that
+session active while the Activity pauses, retries the expected playback command across the first
+two seconds of the compositor transition, and keeps the transition alive for five seconds so loaded
+emulators cannot tear down the renderer prematurely. User-initiated Play/Pause commands remain
+authoritative and cancel pending retries.
+
+Candy normally uses Gecko's texture backend so blur, clipping and tab motion keep working. Candy's
+outer browser-content host keeps the same identity throughout the transition. During Android PiP
+only, that host releases the GeckoSession from its texture-backed inner GeckoView and immediately
+attaches it to a freshly initialized surface-backed GeckoView; on return it creates a fresh
+texture-backed GeckoView the same way. A runtime backend mutation can leave Gecko's new SurfaceView
+without a compositor buffer, so it must not be used for this transition. The outer host,
+GeckoSession and tab identity never change.
+
+The Home gesture requests PiP synchronously from `onUserLeaveHint`; Android auto-enter remains a
+fallback. This puts Gecko into PiP before the Activity background lifecycle can make a page such as
+YouTube pause its fullscreen media.
+
+GeckoView 140 does not expose element geometry for ordinary inline video through its native media
+session API. Automatic background PiP and the in-app mini-player therefore remain limited to Gecko
+video that has entered fullscreen. Do not infer inline-video eligibility from page-level state.
 
 ## Ownership map
 
@@ -22,12 +51,11 @@ Canvas-only players, unsupported DRM surfaces and hostile player scripts remain 
 | --- | --- | --- |
 | Android Activity | Lifecycle callback forwarding and browser-system-UI coordination | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt) |
 | Android PiP coordinator | PiP capability, params, auto-enter, explicit entry, mode state and return layout | [`MainActivityPictureInPictureController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivityPictureInPictureController.kt) |
-| Browser controller | Channel identity, eligibility, presentation pinning, fullscreen session identity, lifecycle cleanup and media publication | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
-| Native contract and rules | Bounded bridge parsing, commands, request eligibility and media scoring | [`WebMediaContract.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/WebMediaContract.kt) |
-| Document-start bridge | HTML media telemetry, PiP compatibility API, playback commands, presentation styles and iframe relay | [`WebMediaBridgeScript.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/WebMediaBridgeScript.kt) |
-| Fullscreen policy | Custom-view placement and Android PiP eligibility | [`FullscreenVideoRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/FullscreenVideoRules.kt) |
-| Compose host | Stable custom-view or WebView surface above browser chrome | [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
-| Background playback | Android media session, controls and foreground service | [`WebMediaPlaybackService.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/WebMediaPlaybackService.kt) |
+| Browser controller | Gecko session identity, eligibility, same-view presentation, lifecycle cleanup and media publication | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
+| Fullscreen policy | Gecko-view placement and Android PiP eligibility | [`FullscreenVideoRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/FullscreenVideoRules.kt) |
+| Gecko media policy | Autoplay permission and fullscreen-video PiP eligibility | [`GeckoMediaRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/gecko/GeckoMediaRules.kt) |
+| Compose host | Stable GeckoView surface above browser chrome | [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
+| Background playback | Android media session, controls and foreground service | [`BrowserMediaPlaybackService.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserMediaPlaybackService.kt) |
 
 Keep `MainActivity` and `BrowserController` as orchestration. Put new deterministic eligibility or
 state decisions in focused rules and unit-test them without Android when possible.
@@ -39,69 +67,40 @@ Every accepted media endpoint is bound to all of these values:
 | Identity | Why it matters |
 | --- | --- |
 | Tab and profile | Page cannot select another tab or cross private/regular boundaries |
-| WebView instance | Replaced or destroyed views cannot retain authority |
+| Gecko session and view | Replaced, closed or detached renderers cannot retain authority |
 | Navigation generation | Late callbacks from a previous page become stale |
-| Document and media IDs | Commands return to the exact reported element |
-| Source origin and main-frame flag | Native code distinguishes top-level and embedded strategies |
-| Frame-specific reply proxy | Native commands cannot be redirected through page-supplied routing data |
 
 Preserve these invariants:
 
 - Private media may be observed for local lifecycle cleanup, but must never create Android PiP,
   an in-app mini-player, a media notification or persistent state.
-- Explicit page PiP requires a current selected regular tab, eligible video, transient user
-  activation and applicable Permissions Policy.
-- Resolve a page request only after `onPictureInPictureModeChanged(true)`. A successful
-  `enterPictureInPictureMode()` return value only means Android accepted the request for processing.
-- Keep at most one pending page request. Timeout, navigation, removal, stop or destruction must
-  reject it and unwind presentation state idempotently.
-- Pin the exact requesting channel or exact matching fullscreen session. Never reselect a different
-  video after accepting a page request.
-- Use separate credentials for native bridge authorization and iframe presentation relay.
-- Embedded auto-PiP eligibility must include visibility through every iframe ancestor. Hidden,
-  transparent and offscreen frames cannot outrank visible media.
-- Relay receivers verify the direct `Window` source-to-frame relationship before changing styles.
-- Keep pending requests, channels, fullscreen sessions and presentation ownership memory-only.
+- Gecko media state is memory-only, scoped to the exact tab session, and discarded on navigation,
+  deactivation, crash, close or session replacement.
+- Android PiP requires a current selected regular tab, an active playing fullscreen Gecko video,
+  non-zero dimensions and a video track.
+- Keep the same session and outer content-host identity for PiP. A fresh inner GeckoView may be
+  created solely to initialize the required compositor backend; never create another session or
+  select another tab.
+- Keep Gecko media state and presentation ownership memory-only.
 
 ## Lifecycle states
 
 | State | Owner | Exit conditions |
 | --- | --- | --- |
-| Reported channel | Controller | End/removal, document gone, navigation, tab close or WebView destruction |
-| Fullscreen custom-view session | Controller and `WebChromeClient` | Page exits fullscreen, host dismisses, navigation or PiP return cleanup |
-| WebView presentation | Controller and document-start bridge | PiP cancellation/return, stop, media end or owner invalidation |
-| Pending page PiP request | Controller | Confirmed Android entry, rejection, timeout or any identity invalidation |
-| Active page PiP request | Controller | Android mode exit, navigation, removal or destruction |
+| Gecko media state | Gecko session adapter | Navigation, deactivation, crash, close or replacement |
+| Gecko fullscreen presentation | Controller and Compose host | Media ends, host dismisses, navigation, PiP exit or session replacement |
 | Android PiP transition | Activity and controller | Mode callback, cancellation, stop or return-layout completion |
 
-Repeated mode, hide, navigation and cleanup callbacks must remain harmless. Do not rely on one
-callback ordering across Android or WebView versions.
-
-## Embedded video strategies
-
-Explicit iframe requests and automatic background PiP intentionally use different paths:
-
-| Path | Required proof | Reason |
-| --- | --- | --- |
-| Explicit website button | Chromium fullscreen custom view for the exact video | Chromium consumes the user activation and provides a video-only surface |
-| Automatic background transition | Playing eligible channel plus verified visible iframe chain | No page user activation exists when Android Home starts auto-enter |
-
-For automatic presentation, each injected frame computes its direct child iframe visibility and
-relays the cumulative ratio. Presentation commands isolate the video, then each containing iframe,
-up to the main document. Normal inline styles are restored only when they still match Candy's
-applied values, so page changes made during PiP are not overwritten blindly.
+Repeated mode, navigation and cleanup callbacks stay idempotent.
 
 ## Change checklist
 
 | Change | Required companion work |
 | --- | --- |
-| Add or change bridge payload | Bound it in `WebMediaContract`, validate identity in controller, add parser/rule unit tests |
-| Add a bridge command | Route only through stored reply proxy, make duplicate delivery safe, add instrumented command coverage |
-| Change eligibility | Update pure rules and cover private, stale, hidden, paused, audio and zero-size cases |
-| Change Activity PiP entry | Cover accepted, rejected and missing/late mode callbacks in Activity tests |
-| Change iframe relay | Cover visible, offscreen, nested/cross-origin and restoration behavior |
-| Change presentation CSS | Cover style drift, DOM moves, repeated preparation and exact restoration |
-| Change cleanup | Cover navigation, element removal, tab close, WebView destruction and PiP return |
+| Change Gecko eligibility | Update `GeckoPictureInPictureRules`; cover private, stale, paused, audio and zero-size states |
+| Change Activity PiP entry | Cover accepted, rejected and missing/late mode callbacks in the Gecko instrumentation suite |
+| Change presentation host | Preserve exact Gecko session/view identity; test overview→mini→expanded transitions |
+| Change cleanup | Cover navigation, tab close, session replacement and PiP return |
 
 ## Verification
 
@@ -114,9 +113,8 @@ commands below.
 | Layer | Minimum check |
 | --- | --- |
 | Contract and pure rules | `./gradlew testFullDebugUnitTest testFossDebugUnitTest` |
-| Bridge or WebView behavior | `ANDROID_SERIAL=$CANDY_EMULATOR_SERIAL ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.WebMediaBridgeInstrumentedTest` |
-| Activity PiP lifecycle | Run `FullscreenVideoActivityInstrumentedTest` on the same API 34+ session emulator |
-| Fullscreen/overlay placement | Run `FullscreenVideoInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` |
+| Gecko PiP lifecycle | Run `GeckoPictureInPictureInstrumentedTest` on the same API 34+ session emulator |
+| Fullscreen/overlay placement | Covered by `GeckoPictureInPictureInstrumentedTest` on the same API 34+ emulator |
 | Android integration | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |
 
 Run deterministic tests first. Treat live checks on `anichi.to` and `reanime.cz` as compatibility
@@ -126,19 +124,17 @@ smoke tests because their player hosts and markup can change independently of Ca
 
 | Symptom | Inspect first |
 | --- | --- |
-| Website reports PiP unsupported | Document-start script installation, `pictureInPictureEnabled`, frame policy and private mode |
-| Website button does nothing | User activation, exact pending request, matching custom-view session for iframe video |
-| Home does not enter PiP | Active channel, cumulative visibility, private flag and Activity auto-enter params |
-| Wrong video appears | Channel scoring and whether exact request/session identity was replaced by fallback selection |
-| Page chrome appears in PiP | Presentation relay, iframe source mapping and full ancestor isolation |
-| Video pauses during transition | Playback expectation, `keep-playing` command and suppressed page pause reconciliation |
-| Player stays fullscreen after return | `picture-in-picture-left`, custom-view dismissal and return-layout cleanup |
-| Notification survives media end | Channel removal, system media state publication and playback-service ownership |
+| PiP unavailable | Gecko `MediaSession` must report selected, regular, active, playing fullscreen video with dimensions and track |
+| Wrong view in PiP | Verify selected session and bound Gecko view identities before reparenting |
+| Video pauses during transition | Inspect Gecko media-session playback state and Android PiP mode callback ordering |
+| PiP window is white | Verify the exact owning Gecko session received `CompositorController.onPipModeChanged(true)`, the PiP SurfaceView owns a non-zero compositor buffer, and the transition timeout did not close the session |
+| Player stays fullscreen after return | Inspect same-session host reattachment and return-layout completion |
+| Notification survives media end | Inspect inactive Gecko media state and BrowserMedia system-session publication |
 
 Useful device checks, always with the session's explicit emulator serial:
 
 ```sh
 adb -s "$CANDY_EMULATOR_SERIAL" shell dumpsys activity activities
 adb -s "$CANDY_EMULATOR_SERIAL" shell dumpsys media_session
-adb -s "$CANDY_EMULATOR_SERIAL" logcat -d | rg -i 'picture.?in.?picture|entered-pip|webmedia'
+adb -s "$CANDY_EMULATOR_SERIAL" logcat -d | rg -i 'picture.?in.?picture|gecko.*media'
 ```

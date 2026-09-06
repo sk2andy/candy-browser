@@ -14,6 +14,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,6 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -40,6 +42,7 @@ fun BrowserMenuToolbarAction(
     selected: Boolean = false,
     accessibilityLabel: String? = null,
     horizontalContent: Boolean = false,
+    minHeight: Dp = 64.dp,
     containerColor: Color = if (selected) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -47,13 +50,11 @@ fun BrowserMenuToolbarAction(
     },
 ) {
     val colors = MaterialTheme.colorScheme
-    val accessibilityModifier = if (accessibilityLabel != null) {
-        Modifier.semantics(mergeDescendants = true) {
-            this.selected = selected
+    val accessibilityModifier = Modifier.semantics(mergeDescendants = true) {
+        this.selected = selected
+        if (accessibilityLabel != null) {
             contentDescription = accessibilityLabel
         }
-    } else {
-        Modifier
     }
     val contentColor = when {
         !enabled -> colors.onSurface.copy(alpha = 0.38f)
@@ -63,7 +64,7 @@ fun BrowserMenuToolbarAction(
     Surface(
         onClick = onClick,
         modifier = modifier
-            .heightIn(min = 64.dp)
+            .heightIn(min = minHeight)
             .then(accessibilityModifier),
         enabled = enabled,
         shape = MaterialTheme.shapes.large,
@@ -118,19 +119,25 @@ fun BrowserMenuRow(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     supportingText: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
+    minHeight: Dp = 44.dp,
+    horizontalPadding: Dp = 16.dp,
+    verticalPadding: Dp = 6.dp,
 ) {
     Surface(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 44.dp),
+            .heightIn(min = minHeight),
         enabled = enabled,
         shape = shape,
         color = containerColor,
         contentColor = if (enabled) contentColor else contentColor.copy(alpha = 0.38f),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            modifier = Modifier.padding(
+                horizontal = horizontalPadding,
+                vertical = verticalPadding,
+            ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             icon()
@@ -170,12 +177,16 @@ fun BrowserMenuToggleItem(
     modifier: Modifier = Modifier,
     shape: Shape = MaterialTheme.shapes.medium,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    minHeight: Dp = 52.dp,
+    horizontalPadding: Dp = 16.dp,
+    verticalPadding: Dp = 6.dp,
+    checkedTrackColor: Color? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 52.dp)
+            .heightIn(min = minHeight)
             .semantics(mergeDescendants = true) {}
             .toggleable(
                 value = checked,
@@ -188,7 +199,12 @@ fun BrowserMenuToggleItem(
         contentColor = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f),
     ) {
         Row(
-            modifier = Modifier.padding(start = 16.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
+            modifier = Modifier.padding(
+                start = horizontalPadding,
+                end = horizontalPadding - 6.dp,
+                top = verticalPadding,
+                bottom = verticalPadding,
+            ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -207,6 +223,79 @@ fun BrowserMenuToggleItem(
                 onCheckedChange = null,
                 modifier = Modifier.clearAndSetSemantics {},
                 enabled = enabled,
+                colors = if (checkedTrackColor == null) {
+                    SwitchDefaults.colors()
+                } else {
+                    SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = checkedTrackColor,
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+fun BrowserMenuIconToggleItem(
+    label: String,
+    icon: @Composable () -> Unit,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.medium,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    minHeight: Dp = 48.dp,
+    horizontalPadding: Dp = 16.dp,
+    verticalPadding: Dp = 0.dp,
+    checkedTrackColor: Color? = null,
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = minHeight)
+            .semantics(mergeDescendants = true) {}
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            ),
+        shape = shape,
+        color = containerColor,
+        contentColor = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f),
+    ) {
+        Row(
+            modifier = Modifier.padding(
+                start = horizontalPadding,
+                end = horizontalPadding - 6.dp,
+                top = verticalPadding,
+                bottom = verticalPadding,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            icon()
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
+                enabled = enabled,
+                colors = if (checkedTrackColor == null) {
+                    SwitchDefaults.colors()
+                } else {
+                    SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = checkedTrackColor,
+                    )
+                },
             )
         }
     }

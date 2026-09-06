@@ -51,7 +51,7 @@ enum class CommandCookieScope {
     SharedRegularProfile,
     IsolatedRegularProfile,
     PrivateProfile,
-    AllWebViews,
+    AllBrowserProfiles,
 }
 
 object CommandExecutionIds {

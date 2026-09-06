@@ -7,6 +7,12 @@ internal data class GeckoExtension(
     val enabled: Boolean,
     val allowedInPrivateBrowsing: Boolean,
     val isBuiltIn: Boolean,
+    val temporary: Boolean = false,
+    val disabledFlags: Int = 0,
+    val location: String? = null,
+    val baseUrl: String? = null,
+    val optionsPageUrl: String? = null,
+    val opensOptionsPageInTab: Boolean = false,
 )
 
 internal data class GeckoExtensionSnapshot(
@@ -88,6 +94,21 @@ internal interface GeckoExtensionRuntime {
     fun setPermissionPrompt(prompt: GeckoExtensionPermissionPrompt)
 
     fun setChangeListener(listener: GeckoExtensionChangeListener) = Unit
+
+    fun setChromeHost(host: GeckoExtensionChromeHost?) = Unit
+
+    fun attachChromeSession(
+        session: org.mozilla.geckoview.GeckoSession,
+        identity: GeckoExtensionSessionIdentity,
+    ) = Unit
+
+    fun detachChromeSession(session: org.mozilla.geckoview.GeckoSession) = Unit
+
+    fun onSelectedChromeSessionChanged() = Unit
+
+    fun clickChromeAction(key: GeckoExtensionActionKey): Boolean = false
+
+    fun dismissChromePopup() = Unit
 
     suspend fun listInstalled(): List<GeckoExtension>
 

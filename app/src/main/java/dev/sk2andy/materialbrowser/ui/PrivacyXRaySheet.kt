@@ -2,6 +2,8 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewContrastRules
+
 import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent

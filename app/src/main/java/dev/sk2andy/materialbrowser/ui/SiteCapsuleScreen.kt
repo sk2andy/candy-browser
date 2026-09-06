@@ -3,7 +3,6 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.graphics.Bitmap
-import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
@@ -36,7 +35,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -46,13 +44,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,7 +70,6 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
-import dev.sk2andy.materialbrowser.browser.BrowserWebView
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.capsule.CapsuleChromeMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
@@ -88,7 +84,7 @@ import kotlinx.coroutines.flow.collect
 
 object SiteCapsuleTestTags {
     const val Screen = "site_capsule_screen"
-    const val WebView = "site_capsule_webview"
+    const val WebContent = "site_capsule_web_content"
     const val Editor = "site_capsule_editor"
     const val Save = "site_capsule_save"
     const val Chrome = "site_capsule_chrome"
@@ -101,7 +97,6 @@ fun SiteCapsuleBrowserScreen(
     webViewVideoOnlyPresentation: Boolean = false,
 ) {
     val tab = controller.selectedTab
-    var scrollBarWebView by remember(tab.id) { mutableStateOf<BrowserWebView?>(null) }
     val entrance = remember(capsule.id) { Animatable(0f) }
     LaunchedEffect(capsule.id) {
         entrance.animateTo(1f, spring(dampingRatio = 0.84f, stiffness = 520f))
@@ -124,20 +119,11 @@ fun SiteCapsuleBrowserScreen(
                 clip = progress < 1f
             },
     ) {
-        CapsuleWebViewHost(
+        CapsuleBrowserEngineHost(
             controller = controller,
             statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
             showStatusBarFrostedGlass = !webViewVideoOnlyPresentation,
-            onWebViewChanged = { scrollBarWebView = it },
         )
-        if (controller.isScrollBarEnabled && !webViewVideoOnlyPresentation) {
-            scrollBarWebView?.let { webView ->
-                WebViewScrollBar(
-                    webView = webView,
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                )
-            }
-        }
         tab.error?.takeIf {
             !webViewVideoOnlyPresentation && capsule.chromeMode.showsControls
         }?.let { error ->
@@ -174,11 +160,10 @@ fun SiteCapsuleBrowserScreen(
 }
 
 @Composable
-private fun CapsuleWebViewHost(
+private fun CapsuleBrowserEngineHost(
     controller: BrowserController,
     statusBarTint: Int,
     showStatusBarFrostedGlass: Boolean,
-    onWebViewChanged: (BrowserWebView?) -> Unit,
 ) {
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
@@ -186,28 +171,25 @@ private fun CapsuleWebViewHost(
         density = density.density,
     )
     val selectedTabId = controller.selectedTabId
-    val webViewRevision = controller.webViewRevision
-    val currentOnWebViewChanged by rememberUpdatedState(onWebViewChanged)
+    val engineViewRevision = controller.engineViewRevision
     AndroidView(
         factory = { context -> StatusBarFrostedGlassHost(context) },
         update = { host ->
-            host.tag = selectedTabId to webViewRevision
+            host.tag = selectedTabId to engineViewRevision
             host.updateFrostedGlass(
                 geometry = statusBarGeometry,
                 tint = statusBarTint,
                 visible = showStatusBarFrostedGlass,
             )
             val attachedView = controller.attachSelectedBrowserEngineView(host.blurTarget)
-            currentOnWebViewChanged(attachedView as? BrowserWebView)
         },
         onRelease = { host ->
             controller.detachBrowserEngineView(host.blurTarget)
             host.release()
-            currentOnWebViewChanged(null)
         },
         modifier = Modifier
             .fillMaxSize()
-            .testTag(SiteCapsuleTestTags.WebView),
+            .testTag(SiteCapsuleTestTags.WebContent),
     )
 }
 

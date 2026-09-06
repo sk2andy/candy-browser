@@ -95,6 +95,15 @@ class BrowserCommandRegistryTest {
     }
 
     @Test
+    fun `registry exposes cookie clearing only when current engine can clear cookies`() {
+        val available = BrowserCommandRegistry.commands(context(canClearCookies = true))
+        val unavailable = BrowserCommandRegistry.commands(context(canClearCookies = false))
+
+        assertTrue(available.any { it.kind == BrowserCommandKind.ClearCookiesAndReload })
+        assertFalse(unavailable.any { it.kind == BrowserCommandKind.ClearCookiesAndReload })
+    }
+
+    @Test
     fun `maximum profile registry exposes unique targets even with repeated emoji`() {
         val profiles = (1..12).map {
             BrowserProfile(if (it == 1) "home" else "profile-$it", "🍬")

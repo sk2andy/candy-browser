@@ -8,11 +8,6 @@ class CommandDispatcherTest {
     fun `dispatch routes every fixed execution id`() {
         val actions = RecordingActions()
         val expected = listOf(
-            Triple(
-                BrowserCommandKind.ClearCacheAndReload,
-                "cache",
-                CommandResult.CacheClearedAndReloaded,
-            ),
             Triple(BrowserCommandKind.Reload, "reload", CommandResult.Reloaded),
             Triple(BrowserCommandKind.StopLoading, "stop", CommandResult.LoadingStopped),
             Triple(BrowserCommandKind.PinTab, "pin:true", CommandResult.TabPinned),
@@ -43,6 +38,35 @@ class CommandDispatcherTest {
             )
             assertEquals(event, actions.events.last())
         }
+    }
+
+    @Test
+    fun `cache command reports success only after async completion`() {
+        val actions = RecordingActions()
+        val completedOutcomes = mutableListOf<CommandDispatchOutcome>()
+        val command = BrowserCommand(
+            checkNotNull(BrowserCommandKind.ClearCacheAndReload.executionId),
+            BrowserCommandKind.ClearCacheAndReload,
+        )
+
+        val startedOutcome = CommandDispatcher.dispatch(
+            command = command,
+            actions = actions,
+            onPendingOutcome = completedOutcomes::add,
+        )
+
+        assertEquals(
+            CommandDispatchOutcome.Pending(BrowserCommandKind.ClearCacheAndReload),
+            startedOutcome,
+        )
+        assertEquals(emptyList<CommandDispatchOutcome>(), completedOutcomes)
+
+        actions.completeCache(completed = true)
+
+        assertEquals(
+            listOf(CommandDispatchOutcome.Succeeded(CommandResult.CacheClearedAndReloaded)),
+            completedOutcomes,
+        )
     }
 
     @Test
@@ -157,8 +181,13 @@ class CommandDispatcherTest {
 
     private class RecordingActions(private val succeeds: Boolean = true) : CommandActions {
         val events = mutableListOf<String>()
+        private var cacheCompletion: ((Boolean) -> Unit)? = null
         private var cookieCompletion: ((Boolean) -> Unit)? = null
-        override fun clearCacheAndReload() = record("cache")
+        override fun clearCacheAndReload(onComplete: (Boolean) -> Unit): Boolean {
+            events += "cache"
+            if (succeeds) cacheCompletion = onComplete
+            return succeeds
+        }
         override fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean {
             events += "cookies"
             if (succeeds) cookieCompletion = onComplete
@@ -178,6 +207,10 @@ class CommandDispatcherTest {
         fun completeCookies(completed: Boolean) {
             checkNotNull(cookieCompletion).invoke(completed)
             cookieCompletion = null
+        }
+        fun completeCache(completed: Boolean) {
+            checkNotNull(cacheCompletion).invoke(completed)
+            cacheCompletion = null
         }
         private fun record(event: String): Boolean {
             events += event

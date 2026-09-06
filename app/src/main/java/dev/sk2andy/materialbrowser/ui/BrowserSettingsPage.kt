@@ -20,6 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
+import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettingsStrings
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 
 internal object BrowserSettingsTestTags {
@@ -51,7 +53,6 @@ internal fun BrowserSettingsPage(
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
 ) {
-    var translationProviderMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
@@ -101,44 +102,27 @@ internal fun BrowserSettingsPage(
             onCheckedChange = onVideoAutoplayBlockedChanged,
         )
         Spacer(Modifier.height(8.dp))
-        Box {
-            SettingsChoice(
+        TranslationProviderSettings(
+            provider = pageTranslationProvider,
+            strings = TranslationProviderSettingsStrings(
                 title = stringResource(R.string.settings_translation_provider),
-                value = pageTranslationProvider.displayName,
-                expanded = translationProviderMenuExpanded,
-                onClick = { translationProviderMenuExpanded = true },
-                modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
-            )
-            SettingsDropdown(
-                expanded = translationProviderMenuExpanded,
-                onDismissRequest = { translationProviderMenuExpanded = false },
-            ) {
-                PageTranslationProvider.entries.forEach { provider ->
-                    SettingsDropdownItem(
-                        label = provider.displayName,
-                        selected = provider == pageTranslationProvider,
-                        onClick = {
-                            translationProviderMenuExpanded = false
-                            onPageTranslationProviderChanged(provider)
-                        },
-                    )
-                }
-            }
-        }
-        Text(
-            stringResource(
-                when (pageTranslationProvider) {
-                    PageTranslationProvider.Google ->
-                        R.string.settings_translation_provider_google_summary
-                    PageTranslationProvider.Yandex ->
-                        R.string.settings_translation_provider_summary
-                    PageTranslationProvider.Kagi ->
-                        R.string.settings_translation_provider_kagi_summary
-                },
+                providerNames = PageTranslationProvider.entries.associateWith { it.displayName },
+                providerSummaries = mapOf(
+                    PageTranslationProvider.Google to stringResource(
+                        R.string.settings_translation_provider_google_summary,
+                    ),
+                    PageTranslationProvider.Yandex to stringResource(
+                        R.string.settings_translation_provider_summary,
+                    ),
+                    PageTranslationProvider.Kagi to stringResource(
+                        R.string.settings_translation_provider_kagi_summary,
+                    ),
+                ),
             ),
-            modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+            enabled = true,
+            onProviderChanged = onPageTranslationProviderChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
         )
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(

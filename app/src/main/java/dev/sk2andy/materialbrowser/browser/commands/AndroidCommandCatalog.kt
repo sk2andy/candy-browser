@@ -41,7 +41,7 @@ class AndroidCommandCatalog(private val context: Context) {
                     R.string.command_delete_cookies_reload_effect_isolated
                 CommandCookieScope.PrivateProfile ->
                     R.string.command_delete_cookies_reload_effect_private
-                CommandCookieScope.AllWebViews ->
+                CommandCookieScope.AllBrowserProfiles ->
                     R.string.command_delete_cookies_reload_effect_all
             },
         )

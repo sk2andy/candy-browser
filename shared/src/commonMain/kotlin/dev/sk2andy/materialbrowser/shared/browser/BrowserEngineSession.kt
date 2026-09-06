@@ -1,5 +1,11 @@
 package dev.sk2andy.materialbrowser.shared.browser
 
+import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.SearchSettings
+import dev.sk2andy.materialbrowser.browser.SearchSettingsRules
+import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDefinition
+import dev.sk2andy.materialbrowser.sync.SyncProfile
+
 interface BrowserEngineSessionPort {
     val tabId: String
 
@@ -61,12 +67,16 @@ data class BrowserEngineEvent(
     val canGoBack: Boolean,
     val canGoForward: Boolean,
     val failureDescription: String?,
+    val isLoading: Boolean? = null,
 )
 
 class BrowserSessionController(
     private val tabsController: BrowserTabsController,
 ) {
     private val sessions = mutableMapOf<String, BrowserEngineSessionPort>()
+
+    var searchSettings: SearchSettings = SearchSettings()
+        private set
 
     constructor() : this(BrowserTabsController())
 
@@ -103,6 +113,50 @@ class BrowserSessionController(
     fun selectAdjacentTab(target: BrowserTabSwitchTarget): BrowserTabsState =
         tabsController.selectAdjacentTab(target)
 
+    fun createProfile(
+        profileId: String,
+        emoji: String,
+        isolationEnabled: Boolean = false,
+        isolationSupported: Boolean = true,
+    ): BrowserTabsState = tabsController.createProfile(
+        profileId = profileId,
+        emoji = emoji,
+        isolationEnabled = isolationEnabled,
+        isolationSupported = isolationSupported,
+    )
+
+    fun updateProfileEmoji(profileId: String, emoji: String): BrowserTabsState =
+        tabsController.updateProfileEmoji(profileId = profileId, emoji = emoji)
+
+    fun updateProfileIsolation(
+        profileId: String,
+        enabled: Boolean,
+        isolationSupported: Boolean = true,
+    ): BrowserTabsState = tabsController.updateProfileIsolation(
+        profileId = profileId,
+        enabled = enabled,
+        isolationSupported = isolationSupported,
+    )
+
+    fun selectProfile(profileId: String): BrowserTabsState = tabsController.selectProfile(profileId)
+
+    fun assignSyncCandyId(
+        tabId: String,
+        candyId: String,
+    ): BrowserTabsState = tabsController.assignSyncCandyId(tabId, candyId)
+
+    fun reconcileSyncProfiles(
+        syncedProfiles: List<SyncProfile>,
+        currentDeviceId: String?,
+        localProfileId: String?,
+        icons: List<SyncDeviceIconDefinition>,
+    ): BrowserTabsState = tabsController.reconcileSyncProfiles(
+        syncedProfiles = syncedProfiles,
+        currentDeviceId = currentDeviceId,
+        localProfileId = localProfileId,
+        icons = icons,
+    )
+
     fun dispatchTabSwitchGesture(
         dragX: Double,
         dragY: Double,
@@ -110,14 +164,14 @@ class BrowserSessionController(
         viewportWidth: Double,
         isAddressEditing: Boolean,
     ): BrowserTabsState {
-        val selectedIndex = state.tabs.indexOfFirst { it.id == state.selectedTabId }
+        val selectedIndex = state.activeTabs.indexOfFirst { it.id == state.selectedTabId }
         val target = BrowserTabSwitchGestureRules.target(
             dragX = dragX,
             dragY = dragY,
             velocityX = velocityX,
             viewportWidth = viewportWidth,
             hasPreviousTab = selectedIndex > 0,
-            hasNextTab = selectedIndex in 0 until state.tabs.lastIndex,
+            hasNextTab = selectedIndex in 0 until state.activeTabs.lastIndex,
             isAddressEditing = isAddressEditing,
         )
         return tabsController.selectAdjacentTab(target)
@@ -135,8 +189,21 @@ class BrowserSessionController(
         return true
     }
 
+    fun updateSearchSettings(
+        searchEngine: SearchEngine,
+        searxngInstanceUrl: String,
+    ): SearchSettings {
+        searchSettings = SearchSettingsRules.sanitize(
+            SearchSettings(
+                searchEngine = searchEngine,
+                searxngInstanceUrl = searxngInstanceUrl,
+            ),
+        )
+        return searchSettings
+    }
+
     fun navigateSelected(input: String): AddressResolution {
-        val resolution = BrowserUrlRules.resolve(input)
+        val resolution = BrowserUrlRules.resolve(input, searchSettings)
         val address = resolution.url?.value ?: return resolution
         val selected = state.tabs.first { it.id == state.selectedTabId }
         if (sessions[selected.id] == null) return resolution
@@ -212,6 +279,12 @@ class BrowserSessionController(
         attachedSessions.forEach { session ->
             session.execute(BrowserEngineCommands.close())
         }
+    }
+
+    fun detachSession(tabId: String): Boolean {
+        if (sessions[tabId] == null) return false
+        closeSession(tabId)
+        return true
     }
 
     private fun closeSession(tabId: String) {

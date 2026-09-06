@@ -96,7 +96,7 @@ internal fun BrowserTransientOverlays(
                                     R.string.command_cookie_confirm_isolated
                                 CommandCookieScope.PrivateProfile ->
                                     R.string.command_cookie_confirm_private
-                                CommandCookieScope.AllWebViews ->
+                                CommandCookieScope.AllBrowserProfiles ->
                                     R.string.command_cookie_confirm_all
                             },
                         )
@@ -144,14 +144,14 @@ internal fun BrowserTransientOverlays(
             armed = controller.contentActions.isLinkPeekArmed,
             committing = controller.contentActions.isLinkPeekCommitting,
             newTabTargetBounds = addressNewTabButtonBounds,
-            createPreviewWebView = { onProgressChanged, onCommittedUrlChanged ->
+            createPreviewView = { onProgressChanged, onCommittedUrlChanged ->
                 controller.createLinkPeekPreviewView(
                     url = requireNotNull(linkTarget?.linkUrl),
                     onProgressChanged = onProgressChanged,
                     onCommittedUrlChanged = onCommittedUrlChanged,
                 )
             },
-            releasePreviewWebView = controller::releaseLinkPeekPreviewView,
+            releasePreviewView = controller::releaseLinkPeekPreviewView,
             onCommitRequested = controller.contentActions::startLinkPeekCommit,
             onOpen = {
                 rootView.performConfirmHaptic()

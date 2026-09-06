@@ -31,7 +31,7 @@ class AppDataImportConfirmationDialogInstrumentedTest {
         composeRule.setContent {
             MaterialTheme {
                 AppDataImportConfirmationDialog(
-                    pending = pending(AppDataArchiveCompatibility.WebViewMismatch),
+                    pending = pending(AppDataArchiveCompatibility.BrowserEngineMismatch),
                     onDismiss = {},
                     onConfirm = confirmCalls::incrementAndGet,
                 )

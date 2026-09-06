@@ -72,14 +72,22 @@ class BrowserFeatureMenuRulesTest {
     }
 
     @Test
-    fun `toggle exposes checked state while command does not`() {
+    fun `toggle and selectable toolbar commands expose checked state`() {
         val items = BrowserFeatureMenuRules.items(
-            state = BrowserFeatureMenuState(isDesktopView = true),
+            state = BrowserFeatureMenuState(
+                isDesktopView = true,
+                isFavorite = true,
+                isPinned = true,
+            ),
         )
 
         val desktop = items.single { it.action == BrowserFeatureMenuAction.ToggleDesktopView }
+        val favorite = items.single { it.action == BrowserFeatureMenuAction.ToggleFavorite }
+        val pinned = items.single { it.action == BrowserFeatureMenuAction.TogglePinned }
         val share = items.single { it.action == BrowserFeatureMenuAction.Share }
         assertTrue(desktop.checked == true)
+        assertTrue(favorite.checked == true)
+        assertTrue(pinned.checked == true)
         assertNull(share.checked)
     }
 

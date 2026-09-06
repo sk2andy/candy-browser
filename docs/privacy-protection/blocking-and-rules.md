@@ -72,17 +72,35 @@ rules, protection settings, private rules, or site pause change. A policy revisi
 before a dependent navigation or reload continues.
 
 Candy allow rules are authoritative, so Gecko's own tracking-protection classifier is disabled for
-these sessions. Gecko Safe Browsing and first-party cookie isolation remain enabled. Block and allow
-decisions are returned to native code in bounded batches for the existing hit counts and Privacy
-X-Ray pipeline. The built-in host is hidden from the user extension manager and is explicitly enabled
-in private browsing; ordinary installed Firefox extensions retain their separate permission policy.
+these sessions. Gecko Safe Browsing remains enabled. The global third-party-cookie switch changes
+the process runtime between `ACCEPT_FIRST_PARTY` and `ACCEPT_ALL` for normal and private sessions.
+The host also observes only the recognized SSO and CAPTCHA request hosts, including requests that
+arrive before a just-published policy update; native blocking state, HTTPS host/path, current-page,
+policy-revision direction, and public-suffix validation drives the existing consent flow.
+GeckoView 140 has no site-scoped override for hard `ACCEPT_FIRST_PARTY` rejection. After consent,
+Candy therefore switches the shared runtime to `ACCEPT_ALL` only while the matching page is the
+selected session. Normal and private modes remain separate. Candy restores `ACCEPT_FIRST_PARTY`
+before cross-host main-frame navigation and on deactivation, revocation, or close. Inactive
+same-mode sibling sessions share the runtime. Candy marks them inactive through Gecko's session
+lifecycle during that bounded compatibility window, though GeckoView does not specify that as a
+complete network suspension.
+Block and allow decisions are returned to native code in bounded batches for the existing hit counts
+and Privacy X-Ray pipeline. The built-in host is hidden from the user extension manager and is
+explicitly enabled in private browsing; ordinary installed Firefox extensions retain their separate
+permission policy.
 
 The first external load is fail-closed until the extension assets, private permission, policy, and
 session binding are all acknowledged. Initialization, policy, and bootstrap binding each have a
 15-second bound. A timeout, asset failure, or post-initialization native-port disconnect emits a
 failed navigation with a Candy Privacy error instead of loading without protection. A restart caused
 by initially applying the private permission may reconnect within the same bounded initialization
-window.
+window. Session binding uses two acknowledgements: native first authenticates the exact extension,
+session and token generation and returns a primitive response; only after the extension page receives
+that response does its background port confirm the binding. Candy posts the real page navigation only
+after this confirmation. Navigating synchronously from the message delegate can tear down Gecko's
+extension-page actor before the native response is delivered. Policy revisions may overtake an
+in-flight bootstrap, but an authenticated older revision can only bind the same live generation; the
+external-load gate still waits for both that session binding and the latest policy acknowledgement.
 
 The Gecko host deliberately excludes generic, unscoped cosmetic selectors: only host-scoped rules
 run in page content, and sensitive-host exclusions plus upstream exceptions remain authoritative.

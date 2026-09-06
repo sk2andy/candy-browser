@@ -12,7 +12,7 @@ import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
-import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
+import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -508,18 +508,6 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
-    fun pendingWebViewProfileDeletionsRoundTrip() {
-        val store = BrowserSessionStore(context)
-
-        store.savePendingWebViewProfileDeletions(setOf("profile-a", "profile-b"))
-
-        assertEquals(
-            setOf("profile-a", "profile-b"),
-            store.loadPendingWebViewProfileDeletions(),
-        )
-    }
-
-    @Test
     fun incognitoTabsAndSelectionAreNeverRestored() {
         val store = BrowserSessionStore(context)
         store.saveTabs(
@@ -566,16 +554,16 @@ class BrowserSessionStoreInstrumentedTest {
     @Test
     fun residentTabLimitDefaultsRoundTripsAndIsClamped() {
         val store = BrowserSessionStore(context)
-        assertEquals(TabWebViewResidencyRules.DEFAULT_LIMIT, store.loadResidentTabLimit())
+        assertEquals(BrowserSessionResidencyRules.DEFAULT_LIMIT, store.loadResidentTabLimit())
 
         store.saveResidentTabLimit(15)
         assertEquals(15, store.loadResidentTabLimit())
 
         store.saveResidentTabLimit(Int.MAX_VALUE)
-        assertEquals(TabWebViewResidencyRules.MAX_LIMIT, store.loadResidentTabLimit())
+        assertEquals(BrowserSessionResidencyRules.MAX_LIMIT, store.loadResidentTabLimit())
 
         preferences.edit().putString("resident_tab_limit", "invalid").commit()
-        assertEquals(TabWebViewResidencyRules.DEFAULT_LIMIT, store.loadResidentTabLimit())
+        assertEquals(BrowserSessionResidencyRules.DEFAULT_LIMIT, store.loadResidentTabLimit())
     }
 
     @Test

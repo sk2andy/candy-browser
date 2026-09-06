@@ -104,7 +104,9 @@ class AndroidSyncSecurityInstrumentedTest {
         assertEquals(cache, cacheStore.load())
         assertFalse(File(context.noBackupFilesDir, "candy_sync_cache_v1").readText().contains("epoch:1"))
 
-        val catalog = context.assets.open("candy_sync_device_icons_v1.json").use(SyncDeviceIconCatalog::decode)
+        val catalog = context.assets.open("candy_sync_device_icons_v1.json").bufferedReader().use { reader ->
+            SyncDeviceIconCatalog.decode(reader.readText())
+        }
         assertEquals(54, catalog.icons.size)
         assertTrue(catalog.contains("phone"))
         assertTrue(catalog.contains("computer"))

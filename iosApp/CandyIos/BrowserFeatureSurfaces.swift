@@ -1,5 +1,4 @@
 import SwiftUI
-import Translation
 import UIKit
 
 struct BrowserSharePayload: Identifiable {
@@ -50,69 +49,6 @@ struct BrowserFindBar: View {
         .modifier(CandyBrowserChrome())
         .padding(.horizontal, 12)
         .onAppear { isFocused = true }
-    }
-}
-
-struct BrowserReaderSurface: View {
-    let document: BrowserPageDocument
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(document.title)
-                        .font(.largeTitle.bold())
-                    if !document.address.isEmpty {
-                        Text(document.address)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Text(document.text)
-                        .font(.system(.body, design: .serif))
-                        .lineSpacing(6)
-                        .textSelection(.enabled)
-                }
-                .frame(maxWidth: 720, alignment: .leading)
-                .padding(24)
-            }
-            .navigationTitle("Lesemodus")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fertig") { dismiss() }
-                }
-            }
-        }
-    }
-}
-
-struct BrowserTranslationSurface: View {
-    let document: BrowserPageDocument
-    @Environment(\.dismiss) private var dismiss
-    @State private var presentsTranslation = false
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                Text(document.text)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(24)
-                    .textSelection(.enabled)
-            }
-            .navigationTitle("Übersetzen")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Fertig") { dismiss() }
-                }
-            }
-        }
-        .translationPresentation(
-            isPresented: $presentsTranslation,
-            text: document.text
-        )
-        .onAppear { presentsTranslation = true }
     }
 }
 

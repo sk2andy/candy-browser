@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroRules
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -154,6 +156,75 @@ class TabOverviewHeroRulesTest {
             ),
             0f,
         )
+    }
+
+    @Test
+    fun `hero target reverses entry progress during exit`() {
+        assertEquals(
+            0.4f,
+            TabOverviewHeroRules.targetFraction(
+                entryProgress = 0.4f,
+                exitProgress = 0f,
+                isExiting = false,
+            ),
+            0f,
+        )
+        assertEquals(
+            0.75f,
+            TabOverviewHeroRules.targetFraction(
+                entryProgress = 1f,
+                exitProgress = 0.25f,
+                isExiting = true,
+            ),
+            0f,
+        )
+        assertEquals(
+            0f,
+            TabOverviewHeroRules.targetFraction(
+                entryProgress = 1f,
+                exitProgress = 2f,
+                isExiting = true,
+            ),
+            0f,
+        )
+    }
+
+    @Test
+    fun `compact chrome follows entry and clears before exit hero`() {
+        assertEquals(
+            0f,
+            TabOverviewHeroRules.chromeAlpha(
+                entryProgress = 0.62f,
+                exitProgress = 0f,
+                isExiting = false,
+            ),
+            0f,
+        )
+        assertEquals(
+            1f,
+            TabOverviewHeroRules.chromeAlpha(
+                entryProgress = 1f,
+                exitProgress = 0f,
+                isExiting = false,
+            ),
+            0f,
+        )
+        assertEquals(
+            0f,
+            TabOverviewHeroRules.chromeAlpha(
+                entryProgress = 1f,
+                exitProgress = 0.25f,
+                isExiting = true,
+            ),
+            0f,
+        )
+    }
+
+    @Test
+    fun `initial tab title enters at android hero threshold`() {
+        assertEquals(0f, TabOverviewHeroRules.titleAlpha(0.72f), 0f)
+        assertEquals(0.5f, TabOverviewHeroRules.titleAlpha(0.86f), 0.001f)
+        assertEquals(1f, TabOverviewHeroRules.titleAlpha(1f), 0f)
     }
 
     @Test

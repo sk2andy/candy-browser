@@ -6,8 +6,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptOpenTabRequest
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
+import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
@@ -41,8 +44,31 @@ class CandyToppingHostInstrumentedTest {
 
         lateinit var runtime: GeckoRuntimeHandle
         val ready = CountDownLatch(1)
+        val menuPublished = CountDownLatch(1)
+        val openedTab = CountDownLatch(1)
+        val menuCommand = AtomicReference<UserScriptMenuCommand?>()
+        val openTabRequest = AtomicReference<UserScriptOpenTabRequest?>()
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             runtime = GeckoRuntimeOwner.getOrCreate(context)
+            runtime.toppings.clearValues(SCRIPT_ID)
+            runtime.toppings.setInteractionDelegate(
+                object : GeckoToppingInteractionDelegate {
+                    override fun onMenuCommandsChanged(
+                        tabId: String,
+                        commands: List<UserScriptMenuCommand>,
+                    ) {
+                        commands.singleOrNull()?.let { command ->
+                            menuCommand.set(command)
+                            menuPublished.countDown()
+                        }
+                    }
+
+                    override fun onOpenTab(request: UserScriptOpenTabRequest) {
+                        openTabRequest.set(request)
+                        openedTab.countDown()
+                    }
+                },
+            )
             runtime.toppings.reconcile(listOf(topping(server.url)))
             runtime.toppings.setStateListener { state ->
                 if (state != GeckoToppingHostState.Initializing) ready.countDown()
@@ -53,6 +79,7 @@ class CandyToppingHostInstrumentedTest {
         assertEquals(GeckoToppingHostState.Ready, runtime.toppings.state)
 
         val regularInjected = CountDownLatch(1)
+        val menuInvoked = CountDownLatch(1)
         val excludedStopped = CountDownLatch(1)
         val privateStopped = CountDownLatch(1)
         val excludedTitle = AtomicReference<String?>()
@@ -68,6 +95,7 @@ class CandyToppingHostInstrumentedTest {
             regularView = regularSession.createView(context)
             regularSession.setStateListener { state ->
                 if (state.title == INJECTED_TITLE) regularInjected.countDown()
+                if (state.title == MENU_INVOKED_TITLE) menuInvoked.countDown()
             }
             excludedSession = runtime.createSession(profileId = "excluded", isPrivate = false)
             excludedView = excludedSession.createView(context)
@@ -81,6 +109,10 @@ class CandyToppingHostInstrumentedTest {
                 privateTitle.set(state.title)
                 if (state.lastNavigationSucceeded == true) privateStopped.countDown()
             }
+            regularSession.setActive(true)
+            excludedSession.setActive(false)
+            privateSession.setActive(false)
+            runtime.toppings.setActiveTab(CANDY_TAB_ID)
             assertTrue(regularSession.loadUrl(server.url))
             assertTrue(excludedSession.loadUrl("${server.url}excluded/page"))
             assertTrue(privateSession.loadUrl(server.url))
@@ -95,9 +127,51 @@ class CandyToppingHostInstrumentedTest {
             assertTrue("Private fixture did not finish", privateStopped.await(20, TimeUnit.SECONDS))
             assertFalse(excludedTitle.get() == INJECTED_TITLE)
             assertFalse(privateTitle.get() == INJECTED_TITLE)
+            assertEquals(
+                "\"$INJECTED_TITLE\"",
+                UserScriptValueStore(context).snapshot(SCRIPT_ID)[VALUE_KEY],
+            )
+            assertTrue(
+                "Active Gecko tab did not publish its Topping menu command",
+                menuPublished.await(20, TimeUnit.SECONDS),
+            )
+            assertEquals(
+                UserScriptMenuCommand(
+                    tabId = CANDY_TAB_ID,
+                    scriptId = SCRIPT_ID,
+                    scriptName = SCRIPT_NAME,
+                    commandId = "1",
+                    caption = MENU_CAPTION,
+                ),
+                menuCommand.get(),
+            )
+            assertTrue(
+                "GM_openInTab did not reach the active Candy tab delegate",
+                openedTab.await(20, TimeUnit.SECONDS),
+            )
+            assertEquals(
+                UserScriptOpenTabRequest(
+                    tabId = CANDY_TAB_ID,
+                    scriptId = SCRIPT_ID,
+                    url = "${server.url}opened",
+                    active = false,
+                ),
+                openTabRequest.get(),
+            )
+
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                runtime.toppings.invokeMenuCommand(checkNotNull(menuCommand.get()))
+            }
+            assertTrue(
+                "Topping menu callback did not execute in its Gecko user-script world",
+                menuInvoked.await(20, TimeUnit.SECONDS),
+            )
 
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                runtime.toppings.setActiveTab(null)
+                runtime.toppings.setInteractionDelegate(GeckoToppingInteractionDelegate.None)
+                runtime.toppings.clearValues(SCRIPT_ID)
                 regularSession.releaseView(regularView)
                 excludedSession.releaseView(excludedView)
                 privateSession.releaseView(privateView)
@@ -112,16 +186,43 @@ class CandyToppingHostInstrumentedTest {
     private fun topping(url: String, title: String = INJECTED_TITLE): UserScript {
         val source = """
             // ==UserScript==
-            // @name Gecko host fixture
+            // @name $SCRIPT_NAME
             // @include $url*
             // @exclude ${url}excluded/*
             // @run-at document-start
-            // @grant none
+            // @grant GM_getValue
+            // @grant GM_setValue
+            // @grant GM_registerMenuCommand
+            // @grant GM_openInTab
+            // @grant GM_getResourceText
+            // @require https://cdn.jsdelivr.net/npm/candy-fixture@1/require.js
+            // @resource fixture https://cdn.jsdelivr.net/npm/candy-fixture@1/resource.txt
             // ==/UserScript==
-            document.title = "$title";
+            const dependencyReady = globalThis.candyRequiredFixture === "ready";
+            const resourceReady = GM_getResourceText("fixture") === "$RESOURCE_TEXT";
+            const injectedTitle = dependencyReady && resourceReady ? "$title" : "$DEPENDENCY_FAILED_TITLE";
+            GM.setValue("$VALUE_KEY", injectedTitle).then(() => {
+              document.title = GM_getValue("$VALUE_KEY", "missing");
+              GM_registerMenuCommand("$MENU_CAPTION", () => {
+                document.title = "$MENU_INVOKED_TITLE";
+              });
+              GM_openInTab("${url}opened", { active: false });
+            });
         """.trimIndent()
-        return (UserScriptParser.parse(id = "gecko-host-fixture", source = source)
+        val parsed = (UserScriptParser.parse(id = SCRIPT_ID, source = source)
             as UserScriptParseResult.Accepted).script
+        return parsed.copy(
+            requires = parsed.requires.map { dependency ->
+                dependency.copy(source = "globalThis.candyRequiredFixture = 'ready';")
+            },
+            resources = parsed.resources.map { resource ->
+                resource.copy(
+                    encodedContent = java.util.Base64.getEncoder()
+                        .encodeToString(RESOURCE_TEXT.toByteArray()),
+                    mimeType = "text/plain",
+                )
+            },
+        )
     }
 
     private class FixtureServer : AutoCloseable {
@@ -162,7 +263,15 @@ class CandyToppingHostInstrumentedTest {
     }
 
     private companion object {
+        const val CANDY_TAB_ID = "candy-fixture-tab"
         const val INJECTED_TITLE = "Candy Topping Injected"
+        const val MENU_CAPTION = "Candy fixture menu"
+        const val MENU_INVOKED_TITLE = "Candy Topping Menu Invoked"
+        const val DEPENDENCY_FAILED_TITLE = "Candy Topping Dependency Failed"
+        const val RESOURCE_TEXT = "Candy resource"
+        const val SCRIPT_ID = "gecko-host-fixture"
+        const val SCRIPT_NAME = "Gecko host fixture"
+        const val VALUE_KEY = "bridge-probe"
     }
 }
 

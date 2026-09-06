@@ -90,4 +90,35 @@ class HttpAuthPromptRulesTest {
 
         assertEquals("localhost", details?.host)
     }
+
+    @Test
+    fun `proxy challenge is sanitized independently from page origin`() {
+        val details = HttpAuthPromptRules.proxyChallengeDetails(
+            host = " proxy.example.com ",
+            realm = " Corporate Proxy ",
+            proxyUrl = "https://proxy.example.com:8443",
+        )
+
+        assertEquals("proxy.example.com", details?.host)
+        assertEquals("Corporate Proxy", details?.realm)
+        assertTrue(details?.isPageSecure == true)
+    }
+
+    @Test
+    fun `proxy challenge rejects unsafe host and strips unsafe realm`() {
+        assertNull(
+            HttpAuthPromptRules.proxyChallengeDetails(
+                host = "proxy.example.com\nattacker.example",
+                realm = "Proxy",
+                proxyUrl = "http://proxy.example.com",
+            ),
+        )
+        assertNull(
+            HttpAuthPromptRules.proxyChallengeDetails(
+                host = "proxy.example.com",
+                realm = "trusted\u202Espoofed",
+                proxyUrl = "http://proxy.example.com",
+            )?.realm,
+        )
+    }
 }

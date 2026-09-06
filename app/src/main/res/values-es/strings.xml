@@ -107,7 +107,7 @@
     <string name="action_move_tab_to_profile">Mover al perfil</string>
     <string name="settings_profile_isolation_title">Almacenamiento propio · Modo aislado</string>
     <string name="settings_profile_isolation_subtitle">Separa las cookies, los inicios de sesión, los datos de sitios, la caché y los service workers de este perfil</string>
-    <string name="settings_profile_isolation_unsupported">No disponible: el proveedor WebView instalado no admite almacenamiento separado por perfil</string>
+    <string name="settings_profile_isolation_unsupported">No disponible: Gecko no pudo inicializar el almacenamiento separado del perfil</string>
     <string name="profile_isolation_confirm_title">¿Cambiar el almacenamiento del perfil?</string>
     <string name="profile_isolation_enable_message">Las pestañas de este perfil se recargarán con almacenamiento separado. Los inicios de sesión compartidos no se transferirán.</string>
     <string name="profile_isolation_disable_message">Las pestañas de este perfil se recargarán con almacenamiento compartido. Los inicios de sesión del almacenamiento aislado dejarán de estar activos.</string>
@@ -185,12 +185,12 @@
 
     <!-- Comandos de dirección -->
     <string name="command_clear_cache_reload_name">Borrar caché y volver a cargar</string>
-    <string name="command_clear_cache_reload_effect">Borra la caché WebView compartida de Candy y vuelve a cargar esta pestaña</string>
+    <string name="command_clear_cache_reload_effect">Borra la caché compartida del navegador Candy y vuelve a cargar esta pestaña</string>
     <string name="command_delete_cookies_reload_name">Eliminar cookies y volver a cargar</string>
     <string name="command_delete_cookies_reload_effect_regular">Elimina las cookies compartidas por todos los perfiles Candy normales y vuelve a cargar esta pestaña</string>
     <string name="command_delete_cookies_reload_effect_isolated">Elimina solo las cookies de este perfil Candy aislado y vuelve a cargar esta pestaña</string>
     <string name="command_delete_cookies_reload_effect_private">Elimina las cookies compartidas por todas las pestañas privadas y vuelve a cargar esta pestaña</string>
-    <string name="command_delete_cookies_reload_effect_all">Elimina las cookies compartidas por todas las WebViews Candy y vuelve a cargar esta pestaña</string>
+    <string name="command_delete_cookies_reload_effect_all">Elimina las cookies de todos los perfiles del navegador Candy y vuelve a cargar esta pestaña</string>
     <string name="command_reload_effect">Vuelve a cargar la pestaña actual</string>
     <string name="command_stop_loading_effect">Detiene la carga de la pestaña actual</string>
     <string name="command_pin_tab_effect">Mantiene esta pestaña abierta y la coloca al principio</string>
@@ -230,7 +230,7 @@
     <string name="command_cookie_confirm_regular">Todos los perfiles Candy normales comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
     <string name="command_cookie_confirm_isolated">Las pestañas de este perfil Candy aislado comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
     <string name="command_cookie_confirm_private">Todas las pestañas privadas comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
-    <string name="command_cookie_confirm_all">Todas las WebViews Candy comparten estas cookies y podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
+    <string name="command_cookie_confirm_all">Todos los perfiles del navegador Candy podrían cerrar sesión. Después se volverá a cargar esta pestaña.</string>
     <string name="command_duplicates_confirm_title">¿Cerrar pestañas duplicadas?</string>
     <plurals name="command_duplicates_confirm_message">
         <item quantity="one">¿Cerrar %1$d pestaña duplicada? Las pestañas fijadas y la actual permanecerán abiertas.</item>
@@ -287,7 +287,7 @@
     <string name="data_archive_export_action">Elegir ubicación</string>
     <string name="data_archive_import_confirm_title">¿Reemplazar todos los datos de Candy?</string>
     <string name="data_archive_import_confirm_message">Importa solo una copia creada por ti o de confianza. Puede contener userscripts activados que ejecutan código en sitios web. Esta copia se creó con Candy %1$s y contiene %2$d archivos. La importación reemplaza ajustes, pestañas, avisos, reglas, cookies y almacenamiento web. Candy se reiniciará después.</string>
-    <string name="data_archive_import_version_warning">Advertencia: esta copia se creó con otra versión de la aplicación, Android o WebView. Es posible que las sesiones o ajustes nuevos no se restauren correctamente.</string>
+    <string name="data_archive_import_version_warning">Advertencia: esta copia se creó con otra versión de la aplicación, Android o el motor del navegador. Es posible que las sesiones o ajustes nuevos no se restauren correctamente.</string>
     <string name="data_archive_import_action">Importar y reiniciar</string>
     <string name="data_archive_import_mismatch_action">Importar de todos modos</string>
     <string name="data_archive_preparing">Preparando datos…</string>
@@ -369,7 +369,7 @@
     <string name="scroll_bar_content_description">Barra de desplazamiento de la página</string>
     <string name="settings_video_autoplay_title">Impedir la reproducción automática de vídeos</string>
     <string name="settings_video_autoplay_subtitle">Los vídeos solo se inician cuando los reproduces.</string>
-    <string name="settings_video_autoplay_unsupported">Requiere una versión más reciente de Android WebView.</string>
+    <string name="settings_video_autoplay_unsupported">Requiere una versión más reciente del motor Gecko.</string>
     <string name="settings_default_browser">Navegador predeterminado</string>
     <string name="settings_default_browser_active">Candy Browser es tu navegador predeterminado</string>
     <string name="settings_make_default_browser">Establecer Candy Browser como navegador predeterminado</string>
@@ -441,12 +441,12 @@
     <string name="toast_printing_unavailable">La impresión no está disponible en este dispositivo</string>
     <string name="toast_qr_scan_failed">No se pudo escanear el código QR</string>
     <string name="toast_browsing_data_cleared">Datos de navegación borrados</string>
-    <string name="toast_incognito_unsupported">El modo incógnito no está disponible porque este proveedor WebView no puede aislar su almacenamiento</string>
+    <string name="toast_incognito_unsupported">El modo incógnito no está disponible porque Gecko no pudo aislar el almacenamiento del perfil</string>
     <string name="error_unsafe_tls_blocked">Conexión TLS no segura bloqueada</string>
     <string name="error_unsafe_site_blocked">Sitio web no seguro bloqueado</string>
     <string name="error_renderer_crashed">El renderizador web se detuvo inesperadamente</string>
     <string name="error_renderer_terminated">El sistema detuvo el renderizador web</string>
-    <string name="toast_webview_startup_failed">No se pudo iniciar el contenido web. Actualiza Android System WebView e inténtalo de nuevo.</string>
+    <string name="toast_webview_startup_failed">No se pudo iniciar el contenido web. Reinicia o actualiza Candy e inténtalo de nuevo.</string>
     <string name="toast_download_type_unsupported">Tipo de descarga no compatible</string>
     <string name="toast_download_started">Descarga iniciada: %1$s</string>
     <string name="toast_download_handed_off">Enviado a %1$s</string>
@@ -517,7 +517,7 @@
     <string name="capsule_dedicated_profile">Nuevo perfil dedicado</string>
     <string name="capsule_dedicated_profile_summary">Crea un espacio Candy separado. La separación de cookies e inicios de sesión requiere almacenamiento propio.</string>
     <string name="capsule_own_storage">Almacenamiento propio</string>
-    <string name="capsule_own_storage_summary">Usa aislamiento real de perfil WebView para cookies, sesiones y datos</string>
+    <string name="capsule_own_storage_summary">Usa un perfil Gecko separado para cookies, sesiones y datos</string>
     <string name="capsule_navigation_mode">Navegación de enlaces</string>
     <string name="capsule_navigation_same_origin">Mismo origen</string>
     <string name="capsule_navigation_same_origin_summary">Otros orígenes se abren en una pestaña Candy completa</string>
@@ -851,9 +851,12 @@
     <string name="captcha_compatibility_allow_for_profile">Permitir para el perfil</string>
     <string name="captcha_compatibility_deny">No permitir</string>
     <string name="http_auth_dialog_title">Iniciar sesión</string>
+    <string name="http_auth_proxy_dialog_title">Iniciar sesión en el proxy</string>
     <string name="http_auth_dialog_message">%1$s requiere un nombre de usuario y una contraseña.</string>
+    <string name="http_auth_proxy_dialog_message">El proxy %1$s requiere un nombre de usuario y una contraseña.</string>
     <string name="http_auth_dialog_realm">Dominio: %1$s</string>
     <string name="http_auth_dialog_insecure_warning">Esta página no usa HTTPS. Tus credenciales podrían quedar expuestas.</string>
+    <string name="http_auth_proxy_insecure_warning">Esta conexión proxy no está cifrada. Tus credenciales podrían quedar expuestas.</string>
     <string name="http_auth_username">Nombre de usuario</string>
     <string name="http_auth_password">Contraseña</string>
     <string name="http_auth_show_password">Mostrar contraseña</string>
@@ -880,6 +883,15 @@
     <string name="gecko_address_or_search">Dirección o búsqueda</string>
     <string name="gecko_stop_loading">Detener carga</string>
     <string name="gecko_reload">Volver a cargar</string>
+    <string name="web_prompt_title">Mensaje del sitio web</string>
+    <string name="web_prompt_ok">Aceptar</string>
+    <string name="web_prompt_leave_title">¿Salir de esta página?</string>
+    <string name="web_prompt_leave_message">Es posible que los cambios realizados no se guarden.</string>
+    <string name="web_prompt_leave">Salir</string>
+    <string name="web_prompt_stay">Permanecer</string>
+    <string name="web_prompt_repost_title">¿Volver a enviar el formulario?</string>
+    <string name="web_prompt_repost_message">Al volver a esta página se reenviará la información introducida.</string>
+    <string name="web_prompt_resend">Volver a enviar</string>
     <string name="action_allow">Permitir</string>
     <string name="action_deny">Denegar</string>
 </resources>

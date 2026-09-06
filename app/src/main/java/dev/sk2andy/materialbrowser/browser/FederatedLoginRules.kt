@@ -31,6 +31,8 @@ object FederatedLoginRules {
     private val versionTokenPattern = Regex("""\s+Version/\S+""", RegexOption.IGNORE_CASE)
     private val repeatedWhitespacePattern = Regex("""\s{2,}""")
 
+    internal val compatibilityRequestHosts = setOf(GOOGLE_ACCOUNTS_HOST)
+
     fun providerForSubresource(
         requestUrl: String,
         pageUrl: String,

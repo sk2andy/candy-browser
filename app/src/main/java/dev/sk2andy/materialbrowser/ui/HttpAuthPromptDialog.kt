@@ -40,10 +40,29 @@ internal fun HttpAuthPromptDialog(
     AlertDialog(
         onDismissRequest = onCancel,
         modifier = Modifier.testTag(HttpAuthPromptTestTags.Dialog),
-        title = { Text(stringResource(R.string.http_auth_dialog_title)) },
+        title = {
+            Text(
+                stringResource(
+                    if (prompt.isProxy) {
+                        R.string.http_auth_proxy_dialog_title
+                    } else {
+                        R.string.http_auth_dialog_title
+                    },
+                ),
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.http_auth_dialog_message, prompt.host))
+                Text(
+                    stringResource(
+                        if (prompt.isProxy) {
+                            R.string.http_auth_proxy_dialog_message
+                        } else {
+                            R.string.http_auth_dialog_message
+                        },
+                        prompt.host,
+                    ),
+                )
                 prompt.realm?.let { realm ->
                     Text(
                         stringResource(R.string.http_auth_dialog_realm, realm),
@@ -53,7 +72,13 @@ internal fun HttpAuthPromptDialog(
                 }
                 if (!prompt.isPageSecure) {
                     Text(
-                        stringResource(R.string.http_auth_dialog_insecure_warning),
+                        stringResource(
+                            if (prompt.isProxy) {
+                                R.string.http_auth_proxy_insecure_warning
+                            } else {
+                                R.string.http_auth_dialog_insecure_warning
+                            },
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )

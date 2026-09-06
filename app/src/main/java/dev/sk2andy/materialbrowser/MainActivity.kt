@@ -43,7 +43,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
-import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
+import dev.sk2andy.materialbrowser.browser.BrowserMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
@@ -85,7 +85,7 @@ import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
     private lateinit var browserController: BrowserController
-    private lateinit var webMediaSystemSession: WebMediaSystemSession
+    private lateinit var browserMediaSystemSession: BrowserMediaSystemSession
     private lateinit var castSessionController: CastSessionController
     private lateinit var releaseNotesStore: ReleaseNotesStore
     private lateinit var pictureInPictureController: MainActivityPictureInPictureController
@@ -224,11 +224,11 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             onFullImmersiveModeChanged = { applyBrowserSystemUi() },
-            onWebMediaStateChanged = {
+            onMediaStateChanged = {
                 if (!activityDestroyed) {
                     ensureMediaControllers()
-                    if (::webMediaSystemSession.isInitialized) {
-                        webMediaSystemSession.publish(browserController.systemWebMediaState)
+                    if (::browserMediaSystemSession.isInitialized) {
+                        browserMediaSystemSession.publish(browserController.systemMediaState)
                     }
                     if (::castSessionController.isInitialized) {
                         castSessionController.updateCandidate(browserController.castMediaCandidate)
@@ -236,11 +236,6 @@ class MainActivity : AppCompatActivity() {
                     updatePictureInPictureParams()
                 }
             },
-            onWebPictureInPictureRequested = ::onPictureInPictureRequested,
-            onWebPictureInPictureRequestTimedOut = ::cancelPictureInPictureTransition,
-            // Android production browsing is Gecko-only. Keep the legacy WebView runtime cold
-            // while the remaining migration-only classes are removed in focused slices.
-            deferWebViewRuntimeStartup = true,
         )
         pictureInPictureController = MainActivityPictureInPictureController(
             activity = this,
@@ -357,7 +352,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(
                     fullscreenVideoState,
-                    browserController.webMediaState,
+                    browserController.systemMediaState,
                     selectedTabId,
                     videoOnlyPresentation,
                 ) {
@@ -596,6 +591,12 @@ class MainActivity : AppCompatActivity() {
     override fun onUserLeaveHint() {
         if (!appDataTransferActive) {
             browserController.dismissExternalLinkPreview()
+            if (
+                ::pictureInPictureController.isInitialized &&
+                pictureInPictureController.requestPictureInPicture()
+            ) {
+                return
+            }
             prepareForPictureInPictureTransition()
         }
         super.onUserLeaveHint()
@@ -674,7 +675,7 @@ class MainActivity : AppCompatActivity() {
         if (::pictureInPictureController.isInitialized) pictureInPictureController.onDestroy()
         if (::castSessionController.isInitialized) castSessionController.release()
         if (::browserController.isInitialized) browserController.destroy()
-        if (::webMediaSystemSession.isInitialized) webMediaSystemSession.release()
+        if (::browserMediaSystemSession.isInitialized) browserMediaSystemSession.release()
         super.onDestroy()
     }
 
@@ -814,7 +815,7 @@ class MainActivity : AppCompatActivity() {
         packageName = packageName,
         appVersionName = BuildConfig.VERSION_NAME,
         appVersionCode = BuildConfig.VERSION_CODE.toLong(),
-        webViewVersion = currentWebViewIdentity(),
+        webViewVersion = currentBrowserEngineIdentity(),
         sdkInt = Build.VERSION.SDK_INT,
     )
 
@@ -1004,13 +1005,13 @@ class MainActivity : AppCompatActivity() {
             )
         }
         castSessionController.updateCandidate(browserController.castMediaCandidate)
-        if (!::webMediaSystemSession.isInitialized) {
-            webMediaSystemSession = WebMediaSystemSession(
+        if (!::browserMediaSystemSession.isInitialized) {
+            browserMediaSystemSession = BrowserMediaSystemSession(
                 context = this,
-                onPlay = browserController::playActiveWebMedia,
-                onPause = browserController::pauseActiveWebMedia,
-                onStop = browserController::stopActiveWebMedia,
-                onSeekTo = browserController::seekActiveWebMedia,
+                onPlay = browserController::playActiveMedia,
+                onPause = browserController::pauseActiveMedia,
+                onStop = browserController::stopActiveMedia,
+                onSeekTo = browserController::seekActiveMedia,
             )
         }
     }

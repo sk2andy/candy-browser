@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
@@ -34,16 +35,37 @@ class GeckoRuntimeOwnerTest {
         assertEquals(1, creationCount)
     }
 
+    @Test
+    fun `session factory forwards global third party cookie blocking`() {
+        val runtime = FakeRuntimeHandle()
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+
+        factory.setBlockThirdPartyCookies(false)
+
+        assertFalse(runtime.thirdPartyCookiesBlocked)
+    }
+
     private class FakeRuntimeHandle : GeckoRuntimeHandle {
         override val extensions = FakeExtensionRuntime()
         override val toppings = FakeToppingHostRuntime()
+        var thirdPartyCookiesBlocked = true
 
         override fun createSession(
             profileId: String,
+            isolationEnabled: Boolean,
             isPrivate: Boolean,
             privacyPolicy: GeckoPrivacyPolicy,
             privacyEventSink: GeckoPrivacyEventSink,
         ): GeckoBrowserSession = error("Not used")
+
+        override fun clearBrowsingData(
+            data: GeckoBrowsingData,
+            onComplete: (Boolean) -> Unit,
+        ) = onComplete(true)
+
+        override fun setBlockThirdPartyCookies(blocked: Boolean) {
+            thirdPartyCookiesBlocked = blocked
+        }
     }
 
     private class FakeToppingHostRuntime : GeckoToppingHostRuntime {

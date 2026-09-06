@@ -40,17 +40,6 @@ internal object FullscreenVideoRules {
         }
     }
 
-    fun keepsWebViewResumed(
-        sessionTabId: String?,
-        tabId: String,
-        isPrivate: Boolean,
-    ): Boolean = sessionTabId == tabId && !isPrivate
-
-    fun isPictureInPictureEligible(
-        sessionTabId: String?,
-        isPrivate: Boolean?,
-    ): Boolean = sessionTabId != null && isPrivate == false
-
     fun pictureInPictureSourceBounds(
         windowBounds: FullscreenVideoBounds,
         aspectWidth: Int,

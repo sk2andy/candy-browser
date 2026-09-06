@@ -3,7 +3,7 @@ candy-rules:1
 # Audit date: 2026-08-07
 # Ranking: https://tranco-list.eu/list/PYG5J/1000000
 # Methodology: docs/audits/top-300-blocking.md
-# Live evidence: 300 isolated Android WebView profiles plus targeted web.de/gmx.net/nytimes.com probes.
+# Live evidence: 300 isolated Android browser profiles plus targeted web.de/gmx.net/nytimes.com probes.
 # Upstream corroboration: EasyList/uAssets selectors, pinned source revisions in bundled assets.
 # Rule count: 49
 rule	css	origin	nytimes.com	I2ZpZGVzLWJhbm5lci1jb250YWluZXI	nytimes-fides-banner	*	Candy Cookies	1

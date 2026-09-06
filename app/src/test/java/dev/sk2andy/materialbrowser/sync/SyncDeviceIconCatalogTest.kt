@@ -13,7 +13,7 @@ class SyncDeviceIconCatalogTest {
             File(root, "sync/protocol/device-icons-v1.json"),
             File(root, "../sync/protocol/device-icons-v1.json"),
         ).first(File::isFile)
-        val catalog = catalogFile.inputStream().use(SyncDeviceIconCatalog::decode)
+        val catalog = SyncDeviceIconCatalog.decode(catalogFile.readText())
         assertEquals(54, catalog.icons.size)
         assertTrue(catalog.contains("phone"))
         assertTrue(catalog.contains("computer"))

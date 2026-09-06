@@ -22,7 +22,7 @@ class IosBrowserViewportState(
     initialViewport: UIView,
     initialSnapshot: BrowserViewportSnapshot,
 ) {
-    private val previews = mutableStateMapOf<String, UIImageView>()
+    private val previews = mutableStateMapOf<String, UIImage>()
     internal var viewport by mutableStateOf(initialViewport)
         private set
     internal var viewportVersion by mutableLongStateOf(0L)
@@ -46,12 +46,7 @@ class IosBrowserViewportState(
             previews.remove(tabId)
             return
         }
-        val preview = previews[tabId] ?: UIImageView().also { imageView ->
-            imageView.contentMode = UIViewContentMode.UIViewContentModeScaleAspectFill
-            imageView.clipsToBounds = true
-            previews[tabId] = imageView
-        }
-        preview.image = value
+        previews[tabId] = value
     }
 
     fun retainPreviews(tabIds: List<String>) {
@@ -59,7 +54,7 @@ class IosBrowserViewportState(
         previews.keys.toList().filterNot(retainedIds::contains).forEach(previews::remove)
     }
 
-    internal fun preview(tabId: String): UIImageView? = previews[tabId]
+    internal fun preview(tabId: String): UIImage? = previews[tabId]
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -67,33 +62,45 @@ class CandyComposeControllerFactory {
     fun create(
         state: IosBrowserViewportState,
         actionSink: BrowserViewportActionSink,
-    ): UIViewController = ComposeUIViewController {
-        CandyBrowserApp(
-            snapshot = state.snapshot,
-            actionSink = actionSink,
-            browserViewport = {
-                key(state.viewportVersion) {
-                    UIKitView(
-                        factory = { state.viewport },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            },
-            tabPreview = { tab, modifier ->
-                val preview = state.preview(tab.id)
-                if (preview == null) {
-                    CandyTabPreviewFallback(tab = tab, modifier = modifier)
-                } else {
-                    key(preview) {
+    ): UIViewController {
+        val composeController = ComposeUIViewController {
+            CandyBrowserApp(
+                snapshot = state.snapshot,
+                actionSink = actionSink,
+                chromeEffects = IosLiquidGlassChromeEffects,
+                showBrowserChrome = false,
+                browserViewport = {
+                    key(state.viewportVersion) {
                         UIKitView(
-                            factory = { preview },
-                            modifier = modifier,
-                            interactive = false,
-                            accessibilityEnabled = false,
+                            factory = { state.viewport },
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
-                }
-            },
-        )
+                },
+                tabPreview = { tab, modifier ->
+                    val preview = state.preview(tab.id)
+                    if (preview == null) {
+                        CandyTabPreviewFallback(tab = tab, modifier = modifier)
+                    } else {
+                        key(preview) {
+                            UIKitView(
+                                factory = {
+                                    UIImageView(image = preview).apply {
+                                        contentMode =
+                                            UIViewContentMode.UIViewContentModeScaleAspectFill
+                                        clipsToBounds = true
+                                    }
+                                },
+                                update = { imageView -> imageView.image = preview },
+                                modifier = modifier,
+                                interactive = false,
+                                accessibilityEnabled = false,
+                            )
+                        }
+                    }
+                },
+            )
+        }
+        return composeController
     }
 }

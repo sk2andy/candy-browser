@@ -55,4 +55,26 @@ class ReaderExtractionParserInstrumentedTest {
         assertEquals("Local story", document.title)
         assertEquals(listOf("https://example.com/more"), document.blocks.last().links.map { it.url })
     }
+
+    @Test
+    fun geckoRawJsonBecomesSanitizedDocument() {
+        val payload = JSONObject()
+            .put("title", "Gecko story")
+            .put("sourceUrl", "https://example.com/gecko")
+            .put("siteName", "Example")
+            .put(
+                "blocks",
+                org.json.JSONArray().put(
+                    JSONObject()
+                        .put("kind", "paragraph")
+                        .put("text", "Readable Gecko article text ".repeat(5)),
+                ),
+            )
+            .toString()
+
+        val result = ReaderExtractionParser.parseJson(payload)
+
+        assertTrue(result is ReaderExtractionResult.Success)
+        assertEquals("Gecko story", (result as ReaderExtractionResult.Success).document.title)
+    }
 }

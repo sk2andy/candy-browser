@@ -26,7 +26,6 @@ final class BrowserTabSnapshotStore {
         }
         navigationRevisions[tabId, default: 0] &+= 1
         latestRequestIds[tabId] = nil
-        images[tabId] = nil
     }
 
     func pageStateChanged(tabId: String, pageIdentity: String?) {
@@ -61,7 +60,8 @@ final class BrowserTabSnapshotStore {
         webView: WKWebView,
         sessionId: UUID,
         activeTabIds: Set<String>,
-        onUpdate: @escaping @MainActor () -> Void
+        onUpdate: @escaping @MainActor () -> Void,
+        onCompletion: @escaping @MainActor (Bool) -> Void = { _ in }
     ) {
         guard
             activeTabIds.contains(tabId),
@@ -69,6 +69,7 @@ final class BrowserTabSnapshotStore {
             webView.bounds.width > 0,
             webView.bounds.height > 0
         else {
+            onCompletion(false)
             return
         }
 
@@ -91,6 +92,7 @@ final class BrowserTabSnapshotStore {
         )
         webView.takeSnapshot(with: configuration) { [weak self] image, _ in
             guard let self, let image else {
+                onCompletion(false)
                 return
             }
             guard BrowserTabSnapshotAcceptanceRules.accepts(
@@ -101,10 +103,12 @@ final class BrowserTabSnapshotStore {
                 latestRequestId: self.latestRequestIds[tabId],
                 pageIdentity: self.normalizedPageIdentity(webView.url)
             ) else {
+                onCompletion(false)
                 return
             }
             self.images[tabId] = image
             onUpdate()
+            onCompletion(true)
         }
     }
 

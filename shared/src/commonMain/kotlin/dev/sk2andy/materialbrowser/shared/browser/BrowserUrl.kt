@@ -1,5 +1,8 @@
 package dev.sk2andy.materialbrowser.shared.browser
 
+import dev.sk2andy.materialbrowser.browser.SearchSettings
+import dev.sk2andy.materialbrowser.browser.BLANK_URL
+
 data class BrowserUrl(
     val value: String,
 )
@@ -16,11 +19,13 @@ data class AddressResolution(
 )
 
 object BrowserUrlRules {
-    private const val DEFAULT_SEARCH_URL = "https://duckduckgo.com/?q="
     private const val MAX_INPUT_LENGTH = 16_384
     private const val MAX_HOST_LENGTH = 253
 
-    fun resolve(input: String): AddressResolution {
+    fun resolve(
+        input: String,
+        searchSettings: SearchSettings = SearchSettings(),
+    ): AddressResolution {
         val normalized = input.trim()
         if (normalized.isEmpty() || normalized.length > MAX_INPUT_LENGTH || normalized.hasControlCharacter()) {
             return AddressResolution(AddressResolutionKind.Rejected, null)
@@ -34,17 +39,26 @@ object BrowserUrlRules {
             return AddressResolution(AddressResolutionKind.Rejected, null)
         }
 
-        parseHttpUrl("https://$normalized")?.let { url ->
-            return AddressResolution(AddressResolutionKind.WebUrl, BrowserUrl(url))
+        if (normalized.looksLikeHostInput()) {
+            parseHttpUrl("https://$normalized")?.let { url ->
+                return AddressResolution(AddressResolutionKind.WebUrl, BrowserUrl(url))
+            }
         }
 
-        return AddressResolution(
-            kind = AddressResolutionKind.Search,
-            url = BrowserUrl(DEFAULT_SEARCH_URL + normalized.percentEncoded()),
+        val searchUrl = searchSettings.searchEngine.buildSearchUrl(
+            query = normalized,
+            searxngInstanceUrl = searchSettings.searxngInstanceUrl,
         )
+        return if (searchUrl == BLANK_URL) {
+            AddressResolution(AddressResolutionKind.Rejected, null)
+        } else {
+            AddressResolution(AddressResolutionKind.Search, BrowserUrl(searchUrl))
+        }
     }
 
     fun normalizeHttpUrl(value: String): BrowserUrl? = parseHttpUrl(value)?.let(::BrowserUrl)
+
+    fun encodeSearchQuery(value: String): String = value.percentEncoded()
 
     private fun parseHttpUrl(value: String): String? {
         if (value.length > MAX_INPUT_LENGTH || value.hasControlCharacter() || value.any(Char::isWhitespace)) {
@@ -118,6 +132,19 @@ object BrowserUrlRules {
                 char.isLetterOrDigit() || char == '+' || char == '-' || char == '.'
             }
         }
+    }
+
+    private fun String.looksLikeHostInput(): Boolean {
+        val authority = substringBefore('/').substringBefore('?').substringBefore('#')
+        val host = authority.substringBefore(':').lowercase()
+        return host == "localhost" ||
+            host.startsWith('[') ||
+            '.' in host ||
+            host.split('.').let { parts ->
+                parts.size == 4 && parts.all { part ->
+                    part.toIntOrNull() in 0..255
+                }
+            }
     }
 
     private fun String.hasControlCharacter(): Boolean = any { char ->

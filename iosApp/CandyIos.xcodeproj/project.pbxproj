@@ -22,6 +22,18 @@
 		A2000000000000000000000E /* ToppingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000016 /* ToppingStore.swift */; };
 		A2000000000000000000000F /* WebKitBlocking.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000017 /* WebKitBlocking.swift */; };
 		A2000000000000000000001C /* CandyComposeHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000024 /* CandyComposeHost.swift */; };
+		A2000000000000000000001D /* ToppingRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000025 /* ToppingRuntime.swift */; };
+		A2000000000000000000001E /* ToppingDependencyResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000026 /* ToppingDependencyResolver.swift */; };
+		A2000000000000000000001F /* ToppingValueRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000027 /* ToppingValueRules.swift */; };
+		A20000000000000000000020 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000028 /* Assets.xcassets */; };
+		A20000000000000000000021 /* BrowserTranslationProviderPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000029 /* BrowserTranslationProviderPreference.swift */; };
+		A20000000000000000000022 /* CandyNativeBrowserChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000002A /* CandyNativeBrowserChrome.swift */; };
+		A20000000000000000000023 /* LiquidGlassPresentationRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000002B /* LiquidGlassPresentationRules.swift */; };
+		A20000000000000000000024 /* device-icons-v1.json in Resources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000002C /* device-icons-v1.json */; };
+		A20000000000000000000025 /* SwiftArgon2 in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* SwiftArgon2 */; };
+		A20000000000000000000026 /* IosSyncRecoveryKeyDeriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000002D /* IosSyncRecoveryKeyDeriver.swift */; };
+		A20000000000000000000027 /* IosSyncTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000002E /* IosSyncTransport.swift */; };
+		A20000000000000000000028 /* IosSyncPlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000002F /* IosSyncPlatform.swift */; };
 		A20000000000000000000010 /* blocked_hosts.txt in Resources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000018 /* blocked_hosts.txt */; };
 		A20000000000000000000011 /* easylist_blocked_hosts.txt in Resources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000019 /* easylist_blocked_hosts.txt */; };
 		A20000000000000000000012 /* hagezi_blocked_hosts.txt in Resources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000001A /* hagezi_blocked_hosts.txt */; };
@@ -55,6 +67,17 @@
 		A30000000000000000000016 /* ToppingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToppingStore.swift; sourceTree = "<group>"; };
 		A30000000000000000000017 /* WebKitBlocking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebKitBlocking.swift; sourceTree = "<group>"; };
 		A30000000000000000000024 /* CandyComposeHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CandyComposeHost.swift; sourceTree = "<group>"; };
+		A30000000000000000000025 /* ToppingRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToppingRuntime.swift; sourceTree = "<group>"; };
+		A30000000000000000000026 /* ToppingDependencyResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToppingDependencyResolver.swift; sourceTree = "<group>"; };
+		A30000000000000000000027 /* ToppingValueRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToppingValueRules.swift; sourceTree = "<group>"; };
+		A30000000000000000000028 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A30000000000000000000029 /* BrowserTranslationProviderPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTranslationProviderPreference.swift; sourceTree = "<group>"; };
+		A3000000000000000000002A /* CandyNativeBrowserChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CandyNativeBrowserChrome.swift; sourceTree = "<group>"; };
+		A3000000000000000000002B /* LiquidGlassPresentationRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassPresentationRules.swift; sourceTree = "<group>"; };
+		A3000000000000000000002C /* device-icons-v1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "device-icons-v1.json"; path = "../../sync/protocol/device-icons-v1.json"; sourceTree = "<group>"; };
+		A3000000000000000000002D /* IosSyncRecoveryKeyDeriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IosSyncRecoveryKeyDeriver.swift; sourceTree = "<group>"; };
+		A3000000000000000000002E /* IosSyncTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IosSyncTransport.swift; sourceTree = "<group>"; };
+		A3000000000000000000002F /* IosSyncPlatform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IosSyncPlatform.swift; sourceTree = "<group>"; };
 		A30000000000000000000018 /* blocked_hosts.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = blocked_hosts.txt; sourceTree = "<group>"; };
 		A30000000000000000000019 /* easylist_blocked_hosts.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = easylist_blocked_hosts.txt; sourceTree = "<group>"; };
 		A3000000000000000000001A /* hagezi_blocked_hosts.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = hagezi_blocked_hosts.txt; sourceTree = "<group>"; };
@@ -76,6 +99,7 @@
 			files = (
 				A20000000000000000000006 /* CandyShared.framework in Frameworks */,
 				A20000000000000000000007 /* WebKit.framework in Frameworks */,
+				A20000000000000000000025 /* SwiftArgon2 in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,6 +133,17 @@
 				A30000000000000000000016 /* ToppingStore.swift */,
 				A30000000000000000000017 /* WebKitBlocking.swift */,
 				A30000000000000000000024 /* CandyComposeHost.swift */,
+				A30000000000000000000025 /* ToppingRuntime.swift */,
+				A30000000000000000000026 /* ToppingDependencyResolver.swift */,
+				A30000000000000000000027 /* ToppingValueRules.swift */,
+				A30000000000000000000028 /* Assets.xcassets */,
+				A30000000000000000000029 /* BrowserTranslationProviderPreference.swift */,
+				A3000000000000000000002A /* CandyNativeBrowserChrome.swift */,
+				A3000000000000000000002B /* LiquidGlassPresentationRules.swift */,
+				A3000000000000000000002C /* device-icons-v1.json */,
+				A3000000000000000000002D /* IosSyncRecoveryKeyDeriver.swift */,
+				A3000000000000000000002E /* IosSyncTransport.swift */,
+				A3000000000000000000002F /* IosSyncPlatform.swift */,
 				A30000000000000000000006 /* Info.plist */,
 			);
 			path = CandyIos;
@@ -165,6 +200,9 @@
 			buildRules = ();
 			dependencies = ();
 			name = CandyIos;
+			packageProductDependencies = (
+				A90000000000000000000002 /* SwiftArgon2 */,
+			);
 			productName = CandyIos;
 			productReference = A30000000000000000000007 /* CandyIos.app */;
 			productType = "com.apple.product-type.application";
@@ -176,6 +214,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A20000000000000000000020 /* Assets.xcassets in Resources */,
+				A20000000000000000000024 /* device-icons-v1.json in Resources */,
 				A20000000000000000000010 /* blocked_hosts.txt in Resources */,
 				A20000000000000000000011 /* easylist_blocked_hosts.txt in Resources */,
 				A20000000000000000000012 /* hagezi_blocked_hosts.txt in Resources */,
@@ -212,6 +252,9 @@
 			mainGroup = A50000000000000000000001;
 			productRefGroup = A50000000000000000000004 /* Products */;
 			projectDirPath = "";
+			packageReferences = (
+				A90000000000000000000001 /* XCRemoteSwiftPackageReference "argon2-swift" */,
+			);
 			projectRoot = "";
 			targets = (A10000000000000000000001 /* CandyIos */);
 		};
@@ -247,10 +290,19 @@
 				A2000000000000000000000A /* BrowserTabSnapshotStore.swift in Sources */,
 				A2000000000000000000000B /* BrowserTabOverviewMode.swift in Sources */,
 				A2000000000000000000000C /* BrowserFeatureSurfaces.swift in Sources */,
+				A20000000000000000000022 /* CandyNativeBrowserChrome.swift in Sources */,
+				A20000000000000000000023 /* LiquidGlassPresentationRules.swift in Sources */,
 				A2000000000000000000000D /* BrowserPageExtractionRules.swift in Sources */,
 				A2000000000000000000000E /* ToppingStore.swift in Sources */,
 				A2000000000000000000000F /* WebKitBlocking.swift in Sources */,
 				A2000000000000000000001C /* CandyComposeHost.swift in Sources */,
+				A2000000000000000000001D /* ToppingRuntime.swift in Sources */,
+				A2000000000000000000001E /* ToppingDependencyResolver.swift in Sources */,
+				A2000000000000000000001F /* ToppingValueRules.swift in Sources */,
+				A20000000000000000000021 /* BrowserTranslationProviderPreference.swift in Sources */,
+				A20000000000000000000026 /* IosSyncRecoveryKeyDeriver.swift in Sources */,
+				A20000000000000000000027 /* IosSyncTransport.swift in Sources */,
+				A20000000000000000000028 /* IosSyncPlatform.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,6 +396,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A90000000000000000000001 /* XCRemoteSwiftPackageReference "argon2-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mimiclone/argon2-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A90000000000000000000002 /* SwiftArgon2 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A90000000000000000000001 /* XCRemoteSwiftPackageReference "argon2-swift" */;
+			productName = SwiftArgon2;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A70000000000000000000001 /* Project object */;
 }

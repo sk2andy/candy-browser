@@ -6,11 +6,13 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroRules
+import dev.sk2andy.materialbrowser.shared.ui.TabSwitchPreviewLayoutRules
+
 import android.graphics.Bitmap
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.view.View
-import android.webkit.WebView
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -40,16 +42,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,7 +81,6 @@ import androidx.core.view.WindowInsetsCompat
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserController
-import dev.sk2andy.materialbrowser.browser.BrowserWebView
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.FindInPageRules
@@ -101,12 +102,12 @@ internal fun ExternalLinkPreviewScreen(
     var rootBottomInWindowPx by remember { mutableIntStateOf(0) }
     var blurTarget by remember { mutableStateOf<BlurTarget?>(null) }
     val profiles = if (controller.profilesEnabled) {
-        controller.profiles.toList()
+        controller.localBrowserProfiles
     } else {
-        controller.profiles.take(1)
+        controller.localBrowserProfiles.take(1)
     }
-    val webViewRevision = controller.webViewRevision
-    LaunchedEffect(state.sessionId, webViewRevision) {
+    val engineViewRevision = controller.engineViewRevision
+    LaunchedEffect(state.sessionId, engineViewRevision) {
         onTabOverviewPortraitLockChanged(false)
         controller.prepareExternalLinkPreview(state.sessionId)
     }
@@ -249,7 +250,7 @@ private fun ExternalLinkPreviewViewport(
                 tint = statusBarTint,
                 visible = true,
             )
-            if (controller.externalLinkPreviewState?.isWebViewReady == true) {
+            if (controller.externalLinkPreviewState?.isContentReady == true) {
                 controller.attachExternalLinkPreview(host.blurTarget)
             } else {
                 controller.detachExternalLinkPreview(host.blurTarget)
@@ -309,7 +310,6 @@ internal fun BrowserViewport(
             ),
         )
     }
-    var scrollBarWebView by remember(selectedTab.id) { mutableStateOf<BrowserWebView?>(null) }
     LaunchedEffect(selectedTab.id, selectedTab.error, selectedTab.isLoading) {
         pageErrorFeedback = PageErrorFeedbackRules.observe(
             current = pageErrorFeedback,
@@ -374,21 +374,7 @@ internal fun BrowserViewport(
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
                 onBlurTargetReleased = onBlurTargetReleased,
-                onWebViewChanged = { scrollBarWebView = it },
             )
-        }
-
-        if (
-            controller.isScrollBarEnabled &&
-            !webViewVideoOnlyPresentation &&
-            !tabOverviewVisible
-        ) {
-            scrollBarWebView?.let { webView ->
-                WebViewScrollBar(
-                    webView = webView,
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                )
-            }
         }
 
         AnimatedVisibility(
@@ -459,7 +445,6 @@ private fun ActiveBrowserEngineView(
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
-    onWebViewChanged: (BrowserWebView?) -> Unit,
 ) {
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
@@ -467,11 +452,10 @@ private fun ActiveBrowserEngineView(
         density = density.density,
     )
     val selectedTabId = controller.selectedTabId
-    val webViewRevision = controller.webViewRevision
+    val engineViewRevision = controller.engineViewRevision
     val currentOnLiveFrame by rememberUpdatedState(onLiveFrame)
     val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
-    val currentOnWebViewChanged by rememberUpdatedState(onWebViewChanged)
     AndroidView(
         factory = { context ->
             StatusBarFrostedGlassHost(context).apply {
@@ -487,17 +471,19 @@ private fun ActiveBrowserEngineView(
                 visible = showStatusBarFrostedGlass,
             )
             val hostState = hostView.tag as BrowserEngineViewHostState
-            val attachedView = controller.attachSelectedBrowserEngineView(hostState.container)
+            val attachedView = controller.attachSelectedBrowserEngineView(
+                container = hostState.container,
+                onContentPresented = currentOnLiveFrame,
+            )
             if (attachedView != null) {
                 hostState.bind(
                     tabId = selectedTabId,
-                    revision = webViewRevision,
+                    revision = engineViewRevision,
                     view = attachedView,
                 ) {
                     currentOnLiveFrame(it)
                 }
             }
-            currentOnWebViewChanged(attachedView as? BrowserWebView)
         },
         onRelease = { hostView ->
             val hostState = hostView.tag as? BrowserEngineViewHostState
@@ -506,7 +492,6 @@ private fun ActiveBrowserEngineView(
             hostState?.let { controller.detachBrowserEngineView(it.container) }
             hostView.release()
             currentOnBlurTargetReleased(hostView.blurTarget)
-            currentOnWebViewChanged(null)
         },
         modifier = Modifier.fillMaxSize(),
     )
@@ -577,17 +562,7 @@ private class BrowserEngineViewHostState(val container: FrameLayout) {
             reportLiveFrame(tabId)
         }
 
-        if (view is WebView) {
-            view.postVisualStateCallback(
-                System.nanoTime(),
-                object : WebView.VisualStateCallback() {
-                    override fun onComplete(requestId: Long) = awaitNextDraw()
-                },
-            )
-        } else {
-            view.post(::awaitNextDraw)
-        }
-        drawFallback = Runnable(::awaitNextDraw).also { container.postDelayed(it, 500L) }
+        awaitNextDraw()
     }
 
     fun release() {

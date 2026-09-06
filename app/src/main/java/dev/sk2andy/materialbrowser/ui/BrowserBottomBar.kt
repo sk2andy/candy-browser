@@ -100,6 +100,8 @@ import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.shared.ui.OverviewAddressBarContent
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
@@ -227,8 +229,7 @@ internal fun BrowserBottomBar(
     val pulseScale = remember { Animatable(1f) }
     val newTabPulseScale = remember { Animatable(1f) }
     val domain = AddressResolver.displayText(tab.url)
-    val readerSupported = supportsPageContentActions &&
-        ReaderStudioSessionRules.isSupportedSource(tab.url)
+    val readerSupported = ReaderStudioSessionRules.isSupportedSource(tab.url)
     val readerOpenLabel = stringResource(R.string.reader_open_action)
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
@@ -579,6 +580,20 @@ internal fun BrowserBottomBar(
                             AddressBarPresentation.Overview -> OverviewAddressBarContent(
                                 onNewTab = onNewTab,
                                 onMore = {},
+                                newTabIcon = {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = stringResource(R.string.cd_new_tab),
+                                    )
+                                },
+                                moreIcon = {
+                                    Icon(
+                                        Icons.Default.MoreVert,
+                                        contentDescription = stringResource(
+                                            R.string.cd_more_options,
+                                        ),
+                                    )
+                                },
                             )
                             AddressBarPresentation.CommandFeedback -> {
                                 commandFeedback?.let { feedback ->
@@ -717,52 +732,6 @@ private fun AddressBarParkIcon(
                     rotationZ = AddressBarDockingRules.parkChevronRotationDegrees(edge)
                 },
         )
-    }
-}
-
-internal object TabOverviewChromeTestTags {
-    const val Root = "tab_overview_root"
-    const val Background = "tab_overview_background"
-    const val HeroPager = "tab_overview_hero_pager"
-    const val Grid = "tab_overview_grid"
-    const val List = "tab_overview_list"
-    const val Bar = "tab_overview_address_bar"
-    const val NewTab = "tab_overview_new_tab"
-    const val More = "tab_overview_more"
-    const val PinnedTabsJump = "tab_overview_pinned_tabs_jump"
-    const val Settings = "tab_overview_settings"
-}
-
-@Composable
-internal fun OverviewAddressBarContent(
-    onNewTab: () -> Unit,
-    onMore: () -> Unit,
-    enabled: Boolean = true,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(
-            onClick = onNewTab,
-            enabled = enabled,
-            modifier = Modifier.testTag(TabOverviewChromeTestTags.NewTab),
-        ) {
-            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_new_tab))
-        }
-        IconButton(
-            onClick = onMore,
-            enabled = enabled,
-            modifier = Modifier.testTag(TabOverviewChromeTestTags.More),
-        ) {
-            Icon(
-                Icons.Default.MoreVert,
-                contentDescription = stringResource(R.string.cd_more_options),
-            )
-        }
     }
 }
 

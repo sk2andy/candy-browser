@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.shared.browser
 
+import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.SearchSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -26,7 +28,52 @@ class BrowserUrlRulesTest {
         val result = BrowserUrlRules.resolve("Candy Browser")
 
         assertEquals(AddressResolutionKind.Search, result.kind)
-        assertEquals("https://duckduckgo.com/?q=Candy%20Browser", result.url?.value)
+        assertEquals("https://www.google.com/search?q=Candy%20Browser", result.url?.value)
+    }
+
+    @Test
+    fun singleSearchTermDoesNotBecomeHttpsHost() {
+        val result = BrowserUrlRules.resolve("candy")
+
+        assertEquals(AddressResolutionKind.Search, result.kind)
+        assertEquals("https://www.google.com/search?q=candy", result.url?.value)
+    }
+
+    @Test
+    fun selectedProviderOwnsPlainTextSearchUrl() {
+        val result = BrowserUrlRules.resolve(
+            input = "private search",
+            searchSettings = SearchSettings(searchEngine = SearchEngine.Brave),
+        )
+
+        assertEquals(AddressResolutionKind.Search, result.kind)
+        assertEquals(
+            "https://search.brave.com/search?q=private%20search",
+            result.url?.value,
+        )
+    }
+
+    @Test
+    fun searxngRequiresValidSharedInstance() {
+        val missingInstance = BrowserUrlRules.resolve(
+            input = "private search",
+            searchSettings = SearchSettings(searchEngine = SearchEngine.SearXNG),
+        )
+        val configuredInstance = BrowserUrlRules.resolve(
+            input = "private search",
+            searchSettings = SearchSettings(
+                searchEngine = SearchEngine.SearXNG,
+                searxngInstanceUrl = "https://search.example/candy",
+            ),
+        )
+
+        assertEquals(AddressResolutionKind.Rejected, missingInstance.kind)
+        assertNull(missingInstance.url)
+        assertEquals(AddressResolutionKind.Search, configuredInstance.kind)
+        assertEquals(
+            "https://search.example/candy/search?q=private%20search",
+            configuredInstance.url?.value,
+        )
     }
 
     @Test

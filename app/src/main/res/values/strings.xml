@@ -111,7 +111,7 @@
     <string name="action_move_tab_to_profile">Move to profile</string>
     <string name="settings_profile_isolation_title">Own storage · Isolation mode</string>
     <string name="settings_profile_isolation_subtitle">Keeps cookies, sign-ins, site data, cache, and service workers separate for this profile</string>
-    <string name="settings_profile_isolation_unsupported">Unavailable: the installed WebView provider does not support separate profile storage</string>
+    <string name="settings_profile_isolation_unsupported">Unavailable: Gecko could not initialize separate profile storage</string>
     <string name="profile_isolation_confirm_title">Switch profile storage?</string>
     <string name="profile_isolation_enable_message">Tabs in this profile will reload with separate storage. Existing shared sign-ins will not carry over.</string>
     <string name="profile_isolation_disable_message">Tabs in this profile will reload with shared storage. Sign-ins from isolated storage will no longer be active.</string>
@@ -184,6 +184,15 @@
     <string name="clear_data_message">Cookies, site storage, cache, and this session’s history will be deleted.</string>
     <string name="action_delete">Delete</string>
     <string name="action_cancel">Cancel</string>
+    <string name="web_prompt_title">Website message</string>
+    <string name="web_prompt_ok">OK</string>
+    <string name="web_prompt_leave_title">Leave this page?</string>
+    <string name="web_prompt_leave_message">Changes you made may not be saved.</string>
+    <string name="web_prompt_leave">Leave</string>
+    <string name="web_prompt_stay">Stay</string>
+    <string name="web_prompt_repost_title">Send form again?</string>
+    <string name="web_prompt_repost_message">Returning to this page will resend information you entered.</string>
+    <string name="web_prompt_resend">Send again</string>
     <string name="update_available_title">Update available</string>
     <string name="update_available_message">Candy Browser %1$s is available. Download the signed APK from GitHub? When the download finishes, open it to let Android verify and install the update.</string>
     <string name="action_download_update">Download update</string>
@@ -191,12 +200,12 @@
 
     <!-- Address commands -->
     <string name="command_clear_cache_reload_name">Clear cache &amp; reload</string>
-    <string name="command_clear_cache_reload_effect">Clears Candy’s shared WebView cache, then reloads this tab</string>
+    <string name="command_clear_cache_reload_effect">Clears Candy’s shared browser cache, then reloads this tab</string>
     <string name="command_delete_cookies_reload_name">Delete cookies &amp; reload</string>
     <string name="command_delete_cookies_reload_effect_regular">Deletes cookies shared by all regular Candy profiles, then reloads this tab</string>
     <string name="command_delete_cookies_reload_effect_isolated">Deletes cookies only for this isolated Candy profile, then reloads this tab</string>
     <string name="command_delete_cookies_reload_effect_private">Deletes cookies shared by all private tabs, then reloads this tab</string>
-    <string name="command_delete_cookies_reload_effect_all">Deletes cookies shared by all Candy WebViews, then reloads this tab</string>
+    <string name="command_delete_cookies_reload_effect_all">Deletes cookies across all Candy browser profiles, then reloads this tab</string>
     <string name="command_reload_effect">Reloads the current tab</string>
     <string name="command_stop_loading_effect">Stops loading the current tab</string>
     <string name="command_pin_tab_effect">Keeps this tab open and places it at the front</string>
@@ -236,7 +245,7 @@
     <string name="command_cookie_confirm_regular">All regular Candy profiles share these cookies and may be signed out. This tab reloads afterward.</string>
     <string name="command_cookie_confirm_isolated">Tabs in this isolated Candy profile share these cookies and may be signed out. This tab reloads afterward.</string>
     <string name="command_cookie_confirm_private">All private tabs share these cookies and may be signed out. This tab reloads afterward.</string>
-    <string name="command_cookie_confirm_all">All Candy WebViews share these cookies and may be signed out. This tab reloads afterward.</string>
+    <string name="command_cookie_confirm_all">All Candy browser profiles may be signed out. This tab reloads afterward.</string>
     <string name="command_duplicates_confirm_title">Close duplicate tabs?</string>
     <plurals name="command_duplicates_confirm_message">
         <item quantity="one">Close %1$d duplicate tab? Pinned tabs and the current tab stay open.</item>
@@ -297,7 +306,7 @@
     <string name="data_archive_export_action">Choose storage location</string>
     <string name="data_archive_import_confirm_title">Replace all Candy data?</string>
     <string name="data_archive_import_confirm_message">Only import a backup you created or trust. It may contain enabled userscripts that run code on websites. This backup was created by Candy %1$s and contains %2$d files. Import replaces current settings, tabs, snoozes, rules, cookies, and website storage. Candy restarts afterward.</string>
-    <string name="data_archive_import_version_warning">Warning: this backup was created with a different app, Android, or WebView version. Website sessions or newer settings may not restore correctly.</string>
+    <string name="data_archive_import_version_warning">Warning: this backup was created with a different app, Android, or browser-engine version. Website sessions or newer settings may not restore correctly.</string>
     <string name="data_archive_import_action">Import and restart</string>
     <string name="data_archive_import_mismatch_action">Import anyway</string>
     <string name="data_archive_preparing">Preparing app data…</string>
@@ -376,7 +385,7 @@
     <string name="scroll_bar_content_description">Page scroll bar</string>
     <string name="settings_video_autoplay_title">Prevent video autoplay</string>
     <string name="settings_video_autoplay_subtitle">Videos start only when you play them.</string>
-    <string name="settings_video_autoplay_unsupported">Requires a newer Android WebView version.</string>
+    <string name="settings_video_autoplay_unsupported">Requires a newer Gecko engine version.</string>
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>
@@ -448,12 +457,12 @@
     <string name="toast_printing_unavailable">Printing is unavailable on this device</string>
     <string name="toast_qr_scan_failed">QR code could not be scanned</string>
     <string name="toast_browsing_data_cleared">Browsing data cleared</string>
-    <string name="toast_incognito_unsupported">Private browsing is unavailable because this WebView provider cannot isolate its storage</string>
+    <string name="toast_incognito_unsupported">Private browsing is unavailable because Gecko could not isolate its profile storage</string>
     <string name="error_unsafe_tls_blocked">Unsafe TLS connection blocked</string>
     <string name="error_unsafe_site_blocked">Unsafe website blocked</string>
     <string name="error_renderer_crashed">Web renderer stopped unexpectedly</string>
     <string name="error_renderer_terminated">Web renderer was stopped by the system</string>
-    <string name="toast_webview_startup_failed">Web content could not start. Update Android System WebView and try again.</string>
+    <string name="toast_webview_startup_failed">Web content could not start. Restart or update Candy and try again.</string>
     <string name="toast_download_type_unsupported">Download type not supported</string>
     <string name="toast_download_started">Download started: %1$s</string>
     <string name="toast_download_handed_off">Sent to %1$s</string>
@@ -476,7 +485,7 @@
     <string name="capsule_dedicated_profile">New dedicated profile</string>
     <string name="capsule_dedicated_profile_summary">Creates a separate Candy workspace. Cookie and sign-in separation requires Own storage.</string>
     <string name="capsule_own_storage">Own storage</string>
-    <string name="capsule_own_storage_summary">Uses real WebView profile isolation for cookies, sign-ins and site data</string>
+    <string name="capsule_own_storage_summary">Uses a separate Gecko profile for cookies, sign-ins and site data</string>
     <string name="capsule_navigation_mode">Link navigation</string>
     <string name="capsule_navigation_same_origin">Same origin</string>
     <string name="capsule_navigation_same_origin_summary">Other origins open in a full Candy tab</string>
@@ -784,9 +793,12 @@
     <string name="popup_blocked">Popup blocked</string>
     <string name="action_open_popup">Open</string>
     <string name="http_auth_dialog_title">Sign in</string>
+    <string name="http_auth_proxy_dialog_title">Proxy sign-in</string>
     <string name="http_auth_dialog_message">%1$s requires a username and password.</string>
+    <string name="http_auth_proxy_dialog_message">The proxy %1$s requires a username and password.</string>
     <string name="http_auth_dialog_realm">Realm: %1$s</string>
     <string name="http_auth_dialog_insecure_warning">This page is not using HTTPS. Your credentials could be exposed.</string>
+    <string name="http_auth_proxy_insecure_warning">This proxy connection is not encrypted. Your credentials could be exposed.</string>
     <string name="http_auth_username">Username</string>
     <string name="http_auth_password">Password</string>
     <string name="http_auth_show_password">Show password</string>

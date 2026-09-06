@@ -10,7 +10,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ReaderLibraryRepository private constructor(context: Context) {
+class ReaderLibraryRepository private constructor(context: Context) : ReaderLibraryDataSource {
     private val store = ReaderLibraryStore(context.applicationContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val operations = Channel<suspend () -> Unit>(Channel.UNLIMITED)
@@ -29,14 +29,14 @@ class ReaderLibraryRepository private constructor(context: Context) {
         }
     }
 
-    fun load(isPrivate: Boolean, onLoaded: (ReaderLibraryState) -> Unit) {
+    override fun load(isPrivate: Boolean, onLoaded: (ReaderLibraryState) -> Unit) {
         enqueue {
             val state = store.load(isPrivate)
             onMain { onLoaded(state) }
         }
     }
 
-    fun updateSettings(
+    override fun updateSettings(
         settings: ReaderSettings,
         isPrivate: Boolean,
         onUpdated: (ReaderLibraryState) -> Unit,
@@ -48,11 +48,11 @@ class ReaderLibraryRepository private constructor(context: Context) {
         }
     }
 
-    fun updateProgress(sourceUrl: String, progress: Float, isPrivate: Boolean) {
+    override fun updateProgress(sourceUrl: String, progress: Float, isPrivate: Boolean) {
         enqueue { store.updateProgress(sourceUrl, progress, isPrivate) }
     }
 
-    fun saveSnapshot(
+    override fun saveSnapshot(
         document: ReaderDocument,
         progress: Float,
         isPrivate: Boolean,
@@ -65,7 +65,7 @@ class ReaderLibraryRepository private constructor(context: Context) {
         }
     }
 
-    fun deleteSnapshot(
+    override fun deleteSnapshot(
         snapshotId: String,
         isPrivate: Boolean,
         onUpdated: (ReaderLibraryState) -> Unit,

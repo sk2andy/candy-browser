@@ -57,6 +57,13 @@ class AppDataArchiveRulesTest {
         assertTrue(
             AppDataArchiveRules.shouldExportRelativePath("no_backup/candy_trails/trail.json"),
         )
+        assertFalse(
+            AppDataArchiveRules.shouldExportRelativePath("no_backup/gecko_session_states/tab.json"),
+        )
+        assertFalse(
+            AppDataArchiveRules.shouldExportRelativePath("no_backup/tab_webview_states/tab.bin"),
+        )
+        assertFalse(AppDataArchiveRules.shouldExportRelativePath("files/mozilla/profile"))
     }
 
     @Test
@@ -138,7 +145,17 @@ class AppDataArchiveRulesTest {
             ),
         )
         assertEquals(
-            AppDataArchiveCompatibility.WebViewMismatch,
+            AppDataArchiveCompatibility.BrowserEngineMismatch,
+            AppDataArchiveRules.compatibility(
+                current,
+                manifest().copy(
+                    webViewVersion = "126.0",
+                    websiteState = AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded,
+                ),
+            ),
+        )
+        assertEquals(
+            AppDataArchiveCompatibility.Same,
             AppDataArchiveRules.compatibility(
                 current,
                 manifest().copy(webViewVersion = "126.0"),
@@ -161,6 +178,31 @@ class AppDataArchiveRulesTest {
         assertTrue(AppDataArchiveRules.isFileSizeExceeded(256L * 1024L * 1024L + 1L))
         assertFalse(AppDataArchiveRules.isTotalSizeExceeded(2L * 1024L * 1024L * 1024L, 0L))
         assertTrue(AppDataArchiveRules.isTotalSizeExceeded(2L * 1024L * 1024L * 1024L, 1L))
+    }
+
+    @Test
+    fun `legacy engine state has explicit excluded migration outcome`() {
+        assertEquals(
+            AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded,
+            AppDataArchiveRules.websiteStateFor(
+                formatVersion = AppDataArchiveRules.LEGACY_FORMAT_VERSION,
+                entries = listOf(
+                    AppDataArchiveEntry(
+                        relativePath = "no_backup/tab_webview_states/tab.bin",
+                        isDirectory = false,
+                        size = 1L,
+                        crc = 0L,
+                    ),
+                ),
+            ),
+        )
+        assertEquals(
+            AppDataArchiveWebsiteState.CandyOwnedOnly,
+            AppDataArchiveRules.websiteStateFor(
+                formatVersion = AppDataArchiveRules.FORMAT_VERSION,
+                entries = emptyList(),
+            ),
+        )
     }
 
     private fun environment() = AppDataArchiveEnvironment(

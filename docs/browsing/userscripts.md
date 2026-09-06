@@ -1,11 +1,14 @@
 # Toppings (local userscripts)
 
 Toppings are the cross-platform lightweight customization model. Android's Gecko runtime uses a
-private bundled MV3 host extension; the WebView migration fallback uses the implementation below.
-The iOS vertical slice consumes the shared metadata/injection plan
-and installs it as a main-frame `WKUserScript` in a named `WKContentWorld`. Android Gecko separately
+private bundled MV3 host extension. Android has no WebView fallback.
+The iOS runtime consumes the shared metadata and URL policy, resolves dependencies during explicit
+imports and installs each script as a main-frame `WKUserScript` in a named `WKContentWorld`. Android Gecko separately
 supports Mozilla-signed Firefox WebExtensions. See [`platform-engines.md`](platform-engines.md) for
 the engine boundary; WebExtensions and Toppings intentionally remain different capability models.
+Firefox WebExtension action, popup, options, tab and download conformance is tracked in the
+[GeckoView 140 capability matrix](platform-engines.md#firefox-webextension-capability-matrix-geckoview-140);
+none of those privileged delegates are exposed to Toppings.
 
 ## Ownership
 
@@ -13,7 +16,7 @@ the engine boundary; WebExtensions and Toppings intentionally remain different c
 | --- | --- | --- |
 | Model and policy | Parse bounded metadata, match HTTP(S) URLs, derive origin rules and build guarded injection sources | `browser/userscript/` |
 | Persistence | Atomically store validated local source, bounded per-script GM values and the last valid catalog outside browser-session state | `data/UserScriptStore.kt`, `data/UserScriptValueStore.kt`, `data/ToppingCatalogStore.kt` |
-| Runtime | Register isolated scripts in regular Gecko sessions through the bundled Candy host; keep the world-scoped native bridge on fallback WebViews | `browser/gecko/GeckoToppingHostRuntime.kt`, `browser/userscript/UserScriptRuntime.kt`, `browser/BrowserController.kt` |
+| Runtime | Register isolated scripts in regular Gecko sessions through the bundled Candy host; iOS uses its platform WKContentWorld bridge | `browser/gecko/GeckoToppingHostRuntime.kt`, `browser/BrowserController.kt`, `iosApp/CandyIos/ToppingRuntime.swift` |
 | UI and import | Manage local Toppings and explicitly install catalog entries | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
 
 ## Discovery catalog
@@ -82,9 +85,13 @@ the engine boundary; WebExtensions and Toppings intentionally remain different c
   `@match`/`@include`/`@exclude` scopes and `document-start`/`document-end` timing. GeckoView 140 has
   no CSS member on `RegisteredUserScript`; CSS in this slice is supported through the local
   `GM_addStyle`/`GM.addStyle` bootstrap. `GM_info`/`GM.info` is also local.
-- Gecko currently skips a complete Topping when it declares `@require`, `@resource`, persistent
-  values, menu commands or `GM_openInTab`. It does not expose a partial privileged API. GeckoView
-  140 can keep a built-in extension marked private-capable even after requesting the opposite.
+- GeckoView 140 user-script worlds expose `runtime.sendMessage` and `runtime.connect`, but not
+  `runtime.onMessage`. Value mutations use the former; menu callbacks use a world-validated port
+  accepted through the host's `runtime.onUserScriptConnect`. The bridge binds Gecko's active tab to
+  Candy's tab ID only when the host-provided active Candy ID and `sender.tab.active` agree.
+  Value-only reconciliation changes the content-addressed registration ID but deliberately retains
+  the world ID, so the current document can continue mutating values and invoking menu callbacks.
+- GeckoView 140 can keep a built-in extension marked private-capable even after requesting the opposite.
   Therefore every registered script performs a fail-closed `private-check` over the dedicated
   user-script messaging channel before user source runs. The host handles only that bounded message,
   never appears in the Firefox extension manager and cannot be mutated through that manager.
@@ -101,6 +108,25 @@ the engine boundary; WebExtensions and Toppings intentionally remain different c
   data. GM values are removed when their script is deleted. Scripts and their GM values are never
   copied into private runtime or private persistence.
 - Site Capsules use normal tab WebViews, so regular Capsule pages follow the same matching rules.
+- iOS registers a distinct named `WKContentWorld` and `WKScriptMessageHandlerWithReply` for every
+  Topping revision. The first statement asks native code to authorize the current top-frame URL;
+  disabled, replaced, private, non-HTTP(S), mismatched and stale-revision scripts fail before
+  `@require` or user source runs. Save, toggle and delete reconcile live controllers without removing
+  Candy Blocking scripts. Old immutable `WKUserScript` registrations remain inert because their
+  revision handler is removed; a matching current revision is never registered twice.
+- iOS `@require` and `@resource` downloads use an ephemeral cache-free session only from the same
+  allowlist as Android. Credentials, non-standard ports, IP literals, private/loopback DNS answers,
+  more than three redirects, oversized payloads, invalid UTF-8 and SHA-256 mismatches fail closed.
+  The resolved bytes are stored with the Topping and normal navigation performs no dependency
+  network request. Persisted dependency bytes and integrity are revalidated before registration.
+- iOS GM values use a bounded script-ID-partitioned `UserDefaults` store. The world bridge checks
+  current grant, top frame, current URL scope, revision and message rate before an atomic mutation,
+  then replies with the canonical merged snapshot. Menu callbacks live only in the script world;
+  native stores only IDs/captions and removes them on navigation. `GM_openInTab` accepts at most four
+  credential-free HTTP(S) requests per ten seconds and never runs in private tabs.
+- WebKit's reply bridge is asynchronous. iOS registers `document-start` at WebKit's earliest
+  injection point, but the Topping payload resumes only after native authorization; unlike Gecko,
+  WebKit cannot guarantee that this continuation beats every page-world start script.
 
 ## Verification
 
@@ -113,3 +139,6 @@ the engine boundary; WebExtensions and Toppings intentionally remain different c
 | Discovery semantics and actions | `ToppingCatalogScreenInstrumentedTest` |
 | WebView timing, CSP, origin and top-frame boundary | `UserScriptInjectionInstrumentedTest` on API 34+ |
 | GM world isolation and private-registration boundary | `UserScriptRuntimeInstrumentedTest` |
+| Shared iOS metadata/grants/dependency and URL policy | `shared:ToppingRulesTest` |
+| iOS compiler and WebKit contract | `swiftc -typecheck` over `iosApp/CandyIos/*.swift`; `CandyIos` simulator build/smoke |
+| GeckoView 140 host readiness, world validation, resolved `@require`/`@resource`, values, active-tab binding, menu callback, `GM_openInTab`, exclude and private rejection | `CandyToppingHostInstrumentedTest` on the dedicated API 34+ emulator |

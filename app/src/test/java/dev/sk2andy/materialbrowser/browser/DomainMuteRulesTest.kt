@@ -43,6 +43,34 @@ class DomainMuteRulesTest {
     }
 
     @Test
+    fun navigatingFromMutedDomainToAnotherDomainClearsMuteAndBackRestoresIt() {
+        val mutedDomains = setOf("example.com")
+        val navigation = listOf(
+            "https://video.example.com/watch",
+            "https://example.org/watch",
+            "https://music.example.com/listen",
+            BLANK_URL,
+        )
+
+        assertEquals(
+            listOf(true, false, true, false),
+            navigation.map { url -> DomainMuteRules.isMuted(url, mutedDomains) },
+        )
+    }
+
+    @Test
+    fun navigationUsesOnlyTheCurrentProfileAndPrivacyScope() {
+        val url = "https://video.example.com/watch"
+        val regularProfileDomains = setOf("example.com")
+        val privateProfileDomains = emptySet<String>()
+        val otherProfileDomains = setOf("example.org")
+
+        assertTrue(DomainMuteRules.isMuted(url, regularProfileDomains))
+        assertFalse(DomainMuteRules.isMuted(url, privateProfileDomains))
+        assertFalse(DomainMuteRules.isMuted(url, otherProfileDomains))
+    }
+
+    @Test
     fun mutedStateIsCanonicalBoundedAndReversible() {
         val initial = (1..64).map { index -> "site$index.example" }
 

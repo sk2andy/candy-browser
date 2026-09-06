@@ -1,76 +1,39 @@
 package dev.sk2andy.materialbrowser.browser
 
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
 import android.net.Uri
-import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.Message
 import android.os.SystemClock
-import android.print.PrintManager
-import android.view.PixelCopy
+import android.provider.MediaStore
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.CookieManager
-import android.webkit.DownloadListener
-import android.webkit.GeolocationPermissions
-import android.webkit.HttpAuthHandler
-import android.webkit.JavascriptInterface
-import android.webkit.PermissionRequest
-import android.webkit.RenderProcessGoneDetail
-import android.webkit.SafeBrowsingResponse
-import android.webkit.ServiceWorkerClient
-import android.webkit.SslErrorHandler
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
-import android.webkit.WebStorage
-import android.webkit.ValueCallback
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
-import androidx.webkit.JavaScriptReplyProxy
-import androidx.webkit.ProfileStore
-import androidx.webkit.ScriptHandler
-import androidx.webkit.ServiceWorkerClientCompat
-import androidx.webkit.ServiceWorkerControllerCompat
-import androidx.webkit.UserAgentMetadata
-import androidx.webkit.WebSettingsCompat
-import androidx.webkit.WebStorageCompat
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.AdvancedFilterAction
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.BundledSitePrivacyDefaults
-import dev.sk2andy.materialbrowser.blocking.CandyCosmeticScript
-import dev.sk2andy.materialbrowser.blocking.CandyProceduralCosmeticScript
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
-import dev.sk2andy.materialbrowser.blocking.CandyDocumentStartOrigin
 import dev.sk2andy.materialbrowser.blocking.CandyFilterPresets
 import dev.sk2andy.materialbrowser.blocking.CandyHostCanonicalizer
 import dev.sk2andy.materialbrowser.blocking.CandyImportScope
@@ -88,25 +51,20 @@ import dev.sk2andy.materialbrowser.blocking.CandyRulePreview
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidation
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidator
 import dev.sk2andy.materialbrowser.blocking.CandySubscriptionRules
-import dev.sk2andy.materialbrowser.blocking.CandyWindowOpenDefuserScript
 import dev.sk2andy.materialbrowser.blocking.ContentBlocker
-import dev.sk2andy.materialbrowser.blocking.ConsentRequestRules
-import dev.sk2andy.materialbrowser.blocking.ForcedPageZoomScript
-import dev.sk2andy.materialbrowser.blocking.ForcedVerticalScrollScript
-import dev.sk2andy.materialbrowser.blocking.GenericCosmeticPolicyCache
-import dev.sk2andy.materialbrowser.blocking.GenericCosmeticScript
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestSanitizer
 import dev.sk2andy.materialbrowser.blocking.PrivacyPolicyRules
 import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
 import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionSummary
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRayRepository
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
-import dev.sk2andy.materialbrowser.blocking.RequestProtectionRules
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrideRules
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
 import dev.sk2andy.materialbrowser.capsule.CapsuleDeletionRules
+import dev.sk2andy.materialbrowser.capsule.CapsuleFullCandyTransition
+import dev.sk2andy.materialbrowser.capsule.CapsuleFullCandyTransitionRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconRenderer
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
@@ -124,7 +82,7 @@ import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.actions.PendingDownloadChoice
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
-import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
+import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.cast.CastMediaCandidate
 import dev.sk2andy.materialbrowser.browser.cast.CastMediaIdentity
 import dev.sk2andy.materialbrowser.browser.cast.CastMediaRules
@@ -135,22 +93,47 @@ import dev.sk2andy.materialbrowser.browser.commands.BrowserCommandRegistry
 import dev.sk2andy.materialbrowser.browser.commands.CommandContext
 import dev.sk2andy.materialbrowser.browser.commands.CommandCookieScope
 import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
-import dev.sk2andy.materialbrowser.browser.commands.WebViewCommandActions
-import dev.sk2andy.materialbrowser.browser.commands.WebViewProfileCookies
 import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPrompt
 import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPromptRules
-import dev.sk2andy.materialbrowser.browser.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowserEngineSessionFactory
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoProfileStorageRules
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowsingData
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowsingDataReloadRules
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoCandyTrailHistoryEvent
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoContextDownloadRequest
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadFailure
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadTransferListener
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadTransferStart
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExternalDownloadResponse
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionChromeHost
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionChromeRules
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionCreateTabRequest
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionPopupIdentity
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionSessionIdentity
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionUpdateTabRequest
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaCommand
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoMainFrameNavigationRequest
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoNewSessionRequest
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionState
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionStateListener
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoNavigationRequestDecision
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoPictureInPictureRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoSessionStateRestoreDecision
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoSessionStateSnapshotRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoToppingHostState
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoToppingInteractionDelegate
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsetRules
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsets
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryRequest
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryResult
-import dev.sk2andy.materialbrowser.browser.integration.ApkDownloadNavigationRules
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.integration.DefaultBrowserRole
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
@@ -160,7 +143,6 @@ import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationGrantRu
 import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationPolicy
 import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGrant
 import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGrantRules
-import dev.sk2andy.materialbrowser.browser.integration.LinkPeekPreviewNavigationPolicy
 import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
 import dev.sk2andy.materialbrowser.browser.integration.PageShareRequest
 import dev.sk2andy.materialbrowser.browser.integration.PageShareResult
@@ -193,7 +175,6 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptOpenTabRequest
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRejectionReason
-import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRuntime
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
@@ -243,12 +224,11 @@ import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.TabPreviewQuality
 import dev.sk2andy.materialbrowser.data.TabRetentionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
-import dev.sk2andy.materialbrowser.data.TabWebViewStateRepository
+import dev.sk2andy.materialbrowser.data.GeckoSessionStateStore
 import dev.sk2andy.materialbrowser.data.ToppingCatalogRefreshResult
 import dev.sk2andy.materialbrowser.data.ToppingCatalogRepository
 import dev.sk2andy.materialbrowser.data.ToppingDownloadResult
 import dev.sk2andy.materialbrowser.data.UserScriptRepository
-import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncCacheStore
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncSettingsStore
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncVaultStore
@@ -256,13 +236,11 @@ import dev.sk2andy.materialbrowser.data.sync.CandySyncRepository
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
-import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.recall.RecallExtractionIdentity
-import dev.sk2andy.materialbrowser.recall.RecallExtractionScript
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import dev.sk2andy.materialbrowser.recall.RecallRules
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
@@ -271,33 +249,16 @@ import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
 import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
 import dev.sk2andy.materialbrowser.sync.SyncProfile
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
-import dev.sk2andy.materialbrowser.sync.SyncStatus
 import dev.sk2andy.materialbrowser.sync.SyncTab
 import java.util.ArrayDeque
 import java.util.UUID
-import java.util.WeakHashMap
+import org.mozilla.geckoview.GeckoSession
+import org.mozilla.geckoview.GeckoView
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
-
-private class PendingPreviewCapture(
-    val tabId: String,
-    val webView: WebView,
-    val pageUrl: String?,
-    val navigationGeneration: Int,
-    val previewEpoch: Int,
-    val sourceRect: Rect,
-    val destination: Bitmap,
-    onComplete: () -> Unit,
-    var acceptAfterDeparture: Boolean,
-) {
-    val completionCallbacks = mutableListOf(onComplete)
-    var timeout: Runnable? = null
-    var uiCompleted = false
-    var expired = false
-}
 
 private class PendingGeckoPreviewCapture(
     val tabId: String,
@@ -326,12 +287,10 @@ internal data class FullscreenVideoState(
 )
 
 internal enum class FullscreenVideoSource {
-    CustomView,
-    WebView,
+    GeckoView,
 }
 
 internal enum class FullscreenVideoHost {
-    Browser,
     Overlay,
 }
 
@@ -346,77 +305,21 @@ internal sealed interface UserScriptSaveOutcome {
     ) : UserScriptSaveOutcome
 }
 
-private class FullscreenVideoSession(
+private class GeckoMediaPresentation(
     val tabId: String,
-    val webView: WebView,
+    val session: AndroidBrowserEngineSessionPort,
     val view: View,
-    val callback: WebChromeClient.CustomViewCallback,
-    val isPrivate: Boolean,
-    val navigationGeneration: Int,
-    var minimizedByUser: Boolean = false,
-)
-
-private data class WebMediaChannelKey(
-    val tabId: String,
-    val navigationGeneration: Int,
-    val documentId: String,
-    val mediaId: String,
-    val origin: String,
-    val isMainFrame: Boolean,
-)
-
-private class WebMediaChannel(
-    val key: WebMediaChannelKey,
-    val webView: WebView,
-    var replyProxy: JavaScriptReplyProxy,
-    var payload: WebMediaPayload,
-    var receivedAtMillis: Long,
-)
-
-private class WebMediaMessageRateWindow(
-    var startedAtElapsedMillis: Long,
-    var acceptedCount: Int,
-)
-
-private data class WebMediaMessageRateKey(
-    val webView: WebView,
-    val origin: String,
-    val isMainFrame: Boolean,
-)
-
-private class WebMediaPresentation(
-    val key: WebMediaChannelKey,
     var minimizedByUser: Boolean,
-    var host: FullscreenVideoHost,
-)
-
-private data class WebPictureInPictureRequest(
-    val key: WebMediaChannelKey,
-    val requestId: String,
-    val fallbackSession: FullscreenVideoSession? = null,
-)
-
-private data class PendingBlockingStart(
-    val webView: WebView,
-    val pageUrl: String,
-    val restoreState: Boolean,
-)
-
-private data class MainFrameTlsNavigation(
-    val webView: WebView,
-    val generation: Int,
-    val targetUrls: List<String>,
 )
 
 private data class FindInPageSession(
     val id: Long,
     val tabId: String,
-    val webView: WebView? = null,
     val geckoSession: AndroidBrowserEngineSessionPort? = null,
     val navigationGeneration: Int,
 ) {
     init {
-        require((webView != null) != (geckoSession != null))
+        require(geckoSession != null)
     }
 }
 
@@ -442,20 +345,17 @@ class BrowserController(
     },
     private val requestSnoozeNotificationPermission: () -> Unit = {},
     private val onFullImmersiveModeChanged: (Boolean) -> Unit = {},
-    private val onWebMediaStateChanged: () -> Unit = {},
-    private val onWebPictureInPictureRequested: () -> Boolean = { false },
-    private val onWebPictureInPictureRequestTimedOut: () -> Unit = {},
-    private val deferWebViewRuntimeStartup: Boolean = false,
+    private val onMediaStateChanged: () -> Unit = {},
     private val externalApps: ExternalAppLauncher = ExternalAppLauncher(activity),
 ) {
     val usesGeckoEngine: Boolean
         get() = BuildConfig.USE_GECKO_ENGINE
 
     val supportsPageContentActions: Boolean
-        get() = !usesGeckoEngine
+        get() = true
 
     private val isDomainMuteSupported: Boolean
-        get() = !usesGeckoEngine && WebViewFeature.isFeatureSupported(WebViewFeature.MUTE_AUDIO)
+        get() = true
 
     val tabs = mutableStateListOf<BrowserTab>()
     val profiles = mutableStateListOf<BrowserProfile>()
@@ -477,6 +377,10 @@ class BrowserController(
         private set
     internal val busyToppingIds = mutableStateListOf<String>()
     val contentActions = WebContentActionState()
+    internal val firefoxExtensionActions = mutableStateListOf<GeckoExtensionActionState>()
+    internal var firefoxExtensionPopupView by mutableStateOf<View?>(null)
+        private set
+    private var firefoxExtensionPopupIdentity: GeckoExtensionPopupIdentity? = null
     val externalDownloadManagers = mutableStateListOf<ExternalDownloadManagerApp>()
     var activeProfileWallpaperBitmap by mutableStateOf<Bitmap?>(null)
         private set
@@ -490,17 +394,12 @@ class BrowserController(
             if (selectedTabIdState == value) return
             if (findInPageState?.tabId != value) closeFindInPage()
             selectedTabIdState = value
-            fullscreenVideoSession
-                ?.takeIf { session -> session.isPrivate && session.tabId != value }
-                ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
-            val presentationTabId = webMediaPresentation?.key?.tabId
-            if (
-                presentationTabId != null &&
-                presentationTabId != value &&
-                tabs.firstOrNull { it.id == presentationTabId }?.isIncognito == true
-            ) {
-                clearWebMediaPresentation(pause = true)
-            }
+            geckoMediaPresentation
+                ?.takeIf { presentation ->
+                    presentation.tabId != value &&
+                        tabs.firstOrNull { it.id == presentation.tabId }?.isIncognito == true
+                }
+                ?.let { clearGeckoMediaPresentation() }
         }
     var activeProfileId by mutableStateOf(DEFAULT_PROFILE_ID)
         private set
@@ -510,7 +409,7 @@ class BrowserController(
         private set
     var inactiveTabLifetime by mutableStateOf(InactiveTabLifetime.Never)
         private set
-    var residentTabLimit by mutableIntStateOf(TabWebViewResidencyRules.DEFAULT_LIMIT)
+    var residentTabLimit by mutableIntStateOf(BrowserSessionResidencyRules.DEFAULT_LIMIT)
         private set
     var searchEngine by mutableStateOf(SearchEngine.Google)
         private set
@@ -576,41 +475,32 @@ class BrowserController(
         private set
     var activeCapsuleId by mutableStateOf<String?>(null)
         private set
-    var webViewRevision by mutableIntStateOf(0)
+    var engineViewRevision by mutableIntStateOf(0)
         private set
     var permissionPrompt by mutableStateOf<PermissionPrompt?>(null)
         private set
     var httpAuthPrompt by mutableStateOf<HttpAuthPrompt?>(null)
         private set
-    internal var fullscreenVideoState by mutableStateOf<FullscreenVideoState?>(null)
+    var webPrompt by mutableStateOf<BrowserWebPrompt?>(null)
         private set
-    internal var webMediaState by mutableStateOf<WebMediaState?>(null)
+    internal var fullscreenVideoState by mutableStateOf<FullscreenVideoState?>(null)
         private set
     internal var castMediaCandidate by mutableStateOf<CastMediaCandidate?>(null)
         private set
-    private var isWebViewRuntimeReady = !usesGeckoEngine && !deferWebViewRuntimeStartup
     val isProfileIsolationSupported: Boolean
         get() = isProfileIsolationSupportedState
-    private var isProfileIsolationSupportedState by mutableStateOf(
-        usesGeckoEngine ||
-            (!deferWebViewRuntimeStartup &&
-                WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)),
-    )
+    private var isProfileIsolationSupportedState by mutableStateOf(true)
+
     val canOpenLinkInPrivate: Boolean
         get() = isProfileIsolationSupported && !isSyncedProfile(activeProfileId)
     val isVideoAutoplayBlockingSupported: Boolean
         get() = isVideoAutoplayBlockingSupportedState
-    private var isVideoAutoplayBlockingSupportedState by mutableStateOf(
-        !deferWebViewRuntimeStartup &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT),
-    )
+    private var isVideoAutoplayBlockingSupportedState by mutableStateOf(true)
+
     val isUserScriptSupported: Boolean
         get() = isUserScriptSupportedState
-    private var isUserScriptSupportedState by mutableStateOf(
-        !usesGeckoEngine &&
-            !deferWebViewRuntimeStartup &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD),
-    )
+    private var isUserScriptSupportedState by mutableStateOf(false)
+
     val activeSiteCapsule: SiteCapsule?
         get() = activeCapsuleId?.let { id -> siteCapsules.firstOrNull { it.id == id } }
     val isCapsulePinningSupported: Boolean
@@ -620,6 +510,7 @@ class BrowserController(
     val selectedFavicon: Bitmap?
         get() = favicons[selectedTabId]
     private val bottomBarCompactStates = mutableStateMapOf<String, Boolean>()
+    private val browserChromeScrollStates = mutableMapOf<String, BrowserChromeScrollState>()
 
     val isBottomBarCompact: Boolean
         get() = bottomBarCompactStates[selectedTabId] == true
@@ -632,35 +523,36 @@ class BrowserController(
             FullscreenVideoPlacement.Expanded
 
     internal val isPictureInPictureEligible: Boolean
-        get() {
-            val session = fullscreenVideoSession
-            if (FullscreenVideoRules.isPictureInPictureEligible(
-                sessionTabId = session?.tabId,
-                isPrivate = session?.isPrivate,
-            )) return true
-            val requestedChannel = pendingWebPictureInPictureRequest
-                ?.key
-                ?.let(webMediaChannels::get)
-                ?.takeIf(::isCurrentWebMediaChannel)
-            val channel = requestedChannel ?: presentedWebMediaChannel()
-                ?: activeVideoChannel(selectedTabId)
-            val tab = channel?.key?.tabId?.let { id -> tabs.firstOrNull { it.id == id } }
-            val isPresented = channel != null && webMediaPresentation?.key == channel.key
-            val isRequested = channel != null && requestedChannel?.key == channel.key
-            return channel != null &&
-                (channel.key.tabId == selectedTabId || isPresented) &&
-                WebMediaRules.isExternalPresentationEligible(
-                    state = channel.toState(),
-                    isPrivate = tab?.isIncognito != false,
-                ) &&
-                (channel.payload.isPlaying || isPresented || isRequested)
-        }
+        get() = GeckoPictureInPictureRules.isEligible(
+            state = geckoMediaStates[selectedTabId],
+            isPrivate = selectedTab.isIncognito,
+            isSelectedTab = true,
+        )
 
-    internal val systemWebMediaState: WebMediaState?
-        get() = systemWebMediaChannel()?.toState()
+    internal val systemMediaState: BrowserMediaState?
+        get() = geckoSystemMediaState()
 
     @VisibleForTesting
-    fun selectedWebViewForTesting(): WebView = webViewFor(selectedTabId)
+    internal fun reportSelectedGeckoMediaStateForTesting(state: GeckoMediaSessionState) {
+        check(usesGeckoEngine)
+        val session = geckoEngineSessionFor(selectedTabId)
+        onGeckoMediaState(selectedTabId, session, state)
+    }
+
+    @VisibleForTesting
+    fun selectedGeckoViewForTesting(): View? = geckoViewBindings.values
+        .firstOrNull { binding -> binding.tabId == selectedTabId }
+        ?.view
+
+    /** Routes a semantic Gecko content-target callback through normal Link Peek handling. */
+    @VisibleForTesting
+    internal fun dispatchSelectedGeckoContentTargetForTesting(target: WebContentTarget) {
+        check(usesGeckoEngine)
+        geckoEngineSessionFor(selectedTabId).dispatchContentTargetForTesting(target)
+    }
+
+    @VisibleForTesting
+    fun hasPendingFileChooserForTesting(): Boolean = pendingFileChooser != null
 
     @VisibleForTesting
     fun detectFederatedLoginForTesting(requestUrl: String) {
@@ -676,8 +568,12 @@ class BrowserController(
 
     @VisibleForTesting
     fun acceptsThirdPartyCookiesForTesting(tabId: String = selectedTabId): Boolean {
-        val webView = webViewFor(tabId)
-        return cookieManagerFor(webView).acceptThirdPartyCookies(webView)
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return PrivacyPolicyRules.acceptsThirdPartyCookies(
+            blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
+            sitePaused = isSiteProtectionPaused(tabId, tab.url),
+        ) || isFederatedLoginCompatibilityEnabled(tab, tab.url) ||
+            isCaptchaCompatibilityEnabled(tab, tab.url)
     }
 
     @VisibleForTesting
@@ -695,78 +591,62 @@ class BrowserController(
     fun selectedTabForTesting(): BrowserTab = selectedTab
 
     @VisibleForTesting
-    fun residentTabIdsForTesting(): Set<String> = webViews.keys.toSet()
-
-    @VisibleForTesting
-    fun flushWebViewStateForTesting(): Boolean = webViewStateRepository.flush()
-
-    @VisibleForTesting
-    fun showFullscreenVideoForTesting(
-        view: View,
-        callback: WebChromeClient.CustomViewCallback,
-    ) {
-        val webView = webViewFor(selectedTabId)
-        showFullscreenVideo(selectedTabId, webView, view, callback)
-    }
-
-    @VisibleForTesting
-    fun hideFullscreenVideoForTesting() {
-        fullscreenVideoSession?.let(::handleFullscreenVideoHidden)
-    }
+    fun residentTabIdsForTesting(): Set<String> = geckoEngineSessions.keys.toSet()
 
     @VisibleForTesting
     val activeLinkPeekPreviewCountForTesting: Int
-        get() = linkPeekPreviewAssignments.size + geckoLinkPeekBindings.size
+        get() = geckoLinkPeekBindings.size
 
     @VisibleForTesting
-    fun externalLinkPreviewWebViewForTesting(): WebView? = externalLinkPreviewRuntime?.webView
+    fun externalLinkPreviewEngineViewForTesting(): View? =
+        externalLinkPreviewRuntime?.binding?.view
+
+    @VisibleForTesting
+    fun externalLinkPreviewUsesGeckoForTesting(): Boolean =
+        externalLinkPreviewRuntime?.binding is ExternalLinkPreviewEngineBinding.Gecko
 
     @VisibleForTesting
     val videoAutoplayScriptHandlerCountForTesting: Int
-        get() = videoAutoplayScriptHandlers.size
+        get() = if (isVideoAutoplayBlocked) geckoEngineSessions.size else 0
 
     @VisibleForTesting
-    val backgroundAudioTabIdForTesting: String?
-        get() = backgroundAudioKey?.tabId
+    internal var syncMutationObserverForTesting: ((SyncPendingMutation) -> Unit)? = null
 
-    private val webViews = mutableMapOf<String, WebView>()
+    @VisibleForTesting
+    internal fun applySyncRepositoryStateForTesting(state: SyncRepositoryState) {
+        applySyncRepositoryState(state)
+    }
+
+    @VisibleForTesting
+    internal fun dispatchGeckoEngineEventForTesting(event: BrowserEngineEvent) {
+        onGeckoEngineEvent(event)
+    }
+
+    @VisibleForTesting
+    internal fun installGeckoEngineSessionForTesting(session: AndroidBrowserEngineSessionPort) {
+        require(tabs.any { tab -> tab.id == session.tabId })
+        geckoEngineSessions.put(session.tabId, session)?.execute(BrowserEngineCommands.close())
+        connectGeckoScrollListener(session.tabId, session)
+    }
+
     private val geckoEngineSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
     private val geckoViewBindings = mutableMapOf<FrameLayout, GeckoViewBinding>()
     private val geckoEngineSessionFactory by lazy(LazyThreadSafetyMode.NONE) {
         GeckoBrowserEngineSessionFactory(activity.applicationContext)
     }
-    private val residentWebViewAccessOrder = mutableMapOf<String, Long>()
-    private var residentWebViewAccessSequence = 0L
-    private var residentWebViewTrimScheduled = false
-    private var fullscreenVideoSession: FullscreenVideoSession? = null
+    private val residentSessionAccessOrder = mutableMapOf<String, Long>()
+    private var residentSessionAccessSequence = 0L
+    private var residentSessionTrimScheduled = false
     private var fullscreenVideoSourceRevision = 0
-    private var webMediaPresentation: WebMediaPresentation? = null
-    private var activeWebMediaKey: WebMediaChannelKey? = null
-    private var backgroundAudioKey: WebMediaChannelKey? = null
+    private var geckoMediaPresentation: GeckoMediaPresentation? = null
     private var pictureInPictureTransitionPending = false
     private var pictureInPictureTransitionGeneration = 0
-    private var pictureInPicturePresentationCreatedForTransition = false
-    private var pictureInPicturePresentationPendingReturnCleanupKey: WebMediaChannelKey? = null
-    private var pictureInPicturePresentationReturnHost: FullscreenVideoHost? = null
+    private var pictureInPicturePlaybackRetryGeneration = 0
     private var pictureInPictureOwnerTabId: String? = null
+    private var pictureInPictureCompositorSession: AndroidBrowserEngineSessionPort? = null
     private var pictureInPicturePlaybackExpected = false
-    private var pictureInPicturePlayRetryPending = false
-    private var pictureInPicturePresentationRetryKey: WebMediaChannelKey? = null
-    private var pictureInPicturePresentationRetryGeneration = 0
-    private var pictureInPictureExitGuardKey: WebMediaChannelKey? = null
-    private var pictureInPictureExitGuardGeneration = 0
     private var isInPictureInPicture = false
-    private var pendingWebPictureInPictureRequest: WebPictureInPictureRequest? = null
-    private var activeWebPictureInPictureRequest: WebPictureInPictureRequest? = null
-    private var webPictureInPictureFallbackPendingReturnCleanup: FullscreenVideoSession? = null
-    private var fullscreenVideoHiddenDuringPictureInPicture: FullscreenVideoSession? = null
-    private val webMediaChannels = mutableMapOf<WebMediaChannelKey, WebMediaChannel>()
-    private val webMediaScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
-    private val webMediaBridgeTokens = mutableMapOf<WebView, String>()
-    private val webMediaMessageRateWindows =
-        mutableMapOf<WebMediaMessageRateKey, WebMediaMessageRateWindow>()
-    private val retiredWebMediaDocumentIds = mutableMapOf<WebView, ArrayDeque<String>>()
-    private val linkPeekPreviewAssignments = mutableMapOf<WebView, WebViewProfileAssignment>()
+    private val geckoMediaStates = mutableMapOf<String, GeckoMediaSessionState>()
     private val geckoLinkPeekBindings = mutableMapOf<View, GeckoLinkPeekBinding>()
     private var nextGeckoLinkPeekId = 0L
     private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
@@ -777,17 +657,7 @@ class BrowserController(
     private val externalNavigationGrants = mutableMapOf<String, ExternalNavigationGrant>()
     private val pendingInitialExternalNavigationGrants =
         mutableMapOf<String, ExternalNavigationGrant>()
-    private val mainFrameTlsNavigations = mutableMapOf<String, MainFrameTlsNavigation>()
     private var webContentRequestGeneration = 0L
-    private val desktopViewportScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
-    private val desktopViewportScriptOrigins = mutableMapOf<WebView, Set<String>>()
-    private val forcedPageZoomScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
-    private val forcedVerticalScrollScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
-    private val cosmeticScriptHandlers = mutableMapOf<WebView, List<ScriptHandler>>()
-    private val webContentTopInsetScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
-    private val webContentTopInsetNativeFallbacks = mutableSetOf<WebView>()
-    private val genericCosmeticBridges = mutableMapOf<WebView, GenericCosmeticBridge>()
-    private val videoAutoplayScriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private var userScriptMutationPending = false
     private var toppingCatalogRefreshGeneration = 0
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
@@ -809,12 +679,11 @@ class BrowserController(
     private val federatedLoginPopupTabIds = mutableSetOf<String>()
     private val federatedLoginCompatibilityTabIds = mutableSetOf<String>()
     private val pageUrls = ConcurrentHashMap<String, String>()
-    private val webViewProfileKeys = ConcurrentHashMap<String, String>()
-    private val configuredServiceWorkerProfiles = mutableSetOf<String>()
-    private var incognitoWebViewProfileName = newIncognitoWebViewProfileName()
     private val mainHandler = Handler(Looper.getMainLooper())
     val syncIconCatalog = SyncDeviceIconCatalog.decode(
-        activity.assets.open("candy_sync_device_icons_v1.json"),
+        activity.assets.open("candy_sync_device_icons_v1.json")
+            .bufferedReader(Charsets.UTF_8)
+            .use { it.readText() },
     )
     private val syncRepository = CandySyncRepository(
         settingsStore = AndroidSyncSettingsStore(activity),
@@ -828,6 +697,7 @@ class BrowserController(
     private val locallyPendingSyncCandyIds = mutableSetOf<String>()
     private val pendingSyncNavigationRunnables = mutableMapOf<String, Runnable>()
     private val remoteSyncNavigationUrls = mutableMapOf<String, String>()
+    private val supersededRemoteSyncNavigationUrls = mutableMapOf<String, MutableSet<String>>()
     private val syncRefreshRunnable = object : Runnable {
         override fun run() {
             if (destroyed || !isActivityStarted) return
@@ -855,10 +725,13 @@ class BrowserController(
     private val permissionRepository = PermissionRadarRepository(permissionStore)
     private val activePermissions = ActivePermissionLedger()
     private var pendingPermissionAccess: PendingPermissionAccess? = null
+    private var pendingGeckoAndroidPermissionRequest: PendingGeckoAndroidPermissionRequest? = null
     private var pendingFileChooser: PendingFileChooser? = null
     private var permissionPromptSequence = 0L
     private var pendingHttpAuthChallenge: PendingHttpAuthChallenge? = null
     private var httpAuthPromptSequence = 0L
+    private var pendingWebPrompt: PendingWebPrompt? = null
+    private var webPromptSequence = 0L
     private var permissionRevision by mutableIntStateOf(0)
     private val protectionRequestContexts = ConcurrentHashMap<String, ProtectionRequestContext>()
     private var isActivityResumed = false
@@ -868,7 +741,6 @@ class BrowserController(
     @Volatile
     private var destroyed = false
     private var previewContentBottomInWindowPx: Int? = null
-    private val pendingPreviewCaptures = mutableMapOf<String, PendingPreviewCapture>()
     private val pendingGeckoPreviewCaptures = mutableMapOf<String, PendingGeckoPreviewCapture>()
     @VisibleForTesting
     var previewCaptureRequestCountForTesting = 0
@@ -904,6 +776,7 @@ class BrowserController(
         putAll(store.loadMutedDomains())
     }
     private val temporaryMutedDomains = mutableStateMapOf<String, Set<String>>()
+    private val extensionTabMuteOverrides = mutableMapOf<String, Boolean>()
     private val permanentDesktopViewDomains = mutableStateMapOf<String, Set<String>>().apply {
         putAll(store.loadDesktopViewDomains())
     }
@@ -913,15 +786,10 @@ class BrowserController(
             putAll(store.loadAlwaysBlockPopupDomains())
         }
     private val temporaryAlwaysBlockPopupDomains = mutableStateMapOf<String, Set<String>>()
-    private val defaultUserAgentMetadataBySettings = WeakHashMap<WebSettings, UserAgentMetadata>()
-    private val desktopNavigationOverrideTokens = WeakHashMap<WebView, Long>()
-    private var desktopNavigationOverrideSequence = 0L
-    private val profileDeletionCoordinator =
-        WebViewProfileDeletionCoordinator(store, ::tryDeleteNamedWebViewProfile)
     private val previewRepository = TabPreviewRepository.get(activity)
     private val faviconRepository = FaviconRepository.get(activity)
     private val candyTrailRepository = CandyTrailRepository.get(activity)
-    private val webViewStateRepository = TabWebViewStateRepository.get(activity)
+    private val geckoSessionStateStore = GeckoSessionStateStore(activity.applicationContext)
     private val siteCapsuleStore = SiteCapsuleStore(activity)
     private val siteCapsuleIconStore = SiteCapsuleIconStore(activity)
     private val profileWallpaperStore = ProfileWallpaperStore(activity.applicationContext)
@@ -931,20 +799,9 @@ class BrowserController(
     private val candyRuleRepository = CandyRuleRepository.get(activity)
     private val userScriptRepository = UserScriptRepository.get(activity)
     private val userScriptCommandsByTab = mutableStateMapOf<String, List<UserScriptMenuCommand>>()
-    private val userScriptRuntime = UserScriptRuntime(
-        valueStore = UserScriptValueStore(activity),
-        onMenuCommandsChanged = { tabId, commands ->
-            if (commands.isEmpty()) {
-                userScriptCommandsByTab.remove(tabId)
-            } else {
-                userScriptCommandsByTab[tabId] = commands
-            }
-        },
-        onOpenTab = ::openUserScriptTab,
-    )
     private val toppingCatalogRepository = ToppingCatalogRepository.get(activity)
     private val contentBlocker = ContentBlocker(activity)
-    private val blockingStartGate = BlockingStartGate<PendingBlockingStart>()
+    private val blockingStartGate = BlockingStartGate<Unit>()
     private var isBundledBlockingPrepared = false
     private val suppressedInitialBlankTabIds = mutableSetOf<String>()
     private val bundledSitePrivacyDefaults = BundledSitePrivacyDefaults.load(activity)
@@ -976,7 +833,7 @@ class BrowserController(
 
     internal fun invokeUserScriptMenuCommand(command: UserScriptMenuCommand) {
         if (command.tabId != selectedTabId) return
-        userScriptRuntime.invokeMenuCommand(command)
+        geckoEngineSessionFactory.invokeToppingMenuCommand(command)
     }
 
     val activeTabs: List<BrowserTab>
@@ -995,6 +852,9 @@ class BrowserController(
 
     val localBrowserProfiles: List<BrowserProfile>
         get() = localProfiles
+
+    private fun profileForId(profileId: String): BrowserProfile? =
+        profiles.firstOrNull { it.id == profileId }
 
     private fun isSyncedProfile(profileId: String): Boolean =
         profiles.any { it.id == profileId && it.isSynced }
@@ -1136,7 +996,7 @@ class BrowserController(
             cancelPendingPermissionAccess(tabId)
             removeActivePermissionsForTab(tabId)
             clearExternalNavigationAuthorization(tabId)
-            webViews[tabId]?.reload()
+            geckoEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
         } else if (
             pendingPermissionAccess?.let { access ->
                 access.site == site && permission in access.requested
@@ -1144,9 +1004,7 @@ class BrowserController(
         ) {
             cancelPendingPermissionAccess(tabId)
         }
-        if (permission == SitePermission.Location) {
-            geolocationPermissionsFor(tabId)?.clear(normalizedOrigin)
-        }
+
         return true
     }
 
@@ -1161,9 +1019,8 @@ class BrowserController(
         if (activePermissions.hasSite(tabId, site)) {
             removeActivePermissionsForTab(tabId)
             clearExternalNavigationAuthorization(tabId)
-            webViews[tabId]?.reload()
+            geckoEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
         }
-        geolocationPermissionsFor(tabId)?.clear(normalizedOrigin)
         return true
     }
 
@@ -1215,9 +1072,9 @@ class BrowserController(
         }
         pendingHttpAuthChallenge = null
         httpAuthPrompt = null
-        runCatching { pending.handler.proceed(username, password) }
-            .onFailure { runCatching { pending.handler.cancel() } }
-        scheduleResidentWebViewTrim()
+        runCatching { pending.confirm(username, password) }
+            .onFailure { runCatching(pending.dismiss) }
+        scheduleResidentSessionTrim()
     }
 
     fun cancelHttpAuthPrompt(promptId: Long) {
@@ -1225,7 +1082,51 @@ class BrowserController(
         cancelPendingHttpAuthChallenge()
     }
 
+    fun confirmWebPrompt(promptId: Long, value: String? = null) {
+        val pending = pendingWebPrompt?.takeIf { it.promptId == promptId } ?: return
+        if (!isWebPromptCurrent(pending)) {
+            cancelPendingWebPrompt()
+            return
+        }
+        val prompt = webPrompt
+        pendingWebPrompt = null
+        webPrompt = null
+        val shareLaunched = if (prompt?.kind == BrowserWebPromptKind.Share) {
+            prompt.shareUri?.let { uri ->
+                PageShareRequest.create(uri, prompt.title.orEmpty())
+                    ?.let(PageShareLauncher(activity)::launch)
+            } == PageShareResult.Launched
+        } else true
+        val responseValue = if (prompt?.kind == BrowserWebPromptKind.Share) {
+            null
+        } else value?.take(BrowserWebPromptRules.MAX_INPUT_LENGTH)
+        runCatching {
+            if (shareLaunched) pending.response.confirm(responseValue) else pending.response.dismiss()
+        }
+            .onFailure { runCatching(pending.response::dismiss) }
+    }
+
+    fun cancelWebPrompt(promptId: Long) {
+        if (pendingWebPrompt?.promptId != promptId) return
+        cancelPendingWebPrompt()
+    }
+
     fun onRuntimePermissionResult(results: Map<String, Boolean>) {
+        pendingGeckoAndroidPermissionRequest?.let { pending ->
+            pendingGeckoAndroidPermissionRequest = null
+            val isCurrent = isGeckoRendererCurrent(
+                tabId = pending.tabId,
+                session = pending.session,
+                navigationGeneration = pending.navigationGeneration,
+                requireSelected = true,
+            )
+            pending.request.response.complete(
+                isCurrent && pending.request.permissions.all { permission ->
+                    results[permission] == true || hasRuntimePermission(permission)
+                },
+            )
+            return
+        }
         val pending = pendingPermissionAccess?.takeIf(PendingPermissionAccess::awaitingRuntime)
             ?: return
         if (!isPermissionRequestCurrent(pending.identity, requireResumed = false)) {
@@ -1249,13 +1150,22 @@ class BrowserController(
         val pending = pendingFileChooser ?: return
         if (!isFileChooserCurrent(pending.identity)) {
             pendingFileChooser = null
+            finalizeFileCapture(pending.captureOutput, keep = false)
             pending.delivery.complete(null)
-            scheduleResidentWebViewTrim()
+            scheduleResidentSessionTrim()
             return
         }
-        val parsed = WebChromeClient.FileChooserParams.parseResult(resultCode, data)
-            .orEmpty()
-            .map(Uri::toString)
+        val parsed = if (resultCode == Activity.RESULT_OK) {
+            buildList {
+                pending.captureOutput?.let { output -> add(output.uri.toString()) }
+                data?.data?.let { add(it.toString()) }
+                data?.clipData?.let { clip ->
+                    repeat(clip.itemCount) { index -> add(clip.getItemAt(index).uri.toString()) }
+                }
+            }
+        } else {
+            emptyList()
+        }
         runCatching {
             fileChooserValidationExecutor.execute {
                 val safeUris = FileChooserRules.sanitizedUris(parsed, pending.allowMultiple)
@@ -1269,19 +1179,22 @@ class BrowserController(
                         !isFileChooserCurrent(pending.identity)
                     ) {
                         if (pendingFileChooser === pending) pendingFileChooser = null
+                        finalizeFileCapture(pending.captureOutput, keep = false)
                         pending.delivery.complete(null)
-                        scheduleResidentWebViewTrim()
+                        scheduleResidentSessionTrim()
                     } else {
                         pendingFileChooser = null
+                        finalizeFileCapture(pending.captureOutput, keep = safeUris != null)
                         pending.delivery.complete(safeUris)
-                        scheduleResidentWebViewTrim()
+                        scheduleResidentSessionTrim()
                     }
                 }
             }
         }.onFailure {
             if (pendingFileChooser === pending) pendingFileChooser = null
+            finalizeFileCapture(pending.captureOutput, keep = false)
             pending.delivery.complete(null)
-            scheduleResidentWebViewTrim()
+            scheduleResidentSessionTrim()
         }
     }
 
@@ -1587,10 +1500,150 @@ class BrowserController(
         semanticRuleKey(left) == semanticRuleKey(right)
 
     init {
-        if (isWebViewRuntimeReady) deletePendingWebViewProfiles()
         filterRules += candyRuleRepository.load()
         userScripts += userScriptRepository.load()
         if (usesGeckoEngine) {
+            geckoEngineSessionFactory.setBlockThirdPartyCookies(
+                workerSettings.blockThirdPartyCookies,
+            )
+            geckoEngineSessionFactory.setExtensionChromeHost(
+                object : GeckoExtensionChromeHost {
+                    override fun currentSessionIdentity(): GeckoExtensionSessionIdentity? =
+                        geckoEngineSessionFactory.extensionSessionIdentity(selectedTabId)
+                            ?.takeIf { geckoEngineSessions.containsKey(it.tabId) }
+
+                    override fun isCurrentSession(identity: GeckoExtensionSessionIdentity): Boolean =
+                        geckoEngineSessions.containsKey(identity.tabId) &&
+                            geckoEngineSessionFactory.extensionSessionIdentity(identity.tabId) == identity
+
+                    override fun createTab(
+                        request: GeckoExtensionCreateTabRequest,
+                        session: GeckoSession,
+                    ): String? {
+                        val existingTabIds = tabs.mapTo(hashSetOf(), BrowserTab::id)
+                        val source = request.source
+                        val tabId = if (request.active) {
+                            this@BrowserController.createTab(
+                                isIncognito = source?.isPrivate == true,
+                                openerTabId = source?.tabId,
+                            )
+                        } else {
+                            this@BrowserController.createBackgroundTab(
+                                initialUrl = BLANK_URL,
+                                openerTabId = source?.tabId,
+                                isIncognito = source?.isPrivate == true,
+                            ) ?: return null
+                        }
+                        if (tabId in existingTabIds) return null
+                        if (request.pinned) this@BrowserController.setTabPinned(tabId, true)
+                        if (
+                            request.index?.let { index ->
+                                !this@BrowserController.positionExtensionCreatedTab(tabId, index)
+                            } == true
+                        ) {
+                            this@BrowserController.closeTab(tabId)
+                            return null
+                        }
+                        if (!geckoEngineSessionFactory.prepareSession(tabId, session)) {
+                            this@BrowserController.closeTab(tabId)
+                            return null
+                        }
+                        this@BrowserController.geckoEngineSessionFor(tabId)
+                        return tabId
+                    }
+
+                    override fun updateTab(request: GeckoExtensionUpdateTabRequest): Boolean {
+                        if (!isCurrentSession(request.target)) return false
+                        request.pinned?.let { pinned ->
+                            this@BrowserController.setTabPinned(request.target.tabId, pinned)
+                        }
+                        request.muted?.let { muted ->
+                            if (!this@BrowserController.setExtensionTabMuted(
+                                    tabId = request.target.tabId,
+                                    muted = muted,
+                                )
+                            ) {
+                                return false
+                            }
+                        }
+                        if (request.active == true) {
+                            this@BrowserController.selectTab(request.target.tabId)
+                        }
+                        return true
+                    }
+
+                    override fun closeTab(target: GeckoExtensionSessionIdentity): Boolean {
+                        if (!isCurrentSession(target)) return false
+                        val before = tabs.size
+                        this@BrowserController.closeTab(target.tabId)
+                        return tabs.size < before
+                    }
+
+                    override fun openPopup(
+                        popup: GeckoExtensionPopupIdentity,
+                        session: GeckoSession,
+                        toggle: Boolean,
+                    ): Boolean {
+                        if (!isCurrentSession(popup.owner)) return false
+                        this@BrowserController.releaseFirefoxExtensionPopupView()
+                        val view = GeckoView(activity).also { geckoView ->
+                            geckoView.setSession(session)
+                        }
+                        firefoxExtensionPopupIdentity = popup
+                        firefoxExtensionPopupView = view
+                        return true
+                    }
+
+                    override fun closePopup(popup: GeckoExtensionPopupIdentity) {
+                        if (firefoxExtensionPopupIdentity != popup) return
+                        this@BrowserController.releaseFirefoxExtensionPopupView()
+                    }
+
+                    override fun openOptionsPage(
+                        extensionId: String,
+                        owner: GeckoExtensionSessionIdentity,
+                        url: String,
+                        openInTab: Boolean,
+                    ): String? {
+                        if (!isCurrentSession(owner)) return null
+                        val existingTabIds = tabs.mapTo(hashSetOf(), BrowserTab::id)
+                        val tabId = this@BrowserController.createTab(
+                            isIncognito = owner.isPrivate,
+                            openerTabId = owner.tabId,
+                        )
+                        if (tabId in existingTabIds) return null
+                        if (!this@BrowserController.geckoEngineSessionFor(tabId).loadExtensionUrl(url)) {
+                            this@BrowserController.closeTab(tabId)
+                            return null
+                        }
+                        return tabId
+                    }
+
+                    override fun onActionsChanged(actions: List<GeckoExtensionActionState>) {
+                        firefoxExtensionActions.clear()
+                        firefoxExtensionActions.addAll(actions)
+                    }
+
+                },
+            )
+            geckoEngineSessionFactory.setToppingInteractionDelegate(
+                object : GeckoToppingInteractionDelegate {
+                    override fun onMenuCommandsChanged(
+                        tabId: String,
+                        commands: List<UserScriptMenuCommand>,
+                    ) {
+                        if (commands.isEmpty()) {
+                            userScriptCommandsByTab.remove(tabId)
+                        } else {
+                            userScriptCommandsByTab[tabId] = commands
+                        }
+                    }
+
+                    override fun onOpenTab(request: UserScriptOpenTabRequest) {
+                        openUserScriptTab(request)
+                    }
+                },
+            )
             geckoEngineSessionFactory.setToppingHostStateListener { state ->
                 isUserScriptSupportedState = state == GeckoToppingHostState.Ready
             }
@@ -1618,7 +1671,7 @@ class BrowserController(
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
         automaticTabSortingEnabled = store.loadAutomaticTabSortingEnabled()
         isAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
-        isExternalLinkPreviewEnabled = !usesGeckoEngine && store.loadExternalLinkPreviewEnabled()
+        isExternalLinkPreviewEnabled = store.loadExternalLinkPreviewEnabled()
         val storedAddressBarDockPlacement = store.loadAddressBarDockPlacement()
         lastAddressBarDockPlacement = store.loadLastAddressBarDockPlacement()
             ?: storedAddressBarDockPlacement
@@ -1758,18 +1811,14 @@ class BrowserController(
             }
         }
         persist()
-        webViewStateRepository.prune(
+        geckoSessionStateStore.prune(
             (tabs.asSequence() + snoozedTabs.asSequence().map(SnoozedTab::tab))
                 .filterNot(BrowserTab::isIncognito)
                 .mapTo(linkedSetOf(), BrowserTab::id),
         )
-        // Incognito tabs are never restored. Remove data left by process death before
-        // any private WebView can reuse the old profile.
-        if (isWebViewRuntimeReady) clearIncognitoProfile()
         restorePersistedPreviews()
         restorePersistedFavicons()
         restorePersistedCandyTrails()
-        if (isWebViewRuntimeReady) WebView.setWebContentsDebuggingEnabled(false)
         contentBlocker.onBundledBlockingReady {
             mainHandler.post {
                 if (destroyed) return@post
@@ -1782,11 +1831,7 @@ class BrowserController(
             contentBlocker.prepareCosmeticRules()
             contentBlocker.onCosmeticRulesReady {
                 mainHandler.post {
-                    webViews.forEach { (tabId, webView) ->
-                        val pageUrl = pageUrls[tabId] ?: webView.url
-                        installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
-                        injectCandyCosmeticFallback(tabId, webView, pageUrl)
-                    }
+
                 }
             }
         }
@@ -1799,49 +1844,64 @@ class BrowserController(
         }
     }
 
-    internal fun onWebViewProcessReady() {
-        if (destroyed || isWebViewRuntimeReady) return
-        isProfileIsolationSupportedState =
-            WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
-        isVideoAutoplayBlockingSupportedState =
-            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
-        isUserScriptSupportedState =
-            WebViewFeature.isFeatureSupported(WebViewFeature.JS_INJECTION_IN_FRAME_AND_WORLD)
-        isVideoAutoplayBlocked =
-            isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
-        isWebViewRuntimeReady = true
-        deletePendingWebViewProfiles()
-        clearIncognitoProfile()
-        WebView.setWebContentsDebuggingEnabled(false)
-        completeBlockingStartupIfReady()
-        webViewRevision++
+    private fun completeBlockingStartupIfReady() {
+        if (!isBundledBlockingPrepared || blockingStartGate.isReady) return
+        blockingStartGate.markReady()
     }
 
-    private fun completeBlockingStartupIfReady() {
-        if (!isWebViewRuntimeReady || !isBundledBlockingPrepared || blockingStartGate.isReady) return
-        configureServiceWorkerBlocking()
-        val pendingStarts = blockingStartGate.markReady()
-        webViews.forEach { (tabId, webView) ->
-            tabs.firstOrNull { tab -> tab.id == tabId }?.let { tab ->
-                configureProfileServiceWorkerBlocking(profileAssignmentFor(tab), webView)
+    fun attachSelectedBrowserEngineView(
+        container: FrameLayout,
+        onContentPresented: ((String) -> Unit)? = null,
+    ): View? {
+        if (browsingDataClearPending) {
+            container.removeAllViews()
+            return null
+        }
+        return attachSelectedGeckoView(container, onContentPresented)
+    }
+
+    private fun attachSelectedGeckoView(
+        container: FrameLayout,
+        onContentPresented: ((String) -> Unit)?,
+    ): View? {
+        fun awaitContent(binding: GeckoViewBinding) {
+            if (onContentPresented == null) return
+            binding.session.awaitContentPresented {
+                container.post {
+                    if (
+                        geckoViewBindings[container] === binding &&
+                        binding.tabId == selectedTabId &&
+                        binding.view.parent === container
+                    ) {
+                        onContentPresented(binding.tabId)
+                    }
+                }
             }
         }
-        externalLinkPreviewRuntime?.let { runtime ->
-            configureProfileServiceWorkerBlocking(runtime.profileAssignment, runtime.webView)
-            startExternalLinkPreviewIfReady(runtime)
-        }
-        resumePendingBlockingStarts(pendingStarts)
-    }
 
-    fun attachSelectedBrowserEngineView(container: FrameLayout): View? {
-        if (usesGeckoEngine) return attachSelectedGeckoView(container)
-        attachSelectedWebView(container)
-        return container.getChildAt(0)
-    }
-
-    private fun attachSelectedGeckoView(container: FrameLayout): View {
         val current = geckoViewBindings[container]
         if (current?.tabId == selectedTabId && current.view.parent === container) {
+            awaitContent(current)
+            return current.view
+        }
+        if (
+            current?.tabId == selectedTabId &&
+            geckoMediaPresentation?.view === current.view
+        ) {
+            container.removeAllViews()
+            return null
+        }
+        if (current?.tabId == selectedTabId && current.view.parent == null) {
+            container.removeAllViews()
+            container.addView(
+                current.view,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            dispatchCurrentWindowInsets(current.view, current.tabId)
+            awaitContent(current)
             return current.view
         }
         current?.let { binding ->
@@ -1849,7 +1909,31 @@ class BrowserController(
             geckoViewBindings.remove(container)
         }
         container.removeAllViews()
-        val engineSession = geckoEngineSessionFor(selectedTabId)
+        val tabId = selectedTabId
+        val engineSession = geckoEngineSessionFor(tabId)
+        val transferable = geckoViewBindings.entries.firstOrNull { (host, binding) ->
+            host !== container &&
+                binding.tabId == tabId &&
+                binding.session === engineSession &&
+                binding.view !== geckoMediaPresentation?.view
+        }
+        if (transferable != null) {
+            val sourceContainer = transferable.key
+            val binding = transferable.value
+            (binding.view.parent as? ViewGroup)?.removeView(binding.view)
+            geckoViewBindings.remove(sourceContainer)
+            container.addView(
+                binding.view,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            geckoViewBindings[container] = binding
+            dispatchCurrentWindowInsets(binding.view, binding.tabId)
+            awaitContent(binding)
+            return binding.view
+        }
         val view = engineSession.createView(container.context)
         container.addView(
             view,
@@ -1858,44 +1942,15 @@ class BrowserController(
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
-        geckoViewBindings[container] = GeckoViewBinding(
-            tabId = selectedTabId,
+        val binding = GeckoViewBinding(
+            tabId = tabId,
             session = engineSession,
             view = view,
         )
+        geckoViewBindings[container] = binding
+        dispatchCurrentWindowInsets(view, tabId)
+        awaitContent(binding)
         return view
-    }
-
-    fun attachSelectedWebView(container: FrameLayout) {
-        check(!usesGeckoEngine) { "WebView host is unavailable while Gecko is active" }
-        if (!isWebViewRuntimeReady) {
-            container.removeAllViews()
-            return
-        }
-        val webView = webViewFor(selectedTabId)
-        if (webView.parent === container && container.childCount == 1) {
-            return
-        }
-        if (
-            webMediaPresentation?.key?.tabId == selectedTabId &&
-            webView.parent != null &&
-            webView.parent !== container
-        ) {
-            container.removeAllViews()
-            return
-        }
-        (webView.parent as? FrameLayout)?.removeView(webView)
-        container.removeAllViews()
-        container.addView(
-            webView,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            ),
-        )
-        dispatchCurrentWindowInsets(selectedTabId, webView)
-        SystemWebViewCredentials.onAttached(webView)
-        if (isActivityResumed) resumeWebView(selectedTabId, webView)
     }
 
     fun onWindowInsetsChanged(insets: WindowInsetsCompat) {
@@ -1909,20 +1964,23 @@ class BrowserController(
             return
         }
         // Compose owns the root inset listener. AndroidView children do not receive that
-        // callback, so forward every change to Chromium's WebView inset controller.
-        dispatchWindowInsetsToAttachedWebViews(insets)
+        // callback, so forward every change to the active engine views.
+        dispatchWindowInsetsToAttachedEngineViews(insets)
     }
 
     fun setBrowserChromeOwnsIme(ownsIme: Boolean) {
         if (browserChromeOwnsIme == ownsIme) return
         browserChromeOwnsIme = ownsIme
         val insets = lastWindowInsets ?: return
-        dispatchWindowInsetsToAttachedWebViews(insets)
+        dispatchWindowInsetsToAttachedEngineViews(insets)
     }
 
-    private fun dispatchWindowInsetsToAttachedWebViews(insets: WindowInsetsCompat) {
-        webViews.forEach { (tabId, webView) ->
-            if (webView.isAttachedToWindow) applyWindowInsets(tabId, webView, insets)
+    private fun dispatchWindowInsetsToAttachedEngineViews(insets: WindowInsetsCompat) {
+
+        geckoViewBindings.values.forEach { binding ->
+            if (binding.view.isAttachedToWindow) {
+                applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+            }
         }
     }
 
@@ -1930,10 +1988,6 @@ class BrowserController(
         geckoViewBindings.remove(container)?.let { binding ->
             binding.session.releaseView(binding.view)
         }
-        detachWebView(container)
-    }
-
-    fun detachWebView(container: FrameLayout) {
         container.removeAllViews()
     }
 
@@ -1947,21 +2001,19 @@ class BrowserController(
     )
 
     internal fun attachFullscreenVideoView(container: FrameLayout) {
-        val session = fullscreenVideoSession
-        val videoView = if (session != null) {
-            if (
-                webViews[session.tabId] !== session.webView ||
-                navigationGenerations[session.tabId] != session.navigationGeneration ||
-                tabs.none { it.id == session.tabId }
-            ) {
-                dismissFullscreenVideo(session, notifyPage = true)
-                return
+        val presentation = geckoMediaPresentation ?: return
+        if (
+            geckoEngineSessions[presentation.tabId] !== presentation.session ||
+            geckoViewBindings.values.none { binding ->
+                binding.tabId == presentation.tabId &&
+                    binding.session === presentation.session &&
+                    binding.view === presentation.view
             }
-            session.view
-        } else {
-            val channel = presentedWebMediaChannel() ?: return clearWebMediaPresentation()
-            channel.webView
+        ) {
+            clearGeckoMediaPresentation()
+            return
         }
+        val videoView = presentation.view
         if (videoView.parent === container && container.childCount == 1) return
         (videoView.parent as? ViewGroup)?.removeView(videoView)
         container.removeAllViews()
@@ -1972,28 +2024,15 @@ class BrowserController(
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
-        if (videoView is WebView) {
-            dispatchCurrentWindowInsets(
-                webMediaPresentation?.key?.tabId ?: selectedTabId,
-                videoView,
-            )
-            videoView.settings.allowContinuousMediaPlayback()
-            videoView.onResume()
-        }
     }
 
     internal fun detachFullscreenVideoView(container: FrameLayout) {
         container.removeAllViews()
-        if (fullscreenVideoSession == null && webMediaPresentation != null) webViewRevision++
     }
 
     internal fun minimizeFullscreenVideo() {
         if (presentationIsPrivate() != false) return
-        fullscreenVideoSession?.let { session ->
-            if (session.minimizedByUser) return
-            session.minimizedByUser = true
-        }
-        webMediaPresentation?.let { presentation ->
+        geckoMediaPresentation?.let { presentation ->
             presentation.minimizedByUser = true
         }
         publishFullscreenVideoState()
@@ -2001,196 +2040,177 @@ class BrowserController(
 
     internal fun expandFullscreenVideo() {
         val tabId = presentationTabId() ?: return
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return clearMediaPresentation()
-        fullscreenVideoSession?.minimizedByUser = false
-        webMediaPresentation?.minimizedByUser = false
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return clearGeckoMediaPresentation()
+        geckoMediaPresentation?.minimizedByUser = false
         if (tab.profileId != activeProfileId && !selectProfile(tab.profileId)) return
         selectTab(tab.id)
         publishFullscreenVideoState()
     }
 
     internal fun exitFullscreenVideo() {
-        cancelPictureInPicturePresentationRetry()
+        notifyGeckoPictureInPictureModeChanged(false)
+        pictureInPicturePlaybackRetryGeneration++
         pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
-        fullscreenVideoSession?.let { session ->
-            dismissFullscreenVideo(session, notifyPage = true)
-        }
-        clearWebMediaPresentation(pause = true)
+        geckoEngineSessions[presentationTabId()]?.executeMediaCommand(GeckoMediaCommand.Stop)
+        clearGeckoMediaPresentation()
     }
 
-    fun prepareForPictureInPicture() {
-        val session = fullscreenVideoSession
-        if (session?.isPrivate == true) return
-        val requestedChannel = pendingWebPictureInPictureRequest
-            ?.key
-            ?.let(webMediaChannels::get)
-            ?.takeIf(::isCurrentWebMediaChannel)
-        val requestedFallbackSession = pendingWebPictureInPictureRequest?.fallbackSession
-        val startsTransition = !pictureInPictureTransitionPending && !isInPictureInPicture
-        if (startsTransition) {
-            cancelPictureInPicturePresentationRetry()
-            val ownerTabId = session?.tabId ?: requestedChannel?.key?.tabId
-                ?: webMediaPresentation?.key?.tabId ?: selectedTabId
-            val returnCleanupKey = pictureInPicturePresentationPendingReturnCleanupKey
-            val retainedTransitionPresentation = returnCleanupKey != null &&
-                returnCleanupKey == webMediaPresentation?.key
-            pictureInPictureTransitionGeneration++
-            pictureInPictureExitGuardGeneration++
-            pictureInPictureExitGuardKey = null
-            pictureInPicturePresentationPendingReturnCleanupKey = null
-            pictureInPicturePresentationCreatedForTransition = retainedTransitionPresentation
-            pictureInPicturePresentationReturnHost = webMediaPresentation?.host
-            pictureInPictureOwnerTabId = ownerTabId
-            pictureInPicturePlaybackExpected = session != null ||
-                requestedChannel?.payload?.isPlaying == true ||
-                presentedWebMediaChannel()?.payload?.isPlaying == true ||
-                activeVideoChannel(ownerTabId)?.payload?.isPlaying == true
-        }
-        pictureInPictureTransitionPending = true
-        val hadWebMediaPresentation = webMediaPresentation != null
-        if (webMediaPresentation == null && requestedFallbackSession == null) {
-            pinWebMediaForPresentation(
-                channel = requestedChannel ?: activeVideoChannel(
-                    tabId = session?.tabId ?: selectedTabId,
-                    requireVisible = session == null,
-                    allowPaused = session != null,
-                ),
-                minimizedByUser = false,
-                host = FullscreenVideoHost.Browser,
+    fun prepareForPictureInPicture() = prepareGeckoPictureInPicture()
+
+    private fun prepareGeckoPictureInPicture() {
+        val tab = tabs.firstOrNull { candidate -> candidate.id == selectedTabId } ?: return
+        val mediaState = geckoMediaStates[tab.id]
+        if (
+            !GeckoPictureInPictureRules.isEligible(
+                state = mediaState,
+                isPrivate = tab.isIncognito,
+                isSelectedTab = true,
             )
+        ) return
+        val session = geckoEngineSessions[tab.id] ?: return
+        val binding = geckoViewBindings.values.firstOrNull { candidate ->
+            candidate.tabId == tab.id && candidate.session === session
+        } ?: return
+        val current = geckoMediaPresentation
+        if (current == null) {
+            geckoMediaPresentation = GeckoMediaPresentation(
+                tabId = tab.id,
+                session = session,
+                view = binding.view,
+                minimizedByUser = false,
+            )
+            publishFullscreenVideoState()
+        } else if (
+            current.tabId != tab.id ||
+            current.session !== session ||
+            current.view !== binding.view
+        ) {
+            return
         }
-        if (requestedFallbackSession == null) {
-            presentedWebMediaChannel()?.let { channel ->
-                schedulePictureInPicturePresentationRetry(channel.key)
-                if (hadWebMediaPresentation) {
-                    sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
-                }
-                if (pictureInPicturePlaybackExpected) {
-                    sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
-                }
-            }
+        if (!pictureInPictureTransitionPending && !isInPictureInPicture) {
+            pictureInPictureTransitionGeneration++
         }
-        if (!hadWebMediaPresentation && webMediaPresentation != null) {
-            pictureInPicturePresentationCreatedForTransition = true
+        pictureInPicturePlaybackExpected =
+            GeckoPictureInPictureRules.playbackExpectedDuringTransition(
+                currentExpected = pictureInPicturePlaybackExpected,
+                transitionPending = pictureInPictureTransitionPending,
+                inPictureInPicture = isInPictureInPicture,
+                mediaIsPlaying = mediaState?.isPlaying == true,
+            )
+        pictureInPictureTransitionPending = true
+        pictureInPictureOwnerTabId = tab.id
+        session.setPictureInPicturePlaybackExpected(pictureInPicturePlaybackExpected)
+        notifyGeckoPictureInPictureModeChanged(true)
+    }
+
+    private fun clearGeckoMediaPresentation() {
+        val presentation = geckoMediaPresentation ?: return
+        if (pictureInPictureCompositorSession === presentation.session) {
+            notifyGeckoPictureInPictureModeChanged(false)
         }
+        geckoMediaPresentation = null
+        publishFullscreenVideoState()
     }
 
     fun cancelPictureInPictureTransition() {
         if (isInPictureInPicture) return
-        val wasTransitionPending = pictureInPictureTransitionPending
+        val ownerSession = activeMediaCommandSession()
+        notifyGeckoPictureInPictureModeChanged(false)
         pictureInPictureTransitionGeneration++
+        pictureInPicturePlaybackRetryGeneration++
         pictureInPictureTransitionPending = false
-        if (wasTransitionPending) {
-            pictureInPicturePresentationPendingReturnCleanupKey = null
-        }
-        if (pictureInPicturePresentationCreatedForTransition) {
-            pictureInPicturePresentationCreatedForTransition = false
-            clearWebMediaPresentation()
-        } else if (wasTransitionPending && pictureInPictureExitGuardKey == null) {
-            presentedWebMediaChannel()?.let { channel ->
-                sendWebMediaCommand(channel, WebMediaCommand.AllowPause)
-            }
-        }
-        pictureInPicturePresentationReturnHost = null
-        cancelPictureInPicturePresentationRetry()
         pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
-        pictureInPicturePlayRetryPending = false
-        scheduleResidentWebViewTrim()
+        if (!isActivityResumed) ownerSession?.setActive(false)
+        scheduleResidentSessionTrim()
     }
 
     fun onPictureInPictureModeChanged(inPictureInPicture: Boolean) {
         isInPictureInPicture = inPictureInPicture
         if (inPictureInPicture) {
-            prepareForPictureInPicture()
+            prepareGeckoPictureInPicture()
             pictureInPictureTransitionPending = false
-            pendingWebPictureInPictureRequest?.let { request ->
-                pendingWebPictureInPictureRequest = null
-                activeWebPictureInPictureRequest = request
-                sendWebPictureInPictureCommand(
-                    request = request,
-                    command = WebMediaCommand.PictureInPictureEntered,
-                )
-            }
-            presentedWebMediaChannel()?.let { channel ->
-                if (pictureInPicturePlaybackExpected) {
-                    sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
-                    sendWebMediaCommand(channel, WebMediaCommand.Play)
-                }
-            }
+            currentPictureInPicturePresentation()?.session?.setActive(true)
+            notifyGeckoPictureInPictureModeChanged(true)
+            resumePictureInPicturePlayback()
         } else {
-            pendingWebPictureInPictureRequest?.let(::failWebPictureInPictureRequest)
-            val leavingRequest = activeWebPictureInPictureRequest
-            leavingRequest?.let { request ->
-                sendWebPictureInPictureCommand(
-                    request = request,
-                    command = WebMediaCommand.PictureInPictureLeft,
-                )
-            }
-            leavingRequest?.fallbackSession?.let { session ->
-                webPictureInPictureFallbackPendingReturnCleanup = session
-            }
-            activeWebPictureInPictureRequest = null
-            val presentedChannel = presentedWebMediaChannel()
-            val shouldResumePlayback = pictureInPicturePlaybackExpected
-            val presentationWasCreatedForTransition =
-                pictureInPicturePresentationCreatedForTransition
-            val returnHost = pictureInPicturePresentationReturnHost
+            notifyGeckoPictureInPictureModeChanged(false)
             pictureInPictureTransitionGeneration++
+            pictureInPicturePlaybackRetryGeneration++
             pictureInPictureTransitionPending = false
-            pictureInPicturePresentationCreatedForTransition = false
-            pictureInPicturePresentationReturnHost = null
-            cancelPictureInPicturePresentationRetry()
             pictureInPictureOwnerTabId = null
             pictureInPicturePlaybackExpected = false
-            pictureInPicturePlayRetryPending = false
-            if (presentationWasCreatedForTransition) {
-                pictureInPicturePresentationPendingReturnCleanupKey = presentedChannel?.key
-                if (presentedChannel == null) clearWebMediaPresentation()
-            } else {
-                webMediaPresentation?.host = returnHost ?: FullscreenVideoHost.Overlay
-                publishFullscreenVideoState()
-            }
-            if (shouldResumePlayback && presentedChannel != null) {
-                pictureInPictureExitGuardGeneration++
-                pictureInPictureExitGuardKey = presentedChannel.key
-                resumeWebView(presentedChannel.key.tabId, presentedChannel.webView)
-                presentedChannel.webView.settings.allowContinuousMediaPlayback()
-                sendWebMediaCommand(presentedChannel, WebMediaCommand.Play)
-            }
-            releasePictureInPictureExitGuardWhenResumed()
-            fullscreenVideoHiddenDuringPictureInPicture
-                ?.takeIf { session -> fullscreenVideoSession === session }
-                ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
         }
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
+    }
+
+    private fun notifyGeckoPictureInPictureModeChanged(inPictureInPicture: Boolean) {
+        if (!inPictureInPicture) {
+            pictureInPictureCompositorSession?.let { session ->
+                session.setPictureInPicturePlaybackExpected(false)
+                session.notifyPictureInPictureModeChanged(false)
+            }
+            pictureInPictureCompositorSession = null
+            return
+        }
+        val presentation = currentPictureInPicturePresentation() ?: return
+        if (pictureInPictureCompositorSession === presentation.session) {
+            presentation.session.notifyPictureInPictureModeChanged(true)
+            return
+        }
+        pictureInPictureCompositorSession
+            ?.notifyPictureInPictureModeChanged(false)
+        presentation.session.notifyPictureInPictureModeChanged(true)
+        pictureInPictureCompositorSession = presentation.session
+    }
+
+    private fun resumePictureInPicturePlayback() {
+        if (!pictureInPicturePlaybackExpected) return
+        val presentation = currentPictureInPicturePresentation() ?: return
+        presentation.session.setPictureInPicturePlaybackExpected(true)
+        presentation.session.executeMediaCommand(GeckoMediaCommand.Play)
+        val retryGeneration = ++pictureInPicturePlaybackRetryGeneration
+        PICTURE_IN_PICTURE_PLAY_RETRY_DELAYS_MILLIS.forEach { delayMillis ->
+            mainHandler.postDelayed(
+                {
+                    if (
+                        retryGeneration != pictureInPicturePlaybackRetryGeneration ||
+                        !isInPictureInPicture ||
+                        !pictureInPicturePlaybackExpected ||
+                        currentPictureInPicturePresentation() !== presentation
+                    ) {
+                        return@postDelayed
+                    }
+                    presentation.session.executeMediaCommand(GeckoMediaCommand.Play)
+                },
+                delayMillis,
+            )
+        }
+    }
+
+    private fun currentPictureInPicturePresentation(): GeckoMediaPresentation? {
+        val presentation = geckoMediaPresentation ?: return null
+        if (
+            presentation.tabId != pictureInPictureOwnerTabId ||
+            geckoEngineSessions[presentation.tabId] !== presentation.session ||
+            geckoViewBindings.values.none { binding ->
+                binding.tabId == presentation.tabId &&
+                    binding.session === presentation.session &&
+                    binding.view === presentation.view
+            }
+        ) {
+            return null
+        }
+        return presentation
     }
 
     fun completePictureInPictureReturn() {
         if (isInPictureInPicture || pictureInPictureTransitionPending) return
-        webPictureInPictureFallbackPendingReturnCleanup?.let { session ->
-            webPictureInPictureFallbackPendingReturnCleanup = null
-            if (fullscreenVideoSession === session) {
-                dismissFullscreenVideo(session, notifyPage = true)
-            }
-        }
-        val key = pictureInPicturePresentationPendingReturnCleanupKey ?: return
-        pictureInPicturePresentationPendingReturnCleanupKey = null
-        if (webMediaPresentation?.key == key) {
-            clearWebMediaPresentation(
-                preservePlaybackGuard = pictureInPictureExitGuardKey == key,
-            )
-        }
-        releasePictureInPictureExitGuardWhenResumed()
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
     }
 
-    /**
-     * Builds an ephemeral, read-only WebView for Link Peek without registering a tab or writing
-     * browser history. It deliberately shares the source tab's WebView profile so regular,
-     * isolated, and incognito cookie boundaries remain unchanged while the preview is visible.
-     */
+    /** Builds an ephemeral Gecko renderer without registering a tab or writing history. */
     fun createLinkPeekPreviewView(
         url: String,
         onProgressChanged: (Int) -> Unit,
@@ -2198,86 +2218,12 @@ class BrowserController(
     ): View {
         val safeUrl = requireNotNull(BrowserUriPolicy.normalizeHttpUrl(url))
         val sourceTab = tabs.first { it.id == selectedTabId }
-        if (usesGeckoEngine) {
-            return createGeckoLinkPeekPreview(
-                sourceTab = sourceTab,
-                url = safeUrl,
-                onProgressChanged = onProgressChanged,
-                onCommittedUrlChanged = onCommittedUrlChanged,
-            )
-        }
-        return createLinkPeekPreviewWebView(
+        return createGeckoLinkPeekPreview(
+            sourceTab = sourceTab,
             url = safeUrl,
             onProgressChanged = onProgressChanged,
             onCommittedUrlChanged = onCommittedUrlChanged,
         )
-    }
-
-    fun createLinkPeekPreviewWebView(
-        url: String,
-        onProgressChanged: (Int) -> Unit,
-        onCommittedUrlChanged: (String) -> Unit,
-    ): WebView {
-        val safeUrl = requireNotNull(BrowserUriPolicy.normalizeHttpUrl(url))
-        val sourceTab = tabs.first { it.id == selectedTabId }
-        val sourceTabId = sourceTab.id
-        val profileAssignment = profileAssignmentFor(sourceTab)
-        val protectionState = AtomicReference(
-            LinkPeekProtectionState(
-                pageUrl = safeUrl,
-                requestContext = protectionRequestContextFor(sourceTab, safeUrl),
-            ),
-        )
-        return WebView(activity).apply {
-            when (profileAssignment) {
-                WebViewProfileAssignment.Default -> Unit
-                is WebViewProfileAssignment.Incognito,
-                is WebViewProfileAssignment.Isolated,
-                -> WebViewCompat.setProfile(this, profileAssignment.storageKey)
-            }
-            configureProfileServiceWorkerBlocking(profileAssignment, this)
-            val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-            setBackgroundColor(if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE)
-            with(settings) {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                allowFileAccess = false
-                allowContentAccess = false
-                @Suppress("DEPRECATION")
-                allowFileAccessFromFileURLs = false
-                @Suppress("DEPRECATION")
-                allowUniversalAccessFromFileURLs = false
-                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                javaScriptCanOpenWindowsAutomatically = false
-                setSupportMultipleWindows(false)
-                safeBrowsingEnabled = true
-                requireMediaPlaybackGesture()
-            }
-            if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(this)
-            settings.applyWebsiteDarkeningPolicy(appearanceSettings.forceDarkWebsites)
-            applyDesktopViewPolicy(sourceTabId, this, safeUrl)
-            cookieManagerFor(this).setAcceptCookie(true)
-            applyCookiePolicy(sourceTabId, this, safeUrl)
-            webViewClient = linkPeekPreviewWebViewClient(
-                sourceTabId = sourceTabId,
-                protectionState = protectionState,
-                onCommittedUrlChanged = onCommittedUrlChanged,
-            )
-            webChromeClient = object : WebChromeClient() {
-                override fun onProgressChanged(view: WebView, newProgress: Int) {
-                    onProgressChanged(newProgress.coerceIn(0, 100))
-                }
-            }
-            isFocusable = false
-            isFocusableInTouchMode = false
-            isEnabled = false
-            isLongClickable = false
-            importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-            loadUrl(safeUrl)
-        }.also { webView ->
-            linkPeekPreviewAssignments[webView] = profileAssignment
-            if (!isActivityResumed) pauseWebView(webView)
-        }
     }
 
     fun releaseLinkPeekPreviewView(view: View) {
@@ -2286,12 +2232,6 @@ class BrowserController(
             binding.session.execute(BrowserEngineCommands.close())
             return
         }
-        val webView = view as? WebView ?: return
-        releaseLinkPeekPreviewWebView(webView)
-    }
-
-    fun releaseLinkPeekPreviewWebView(webView: WebView) {
-        if (linkPeekPreviewAssignments.remove(webView) != null) destroyWebView(webView)
     }
 
     private fun createGeckoLinkPeekPreview(
@@ -2304,6 +2244,7 @@ class BrowserController(
         val session = geckoEngineSessionFactory.create(
             tabId = previewTabId,
             profileId = sourceTab.profileId,
+            isolationEnabled = profileForId(sourceTab.profileId)?.isolationEnabled == true,
             isPrivate = sourceTab.isIncognito,
             eventSink = { event ->
                 event.address
@@ -2348,7 +2289,7 @@ class BrowserController(
                 null
             }
         val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
-            profiles = profiles,
+            profiles = localBrowserProfiles,
             profilesEnabled = profilesEnabled,
             requestedProfileId = null,
             activeProfileId = activeProfileId,
@@ -2356,8 +2297,9 @@ class BrowserController(
         closeFindInPage()
         contentActions.dismiss()
         releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
-        prepareMediaForTabDeparture(selectedTabId)
-        webViews[selectedTabId]?.let(::pauseWebView)
+        minimizeGeckoMediaForTabDeparture(selectedTabId)
+        geckoEngineSessions[selectedTabId]?.setActive(false)
+
         val sessionId = ++nextExternalLinkPreviewSessionId
         externalLinkPreviewState = ExternalLinkPreviewState(
             sessionId = sessionId,
@@ -2370,7 +2312,6 @@ class BrowserController(
     }
 
     fun prepareExternalLinkPreview(sessionId: Long): Boolean {
-        if (!isWebViewRuntimeReady) return false
         externalLinkPreviewRuntime?.let { runtime ->
             return runtime.sessionId == sessionId
         }
@@ -2384,7 +2325,7 @@ class BrowserController(
         val current = externalLinkPreviewState?.takeIf { it.sessionId == sessionId }
             ?: return false
         val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
-            profiles = profiles,
+            profiles = localBrowserProfiles,
             profilesEnabled = profilesEnabled,
             requestedProfileId = profileId,
             activeProfileId = activeProfileId,
@@ -2400,9 +2341,11 @@ class BrowserController(
             progress = 0,
             isLoading = true,
             canGoBack = false,
-            isWebViewReady = false,
+            isContentReady = false,
         )
-        if (isWebViewRuntimeReady) createExternalLinkPreviewRuntime(updatedState)
+        if (true) {
+            createExternalLinkPreviewRuntime(updatedState)
+        }
         else externalLinkPreviewState = updatedState
         return true
     }
@@ -2418,18 +2361,19 @@ class BrowserController(
         val runtime = externalLinkPreviewRuntime
             ?.takeIf { it.sessionId == sessionId }
             ?: return false
-        val webView = runtime.webView.takeIf(WebView::canGoBack) ?: return false
-        val history = webView.copyBackForwardList()
-        val targetUrl = history.getItemAtIndex(history.currentIndex - 1)?.url ?: return false
-        runtime.downloadGrant = null
-        externalNavigationGrants.remove(runtime.policyTab.id)
-        clearExternalLinkPreviewAppHandoff(sessionId)
-        invalidatePendingDesktopNavigationOverride(webView)
-        webView.stopLoading()
-        applyDesktopViewPolicy(runtime.policyTab, webView, targetUrl)
-        webView.stopLoading()
-        webView.goBack()
-        return true
+        runtime.geckoBinding.let { binding ->
+            if (externalLinkPreviewState?.canGoBack != true) return false
+            runtime.downloadGrant = null
+            externalNavigationGrants.remove(runtime.policyTab.id)
+            clearExternalLinkPreviewAppHandoff(sessionId)
+            binding.session.historyUrlAtOffset(-1)?.let { targetUrl ->
+                binding.session.setDesktopMode(isDesktopView(runtime.policyTab, targetUrl))
+            }
+            binding.session.execute(BrowserEngineCommands.stop())
+            binding.session.execute(BrowserEngineCommands.back())
+            return true
+        }
+        return false
     }
 
     fun commitExternalLinkPreview(sessionId: Long): ExternalLinkPreviewCommitResult {
@@ -2443,7 +2387,7 @@ class BrowserController(
         val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(state.currentUrl)
             ?: return ExternalLinkPreviewCommitResult.MissingPreview
         val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
-            profiles = profiles,
+            profiles = localBrowserProfiles,
             profilesEnabled = profilesEnabled,
             requestedProfileId = state.targetProfileId,
             activeProfileId = activeProfileId,
@@ -2461,6 +2405,9 @@ class BrowserController(
             ExternalLinkPreviewCommitResult.TabLimitReached
         } else {
             releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
+            if (usesGeckoEngine && isActivityResumed) {
+                geckoEngineSessions[selectedTabId]?.setActive(true)
+            }
             ExternalLinkPreviewCommitResult.Opened(tabId)
         }
     }
@@ -2470,22 +2417,29 @@ class BrowserController(
             container.removeAllViews()
             return
         }
-        val webView = runtime.webView
-        if (webView.parent === container && container.childCount == 1) return
-        (webView.parent as? FrameLayout)?.removeView(webView)
+        val view = runtime.binding.view
+        if (view.parent === container && container.childCount == 1) return
+        (view.parent as? ViewGroup)?.removeView(view)
         container.removeAllViews()
         container.addView(
-            webView,
+            view,
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
         startExternalLinkPreviewIfReady(runtime)
-        if (isActivityResumed) webView.onResume()
+        if (isActivityResumed) {
+            runtime.geckoBinding.session.setActive(true)
+        }
     }
 
     fun detachExternalLinkPreview(container: FrameLayout) {
+        externalLinkPreviewRuntime
+            ?.takeIf { runtime -> runtime.binding.view.parent === container }
+            ?.geckoBinding
+            ?.session
+            ?.setActive(false)
         container.removeAllViews()
     }
 
@@ -2505,11 +2459,16 @@ class BrowserController(
         val runtime = externalLinkPreviewRuntime
             ?.takeIf { it.sessionId == sessionId }
             ?: return false
-        return openFindInPage(
+        val session = runtime.geckoBinding.session
+        closeFindInPage()
+        findInPageSession = FindInPageSession(
+            id = ++nextFindInPageSessionId,
             tabId = runtime.policyTab.id,
-            webView = runtime.webView,
+            geckoSession = session,
             navigationGeneration = runtime.generation,
         )
+        findInPageState = FindInPageState(tabId = runtime.policyTab.id)
+        return true
     }
 
     val isExternalLinkPreviewDesktopView: Boolean
@@ -2560,423 +2519,313 @@ class BrowserController(
             url = state.currentUrl,
             isLoading = true,
         )
-        val profileAssignment = profileAssignmentFor(policyTab)
-        val protectionState = AtomicReference(
-            LinkPeekProtectionState(
-                pageUrl = state.currentUrl,
-                requestContext = protectionRequestContextFor(policyTab, state.currentUrl),
-            ),
-        )
+        createExternalLinkPreviewGeckoRuntime(state, policyTab)
+    }
+
+    private fun createExternalLinkPreviewGeckoRuntime(
+        state: ExternalLinkPreviewState,
+        policyTab: BrowserTab,
+    ) {
+        val requestContext = protectionRequestContextFor(policyTab, state.currentUrl)
         synchronized(privacyEventLock) {
-            protectionRequestContexts[policyTab.id] = protectionState.get().requestContext
+            protectionRequestContexts[policyTab.id] = requestContext
         }
-        val webView = WebView(activity)
-        when (profileAssignment) {
-            WebViewProfileAssignment.Default -> Unit
-            is WebViewProfileAssignment.Incognito,
-            is WebViewProfileAssignment.Isolated,
-            -> WebViewCompat.setProfile(webView, profileAssignment.storageKey)
-        }
-        configureProfileServiceWorkerBlocking(profileAssignment, webView)
-        val nightMode = webView.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        webView.setBackgroundColor(
-            if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE,
-        )
-        with(webView.settings) {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = false
-            allowContentAccess = false
-            @Suppress("DEPRECATION")
-            allowFileAccessFromFileURLs = false
-            @Suppress("DEPRECATION")
-            allowUniversalAccessFromFileURLs = false
-            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            javaScriptCanOpenWindowsAutomatically = false
-            setSupportMultipleWindows(false)
-            safeBrowsingEnabled = true
-            requireMediaPlaybackGesture()
-        }
-        if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(webView)
-        webView.settings.applyWebsiteDarkeningPolicy(appearanceSettings.forceDarkWebsites)
-        applyDesktopViewPolicy(policyTab, webView, state.currentUrl)
-        cookieManagerFor(webView).setAcceptCookie(true)
-        applyExternalLinkPreviewCookiePolicy(policyTab, protectionState.get(), webView)
-        webView.webViewClient = externalLinkPreviewWebViewClient(
-            sessionId = state.sessionId,
-            policyTab = policyTab,
-            protectionState = protectionState,
-        )
-        webView.setDownloadListener externalDownload@{
-            url,
-            userAgent,
-            contentDisposition,
-            mimeType,
-            _,
-            ->
-            val runtime = externalLinkPreviewRuntime
-                ?.takeIf { current ->
-                    current.sessionId == state.sessionId && current.webView === webView
+        lateinit var session: AndroidBrowserEngineSessionPort
+        session = geckoEngineSessionFactory.create(
+            tabId = policyTab.id,
+            profileId = policyTab.profileId,
+            isolationEnabled = profileForId(policyTab.profileId)?.isolationEnabled == true,
+            isPrivate = false,
+            privacyPolicy = geckoPrivacyPolicyFor(
+                tab = policyTab,
+                pageUrl = state.currentUrl,
+                context = requestContext,
+            ),
+            privacyEventSink = GeckoPrivacyEventSink { },
+            eventSink = { event ->
+                mainHandler.post {
+                    onExternalLinkPreviewGeckoEvent(
+                        sessionId = state.sessionId,
+                        generation = state.generation,
+                        session = session,
+                        event = event,
+                    )
                 }
-                ?: return@externalDownload
-            if (
-                !ExternalPreviewDownloadGrantRules.canConsume(
+            },
+        )
+        session.setNavigationRequestListener { request ->
+            onExternalLinkPreviewGeckoNavigationRequest(
+                sessionId = state.sessionId,
+                generation = state.generation,
+                session = session,
+                request = request,
+            )
+        }
+        session.setDownloadResponseListener { response ->
+            val runtime = currentExternalLinkPreviewGeckoRuntime(
+                sessionId = state.sessionId,
+                generation = state.generation,
+                session = session,
+            ) ?: return@setDownloadResponseListener response.close()
+            val metadata = response.metadata
+            val nowElapsedRealtime = SystemClock.elapsedRealtime()
+            if (!ExternalPreviewDownloadGrantRules.canConsume(
                     grant = runtime.downloadGrant,
-                    url = url,
-                    nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                    url = metadata.url,
+                    nowElapsedRealtime = nowElapsedRealtime,
                 )
-            ) return@externalDownload
-            runtime.downloadGrant = null
-            val request = BrowserDownloadRequestFactory.create(
-                url = url,
-                contentDisposition = contentDisposition,
-                mimeType = mimeType,
-                userAgent = userAgent,
-                cookies = cookieManagerFor(webView).getCookie(url),
-                referrer = webView.url,
-            ) ?: return@externalDownload
+            ) return@setDownloadResponseListener response.close()
+            val request = BrowserEngineDownloadRules.request(
+                response = metadata,
+                referrer = externalLinkPreviewState?.currentUrl,
+            ) ?: return@setDownloadResponseListener response.close()
             if (!BrowserDownloadRequestFactory.isAndroidPackage(request)) {
-                return@externalDownload
+                return@setDownloadResponseListener response.close()
             }
+            runtime.downloadGrant = null
             externalNavigationGrants.remove(runtime.policyTab.id)
-            routeDownload(request, runtime.policyTab.id)?.let(::showDownloadResult)
-            mainHandler.post { dismissExternalLinkPreview(state.sessionId) }
+            response.start(
+                object : GeckoDownloadTransferListener {
+                    override fun onStarted(start: GeckoDownloadTransferStart) {
+                        showDownloadResult(
+                            DownloadActionResult.Enqueued(start.id.toLong(), start.fileName),
+                        )
+                        mainHandler.post { dismissExternalLinkPreview(state.sessionId) }
+                    }
+
+                    override fun onFailed(reason: GeckoDownloadFailure) {
+                        showDownloadResult(
+                            DownloadActionResult.Failed(
+                                activity.getString(R.string.error_download_start_failed),
+                            ),
+                        )
+                    }
+                },
+            )
         }
-        webView.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView, newProgress: Int) {
-                updateExternalLinkPreviewState(state.sessionId, view) { current ->
-                    current.copy(progress = newProgress.coerceIn(0, 100))
-                }
-            }
-        }
-        webView.isFocusable = true
-        webView.isFocusableInTouchMode = true
-        webView.isEnabled = true
-        webView.isLongClickable = true
-        webView.importantForAccessibility = WebView.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        session.setDesktopMode(isDesktopView(policyTab, state.currentUrl))
+        val view = session.createView(activity)
         externalLinkPreviewRuntime = ExternalLinkPreviewRuntime(
             sessionId = state.sessionId,
             generation = state.generation,
             policyTab = policyTab,
-            profileAssignment = profileAssignment,
-            webView = webView,
+            binding = ExternalLinkPreviewEngineBinding.Gecko(
+                session = session,
+                view = view,
+            ),
         )
-        externalLinkPreviewState = state.copy(isWebViewReady = true)
-        if (!isActivityResumed) pauseWebView(webView)
+        externalLinkPreviewState = state.copy(isContentReady = true)
     }
 
-    private fun externalLinkPreviewWebViewClient(
+    private fun onExternalLinkPreviewGeckoEvent(
         sessionId: Long,
-        policyTab: BrowserTab,
-        protectionState: AtomicReference<LinkPeekProtectionState>,
-    ) = object : WebViewClient() {
-        override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-            invalidatePendingDesktopNavigationOverride(view)
-            val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
-            protectionState.set(
-                LinkPeekProtectionState(
-                    pageUrl = safeUrl,
-                    requestContext = protectionRequestContextFor(policyTab, safeUrl),
-                ),
-            )
-            synchronized(privacyEventLock) {
-                protectionRequestContexts[policyTab.id] = protectionState.get().requestContext
-            }
-            applyExternalLinkPreviewCookiePolicy(policyTab, protectionState.get(), view)
-            if (findInPageSession?.webView === view) closeFindInPage()
-            updateExternalLinkPreviewState(sessionId, view) { current ->
-                current.copy(
-                    currentUrl = safeUrl,
-                    progress = 0,
-                    isLoading = true,
-                    canGoBack = view.canGoBack(),
-                )
-            }
-        }
-
-        override fun onPageCommitVisible(view: WebView, url: String) {
-            val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
-            updateExternalLinkPreviewState(sessionId, view) { current ->
-                current.copy(
-                    currentUrl = safeUrl,
-                    canGoBack = view.canGoBack(),
-                )
-            }
-        }
-
-        override fun onPageFinished(view: WebView, url: String) {
-            externalLinkPreviewRuntime
-                ?.takeIf { runtime ->
-                    runtime.sessionId == sessionId && runtime.webView === view
-                }
-                ?.let { runtime ->
-                    if (
-                        clearExternalNavigationGrantForCallback(
-                            tabId = runtime.policyTab.id,
-                            callbackUrl = url,
-                            currentWebViewUrl = view.url,
-                        )
-                    ) {
-                        clearExternalLinkPreviewAppHandoff(sessionId)
-                    }
-                    val grant = runtime.downloadGrant ?: return@let
-                    if (
-                        ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
-                            grant = grant,
-                            callbackUrl = url,
-                            currentWebViewUrl = view.url,
-                            nowElapsedRealtime = SystemClock.elapsedRealtime(),
-                        )
-                    ) {
-                        runtime.downloadGrant = null
-                    }
-                }
-            val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
-            applyFinishedNavigationDesktopViewPolicy(
-                tab = policyTab,
-                webView = view,
-                pageUrl = safeUrl,
-                isCurrent = {
-                    externalLinkPreviewRuntime?.let { runtime ->
-                        runtime.sessionId == sessionId && runtime.webView === view
-                    } == true
-                },
-            )
-            updateExternalLinkPreviewState(sessionId, view) { current ->
-                current.copy(
-                    currentUrl = safeUrl,
-                    progress = 100,
-                    isLoading = false,
-                    canGoBack = view.canGoBack(),
-                )
-            }
-        }
-
-        override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
-            val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url ?: view.url) ?: return
-            if (findInPageSession?.webView === view) closeFindInPage()
-            updateExternalLinkPreviewState(sessionId, view) { current ->
-                current.copy(
-                    currentUrl = safeUrl,
-                    canGoBack = view.canGoBack(),
-                )
-            }
-        }
-
-        override fun shouldInterceptRequest(
-            view: WebView,
-            request: WebResourceRequest,
-        ): WebResourceResponse? {
-            val state = protectionState.get()
-            return interceptProtectedSubresourceRequest(
-                tabId = policyTab.id,
-                request = request,
-                requestContext = state.requestContext,
-                pageUrl = state.pageUrl,
-                recordDecision = false,
-            )
-        }
-
-        override fun onReceivedError(
-            view: WebView,
-            request: WebResourceRequest,
-            error: WebResourceError,
+        generation: Int,
+        session: AndroidBrowserEngineSessionPort,
+        event: BrowserEngineEvent,
+    ) {
+        val runtime = currentExternalLinkPreviewGeckoRuntime(
+            sessionId = sessionId,
+            generation = generation,
+            session = session,
+        ) ?: return
+        val state = externalLinkPreviewState ?: return
+        val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(event.address)
+        if (event.type == BrowserEngineEventType.NavigationStarted &&
+            findInPageSession?.geckoSession === session
         ) {
-            if (!request.isForMainFrame) return
-            externalLinkPreviewRuntime
-                ?.takeIf { runtime ->
-                    runtime.sessionId == sessionId && runtime.webView === view
-                }
-                ?.let { runtime ->
-                    if (
-                        clearExternalNavigationGrantForCallback(
-                            tabId = runtime.policyTab.id,
-                            callbackUrl = request.url.toString(),
-                            currentWebViewUrl = view.url,
-                        )
-                    ) {
-                        clearExternalLinkPreviewAppHandoff(sessionId)
-                    }
-                    val grant = runtime.downloadGrant ?: return@let
-                    if (
-                        ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
-                            grant = grant,
-                            callbackUrl = request.url.toString(),
-                            currentWebViewUrl = view.url,
-                            nowElapsedRealtime = SystemClock.elapsedRealtime(),
-                        )
-                    ) {
-                        runtime.downloadGrant = null
-                    }
-                }
+            closeFindInPage()
         }
-
-        override fun shouldOverrideUrlLoading(
-            view: WebView,
-            request: WebResourceRequest,
-        ): Boolean {
-            val runtime = externalLinkPreviewRuntime?.takeIf { runtime ->
-                runtime.sessionId == sessionId && runtime.webView === view
-            } ?: return true
-            if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
-            val targetUrl = request.url.toString()
-            val scheme = request.url.scheme?.lowercase()
-            val nowElapsedRealtime = SystemClock.elapsedRealtime()
-            if (scheme == "http" || scheme == "https") {
-                if (request.isForMainFrame && request.hasGesture()) {
-                    runtime.downloadGrant = ExternalPreviewDownloadGrantRules.start(
-                        url = targetUrl,
-                        nowElapsedRealtime = nowElapsedRealtime,
-                    )
-                } else {
-                    runtime.downloadGrant = runtime.downloadGrant?.let { grant ->
-                        ExternalPreviewDownloadGrantRules.followRedirect(
-                            grant = grant,
-                            url = targetUrl,
-                            isForMainFrame = request.isForMainFrame,
-                            isRedirect = request.isRedirect,
-                            nowElapsedRealtime = nowElapsedRealtime,
-                        )
-                    }
-                }
-                updateExternalNavigationGrant(
-                    tabId = policyTab.id,
-                    url = targetUrl,
-                    isForMainFrame = request.isForMainFrame,
-                    hasGesture = request.hasGesture(),
-                    isRedirect = request.isRedirect,
-                    nowElapsedRealtime = nowElapsedRealtime,
-                )
-                val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
-                    grant = externalNavigationGrants[policyTab.id],
-                    nowElapsedRealtime = nowElapsedRealtime,
-                )
-                if (
-                    ApkDownloadNavigationRules.shouldRoute(
-                        url = targetUrl,
-                        isForMainFrame = request.isForMainFrame,
-                        hasGesture = request.hasGesture(),
-                        isRedirect = request.isRedirect,
-                        hasUserNavigationGrant = ExternalPreviewDownloadGrantRules.canConsume(
-                            grant = runtime.downloadGrant,
-                            url = targetUrl,
-                            nowElapsedRealtime = nowElapsedRealtime,
-                        ),
-                    ) && routeExplicitDownloadNavigation(policyTab.id, view, targetUrl)
-                ) {
-                    runtime.downloadGrant = null
-                    externalNavigationGrants.remove(policyTab.id)
-                    clearExternalLinkPreviewAppHandoff(sessionId)
-                    mainHandler.post { dismissExternalLinkPreview(sessionId) }
-                    return true
-                }
-                if (
-                    ExternalNavigationPolicy.shouldAttemptExternalLaunch(
-                        scheme = scheme,
-                        isForMainFrame = request.isForMainFrame,
-                        hasGesture = request.hasGesture(),
-                        isRedirect = request.isRedirect,
-                        hasUserNavigationGrant = hasUserNavigationGrant,
-                    ) && externalApps.openWebUrlExternally(targetUrl) ==
-                    ExternalLaunchResult.Launched
-                ) {
-                    runtime.downloadGrant = null
-                    externalNavigationGrants.remove(policyTab.id)
-                    clearExternalLinkPreviewAppHandoff(sessionId)
-                    showExternalAppOpenedToast()
-                    return true
-                }
-                return overrideWebRequestedNavigationForDesktopView(
-                    tab = policyTab,
-                    webView = view,
-                    request = request,
-                    isCurrent = {
-                        externalLinkPreviewRuntime?.let { current ->
-                            current.sessionId == sessionId && current.webView === view
-                        } == true
-                    },
-                    navigate = { url ->
-                        navigateExternalLinkPreview(
-                            runtime = runtime,
-                            protectionState = protectionState,
-                            url = url,
-                            preserveExternalNavigationGrant = true,
-                        )
-                    },
-                )
+        if (event.type == BrowserEngineEventType.NavigationStarted && safeUrl != null) {
+            val requestContext = protectionRequestContextFor(runtime.policyTab, safeUrl)
+            synchronized(privacyEventLock) {
+                protectionRequestContexts[runtime.policyTab.id] = requestContext
             }
-            val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
-                grant = externalNavigationGrants[policyTab.id],
-                nowElapsedRealtime = nowElapsedRealtime,
+            session.updatePrivacyPolicy(
+                policy = geckoPrivacyPolicyFor(
+                    tab = runtime.policyTab,
+                    pageUrl = safeUrl,
+                    context = requestContext,
+                ),
+                reloadOnCookiePermissionChange = true,
             )
+        }
+        if (event.type == BrowserEngineEventType.NavigationCommitted && safeUrl != null) {
             if (
-                !ExternalNavigationPolicy.shouldAttemptExternalLaunch(
-                    scheme = scheme,
-                    isForMainFrame = request.isForMainFrame,
-                    hasGesture = request.hasGesture(),
-                    isRedirect = request.isRedirect,
-                    hasUserNavigationGrant = hasUserNavigationGrant,
+                clearExternalNavigationGrantForCallback(
+                    tabId = runtime.policyTab.id,
+                    callbackUrl = safeUrl,
+                    currentBrowserUrl = safeUrl,
                 )
             ) {
-                return true
+                clearExternalLinkPreviewAppHandoff(sessionId)
             }
-            runtime.downloadGrant = null
-            externalNavigationGrants.remove(policyTab.id)
-            clearExternalLinkPreviewAppHandoff(sessionId)
-            return when (val result = externalApps.open(request.url)) {
-                ExternalLaunchResult.Launched -> {
-                    showExternalAppOpenedToast()
-                    true
+        }
+        externalLinkPreviewState = when (event.type) {
+            BrowserEngineEventType.NavigationStarted -> state.copy(
+                currentUrl = safeUrl ?: state.currentUrl,
+                progress = 0,
+                isLoading = true,
+                canGoBack = event.canGoBack,
+            )
+            BrowserEngineEventType.NavigationCommitted,
+            BrowserEngineEventType.NavigationFailed,
+            -> state.copy(
+                currentUrl = safeUrl ?: state.currentUrl,
+                progress = 100,
+                isLoading = false,
+                canGoBack = event.canGoBack,
+            )
+            BrowserEngineEventType.StateChanged -> state.copy(
+                currentUrl = safeUrl ?: state.currentUrl,
+                canGoBack = event.canGoBack,
+            )
+            BrowserEngineEventType.Crashed,
+            BrowserEngineEventType.Closed,
+            -> state.copy(
+                progress = 100,
+                isLoading = false,
+                isContentReady = false,
+                canGoBack = false,
+            )
+        }
+    }
+
+    private fun onExternalLinkPreviewGeckoNavigationRequest(
+        sessionId: Long,
+        generation: Int,
+        session: AndroidBrowserEngineSessionPort,
+        request: GeckoMainFrameNavigationRequest,
+    ): GeckoNavigationRequestDecision {
+        val runtime = currentExternalLinkPreviewGeckoRuntime(
+            sessionId = sessionId,
+            generation = generation,
+            session = session,
+        ) ?: return GeckoNavigationRequestDecision.Deny
+        val safeHttpUrl = ExternalLinkPreviewRules.safeCurrentUrl(request.url)
+        if (safeHttpUrl != null && runtime.pendingInternalNavigationUrl == safeHttpUrl) {
+            runtime.pendingInternalNavigationUrl = null
+            return GeckoNavigationRequestDecision.Allow
+        }
+        val scheme = runCatching { Uri.parse(request.url).scheme }.getOrNull()?.lowercase()
+        val nowElapsedRealtime = SystemClock.elapsedRealtime()
+        if (safeHttpUrl != null) {
+            runtime.downloadGrant = if (request.hasUserGesture) {
+                ExternalPreviewDownloadGrantRules.start(
+                    url = safeHttpUrl,
+                    nowElapsedRealtime = nowElapsedRealtime,
+                )
+            } else {
+                runtime.downloadGrant?.let { grant ->
+                    ExternalPreviewDownloadGrantRules.followRedirect(
+                        grant = grant,
+                        url = safeHttpUrl,
+                        isForMainFrame = true,
+                        isRedirect = request.isRedirect,
+                        nowElapsedRealtime = nowElapsedRealtime,
+                    )
                 }
-                is ExternalLaunchResult.OpenInBrowser -> {
-                    navigateExternalLinkPreview(runtime, protectionState, result.url)
-                    true
+            }
+            updateExternalNavigationGrant(
+                tabId = runtime.policyTab.id,
+                url = safeHttpUrl,
+                isForMainFrame = true,
+                hasGesture = request.hasUserGesture,
+                isRedirect = request.isRedirect,
+                nowElapsedRealtime = nowElapsedRealtime,
+            )
+            val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
+                externalNavigationGrants[runtime.policyTab.id],
+                nowElapsedRealtime,
+            )
+            if (
+                ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                    scheme = scheme,
+                    isForMainFrame = true,
+                    hasGesture = request.hasUserGesture,
+                    isRedirect = request.isRedirect,
+                    hasUserNavigationGrant = hasUserNavigationGrant,
+                ) && externalApps.openWebUrlExternally(safeHttpUrl) ==
+                ExternalLaunchResult.Launched
+            ) {
+                externalNavigationGrants.remove(runtime.policyTab.id)
+                clearExternalLinkPreviewAppHandoff(sessionId)
+                showExternalAppOpenedToast()
+                return GeckoNavigationRequestDecision.Deny
+            }
+            session.setDesktopMode(isDesktopView(runtime.policyTab, safeHttpUrl))
+            return GeckoNavigationRequestDecision.Allow
+        }
+        val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
+            externalNavigationGrants[runtime.policyTab.id],
+            nowElapsedRealtime,
+        )
+        if (
+            !ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = scheme,
+                isForMainFrame = true,
+                hasGesture = request.hasUserGesture,
+                isRedirect = request.isRedirect,
+                hasUserNavigationGrant = hasUserNavigationGrant,
+            )
+        ) return GeckoNavigationRequestDecision.Deny
+        externalNavigationGrants.remove(runtime.policyTab.id)
+        clearExternalLinkPreviewAppHandoff(sessionId)
+        return when (val result = externalApps.open(Uri.parse(request.url))) {
+            ExternalLaunchResult.Launched -> {
+                showExternalAppOpenedToast()
+                GeckoNavigationRequestDecision.Deny
+            }
+            is ExternalLaunchResult.OpenInBrowser -> {
+                mainHandler.post {
+                    navigateExternalLinkPreviewGecko(runtime, result.url)
                 }
-                ExternalLaunchResult.Unsupported -> {
-                    Toast.makeText(
-                        activity,
-                        activity.getString(R.string.toast_no_matching_app),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                    true
-                }
+                GeckoNavigationRequestDecision.Deny
+            }
+            ExternalLaunchResult.Unsupported -> {
+                Toast.makeText(
+                    activity,
+                    activity.getString(R.string.toast_no_matching_app),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                GeckoNavigationRequestDecision.Deny
             }
         }
     }
 
-    private fun navigateExternalLinkPreview(
+    private fun currentExternalLinkPreviewGeckoRuntime(
+        sessionId: Long,
+        generation: Int,
+        session: AndroidBrowserEngineSessionPort,
+    ): ExternalLinkPreviewRuntime? {
+        val runtime = externalLinkPreviewRuntime ?: return null
+        if (destroyed || !ExternalLinkPreviewRules.isCurrent(
+                state = externalLinkPreviewState,
+                sessionId = sessionId,
+                generation = generation,
+            ) || runtime.sessionId != sessionId || runtime.generation != generation ||
+            runtime.geckoBinding.session !== session || runtime.policyTab.id != session.tabId
+        ) return null
+        return runtime
+    }
+
+    private fun navigateExternalLinkPreviewGecko(
         runtime: ExternalLinkPreviewRuntime,
-        protectionState: AtomicReference<LinkPeekProtectionState>,
         url: String,
-        preserveExternalNavigationGrant: Boolean = false,
     ) {
-        val webView = runtime.webView
-        val policyTab = runtime.policyTab
-        if (!preserveExternalNavigationGrant) {
-            externalNavigationGrants.remove(policyTab.id)
-            clearExternalLinkPreviewAppHandoff(runtime.sessionId)
-        }
-        webView.stopLoading()
-        applyDesktopViewPolicy(policyTab, webView, url)
-        webView.stopLoading()
-        val targetProtectionState = LinkPeekProtectionState(
-            pageUrl = url,
-            requestContext = protectionRequestContextFor(policyTab, url),
-        )
-        protectionState.set(targetProtectionState)
-        synchronized(privacyEventLock) {
-            protectionRequestContexts[policyTab.id] = targetProtectionState.requestContext
-        }
-        applyExternalLinkPreviewCookiePolicy(policyTab, targetProtectionState, webView)
-        webView.loadUrl(url)
+        val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
+        val binding = runtime.geckoBinding
+        if (externalLinkPreviewRuntime !== runtime) return
+        runtime.pendingInternalNavigationUrl = safeUrl
+        binding.session.setDesktopMode(isDesktopView(runtime.policyTab, safeUrl))
+        binding.session.execute(BrowserEngineCommands.stop())
+        binding.session.execute(BrowserEngineCommands.load(safeUrl))
     }
 
     private fun startExternalLinkPreviewIfReady(runtime: ExternalLinkPreviewRuntime) {
         if (
             runtime !== externalLinkPreviewRuntime ||
             runtime.hasStarted ||
-            !runtime.webView.isAttachedToWindow ||
-            !blockingStartGate.isReady
+            !runtime.binding.view.isAttachedToWindow
         ) return
         runtime.hasStarted = true
         val state = externalLinkPreviewState?.takeIf { it.sessionId == runtime.sessionId } ?: return
@@ -2993,34 +2842,10 @@ class BrowserController(
                 externalNavigationGrants[runtime.policyTab.id] = grant
             }
         }
-        if (
-            ApkDownloadNavigationRules.shouldRoute(
-                url = state.currentUrl,
-                isForMainFrame = true,
-                hasGesture = true,
-                isRedirect = false,
-            ) && routeExplicitDownloadNavigation(
-                tabId = runtime.policyTab.id,
-                webView = runtime.webView,
-                url = state.currentUrl,
-            )
-        ) {
-            runtime.downloadGrant = null
-            mainHandler.post { dismissExternalLinkPreview(state.sessionId) }
-            return
-        }
-        runtime.webView.loadUrl(state.currentUrl)
-    }
-
-    private fun updateExternalLinkPreviewState(
-        sessionId: Long,
-        webView: WebView,
-        transform: (ExternalLinkPreviewState) -> ExternalLinkPreviewState,
-    ) {
-        val runtime = externalLinkPreviewRuntime
-        val state = externalLinkPreviewState
-        if (runtime?.sessionId != sessionId || runtime.webView !== webView || state == null) return
-        externalLinkPreviewState = transform(state)
+        val binding = runtime.geckoBinding
+        runtime.pendingInternalNavigationUrl = state.currentUrl
+        binding.session.setActive(isActivityResumed)
+        binding.session.execute(BrowserEngineCommands.load(state.currentUrl))
     }
 
     private fun clearExternalLinkPreviewAppHandoff(sessionId: Long) {
@@ -3032,7 +2857,7 @@ class BrowserController(
 
     private fun releaseExternalLinkPreviewRuntime(resumeSelectedTab: Boolean) {
         val runtime = externalLinkPreviewRuntime
-        if (findInPageSession?.webView === runtime?.webView) closeFindInPage()
+        if (findInPageSession?.geckoSession === runtime?.geckoBinding?.session) closeFindInPage()
         externalLinkPreviewRuntime = null
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
@@ -3041,105 +2866,28 @@ class BrowserController(
                 protectionRequestContexts.remove(policyTabId)?.let(::flushPendingFilterHits)
             }
         }
-        runtime?.webView?.let(::destroyWebView)
+        runtime?.geckoBinding?.let { binding ->
+            (binding.view.parent as? ViewGroup)?.removeView(binding.view)
+            binding.session.setActive(false)
+            binding.session.releaseView(binding.view)
+            binding.session.execute(BrowserEngineCommands.close())
+        }
         if (resumeSelectedTab && isActivityResumed) {
-            webViews[selectedTabId]?.let { webView -> resumeWebView(selectedTabId, webView) }
+            geckoEngineSessions[selectedTabId]?.setActive(true)
         }
     }
 
-    private fun linkPeekPreviewWebViewClient(
-        sourceTabId: String,
-        protectionState: AtomicReference<LinkPeekProtectionState>,
-        onCommittedUrlChanged: (String) -> Unit,
-    ) = object : WebViewClient() {
-        override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-            invalidatePendingDesktopNavigationOverride(view)
-            val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
-            val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return
-            protectionState.set(
-                LinkPeekProtectionState(
-                    pageUrl = safeUrl,
-                    requestContext = protectionRequestContextFor(sourceTab, safeUrl),
-                ),
-            )
-        }
-
-        override fun onPageCommitVisible(view: WebView, url: String) {
-            BrowserUriPolicy.normalizeHttpUrl(url)?.let(onCommittedUrlChanged)
-        }
-
-        override fun onPageFinished(view: WebView, url: String) {
-            val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
-            val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return
-            applyFinishedNavigationDesktopViewPolicy(
-                tab = sourceTab,
-                webView = view,
-                pageUrl = safeUrl,
-                isCurrent = {
-                    linkPeekPreviewAssignments.containsKey(view) &&
-                        tabs.any { tab -> tab.id == sourceTabId }
-                },
-            )
-        }
-
-        override fun shouldInterceptRequest(
-            view: WebView,
-            request: WebResourceRequest,
-        ): WebResourceResponse? {
-            val state = protectionState.get()
-            return interceptProtectedSubresourceRequest(
-                tabId = sourceTabId,
-                request = request,
-                requestContext = state.requestContext,
-                pageUrl = state.pageUrl,
-                recordDecision = false,
-            )
-        }
-
-        override fun shouldOverrideUrlLoading(
-            view: WebView,
-            request: WebResourceRequest,
-        ): Boolean {
-            if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
-            val targetUrl = request.url.toString()
-            if (LinkPeekPreviewNavigationPolicy.shouldBlock(targetUrl)) return true
-            val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return true
-            return overrideWebRequestedNavigationForDesktopView(
-                tab = sourceTab,
-                webView = view,
-                request = request,
-                isCurrent = {
-                    linkPeekPreviewAssignments.containsKey(view) &&
-                        tabs.any { tab -> tab.id == sourceTabId }
-                },
-                navigate = { url ->
-                    view.stopLoading()
-                    applyDesktopViewPolicy(sourceTab, view, url)
-                    view.stopLoading()
-                    protectionState.set(
-                        LinkPeekProtectionState(
-                            pageUrl = url,
-                            requestContext = protectionRequestContextFor(sourceTab, url),
-                        ),
-                    )
-                    view.loadUrl(url)
-                },
-            )
-        }
-    }
-
-    private fun dispatchCurrentWindowInsets(tabId: String, webView: WebView) {
-        // A reused WebView can attach after the content root's inset traversal. requestApplyInsets()
-        // alone does not cross this Compose AndroidView holder, so dispatch the current snapshot.
-        webView.doOnAttach { attachedView ->
+    private fun dispatchCurrentWindowInsets(view: View, tabId: String) {
+        // A newly bound GeckoView can attach after the root traversal owned by Compose.
+        view.doOnAttach { attachedView ->
             val insets = ViewCompat.getRootWindowInsets(attachedView) ?: lastWindowInsets
-            if (insets != null) applyWindowInsets(tabId, webView, insets)
+            if (insets != null) applyGeckoWindowInsets(attachedView, tabId, insets)
         }
     }
 
-    private fun applyWindowInsets(
+    private fun applyGeckoWindowInsets(
+        view: View,
         tabId: String,
-        webView: WebView,
         insets: WindowInsetsCompat,
     ) {
         val effectiveInsets = if (browserChromeOwnsIme) {
@@ -3150,80 +2898,40 @@ class BrowserController(
         } else {
             insets
         }
-        val drawsEdgeToEdge = drawsEdgeToEdge(tabId)
         val safeArea = effectiveInsets.getInsets(SAFE_AREA_INSET_TYPES)
-        val navigationBars = effectiveInsets.getInsets(WindowInsetsCompat.Type.navigationBars())
-        val tappableElements = effectiveInsets.getInsets(WindowInsetsCompat.Type.tappableElement())
-        val hasTappableNavigation =
-            (navigationBars.left > 0 && tappableElements.left > 0) ||
-                (navigationBars.top > 0 && tappableElements.top > 0) ||
-                (navigationBars.right > 0 && tappableElements.right > 0) ||
-                (navigationBars.bottom > 0 && tappableElements.bottom > 0)
-        val usesGestureNavigation = navigationBars != Insets.NONE && !hasTappableNavigation
-        val forceSafeArea = isSafeAreaForced(tabId)
-        val topInsetMode = WebContentTopInsetRules.resolve(
-            drawsEdgeToEdge = drawsEdgeToEdge,
-            forceSafeArea = forceSafeArea,
-            scrollableDocumentEnabled = isScrollAwareTopInsetEnabled,
-            documentStartAvailable =
-                webView in webContentTopInsetScriptHandlers &&
-                    webView !in webContentTopInsetNativeFallbacks,
+        val layout = GeckoViewInsetRules.resolve(
+            safeArea = safeArea.toGeckoViewInsets(),
+            forceNativeSafeArea = isSafeAreaForced(tabId),
         )
-        val usesScrollableDocumentInset =
-            topInsetMode == WebContentTopInsetMode.ScrollableDocument
-        val topMargin = if (topInsetMode == WebContentTopInsetMode.NativeSafeArea) {
-            safeArea.top
-        } else {
-            0
-        }
-        val bottomMargin = when {
-            drawsEdgeToEdge -> 0
-            usesGestureNavigation -> 0
-            else -> safeArea.bottom
-        }
-        val margins = if (drawsEdgeToEdge) {
-            Insets.NONE
-        } else {
-            Insets.of(safeArea.left, topMargin, safeArea.right, bottomMargin)
-        }
-        (webView.layoutParams as? FrameLayout.LayoutParams)?.let { layoutParams ->
+        (view.layoutParams as? FrameLayout.LayoutParams)?.let { layoutParams ->
+            val margins = layout.margins
             if (
                 layoutParams.leftMargin != margins.left ||
                 layoutParams.topMargin != margins.top ||
                 layoutParams.rightMargin != margins.right ||
                 layoutParams.bottomMargin != margins.bottom
             ) {
-                layoutParams.setMargins(margins.left, margins.top, margins.right, margins.bottom)
-                webView.layoutParams = layoutParams
+                layoutParams.setMargins(
+                    margins.left,
+                    margins.top,
+                    margins.right,
+                    margins.bottom,
+                )
+                view.layoutParams = layoutParams
             }
         }
-        (webView as? BrowserWebView)?.let { browserWebView ->
-            if (
-                browserWebView.updateContentTopInset(
-                    insetPx = if (usesScrollableDocumentInset) safeArea.top else 0,
-                    viewportCoverAllowed = isWebContentEdgeToEdgeEnabled,
-                )
-            ) {
-                browserWebView.evaluateJavascript(WebContentTopInsetScript.installScript, null)
-            }
-        }
-        val rendererInsets = if (drawsEdgeToEdge) {
-            effectiveInsets
-        } else {
-            WindowInsetsCompat.Builder(effectiveInsets)
-                .setInsets(
-                    SAFE_AREA_INSET_TYPES,
-                    Insets.of(
-                        0,
-                        0,
-                        0,
-                        safeArea.bottom - bottomMargin,
-                    ),
-                )
-                .build()
-        }
-        ViewCompat.dispatchApplyWindowInsets(webView, rendererInsets)
+        // Gecko owns display-cutout safe-area propagation. This compositor offset keeps fixed
+        // bottom content above gesture/three-button navigation while its background still paints
+        // behind the transparent system bar.
+        (view as? GeckoView)?.setVerticalClipping(layout.bottomContentClippingPx)
     }
+
+    private fun Insets.toGeckoViewInsets(): GeckoViewInsets = GeckoViewInsets(
+        left = left,
+        top = top,
+        right = right,
+        bottom = bottom,
+    )
 
     private fun hasSameNonImeInsets(
         previous: WindowInsetsCompat,
@@ -3237,106 +2945,6 @@ class BrowserController(
         !isSafeAreaForced(tabId) &&
             isWebContentEdgeToEdgeEnabled &&
             edgeToEdgePages[tabId] == true
-
-    private fun detectPageEdgeToEdge(tabId: String, webView: WebView) {
-        val navigationGeneration = navigationGenerations[tabId] ?: return
-        webView.evaluateJavascript(PageViewportFit.observerScript(navigationGeneration)) { result ->
-            if (
-                webViews[tabId] !== webView ||
-                navigationGenerations[tabId] != navigationGeneration
-            ) {
-                return@evaluateJavascript
-            }
-            setPageEdgeToEdge(
-                tabId,
-                webView,
-                enabled = PageViewportFit.isCoverResult(result),
-                force = true,
-            )
-        }
-    }
-
-    private inner class ViewportFitBridge(
-        private val tabId: String,
-        private val webView: WebView,
-    ) {
-        @JavascriptInterface
-        fun update(navigationGeneration: Int, enabled: Boolean) {
-            mainHandler.post {
-                if (
-                    webViews[tabId] !== webView ||
-                    navigationGenerations[tabId] != navigationGeneration
-                ) {
-                    return@post
-                }
-                setPageEdgeToEdge(tabId, webView, enabled)
-            }
-        }
-    }
-
-    private inner class WebContentTopInsetBridge(
-        private val tabId: String,
-        private val webView: BrowserWebView,
-    ) {
-        @JavascriptInterface
-        fun topInsetPx(): Int = webView.contentTopInsetPx()
-
-        @JavascriptInterface
-        fun viewportCoverAllowed(): Boolean = webView.isViewportCoverAllowed()
-
-        @JavascriptInterface
-        fun navigationGeneration(): Int = webView.contentInsetNavigationGeneration()
-
-        @JavascriptInterface
-        fun fallbackToNative(navigationGeneration: Int) {
-            mainHandler.post {
-                if (
-                    webViews[tabId] !== webView ||
-                    navigationGenerations[tabId] != navigationGeneration ||
-                    !webContentTopInsetNativeFallbacks.add(webView)
-                ) {
-                    return@post
-                }
-                lastWindowInsets?.let { insets -> applyWindowInsets(tabId, webView, insets) }
-            }
-        }
-    }
-
-    private inner class GenericCosmeticBridge {
-        val token: String = UUID.randomUUID().toString()
-        private val policyCache = GenericCosmeticPolicyCache(
-            maxEntries = MAX_GENERIC_POLICY_CACHE_ENTRIES,
-            resolve = contentBlocker::genericCosmeticPolicyForHost,
-        )
-
-        @JavascriptInterface
-        fun payload(candidateToken: String): String = if (candidateToken == token) {
-            contentBlocker.genericCosmeticPayload()
-        } else {
-            ""
-        }
-
-        @JavascriptInterface
-        fun policy(candidateToken: String, rawHost: String): String {
-            if (candidateToken != token || rawHost.length !in 1..MAX_GENERIC_POLICY_HOST_LENGTH) {
-                return "!"
-            }
-            val host = CandyHostCanonicalizer.canonicalHost(rawHost) ?: return "!"
-            return policyCache.get(host)
-        }
-    }
-
-    private fun setPageEdgeToEdge(
-        tabId: String,
-        webView: WebView,
-        enabled: Boolean,
-        force: Boolean = false,
-    ) {
-        val previous = edgeToEdgePages.put(tabId, enabled)
-        if (!force && previous == enabled) return
-        val insets = ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets ?: return
-        applyWindowInsets(tabId, webView, insets)
-    }
 
     fun submitAddress(
         input: String,
@@ -3380,41 +2988,32 @@ class BrowserController(
                 )
             }
         }
-        if (usesGeckoEngine) {
-            val tabId = selectedTabId
-            val existingSession = geckoEngineSessions[tabId]
-            updateTab(tabId) {
-                it.copy(
-                    url = target,
-                    title = "",
-                    isLoading = target != BLANK_URL,
-                    progress = 0,
-                    error = null,
-                )
+        activeCapsuleForTab(selectedTabId)?.let { capsule ->
+            if (
+                CapsuleNavigationRules.decide(capsule, target) ==
+                CapsuleNavigationDecision.OpenInFullCandy
+            ) {
+                openCapsuleTargetInFullCandy(selectedTabId, target)
+                return
             }
-            if (target == BLANK_URL) {
-                closeGeckoEngineSession(tabId)
-            } else if (existingSession == null) {
-                geckoEngineSessionFor(tabId)
-            } else {
-                loadGeckoWithPrivacy(tabId, existingSession, target)
-            }
-            return
         }
-        val webView = webViewFor(selectedTabId)
-        applyMediaPlaybackPolicy(selectedTabId, webView)
-        updateTab(selectedTabId) {
+        val tabId = selectedTabId
+        val existingSession = geckoEngineSessions[tabId]
+        updateTab(tabId) {
             it.copy(
+                url = target,
+                title = "",
                 isLoading = target != BLANK_URL,
                 progress = 0,
                 error = null,
             )
         }
         if (target == BLANK_URL) {
-            cancelPendingBlockingStart(selectedTabId)
-            webView.loadUrl(BLANK_URL)
+            closeGeckoEngineSession(tabId)
+        } else if (existingSession == null) {
+            geckoEngineSessionFor(tabId)
         } else {
-            loadUrlWithProtection(selectedTabId, webView, target)
+            loadGeckoWithPrivacy(tabId, existingSession, target)
         }
     }
 
@@ -3564,6 +3163,15 @@ class BrowserController(
     }
 
     fun openSiteCapsuleInFullCandy() {
+        val capsule = activeSiteCapsule ?: return
+        val transition = CapsuleFullCandyTransitionRules.resolve(
+            capsule = capsule,
+            activeCapsuleTabId = activeCapsuleTabId,
+            selectedTabId = selectedTabId,
+            selectedProfileId = selectedTab.profileId,
+            selectedTabIsPrivate = selectedTab.isIncognito,
+        )
+        if (transition !is CapsuleFullCandyTransition.KeepCurrentTab) return
         leaveSiteCapsule()
     }
 
@@ -3585,11 +3193,8 @@ class BrowserController(
             setBlankTabIncognito(false)
             cancelPendingBlockingStart(selectedTabId)
             clearExternalNavigationAuthorization(selectedTabId)
-            if (usesGeckoEngine) {
-                closeGeckoEngineSession(selectedTabId)
-            } else {
-                webViewFor(selectedTabId).loadUrl(BLANK_URL)
-            }
+            closeGeckoEngineSession(selectedTabId)
+
         } else if (!selectedTab.isFreshBlankTab) {
             val previousTabId = selectedTabId
             if (createTab(BLANK_URL, isIncognito = false) == previousTabId) {
@@ -3931,7 +3536,7 @@ class BrowserController(
         commitUserScripts(
             proposed = userScripts.filterNot { it.id == id },
             onComplete = onComplete,
-            onPersisted = { userScriptRuntime.clearValues(id) },
+            onPersisted = { geckoEngineSessionFactory.clearToppingValues(id) },
         )
     }
 
@@ -3954,13 +3559,7 @@ class BrowserController(
                 if (persisted) {
                     userScripts.clear()
                     userScripts += snapshot
-                    if (usesGeckoEngine) {
-                        geckoEngineSessionFactory.reconcileToppings(snapshot)
-                    } else {
-                        webViews.forEach { (tabId, webView) ->
-                            installUserScripts(tabId, webView)
-                        }
-                    }
+                    geckoEngineSessionFactory.reconcileToppings(snapshot)
                 }
                 onComplete(persisted)
             }
@@ -4042,8 +3641,6 @@ class BrowserController(
         if (activeCapsuleTabId != null) leaveSiteCapsule()
         clearPermissionActivity(selectedTabId)
         touchTab(selectedTabId, nowMillis)
-        prepareMediaForTabDeparture(selectedTabId)
-        webViews[selectedTabId]?.let(::pauseWebView)
         val resolvedUrl = if (initialUrl == BLANK_URL) {
             BLANK_URL
         } else {
@@ -4115,7 +3712,6 @@ class BrowserController(
         }
         if (transientPopup) transientPopupTabIds += tab.id
         persist()
-        if (!usesGeckoEngine) pauseWebView(webViewFor(tab.id))
         if (!transientPopup) {
             contentActions.requestAddressBarPulse()
             contentActions.dismiss()
@@ -4129,7 +3725,7 @@ class BrowserController(
             blockedPopupOffer = null
             return
         }
-        val view = webViews[tab.id] ?: run {
+        val view = geckoEngineSessions[tab.id] ?: run {
             blockedPopupOffer = null
             closeTab(tab.id)
             return
@@ -4145,7 +3741,7 @@ class BrowserController(
         }
         tabs.firstOrNull { it.id == tab.id }?.let(::markSyncedTabPending)
         scheduleSyncedTabNavigation(tab.id)
-        loadUrlWithProtection(tab.id, view, offer.targetUrl)
+        loadGeckoWithPrivacy(tab.id, view, offer.targetUrl)
         selectTab(tab.id)
     }
 
@@ -4244,20 +3840,17 @@ class BrowserController(
             ).show()
             return null
         }
-        val safeEmoji = emoji.trim().takeIf(String::isNotEmpty) ?: return null
+        val profile = BrowserProfileRules.create(
+            draft = BrowserProfileDraft(
+                emoji = emoji,
+                isolationRequested = isolationEnabled,
+            ),
+            profileId = UUID.randomUUID().toString(),
+            isolationSupported = isProfileIsolationSupported,
+        ) ?: return null
         val previousTabId = selectedTabId
         clearPermissionActivity(previousTabId)
         touchTab(previousTabId, System.currentTimeMillis())
-        prepareMediaForTabDeparture(previousTabId)
-        webViews[previousTabId]?.let(::pauseWebView)
-        val profile = BrowserProfile(
-            id = UUID.randomUUID().toString(),
-            emoji = safeEmoji,
-            isolationEnabled = WebViewProfileRules.effectiveIsolationEnabled(
-                requested = isolationEnabled,
-                multiProfileSupported = isProfileIsolationSupported,
-            ),
-        )
         profiles += profile
         activeProfileId = profile.id
         refreshActiveProfileWallpaper()
@@ -4276,8 +3869,6 @@ class BrowserController(
         clearPermissionActivity(previousTabId)
         touchTab(previousTabId, System.currentTimeMillis())
         rememberSelectedTab(activeProfileId, previousTabId)
-        prepareMediaForTabDeparture(previousTabId)
-        webViews[previousTabId]?.let(::pauseWebView)
         activeProfileId = profileId
         refreshActiveProfileWallpaper()
         releaseActiveProfileTabSwitcherWallpaper()
@@ -4294,11 +3885,13 @@ class BrowserController(
     }
 
     fun updateProfileEmoji(profileId: String, emoji: String): Boolean {
-        if (isSyncedProfile(profileId)) return false
-        val safeEmoji = emoji.trim().takeIf(String::isNotEmpty) ?: return false
         val index = profiles.indexOfFirst { it.id == profileId }
-        if (index < 0 || profiles[index].emoji == safeEmoji) return false
-        profiles[index] = profiles[index].copy(emoji = safeEmoji)
+        if (index < 0) return false
+        val updatedProfile = BrowserProfileRules.updateEmoji(
+            profile = profiles[index],
+            emoji = emoji,
+        ) ?: return false
+        profiles[index] = updatedProfile
         persist()
         return true
     }
@@ -4408,13 +4001,16 @@ class BrowserController(
     }
 
     fun setProfileIsolation(profileId: String, enabled: Boolean): Boolean {
-        if (isSyncedProfile(profileId)) return false
-        if (!isProfileIsolationSupported) return false
         val index = profiles.indexOfFirst { it.id == profileId }
-        if (index < 0 || profiles[index].isolationEnabled == enabled) return false
-        val affectedTabIds = WebViewProfileRules.regularTabIdsForStorageChange(tabs, profileId)
-        profiles[index] = profiles[index].copy(isolationEnabled = enabled)
-        recreateWebViews(affectedTabIds)
+        if (index < 0) return false
+        val updatedProfile = BrowserProfileRules.updateIsolation(
+            profile = profiles[index],
+            enabled = enabled,
+            isolationSupported = isProfileIsolationSupported,
+        ) ?: return false
+        val affectedTabIds = GeckoProfileStorageRules.affectedTabIds(tabs, profileId)
+        profiles[index] = updatedProfile
+        recreateEngineSessions(affectedTabIds)
         externalLinkPreviewState
             ?.takeIf { it.targetProfileId == profileId }
             ?.let(::recreateExternalLinkPreviewRuntime)
@@ -4479,24 +4075,35 @@ class BrowserController(
         )
             .filter { tab -> tab.profileId == profileId && !tab.isIncognito }
             .mapTo(linkedSetOf(), BrowserTab::id)
-        val historyMutation = historyRepository.clearProfiles(
-            profileIds = setOf(profileId),
-            trailTabIds = removedProfileTrailTabIds,
-            recallAlreadyDeleted = recallAlreadyDeleted,
-        )
-        if (!historyMutation.committed) return false
         val previewToRecreate = externalLinkPreviewState
             ?.takeIf { it.targetProfileId == profileId }
             ?.copy(targetProfileId = fallbackProfile.id)
         if (previewToRecreate != null) {
             releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
         }
+        val movedTabIds = GeckoProfileStorageRules.affectedTabIds(tabs, profileId)
+        // Native context deletion requires every session in that context to be closed first.
+        dismissFirefoxExtensionPopup()
+        contentActions.dismiss()
+        destroyLinkPeekPreviewSessions()
+        movedTabIds.forEach(::closeGeckoEngineSession)
+        val removedProfile = profiles[profileIndex]
+        if (GeckoProfileStorageRules.requiresContextDeletion(removedProfile.isolationEnabled) &&
+            !geckoEngineSessionFactory.requestProfileDataDeletion(profileId)
+        ) return false
+        val historyMutation = historyRepository.clearProfiles(
+            profileIds = setOf(profileId),
+            trailTabIds = removedProfileTrailTabIds,
+            recallAlreadyDeleted = recallAlreadyDeleted,
+        )
+        if (!historyMutation.committed) return false
         if (historyMutation.history.size != history.size) {
             history.clear()
             history += historyMutation.history
         }
         reassignSiteCapsules(profileId, fallbackProfile, excludedCapsuleId)
-        val movedTabIds = WebViewProfileRules.tabIdsForProfileDeletion(tabs, profileId)
+        removedProfileTrailTabIds.forEach(geckoSessionStateStore::delete)
+        movedTabIds.forEach(extensionTabMuteOverrides::remove)
         movedTabIds.forEach(::clearPrivacyDataForTab)
         val profileRuleIds = filterRules.filter { it.profileId == profileId }.map(CandyRule::id).toSet()
         if (profileRuleIds.isNotEmpty()) {
@@ -4528,24 +4135,11 @@ class BrowserController(
         temporaryAlwaysBlockPopupDomains.remove(profileId)
         permissionRepository.removeProfile(profileId)
         permissionRevision++
-        val webViewProfileName = WebViewProfileRules.isolatedProfileName(profileId)
-        clearExistingWebViewProfileData(webViewProfileName)
-        clearProfileServiceWorkerClient(webViewProfileName)
-        val movedTabs = WebViewProfileRules.moveTabs(
+        val movedTabs = GeckoProfileStorageRules.movedTabs(
             tabs = tabs,
             sourceProfileId = profileId,
             targetProfileId = fallbackProfile.id,
         )
-        val tabsRequiringWebViewRecreation =
-            WebViewProfileRules.tabIdsRequiringWebViewRecreation(
-                before = tabs,
-                after = movedTabs,
-                profiles = profiles,
-                multiProfileSupported = isProfileIsolationSupported,
-                incognitoProfileName = incognitoWebViewProfileName,
-            )
-        recreateWebViews(tabsRequiringWebViewRecreation)
-        deleteOrScheduleWebViewProfile(webViewProfileName)
         tabs.clear()
         tabs += movedTabs
         val reassignedSnoozed = snoozedTabs.map { snoozed ->
@@ -4561,10 +4155,7 @@ class BrowserController(
         }
         movedTabIds.forEach { tabId ->
             updateProtectionRequestContext(tabId, pageUrls[tabId])
-            webViews[tabId]?.let { webView ->
-                cleanupSiteCompatibilityScripts(webView)
-                reloadTabWithProtection(tabId)
-            }
+
         }
         profiles.removeAt(profileIndex)
         profileWallpaperExecutor.execute { profileWallpaperStore.delete(profileId) }
@@ -4612,7 +4203,6 @@ class BrowserController(
             return false
         }
         val sourceIndex = activeTabs.indexOfFirst { it.id == tabId }
-        val oldAssignment = profileAssignmentFor(sourceTab)
         if (isSyncTargetProfile(sourceTab.profileId)) enqueueSyncedTabClose(sourceTab)
         val movedTab = sourceTab.copy(
             profileId = profileId,
@@ -4624,19 +4214,17 @@ class BrowserController(
                 null
             },
         )
-        val newAssignment = profileAssignmentFor(movedTab)
         if (tabId == selectedTabId) {
             clearPermissionActivity(tabId)
-            webViews[tabId]?.let(::pauseWebView)
         }
         clearPrivacyDataForTab(tabId)
-        if (oldAssignment != newAssignment) recreateWebViews(setOf(tabId))
+        if (GeckoProfileStorageRules.contextChanged(sourceTab, movedTab)) {
+            closeGeckoEngineSession(tabId)
+            geckoSessionStateStore.delete(tabId)
+        }
         updateTab(tabId) { movedTab }
         updateProtectionRequestContext(tabId, pageUrls[tabId])
-        webViews[tabId]?.let { webView ->
-            cleanupSiteCompatibilityScripts(webView)
-            reloadTabWithProtection(tabId)
-        }
+
         replaceProfileTabs(
             profileId,
             TabPinningRules.orderedTabs(tabs.filter { it.profileId == profileId }),
@@ -4660,34 +4248,41 @@ class BrowserController(
 
     fun downloadContextImage() {
         val tabId = currentContentActionTabId() ?: return
-        val target = contentActions.target ?: return
-        val imageUrl = target.imageUrl ?: return
-        val selectedWebView = webViews[tabId]
-        val action = target.downloadImageAction(
-            userAgent = selectedWebView?.settings?.userAgentString,
-            cookies = cookiesFor(tabId, imageUrl),
-            referrer = referrerFor(tabId),
-        ) ?: return
-        val result = routeDownload(action.request, tabId)
-        result?.let(contentActions::reportDownload)
-        contentActions.dismiss()
-        result?.let(::showDownloadResult)
+        val imageUrl = contentActions.target?.imageUrl ?: return
+        requestContextDownload(tabId, imageUrl)
     }
 
     fun downloadContextLink() {
         val tabId = currentContentActionTabId() ?: return
-        val target = contentActions.target ?: return
-        val linkUrl = target.linkUrl ?: return
-        val selectedWebView = webViews[tabId]
-        val action = target.downloadLinkAction(
-            userAgent = selectedWebView?.settings?.userAgentString,
-            cookies = cookiesFor(tabId, linkUrl),
-            referrer = referrerFor(tabId),
-        ) ?: return
-        val result = routeDownload(action.request, tabId)
-        result?.let(contentActions::reportDownload)
+        val linkUrl = contentActions.target?.linkUrl ?: return
+        requestContextDownload(tabId, linkUrl)
+    }
+
+    private fun requestContextDownload(tabId: String, url: String) {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
+        val session = geckoEngineSessionFor(tabId)
+        var reported = false
+        fun report(result: DownloadActionResult) {
+            if (reported) return
+            reported = true
+            contentActions.reportDownload(result)
+            showDownloadResult(result)
+        }
+        fun reportFailure() = report(
+            DownloadActionResult.Failed(activity.getString(R.string.error_download_start_failed)),
+        )
         contentActions.dismiss()
-        result?.let(::showDownloadResult)
+        val cancellation = session.startContextDownload(
+            request = GeckoContextDownloadRequest(safeUrl, referrer = referrerFor(tabId)),
+            listener = object : GeckoDownloadTransferListener {
+                override fun onStarted(start: GeckoDownloadTransferStart) {
+                    report(DownloadActionResult.Enqueued(start.id.toLong(), start.fileName))
+                }
+
+                override fun onFailed(reason: GeckoDownloadFailure) = reportFailure()
+            },
+        )
+        if (cancellation == null) reportFailure()
     }
 
     private fun currentContentActionTabId(): String? {
@@ -4757,7 +4352,7 @@ class BrowserController(
             provider = pageTranslationProvider,
             sourceUrl = selectedTab.url,
             targetLanguage = PageTranslationRules.targetLanguage(
-                activity.resources.configuration.locales[0],
+                activity.resources.configuration.locales[0].language,
             ),
         ) ?: return
         submitAddress(translationUrl)
@@ -4799,7 +4394,7 @@ class BrowserController(
     private fun clearExternalNavigationGrantForCallback(
         tabId: String,
         callbackUrl: String?,
-        currentWebViewUrl: String?,
+        currentBrowserUrl: String?,
         nowElapsedRealtime: Long = SystemClock.elapsedRealtime(),
     ): Boolean {
         val grant = externalNavigationGrants[tabId] ?: return false
@@ -4807,7 +4402,7 @@ class BrowserController(
             ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
                 grant = grant,
                 callbackUrl = callbackUrl,
-                currentWebViewUrl = currentWebViewUrl,
+                currentBrowserUrl = currentBrowserUrl,
                 nowElapsedRealtime = nowElapsedRealtime,
             )
         ) {
@@ -4878,17 +4473,30 @@ class BrowserController(
             onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.UnsupportedPage))
             return
         }
-        val webView = webViews[tab.id]
-        if (webView == null) {
+        val engineSession = geckoEngineSessions[tab.id]
+        if (engineSession == null) {
             onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
             return
         }
         val expectedUrl = tab.url
-        webView.evaluateJavascript(ReaderExtractionScript.javascript) { result ->
-            if (destroyed || selectedTab.id != tab.id || selectedTab.url != expectedUrl) {
-                onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+        val expectedNavigationGeneration = navigationGenerations.getOrDefault(tab.id, 0)
+        engineSession.extractPageForReader { result ->
+            val currentTab = tabs.firstOrNull { candidate -> candidate.id == tab.id }
+            if (
+                destroyed ||
+                selectedTabId != tab.id ||
+                currentTab?.url != expectedUrl ||
+                navigationGenerations.getOrDefault(tab.id, 0) !=
+                expectedNavigationGeneration ||
+                geckoEngineSessions[tab.id] !== engineSession
+            ) {
+                onResult(
+                    ReaderExtractionResult.Failure(
+                        ReaderExtractionFailure.InvalidResponse,
+                    ),
+                )
             } else {
-                onResult(ReaderExtractionParser.parse(result))
+                onResult(ReaderExtractionParser.parseJson(result))
             }
         }
     }
@@ -4896,75 +4504,40 @@ class BrowserController(
     fun openFindInPage(): Boolean {
         val tab = selectedTab
         if (tab.url == BLANK_URL) return false
-        if (usesGeckoEngine) {
-            val session = geckoEngineSessions[tab.id] ?: return false
-            closeFindInPage()
-            findInPageSession = FindInPageSession(
-                id = ++nextFindInPageSessionId,
-                tabId = tab.id,
-                geckoSession = session,
-                navigationGeneration = navigationGenerations.getOrDefault(tab.id, 0),
-            )
-            findInPageState = FindInPageState(tabId = tab.id)
-            return true
-        }
-        val webView = webViews[tab.id] ?: return false
-        val navigationGeneration = navigationGenerations[tab.id] ?: return false
-        return openFindInPage(tab.id, webView, navigationGeneration)
-    }
-
-    private fun openFindInPage(
-        tabId: String,
-        webView: WebView,
-        navigationGeneration: Int,
-    ): Boolean {
+        val session = geckoEngineSessions[tab.id] ?: return false
         closeFindInPage()
-        val session = FindInPageSession(
+        findInPageSession = FindInPageSession(
             id = ++nextFindInPageSessionId,
-            tabId = tabId,
-            webView = webView,
-            navigationGeneration = navigationGeneration,
+            tabId = tab.id,
+            geckoSession = session,
+            navigationGeneration = navigationGenerations.getOrDefault(tab.id, 0),
         )
-        findInPageSession = session
-        findInPageState = FindInPageState(tabId = tabId)
-        webView.setFindListener { activeMatchOrdinal, matchCount, isDoneCounting ->
-            val currentSession = findInPageSession
-            val currentState = findInPageState
-            if (
-                destroyed ||
-                currentSession?.id != session.id ||
-                currentSession.webView !== webView ||
-                currentState?.tabId != session.tabId ||
-                currentState.query.isEmpty() ||
-                !isFindInPageSessionCurrent(session)
-            ) {
-                return@setFindListener
-            }
-            findInPageState = FindInPageRules.withResult(
-                state = currentState,
-                activeMatchOrdinal = activeMatchOrdinal,
-                matchCount = matchCount,
-                isDoneCounting = isDoneCounting,
-            )
-        }
+        findInPageState = FindInPageState(tabId = tab.id)
         return true
+
     }
 
     private fun isFindInPageSessionCurrent(session: FindInPageSession): Boolean {
         if (session.geckoSession != null) {
+            val previewRuntime = externalLinkPreviewRuntime
+            if (
+                previewRuntime?.policyTab?.id == session.tabId &&
+                previewRuntime.geckoBinding.session === session.geckoSession
+            ) {
+                return previewRuntime.generation == session.navigationGeneration &&
+                    ExternalLinkPreviewRules.isCurrent(
+                        state = externalLinkPreviewState,
+                        sessionId = previewRuntime.sessionId,
+                        generation = previewRuntime.generation,
+                    )
+            }
             return selectedTabId == session.tabId &&
                 geckoEngineSessions[session.tabId] === session.geckoSession &&
                 navigationGenerations.getOrDefault(session.tabId, 0) ==
                 session.navigationGeneration
         }
-        if (session.webView != null && webViews[session.tabId] === session.webView) {
-            return selectedTabId == session.tabId &&
-                navigationGenerations[session.tabId] == session.navigationGeneration
-        }
-        val previewRuntime = externalLinkPreviewRuntime
-        return previewRuntime?.policyTab?.id == session.tabId &&
-            previewRuntime.webView === session.webView &&
-            previewRuntime.generation == session.navigationGeneration
+
+        return false
     }
 
     fun updateFindInPageQuery(query: String) {
@@ -4974,10 +4547,8 @@ class BrowserController(
         if (updated === state) return
         findInPageState = updated
         if (query.isEmpty()) {
-            session.webView?.clearMatches()
             session.geckoSession?.clearFindInPage()
         } else {
-            session.webView?.findAllAsync(query)
             session.geckoSession?.findInPage(
                 query = query,
                 forward = true,
@@ -5007,7 +4578,6 @@ class BrowserController(
         val session = findInPageSession ?: return false
         val state = findInPageState ?: return false
         if (!FindInPageRules.canNavigate(state)) return false
-        session.webView?.findNext(forward)
         session.geckoSession?.findInPage(
             query = state.query,
             forward = forward,
@@ -5038,10 +4608,7 @@ class BrowserController(
         findInPageSession = null
         findInPageState = null
         nextFindInPageSessionId++
-        session?.webView?.runCatching {
-            clearMatches()
-            setFindListener(null)
-        }
+
         session?.geckoSession?.clearFindInPage()
     }
 
@@ -5075,31 +4642,24 @@ class BrowserController(
 
     fun printSelectedPage() = printPage(selectedTabId)
 
+    internal fun clickFirefoxExtensionAction(key: GeckoExtensionActionKey): Boolean =
+        geckoEngineSessionFactory.clickExtensionAction(key)
+
+    internal fun dismissFirefoxExtensionPopup() {
+        geckoEngineSessionFactory.dismissExtensionPopup()
+        releaseFirefoxExtensionPopupView()
+    }
+
+    private fun releaseFirefoxExtensionPopupView() {
+        (firefoxExtensionPopupView as? GeckoView)?.releaseSession()
+        firefoxExtensionPopupView = null
+        firefoxExtensionPopupIdentity = null
+    }
+
     fun printPage(tabId: String) {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (tab.url == BLANK_URL) return
-        if (usesGeckoEngine) {
-            if (geckoEngineSessions[tab.id]?.printPage() != true) showPrintingUnavailable()
-            return
-        }
-        val webView = webViews[tab.id]
-        val printManager = activity.getSystemService(PrintManager::class.java)
-        if (webView == null || printManager == null) {
-            showPrintingUnavailable()
-            return
-        }
-        val jobName = tab.title.trim().takeIf(String::isNotEmpty)
-            ?: AddressResolver.displayText(tab.url).takeIf(String::isNotBlank)
-            ?: activity.getString(R.string.app_name)
-        runCatching {
-            printManager.print(
-                jobName,
-                webView.createPrintDocumentAdapter(jobName),
-                null,
-            )
-        }.onFailure {
-            showPrintingUnavailable()
-        }
+        if (geckoEngineSessions[tab.id]?.printPage() != true) showPrintingUnavailable()
     }
 
     private fun showPrintingUnavailable() {
@@ -5116,19 +4676,17 @@ class BrowserController(
         val nowMillis = System.currentTimeMillis()
         touchTab(selectedTabId, nowMillis)
         touchTab(tabId, nowMillis)
-        markResidentWebViewAccess(tabId)
-        scheduleResidentWebViewTrim()
+        markResidentSessionAccess(tabId)
+        scheduleResidentSessionTrim()
         pruneStaleTabs(nowMillis)
         if (tabId == selectedTabId) {
             persist()
             return
         }
-        prepareMediaForTabDeparture(selectedTabId)
         clearPermissionActivity(selectedTabId)
-        webViews[selectedTabId]?.let(::pauseWebView)
         updateSelectedTabId(tabId)
         rememberSelectedTab(activeProfileId, tabId)
-        publishWebMediaState()
+        notifyMediaStateChanged()
         persist()
     }
 
@@ -5182,7 +4740,7 @@ class BrowserController(
         }
         if (wasLastIncognitoTab) clearIncognitoProfile()
         reconcileCandyTrailForks(System.currentTimeMillis())
-        webViewRevision++
+        engineViewRevision++
         persist()
         return true
     }
@@ -5300,7 +4858,6 @@ class BrowserController(
 
         enqueueSyncedTabClose(tab)
         if (activeCapsuleTabId == tabId) leaveSiteCapsule()
-        if (selectedTabId == tabId) webViews[tabId]?.let(::pauseWebView)
         removeTabRuntimeForSnooze(tab)
         tabs.clear()
         tabs += updatedTabs
@@ -5345,7 +4902,6 @@ class BrowserController(
             )
         ) return false
 
-        if (result.selectedTabId != selectedTabId) webViews[selectedTabId]?.let(::pauseWebView)
         result.removedReplacementTabId?.let(::removeTabResources)
         tabs.clear()
         tabs += result.tabs
@@ -5397,7 +4953,6 @@ class BrowserController(
         )
         if (tabId !in result.completedTabIds || result.tabs.none { it.id == tabId }) return false
         val restoredTab = result.tabs.first { it.id == tabId }
-        val previousWebView = webViews[selectedTabId]
         val remaining = SnoozeMutationRules.deleted(snoozedTabs, tabId) ?: return false
         if (!store.saveTabsAndSnoozedImmediately(
                 tabs = persistableTabs(result.tabs),
@@ -5405,7 +4960,6 @@ class BrowserController(
                 snoozedTabs = remaining,
             )
         ) return false
-        previousWebView?.let(::pauseWebView)
         tabs.clear()
         tabs += result.tabs
         activeProfileId = restoredTab.profileId
@@ -5430,8 +4984,8 @@ class BrowserController(
         candyTrails.remove(tabId)
         candyTrailGenerations.remove(tabId)
         candyTrailRepository.delete(tabId)
-        webViewStateRepository.delete(tabId)
         reconcileCandyTrailForks(System.currentTimeMillis())
+        geckoSessionStateStore.delete(tabId)
         snoozeScheduler.schedule(remaining)
         return true
     }
@@ -5465,6 +5019,22 @@ class BrowserController(
         return true
     }
 
+    private fun positionExtensionCreatedTab(tabId: String, requestedIndex: Int): Boolean {
+        if (automaticTabSortingEnabled || isSessionEphemeralTab(tabId)) return false
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return false
+        if (tab.profileId != activeProfileId) return false
+        val currentTabs = activeTabs
+        val destinationIndex = TabReorderingRules.clampedDestinationIndex(
+            tabs = currentTabs,
+            tabId = tabId,
+            requestedIndex = requestedIndex,
+        ) ?: return false
+        if (currentTabs.indexOfFirst { candidate -> candidate.id == tabId } == destinationIndex) {
+            return true
+        }
+        return reorderTab(tabId, requestedIndex)
+    }
+
     fun candyTrail(tabId: String): CandyTrail = candyTrails[tabId] ?: CandyTrail(tabId)
 
     fun forkCandyTrailNode(tabId: String, nodeId: String): String? {
@@ -5492,7 +5062,6 @@ class BrowserController(
         ) ?: return null
 
         touchTab(selectedTabId, nowMillis)
-        webViews[selectedTabId]?.let(::pauseWebView)
         tabs += destinationTab
         setCandyTrail(originTab, forkedTrail)
         updateSelectedTabId(destinationTab.id)
@@ -5537,7 +5106,6 @@ class BrowserController(
         ) ?: return null
 
         touchTab(selectedTabId, nowMillis)
-        webViews[selectedTabId]?.let(::pauseWebView)
         tabs += destinationTab
         setCandyTrail(originTab, reopenedTrail)
         updateSelectedTabId(destinationTab.id)
@@ -5556,84 +5124,52 @@ class BrowserController(
         pendingCandyTrailTargets[tabId] = nodeId
         selectTab(tabId)
 
-        if (usesGeckoEngine) {
-            val existingSession = geckoEngineSessions[tabId]
-            updateTab(tabId) {
-                it.copy(url = node.url, title = node.title, isLoading = true, progress = 0)
-            }
-            if (existingSession == null) {
-                geckoEngineSessionFor(tabId)
-            } else {
-                loadGeckoWithPrivacy(tabId, existingSession, node.url)
-            }
-            return true
-        }
-
-        val existingWebView = webViews[tabId]
-        if (existingWebView == null) {
-            updateTab(tabId) { it.copy(url = node.url, title = node.title, isLoading = true, progress = 0) }
-            webViewFor(tabId, initialUrlOverride = node.url)
-            return true
-        }
+        val existingSession = geckoEngineSessions[tabId]
         val binding = candyTrailHistoryBindings[tabId] ?: CandyTrailHistoryBinding()
         val targetIndex = CandyTrailHistoryReconciler.indexOfNode(binding, nodeId)
-        val delta = targetIndex?.minus(binding.currentIndex)
-        if (delta != null && delta != 0) {
-            prepareWebViewForNavigation(tabId, existingWebView, node.url)
-            existingWebView.goBackOrForward(delta)
-        } else if (delta == null || existingWebView.url != node.url) {
-            applyMediaPlaybackPolicy(tabId, existingWebView)
-            loadUrlWithProtection(tabId, existingWebView, node.url)
-        } else {
+        updateTab(tabId) {
+            it.copy(url = node.url, title = node.title, isLoading = true, progress = 0)
+        }
+        if (existingSession == null) {
+            geckoEngineSessionFor(tabId)
+        } else if (targetIndex != null && targetIndex != binding.currentIndex) {
+            existingSession.goToHistoryIndex(targetIndex)
+        } else if (targetIndex == binding.currentIndex && pageUrls[tabId] == node.url) {
             pendingCandyTrailTargets.remove(tabId)
+            updateTab(tabId) { current -> current.copy(isLoading = false, progress = 100) }
+        } else {
+            loadGeckoWithPrivacy(tabId, existingSession, node.url)
         }
         return true
+
     }
 
     fun goBack() {
-        if (usesGeckoEngine) {
-            if (!selectedTab.canGoBack) return
-            if (activeCapsuleForTab(selectedTabId) != null) leaveSiteCapsule()
-            geckoEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.back())
-            return
-        }
-        val webView = webViews[selectedTabId]?.takeIf(WebView::canGoBack) ?: return
-        val history = webView.copyBackForwardList()
-        val targetUrl = history.getItemAtIndex(history.currentIndex - 1)?.url
+        if (!selectedTab.canGoBack) return
+        val session = geckoEngineSessions[selectedTabId] ?: return
         val capsule = activeCapsuleForTab(selectedTabId)
-        if (capsule != null && targetUrl != null &&
+        val targetUrl = session.historyUrlAtOffset(-1)
+        if (
+            capsule != null &&
+            targetUrl != null &&
             CapsuleNavigationRules.decide(capsule, targetUrl) ==
             CapsuleNavigationDecision.OpenInFullCandy
         ) {
             leaveSiteCapsule()
         }
-        if (targetUrl == null) return
-        prepareWebViewForNavigation(selectedTabId, webView, targetUrl)
-        webView.goBack()
+        session.execute(BrowserEngineCommands.back())
     }
     fun goForward() {
-        if (usesGeckoEngine) {
-            if (!selectedTab.canGoForward) return
-            geckoEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.forward())
-            return
-        }
-        val webView = webViews[selectedTabId]?.takeIf(WebView::canGoForward) ?: return
+        if (!selectedTab.canGoForward) return
         val binding = candyTrailHistoryBindings[selectedTabId]
         binding?.entries?.getOrNull(binding.currentIndex + 1)?.nodeId?.let { targetNodeId ->
             pendingCandyTrailTargets[selectedTabId] = targetNodeId
         }
-        val history = webView.copyBackForwardList()
-        val targetUrl = history.getItemAtIndex(history.currentIndex + 1)?.url ?: return
-        prepareWebViewForNavigation(selectedTabId, webView, targetUrl)
-        webView.goForward()
+        geckoEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.forward())
     }
     fun reload() {
         updateTab(selectedTabId) { it.copy(isLoading = true, progress = 0, error = null) }
-        if (usesGeckoEngine) {
-            geckoEngineSessionFor(selectedTabId).execute(BrowserEngineCommands.reload())
-            return
-        }
-        reloadTabWithProtection(selectedTabId)
+        geckoEngineSessionFor(selectedTabId).execute(BrowserEngineCommands.reload())
     }
 
     internal fun reloadSelectedPageAfterExtensionChange() {
@@ -5645,82 +5181,72 @@ class BrowserController(
         val tabId = selectedTabId
         if (selectedTab.error == null || selectedTab.isLoading) return false
         updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-        if (usesGeckoEngine) {
-            geckoEngineSessionFor(tabId).execute(BrowserEngineCommands.reload())
-            return true
-        }
-        val webView = webViews[tabId]
-        if (webView == null) {
-            webViewFor(tabId)
-        } else {
-            reloadTabWithProtection(tabId)
-        }
+        geckoEngineSessionFor(tabId).execute(BrowserEngineCommands.reload())
         return true
+
     }
 
     fun stopLoading() {
-        if (usesGeckoEngine) {
-            geckoEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.stop())
-            updateTab(selectedTabId) { it.copy(isLoading = false) }
-            return
-        }
-        cancelPendingBlockingStart(selectedTabId)
-        cancelPendingHttpAuthChallenge(selectedTabId)
-        clearExternalNavigationAuthorization(selectedTabId)
-        webViews[selectedTabId]?.stopLoading()
+        geckoEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.stop())
         updateTab(selectedTabId) { it.copy(isLoading = false) }
     }
 
-    fun clearCacheAndReload(): Boolean {
+    fun clearCacheAndReload(onComplete: (Boolean) -> Unit): Boolean {
         val tabId = selectedTabId
         if (selectedTab.url == BLANK_URL) return false
-        if (usesGeckoEngine) return false
-        cancelPendingHttpAuthChallenge(tabId)
-        clearExternalNavigationAuthorization(tabId)
-        val webView = webViewFor(tabId)
-        updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-        WebViewCommandActions.clearCacheAndReload(webView)
+        clearGeckoBrowsingDataAndReload(
+            tabId = tabId,
+            data = GeckoBrowsingData.AllCaches,
+            onComplete = onComplete,
+        )
         return true
     }
 
     fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean {
         val tabId = selectedTabId
         if (selectedTab.url == BLANK_URL) return false
-        if (usesGeckoEngine) return false
-        clearExternalNavigationAuthorization(tabId)
-        val webView = webViewFor(tabId)
-        val cookieManager = WebViewProfileCookies.managerFor(webView) ?: return false
-        val navigationGeneration = navigationGenerations[tabId]
-        val capturedUrl = webView.url
-        var reloaded = false
-        WebViewCommandActions.clearCookiesAndReload(
-            cookieManager = cookieManager,
-            webView = webView,
-            shouldReload = {
-                val unchanged = tabs.any { it.id == tabId } &&
-                    webViews[tabId] === webView &&
-                    navigationGenerations[tabId] == navigationGeneration &&
-                    webView.url == capturedUrl
-                if (unchanged) {
-                    updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                }
-                reloaded = unchanged
-                unchanged
-            },
-            onComplete = { onComplete(reloaded) },
+        clearGeckoBrowsingDataAndReload(
+            tabId = tabId,
+            data = GeckoBrowsingData.Cookies,
+            onComplete = onComplete,
         )
         return true
     }
 
-    val commandCookieScope: CommandCookieScope
-        get() = when {
-            !isProfileIsolationSupported -> CommandCookieScope.AllWebViews
-            else -> when (profileAssignmentFor(selectedTab)) {
-                WebViewProfileAssignment.Default -> CommandCookieScope.SharedRegularProfile
-                is WebViewProfileAssignment.Incognito -> CommandCookieScope.PrivateProfile
-                is WebViewProfileAssignment.Isolated -> CommandCookieScope.IsolatedRegularProfile
+    private fun clearGeckoBrowsingDataAndReload(
+        tabId: String,
+        data: GeckoBrowsingData,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        clearExternalNavigationAuthorization(tabId)
+        val session = geckoEngineSessionFor(tabId)
+        val navigationGeneration = navigationGenerations[tabId]
+        val capturedUrl = pageUrls[tabId] ?: selectedTab.url
+        geckoEngineSessionFactory.clearBrowsingData(data) { cleared ->
+            if (!cleared) {
+                onComplete(false)
+                return@clearBrowsingData
             }
+            val currentTab = tabs.firstOrNull { tab -> tab.id == tabId }
+            val unchanged = GeckoBrowsingDataReloadRules.canReload(
+                capturedUrl = capturedUrl,
+                currentUrl = currentTab?.let { tab -> pageUrls[tabId] ?: tab.url },
+                capturedNavigationGeneration = navigationGeneration,
+                currentNavigationGeneration = navigationGenerations[tabId],
+                sameSession = geckoEngineSessions[tabId] === session,
+            )
+            if (unchanged) {
+                updateTab(tabId) { tab ->
+                    tab.copy(isLoading = true, progress = 0, error = null)
+                }
+                session.execute(BrowserEngineCommands.reload())
+            }
+            onComplete(unchanged)
         }
+    }
+
+    val commandCookieScope: CommandCookieScope
+        get() = CommandCookieScope.AllBrowserProfiles
 
     fun addressSuggestionItems(
         query: String,
@@ -5754,8 +5280,7 @@ class BrowserController(
                     !isSyncedProfile(activeProfileId),
                 canMoveSelectedTab = canMoveSelectedTab,
                 hasLoadedPage = selectedTab.url != BLANK_URL,
-                canClearCookies = webViews[selectedTabId]
-                    ?.let(WebViewProfileCookies::managerFor) != null,
+                canClearCookies = true,
             ),
         )
         val commandMatches = CommandMatcher.match(
@@ -5940,7 +5465,6 @@ class BrowserController(
     }
 
     fun updateExternalLinkPreviewEnabled(enabled: Boolean) {
-        if (usesGeckoEngine) return
         if (isExternalLinkPreviewEnabled == enabled) return
         isExternalLinkPreviewEnabled = enabled
         store.saveExternalLinkPreviewEnabled(enabled)
@@ -5984,42 +5508,16 @@ class BrowserController(
         if (isVideoAutoplayBlocked == blocked) return
         isVideoAutoplayBlocked = blocked
         store.saveVideoAutoplayBlocked(blocked)
-        val activeWebViews = (
-            webViews.values +
-                linkPeekPreviewAssignments.keys +
-                listOfNotNull(externalLinkPreviewRuntime?.webView)
-            ).distinct()
-        if (blocked) {
-            activeWebViews.forEach { webView ->
-                installVideoAutoplayDocumentStartScript(webView)
-                webView.evaluateJavascript(VideoAutoplayBlockerScript.installScript, null)
-            }
-        } else {
-            activeWebViews.forEach { webView ->
-                removeVideoAutoplayDocumentStartScript(webView)
-                webView.evaluateJavascript(VideoAutoplayBlockerScript.cleanupScript, null)
-            }
+        geckoEngineSessions.values.forEach { session ->
+            session.setVideoAutoplayBlocked(blocked)
         }
     }
 
     fun updateAppearanceSettings(settings: AppearanceSettings) {
         val normalized = settings.normalized()
         if (appearanceSettings == normalized) return
-        val forceDarkWebsitesChanged =
-            appearanceSettings.forceDarkWebsites != normalized.forceDarkWebsites
         appearanceSettings = normalized
         store.saveAppearanceSettings(normalized)
-        if (forceDarkWebsitesChanged) applyWebsiteDarkeningPolicyToActiveWebViews()
-    }
-
-    private fun applyWebsiteDarkeningPolicyToActiveWebViews() {
-        (
-            webViews.values +
-                linkPeekPreviewAssignments.keys +
-                listOfNotNull(externalLinkPreviewRuntime?.webView)
-        ).distinct().forEach { webView ->
-            webView.settings.applyWebsiteDarkeningPolicy(appearanceSettings.forceDarkWebsites)
-        }
     }
 
     fun configureSync(settings: SyncConnectionSettings): Boolean =
@@ -6049,15 +5547,11 @@ class BrowserController(
 
     fun onAppearanceConfigurationChanged() {
         val externalPreview = externalLinkPreviewState
-        if (linkPeekPreviewAssignments.isNotEmpty() || geckoLinkPeekBindings.isNotEmpty()) {
+        if (geckoLinkPeekBindings.isNotEmpty()) {
             contentActions.dismiss()
         }
-        destroyLinkPeekPreviewWebViews()
+        destroyLinkPeekPreviewSessions()
         if (externalPreview != null) recreateExternalLinkPreviewRuntime(externalPreview)
-        recreateWebViews(
-            tabIds = webViews.keys.toSet(),
-            reloadImmediately = true,
-        )
     }
 
     fun updateDownloadSettings(settings: BrowserDownloadSettings) {
@@ -6092,7 +5586,7 @@ class BrowserController(
         }
         isWebContentEdgeToEdgeEnabled = enabled
         isScrollAwareTopInsetEnabled = enabled
-        lastWindowInsets?.let(::dispatchWindowInsetsToAttachedWebViews)
+        lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
     }
 
     fun prepareTabOverview(onReady: () -> Unit = {}) {
@@ -6116,29 +5610,10 @@ class BrowserController(
         previewContentBottomInWindowPx = bottomPx.takeIf { it > 0 }
     }
 
-    fun previewTopInsetPx(tabId: String): Int {
-        val safeTop = lastWindowInsets
-            ?.getInsets(SAFE_AREA_INSET_TYPES)
-            ?.top
-            ?.coerceAtLeast(0)
-            ?: 0
-        val webView = webViews[tabId]
-        return when (
-            WebContentTopInsetRules.resolve(
-                drawsEdgeToEdge = drawsEdgeToEdge(tabId),
-                forceSafeArea = isSafeAreaForced(tabId),
-                scrollableDocumentEnabled = isScrollAwareTopInsetEnabled,
-                documentStartAvailable =
-                    webView != null &&
-                        webView in webContentTopInsetScriptHandlers &&
-                        webView !in webContentTopInsetNativeFallbacks,
-            )
-        ) {
-            WebContentTopInsetMode.EdgeToEdge -> 0
-            WebContentTopInsetMode.ScrollableDocument ->
-                (safeTop - (webView?.scrollY ?: 0)).coerceAtLeast(0)
-            WebContentTopInsetMode.NativeSafeArea -> safeTop
-        }
+    fun previewTopInsetPx(tabId: String): Int = if (drawsEdgeToEdge(tabId) && !isSafeAreaForced(tabId)) {
+        0
+    } else {
+        lastWindowInsets?.getInsets(SAFE_AREA_INSET_TYPES)?.top?.coerceAtLeast(0) ?: 0
     }
 
     fun updateBlockerSettings(settings: BlockerSettings) {
@@ -6148,62 +5623,14 @@ class BrowserController(
         blockerSettings = settings
         workerSettings = settings
         store.saveBlockerSettings(settings)
-        if (usesGeckoEngine) {
-            geckoEngineSessions.forEach { (tabId, session) ->
-                updateProtectionRequestContext(tabId, pageUrls[tabId])
-                geckoPrivacyPolicyFor(tabId)?.let { policy ->
-                    session.updatePrivacyPolicy(policy) {
-                        session.execute(BrowserEngineCommands.reload())
-                    }
+        geckoEngineSessionFactory.setBlockThirdPartyCookies(settings.blockThirdPartyCookies)
+        geckoEngineSessions.forEach { (tabId, session) ->
+            updateProtectionRequestContext(tabId, pageUrls[tabId])
+            geckoPrivacyPolicyFor(tabId)?.let { policy ->
+                session.updatePrivacyPolicy(policy) {
+                    session.execute(BrowserEngineCommands.reload())
                 }
             }
-            return
-        }
-        webViews.forEach { (tabId, webView) ->
-            applyCookiePolicy(tabId, webView, pageUrls[tabId])
-        }
-        if (cookieConsentSettingChanged) {
-            webViews.forEach { (tabId, webView) ->
-                if (!settings.hideCookieConsent ||
-                    !isCookieBannerRemovalEnabled(tabId, pageUrls[tabId])
-                ) {
-                    webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
-                } else {
-                    injectCookieConsentCss(tabId, webView)
-                }
-            }
-        }
-        if (requestFilterSettingChanged) {
-            webViews.forEach { (tabId, webView) ->
-                if (tabId in transientPopupTabIds) return@forEach
-                webView.evaluateJavascript(CandyCosmeticScript.cleanupScript, null)
-                webView.evaluateJavascript(contentBlocker.genericCosmeticCleanupScript, null)
-                webView.evaluateJavascript(CandyProceduralCosmeticScript.cleanupScript, null)
-                webView.evaluateJavascript(CandyWindowOpenDefuserScript.cleanupScript, null)
-                if (settings.blockAdsAndTrackers) {
-                    installCosmeticDocumentStartScripts(tabId, webView)
-                    injectCandyCosmeticFallback(tabId, webView, pageUrls[tabId] ?: webView.url)
-                } else {
-                    removeCosmeticDocumentStartScripts(webView)
-                }
-            }
-        }
-        if (cookieConsentSettingChanged && !settings.hideCookieConsent) {
-            webViews.forEach { (tabId, webView) ->
-                if (tabId in transientPopupTabIds) return@forEach
-                clearExternalNavigationAuthorization(tabId)
-                updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                webView.reload()
-            }
-        } else if (requestFilterSettingChanged) {
-            webViews.forEach { (tabId, webView) ->
-                if (tabId in transientPopupTabIds) return@forEach
-                clearExternalNavigationAuthorization(tabId)
-                updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                webView.reload()
-            }
-        } else {
-            reload()
         }
     }
 
@@ -6326,9 +5753,7 @@ class BrowserController(
             )
             if (byHost.isEmpty()) temporarySitePrivacyOverrides.remove(tabId)
             else temporarySitePrivacyOverrides[tabId] = byHost
-            webViews[tabId]?.let { webView ->
-                installSiteCompatibilityDocumentStartScripts(tabId, webView)
-            }
+
         } else {
             val byHost = SitePrivacyOverrideRules.withOverride(
                 permanentSitePrivacyOverrides[tab.profileId].orEmpty(),
@@ -6355,20 +5780,19 @@ class BrowserController(
                         pageUrls[candidate.id] ?: candidate.url,
                     )
                     if (candidateHost == host) affectedTabIds += candidate.id
-                    webViews[candidate.id]?.let { webView ->
-                        installSiteCompatibilityDocumentStartScripts(candidate.id, webView)
-                    }
+
                 }
         }
         siteExceptionRevision++
         affectedTabIds.forEach { affectedTabId ->
-            webViews[affectedTabId]?.let { webView ->
-                if (reloadAffectedPages) cleanupSiteCompatibilityScripts(webView)
-                (ViewCompat.getRootWindowInsets(webView) ?: lastWindowInsets)?.let { insets ->
-                    applyWindowInsets(affectedTabId, webView, insets)
+            lastWindowInsets?.let { insets ->
+                geckoViewBindings.values.filter { it.tabId == affectedTabId }.forEach { binding ->
+                    applyGeckoWindowInsets(binding.view, binding.tabId, insets)
                 }
             }
-            if (reloadAffectedPages && (affectedTabId == tabId || affectedTabId in webViews)) {
+            val hasResidentEngineSession = affectedTabId == tabId ||
+                affectedTabId in geckoEngineSessions
+            if (reloadAffectedPages && hasResidentEngineSession) {
                 reloadTabWithProtection(affectedTabId)
             }
         }
@@ -6382,9 +5806,9 @@ class BrowserController(
     }
 
     fun updateResidentTabLimit(limit: Int) {
-        residentTabLimit = TabWebViewResidencyRules.normalizedLimit(limit)
+        residentTabLimit = BrowserSessionResidencyRules.normalizedLimit(limit)
         store.saveResidentTabLimit(residentTabLimit)
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
     }
 
     fun updateSearchEngine(engine: SearchEngine) {
@@ -6512,17 +5936,7 @@ class BrowserController(
     fun setSelectedDesktopView(enabled: Boolean): Boolean =
         setDesktopView(selectedTabId, enabled)
 
-    fun canExportAppData(): Boolean {
-        if (tabs.any(BrowserTab::isIncognito)) return false
-        if (usesGeckoEngine) return true
-        if (!isProfileIsolationSupported) return true
-        val profileNames = runCatching { ProfileStore.getInstance().allProfileNames }
-            .getOrNull()
-            ?: return false
-        return profileNames.none { profileName ->
-            profileName.startsWith(INCOGNITO_WEBVIEW_PROFILE_PREFIX)
-        }
-    }
+    fun canExportAppData(): Boolean = tabs.none(BrowserTab::isIncognito)
 
     fun setDesktopView(tabId: String, enabled: Boolean): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
@@ -6558,27 +5972,29 @@ class BrowserController(
         cancelPendingPermissionAccess()
         cancelPendingHttpAuthChallenge()
         cancelPendingFileChooser()
+        cancelPendingWebPrompt()
+        dismissFirefoxExtensionPopup()
+        releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
+        destroyLinkPeekPreviewSessions()
+        geckoEngineSessions.keys.toList().forEach(::closeGeckoEngineSession)
+        geckoSessionStateStore.clear()
+        geckoEngineSessionFactory.clearAllData { cleared ->
+            if (destroyed) return@clearAllData
+            if (!cleared) {
+                browsingDataClearPending = false
+                Toast.makeText(activity, R.string.history_clear_failed, Toast.LENGTH_SHORT).show()
+                engineViewRevision++
+                return@clearAllData
+            }
+            finishClearingBrowsingData()
+            engineViewRevision++
+        }
+    }
+
+    private fun finishClearingBrowsingData() {
         activePermissions.clear()
         permissionRepository.clearAll()
         permissionRevision++
-        val regularSiteCompatibilityTabIds = tabs.asSequence()
-            .filterNot(BrowserTab::isIncognito)
-            .filter { tab ->
-                val host = PrivacyRequestSanitizer.webHost(pageUrls[tab.id] ?: tab.url)
-                host != null &&
-                    (
-                        isForcedVerticalScrolling(tab, host) ||
-                            isPageZoomingForced(tab, host) ||
-                            isSafeAreaForced(tab, host)
-                    )
-            }
-            .map(BrowserTab::id)
-            .toSet()
-        val regularDesktopViewTabIds = tabs.asSequence()
-            .filterNot(BrowserTab::isIncognito)
-            .filter { tab -> isDesktopView(tab, pageUrls[tab.id] ?: tab.url) }
-            .map(BrowserTab::id)
-            .toSet()
         tabs.forEach { tab ->
             updateProtectionRequestContext(tab.id, pageUrls[tab.id] ?: tab.url)
         }
@@ -6597,7 +6013,6 @@ class BrowserController(
             }
             savePersistentFilterRules()
         }
-        clearAllWebViewProfileData()
         privacySnapshots.clear()
         temporarySiteExceptions.clear()
         permanentSiteExceptions = emptyMap()
@@ -6615,26 +6030,11 @@ class BrowserController(
         permanentAlwaysBlockPopupDomains.clear()
         store.saveAlwaysBlockPopupDomains(emptyMap())
         siteExceptionRevision++
-        webViews.forEach { (tabId, webView) ->
-            val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
-                ?: BLANK_URL
-            installSiteCompatibilityDocumentStartScripts(tabId, webView)
-            applySiteProtectionForNavigation(tabId, webView, pageUrl)
-            applyDomainMutePolicy(tabId, webView, pageUrl)
-        }
-        val incognitoTabIds = tabs.asSequence()
-            .filter(BrowserTab::isIncognito)
-            .map(BrowserTab::id)
-            .toList()
-        if (incognitoTabIds.isNotEmpty()) prepareIncognitoProfileForRemoval()
-        recreateWebViews(incognitoTabIds.toSet())
+
         clearIncognitoProfile()
-        webViews.values.forEach {
-            it.clearCache(true)
-            it.clearFormData()
-            it.clearHistory()
+        tabs.indices.forEach { index ->
+            tabs[index] = tabs[index].copy(blockedCount = 0, canGoBack = false, canGoForward = false)
         }
-        tabs.indices.forEach { index -> tabs[index] = tabs[index].copy(blockedCount = 0) }
         historyMutationExecutor.execute {
             val mutation = historyRepository.clear()
             mainHandler.post {
@@ -6654,6 +6054,7 @@ class BrowserController(
                         ).show()
                     }
                     browsingDataClearPending = false
+                    engineViewRevision++
                 }
             }
         }
@@ -6677,17 +6078,7 @@ class BrowserController(
         suppressedCandyTrailTabIds += tabs.map(BrowserTab::id)
         candyTrails.clear()
         candyTrailRepository.clear()
-        webViewStateRepository.clear()
-        webViewStateRepository.flush()
-        regularSiteCompatibilityTabIds.forEach { tabId ->
-            webViews[tabId]?.let { webView ->
-                cleanupSiteCompatibilityScripts(webView)
-                lastWindowInsets?.let { insets -> applyWindowInsets(tabId, webView, insets) }
-            }
-        }
-        (regularSiteCompatibilityTabIds + regularDesktopViewTabIds).forEach { tabId ->
-            if (webViews[tabId] != null) reloadTabWithProtection(tabId)
-        }
+        geckoSessionStateStore.clear()
     }
 
     fun onPause() {
@@ -6695,34 +6086,30 @@ class BrowserController(
             captureVisiblePreview(selectedTabId, acceptAfterDeparture = true)
         }
         isActivityResumed = false
-        fullscreenVideoSession
-            ?.takeIf(FullscreenVideoSession::isPrivate)
-            ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
-        webMediaPresentation
+        geckoMediaPresentation
             ?.takeIf { presentation ->
-                tabs.firstOrNull { it.id == presentation.key.tabId }?.isIncognito == true
+                tabs.firstOrNull { it.id == presentation.tabId }?.isIncognito == true
             }
-            ?.let { clearWebMediaPresentation(pause = true) }
-        prepareBackgroundAudio(selectedTabId)
+            ?.let { clearGeckoMediaPresentation() }
         touchTab(selectedTabId, System.currentTimeMillis())
-        persistWebViewStates()
-        webViews.values.forEach(::pauseWebView)
-        linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
-        externalLinkPreviewRuntime?.webView?.let(::pauseWebView)
-        flushCookieStores()
+        geckoEngineSessions.forEach(::persistGeckoSessionState)
+        if (
+            geckoMediaPresentation == null &&
+            !pictureInPictureTransitionPending &&
+            !isInPictureInPicture
+        ) {
+            geckoEngineSessions[selectedTabId]?.setActive(false)
+        }
+        externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
         persist()
     }
 
     fun prepareForAppDataTransfer(onReady: (Boolean) -> Unit) {
         ReaderLibraryRepository.get(activity).awaitIdle {
-            webViews.values.forEach(::pauseWebView)
-            linkPeekPreviewAssignments.keys.forEach(::pauseWebView)
-            externalLinkPreviewRuntime?.webView?.let(::pauseWebView)
-            persistWebViewStates()
-            flushCookieStores()
+            externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
+            geckoEngineSessions.forEach(::persistGeckoSessionState)
             persist()
             val persistentWritersReady = listOf(
-                webViewStateRepository.flush(),
                 previewRepository.flush(),
                 faviconRepository.flush(),
                 candyTrailRepository.flush(),
@@ -6731,35 +6118,20 @@ class BrowserController(
                 store.flush(),
                 permissionStore.flush(),
             ).all { ready -> ready }
-            if (!persistentWritersReady) resumeWebViewsAfterTransferPreparationFailure()
+            if (!persistentWritersReady) resumeEngineSessionsAfterTransferPreparationFailure()
             onReady(persistentWritersReady)
         }
     }
 
-    private fun resumeWebViewsAfterTransferPreparationFailure() {
+    private fun resumeEngineSessionsAfterTransferPreparationFailure() {
         if (externalLinkPreviewState == null) {
-            webViews[selectedTabId]?.let { webView -> resumeWebView(selectedTabId, webView) }
-        }
-        fullscreenVideoSession
-            ?.takeIf { session -> session.tabId != selectedTabId }
-            ?.let(::resumeFullscreenVideoWebView)
-        presentedWebMediaChannel()
-            ?.takeIf { channel -> channel.key.tabId != selectedTabId }
-            ?.let { channel -> resumeWebView(channel.key.tabId, channel.webView) }
-        linkPeekPreviewAssignments.keys.forEach(WebView::onResume)
-        externalLinkPreviewRuntime?.webView?.onResume()
-    }
 
-    private fun flushCookieStores() {
-        if (!isWebViewRuntimeReady) return
-        CookieManager.getInstance().flush()
-        (
-            webViews.values +
-                linkPeekPreviewAssignments.keys +
-                listOfNotNull(externalLinkPreviewRuntime?.webView)
-            ).forEach { webView ->
-            if (isProfileIsolationSupported) cookieManagerFor(webView).flush()
+            if (isActivityResumed) geckoEngineSessions[selectedTabId]?.setActive(true)
         }
+        externalLinkPreviewRuntime?.geckoBinding
+            ?.takeIf { binding -> isActivityResumed && binding.view.isAttachedToWindow }
+            ?.session
+            ?.setActive(true)
     }
 
     fun onResume() {
@@ -6769,9 +6141,6 @@ class BrowserController(
         isActivityResumed = true
         if (!isInPictureInPicture) {
             cancelPictureInPictureTransition()
-            fullscreenVideoHiddenDuringPictureInPicture
-                ?.takeIf { session -> fullscreenVideoSession === session }
-                ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
         }
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         refreshExternalDownloadManagers()
@@ -6781,17 +6150,12 @@ class BrowserController(
         touchTab(selectedTabId, nowMillis)
         persist()
         if (externalLinkPreviewState == null) {
-            webViews[selectedTabId]?.let { resumeWebView(selectedTabId, it) }
+            geckoEngineSessions[selectedTabId]?.setActive(true)
         }
-        fullscreenVideoSession
-            ?.takeIf { session -> session.tabId != selectedTabId }
-            ?.let(::resumeFullscreenVideoWebView)
-        presentedWebMediaChannel()
-            ?.takeIf { channel -> channel.key.tabId != selectedTabId }
-            ?.let { channel -> resumeWebView(channel.key.tabId, channel.webView) }
-        linkPeekPreviewAssignments.keys.forEach(WebView::onResume)
-        externalLinkPreviewRuntime?.webView?.onResume()
-        releasePictureInPictureExitGuardWhenResumed()
+        externalLinkPreviewRuntime?.geckoBinding
+            ?.takeIf { binding -> binding.view.isAttachedToWindow }
+            ?.session
+            ?.setActive(true)
     }
 
     fun onStart() {
@@ -6837,71 +6201,59 @@ class BrowserController(
             closeTabsOnBackground()
         }
         if (pendingPermissionAccess?.awaitingRuntime != true) cancelPendingPermissionAccess()
+        pendingGeckoAndroidPermissionRequest?.request?.response?.complete(false)
+        pendingGeckoAndroidPermissionRequest = null
         cancelPendingHttpAuthChallenge()
+        cancelPendingWebPrompt()
         activePermissions.clear()
         permissionRevision++
-        persistWebViewStates()
-        webViewStateRepository.flush()
+        geckoEngineSessions.forEach(::persistGeckoSessionState)
     }
 
     private fun stopPictureInPictureMedia() {
+        val ownerSession = activeMediaCommandSession()
+        notifyGeckoPictureInPictureModeChanged(false)
         pictureInPictureTransitionGeneration++
+        pictureInPicturePlaybackRetryGeneration++
         pictureInPictureTransitionPending = false
-        pictureInPicturePresentationCreatedForTransition = false
-        pictureInPicturePresentationReturnHost = null
-        cancelPictureInPicturePresentationRetry()
         pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
-        pictureInPicturePlayRetryPending = false
-        pictureInPictureExitGuardKey
-            ?.let(webMediaChannels::get)
-            ?.let { channel -> sendWebMediaCommand(channel, WebMediaCommand.Pause) }
-        pictureInPictureExitGuardGeneration++
-        pictureInPictureExitGuardKey = null
         isInPictureInPicture = false
-        fullscreenVideoHiddenDuringPictureInPicture
-            ?.takeIf { session -> fullscreenVideoSession === session }
-            ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
-        val presentedWebView = presentedWebMediaChannel()?.webView
-        clearWebMediaPresentation(pause = true)
-        fullscreenVideoSession?.webView?.let(::forcePauseWebView)
-        presentedWebView?.let(::forcePauseWebView)
+        ownerSession?.executeMediaCommand(GeckoMediaCommand.Pause)
+        if (!isActivityResumed) ownerSession?.setActive(false)
+        clearGeckoMediaPresentation()
     }
 
     fun destroy() {
         if (usesGeckoEngine) {
             // The runtime is process-scoped; do not let it retain this Activity via the listener.
+            geckoEngineSessionFactory.setExtensionChromeHost(null)
+            releaseFirefoxExtensionPopupView()
             geckoEngineSessionFactory.setToppingHostStateListener {}
+            geckoEngineSessionFactory.setToppingInteractionDelegate(
+                GeckoToppingInteractionDelegate.None,
+            )
         }
         SnoozeRuntimeRegistry.unregister(snoozeRestoreCallback)
         mainHandler.removeCallbacks(syncRefreshRunnable)
         pendingSyncNavigationRunnables.values.forEach(mainHandler::removeCallbacks)
         pendingSyncNavigationRunnables.clear()
         remoteSyncNavigationUrls.clear()
+        supersededRemoteSyncNavigationUrls.clear()
         syncObservation?.close()
         syncObservation = null
         syncRepository.close()
         closeFindInPage()
         releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
-        clearWebMediaPresentation(pause = true)
-        fullscreenVideoSession?.let { session ->
-            dismissFullscreenVideo(session, notifyPage = true)
-        }
+        clearGeckoMediaPresentation()
         destroyed = true
+        notifyGeckoPictureInPictureModeChanged(false)
+        pictureInPicturePlaybackRetryGeneration++
         pictureInPictureTransitionPending = false
-        pictureInPicturePresentationReturnHost = null
-        cancelPictureInPicturePresentationRetry()
         pictureInPictureOwnerTabId = null
         pictureInPicturePlaybackExpected = false
-        pictureInPicturePlayRetryPending = false
-        pictureInPictureExitGuardGeneration++
-        pictureInPictureExitGuardKey = null
         isInPictureInPicture = false
-        backgroundAudioKey = null
-        pendingPreviewCaptures.values.forEach { request ->
-            request.timeout?.let(mainHandler::removeCallbacks)
-        }
-        pendingPreviewCaptures.clear()
+
         pendingGeckoPreviewCaptures.values.forEach { request ->
             request.timeout?.let(mainHandler::removeCallbacks)
             request.capture?.cancel()
@@ -6918,7 +6270,10 @@ class BrowserController(
         captchaCompatibilityOfferKeys.clear()
         cancelAllPendingBlockingStarts()
         cancelPendingPermissionAccess()
+        pendingGeckoAndroidPermissionRequest?.request?.response?.complete(false)
+        pendingGeckoAndroidPermissionRequest = null
         cancelPendingHttpAuthChallenge()
+        cancelPendingWebPrompt()
         cancelPendingFileChooser()
         fileChooserValidationExecutor.shutdownNow()
         profileWallpaperLoadGeneration++
@@ -6944,30 +6299,11 @@ class BrowserController(
         persist()
         federatedLoginPopupTabIds.clear()
         federatedLoginCompatibilityTabIds.clear()
-        destroyLinkPeekPreviewWebViews()
+        destroyLinkPeekPreviewSessions()
         if (tabs.any(BrowserTab::isIncognito)) prepareIncognitoProfileForRemoval()
-        configuredServiceWorkerProfiles.toList().forEach(::clearProfileServiceWorkerClient)
         geckoViewBindings.keys.toList().forEach(::detachBrowserEngineView)
         geckoEngineSessions.keys.toList().forEach(::closeGeckoEngineSession)
-        webViews.values.forEach(::destroyWebView)
-        webViews.clear()
-        residentWebViewAccessOrder.clear()
-        webViewProfileKeys.clear()
-        desktopViewportScriptHandlers.clear()
-        desktopViewportScriptOrigins.clear()
-        forcedPageZoomScriptHandlers.clear()
-        forcedVerticalScrollScriptHandlers.clear()
-        cosmeticScriptHandlers.clear()
-        webContentTopInsetScriptHandlers.clear()
-        webContentTopInsetNativeFallbacks.clear()
-        videoAutoplayScriptHandlers.clear()
-        webMediaScriptHandlers.clear()
-        webMediaBridgeTokens.clear()
-        genericCosmeticBridges.clear()
-        retiredWebMediaDocumentIds.clear()
-        webMediaChannels.clear()
-        activeWebMediaKey = null
-        webMediaState = null
+        residentSessionAccessOrder.clear()
         castMediaCandidate = null
         pendingConsentCssUrls.clear()
         edgeToEdgePages.clear()
@@ -6975,18 +6311,10 @@ class BrowserController(
         committedRecallPages.clear()
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
-        mainFrameTlsNavigations.clear()
-        if (isWebViewRuntimeReady) clearIncognitoProfile()
-        if (
-            isWebViewRuntimeReady &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST)
-        ) {
-            ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(null)
-        }
+
         pageUrls.clear()
-        configuredServiceWorkerProfiles.clear()
         bottomBarCompactStates.clear()
+        browserChromeScrollStates.clear()
         previews.clear()
         favicons.clear()
         privacySnapshots.clear()
@@ -7005,24 +6333,669 @@ class BrowserController(
     private fun geckoEngineSessionFor(tabId: String): AndroidBrowserEngineSessionPort =
         geckoEngineSessions.getOrPut(tabId) {
             val tab = tabs.first { candidate -> candidate.id == tabId }
+            BrowserInputDiagnostics.engineCreated(tab.id, "gecko")
             navigationGenerations.putIfAbsent(tab.id, 0)
             updateProtectionRequestContext(tab.id, tab.url)
             geckoEngineSessionFactory.create(
                 tabId = tab.id,
                 profileId = tab.profileId,
+                isolationEnabled = profileForId(tab.profileId)?.isolationEnabled == true,
                 isPrivate = tab.isIncognito,
                 privacyPolicy = requireNotNull(geckoPrivacyPolicyFor(tab.id)),
                 privacyEventSink = GeckoPrivacyEventSink { event ->
                     mainHandler.post { onGeckoPrivacyEvent(tab.id, event) }
                 },
+                trailHistoryEventSink = ::onGeckoTrailHistoryEvent,
                 eventSink = ::onGeckoEngineEvent,
             ).also { session ->
-                session.setActive(tab.id == selectedTabId)
-                if (tab.url != BLANK_URL) {
+                session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
+                session.setAudioMuted(isTabAudioMuted(tab, tab.url))
+                connectGeckoScrollListener(tab.id, session)
+                session.setMediaStateListener(
+                    GeckoMediaSessionStateListener { state ->
+                        mainHandler.post { onGeckoMediaState(tab.id, session, state) }
+                    },
+                )
+                session.setContentTargetListener { target ->
+                    mainHandler.post {
+                        onGeckoContentTarget(
+                            tabId = tab.id,
+                            session = session,
+                            navigationGeneration = navigationGenerations[tab.id],
+                            target = target,
+                        )
+                    }
+                }
+                session.setNavigationRequestListener { request ->
+                    onGeckoNavigationRequest(tab.id, session, request)
+                }
+                session.setNewSessionListener { request ->
+                    onGeckoNewSession(tab.id, session, request)
+                }
+                session.setDownloadResponseListener { response ->
+                    onGeckoDownloadResponse(tab.id, session, response)
+                }
+                session.setFilePromptListener { request ->
+                    onGeckoFilePrompt(tab.id, session, request)
+                }
+                session.setAndroidPermissionRequestListener { request ->
+                    onGeckoAndroidPermissionRequest(tab.id, session, request)
+                }
+                session.setContentPermissionRequestListener { request ->
+                    onGeckoContentPermissionRequest(tab.id, session, request)
+                }
+                session.setMediaPermissionRequestListener { request ->
+                    onGeckoMediaPermissionRequest(tab.id, session, request)
+                }
+                session.setAuthPromptListener { request ->
+                    onGeckoAuthPrompt(tab.id, session, request)
+                }
+                session.setWebPromptListener { request ->
+                    onGeckoWebPrompt(tab.id, session, request)
+                }
+                session.setActive(
+                    isActivityResumed &&
+                        externalLinkPreviewState == null &&
+                        tab.id == selectedTabId,
+                )
+                val restoreDecision = GeckoSessionStateSnapshotRules.restoreDecision(
+                    snapshot = geckoSessionStateStore.load(tab.id),
+                    tabId = tab.id,
+                    profileId = tab.profileId,
+                    isPrivate = tab.isIncognito || isSessionEphemeralTab(tab.id),
+                )
+                val restored = (restoreDecision as? GeckoSessionStateRestoreDecision.Restore)
+                    ?.snapshot
+                    ?.let { snapshot -> session.restoreSessionState(snapshot.encodedState) }
+                    ?: false
+                if (!restored && tab.url != BLANK_URL) {
+                    if (!tab.isIncognito) geckoSessionStateStore.delete(tab.id)
                     session.execute(BrowserEngineCommands.load(tab.url))
                 }
             }
+        }.also {
+            markResidentSessionAccess(tabId)
+            scheduleResidentSessionTrim()
         }
+
+    private fun connectGeckoScrollListener(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+    ) {
+        session.setScrollListener { event ->
+            mainHandler.post {
+                onBrowserEngineScroll(
+                    tabId = tabId,
+                    rendererIsCurrent = geckoEngineSessions[tabId] === session,
+                    event = event,
+                )
+            }
+        }
+    }
+
+    private fun onGeckoNavigationRequest(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        request: GeckoMainFrameNavigationRequest,
+    ): GeckoNavigationRequestDecision {
+        if (destroyed || geckoEngineSessions[tabId] !== session) {
+            return GeckoNavigationRequestDecision.Allow
+        }
+        val scheme = runCatching { Uri.parse(request.url).scheme }.getOrNull()?.lowercase()
+        val safeHttpUrl = BrowserUriPolicy.normalizeHttpUrl(request.url)
+        if (request.target == BrowserEngineNavigationTarget.New) {
+            if (safeHttpUrl == null || !request.hasUserGesture) {
+                return GeckoNavigationRequestDecision.Deny
+            }
+            mainHandler.post {
+                if (!destroyed && geckoEngineSessions[tabId] === session) {
+                    createGeckoPopup(tabId, safeHttpUrl)
+                }
+            }
+            return GeckoNavigationRequestDecision.Deny
+        }
+        if (isQuarantinedPopup(tabId)) return GeckoNavigationRequestDecision.Deny
+        if (handlePendingPopupNavigation(tabId, session, request.url).isBlocked) {
+            return GeckoNavigationRequestDecision.Deny
+        }
+        if (handlePendingPopunderOpenerNavigation(tabId, session, request.url)) {
+            return GeckoNavigationRequestDecision.Deny
+        }
+        val nowElapsedRealtime = SystemClock.elapsedRealtime()
+        if (safeHttpUrl != null) {
+            updateExternalNavigationGrant(
+                tabId = tabId,
+                url = safeHttpUrl,
+                isForMainFrame = true,
+                hasGesture = request.hasUserGesture,
+                isRedirect = request.isRedirect,
+                nowElapsedRealtime = nowElapsedRealtime,
+            )
+        }
+        val hasGrant = ExternalNavigationGrantRules.isActive(
+            externalNavigationGrants[tabId],
+            nowElapsedRealtime,
+        )
+        if (
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = scheme,
+                isForMainFrame = true,
+                hasGesture = request.hasUserGesture,
+                isRedirect = request.isRedirect,
+                hasUserNavigationGrant = hasGrant,
+            )
+        ) {
+            val result = if (safeHttpUrl != null) {
+                externalApps.openWebUrlExternally(safeHttpUrl)
+            } else {
+                externalApps.open(Uri.parse(request.url))
+            }
+            when (result) {
+                ExternalLaunchResult.Launched -> {
+                    externalNavigationGrants.remove(tabId)
+                    showExternalAppOpenedToast()
+                    return GeckoNavigationRequestDecision.Deny
+                }
+                is ExternalLaunchResult.OpenInBrowser -> {
+                    mainHandler.post {
+                        if (!destroyed && geckoEngineSessions[tabId] === session) {
+                            openUrl(result.url)
+                        }
+                    }
+                    return GeckoNavigationRequestDecision.Deny
+                }
+                ExternalLaunchResult.Unsupported -> if (safeHttpUrl == null) {
+                    return GeckoNavigationRequestDecision.Deny
+                }
+            }
+        }
+        val capsule = activeCapsuleForTab(tabId) ?: return GeckoNavigationRequestDecision.Allow
+        if (
+            CapsuleNavigationRules.decide(capsule, request.url) !=
+            CapsuleNavigationDecision.OpenInFullCandy
+        ) {
+            return GeckoNavigationRequestDecision.Allow
+        }
+        mainHandler.post {
+            if (!destroyed && geckoEngineSessions[tabId] === session) {
+                openCapsuleTargetInFullCandy(tabId, request.url)
+            }
+        }
+        return GeckoNavigationRequestDecision.Deny
+    }
+
+    private fun onGeckoNewSession(
+        openerTabId: String,
+        openerSession: AndroidBrowserEngineSessionPort,
+        request: GeckoNewSessionRequest,
+    ): Boolean {
+        if (destroyed || geckoEngineSessions[openerTabId] !== openerSession) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(request.url) ?: return false
+        return createGeckoPopup(openerTabId, safeUrl, request.session)
+    }
+
+    private fun createGeckoPopup(
+        openerTabId: String,
+        targetUrl: String,
+        preparedSession: GeckoSession? = null,
+    ): Boolean {
+        val opener = tabs.firstOrNull { it.id == openerTabId } ?: return false
+        val openerUrl = pageUrls[openerTabId] ?: opener.url
+        val sitePaused = isSiteProtectionPaused(openerTabId, openerUrl)
+        if (isAlwaysBlockPopupsEnabled(opener, openerUrl)) return false
+        if (workerSettings.blockAdsAndTrackers && !sitePaused &&
+            contentBlocker.shouldBlockPopupWithoutTarget(openerUrl)
+        ) return false
+        val popupTabId = createBackgroundTab(
+            initialUrl = targetUrl,
+            openerTabId = openerTabId,
+            isIncognito = opener.isIncognito,
+            transientPopup = true,
+        ) ?: return false
+        if (
+            preparedSession != null &&
+            !geckoEngineSessionFactory.prepareSession(popupTabId, preparedSession)
+        ) {
+            closeTab(popupTabId)
+            return false
+        }
+        if (isFederatedLoginCompatibilityEnabled(opener, openerUrl)) {
+            federatedLoginCompatibilityTabIds += popupTabId
+        }
+        val pending = PendingPopupNavigation(
+            openerTabId = openerTabId,
+            openerUrl = openerUrl,
+            profileId = opener.profileId,
+            isIncognito = opener.isIncognito,
+            sitePaused = sitePaused,
+            hadUserGesture = true,
+        )
+        pendingPopupNavigations[popupTabId] = pending
+        if (workerSettings.blockAdsAndTrackers && !sitePaused) {
+            val popunder = PendingPopunderNavigation(
+                openerTabId = openerTabId,
+                popupTabId = popupTabId,
+                originalOpenerUrl = openerUrl,
+                createdAtMillis = SystemClock.elapsedRealtime(),
+                sitePaused = false,
+            )
+            pendingPopunderNavigations[openerTabId] = popunder
+            mainHandler.postDelayed({
+                if (pendingPopunderNavigations[openerTabId] === popunder) {
+                    pendingPopunderNavigations.remove(openerTabId)
+                    scheduleResidentSessionTrim()
+                }
+            }, PopunderNavigationRules.WINDOW_MILLIS)
+        }
+        geckoEngineSessionFor(popupTabId)
+        mainHandler.postDelayed({
+            if (pendingPopupNavigations[popupTabId] === pending) {
+                pendingPopupNavigations.remove(popupTabId)
+                if (popupTabId in transientPopupTabIds) discardTransientPopup(popupTabId)
+                scheduleResidentSessionTrim()
+            }
+        }, PopupNavigationRules.PENDING_TIMEOUT_MILLIS)
+        return true
+    }
+
+    private fun onGeckoDownloadResponse(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        response: GeckoExternalDownloadResponse,
+    ) {
+        if (!isGeckoRendererCurrent(tabId, session, navigationGenerations[tabId])) {
+            response.close()
+            return
+        }
+        response.start(
+            object : GeckoDownloadTransferListener {
+                override fun onStarted(start: GeckoDownloadTransferStart) {
+                    showDownloadResult(
+                        DownloadActionResult.Enqueued(start.id.toLong(), start.fileName),
+                    )
+                }
+
+                override fun onFailed(reason: GeckoDownloadFailure) {
+                    showDownloadResult(
+                        DownloadActionResult.Failed(
+                            activity.getString(R.string.error_download_start_failed),
+                        ),
+                    )
+                }
+            },
+        )
+    }
+
+    private fun onGeckoFilePrompt(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        request: BrowserEngineFilePromptRequest,
+    ) {
+        cancelPendingFileChooser()
+        val generation = navigationGenerations[tabId]
+        if (!isGeckoRendererCurrent(tabId, session, generation, requireSelected = true)) {
+            request.response.complete(null)
+            return
+        }
+        val identity = FileChooserIdentity(tabId, requireNotNull(generation))
+        val delivery = FileChooserResultDelivery<Array<Uri>?> { uris ->
+            request.response.complete(uris?.map(Uri::toString))
+        }
+        val captureAction = FileChooserRules.captureAction(request.capture, request.mimeTypes)
+        val captureOutput = captureAction?.let(::createFileCaptureOutput)
+        pendingFileChooser = PendingFileChooser(
+            identity = identity,
+            delivery = delivery,
+            geckoSession = session,
+            allowMultiple = request.allowMultiple,
+            acceptTypes = request.mimeTypes.toTypedArray(),
+            captureOutput = captureOutput,
+        )
+        if (captureAction != null && captureOutput != null) {
+            val intent = Intent(captureAction)
+                .putExtra(MediaStore.EXTRA_OUTPUT, captureOutput.uri)
+                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                .apply {
+                    when (request.capture) {
+                        BrowserEngineFileCapture.User -> putExtra(CAMERA_FACING_EXTRA, CAMERA_FACING_FRONT)
+                        BrowserEngineFileCapture.Environment ->
+                            putExtra(CAMERA_FACING_EXTRA, CAMERA_FACING_BACK)
+                        else -> Unit
+                    }
+                }
+            runCatching { launchFileChooser(intent) }
+                .onFailure { cancelPendingFileChooser(tabId) }
+            return
+        }
+        val mimeTypes = request.mimeTypes.filter { value -> value.contains('/') }.distinct()
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mimeTypes.singleOrNull() ?: "*/*"
+            if (mimeTypes.size > 1) putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes.toTypedArray())
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, request.allowMultiple)
+        }
+        runCatching { launchFileChooser(intent) }
+            .onFailure { cancelPendingFileChooser(tabId) }
+    }
+
+    private fun onGeckoAndroidPermissionRequest(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        request: BrowserEngineAndroidPermissionRequest,
+    ) {
+        val generation = navigationGenerations[tabId]
+        if (!isGeckoRendererCurrent(tabId, session, generation, requireSelected = true)) {
+            request.response.complete(false)
+            return
+        }
+        pendingGeckoAndroidPermissionRequest?.request?.response?.complete(false)
+        val missing = request.permissions.filterNotTo(linkedSetOf(), ::hasRuntimePermission)
+        if (missing.isEmpty()) {
+            request.response.complete(true)
+            return
+        }
+        pendingGeckoAndroidPermissionRequest = PendingGeckoAndroidPermissionRequest(
+            tabId = tabId,
+            session = session,
+            navigationGeneration = requireNotNull(generation),
+            request = request,
+        )
+        runCatching { requestRuntimePermissions(missing) }
+            .onFailure {
+                pendingGeckoAndroidPermissionRequest = null
+                request.response.complete(false)
+            }
+    }
+
+    private fun onGeckoContentPermissionRequest(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        request: BrowserEngineContentPermissionRequest,
+    ) {
+        beginGeckoPermissionAccess(
+            tabId = tabId,
+            session = session,
+            origin = request.origin,
+            requested = setOf(request.permission),
+            requestToken = request.response,
+            grant = { allowed -> request.response.complete(request.permission in allowed) },
+            deny = { request.response.complete(false) },
+        )
+    }
+
+    private fun onGeckoMediaPermissionRequest(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        request: BrowserEngineMediaPermissionRequest,
+    ) {
+        beginGeckoPermissionAccess(
+            tabId = tabId,
+            session = session,
+            origin = request.origin,
+            requested = request.permissions,
+            requestToken = request.response,
+            grant = request.response::complete,
+            deny = { request.response.complete(emptySet()) },
+        )
+    }
+
+    private fun beginGeckoPermissionAccess(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        origin: String,
+        requested: Set<SitePermission>,
+        requestToken: Any,
+        grant: (Set<SitePermission>) -> Unit,
+        deny: () -> Unit,
+    ) {
+        if (pendingPermissionAccess != null) {
+            deny()
+            return
+        }
+        val normalizedOrigin = PermissionOrigin.normalize(origin)
+        val identity = permissionRequestIdentity(tabId, normalizedOrigin)
+        if (
+            identity == null ||
+            !isGeckoRendererCurrent(
+                tabId = tabId,
+                session = session,
+                navigationGeneration = identity.navigationGeneration,
+                requireSelected = true,
+            ) ||
+            !isPermissionRequestCurrent(identity)
+        ) {
+            deny()
+            return
+        }
+        beginPermissionAccess(
+            identity = identity,
+            site = PermissionSiteKey(identity.profileId, identity.origin),
+            requested = requested,
+            kind = PendingPermissionKind.Gecko,
+            requestToken = requestToken,
+            grant = grant,
+            deny = deny,
+        )
+    }
+
+    private fun onGeckoAuthPrompt(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        request: BrowserEngineAuthPromptRequest,
+    ) {
+        val generation = navigationGenerations[tabId]
+        val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { tab -> tab.id == tabId }?.url
+        val challengeHost = request.uri?.let { value ->
+            runCatching { java.net.URI(value).host }.getOrNull()
+        }
+        val details = if (request.isProxy) {
+            HttpAuthPromptRules.proxyChallengeDetails(
+                host = challengeHost,
+                realm = request.realm,
+                proxyUrl = request.uri,
+            )
+        } else {
+            HttpAuthPromptRules.challengeDetails(
+                host = challengeHost,
+                realm = request.realm,
+                pageUrl = pageUrl,
+            )
+        }
+        if (
+            details == null || (!request.isProxy && request.isCrossOriginSubresource) ||
+            !isGeckoRendererCurrent(tabId, session, generation, requireSelected = true)
+        ) {
+            request.response.dismiss()
+            return
+        }
+        cancelPendingHttpAuthChallenge()
+        val promptId = ++httpAuthPromptSequence
+        pendingHttpAuthChallenge = PendingHttpAuthChallenge(
+            promptId = promptId,
+            tabId = tabId,
+            geckoSession = session,
+            navigationGeneration = requireNotNull(generation),
+            confirm = request.response::confirm,
+            dismiss = request.response::dismiss,
+        )
+        httpAuthPrompt = HttpAuthPrompt(
+            id = promptId,
+            tabId = tabId,
+            host = details.host,
+            realm = details.realm,
+            isPageSecure = details.isPageSecure,
+            isProxy = request.isProxy,
+        )
+    }
+
+    private fun onGeckoWebPrompt(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        request: BrowserEngineWebPromptRequest,
+    ) {
+        val generation = navigationGenerations[tabId]
+        if (!isGeckoRendererCurrent(tabId, session, generation, requireSelected = true)) {
+            request.response.dismiss()
+            return
+        }
+        cancelPendingWebPrompt()
+        val promptId = ++webPromptSequence
+        val prompt = BrowserWebPromptRules.sanitized(
+            id = promptId,
+            tabId = tabId,
+            kind = request.kind,
+            title = request.title,
+            message = request.message,
+            defaultValue = request.defaultValue,
+            choices = request.choices,
+            allowMultiple = request.allowMultiple,
+            shareUri = request.shareUri,
+        )
+        if (prompt == null) {
+            request.response.dismiss()
+            return
+        }
+        pendingWebPrompt = PendingWebPrompt(
+            promptId = promptId,
+            tabId = tabId,
+            session = session,
+            navigationGeneration = requireNotNull(generation),
+            response = request.response,
+        )
+        webPrompt = prompt
+    }
+
+    private fun isGeckoRendererCurrent(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        navigationGeneration: Int?,
+        requireSelected: Boolean = false,
+    ): Boolean =
+        !destroyed &&
+            isActivityStarted &&
+            (!requireSelected || selectedTabId == tabId) &&
+            geckoEngineSessions[tabId] === session &&
+            navigationGeneration != null &&
+            navigationGenerations[tabId] == navigationGeneration &&
+            tabs.any { tab -> tab.id == tabId }
+
+    private fun onGeckoContentTarget(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        navigationGeneration: Int?,
+        target: WebContentTarget,
+    ) {
+        if (
+            destroyed ||
+            selectedTabId != tabId ||
+            geckoEngineSessions[tabId] !== session ||
+            navigationGenerations[tabId] != navigationGeneration
+        ) {
+            return
+        }
+        contentActions.show(target, tabId)
+    }
+
+    private fun onGeckoMediaState(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        state: GeckoMediaSessionState,
+    ) {
+        if (destroyed || geckoEngineSessions[tabId] !== session) return
+        if (state.isActive) geckoMediaStates[tabId] = state else geckoMediaStates.remove(tabId)
+        val presentation = geckoMediaPresentation
+        if (
+            presentation?.tabId == tabId &&
+            (!state.isActive ||
+                (!state.isFullscreen &&
+                    !pictureInPictureTransitionPending &&
+                    !isInPictureInPicture))
+        ) {
+            clearGeckoMediaPresentation()
+        }
+        castMediaCandidate = geckoCastMediaCandidate(tabId, state)
+        notifyMediaStateChanged()
+    }
+
+    private fun geckoSystemMediaState(): BrowserMediaState? {
+        val mediaTabId = pictureInPictureOwnerTabId
+            ?.takeIf { isInPictureInPicture || pictureInPictureTransitionPending }
+            ?: selectedTabId
+        val tab = tabs.firstOrNull { candidate -> candidate.id == mediaTabId } ?: return null
+        if (tab.isIncognito) return null
+        val state = geckoMediaStates[tab.id]?.takeIf { media -> media.isActive } ?: return null
+        return geckoMediaStateForSystem(tab.id, state)
+    }
+
+    private fun geckoMediaStateForSystem(
+        tabId: String,
+        state: GeckoMediaSessionState,
+    ): BrowserMediaState? {
+        if (!state.isActive) return null
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return null
+        val video = state.videoTrackCount > 0
+        return BrowserMediaState(
+            tabId = tab.id,
+            title = state.title?.take(MAX_WEB_MEDIA_TITLE_LENGTH) ?: tab.title,
+            origin = Uri.parse(tab.url).host?.removePrefix("www.").orEmpty(),
+            kind = if (video) BrowserMediaKind.Video else BrowserMediaKind.Audio,
+            isPlaying = state.isPlaying,
+            currentPositionMillis = state.currentPositionMillis,
+            durationMillis = state.durationMillis,
+            playbackRate = state.playbackRate,
+            sourceUrl = state.sourceUrl,
+            contentType = null,
+            posterUrl = null,
+        )
+    }
+
+    private fun geckoCastMediaCandidate(
+        tabId: String,
+        state: GeckoMediaSessionState,
+    ): CastMediaCandidate? {
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return null
+        val source = CastMediaRules.source(
+            state = geckoMediaStateForSystem(tabId, state),
+            isPrivate = tab.isIncognito,
+            isSelectedTab = tabId == selectedTabId,
+        ) ?: return null
+        return CastMediaCandidate(
+            identity = CastMediaIdentity(
+                tabId = tabId,
+                navigationGeneration = navigationGenerations[tabId] ?: 0,
+                documentId = state.sourceUrl.orEmpty(),
+                mediaId = state.sourceUrl.orEmpty(),
+                origin = Uri.parse(tab.url).host.orEmpty(),
+            ),
+            source = source,
+        )
+    }
+
+    internal fun pauseCastMedia(candidate: CastMediaCandidate): Boolean {
+        val session = geckoEngineSessions[candidate.identity.tabId] ?: return false
+        val current = geckoMediaStates[candidate.identity.tabId] ?: return false
+        if (geckoCastMediaCandidate(candidate.identity.tabId, current)?.source?.url != candidate.source.url) {
+            return false
+        }
+        session.executeMediaCommand(GeckoMediaCommand.Pause)
+        return true
+    }
+
+    private fun notifyMediaStateChanged() {
+        onMediaStateChanged()
+        scheduleResidentSessionTrim()
+    }
+
+    private fun minimizeGeckoMediaForTabDeparture(tabId: String) {
+        val presentation = geckoMediaPresentation ?: return
+        if (presentation.tabId != tabId) return
+        val isPrivate = tabs.firstOrNull { tab -> tab.id == tabId }?.isIncognito == true
+        if (isPrivate) clearGeckoMediaPresentation()
+        else {
+            presentation.minimizedByUser = true
+            publishFullscreenVideoState()
+        }
+    }
 
     private fun loadGeckoWithPrivacy(
         tabId: String,
@@ -7044,20 +7017,44 @@ class BrowserController(
             ?: protectionRequestContextFor(tab, pageUrl).also { created ->
                 protectionRequestContexts[tabId] = created
             }
+        return geckoPrivacyPolicyFor(tab = tab, pageUrl = pageUrl, context = context)
+    }
+
+    private fun geckoPrivacyPolicyFor(
+        tab: BrowserTab,
+        pageUrl: String,
+        context: ProtectionRequestContext,
+    ): GeckoPrivacyPolicy {
+        val siteProtectionPaused = isSiteProtectionPaused(tab.id, context, pageUrl)
+        val federatedLoginCompatibilityEnabled =
+            isFederatedLoginCompatibilityEnabled(tab, pageUrl)
+        val captchaCompatibilityEnabled = isCaptchaCompatibilityEnabled(tab, pageUrl)
         return GeckoPrivacyPolicy(
             pageHost = PrivacyRequestSanitizer.webHost(pageUrl),
             blockAdsAndTrackers = workerSettings.blockAdsAndTrackers,
             hideCookieConsent = workerSettings.hideCookieConsent,
             cookieBannerRemovalDisabled = context.cookieBannerRemovalDisabled,
-            pausedHosts = siteExceptionHostsForTab(tabId),
+            pausedHosts = siteExceptionHostsForTab(tab.id),
             candyRules = matcherFor(tab.isIncognito).rules.filter { rule ->
                 rule.profileId == null || rule.profileId == tab.profileId
             },
+            blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
+            allowThirdPartyCookiesForSite =
+                siteProtectionPaused ||
+                    federatedLoginCompatibilityEnabled ||
+                    captchaCompatibilityEnabled,
         )
     }
 
     private fun onGeckoPrivacyEvent(tabId: String, event: GeckoPrivacyEvent) {
         val context = protectionRequestContexts[tabId] ?: return
+        if (event.isCompatibilityObservation) {
+            val observedPageHost = event.pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: return
+            if (observedPageHost != context.pageHost) return
+            detectFederatedLoginRequest(tabId, event.requestUrl, context)
+            detectCaptchaRequest(tabId, event.requestUrl, context)
+            return
+        }
         if (event.isBuiltIn) {
             if (event.wasBlocked) {
                 queueBlockedRequest(
@@ -7089,12 +7086,27 @@ class BrowserController(
     }
 
     private fun onGeckoEngineEvent(event: BrowserEngineEvent) {
-        if (geckoEngineSessions[event.tabId] == null) return
+        if (destroyed || geckoEngineSessions[event.tabId] == null) return
+        if (ignoreSupersededRemoteNavigationEvent(event)) {
+            engineViewRevision++
+            return
+        }
         when (event.type) {
             BrowserEngineEventType.NavigationStarted -> {
+                clearPermissionActivity(event.tabId)
+                if (contentActions.sourceTabId == event.tabId) contentActions.dismiss()
+                resetBrowserChromeScroll(event.tabId)
                 navigationGenerations[event.tabId] =
                     navigationGenerations.getOrDefault(event.tabId, 0) + 1
                 event.address?.let { address -> pageUrls[event.tabId] = address }
+                refreshDomainMuteForTab(event.tabId)
+                updateProtectionRequestContext(event.tabId, event.address)
+                geckoPrivacyPolicyFor(event.tabId)?.let { policy ->
+                    geckoEngineSessions[event.tabId]?.updatePrivacyPolicy(
+                        policy = policy,
+                        reloadOnCookiePermissionChange = true,
+                    )
+                }
                 updateTab(event.tabId) { tab ->
                     tab.copy(
                         url = event.address ?: tab.url,
@@ -7107,6 +7119,8 @@ class BrowserController(
             }
             BrowserEngineEventType.NavigationCommitted -> {
                 event.address?.let { address -> pageUrls[event.tabId] = address }
+                refreshDomainMuteForTab(event.tabId)
+                val currentTab = tabs.firstOrNull { tab -> tab.id == event.tabId }
                 updateTab(event.tabId) { tab ->
                     tab.copy(
                         url = event.address ?: tab.url,
@@ -7118,18 +7132,36 @@ class BrowserController(
                         error = null,
                     )
                 }
-            }
-            BrowserEngineEventType.NavigationFailed -> updateTab(event.tabId) { tab ->
-                tab.copy(
-                    isLoading = false,
-                    progress = 100,
-                    canGoBack = event.canGoBack,
-                    canGoForward = event.canGoForward,
-                    error = event.failureDescription,
+                val committedUrl = event.address ?: currentTab?.url
+                if (committedUrl != null) {
+                    refineGeckoCandyTrailTitle(
+                        tabId = event.tabId,
+                        url = committedUrl,
+                        title = event.title.orEmpty().ifBlank { currentTab?.title.orEmpty() },
+                    )
+                }
+                scheduleSyncedTabNavigation(
+                    tabId = event.tabId,
+                    remoteNavigationFinished = true,
                 )
+                persist()
+            }
+            BrowserEngineEventType.NavigationFailed -> {
+                clearRemoteSyncNavigationTracking(event.tabId)
+                updateTab(event.tabId) { tab ->
+                    tab.copy(
+                        isLoading = false,
+                        progress = 100,
+                        canGoBack = event.canGoBack,
+                        canGoForward = event.canGoForward,
+                        error = event.failureDescription,
+                    )
+                }
             }
             BrowserEngineEventType.StateChanged -> {
                 event.address?.let { address -> pageUrls[event.tabId] = address }
+                refreshDomainMuteForTab(event.tabId)
+                val currentTab = tabs.firstOrNull { tab -> tab.id == event.tabId }
                 updateTab(event.tabId) { tab ->
                     tab.copy(
                         url = event.address ?: tab.url,
@@ -7138,9 +7170,30 @@ class BrowserController(
                         canGoForward = event.canGoForward,
                     )
                 }
+                val changedUrl = event.address ?: currentTab?.url
+                val changedTitle = event.title?.takeIf(String::isNotBlank)
+                if (changedUrl != null && changedTitle != null) {
+                    refineGeckoCandyTrailTitle(event.tabId, changedUrl, changedTitle)
+                }
+                if (currentTab?.isLoading == true && event.isLoading == false) {
+                    clearRemoteSyncNavigationTracking(event.tabId)
+                }
+                if (currentTab?.isLoading == false) {
+                    val previousUrl = BrowserUriPolicy.normalizeHttpUrl(currentTab.url)
+                    val changedUrl = event.address?.let(BrowserUriPolicy::normalizeHttpUrl)
+                    if (changedUrl != null && changedUrl != previousUrl) {
+                        scheduleSyncedTabNavigation(event.tabId)
+                    }
+                    persist()
+                }
             }
             BrowserEngineEventType.Crashed -> {
                 cancelPendingGeckoPreviewCapture(event.tabId)
+                clearRemoteSyncNavigationTracking(event.tabId)
+                if (geckoMediaPresentation?.tabId == event.tabId) {
+                    clearGeckoMediaPresentation()
+                }
+                geckoMediaStates.remove(event.tabId)
                 geckoViewBindings.entries.removeAll { (_, binding) ->
                     if (binding.tabId != event.tabId) return@removeAll false
                     binding.session.releaseView(binding.view)
@@ -7157,99 +7210,192 @@ class BrowserController(
                     )
                 }
             }
-            BrowserEngineEventType.Closed -> geckoEngineSessions.remove(event.tabId)
+            BrowserEngineEventType.Closed -> {
+                clearRemoteSyncNavigationTracking(event.tabId)
+                if (geckoMediaPresentation?.tabId == event.tabId) {
+                    clearGeckoMediaPresentation()
+                }
+                geckoMediaStates.remove(event.tabId)
+                geckoEngineSessions.remove(event.tabId)
+            }
         }
-        webViewRevision++
+        engineViewRevision++
+    }
+
+    private fun onGeckoTrailHistoryEvent(
+        session: AndroidBrowserEngineSessionPort,
+        event: GeckoCandyTrailHistoryEvent,
+    ) {
+        if (geckoEngineSessions[event.tabId] !== session) return
+        persistGeckoSessionState(event.tabId, session)
+        reconcileCandyTrailHistory(
+            tabId = event.tabId,
+            snapshot = event.snapshot,
+            title = event.title,
+        )
+    }
+
+    private fun reconcileCandyTrailHistory(
+        tabId: String,
+        snapshot: CandyTrailHistorySnapshot,
+        title: String,
+    ) {
+        if (isSessionEphemeralTab(tabId)) return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (snapshot.currentIndex !in snapshot.urls.indices) return
+        val currentUrl = snapshot.urls[snapshot.currentIndex]
+        if (tabId in suppressedCandyTrailTabIds) {
+            if (currentUrl == pageUrls[tabId]) return
+            suppressedCandyTrailTabIds.remove(tabId)
+        }
+        val pendingTargetNodeId = pendingCandyTrailTargets[tabId]?.takeIf { targetNodeId ->
+            candyTrails[tabId]?.nodes?.any { node ->
+                node.id == targetNodeId && node.url == currentUrl
+            } == true
+        }
+        if (pendingTargetNodeId != null) {
+            pendingCandyTrailTargets.remove(tabId)
+        }
+        val result = CandyTrailHistoryReconciler.reconcile(
+            trail = candyTrails[tabId],
+            tabId = tabId,
+            previous = candyTrailHistoryBindings[tabId] ?: CandyTrailHistoryBinding(),
+            snapshot = snapshot,
+            title = title.ifBlank { tab.title },
+            visitedAt = System.currentTimeMillis(),
+            pendingTargetNodeId = pendingTargetNodeId,
+        )
+        candyTrailHistoryBindings[tabId] = result.binding
+        setCandyTrail(tab, result.trail)
+    }
+
+    private fun refineGeckoCandyTrailTitle(tabId: String, url: String, title: String) {
+        if (title.isBlank() || isSessionEphemeralTab(tabId)) return
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
+        if (isSyncedProfile(tab.profileId)) return
+        val trail = candyTrails[tabId] ?: return
+        val refined = CandyTrailHistoryReconciler.refineCurrentTitle(
+            trail = trail,
+            url = url,
+            title = title,
+            visitedAt = System.currentTimeMillis(),
+        )
+        if (refined == trail) return
+        setCandyTrail(
+            tab,
+            refined,
+        )
     }
 
     private fun closeGeckoEngineSession(tabId: String) {
         cancelPendingGeckoPreviewCapture(tabId)
+        if (geckoMediaPresentation?.tabId == tabId) clearGeckoMediaPresentation()
+        geckoMediaStates.remove(tabId)
         geckoViewBindings.entries.removeAll { (_, binding) ->
             if (binding.tabId != tabId) return@removeAll false
             binding.session.releaseView(binding.view)
             (binding.view.parent as? ViewGroup)?.removeView(binding.view)
             true
         }
-        geckoEngineSessions.remove(tabId)?.execute(BrowserEngineCommands.close())
+        geckoEngineSessions.remove(tabId)?.let { session ->
+            persistGeckoSessionState(tabId, session)
+            session.execute(BrowserEngineCommands.close())
+        }
     }
 
-    private fun webViewFor(tabId: String, initialUrlOverride: String? = null): WebView {
-        check(!usesGeckoEngine) { "WebView creation is forbidden while Gecko is active" }
-        val webView = webViews.getOrPut(tabId) {
-            val tab = tabs.first { it.id == tabId }
-            createWebView(tabId).also { webView ->
-                val initialUrl = initialUrlOverride ?: tab.url
-                if (initialUrl != BLANK_URL && !blockingStartGate.isReady) {
-                    updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                    enqueueBlockingStart(
-                        tabId,
-                        PendingBlockingStart(
-                            webView = webView,
-                            pageUrl = initialUrl,
-                            restoreState = initialUrlOverride == null,
-                        ),
-                    )
-                } else {
-                    val restored = initialUrlOverride == null && initialUrl != BLANK_URL &&
-                        restoreWebViewStateWithProtection(tab, webView)
-                    if (restored) pendingInitialExternalNavigationGrants.remove(tabId)
-                    if (!restored && initialUrl != BLANK_URL) {
-                        updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-                        loadUrlWithProtection(tabId, webView, initialUrl)
-                    }
-                }
+    private fun persistGeckoSessionState(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+    ) {
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
+        if (
+            tab == null ||
+            tab.url == BLANK_URL ||
+            tab.isIncognito ||
+            isSessionEphemeralTab(tabId) ||
+            isSyncedProfile(tab.profileId)
+        ) {
+            geckoSessionStateStore.delete(tabId)
+            return
+        }
+        val snapshot = GeckoSessionStateSnapshotRules.forPersistence(
+            tabId = tab.id,
+            profileId = tab.profileId,
+            isPrivate = false,
+            encodedState = session.sessionStateSnapshot(),
+        ) ?: return
+        geckoSessionStateStore.save(snapshot)
+    }
+
+    private fun onBrowserEngineScroll(
+        tabId: String,
+        rendererIsCurrent: Boolean,
+        event: BrowserEngineScrollEvent,
+    ) {
+        if (
+            !BrowserChromeScrollRules.accepts(
+                eventTabId = tabId,
+                selectedTabId = selectedTabId,
+                tabExists = activeTabs.any { tab -> tab.id == tabId },
+                rendererIsCurrent = rendererIsCurrent,
+                destroyed = destroyed,
+            )
+        ) return
+        val density = activity.resources.displayMetrics.density
+        val update = BrowserChromeScrollRules.update(
+            state = browserChromeScrollStates[tabId] ?: BrowserChromeScrollState(),
+            event = event,
+            collapseThresholdPx = BOTTOM_BAR_COLLAPSE_THRESHOLD_DP * density,
+            expandThresholdPx = BOTTOM_BAR_EXPAND_THRESHOLD_DP * density,
+        )
+        browserChromeScrollStates[tabId] = update.state
+        update.compact?.let { compact ->
+            if (bottomBarCompactStates[tabId] != compact) {
+                bottomBarCompactStates[tabId] = compact
             }
         }
-        markResidentWebViewAccess(tabId)
-        scheduleResidentWebViewTrim()
-        return webView
     }
 
-    private fun markResidentWebViewAccess(tabId: String) {
-        if (tabId !in webViews) return
-        residentWebViewAccessSequence++
-        residentWebViewAccessOrder[tabId] = residentWebViewAccessSequence
+    private fun resetBrowserChromeScroll(tabId: String) {
+        browserChromeScrollStates.remove(tabId)
+        bottomBarCompactStates[tabId] = false
     }
 
-    private fun scheduleResidentWebViewTrim() {
-        if (residentWebViewTrimScheduled || destroyed) return
-        residentWebViewTrimScheduled = true
+    private fun markResidentSessionAccess(tabId: String) {
+        if (tabId !in geckoEngineSessions) return
+        residentSessionAccessSequence++
+        residentSessionAccessOrder[tabId] = residentSessionAccessSequence
+    }
+
+    private fun scheduleResidentSessionTrim() {
+        if (residentSessionTrimScheduled || destroyed) return
+        residentSessionTrimScheduled = true
         mainHandler.post {
-            residentWebViewTrimScheduled = false
-            if (!destroyed) trimResidentWebViews()
+            residentSessionTrimScheduled = false
+            if (!destroyed) trimResidentSessions()
         }
     }
 
-    private fun trimResidentWebViews() {
-        residentWebViewAccessOrder.keys.retainAll(webViews.keys)
-        val evictionIds = TabWebViewResidencyRules.evictionOrder(
-            residentTabIds = webViews.keys,
-            accessOrder = residentWebViewAccessOrder,
+    private fun trimResidentSessions() {
+        residentSessionAccessOrder.keys.retainAll(geckoEngineSessions.keys)
+        val evictionIds = BrowserSessionResidencyRules.evictionOrder(
+            residentTabIds = geckoEngineSessions.keys,
+            accessOrder = residentSessionAccessOrder,
             protectedTabIds = protectedResidentTabIds(),
             limit = residentTabLimit,
         )
         if (evictionIds.isEmpty()) return
-        clearServiceWorkerClientsLosingLastWebView(evictionIds.toSet())
-        evictionIds.forEach(::evictResidentWebView)
-        webViewRevision++
+        evictionIds.forEach(::evictResidentSession)
+        engineViewRevision++
     }
 
     private fun protectedResidentTabIds(): Set<String> = buildSet {
         selectedTabId.takeIf(String::isNotBlank)?.let(::add)
-        fullscreenVideoSession?.tabId?.let(::add)
-        fullscreenVideoHiddenDuringPictureInPicture?.tabId?.let(::add)
-        webMediaPresentation?.key?.tabId?.let(::add)
-        backgroundAudioKey?.tabId?.let(::add)
+        geckoMediaPresentation?.tabId?.let(::add)
         pictureInPictureOwnerTabId?.let(::add)
-        pictureInPicturePresentationPendingReturnCleanupKey?.tabId?.let(::add)
-        pictureInPicturePresentationRetryKey?.tabId?.let(::add)
-        pictureInPictureExitGuardKey?.tabId?.let(::add)
-        pendingWebPictureInPictureRequest?.key?.tabId?.let(::add)
-        activeWebPictureInPictureRequest?.key?.tabId?.let(::add)
         pendingPermissionAccess?.identity?.tabId?.let(::add)
         pendingHttpAuthChallenge?.tabId?.let(::add)
         pendingFileChooser?.identity?.tabId?.let(::add)
-        addAll(pendingPreviewCaptures.keys)
         addAll(pendingGeckoPreviewCaptures.keys)
         addAll(transientPopupTabIds)
         addAll(activeFederatedLoginFlowTabIds())
@@ -7262,936 +7408,46 @@ class BrowserController(
             add(pending.openerTabId)
             add(pending.popupTabId)
         }
-        webViews.keys.filterTo(this) { tabId -> hasPermissionActivity(tabId) }
+        geckoEngineSessions.keys.filterTo(this) { tabId -> hasPermissionActivity(tabId) }
     }
 
-    private fun evictResidentWebView(tabId: String) {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val webView = webViews[tabId] ?: return
-        if (tab.isIncognito) {
-            webViewStateRepository.delete(tabId)
-        } else {
-            persistWebViewState(tabId, webView)
-        }
-        cancelPendingBlockingStart(tabId)
-        webViews.remove(tabId)
-        residentWebViewAccessOrder.remove(tabId)
-        webViewProfileKeys.remove(tabId)
-        edgeToEdgePages.remove(tabId)
-        navigationGenerations.remove(tabId)
-        committedRecallPages.remove(tabId)
-        clearExternalNavigationAuthorization(tabId)
-        mainFrameTlsNavigations.remove(tabId)
-        pageUrls.remove(tabId)
-        bottomBarCompactStates.remove(tabId)
-        candyTrailHistoryBindings.remove(tabId)
-        pendingCandyTrailTargets.remove(tabId)
-        pendingConsentCssUrls.remove(tabId)
-        synchronized(privacyEventLock) {
-            reportedAllowedDecisions.remove(tabId)
-            protectionRequestContexts.remove(tabId)?.let(::flushPendingFilterHits)
-        }
-        destroyWebView(webView)
-        updateTab(tabId) { current ->
-            current.copy(
-                isLoading = false,
-                canGoBack = if (current.isIncognito) false else current.canGoBack,
-                canGoForward = if (current.isIncognito) false else current.canGoForward,
-            )
-        }
-    }
-
-    private fun createWebView(tabId: String): WebView = BrowserWebView(activity, tabId).apply {
-        BrowserInputDiagnostics.webViewCreated(tabId)
-        val tab = tabs.first { it.id == tabId }
-        val profileAssignment = profileAssignmentFor(tab)
-        when (profileAssignment) {
-            WebViewProfileAssignment.Default -> Unit
-            is WebViewProfileAssignment.Incognito ->
-                WebViewCompat.setProfile(this, profileAssignment.profileName)
-            is WebViewProfileAssignment.Isolated ->
-                WebViewCompat.setProfile(this, profileAssignment.profileName)
-        }
-        webViewProfileKeys[tabId] = profileAssignment.storageKey
-        configureProfileServiceWorkerBlocking(profileAssignment, this)
-        updateProtectionRequestContext(tabId, tab.url)
-        edgeToEdgePages[tabId] = false
-        navigationGenerations[tabId] = 0
-        mainFrameTlsNavigations.remove(tabId)
-        addJavascriptInterface(
-            WebContentTopInsetBridge(tabId, this),
-            WebContentTopInsetScript.bridgeName,
-        )
-        updateContentInsetNavigationGeneration(0)
-        installWebContentTopInsetDocumentStartScript(this)
-        val initialContentTopInset = lastWindowInsets
-            ?.getInsets(SAFE_AREA_INSET_TYPES)
-            ?.top
-            ?.takeIf {
-                !isSafeAreaForced(tabId) &&
-                    isScrollAwareTopInsetEnabled &&
-                    this in webContentTopInsetScriptHandlers
-            }
-            ?: 0
-        updateContentTopInset(
-            insetPx = initialContentTopInset,
-            viewportCoverAllowed = isWebContentEdgeToEdgeEnabled,
-        )
-        installWebMediaBridge(tabId, this)
-        addJavascriptInterface(ViewportFitBridge(tabId, this), PageViewportFit.bridgeName)
-        GenericCosmeticBridge().also { bridge ->
-            genericCosmeticBridges[this] = bridge
-            addJavascriptInterface(bridge, GenericCosmeticScript.BRIDGE_NAME)
-        }
-        val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        setBackgroundColor(if (nightMode == Configuration.UI_MODE_NIGHT_YES) Color.BLACK else Color.WHITE)
-        with(settings) {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = false
-            allowContentAccess = false
-            @Suppress("DEPRECATION")
-            allowFileAccessFromFileURLs = false
-            @Suppress("DEPRECATION")
-            allowUniversalAccessFromFileURLs = false
-            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            javaScriptCanOpenWindowsAutomatically = false
-            setSupportMultipleWindows(true)
-            setGeolocationEnabled(true)
-            enablePinchZoom()
-            safeBrowsingEnabled = true
-        }
-        applyMediaPlaybackPolicy(tabId, this)
-        applyDomainMutePolicy(tabId, this, tab.url)
-        applyDesktopViewPolicy(tabId, this, tab.url)
-        if (isVideoAutoplayBlocked) installVideoAutoplayDocumentStartScript(this)
-        installUserScripts(tabId, this)
-        SystemWebViewCredentials.configure(this)
-        settings.applyWebsiteDarkeningPolicy(appearanceSettings.forceDarkWebsites)
-        val configuredWebView = this
-        cookieManagerFor(this).setAcceptCookie(true)
-        applyCookiePolicy(tabId, configuredWebView, tab.url)
-        webViewClient = browserWebViewClient(tabId)
-        webChromeClient = browserChromeClient(tabId, configuredWebView)
-        setDownloadListener(downloadListener(tabId))
-        installSiteCompatibilityDocumentStartScripts(tabId, this)
-        installCosmeticDocumentStartScripts(tabId, this, tab.url)
-        setOnLongClickListener { clickedView ->
-            val webView = clickedView as? BrowserWebView
-                ?: return@setOnLongClickListener false
-            val hit = webView.hitTestResult
-            if (!WebViewHitTestResolver.supports(hit.type)) {
-                return@setOnLongClickListener false
-            }
-            val hitType = hit.type
-            val hitExtra = hit.extra
-            val requestGeneration = ++webContentRequestGeneration
-            if (hitType != WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
-                val target = WebViewHitTestResolver.resolve(
-                    hitType = hitType,
-                    extra = hitExtra,
-                ) ?: return@setOnLongClickListener false
-                contentActions.show(target, tabId)
-                return@setOnLongClickListener true
-            }
-
-            val contentRevision = contentActions.revision
-            val navigationGeneration = navigationGenerations[tabId]
-            val pointerSession = webView.pointerSessionSnapshot()
-            val handler = Handler(Looper.getMainLooper()) { message ->
-                if (
-                    !destroyed &&
-                    webContentRequestGeneration == requestGeneration &&
-                    contentActions.revision == contentRevision &&
-                    selectedTabId == tabId &&
-                    webViews[tabId] === webView &&
-                    webView.isAttachedToWindow &&
-                    navigationGenerations[tabId] == navigationGeneration &&
-                    webView.acceptsPointerSession(pointerSession)
-                ) {
-                    WebViewHitTestResolver.resolve(
-                        hitType = hitType,
-                        extra = hitExtra,
-                        focusedLinkUrl = message.data.getString("url"),
-                        focusedImageUrl = message.data.getString("src"),
-                    )?.let { target -> contentActions.show(target, tabId) }
-                }
-                true
-            }
-            webView.requestFocusNodeHref(handler.obtainMessage())
-            true
-        }
-        val density = resources.displayMetrics.density
-        val collapseThreshold = 24f * density
-        val expandThreshold = 16f * density
-        var accumulatedDistance = 0f
-        var previousDirection = 0
-        setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-            if (tabId != selectedTabId) return@setOnScrollChangeListener
-            if (scrollY <= 0) {
-                accumulatedDistance = 0f
-                previousDirection = 0
-                if (bottomBarCompactStates[tabId] == true) {
-                    bottomBarCompactStates[tabId] = false
-                }
-                return@setOnScrollChangeListener
-            }
-
-            val delta = scrollY - oldScrollY
-            val direction = delta.compareTo(0)
-            if (direction == 0) return@setOnScrollChangeListener
-            if (direction != previousDirection) accumulatedDistance = 0f
-            previousDirection = direction
-            accumulatedDistance += kotlin.math.abs(delta.toFloat())
-            val threshold = if (direction > 0) collapseThreshold else expandThreshold
-            if (accumulatedDistance >= threshold) {
-                val compact = direction > 0
-                if (bottomBarCompactStates[tabId] != compact) {
-                    bottomBarCompactStates[tabId] = compact
-                }
-                accumulatedDistance = 0f
-            }
-        }
+    private fun evictResidentSession(tabId: String) {
+        if (tabId !in geckoEngineSessions) return
+        closeGeckoEngineSession(tabId)
+        residentSessionAccessOrder.remove(tabId)
+        updateTab(tabId) { it.copy(isLoading = false) }
     }
 
     private fun activeCapsuleForTab(tabId: String): SiteCapsule? = activeSiteCapsule
         ?.takeIf { activeCapsuleTabId == tabId && selectedTabId == tabId }
 
-    private fun openCapsuleTargetInFullCandy(tabId: String, view: WebView, targetUrl: String) {
-        if (activeCapsuleTabId != tabId) return
+    private fun openCapsuleTargetInFullCandy(tabId: String, targetUrl: String) {
+        val capsule = activeCapsuleForTab(tabId) ?: return
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
+        val transition = CapsuleFullCandyTransitionRules.resolve(
+            capsule = capsule,
+            activeCapsuleTabId = activeCapsuleTabId,
+            selectedTabId = selectedTabId,
+            selectedProfileId = tab.profileId,
+            selectedTabIsPrivate = tab.isIncognito,
+            targetUrl = targetUrl,
+        ) as? CapsuleFullCandyTransition.OpenTargetInNewTab ?: return
         leaveSiteCapsule()
         val previousTabId = selectedTabId
-        if (createTab(targetUrl, isIncognito = false) == previousTabId) {
-            applyMediaPlaybackPolicy(tabId, view)
-            loadUrlWithProtection(tabId, view, targetUrl)
-        }
-    }
-
-    private fun browserWebViewClient(tabId: String) = object : WebViewClient() {
-        override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-            invalidatePendingDesktopNavigationOverride(view)
-            if (isPendingInitialBlank(tabId, url)) return
-            if (isQuarantinedPopup(tabId)) {
-                view.stopLoading()
-                return
-            }
-            if (handlePendingPopupNavigation(tabId, view, url).isBlocked) {
-                return
-            }
-            if (handlePendingPopunderOpenerNavigation(tabId, view, url)) return
-            if (findInPageSession?.webView === view) closeFindInPage()
-            beginMainFrameTlsNavigation(tabId, view, url)
-            cancelStaleHttpAuthChallenge(tabId, view)
-            if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
-            if (captchaCompatibilityOffer?.tabId == tabId) captchaCompatibilityOffer = null
-            if (tabId in federatedLoginCompatibilityTabIds &&
-                !FederatedLoginRules.isProviderNavigation(url)
-            ) federatedLoginCompatibilityTabIds.remove(tabId)
-            committedRecallPages.remove(tabId)
-            userScriptRuntime.clearMenuCommands(view)
-            clearWebMediaForTab(tabId)
-            fullscreenVideoSession
-                ?.takeIf { session -> session.tabId == tabId && session.webView === view }
-                ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
-            clearPermissionActivity(tabId)
-            val capsule = activeCapsuleForTab(tabId)
-            if (capsule != null &&
-                CapsuleNavigationRules.decide(capsule, url) ==
-                CapsuleNavigationDecision.OpenInFullCandy
-            ) {
-                view.stopLoading()
-                openCapsuleTargetInFullCandy(tabId, view, url)
-                return
-            }
-            if (tabs.none { candidate -> candidate.id == tabId }) return
-            pageUrls[tabId] = url
-            applyDomainMutePolicy(tabId, view, url)
-            updateProtectionRequestContext(tabId, url)
-            applySiteProtectionForNavigation(tabId, view, url)
-            suppressedCandyTrailTabIds.remove(tabId)
-            (view as? BrowserWebView)?.updateContentInsetNavigationGeneration(
-                navigationGenerations[tabId] ?: 0,
-            )
-            if (webContentTopInsetNativeFallbacks.remove(view)) {
-                lastWindowInsets?.let { insets -> applyWindowInsets(tabId, view, insets) }
-            }
-            setPageEdgeToEdge(tabId, view, false)
-            view.evaluateJavascript(WebContentTopInsetScript.installScript, null)
-            val previousUrl = tabs.firstOrNull { it.id == tabId }?.url
-            if (previousUrl != null && FaviconRules.changedSite(previousUrl, url)) {
-                invalidateFavicon(tabId)
-            }
-            favicon?.let { storeFavicon(tabId, it) }
-            bottomBarCompactStates[tabId] = false
-            updateTab(tabId) {
-                it.copy(url = url, isLoading = true, progress = 0, error = null)
-            }
-        }
-
-        override fun onPageCommitVisible(view: WebView, url: String) {
-            if (isQuarantinedPopup(tabId)) return
-            recordCommittedRecallPage(tabId, view, url)
-            detectPageEdgeToEdge(tabId, view)
-            injectCookieConsentCss(tabId, view, url)
-            injectForcedVerticalScrollFallback(tabId, view, url)
-            injectForcedPageZoomFallback(tabId, view, url)
-            injectCandyCosmeticFallback(tabId, view, url)
-        }
-
-        override fun onPageFinished(view: WebView, url: String) {
-            if (isPendingInitialBlank(tabId, url)) return
-            if (isQuarantinedPopup(tabId)) return
-            if (webViews[tabId] !== view) return
-            val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
-            clearExternalNavigationGrantForCallback(
-                tabId = tabId,
-                callbackUrl = url,
-                currentWebViewUrl = view.url,
-            )
-            applyFinishedNavigationDesktopViewPolicy(
-                tab = tab,
-                webView = view,
-                pageUrl = url,
-                isCurrent = { webViews[tabId] === view },
-            )
-            if (url != BLANK_URL) suppressedInitialBlankTabIds.remove(tabId)
-            pageUrls[tabId] = url
-            updateNavigationState(tabId, view)
-            val title = view.title?.takeIf(String::isNotBlank) ?: AddressResolver.displayText(url)
-            updateTab(tabId) {
-                it.copy(
-                    url = url,
-                    title = title,
-                    isLoading = false,
-                    progress = 100,
-                )
-            }
-            if (recordHistory(tabId, url, title)) capturePageForRecall(tabId, view, url)
-            if (view.url == url && pageUrls[tabId] == url) {
-                updateCandyTrailPage(tabId, url, title)
-            }
-            detectPageEdgeToEdge(tabId, view)
-            scheduleSyncedTabNavigation(tabId)
-            persist()
-        }
-
-        override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
-            if (isQuarantinedPopup(tabId)) return
-            if (findInPageSession?.webView === view) closeFindInPage()
-            val visibleUrl = url?.takeIf(String::isNotBlank)
-                ?: view.url?.takeIf(String::isNotBlank)
-            if (visibleUrl != null && isPendingInitialBlank(tabId, visibleUrl)) return
-            if (visibleUrl != null) {
-                pageUrls[tabId] = visibleUrl
-                updateTab(tabId) { tab -> WebViewProfileRules.withVisibleUrl(tab, visibleUrl) }
-                scheduleSyncedTabNavigation(tabId)
-            }
-            updateNavigationState(tabId, view)
-            reconcileCandyTrailHistory(tabId, view, isReload)
-            persistWebViewState(tabId, view)
-        }
-
-        override fun shouldInterceptRequest(
-            view: WebView,
-            request: WebResourceRequest,
-        ): WebResourceResponse? {
-            val requestContext = protectionRequestContexts[tabId] ?: return null
-            detectFederatedLoginRequest(
-                tabId = tabId,
-                requestUrl = request.url.toString(),
-                requestContext = requestContext,
-            )
-            detectCaptchaRequest(
-                tabId = tabId,
-                requestUrl = request.url.toString(),
-                requestContext = requestContext,
-            )
-            return interceptProtectedSubresourceRequest(
-                tabId = tabId,
-                request = request,
-                requestContext = requestContext,
-                pageUrl = requestContext.pageHost?.let { host -> "https://$host" },
-                recordDecision = true,
-            )
-        }
-
-        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-            if (tabs.none { tab -> tab.id == tabId } || webViews[tabId] !== view) return true
-            if (request.isForMainFrame) invalidatePendingDesktopNavigationOverride(view)
-            if (request.isForMainFrame && isQuarantinedPopup(tabId)) {
-                view.stopLoading()
-                return true
-            }
-            if (request.isForMainFrame &&
-                handlePendingPopupNavigation(tabId, view, request.url.toString()).isBlocked
-            ) return true
-            if (request.isForMainFrame &&
-                handlePendingPopunderOpenerNavigation(tabId, view, request.url.toString())
-            ) return true
-            val scheme = request.url.scheme?.lowercase()
-            if (scheme == "http" || scheme == "https") {
-                if (request.isForMainFrame) {
-                    recordMainFrameTlsRedirect(tabId, view, request.url.toString())
-                }
-                val capsule = activeCapsuleForTab(tabId)
-                    ?.takeIf { request.isForMainFrame }
-                if (capsule == null) {
-                    val nowElapsedRealtime = SystemClock.elapsedRealtime()
-                    updateExternalNavigationGrant(
-                        tabId = tabId,
-                        url = request.url.toString(),
-                        isForMainFrame = request.isForMainFrame,
-                        hasGesture = request.hasGesture(),
-                        isRedirect = request.isRedirect,
-                        nowElapsedRealtime = nowElapsedRealtime,
-                    )
-                    val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
-                        grant = externalNavigationGrants[tabId],
-                        nowElapsedRealtime = nowElapsedRealtime,
-                    )
-                    if (
-                        ApkDownloadNavigationRules.shouldRoute(
-                            url = request.url.toString(),
-                            isForMainFrame = request.isForMainFrame,
-                            hasGesture = request.hasGesture(),
-                            isRedirect = request.isRedirect,
-                            hasUserNavigationGrant = hasUserNavigationGrant,
-                        ) && routeExplicitDownloadNavigation(
-                            tabId = tabId,
-                            webView = view,
-                            url = request.url.toString(),
-                        )
-                    ) {
-                        externalNavigationGrants.remove(tabId)
-                        return true
-                    }
-                    val canTryAppLink = ExternalNavigationPolicy.shouldAttemptExternalLaunch(
-                        scheme = scheme,
-                        isForMainFrame = request.isForMainFrame,
-                        hasGesture = request.hasGesture(),
-                        isRedirect = request.isRedirect,
-                        hasUserNavigationGrant = hasUserNavigationGrant,
-                    )
-                    if (
-                        canTryAppLink &&
-                        externalApps.openWebUrlExternally(request.url.toString()) ==
-                        ExternalLaunchResult.Launched
-                    ) {
-                        externalNavigationGrants.remove(tabId)
-                        showExternalAppOpenedToast()
-                        return true
-                    }
-                    if (request.isForMainFrame) {
-                        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
-                            ?: return true
-                        if (
-                            overrideWebRequestedNavigationForDesktopView(
-                                tab = tab,
-                                webView = view,
-                                request = request,
-                                isCurrent = { webViews[tabId] === view },
-                                navigate = { url ->
-                                    loadUrlWithProtectionNow(
-                                        tabId = tabId,
-                                        webView = view,
-                                        pageUrl = url,
-                                        preserveExternalNavigationGrant = true,
-                                    )
-                                },
-                            )
-                        ) return true
-                        applySiteProtectionForNavigation(tabId, view, request.url.toString())
-                    }
-                    return false
-                }
-                return when (CapsuleNavigationRules.decide(capsule, request.url.toString())) {
-                    CapsuleNavigationDecision.StayInCapsule -> {
-                        if (
-                            overrideWebRequestedNavigationForDesktopView(
-                                tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
-                                    ?: return true,
-                                webView = view,
-                                request = request,
-                                isCurrent = { webViews[tabId] === view },
-                                navigate = { url ->
-                                    loadUrlWithProtectionNow(tabId, view, url)
-                                },
-                            )
-                        ) return true
-                        applySiteProtectionForNavigation(tabId, view, request.url.toString())
-                        false
-                    }
-                    CapsuleNavigationDecision.OpenInFullCandy -> {
-                        mainHandler.post {
-                            openCapsuleTargetInFullCandy(tabId, view, request.url.toString())
-                        }
-                        true
-                    }
-                    CapsuleNavigationDecision.UseExistingUriPolicy -> false
-                }
-            }
-            val hasUserNavigationGrant = ExternalNavigationGrantRules.isActive(
-                grant = externalNavigationGrants[tabId],
-                nowElapsedRealtime = SystemClock.elapsedRealtime(),
-            )
-            if (
-                !ExternalNavigationPolicy.shouldAttemptExternalLaunch(
-                    scheme = scheme,
-                    isForMainFrame = request.isForMainFrame,
-                    hasGesture = request.hasGesture(),
-                    isRedirect = request.isRedirect,
-                    hasUserNavigationGrant = hasUserNavigationGrant,
-                )
-            ) {
-                return true
-            }
-            externalNavigationGrants.remove(tabId)
-            return when (val result = externalApps.open(request.url)) {
-                ExternalLaunchResult.Launched -> {
-                    showExternalAppOpenedToast()
-                    true
-                }
-                is ExternalLaunchResult.OpenInBrowser -> {
-                    applyMediaPlaybackPolicy(tabId, view)
-                    loadUrlWithProtection(tabId, view, result.url)
-                    true
-                }
-                ExternalLaunchResult.Unsupported -> {
-                    Toast.makeText(
-                        activity,
-                        activity.getString(R.string.toast_no_matching_app),
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                    true
-                }
-            }
-        }
-
-        override fun onReceivedError(
-            view: WebView,
-            request: WebResourceRequest,
-            error: WebResourceError,
-        ) {
-            if (!request.isForMainFrame || webViews[tabId] !== view) return
-            clearExternalNavigationGrantForCallback(
-                tabId = tabId,
-                callbackUrl = request.url.toString(),
-                currentWebViewUrl = view.url,
-            )
-            updateTab(tabId) {
-                it.copy(isLoading = false, error = error.description.toString())
-            }
-        }
-
-        override fun onReceivedSslError(
-            view: WebView,
-            handler: SslErrorHandler,
-            error: android.net.http.SslError,
-        ) {
-            handler.cancel()
-            val navigation = mainFrameTlsNavigations[tabId] ?: return
-            if (webViews[tabId] !== view ||
-                navigation.webView !== view ||
-                navigation.generation != navigationGenerations[tabId] ||
-                !TlsErrorRules.isForMainFrame(
-                    errorUrl = error.url,
-                    currentMainFrameUrls = navigation.targetUrls,
-                )
-            ) return
-            mainFrameTlsNavigations.remove(tabId)
-            externalNavigationGrants.remove(tabId)
-            updateTab(tabId) {
-                it.copy(isLoading = false, error = activity.getString(R.string.error_unsafe_tls_blocked))
-            }
-        }
-
-        override fun onReceivedHttpAuthRequest(
-            view: WebView,
-            handler: HttpAuthHandler,
-            host: String?,
-            realm: String?,
-        ) {
-            val details = HttpAuthPromptRules.challengeDetails(
-                host = host,
-                realm = realm,
-                pageUrl = pageUrls[tabId] ?: view.url,
-            )
-            if (details == null ||
-                destroyed ||
-                !isActivityResumed ||
-                selectedTabId != tabId ||
-                webViews[tabId] !== view ||
-                navigationGenerations[tabId] == null
-            ) {
-                handler.cancel()
-                return
-            }
-            cancelPendingHttpAuthChallenge()
-            val promptId = ++httpAuthPromptSequence
-            pendingHttpAuthChallenge = PendingHttpAuthChallenge(
-                promptId = promptId,
-                tabId = tabId,
-                webView = view,
-                navigationGeneration = requireNotNull(navigationGenerations[tabId]),
-                handler = handler,
-            )
-            httpAuthPrompt = HttpAuthPrompt(
-                id = promptId,
-                tabId = tabId,
-                host = details.host,
-                realm = details.realm,
-                isPageSecure = details.isPageSecure,
-            )
-            scheduleResidentWebViewTrim()
-        }
-
-        @RequiresApi(Build.VERSION_CODES.O_MR1)
-        override fun onSafeBrowsingHit(
-            view: WebView,
-            request: WebResourceRequest,
-            threatType: Int,
-            callback: SafeBrowsingResponse,
-        ) {
-            callback.backToSafety(true)
-            if (webViews[tabId] !== view) return
-            clearExternalNavigationAuthorization(tabId)
-            updateTab(tabId) {
-                it.copy(isLoading = false, error = activity.getString(R.string.error_unsafe_site_blocked))
-            }
-        }
-
-        override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
-            cancelPendingBlockingStart(tabId)
-            cancelPendingHttpAuthChallenge(tabId, view)
-            fullscreenVideoSession
-                ?.takeIf { session -> session.tabId == tabId && session.webView === view }
-                ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
-            clearPermissionActivity(tabId)
-            clearServiceWorkerClientsLosingLastWebView(setOf(tabId))
-            webViews.remove(tabId)
-            residentWebViewAccessOrder.remove(tabId)
-            webViewProfileKeys.remove(tabId)
-            removeWebMediaBridge(view)
-            genericCosmeticBridges.remove(view)
-            removeSiteCompatibilityDocumentStartScripts(view)
-            removeWebContentTopInsetDocumentStartScript(view)
-            webContentTopInsetNativeFallbacks.remove(view)
-            removeCosmeticDocumentStartScripts(view)
-            removeVideoAutoplayDocumentStartScript(view)
-            removeUserScripts(view)
-            view.removeJavascriptInterface(WebContentTopInsetScript.bridgeName)
-            edgeToEdgePages.remove(tabId)
-            navigationGenerations.remove(tabId)
-            committedRecallPages.remove(tabId)
-            externalNavigationGrants.remove(tabId)
-            mainFrameTlsNavigations.remove(tabId)
-            candyTrailHistoryBindings.remove(tabId)
-            pendingCandyTrailTargets.remove(tabId)
-            (view.parent as? FrameLayout)?.removeView(view)
-            view.destroy()
-            webViewRevision++
-            updateTab(tabId) {
-                it.copy(
-                    isLoading = false,
-                    error = if (detail.didCrash()) {
-                        activity.getString(R.string.error_renderer_crashed)
-                    } else {
-                        activity.getString(R.string.error_renderer_terminated)
-                    },
-                )
-            }
-            return true
+        if (createTab(transition.targetUrl, isIncognito = false) == previousTabId) {
+            submitAddress(transition.targetUrl)
         }
     }
 
     private fun isPendingInitialBlank(tabId: String, url: String): Boolean =
         url == BLANK_URL && tabId in suppressedInitialBlankTabIds
 
-    private fun interceptProtectedSubresourceRequest(
-        tabId: String,
-        request: WebResourceRequest,
-        requestContext: ProtectionRequestContext,
-        pageUrl: String?,
-        recordDecision: Boolean,
-    ): WebResourceResponse? {
-        if (request.isForMainFrame) return null
-        if (request.url.scheme?.lowercase() !in WEB_SCHEMES) return null
-        val sitePaused = isSiteProtectionPaused(tabId, requestContext, pageUrl)
-        if (sitePaused) return null
-        val settings = workerSettings
-        val matcher = matcherFor(requestContext.isIncognito)
-        val requestUrl by lazy(LazyThreadSafetyMode.NONE) { request.url.toString() }
-        val candyDecision = if (settings.blockAdsAndTrackers && matcher.hasRequestRules) {
-            matcher.decideHosts(
-                requestHost = request.url.host,
-                pageHost = requestContext.pageHost,
-                profileId = requestContext.profileId,
-                isForMainFrame = false,
-            )
-        } else {
-            null
-        }
-        if (candyDecision != null) {
-            if (recordDecision) {
-                queueCandyRuleDecision(tabId, requestUrl, pageUrl, requestContext, candyDecision)
-            }
-            return if (candyDecision.action == CandyDecisionAction.Block) {
-                blockedResponse()
-            } else {
-                null
-            }
-        }
-        if (ConsentRequestRules.shouldBlock(
-                isForMainFrame = false,
-                cookieBannerRemovalEnabled = settings.hideCookieConsent &&
-                    !requestContext.cookieBannerRemovalDisabled,
-                sitePaused = false,
-                requestHost = request.url.host,
-            )
-        ) {
-            if (recordDecision) {
-                queueBlockedRequest(
-                    tabId,
-                    requestUrl,
-                    pageUrl,
-                    requestContext,
-                    PrivacyRuleDecisionSummary(
-                        ruleId = null,
-                        label = activity.getString(R.string.filter_rule_builtin),
-                        action = PrivacyRuleDecisionAction.Block,
-                    ),
-                )
-            }
-            return blockedResponse()
-        }
-        if (!settings.blockAdsAndTrackers) return null
-        val listedRequest = contentBlocker.shouldBlock(
-            requestUrl = requestUrl,
-            requestHost = request.url.host,
-            pageHost = requestContext.pageHost,
-        )
-        if (!RequestProtectionRules.shouldBlock(
-                isForMainFrame = false,
-                blockerEnabled = true,
-                sitePaused = false,
-                isListedRequest = listedRequest,
-            )
-        ) {
-            return null
-        }
-        if (recordDecision) {
-            queueBlockedRequest(
-                tabId,
-                requestUrl,
-                pageUrl,
-                requestContext,
-                PrivacyRuleDecisionSummary(
-                    ruleId = null,
-                    label = activity.getString(R.string.filter_rule_builtin),
-                    action = PrivacyRuleDecisionAction.Block,
-                ),
-            )
-        }
-        return blockedResponse()
-    }
-
-    private fun injectCookieConsentCss(tabId: String, view: WebView, committedUrl: String? = null) {
-        val pageUrl = committedUrl ?: pageUrls[tabId] ?: view.url
-        if (!isCookieBannerRemovalEnabled(tabId, pageUrl)) return
-        val readyScript = contentBlocker.consentScriptIfReady()
-        if (readyScript != null) {
-            pendingConsentCssUrls.remove(tabId)
-            view.evaluateJavascript(readyScript, null)
-            return
-        }
-
-        val alreadyPending = pendingConsentCssUrls.containsKey(tabId)
-        pendingConsentCssUrls[tabId] = pageUrl
-        if (alreadyPending) return
-        contentBlocker.onConsentScriptReady { script ->
-            mainHandler.post {
-                val expectedUrl = pendingConsentCssUrls.remove(tabId)
-                val currentView = webViews[tabId] ?: return@post
-                val currentUrl = pageUrls[tabId] ?: currentView.url
-                val expectedHost = expectedUrl?.let(PrivacyRequestSanitizer::webHost)
-                val currentHost = currentUrl?.let(PrivacyRequestSanitizer::webHost)
-                if (expectedHost != null && expectedHost == currentHost &&
-                    isCookieBannerRemovalEnabled(tabId, currentUrl)
-                ) {
-                    currentView.evaluateJavascript(script, null)
-                }
-            }
-        }
-    }
-
-    private fun injectForcedVerticalScrollFallback(tabId: String, view: WebView, pageUrl: String?) {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val host = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url) ?: return
-        if (!isForcedVerticalScrolling(tab, host)) return
-        // Redirects can register a document-start handler after its injection point. Always run
-        // the idempotent fallback for the committed document, even when a handler now exists.
-        ForcedVerticalScrollScript.create(forcedVerticalScrollHostsForTab(tabId, pageUrl))
-            .takeIf(String::isNotEmpty)
-            ?.let { script -> view.evaluateJavascript(script, null) }
-    }
-
-    private fun injectForcedPageZoomFallback(tabId: String, view: WebView, pageUrl: String?) {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val host = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url) ?: return
-        if (!isPageZoomingForced(tab, host)) return
-        // Redirects can register a document-start handler after its injection point. Always run
-        // the idempotent fallback for the committed document, even when a handler now exists.
-        ForcedPageZoomScript.create(forcedPageZoomHostsForTab(tabId, pageUrl))
-            .takeIf(String::isNotEmpty)
-            ?.let { script -> view.evaluateJavascript(script, null) }
-    }
-
-    private fun injectCandyCosmeticFallback(tabId: String, view: WebView, pageUrl: String?) {
-        if (!workerSettings.blockAdsAndTrackers || isSiteProtectionPaused(tabId, pageUrl)) return
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val selectors = contentBlocker.adCosmeticSelectors(pageUrl) + matcherFor(tab.isIncognito)
-            .cosmeticRules(pageUrl ?: return, tab.profileId)
-            .mapNotNull(CandyRule::cosmeticSelector)
-        val script = CandyCosmeticScript.create(selectors)
-        if (script.isNotEmpty()) view.evaluateJavascript(script, null)
-        genericCosmeticBridges[view]?.let { genericBridge ->
-            contentBlocker.genericCosmeticDocumentStartScript(
-                pausedHosts = siteExceptionHostsForTab(tabId),
-                bridgeToken = genericBridge.token,
-            )
-                .takeIf(String::isNotEmpty)
-                ?.let { genericScript -> view.evaluateJavascript(genericScript, null) }
-        }
-        contentBlocker.adProceduralDocumentStartScript(pageUrl)
-            .takeIf(String::isNotEmpty)
-            ?.let { proceduralScript -> view.evaluateJavascript(proceduralScript, null) }
-        contentBlocker.windowOpenDefuserScript(pageUrl)
-            .takeIf(String::isNotEmpty)
-            ?.let { defuserScript -> view.evaluateJavascript(defuserScript, null) }
-    }
-
-    private fun installCosmeticDocumentStartScripts(
-        tabId: String,
-        view: WebView,
-        pageUrl: String? = null,
-    ) {
-        removeCosmeticDocumentStartScripts(view)
-        if (!workerSettings.blockAdsAndTrackers ||
-            !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
-        ) return
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val targetUrl = pageUrl ?: pageUrls[tabId] ?: tab.url
-        val targetOrigin = CandyDocumentStartOrigin.fromUrl(targetUrl) ?: return
-        if (isSiteProtectionPaused(tabId, targetUrl)) return
-        val handlers = buildList {
-            genericCosmeticBridges[view]?.let { genericBridge ->
-                val genericScript = contentBlocker.genericCosmeticDocumentStartScript(
-                    pausedHosts = siteExceptionHostsForTab(tabId),
-                    bridgeToken = genericBridge.token,
-                )
-                if (genericScript.isNotEmpty()) {
-                    runCatching {
-                        WebViewCompat.addDocumentStartJavaScript(
-                            view,
-                            genericScript,
-                            ALL_WEB_ORIGINS,
-                        )
-                    }.getOrNull()?.let(::add)
-                }
-            }
-            val bundledScript = contentBlocker.adCosmeticDocumentStartScript(
-                pageUrl = targetUrl,
-                pausedHosts = siteExceptionHostsForTab(tabId),
-            )
-            if (bundledScript.isNotEmpty()) {
-                runCatching {
-                    WebViewCompat.addDocumentStartJavaScript(
-                        view,
-                        bundledScript,
-                        setOf(targetOrigin),
-                    )
-                }.getOrNull()?.let(::add)
-            }
-            val proceduralScript = contentBlocker.adProceduralDocumentStartScript(targetUrl)
-            if (proceduralScript.isNotEmpty()) {
-                runCatching {
-                    WebViewCompat.addDocumentStartJavaScript(
-                        view,
-                        proceduralScript,
-                        setOf(targetOrigin),
-                    )
-                }.getOrNull()?.let(::add)
-            }
-            val windowOpenDefuserScript = contentBlocker.windowOpenDefuserScript(targetUrl)
-            if (windowOpenDefuserScript.isNotEmpty()) {
-                runCatching {
-                    WebViewCompat.addDocumentStartJavaScript(
-                        view,
-                        windowOpenDefuserScript,
-                        setOf(targetOrigin),
-                    )
-                }.getOrNull()?.let(::add)
-            }
-            addAll(
-                matcherFor(tab.isIncognito).rules.asSequence()
-                    .filter { rule ->
-                        rule.active && rule.kind == CandyRuleKind.CosmeticCss &&
-                            (rule.profileId == null || rule.profileId == tab.profileId)
-                    }
-                    .sortedBy(CandyRule::id)
-                    .take(MAX_COSMETIC_DOCUMENT_START_RULES)
-                    .mapNotNull { rule ->
-                        val host = rule.firstPartyHost ?: return@mapNotNull null
-                        val selector = rule.cosmeticSelector ?: return@mapNotNull null
-                        runCatching {
-                            WebViewCompat.addDocumentStartJavaScript(
-                                view,
-                                CandyCosmeticScript.create(
-                                    listOf(selector),
-                                    siteExceptionHostsForTab(tabId),
-                                ),
-                                setOf(
-                                    "https://$host",
-                                    "https://*.$host",
-                                    "http://$host",
-                                    "http://*.$host",
-                                ),
-                            )
-                        }.getOrNull()
-                    }
-                    .toList(),
-            )
-        }
-        if (handlers.isNotEmpty()) cosmeticScriptHandlers[view] = handlers
-    }
-
-    private fun removeCosmeticDocumentStartScripts(view: WebView) {
-        cosmeticScriptHandlers.remove(view).orEmpty().forEach { handler ->
-            runCatching(handler::remove)
-        }
-    }
-
-    private fun installUserScripts(tabId: String, view: WebView) {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: run {
-            removeUserScripts(view)
-            return
-        }
-        userScriptRuntime.install(
-            tabId = tabId,
-            webView = view,
-            scripts = userScripts,
-            isPrivate = tab.isIncognito,
-        )
-    }
-
-    private fun removeUserScripts(view: WebView) = userScriptRuntime.remove(view)
-
     private fun openUserScriptTab(request: UserScriptOpenTabRequest) {
         val sourceTab = tabs.firstOrNull { tab -> tab.id == request.tabId } ?: return
         if (
             sourceTab.isIncognito ||
             sourceTab.profileId != activeProfileId ||
-            webViews[sourceTab.id] == null ||
+            geckoEngineSessions[sourceTab.id] == null ||
             userScripts.none { script ->
                 script.id == request.scriptId &&
                     script.enabled &&
@@ -8214,1046 +7470,47 @@ class BrowserController(
         }
     }
 
-    private fun installForcedVerticalScrollDocumentStartScript(
-        tabId: String,
-        view: WebView,
-        pageUrl: String? = null,
-    ) {
-        removeForcedVerticalScrollDocumentStartScript(view)
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
-        val script = ForcedVerticalScrollScript.create(
-            forcedVerticalScrollHostsForTab(tabId, pageUrl),
-        )
-        if (script.isEmpty()) return
-        runCatching {
-            WebViewCompat.addDocumentStartJavaScript(view, script, ALL_WEB_ORIGINS)
-        }.getOrNull()?.let { handler -> forcedVerticalScrollScriptHandlers[view] = handler }
-    }
-
-    private fun removeForcedVerticalScrollDocumentStartScript(view: WebView) {
-        forcedVerticalScrollScriptHandlers.remove(view)?.let { handler ->
-            runCatching(handler::remove)
-        }
-    }
-
-    private fun installForcedPageZoomDocumentStartScript(
-        tabId: String,
-        view: WebView,
-        pageUrl: String? = null,
-    ) {
-        removeForcedPageZoomDocumentStartScript(view)
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
-        val script = ForcedPageZoomScript.create(forcedPageZoomHostsForTab(tabId, pageUrl))
-        if (script.isEmpty()) return
-        runCatching {
-            WebViewCompat.addDocumentStartJavaScript(view, script, ALL_WEB_ORIGINS)
-        }.getOrNull()?.let { handler -> forcedPageZoomScriptHandlers[view] = handler }
-    }
-
-    private fun removeForcedPageZoomDocumentStartScript(view: WebView) {
-        forcedPageZoomScriptHandlers.remove(view)?.let { handler ->
-            runCatching(handler::remove)
-        }
-    }
-
-    private fun installSiteCompatibilityDocumentStartScripts(
-        tabId: String,
-        view: WebView,
-        pageUrl: String? = null,
-    ) {
-        installForcedVerticalScrollDocumentStartScript(tabId, view, pageUrl)
-        installForcedPageZoomDocumentStartScript(tabId, view, pageUrl)
-    }
-
-    private fun installWebContentTopInsetDocumentStartScript(view: WebView) {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
-        runCatching {
-            WebViewCompat.addDocumentStartJavaScript(
-                view,
-                WebContentTopInsetScript.installScript,
-                ALL_WEB_ORIGINS,
-            )
-        }.getOrNull()?.let { handler -> webContentTopInsetScriptHandlers[view] = handler }
-    }
-
-    private fun removeWebContentTopInsetDocumentStartScript(view: WebView) {
-        webContentTopInsetScriptHandlers.remove(view)?.let { handler ->
-            runCatching(handler::remove)
-        }
-    }
-
-    private fun removeSiteCompatibilityDocumentStartScripts(view: WebView) {
-        removeForcedVerticalScrollDocumentStartScript(view)
-        removeForcedPageZoomDocumentStartScript(view)
-    }
-
-    private fun cleanupSiteCompatibilityScripts(view: WebView) {
-        view.evaluateJavascript(ForcedVerticalScrollScript.cleanupScript, null)
-        view.evaluateJavascript(ForcedPageZoomScript.cleanupScript, null)
-    }
-
-    private fun installVideoAutoplayDocumentStartScript(view: WebView) {
-        if (!isVideoAutoplayBlocked || view in videoAutoplayScriptHandlers) return
-        if (!isVideoAutoplayBlockingSupported) return
-        runCatching {
-            WebViewCompat.addDocumentStartJavaScript(
-                view,
-                VideoAutoplayBlockerScript.installScript,
-                ALL_WEB_ORIGINS,
-            )
-        }.getOrNull()?.let { handler -> videoAutoplayScriptHandlers[view] = handler }
-    }
-
-    private fun removeVideoAutoplayDocumentStartScript(view: WebView) {
-        videoAutoplayScriptHandlers.remove(view)?.let { handler ->
-            runCatching(handler::remove)
-        }
-    }
-
-    private fun installWebMediaBridge(tabId: String, webView: WebView) {
-        if (
-            !WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) ||
-            !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
-        ) return
-        val bridgeToken = UUID.randomUUID().toString().replace("-", "")
-        val frameRelayToken = UUID.randomUUID().toString().replace("-", "")
-        val pictureInPictureEnabled =
-            tabs.firstOrNull { tab -> tab.id == tabId }?.isIncognito == false &&
-                activity.packageManager.hasSystemFeature(
-                    PackageManager.FEATURE_PICTURE_IN_PICTURE,
-                )
-        runCatching {
-            WebViewCompat.addWebMessageListener(
-                webView,
-                WebMediaContract.BRIDGE_NAME,
-                ALL_WEB_ORIGINS,
-            ) { sourceView, message, sourceOrigin, isMainFrame, replyProxy ->
-                handleWebMediaMessage(
-                    tabId = tabId,
-                    sourceView = sourceView,
-                    rawMessage = message.data,
-                    sourceOrigin = sourceOrigin,
-                    isMainFrame = isMainFrame,
-                    replyProxy = replyProxy,
-                )
-            }
-            WebViewCompat.addDocumentStartJavaScript(
-                webView,
-                WebMediaBridgeScript.javascript(
-                    bridgeToken = bridgeToken,
-                    frameRelayToken = frameRelayToken,
-                    pictureInPictureEnabled = pictureInPictureEnabled,
-                ),
-                ALL_WEB_ORIGINS,
-            )
-        }.onSuccess { handler ->
-            webMediaBridgeTokens[webView] = bridgeToken
-            webMediaScriptHandlers[webView] = handler
-        }.onFailure {
-            runCatching {
-                WebViewCompat.removeWebMessageListener(webView, WebMediaContract.BRIDGE_NAME)
-            }
-        }
-    }
-
-    private fun removeWebMediaBridge(webView: WebView) {
-        clearWebMediaForWebView(webView)
-        webMediaScriptHandlers.remove(webView)?.let { handler -> runCatching(handler::remove) }
-        webMediaBridgeTokens.remove(webView)
-        webMediaMessageRateWindows.keys.removeAll { key -> key.webView === webView }
-        retiredWebMediaDocumentIds.remove(webView)
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            runCatching {
-                WebViewCompat.removeWebMessageListener(webView, WebMediaContract.BRIDGE_NAME)
-            }
-        }
-    }
-
-    private fun handleWebMediaMessage(
-        tabId: String,
-        sourceView: WebView,
-        rawMessage: String?,
-        sourceOrigin: Uri,
-        isMainFrame: Boolean,
-        replyProxy: JavaScriptReplyProxy,
-    ) {
-        if (
-            destroyed ||
-            rawMessage == null ||
-            webViews[tabId] !== sourceView ||
-            tabs.none { it.id == tabId } ||
-            sourceOrigin.scheme?.lowercase() !in WEB_SCHEMES ||
-            (isMainFrame && !mainFrameOriginMatches(sourceView, sourceOrigin)) ||
-            !acceptWebMediaMessage(
-                webView = sourceView,
-                origin = sourceOrigin.toString(),
-                isMainFrame = isMainFrame,
-            )
-        ) return
-        val bridgeToken = webMediaBridgeTokens[sourceView] ?: return
-        val payload = WebMediaContract.parse(rawMessage, bridgeToken) ?: return
-        if (payload.documentId in retiredWebMediaDocumentIds[sourceView].orEmpty()) return
-        if (payload.event == WebMediaEvent.DocumentGone) {
-            clearWebMediaDocument(tabId, sourceView, payload.documentId)
-            return
-        }
-        val mediaId = payload.mediaId ?: return
-        val origin = sourceOrigin.toString().take(MAX_WEB_MEDIA_ORIGIN_LENGTH)
-        val key = WebMediaChannelKey(
-            tabId = tabId,
-            navigationGeneration = navigationGenerations[tabId] ?: return,
-            documentId = payload.documentId,
-            mediaId = mediaId,
-            origin = origin,
-            isMainFrame = isMainFrame,
-        )
-        if (payload.ended) {
-            if (
-                webMediaPresentation?.key == key &&
-                (!pictureInPicturePlaybackExpected ||
-                    (!pictureInPictureTransitionPending && !isInPictureInPicture))
-            ) {
-                pictureInPicturePlaybackExpected = false
-            }
-            if (backgroundAudioKey == key) backgroundAudioKey = null
-            clearWebPictureInPictureChannel(key)
-            if (webMediaPresentation?.key == key) clearWebMediaPresentation()
-            webMediaChannels.remove(key)
+    fun playActiveMedia() {
+        if (isInPictureInPicture) {
+            pictureInPicturePlaybackExpected = true
+            resumePictureInPicturePlayback()
         } else {
-            val nowMillis = System.currentTimeMillis()
-            val channel = webMediaChannels[key]
-            if (channel == null) {
-                evictWebMediaChannelsIfNeeded(sourceView)
-                webMediaChannels[key] = WebMediaChannel(
-                    key = key,
-                    webView = sourceView,
-                    replyProxy = replyProxy,
-                    payload = payload,
-                    receivedAtMillis = nowMillis,
-                )
-            } else {
-                channel.replyProxy = replyProxy
-                channel.payload = payload
-                channel.receivedAtMillis = nowMillis
-            }
-            if (
-                key.tabId == selectedTabId &&
-                payload.isPlaying &&
-                !payload.muted &&
-                payload.volume > 0f &&
-                backgroundAudioKey != null &&
-                backgroundAudioKey != key
-            ) {
-                backgroundAudioKey
-                    ?.let(webMediaChannels::get)
-                    ?.let { background -> sendWebMediaCommand(background, WebMediaCommand.Pause) }
-                backgroundAudioKey = null
-            }
-            schedulePictureInPicturePlayRetry(key)
-        }
-        if (payload.event == WebMediaEvent.PictureInPictureRequested) {
-            handleWebPictureInPictureRequest(
-                channel = webMediaChannels[key] ?: return,
-                requestId = payload.requestId ?: return,
-            )
-        }
-        recoverPictureInPicturePresentation()
-        publishWebMediaState()
-        if (
-            !isActivityResumed &&
-            !payload.isPlaying &&
-            webMediaPresentation?.key != key
-        ) {
-            forcePauseWebView(sourceView)
+            activeMediaCommandSession()?.executeMediaCommand(GeckoMediaCommand.Play)
         }
     }
 
-    private fun handleWebPictureInPictureRequest(
-        channel: WebMediaChannel,
-        requestId: String,
-    ) {
-        val tab = tabs.firstOrNull { it.id == channel.key.tabId }
-        val fallbackSession = if (channel.key.isMainFrame) {
-            null
-        } else {
-            matchingFullscreenVideoSession(channel)
-        }
-        val isEligible = isActivityResumed &&
-            channel.key.tabId == selectedTabId &&
-            tab?.isIncognito == false &&
-            pendingWebPictureInPictureRequest == null &&
-            activeWebPictureInPictureRequest == null &&
-            (webMediaPresentation == null || webMediaPresentation?.key == channel.key) &&
-            !pictureInPictureTransitionPending &&
-            !isInPictureInPicture &&
-            WebMediaRules.isPictureInPictureRequestEligible(
-                state = channel.toState(),
-                isPrivate = false,
-                isMainFrame = channel.key.isMainFrame,
-                hasMatchingFullscreenSession = fallbackSession != null,
-            )
-        val request = WebPictureInPictureRequest(
-            key = channel.key,
-            requestId = requestId,
-            fallbackSession = fallbackSession,
-        )
-        if (!isEligible) {
-            sendWebPictureInPictureCommand(
-                request = request,
-                command = WebMediaCommand.PictureInPictureFailed,
-            )
-            return
-        }
-        pendingWebPictureInPictureRequest = request
-        mainHandler.post {
-            if (pendingWebPictureInPictureRequest != request) return@post
-            val currentChannel = webMediaChannels[request.key]
-            if (
-                currentChannel == null ||
-                !isCurrentWebMediaChannel(currentChannel) ||
-                currentChannel.key.tabId != selectedTabId ||
-                (request.fallbackSession != null &&
-                    fullscreenVideoSession !== request.fallbackSession) ||
-                !isActivityResumed
-            ) {
-                failWebPictureInPictureRequest(request)
-                return@post
-            }
-            val accepted = runCatching(onWebPictureInPictureRequested).getOrDefault(false)
-            if (!accepted) {
-                failWebPictureInPictureRequest(request)
-                return@post
-            }
-            mainHandler.postDelayed(
-                {
-                    if (pendingWebPictureInPictureRequest == request && !isInPictureInPicture) {
-                        runCatching(onWebPictureInPictureRequestTimedOut)
-                        failWebPictureInPictureRequest(request)
-                    }
-                },
-                WEB_PICTURE_IN_PICTURE_REQUEST_TIMEOUT_MILLIS,
-            )
+    fun pauseActiveMedia() {
+        pictureInPicturePlaybackExpected = false
+        pictureInPicturePlaybackRetryGeneration++
+        activeMediaCommandSession()?.let { session ->
+            session.setPictureInPicturePlaybackExpected(false)
+            session.executeMediaCommand(GeckoMediaCommand.Pause)
         }
     }
 
-    private fun matchingFullscreenVideoSession(
-        channel: WebMediaChannel,
-    ): FullscreenVideoSession? = fullscreenVideoSession?.takeIf { session ->
-        session.tabId == channel.key.tabId &&
-            session.webView === channel.webView &&
-            session.navigationGeneration == channel.key.navigationGeneration &&
-            !session.isPrivate
-    }
-
-    private fun failWebPictureInPictureRequest(request: WebPictureInPictureRequest) {
-        if (pendingWebPictureInPictureRequest != request) return
-        pendingWebPictureInPictureRequest = null
-        sendWebPictureInPictureCommand(
-            request = request,
-            command = WebMediaCommand.PictureInPictureFailed,
-        )
-        scheduleWebPictureInPictureFallbackCleanup(request)
-    }
-
-    private fun scheduleWebPictureInPictureFallbackCleanup(
-        request: WebPictureInPictureRequest,
-    ) {
-        val session = request.fallbackSession ?: return
-        mainHandler.postDelayed(
-            {
-                val sessionStillOwned =
-                    pendingWebPictureInPictureRequest?.fallbackSession === session ||
-                        activeWebPictureInPictureRequest?.fallbackSession === session ||
-                        webPictureInPictureFallbackPendingReturnCleanup === session
-                if (!sessionStillOwned && fullscreenVideoSession === session) {
-                    dismissFullscreenVideo(session, notifyPage = true)
-                }
-            },
-            WEB_PICTURE_IN_PICTURE_FULLSCREEN_CLEANUP_DELAY_MILLIS,
-        )
-    }
-
-    private fun schedulePictureInPicturePlayRetry(key: WebMediaChannelKey) {
-        val channel = webMediaChannels[key] ?: return
-        if (
-            channel.payload.isPlaying ||
-            channel.payload.kind != WebMediaKind.Video ||
-            webMediaPresentation?.key != key ||
-            !pictureInPicturePlaybackExpected ||
-            (!pictureInPictureTransitionPending && !isInPictureInPicture) ||
-            pictureInPicturePlayRetryPending
-        ) return
-        pictureInPicturePlayRetryPending = true
-        mainHandler.postDelayed(
-            {
-                pictureInPicturePlayRetryPending = false
-                val current = webMediaChannels[key] ?: return@postDelayed
-                if (
-                    current.payload.isPlaying ||
-                    webMediaPresentation?.key != key ||
-                    !pictureInPicturePlaybackExpected ||
-                    (!pictureInPictureTransitionPending && !isInPictureInPicture)
-                ) return@postDelayed
-                resumeWebView(current.key.tabId, current.webView)
-                current.webView.settings.allowContinuousMediaPlayback()
-                sendWebMediaCommand(current, WebMediaCommand.KeepPlaying)
-                sendWebMediaCommand(current, WebMediaCommand.Play)
-            },
-            PICTURE_IN_PICTURE_PLAY_RETRY_DELAY_MILLIS,
-        )
-    }
-
-    private fun recoverPictureInPicturePresentation() {
-        if (
-            !pictureInPicturePlaybackExpected ||
-            (!pictureInPictureTransitionPending && !isInPictureInPicture)
-        ) return
-        val ownerTabId = pictureInPictureOwnerTabId ?: return
-        if (tabs.firstOrNull { tab -> tab.id == ownerTabId }?.isIncognito != false) return
-        val current = presentedWebMediaChannel()
-        if (
-            current?.key?.tabId == ownerTabId &&
-            current.payload.isPlaying &&
-            WebMediaRules.isExternalPresentationEligible(
-                state = current.toState(),
-                isPrivate = false,
-            )
-        ) return
-        val candidate = activeVideoChannel(
-            tabId = ownerTabId,
-            requireVisible = false,
-            preferPresented = false,
-        ) ?: return
-        if (webMediaPresentation?.key == candidate.key) return
-        val host = webMediaPresentation?.host ?: if (ownerTabId == selectedTabId) {
-            FullscreenVideoHost.Browser
-        } else {
-            FullscreenVideoHost.Overlay
-        }
-        pinWebMediaForPresentation(
-            channel = candidate,
-            minimizedByUser = false,
-            host = host,
-        )
-        if (webMediaPresentation?.key != candidate.key) return
-        schedulePictureInPicturePresentationRetry(candidate.key)
-        candidate.webView.settings.allowContinuousMediaPlayback()
-        candidate.webView.onResume()
-        sendWebMediaCommand(candidate, WebMediaCommand.KeepPlaying)
-        fullscreenVideoSession
-            ?.takeIf { session -> session.tabId == ownerTabId }
-            ?.let { session -> dismissFullscreenVideo(session, notifyPage = false) }
-    }
-
-    private fun schedulePictureInPicturePresentationRetry(key: WebMediaChannelKey) {
-        if (pictureInPicturePresentationRetryKey == key) return
-        pictureInPicturePresentationRetryKey = key
-        val generation = ++pictureInPicturePresentationRetryGeneration
-        mainHandler.postDelayed(
-            {
-                if (
-                    pictureInPicturePresentationRetryGeneration != generation ||
-                    webMediaPresentation?.key != key ||
-                    !pictureInPicturePlaybackExpected ||
-                    (!pictureInPictureTransitionPending && !isInPictureInPicture)
-                ) return@postDelayed
-                webMediaChannels[key]?.let { channel ->
-                    sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
-                }
-            },
-            PICTURE_IN_PICTURE_PLAY_RETRY_DELAY_MILLIS,
-        )
-    }
-
-    private fun cancelPictureInPicturePresentationRetry() {
-        pictureInPicturePresentationRetryGeneration++
-        pictureInPicturePresentationRetryKey = null
-        scheduleResidentWebViewTrim()
-    }
-
-    private fun publishWebMediaState() {
-        val validChannels = webMediaChannels.values.filter(::isCurrentWebMediaChannel)
-        val presentedKey = webMediaPresentation?.key
-        val backgroundAudio = backgroundAudioKey
-            ?.let(webMediaChannels::get)
-            ?.takeIf(::isBackgroundAudioOwnerEligible)
-        if (backgroundAudio == null) backgroundAudioKey = null
-        val selectedCandidates = validChannels.filter { channel ->
-            channel.key == presentedKey ||
-                channel.key == backgroundAudio?.key ||
-                (
-                    channel.key.tabId == selectedTabId &&
-                        (channel.payload.isPlaying || channel.payload.currentPositionMillis > 0)
-                    )
-        }
-        val active = selectedCandidates.maxWithOrNull(
-            compareBy<WebMediaChannel> { channel ->
-                WebMediaRules.score(
-                    payload = channel.payload,
-                    isSelectedTab = channel.key.tabId == selectedTabId,
-                    isPresented = channel.key == presentedKey,
-                )
-            }.thenBy(WebMediaChannel::receivedAtMillis),
-        )
-        activeWebMediaKey = active?.key
-        webMediaState = active?.toState()
-        castMediaCandidate = validChannels
-            .asSequence()
-            .filter { it.key.tabId == selectedTabId }
-            .sortedByDescending(WebMediaChannel::receivedAtMillis)
-            .mapNotNull { channel -> channel.toCastCandidate() }
-            .firstOrNull()
-        onWebMediaStateChanged()
-        scheduleResidentWebViewTrim()
-    }
-
-    private fun WebMediaChannel.toState(): WebMediaState {
-        val tabTitle = tabs.firstOrNull { it.id == key.tabId }?.title.orEmpty()
-        val displayOrigin = Uri.parse(key.origin).host?.removePrefix("www.") ?: key.origin
-        return WebMediaState(
-            tabId = key.tabId,
-            title = tabTitle.take(MAX_WEB_MEDIA_TITLE_LENGTH),
-            origin = displayOrigin.take(MAX_WEB_MEDIA_ORIGIN_LENGTH),
-            kind = requireNotNull(payload.kind),
-            isPlaying = payload.isPlaying,
-            currentPositionMillis = payload.currentPositionMillis,
-            durationMillis = payload.durationMillis,
-            playbackRate = payload.playbackRate,
-            muted = payload.muted,
-            volume = payload.volume,
-            videoWidth = payload.videoWidth,
-            videoHeight = payload.videoHeight,
-            clientWidth = payload.clientWidth,
-            clientHeight = payload.clientHeight,
-            visibleRatio = payload.visibleRatio,
-            sourceUrl = payload.sourceUrl,
-            contentType = payload.contentType,
-            posterUrl = payload.posterUrl,
-        )
-    }
-
-    private fun WebMediaChannel.toCastCandidate(): CastMediaCandidate? {
-        val tab = tabs.firstOrNull { it.id == key.tabId } ?: return null
-        val source = CastMediaRules.source(
-            state = toState(),
-            isPrivate = tab.isIncognito,
-            isSelectedTab = key.tabId == selectedTabId,
-        ) ?: return null
-        return CastMediaCandidate(
-            identity = castIdentity(),
-            source = source,
-        )
-    }
-
-    internal fun pauseCastMedia(candidate: CastMediaCandidate): Boolean {
-        val channel = webMediaChannels.values.firstOrNull { it.castIdentity() == candidate.identity }
-            ?.takeIf(::isCurrentWebMediaChannel)
-            ?: return false
-        if (channel.toCastCandidate()?.source?.url != candidate.source.url) return false
-        sendWebMediaCommand(channel, WebMediaCommand.Pause)
-        return true
-    }
-
-    private fun WebMediaChannel.castIdentity(): CastMediaIdentity = CastMediaIdentity(
-        tabId = key.tabId,
-        navigationGeneration = key.navigationGeneration,
-        documentId = key.documentId,
-        mediaId = key.mediaId,
-        origin = key.origin,
-    )
-
-    private fun activeWebMediaChannel(): WebMediaChannel? =
-        activeWebMediaKey?.let(webMediaChannels::get)?.takeIf(::isCurrentWebMediaChannel)
-
-    private fun presentedWebMediaChannel(): WebMediaChannel? =
-        webMediaPresentation?.key?.let(webMediaChannels::get)?.takeIf(::isCurrentWebMediaChannel)
-
-    private fun activeBackgroundAudioChannel(): WebMediaChannel? =
-        backgroundAudioKey
-            ?.let(webMediaChannels::get)
-            ?.takeIf(::isBackgroundAudioOwnerEligible)
-
-    private fun isBackgroundAudioOwnerEligible(channel: WebMediaChannel): Boolean {
-        val tab = tabs.firstOrNull { it.id == channel.key.tabId }
-        return isCurrentWebMediaChannel(channel) &&
-            tab?.isIncognito == false &&
-            channel.payload.kind == WebMediaKind.Audio &&
-            !channel.payload.muted &&
-            channel.payload.volume > 0f
-    }
-
-    private fun activeVideoChannel(
-        tabId: String,
-        requireVisible: Boolean = true,
-        allowPaused: Boolean = false,
-        preferPresented: Boolean = true,
-    ): WebMediaChannel? = webMediaChannels.values
-        .asSequence()
-        .filter(::isCurrentWebMediaChannel)
-        .filter { channel ->
-            channel.key.tabId == tabId &&
-                channel.payload.kind == WebMediaKind.Video &&
-                (
-                    channel.payload.isPlaying ||
-                        (allowPaused && channel.payload.currentPositionMillis > 0)
-                    ) &&
-                (
-                    !requireVisible ||
-                        WebMediaRules.isExternalPresentationEligible(
-                            state = channel.toState(),
-                            isPrivate = false,
-                        )
-                    )
-        }
-        .maxWithOrNull(
-            compareBy<WebMediaChannel> { channel ->
-                WebMediaRules.score(
-                    payload = channel.payload,
-                    isSelectedTab = channel.key.tabId == selectedTabId,
-                    isPresented = preferPresented && channel.key == webMediaPresentation?.key,
-                )
-            }.thenBy(WebMediaChannel::receivedAtMillis),
-        )
-
-    private fun prepareMediaForTabDeparture(tabId: String) {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        if (tab.isIncognito) {
-            if (backgroundAudioKey?.tabId == tabId) backgroundAudioKey = null
-            return
-        }
-        val video = activeVideoChannel(tabId)
-        val presentationBelongsToTab = webMediaPresentation?.key?.tabId == tabId
-        if (video != null && (webMediaPresentation == null || presentationBelongsToTab)) {
-            pinWebMediaForPresentation(video, minimizedByUser = true)
-            if (backgroundAudioKey?.tabId == tabId) backgroundAudioKey = null
-            return
-        }
-        prepareBackgroundAudio(tabId)
-    }
-
-    private fun prepareBackgroundAudio(tabId: String) {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        if (tab.isIncognito) return
-        val audio = webMediaChannels.values
-            .asSequence()
-            .filter(::isCurrentWebMediaChannel)
-            .filter { channel -> channel.key.tabId == tabId }
-            .filter(::isBackgroundAudioOwnerEligible)
-            .filter { channel -> channel.payload.isPlaying }
-            .maxByOrNull(WebMediaChannel::receivedAtMillis)
-        if (audio != null) {
-            backgroundAudioKey = audio.key
-            audio.webView.settings.allowContinuousMediaPlayback()
-            audio.webView.onResume()
-            publishWebMediaState()
+    fun stopActiveMedia() {
+        pictureInPicturePlaybackExpected = false
+        pictureInPicturePlaybackRetryGeneration++
+        activeMediaCommandSession()?.let { session ->
+            session.setPictureInPicturePlaybackExpected(false)
+            session.executeMediaCommand(GeckoMediaCommand.Stop)
         }
     }
 
-    private fun isCurrentWebMediaChannel(channel: WebMediaChannel): Boolean =
-        webViews[channel.key.tabId] === channel.webView &&
-            navigationGenerations[channel.key.tabId] == channel.key.navigationGeneration &&
-            tabs.any { it.id == channel.key.tabId }
-
-    private fun pinWebMediaForPresentation(
-        channel: WebMediaChannel?,
-        minimizedByUser: Boolean,
-        host: FullscreenVideoHost = FullscreenVideoHost.Overlay,
-    ) {
-        channel ?: return
-        val tab = tabs.firstOrNull { it.id == channel.key.tabId } ?: return
-        if (
-            tab.isIncognito ||
-            channel.payload.kind != WebMediaKind.Video ||
-            channel.payload.videoWidth <= 0 ||
-            channel.payload.videoHeight <= 0
-        ) return
-        val current = webMediaPresentation
-        if (current?.key != channel.key) {
-            clearWebMediaPresentation()
-            webMediaPresentation = WebMediaPresentation(channel.key, minimizedByUser, host)
-        } else {
-            current.minimizedByUser = minimizedByUser
-            current.host = host
-        }
-        sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
-        publishFullscreenVideoState()
-        publishWebMediaState()
+    fun seekActiveMedia(positionMillis: Long) {
+        activeMediaCommandSession()?.seekMedia(positionMillis.coerceAtLeast(0L))
     }
 
-    private fun clearWebMediaPresentation(
-        pause: Boolean = false,
-        preservePlaybackGuard: Boolean = false,
-    ) {
-        val presentation = webMediaPresentation ?: return
-        val channel = webMediaChannels[presentation.key]
-        if (channel != null) {
-            if (pause) sendWebMediaCommand(channel, WebMediaCommand.Pause)
-            else if (!preservePlaybackGuard) {
-                sendWebMediaCommand(channel, WebMediaCommand.AllowPause)
-            }
-            sendWebMediaCommand(channel, WebMediaCommand.ExitPresentation)
-        }
-        webMediaPresentation = null
-        publishFullscreenVideoState()
-        publishWebMediaState()
-        webViewRevision++
+    private fun activeMediaCommandSession(): AndroidBrowserEngineSessionPort? {
+        val pictureInPictureTabId = pictureInPictureOwnerTabId
+            ?.takeIf { isInPictureInPicture || pictureInPictureTransitionPending }
+        return geckoEngineSessions[pictureInPictureTabId ?: selectedTabId]
     }
-
-    private fun releasePictureInPictureExitGuardWhenResumed() {
-        val key = pictureInPictureExitGuardKey ?: return
-        val generation = pictureInPictureExitGuardGeneration
-        if (
-            !isActivityResumed ||
-            pictureInPictureTransitionPending ||
-            isInPictureInPicture ||
-            pictureInPicturePresentationPendingReturnCleanupKey == key
-        ) return
-        mainHandler.postDelayed(
-            {
-                if (
-                    pictureInPictureExitGuardGeneration != generation ||
-                    pictureInPictureExitGuardKey != key ||
-                    !isActivityResumed ||
-                    pictureInPictureTransitionPending ||
-                    isInPictureInPicture ||
-                    pictureInPicturePresentationPendingReturnCleanupKey == key
-                ) return@postDelayed
-                webMediaChannels[key]?.let { channel ->
-                    sendWebMediaCommand(channel, WebMediaCommand.ReconcilePlaying)
-                }
-                pictureInPictureExitGuardKey = null
-                scheduleResidentWebViewTrim()
-            },
-            PICTURE_IN_PICTURE_EXIT_GUARD_DELAY_MILLIS,
-        )
-    }
-
-    private fun clearMediaPresentation() {
-        fullscreenVideoSession?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
-        clearWebMediaPresentation()
-    }
-
-    private fun clearWebMediaDocument(tabId: String, webView: WebView, documentId: String) {
-        retireWebMediaDocument(webView, documentId)
-        val removedKeys = webMediaChannels
-            .filter { (key, channel) ->
-                key.tabId == tabId && key.documentId == documentId && channel.webView === webView
-            }
-            .keys
-        if (backgroundAudioKey in removedKeys) backgroundAudioKey = null
-        clearWebPictureInPictureRequests(removedKeys)
-        if (webMediaPresentation?.key in removedKeys) clearWebMediaPresentation()
-        removedKeys.forEach(webMediaChannels::remove)
-        publishWebMediaState()
-    }
-
-    private fun clearWebMediaForTab(tabId: String) {
-        val removedKeys = webMediaChannels.keys.filter { it.tabId == tabId }
-        removedKeys.forEach { key ->
-            webMediaChannels[key]?.webView?.let { webView ->
-                retireWebMediaDocument(webView, key.documentId)
-            }
-        }
-        if (backgroundAudioKey in removedKeys) backgroundAudioKey = null
-        clearWebPictureInPictureRequests(removedKeys)
-        if (webMediaPresentation?.key in removedKeys) clearWebMediaPresentation()
-        removedKeys.forEach(webMediaChannels::remove)
-        publishWebMediaState()
-    }
-
-    private fun evictWebMediaChannelsIfNeeded(webView: WebView) {
-        val channels = webMediaChannels.values
-            .filter { channel -> channel.webView === webView }
-            .sortedBy(WebMediaChannel::receivedAtMillis)
-        val removeCount = (channels.size - MAX_WEB_MEDIA_CHANNELS_PER_WEBVIEW + 1)
-            .coerceAtLeast(0)
-        channels
-            .asSequence()
-            .filter { channel ->
-                webMediaPresentation?.key != channel.key && backgroundAudioKey != channel.key
-            }
-            .take(removeCount)
-            .forEach { channel -> webMediaChannels.remove(channel.key) }
-    }
-
-    private fun retireWebMediaDocument(webView: WebView, documentId: String) {
-        val retired = retiredWebMediaDocumentIds.getOrPut(webView, ::ArrayDeque)
-        if (documentId in retired) return
-        retired.addLast(documentId)
-        while (retired.size > MAX_RETIRED_WEB_MEDIA_DOCUMENTS) retired.removeFirst()
-    }
-
-    private fun acceptWebMediaMessage(
-        webView: WebView,
-        origin: String,
-        isMainFrame: Boolean,
-    ): Boolean {
-        val nowMillis = SystemClock.elapsedRealtime()
-        val key = WebMediaMessageRateKey(
-            webView = webView,
-            origin = origin.take(MAX_WEB_MEDIA_ORIGIN_LENGTH),
-            isMainFrame = isMainFrame,
-        )
-        val window = webMediaMessageRateWindows.getOrPut(key) {
-            WebMediaMessageRateWindow(nowMillis, acceptedCount = 0)
-        }
-        if (nowMillis - window.startedAtElapsedMillis >= WEB_MEDIA_RATE_WINDOW_MILLIS) {
-            window.startedAtElapsedMillis = nowMillis
-            window.acceptedCount = 0
-        }
-        if (window.acceptedCount >= MAX_WEB_MEDIA_MESSAGES_PER_WINDOW) return false
-        window.acceptedCount++
-        return true
-    }
-
-    private fun mainFrameOriginMatches(webView: WebView, sourceOrigin: Uri): Boolean {
-        val current = webView.url?.let(Uri::parse) ?: return true
-        val currentScheme = current.scheme?.lowercase() ?: return true
-        if (currentScheme !in WEB_SCHEMES) return true
-        return currentScheme == sourceOrigin.scheme?.lowercase() &&
-            current.host?.lowercase() == sourceOrigin.host?.lowercase() &&
-            effectiveWebPort(current) == effectiveWebPort(sourceOrigin)
-    }
-
-    private fun effectiveWebPort(uri: Uri): Int = when {
-        uri.port >= 0 -> uri.port
-        uri.scheme.equals("https", ignoreCase = true) -> 443
-        else -> 80
-    }
-
-    private fun clearWebMediaForWebView(webView: WebView) {
-        val removedKeys = webMediaChannels
-            .filterValues { channel -> channel.webView === webView }
-            .keys
-        if (backgroundAudioKey in removedKeys) backgroundAudioKey = null
-        clearWebPictureInPictureRequests(removedKeys)
-        if (webMediaPresentation?.key in removedKeys) clearWebMediaPresentation()
-        removedKeys.forEach(webMediaChannels::remove)
-        publishWebMediaState()
-    }
-
-    private fun clearWebPictureInPictureRequests(removedKeys: Collection<WebMediaChannelKey>) {
-        pendingWebPictureInPictureRequest
-            ?.takeIf { request -> request.key in removedKeys }
-            ?.let { request ->
-                runCatching(onWebPictureInPictureRequestTimedOut)
-                failWebPictureInPictureRequest(request)
-            }
-        activeWebPictureInPictureRequest
-            ?.takeIf { request -> request.key in removedKeys }
-            ?.let { request ->
-                sendWebPictureInPictureCommand(
-                    request = request,
-                    command = WebMediaCommand.PictureInPictureLeft,
-                )
-                activeWebPictureInPictureRequest = null
-                scheduleWebPictureInPictureFallbackCleanup(request)
-            }
-    }
-
-    private fun clearWebPictureInPictureChannel(key: WebMediaChannelKey) {
-        pendingWebPictureInPictureRequest
-            ?.takeIf { request -> request.key == key }
-            ?.let { request ->
-                runCatching(onWebPictureInPictureRequestTimedOut)
-                failWebPictureInPictureRequest(request)
-            }
-        activeWebPictureInPictureRequest
-            ?.takeIf { request -> request.key == key }
-            ?.let { request ->
-                sendWebPictureInPictureCommand(
-                    request = request,
-                    command = WebMediaCommand.PictureInPictureLeft,
-                )
-                activeWebPictureInPictureRequest = null
-                scheduleWebPictureInPictureFallbackCleanup(request)
-            }
-    }
-
-    private fun sendWebPictureInPictureCommand(
-        request: WebPictureInPictureRequest,
-        command: WebMediaCommand,
-    ) {
-        val channel = webMediaChannels[request.key] ?: return
-        sendWebMediaCommand(
-            channel = channel,
-            command = command,
-            requestId = request.requestId,
-        )
-    }
-
-    private fun sendWebMediaCommand(
-        channel: WebMediaChannel,
-        command: WebMediaCommand,
-        requestId: String? = null,
-    ) {
-        if (!isCurrentWebMediaChannel(channel)) return
-        runCatching {
-            channel.replyProxy.postMessage(
-                WebMediaContract.command(
-                    command = command,
-                    documentId = channel.key.documentId,
-                    mediaId = channel.key.mediaId,
-                    requestId = requestId,
-                ),
-            )
-        }
-    }
-
-    private fun systemWebMediaChannel(): WebMediaChannel? =
-        activeBackgroundAudioChannel() ?: activeWebMediaChannel()?.takeIf { channel ->
-            val tab = tabs.firstOrNull { it.id == channel.key.tabId }
-            tab?.isIncognito == false &&
-                (
-                    webMediaPresentation?.key == channel.key ||
-                        WebMediaRules.isSystemSessionEligible(
-                            state = channel.toState(),
-                            isPrivate = false,
-                        )
-                    )
-        }
-
-    fun playActiveWebMedia() {
-        systemWebMediaChannel()?.let { channel ->
-            if (
-                (pictureInPictureTransitionPending || isInPictureInPicture) &&
-                (webMediaPresentation?.key == channel.key ||
-                    (channel.payload.kind == WebMediaKind.Video &&
-                        channel.key.tabId == pictureInPictureOwnerTabId))
-            ) {
-                pictureInPicturePlaybackExpected = true
-                cancelPictureInPicturePresentationRetry()
-                sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
-                schedulePictureInPicturePresentationRetry(channel.key)
-                sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
-            }
-            val tab = tabs.firstOrNull { it.id == channel.key.tabId }
-            if (tab?.isIncognito == false) {
-                resumeWebView(channel.key.tabId, channel.webView)
-                channel.webView.settings.allowContinuousMediaPlayback()
-            }
-            sendWebMediaCommand(channel, WebMediaCommand.Play)
-        }
-    }
-
-    fun pauseActiveWebMedia() {
-        systemWebMediaChannel()?.let { channel ->
-            if (
-                webMediaPresentation?.key == channel.key ||
-                ((pictureInPictureTransitionPending || isInPictureInPicture) &&
-                    channel.payload.kind == WebMediaKind.Video &&
-                    channel.key.tabId == pictureInPictureOwnerTabId)
-            ) {
-                pictureInPicturePlaybackExpected = false
-                pictureInPicturePlayRetryPending = false
-            }
-            sendWebMediaCommand(channel, WebMediaCommand.Pause)
-        }
-    }
-
-    fun stopActiveWebMedia() {
-        systemWebMediaChannel()?.let { channel ->
-            if (
-                webMediaPresentation?.key == channel.key ||
-                ((pictureInPictureTransitionPending || isInPictureInPicture) &&
-                    channel.payload.kind == WebMediaKind.Video &&
-                    channel.key.tabId == pictureInPictureOwnerTabId)
-            ) {
-                pictureInPicturePlaybackExpected = false
-                pictureInPicturePlayRetryPending = false
-            }
-            sendWebMediaCommand(channel, WebMediaCommand.Stop)
-            if (backgroundAudioKey == channel.key) backgroundAudioKey = null
-            if (webMediaPresentation?.key == channel.key) clearWebMediaPresentation()
-        }
-        publishWebMediaState()
-    }
-
-    fun seekActiveWebMedia(positionMillis: Long) {
-        val channel = systemWebMediaChannel() ?: return
-        if (!isCurrentWebMediaChannel(channel)) return
-        runCatching {
-            channel.replyProxy.postMessage(
-                WebMediaContract.seekCommand(
-                    documentId = channel.key.documentId,
-                    mediaId = channel.key.mediaId,
-                    positionMillis = positionMillis,
-                ),
-            )
-        }
-    }
-
     private fun presentationTabId(): String? =
-        fullscreenVideoSession?.tabId ?: webMediaPresentation?.key?.tabId
+        geckoMediaPresentation?.tabId
 
     private fun presentationIsPrivate(): Boolean? = presentationTabId()?.let { tabId ->
         tabs.firstOrNull { it.id == tabId }?.isIncognito
-    }
-
-    private fun handleWebPermissionRequest(tabId: String, request: PermissionRequest) {
-        if (pendingPermissionAccess != null) {
-            request.deny()
-            return
-        }
-        val origin = PermissionOrigin.normalize(request.origin.toString())
-        val identity = permissionRequestIdentity(tabId, origin)
-        if (identity == null || !isPermissionRequestCurrent(identity)) {
-            request.deny()
-            return
-        }
-        val resourcesByPermission = request.resources
-            .mapNotNull { resource ->
-                sitePermissionForWebResource(resource)?.let { permission -> permission to resource }
-            }
-            .groupBy({ it.first }, { it.second })
-        val requested = resourcesByPermission.keys
-        if (requested.isEmpty()) {
-            request.deny()
-            return
-        }
-        val site = PermissionSiteKey(identity.profileId, identity.origin)
-        beginPermissionAccess(
-            identity = identity,
-            site = site,
-            requested = requested,
-            kind = PendingPermissionKind.WebResource,
-            requestToken = request,
-            grant = { granted ->
-                val resources = granted.flatMap { permission ->
-                    resourcesByPermission[permission].orEmpty()
-                }.distinct()
-                if (resources.isEmpty()) request.deny() else request.grant(resources.toTypedArray())
-            },
-            deny = request::deny,
-        )
-    }
-
-    private fun handleGeolocationPermissionRequest(
-        tabId: String,
-        rawOrigin: String,
-        callback: GeolocationPermissions.Callback,
-    ) {
-        if (pendingPermissionAccess != null) {
-            callback.invoke(rawOrigin, false, false)
-            return
-        }
-        val origin = PermissionOrigin.normalize(rawOrigin)
-        val identity = permissionRequestIdentity(tabId, origin)
-        if (identity == null || !isPermissionRequestCurrent(identity)) {
-            callback.invoke(rawOrigin, false, false)
-            return
-        }
-        beginPermissionAccess(
-            identity = identity,
-            site = PermissionSiteKey(identity.profileId, identity.origin),
-            requested = setOf(SitePermission.Location),
-            kind = PendingPermissionKind.Geolocation,
-            requestToken = callback,
-            grant = { granted ->
-                callback.invoke(rawOrigin, SitePermission.Location in granted, false)
-            },
-            deny = { callback.invoke(rawOrigin, false, false) },
-        )
     }
 
     private fun beginPermissionAccess(
@@ -9355,7 +7612,7 @@ class BrowserController(
                 .onFailure { activePermissions.drop(pending.requestToken) }
         }
         permissionRevision++
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
     }
 
     private fun cancelPendingPermissionAccess(tabId: String? = null) {
@@ -9365,36 +7622,45 @@ class BrowserController(
         permissionPrompt = null
         runCatching { pending.delivery.deny() }
         permissionRevision++
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
     }
 
     private fun cancelPendingHttpAuthChallenge(
         tabId: String? = null,
-        webView: WebView? = null,
     ) {
         val pending = pendingHttpAuthChallenge ?: return
         if (tabId != null && pending.tabId != tabId) return
-        if (webView != null && pending.webView !== webView) return
         pendingHttpAuthChallenge = null
         httpAuthPrompt = null
-        runCatching { pending.handler.cancel() }
-        scheduleResidentWebViewTrim()
-    }
-
-    private fun cancelStaleHttpAuthChallenge(tabId: String, webView: WebView) {
-        val pending = pendingHttpAuthChallenge ?: return
-        if (pending.tabId != tabId || pending.webView !== webView) return
-        if (pending.navigationGeneration != navigationGenerations[tabId]) {
-            cancelPendingHttpAuthChallenge(tabId)
-        }
+        runCatching(pending.dismiss)
+        scheduleResidentSessionTrim()
     }
 
     private fun isHttpAuthChallengeCurrent(pending: PendingHttpAuthChallenge): Boolean =
         !destroyed &&
             isActivityResumed &&
             selectedTabId == pending.tabId &&
-            webViews[pending.tabId] === pending.webView &&
+            (
+                pending.geckoSession?.let { session ->
+                    geckoEngineSessions[pending.tabId] === session
+                } ?: true
+            ) &&
             tabs.any { tab -> tab.id == pending.tabId } &&
+            navigationGenerations[pending.tabId] == pending.navigationGeneration
+
+    private fun cancelPendingWebPrompt(tabId: String? = null) {
+        val pending = pendingWebPrompt ?: return
+        if (tabId != null && pending.tabId != tabId) return
+        pendingWebPrompt = null
+        webPrompt = null
+        runCatching(pending.response::dismiss)
+    }
+
+    private fun isWebPromptCurrent(pending: PendingWebPrompt): Boolean =
+        !destroyed &&
+            isActivityResumed &&
+            selectedTabId == pending.tabId &&
+            geckoEngineSessions[pending.tabId] === pending.session &&
             navigationGenerations[pending.tabId] == pending.navigationGeneration
 
     private fun dropCanceledPermissionAccess(requestToken: Any) {
@@ -9404,12 +7670,20 @@ class BrowserController(
         permissionPrompt = null
         pending.delivery.drop()
         permissionRevision++
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
     }
 
     private fun clearPermissionActivity(tabId: String) {
         cancelPendingPermissionAccess(tabId)
+        pendingGeckoAndroidPermissionRequest
+            ?.takeIf { pending -> pending.tabId == tabId }
+            ?.let { pending ->
+                pendingGeckoAndroidPermissionRequest = null
+                pending.request.response.complete(false)
+            }
         cancelPendingFileChooser(tabId)
+        cancelPendingHttpAuthChallenge(tabId)
+        cancelPendingWebPrompt(tabId)
         removeActivePermissionsForTab(tabId)
     }
 
@@ -9417,7 +7691,7 @@ class BrowserController(
         val removed = activePermissions.dropTab(tabId)
         if (removed) {
             permissionRevision++
-            scheduleResidentWebViewTrim()
+            scheduleResidentSessionTrim()
         }
     }
 
@@ -9443,7 +7717,7 @@ class BrowserController(
     ): Boolean {
         val tab = tabs.firstOrNull { it.id == identity.tabId }
         val currentOrigin = PermissionOrigin.normalize(
-            pageUrls[identity.tabId] ?: webViews[identity.tabId]?.url ?: tab?.url,
+            pageUrls[identity.tabId] ?: tab?.url,
         )
         return PermissionRequestRules.isCurrent(
             identity,
@@ -9459,7 +7733,8 @@ class BrowserController(
                 } else {
                     isActivityStarted && !destroyed
                 },
-                tabExists = tab != null && webViews[identity.tabId] != null,
+                tabExists = tab != null &&
+                    (geckoEngineSessions[identity.tabId] != null),
             ),
         )
     }
@@ -9470,59 +7745,6 @@ class BrowserController(
     private fun hasRuntimePermissionFor(permission: SitePermission): Boolean = when (permission) {
         SitePermission.Location -> permission.runtimePermissions.any(::hasRuntimePermission)
         else -> permission.runtimePermissions.all(::hasRuntimePermission)
-    }
-
-    private fun geolocationPermissionsFor(tabId: String): GeolocationPermissions? {
-        val webView = webViews[tabId] ?: return GeolocationPermissions.getInstance()
-        return if (isProfileIsolationSupported) {
-            runCatching { WebViewCompat.getProfile(webView).geolocationPermissions }.getOrNull()
-        } else {
-            GeolocationPermissions.getInstance()
-        }
-    }
-
-    private fun sitePermissionForWebResource(resource: String): SitePermission? = when (resource) {
-        PermissionRequest.RESOURCE_VIDEO_CAPTURE -> SitePermission.Camera
-        PermissionRequest.RESOURCE_AUDIO_CAPTURE -> SitePermission.Microphone
-        PermissionRequest.RESOURCE_MIDI_SYSEX -> SitePermission.MidiSysex
-        PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID -> SitePermission.ProtectedMedia
-        else -> null
-    }
-
-    private fun handleFileChooser(
-        tabId: String,
-        webView: WebView,
-        callback: ValueCallback<Array<Uri>>,
-        params: WebChromeClient.FileChooserParams,
-    ): Boolean {
-        cancelPendingFileChooser()
-        val delivery = FileChooserResultDelivery<Array<Uri>?> { value ->
-            callback.onReceiveValue(value)
-        }
-        val generation = navigationGenerations[tabId]
-        val identity = generation?.let { FileChooserIdentity(tabId, it) }
-        if (
-            identity == null ||
-            webViews[tabId] !== webView ||
-            !isFileChooserCurrent(identity)
-        ) {
-            delivery.complete(null)
-            return true
-        }
-        val pending = PendingFileChooser(
-            identity = identity,
-            delivery = delivery,
-            allowMultiple = params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE,
-            acceptTypes = params.acceptTypes.copyOf(),
-        )
-        pendingFileChooser = pending
-        return runCatching {
-            launchFileChooser(params.createIntent())
-            true
-        }.getOrElse {
-            cancelPendingFileChooser(tabId)
-            true
-        }
     }
 
     private fun isSafeFileChooserResult(uri: Uri, acceptTypes: Array<String>): Boolean {
@@ -9544,7 +7766,11 @@ class BrowserController(
                 selectedTabId = selectedTabId,
                 navigationGeneration = navigationGenerations[identity.tabId],
                 tabExists = tabs.any { it.id == identity.tabId } &&
-                    webViews[identity.tabId] != null,
+                    (
+                        pendingFileChooser?.geckoSession?.let { session ->
+                            geckoEngineSessions[identity.tabId] === session
+                        } ?: (geckoEngineSessions[identity.tabId] != null)
+                    ),
                 isActivityResumed = isActivityStarted && !destroyed,
             ),
         )
@@ -9553,407 +7779,52 @@ class BrowserController(
         val pending = pendingFileChooser ?: return
         if (tabId != null && pending.identity.tabId != tabId) return
         pendingFileChooser = null
+        finalizeFileCapture(pending.captureOutput, keep = false)
         pending.delivery.complete(null)
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
     }
 
-    private fun browserChromeClient(
-        tabId: String,
-        sourceWebView: WebView,
-    ) = object : WebChromeClient() {
-        override fun onProgressChanged(view: WebView, newProgress: Int) {
-            val currentProgress = tabs.firstOrNull { it.id == tabId }?.progress ?: return
-            if (newProgress in 1..99 && newProgress - currentProgress < 3) return
-            updateTab(tabId) { it.copy(progress = newProgress, isLoading = newProgress < 100) }
+    private fun createFileCaptureOutput(action: String): FileCaptureOutput? {
+        val isVideo = action == MediaStore.ACTION_VIDEO_CAPTURE
+        val mimeType = if (isVideo) "video/mp4" else "image/jpeg"
+        val collection = if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val name = "candy-capture-${System.currentTimeMillis()}.${if (isVideo) "mp4" else "jpg"}"
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
-
-        override fun onReceivedTitle(view: WebView, title: String?) {
-            title?.takeIf(String::isNotBlank)?.let { value ->
-                updateTab(tabId) { it.copy(title = value) }
-                view.url?.let { url -> updateCandyTrailPage(tabId, url, value) }
-            }
-        }
-
-        override fun onReceivedIcon(view: WebView, icon: Bitmap?) {
-            icon?.let { storeFavicon(tabId, it) }
-        }
-
-        override fun onPermissionRequest(request: PermissionRequest) {
-            handleWebPermissionRequest(tabId, request)
-        }
-
-        override fun onPermissionRequestCanceled(request: PermissionRequest) {
-            val pending = pendingPermissionAccess
-            if (pending?.requestToken === request) {
-                dropCanceledPermissionAccess(request)
-            }
-            if (activePermissions.drop(request)) permissionRevision++
-        }
-
-        override fun onGeolocationPermissionsShowPrompt(
-            origin: String,
-            callback: GeolocationPermissions.Callback,
-        ) {
-            handleGeolocationPermissionRequest(tabId, origin, callback)
-        }
-
-        override fun onGeolocationPermissionsHidePrompt() {
-            pendingPermissionAccess
-                ?.takeIf { pending ->
-                    pending.kind == PendingPermissionKind.Geolocation &&
-                        pending.identity.tabId == tabId
-                }
-                ?.let { pending -> dropCanceledPermissionAccess(pending.requestToken) }
-        }
-
-        override fun onShowFileChooser(
-            webView: WebView,
-            filePathCallback: ValueCallback<Array<Uri>>,
-            fileChooserParams: FileChooserParams,
-        ): Boolean = handleFileChooser(
-            tabId = tabId,
-            webView = webView,
-            callback = filePathCallback,
-            params = fileChooserParams,
-        )
-
-        override fun onShowCustomView(
-            view: View,
-            callback: CustomViewCallback,
-        ) {
-            showFullscreenVideo(tabId, sourceWebView, view, callback)
-        }
-
-        override fun onHideCustomView() {
-            val session = fullscreenVideoSession ?: return
-            if (session.tabId == tabId && session.webView === sourceWebView) {
-                handleFullscreenVideoHidden(session)
-            }
-        }
-
-        override fun onCreateWindow(
-            view: WebView,
-            isDialog: Boolean,
-            isUserGesture: Boolean,
-            resultMsg: Message,
-        ): Boolean = createManagedPopup(view, isUserGesture, resultMsg)
-
-        override fun onCloseWindow(window: WebView) {
-            val closingTabId = webViews.entries.firstOrNull { (_, webView) -> webView === window }?.key
-                ?: return
-            closeTab(closingTabId)
-        }
+        val uri = runCatching { activity.contentResolver.insert(collection, values) }.getOrNull()
+            ?: return null
+        return FileCaptureOutput(uri = uri, mimeType = mimeType)
     }
 
-    private fun showFullscreenVideo(
-        tabId: String,
-        sourceWebView: WebView,
-        view: View,
-        callback: WebChromeClient.CustomViewCallback,
-    ) {
-        val tab = tabs.firstOrNull { it.id == tabId }
-        if (
-            fullscreenVideoSession != null ||
-            webViews[tabId] !== sourceWebView ||
-            tab == null ||
-            selectedTabId != tabId
-        ) {
-            runCatching(callback::onCustomViewHidden)
-            return
-        }
-        val session = FullscreenVideoSession(
-            tabId = tabId,
-            webView = sourceWebView,
-            view = view,
-            callback = callback,
-            isPrivate = tab.isIncognito,
-            navigationGeneration = navigationGenerations[tabId] ?: 0,
-        )
-        fullscreenVideoSession = session
-        sourceWebView.settings.allowContinuousMediaPlayback()
-        publishFullscreenVideoState()
-    }
-
-    private fun handleFullscreenVideoHidden(session: FullscreenVideoSession) {
-        if (webMediaPresentation?.key?.tabId == session.tabId) {
-            dismissFullscreenVideo(session, notifyPage = false)
-            presentedWebMediaChannel()?.let { channel ->
-                channel.webView.settings.allowContinuousMediaPlayback()
-                channel.webView.onResume()
-                mainHandler.post {
-                    if (
-                        webMediaPresentation?.key == channel.key &&
-                        (pictureInPictureTransitionPending || isInPictureInPicture)
-                    ) {
-                        sendWebMediaCommand(channel, WebMediaCommand.EnterPresentation)
-                        if (pictureInPicturePlaybackExpected) {
-                            sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
-                        }
-                        sendWebMediaCommand(channel, WebMediaCommand.Play)
-                    }
-                }
+    private fun finalizeFileCapture(output: FileCaptureOutput?, keep: Boolean) {
+        output ?: return
+        runCatching {
+            if (keep) {
+                ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }
+                    .let { values -> activity.contentResolver.update(output.uri, values, null, null) }
+            } else {
+                activity.contentResolver.delete(output.uri, null, null)
             }
-            return
         }
-        if (!pictureInPictureTransitionPending && !isInPictureInPicture) {
-            dismissFullscreenVideo(session, notifyPage = false)
-            return
-        }
-        fullscreenVideoHiddenDuringPictureInPicture = session
-        mainHandler.postDelayed(
-            {
-                if (fullscreenVideoSession !== session) return@postDelayed
-                if (!pictureInPictureTransitionPending && !isInPictureInPicture) {
-                    dismissFullscreenVideo(session, notifyPage = false)
-                    return@postDelayed
-                }
-                if (webMediaPresentation == null) {
-                    pinWebMediaForPresentation(
-                        channel = activeVideoChannel(
-                            tabId = session.tabId,
-                            requireVisible = false,
-                            allowPaused = true,
-                        ),
-                        minimizedByUser = false,
-                        host = FullscreenVideoHost.Browser,
-                    )
-                }
-                if (webMediaPresentation == null) return@postDelayed
-                presentedWebMediaChannel()?.let { channel ->
-                    if (pictureInPicturePlaybackExpected) {
-                        sendWebMediaCommand(channel, WebMediaCommand.KeepPlaying)
-                    }
-                    sendWebMediaCommand(channel, WebMediaCommand.Play)
-                }
-                dismissFullscreenVideo(session, notifyPage = false)
-            },
-            PICTURE_IN_PICTURE_FALLBACK_GRACE_MILLIS,
-        )
     }
 
     private fun publishFullscreenVideoState() {
-        val session = fullscreenVideoSession
-        val webPresentation = webMediaPresentation
+        val presentation = geckoMediaPresentation
         fullscreenVideoSourceRevision++
-        fullscreenVideoState = when {
-            session != null -> FullscreenVideoState(
-                tabId = session.tabId,
-                minimizedByUser = session.minimizedByUser,
+        fullscreenVideoState = presentation?.let {
+            FullscreenVideoState(
+                tabId = it.tabId,
+                minimizedByUser = it.minimizedByUser,
                 sourceRevision = fullscreenVideoSourceRevision,
-                source = FullscreenVideoSource.CustomView,
+                source = FullscreenVideoSource.GeckoView,
                 host = FullscreenVideoHost.Overlay,
             )
-            webPresentation != null -> FullscreenVideoState(
-                tabId = webPresentation.key.tabId,
-                minimizedByUser = webPresentation.minimizedByUser,
-                sourceRevision = fullscreenVideoSourceRevision,
-                source = FullscreenVideoSource.WebView,
-                host = webPresentation.host,
-            )
-            else -> null
         }
-        scheduleResidentWebViewTrim()
-    }
-
-    private fun dismissFullscreenVideo(
-        session: FullscreenVideoSession,
-        notifyPage: Boolean,
-    ) {
-        if (fullscreenVideoSession !== session) return
-        if (fullscreenVideoHiddenDuringPictureInPicture === session) {
-            fullscreenVideoHiddenDuringPictureInPicture = null
-        }
-        fullscreenVideoSession = null
-        (session.view.parent as? ViewGroup)?.removeView(session.view)
-        if (notifyPage) runCatching(session.callback::onCustomViewHidden)
-        publishFullscreenVideoState()
-        if (
-            (!isActivityResumed || session.tabId != selectedTabId) &&
-            webMediaPresentation?.key?.tabId != session.tabId
-        ) {
-            forcePauseWebView(session.webView)
-        } else {
-            resumeWebView(session.tabId, session.webView)
-        }
-    }
-
-    private fun configureServiceWorkerBlocking() {
-        if (
-            !WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) ||
-            !WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST)
-        ) return
-        ServiceWorkerControllerCompat.getInstance()
-            .setServiceWorkerClient(
-                object : ServiceWorkerClientCompat() {
-                    override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
-                        return interceptServiceWorkerRequest(request, DEFAULT_STORAGE_KEY)
-                    }
-                },
-            )
-    }
-
-    private fun configureProfileServiceWorkerBlocking(
-        assignment: WebViewProfileAssignment,
-        webView: WebView,
-    ) {
-        if (!blockingStartGate.isReady) return
-        if (assignment == WebViewProfileAssignment.Default) return
-        if (
-            !WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) ||
-            !WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST)
-        ) return
-        val storageKey = assignment.storageKey
-        if (!configuredServiceWorkerProfiles.add(storageKey)) return
-        runCatching {
-            WebViewCompat.getProfile(webView).serviceWorkerController.setServiceWorkerClient(
-                object : ServiceWorkerClient() {
-                    override fun shouldInterceptRequest(
-                        request: WebResourceRequest,
-                    ): WebResourceResponse? = interceptServiceWorkerRequest(request, storageKey)
-                },
-            )
-        }.onFailure {
-            configuredServiceWorkerProfiles.remove(storageKey)
-        }
-    }
-
-    private fun interceptServiceWorkerRequest(
-        request: WebResourceRequest,
-        storageKey: String,
-    ): WebResourceResponse? {
-        if (request.url.scheme?.lowercase() !in WEB_SCHEMES) return null
-        val relevantPages = protectionRequestContexts.entries.asSequence()
-            .filter { (_, context) -> context.storageKey == storageKey }
-            .mapNotNull { (tabId, context) -> tabId.takeIf { context.pageHost != null } }
-            .toList()
-        if (relevantPages.isEmpty()) return null
-        val settings = workerSettings
-        if (!settings.blockAdsAndTrackers) {
-            val shouldBlockConsentRuntime = relevantPages.all { tabId ->
-                val context = protectionRequestContexts[tabId] ?: return@all false
-                ConsentRequestRules.shouldBlock(
-                    isForMainFrame = request.isForMainFrame,
-                    cookieBannerRemovalEnabled = settings.hideCookieConsent &&
-                        !context.cookieBannerRemovalDisabled,
-                    sitePaused = isSiteProtectionPaused(tabId, context, null),
-                    requestHost = request.url.host,
-                )
-            }
-            return if (shouldBlockConsentRuntime) blockedResponse() else null
-        }
-        // Android does not expose a reliable originating tab here. Preserve the existing
-        // conservative all-page decision: a request is blocked only when every possible page
-        // context agrees, including site pauses and upstream allowlist rules. Never attribute
-        // these requests to a tab's X-Ray counters.
-        val requestUrl = request.url.toString()
-        val shouldBlock = relevantPages.all { tabId ->
-            val context = protectionRequestContexts[tabId] ?: return@all false
-            if (request.isForMainFrame || isSiteProtectionPaused(tabId, null)) return@all false
-            val matcher = matcherFor(context.isIncognito)
-            when (
-                if (matcher.hasRequestRules) matcher.decideHosts(
-                    requestHost = request.url.host,
-                    pageHost = context.pageHost,
-                    profileId = context.profileId,
-                    isForMainFrame = false,
-                )?.action else null
-            ) {
-                CandyDecisionAction.Allow -> false
-                CandyDecisionAction.Block -> true
-                null -> ConsentRequestRules.shouldBlock(
-                    isForMainFrame = request.isForMainFrame,
-                    cookieBannerRemovalEnabled = settings.hideCookieConsent &&
-                        !context.cookieBannerRemovalDisabled,
-                    sitePaused = false,
-                    requestHost = request.url.host,
-                ) || contentBlocker.shouldBlock(
-                    requestUrl = requestUrl,
-                    requestHost = request.url.host,
-                    pageHost = context.pageHost,
-                )
-            }
-        }
-        return if (shouldBlock) {
-            blockedResponse()
-        } else {
-            null
-        }
-    }
-
-    private fun blockedResponse() = WebResourceResponse(null, null, null)
-
-    private fun createManagedPopup(
-        source: WebView,
-        isUserGesture: Boolean,
-        resultMsg: Message,
-    ): Boolean {
-        if (!blockingStartGate.isReady || !isUserGesture || tabs.size >= MAX_TABS) return false
-        val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
-        val openerTabId = webViews.entries.firstOrNull { (_, webView) -> webView === source }?.key
-            ?: return false
-        val openerTab = tabs.firstOrNull { tab -> tab.id == openerTabId } ?: return false
-        val openerUrl = pageUrls[openerTabId] ?: source.url ?: openerTab.url
-        if (isAlwaysBlockPopupsEnabled(openerTab, openerUrl)) return false
-        if (workerSettings.blockAdsAndTrackers &&
-            !isSiteProtectionPaused(openerTabId, openerUrl) &&
-            contentBlocker.shouldBlockPopupWithoutTarget(openerUrl)
-        ) return false
-        val popupTabId = createBackgroundTab(
-            initialUrl = BLANK_URL,
-            openerTabId = openerTabId,
-            transientPopup = true,
-        ) ?: return false
-        if (isFederatedLoginCompatibilityEnabled(openerTab, openerUrl)) {
-            federatedLoginCompatibilityTabIds += popupTabId
-        }
-        val pendingPopup = PendingPopupNavigation(
-            openerTabId = openerTabId,
-            openerUrl = openerUrl,
-            profileId = openerTab.profileId,
-            isIncognito = openerTab.isIncognito,
-            sitePaused = isSiteProtectionPaused(openerTabId, openerUrl),
-            hadUserGesture = true,
-        )
-        pendingPopupNavigations[popupTabId] = pendingPopup
-        val sitePaused = isSiteProtectionPaused(openerTabId, openerUrl)
-        if (workerSettings.blockAdsAndTrackers && !sitePaused) {
-            val candidate = PendingPopunderNavigation(
-                openerTabId = openerTabId,
-                popupTabId = popupTabId,
-                originalOpenerUrl = openerUrl,
-                createdAtMillis = SystemClock.elapsedRealtime(),
-                sitePaused = false,
-            )
-            pendingPopunderNavigations[openerTabId] = candidate
-            mainHandler.postDelayed(
-                {
-                    val current = pendingPopunderNavigations[openerTabId]
-                    if (current?.popupTabId == candidate.popupTabId &&
-                        current.createdAtMillis == candidate.createdAtMillis
-                    ) {
-                        pendingPopunderNavigations.remove(openerTabId)
-                        scheduleResidentWebViewTrim()
-                    }
-                },
-                PopunderNavigationRules.WINDOW_MILLIS,
-            )
-        }
-        val popupWebView = webViewFor(popupTabId)
-        transport.webView = popupWebView
-        resultMsg.sendToTarget()
-        mainHandler.postDelayed(
-            {
-                if (pendingPopupNavigations[popupTabId] === pendingPopup &&
-                    webViews[popupTabId] === popupWebView
-                ) {
-                    pendingPopupNavigations.remove(popupTabId)
-                    if (popupTabId in transientPopupTabIds) discardTransientPopup(popupTabId)
-                    scheduleResidentWebViewTrim()
-                }
-            },
-            PopupNavigationRules.PENDING_TIMEOUT_MILLIS,
-        )
-        return true
+        scheduleResidentSessionTrim()
     }
 
     private fun isQuarantinedPopup(tabId: String): Boolean =
@@ -9973,7 +7844,7 @@ class BrowserController(
 
     private fun handlePendingPopupNavigation(
         tabId: String,
-        view: WebView,
+        view: AndroidBrowserEngineSessionPort,
         targetUrl: String,
     ): PopupNavigationDecision {
         val pending = pendingPopupNavigations[tabId]
@@ -10012,7 +7883,7 @@ class BrowserController(
         if (decision == PopupNavigationDecision.KeepPending) return decision
         if (decision != PopupNavigationDecision.AllowSameSite) {
             pendingPopupNavigations.remove(tabId)
-            scheduleResidentWebViewTrim()
+            scheduleResidentSessionTrim()
         }
         if (decision == PopupNavigationDecision.AllowSameSite) {
             recordPopunderChildNavigation(pending, tabId, targetUrl)
@@ -10025,19 +7896,19 @@ class BrowserController(
                     ?.takeIf { candidate -> candidate.popupTabId == tabId }
                     ?.let { candidate ->
                         pendingPopunderNavigations.remove(candidate.openerTabId)
-                        scheduleResidentWebViewTrim()
+                        scheduleResidentSessionTrim()
                     }
             } else {
                 recordPopunderChildNavigation(pending, tabId, targetUrl)
             }
             promoteTransientPopup(pending, tabId)
         } else if (decision == PopupNavigationDecision.BlockListed) {
-            view.stopLoading()
+            view.execute(BrowserEngineCommands.stop())
             mainHandler.post {
-                if (!destroyed && webViews[tabId] === view) closeTab(tabId)
+                if (!destroyed && geckoEngineSessions[tabId] === view) closeTab(tabId)
             }
         } else if (decision == PopupNavigationDecision.BlockCrossSite) {
-            view.stopLoading()
+            view.execute(BrowserEngineCommands.stop())
             transientPopupTabIds += tabId
             offerBlockedPopup(tabId, targetUrl)
             if (selectedTabId == tabId && tabs.any { tab -> tab.id == pending.openerTabId }) {
@@ -10050,7 +7921,7 @@ class BrowserController(
 
     private fun promoteTransientPopup(pending: PendingPopupNavigation, tabId: String) {
         if (!transientPopupTabIds.remove(tabId)) return
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
         captureVisiblePreview(
             tabId = pending.openerTabId,
             onComplete = {
@@ -10091,13 +7962,13 @@ class BrowserController(
             ?: return
         evaluatePopunder(
             PopunderNavigationRules.withChildUrl(candidate, targetUrl),
-            openerView = webViews[popup.openerTabId],
+            openerView = geckoEngineSessions[popup.openerTabId],
         )
     }
 
     private fun handlePendingPopunderOpenerNavigation(
         openerTabId: String,
-        openerView: WebView,
+        openerView: AndroidBrowserEngineSessionPort,
         targetUrl: String,
     ): Boolean {
         val candidate = pendingPopunderNavigations[openerTabId] ?: return false
@@ -10109,7 +7980,7 @@ class BrowserController(
 
     private fun evaluatePopunder(
         candidate: PendingPopunderNavigation,
-        openerView: WebView?,
+        openerView: AndroidBrowserEngineSessionPort?,
     ): Boolean {
         val decision = PopunderNavigationRules.decide(
             pending = candidate,
@@ -10129,10 +8000,10 @@ class BrowserController(
         }
         if (pendingPopunderNavigations[candidate.openerTabId]?.popupTabId == candidate.popupTabId) {
             pendingPopunderNavigations.remove(candidate.openerTabId)
-            scheduleResidentWebViewTrim()
+            scheduleResidentSessionTrim()
         }
         if (decision != PopunderNavigationDecision.Block) return false
-        openerView?.stopLoading()
+        openerView?.execute(BrowserEngineCommands.stop())
         mainHandler.post {
             if (destroyed || tabs.none { tab -> tab.id == candidate.popupTabId }) return@post
             transientPopupTabIds.remove(candidate.popupTabId)
@@ -10150,48 +8021,12 @@ class BrowserController(
                             error = null,
                         )
                     }
-                    loadUrlWithProtection(opener.id, view, candidate.originalOpenerUrl)
+                    loadGeckoWithPrivacy(opener.id, view, candidate.originalOpenerUrl)
                 }
             } else {
                 closeTab(candidate.openerTabId)
             }
         }
-        return true
-    }
-
-    private fun downloadListener(tabId: String = selectedTabId) =
-        DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
-            val request = BrowserDownloadRequestFactory.create(
-                url = url,
-                contentDisposition = contentDisposition,
-                mimeType = mimeType,
-                userAgent = userAgent,
-                cookies = cookiesFor(tabId, url),
-                referrer = referrerFor(tabId),
-            )
-            if (request == null) {
-                Toast.makeText(
-                    activity,
-                    activity.getString(R.string.toast_download_type_unsupported),
-                    Toast.LENGTH_SHORT,
-                ).show()
-                return@DownloadListener
-            }
-            routeDownload(request, tabId)?.let(::showDownloadResult)
-        }
-
-    private fun routeExplicitDownloadNavigation(
-        tabId: String,
-        webView: WebView,
-        url: String,
-    ): Boolean {
-        val request = BrowserDownloadRequestFactory.create(
-            url = url,
-            userAgent = webView.settings.userAgentString,
-            cookies = cookieManagerFor(webView).getCookie(url),
-            referrer = webView.url,
-        ) ?: return false
-        routeDownload(request, tabId)?.let(::showDownloadResult)
         return true
     }
 
@@ -10281,80 +8116,6 @@ class BrowserController(
         ).show()
     }
 
-    private fun updateNavigationState(tabId: String, view: WebView) {
-        updateTab(tabId) {
-            it.copy(canGoBack = view.canGoBack(), canGoForward = view.canGoForward())
-        }
-    }
-
-    private fun beginMainFrameTlsNavigation(tabId: String, view: WebView, targetUrl: String) {
-        val generation = (navigationGenerations[tabId] ?: 0) + 1
-        navigationGenerations[tabId] = generation
-        mainFrameTlsNavigations[tabId] = MainFrameTlsNavigation(
-            webView = view,
-            generation = generation,
-            targetUrls = listOf(targetUrl),
-        )
-    }
-
-    private fun recordMainFrameTlsRedirect(tabId: String, view: WebView, targetUrl: String) {
-        val navigation = mainFrameTlsNavigations[tabId] ?: return
-        if (navigation.webView !== view ||
-            navigation.generation != navigationGenerations[tabId]
-        ) return
-        mainFrameTlsNavigations[tabId] = navigation.copy(
-            targetUrls = (navigation.targetUrls.filterNot { it == targetUrl } + targetUrl)
-                .takeLast(MAX_TLS_MAIN_FRAME_TARGETS),
-        )
-    }
-
-    private fun restoreWebViewState(tab: BrowserTab, webView: WebView): Boolean {
-        if (tab.isIncognito || tab.url == BLANK_URL) return false
-        val state = webViewStateRepository.load(tab.id) ?: return false
-        val history = runCatching { webView.restoreState(state) }.getOrNull()
-        val currentItem = history?.currentItem
-        if (history == null || history.size == 0 || currentItem?.url != tab.url) {
-            webViewStateRepository.delete(tab.id)
-            return false
-        }
-        pageUrls[tab.id] = currentItem.url
-        updateTab(tab.id) {
-            it.copy(
-                title = currentItem.title.orEmpty().ifBlank { it.title },
-                canGoBack = webView.canGoBack(),
-                canGoForward = webView.canGoForward(),
-                error = null,
-            )
-        }
-        return true
-    }
-
-    private fun restoreWebViewStateWithProtection(tab: BrowserTab, webView: WebView): Boolean {
-        applySiteProtectionForNavigation(tab.id, webView, tab.url)
-        return restoreWebViewState(tab, webView)
-    }
-
-    private fun persistWebViewStates() {
-        webViews.forEach(::persistWebViewState)
-    }
-
-    private fun persistWebViewState(tabId: String, webView: WebView) {
-        val tab = tabs.firstOrNull { it.id == tabId }
-        if (
-            tab == null ||
-            tab.isIncognito ||
-            tab.url == BLANK_URL ||
-            isSessionEphemeralTab(tabId)
-        ) {
-            webViewStateRepository.delete(tabId)
-            return
-        }
-        val state = Bundle()
-        val history = runCatching { webView.saveState(state) }.getOrNull()
-        if (history == null || history.size == 0) return
-        webViewStateRepository.save(tabId, state)
-    }
-
     private fun queueBlockedRequest(
         tabId: String,
         requestUrl: String,
@@ -10436,41 +8197,6 @@ class BrowserController(
         }
     }
 
-    private fun reconcileCandyTrailHistory(tabId: String, view: WebView, isReload: Boolean) {
-        if (isSessionEphemeralTab(tabId)) return
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        val history = view.copyBackForwardList()
-        if (history.currentIndex !in 0 until history.size) return
-        val urls = buildList(history.size) {
-            repeat(history.size) { index -> add(history.getItemAtIndex(index).url.orEmpty()) }
-        }
-        val currentUrl = urls[history.currentIndex]
-        if (tabId in suppressedCandyTrailTabIds) {
-            if (currentUrl == pageUrls[tabId]) return
-            suppressedCandyTrailTabIds.remove(tabId)
-        }
-        val pendingTargetNodeId = pendingCandyTrailTargets.remove(tabId)?.takeIf { targetNodeId ->
-            candyTrails[tabId]?.nodes?.any { node ->
-                node.id == targetNodeId && node.url == currentUrl
-            } == true
-        }
-        val result = CandyTrailHistoryReconciler.reconcile(
-            trail = candyTrails[tabId],
-            tabId = tabId,
-            previous = candyTrailHistoryBindings[tabId] ?: CandyTrailHistoryBinding(),
-            snapshot = CandyTrailHistorySnapshot(
-                urls = urls,
-                currentIndex = history.currentIndex,
-                isReload = isReload,
-            ),
-            title = view.title.orEmpty().ifBlank { tab.title },
-            visitedAt = System.currentTimeMillis(),
-            pendingTargetNodeId = pendingTargetNodeId,
-        )
-        candyTrailHistoryBindings[tabId] = result.binding
-        setCandyTrail(tab, result.trail)
-    }
-
     private fun updateCandyTrailPage(tabId: String, url: String, title: String) {
         if (isSessionEphemeralTab(tabId)) return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
@@ -10531,84 +8257,6 @@ class BrowserController(
         return result.recorded
     }
 
-    private fun capturePageForRecall(tabId: String, view: WebView, url: String) {
-        if (
-            !isActivityStarted || !isRecallEnabled || recallDisablePending ||
-            browsingDataClearPending || isSessionEphemeralTab(tabId)
-        ) return
-        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
-            ?.takeUnless(BrowserTab::isIncognito)
-            ?: return
-        if (tab.profileId in pendingRecallProfileDeletions) return
-        val canonicalUrl = RecallRules.canonicalUrl(url) ?: return
-        val generation = navigationGenerations[tabId] ?: return
-        if (
-            webViews[tabId] !== view ||
-            RecallRules.canonicalUrl(pageUrls[tabId].orEmpty()) != canonicalUrl
-        ) {
-            return
-        }
-        val identity = RecallExtractionIdentity(
-            tabId = tabId,
-            profileId = tab.profileId,
-            url = canonicalUrl,
-            navigationGeneration = generation,
-        )
-        if (committedRecallPages[tabId] != identity) return
-        val visitedAt = System.currentTimeMillis()
-        val cleanupEpoch = recallRepository.captureCleanupEpoch()
-        view.evaluateJavascript(RecallExtractionScript.javascript) { result ->
-            val currentTab = tabs.firstOrNull { candidate -> candidate.id == tabId }
-            val actualIdentity = currentTab?.let { current ->
-                RecallExtractionIdentity(
-                    tabId = current.id,
-                    profileId = current.profileId,
-                    url = RecallRules.canonicalUrl(pageUrls[tabId].orEmpty()).orEmpty(),
-                    navigationGeneration = navigationGenerations[tabId] ?: -1,
-                )
-            }
-            if (
-                destroyed ||
-                currentTab == null ||
-                isSessionEphemeralTab(tabId) ||
-                !RecallRules.isCurrent(
-                    expected = identity,
-                    actual = actualIdentity,
-                    isActivityStarted = isActivityStarted,
-                    enabled = isRecallEnabled,
-                    isPrivate = currentTab.isIncognito,
-                    webViewMatches = webViews[tabId] === view &&
-                        RecallRules.canonicalUrl(view.url.orEmpty()) == canonicalUrl,
-                )
-            ) {
-                return@evaluateJavascript
-            }
-            recallRepository.indexExtracted(
-                webViewResult = result,
-                profileId = identity.profileId,
-                expectedUrl = identity.url,
-                expectedCleanupEpoch = cleanupEpoch,
-                visitedAt = visitedAt,
-            )
-        }
-    }
-
-    private fun recordCommittedRecallPage(tabId: String, view: WebView, url: String) {
-        if (!isActivityStarted || isSessionEphemeralTab(tabId)) return
-        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
-            ?.takeUnless(BrowserTab::isIncognito)
-            ?: return
-        val canonicalUrl = RecallRules.canonicalUrl(url) ?: return
-        val generation = navigationGenerations[tabId] ?: return
-        if (webViews[tabId] !== view) return
-        committedRecallPages[tabId] = RecallExtractionIdentity(
-            tabId = tabId,
-            profileId = tab.profileId,
-            url = canonicalUrl,
-            navigationGeneration = generation,
-        )
-    }
-
     internal fun reloadHistory() {
         val restored = historyRepository.snapshot()
         if (restored == history) return
@@ -10631,129 +8279,12 @@ class BrowserController(
             onComplete()
             return
         }
-        if (usesGeckoEngine) {
-            captureVisibleGeckoPreview(
-                tabId = tabId,
-                width = width,
-                onComplete = onComplete,
-                acceptAfterDeparture = acceptAfterDeparture,
-            )
-            return
-        }
-        pendingPreviewCaptures[tabId]?.let { pending ->
-            if (!pending.uiCompleted) {
-                pending.completionCallbacks += onComplete
-                if (acceptAfterDeparture) pending.acceptAfterDeparture = true
-            } else {
-                onComplete()
-            }
-            return
-        }
-        val tab = tabs.firstOrNull { it.id == tabId }
-        val view = webViews[tabId]
-        if (
-            tab == null ||
-            tab.isIncognito ||
-            tabId != selectedTabId ||
-            !isActivityResumed ||
-            view == null ||
-            !view.isAttachedToWindow ||
-            !view.isShown ||
-            view.hasTransparentViewInHierarchy() ||
-            view.width <= 0 ||
-            view.height <= 0 ||
-            tab.url == BLANK_URL
-        ) {
-            onComplete()
-            return
-        }
-        val location = IntArray(2)
-        view.getLocationInWindow(location)
-        val decorView = activity.window.decorView
-        val contentBottom = previewContentBottomInWindowPx ?: decorView.height
-        val sourceBottomPx = TabPreviewCaptureRules.sourceBottomPx(
-            viewTopPx = location[1],
-            viewHeightPx = view.height,
-            decorHeightPx = decorView.height,
-            contentBottomPx = contentBottom,
-        )
-        val sourceRect = Rect(
-            location[0].coerceIn(0, decorView.width),
-            location[1].coerceIn(0, decorView.height),
-            (location[0] + view.width).coerceIn(0, decorView.width),
-            sourceBottomPx.coerceIn(0, decorView.height),
-        )
-        if (sourceRect.width() <= 0 || sourceRect.height() <= 0) {
-            onComplete()
-            return
-        }
-        val scale = width.toFloat() / sourceRect.width()
-        val height = (sourceRect.height() * scale)
-            .toInt()
-            .coerceIn(1, width * 3)
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val request = PendingPreviewCapture(
+        captureVisibleGeckoPreview(
             tabId = tabId,
-            webView = view,
-            pageUrl = pageUrls[tabId] ?: view.url,
-            navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
-            previewEpoch = previewEpoch,
-            sourceRect = sourceRect,
-            destination = bitmap,
+            width = width,
             onComplete = onComplete,
             acceptAfterDeparture = acceptAfterDeparture,
         )
-        pendingPreviewCaptures[tabId] = request
-        previewCaptureRequestCountForTesting++
-        request.timeout = Runnable {
-            if (pendingPreviewCaptures[tabId] !== request) return@Runnable
-            pendingPreviewCaptures.remove(tabId)
-            request.expired = true
-            completePreviewOpening(request)
-        }.also { timeout ->
-            mainHandler.postDelayed(timeout, PREVIEW_CAPTURE_TIMEOUT_MS)
-        }
-        try {
-            PixelCopy.request(
-                activity.window,
-                sourceRect,
-                bitmap,
-                pixelCopy@{ result ->
-                    if (pendingPreviewCaptures[tabId] !== request) {
-                        if (!bitmap.isRecycled) bitmap.recycle()
-                        return@pixelCopy
-                    }
-                    pendingPreviewCaptures.remove(tabId)
-                    request.timeout?.let(mainHandler::removeCallbacks)
-                    if (
-                        result != PixelCopy.SUCCESS ||
-                        request.expired ||
-                        !isCurrentPreviewCapture(request)
-                    ) {
-                        bitmap.recycle()
-                        completePreviewOpening(request)
-                        return@pixelCopy
-                    }
-                    val candidateQuality = bitmap.previewQuality()
-                    if (
-                        candidateQuality != null &&
-                        TabPreviewCaptureRules.shouldStorePixelCopy(candidateQuality)
-                    ) {
-                        previews[request.tabId] = bitmap
-                        previewRepository.save(request.tabId, bitmap)
-                    } else {
-                        bitmap.recycle()
-                    }
-                    completePreviewOpening(request)
-                },
-                mainHandler,
-            )
-        } catch (_: IllegalArgumentException) {
-            pendingPreviewCaptures.remove(tabId)
-            request.timeout?.let(mainHandler::removeCallbacks)
-            bitmap.recycle()
-            completePreviewOpening(request)
-        }
     }
 
     private fun captureVisibleGeckoPreview(
@@ -10816,7 +8347,7 @@ class BrowserController(
             request.capture?.cancel()
             completeGeckoPreviewOpening(request)
         }.also { timeout ->
-            mainHandler.postDelayed(timeout, PREVIEW_CAPTURE_TIMEOUT_MS)
+            mainHandler.postDelayed(timeout, GECKO_PREVIEW_CAPTURE_TIMEOUT_MS)
         }
         request.capture = binding.session.capturePreview(
             targetWidthPx = width,
@@ -10864,7 +8395,7 @@ class BrowserController(
         val callbacks = request.completionCallbacks.toList()
         request.completionCallbacks.clear()
         callbacks.forEach { callback -> callback() }
-        scheduleResidentWebViewTrim()
+        scheduleResidentSessionTrim()
     }
 
     private fun cancelPendingGeckoPreviewCapture(tabId: String) {
@@ -10908,51 +8439,6 @@ class BrowserController(
             (location[0] + view.width).coerceIn(0, decorView.width),
             sourceBottomPx.coerceIn(0, decorView.height),
         ).takeIf { rect -> rect.width() > 0 && rect.height() > 0 }
-    }
-
-    private fun completePreviewOpening(request: PendingPreviewCapture) {
-        if (request.uiCompleted) return
-        request.uiCompleted = true
-        val callbacks = request.completionCallbacks.toList()
-        request.completionCallbacks.clear()
-        callbacks.forEach { callback -> callback() }
-        scheduleResidentWebViewTrim()
-    }
-
-    private fun isCurrentPreviewCapture(request: PendingPreviewCapture): Boolean =
-        !destroyed &&
-            !isSessionEphemeralTab(request.tabId) &&
-            previewEpoch == request.previewEpoch &&
-            webViews[request.tabId] === request.webView &&
-            navigationGenerations.getOrDefault(request.tabId, 0) == request.navigationGeneration &&
-            (pageUrls[request.tabId] ?: request.webView.url) == request.pageUrl &&
-            (
-                request.acceptAfterDeparture ||
-                    (
-                        isActivityResumed &&
-                            selectedTabId == request.tabId &&
-                            request.webView.isAttachedToWindow &&
-                            hasSamePreviewGeometry(request)
-                        )
-                )
-
-    private fun hasSamePreviewGeometry(request: PendingPreviewCapture): Boolean {
-        val view = request.webView
-        val decorView = activity.window.decorView
-        val location = IntArray(2)
-        view.getLocationInWindow(location)
-        val sourceBottomPx = TabPreviewCaptureRules.sourceBottomPx(
-            viewTopPx = location[1],
-            viewHeightPx = view.height,
-            decorHeightPx = decorView.height,
-            contentBottomPx = previewContentBottomInWindowPx ?: decorView.height,
-        )
-        return request.sourceRect == Rect(
-            location[0].coerceIn(0, decorView.width),
-            location[1].coerceIn(0, decorView.height),
-            (location[0] + view.width).coerceIn(0, decorView.width),
-            sourceBottomPx.coerceIn(0, decorView.height),
-        )
     }
 
     private fun View.hasTransparentViewInHierarchy(): Boolean {
@@ -11310,12 +8796,8 @@ class BrowserController(
             )
             reconciliation.removedRuntimeTabIds.forEach(::removeTabResources)
             replaceProfileTabs(boundProfileId, reconciliation.tabs)
-            reconciliation.navigations.forEach { navigation ->
-                webViews[navigation.runtimeTabId]?.let { webView ->
-                    remoteSyncNavigationUrls[navigation.runtimeTabId] = navigation.url
-                    loadUrlWithProtection(navigation.runtimeTabId, webView, navigation.url)
-                }
-            }
+            reconciliation.hydrations.forEach(::prepareSyncedTabHydration)
+            reconciliation.navigations.forEach(::applySyncedTabNavigation)
         }
 
         var remainingCapacity = (MAX_TABS - tabs.count { !isSyncedProfile(it.profileId) })
@@ -11352,12 +8834,8 @@ class BrowserController(
 
             reconciliation.removedRuntimeTabIds.forEach(::removeTabResources)
             replaceProfileTabs(profileId, reconciliation.tabs)
-            reconciliation.navigations.forEach { navigation ->
-                webViews[navigation.runtimeTabId]?.let { webView ->
-                    remoteSyncNavigationUrls[navigation.runtimeTabId] = navigation.url
-                    loadUrlWithProtection(navigation.runtimeTabId, webView, navigation.url)
-                }
-            }
+            reconciliation.hydrations.forEach(::prepareSyncedTabHydration)
+            reconciliation.navigations.forEach(::applySyncedTabNavigation)
         }
 
         if (activeTabs.none { it.id == selectedTabId }) {
@@ -11412,7 +8890,7 @@ class BrowserController(
                     selectedTabId = selectedTabId,
                 ) ?: return@forEach
                 locallyPendingSyncCandyIds += candyId
-                syncRepository.mutate(
+                mutateSync(
                     SyncPendingMutation.Open(
                         mutationId = UUID.randomUUID().toString(),
                         targetDeviceId = remote.deviceId,
@@ -11428,7 +8906,53 @@ class BrowserController(
         tab.syncCandyId?.let(locallyPendingSyncCandyIds::add)
     }
 
-    private fun scheduleSyncedTabNavigation(tabId: String) {
+    private fun prepareSyncedTabHydration(navigation: SyncedTabNavigation): String? {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(navigation.url) ?: return null
+        if (tabs.none { tab -> tab.id == navigation.runtimeTabId }) return null
+        pendingSyncNavigationRunnables.remove(navigation.runtimeTabId)
+            ?.let(mainHandler::removeCallbacks)
+        remoteSyncNavigationUrls.put(navigation.runtimeTabId, safeUrl)
+            ?.takeIf { previousUrl -> previousUrl != safeUrl }
+            ?.let { previousUrl ->
+                supersededRemoteSyncNavigationUrls
+                    .getOrPut(navigation.runtimeTabId) { mutableSetOf() }
+                    .add(previousUrl)
+            }
+        return safeUrl
+    }
+
+    private fun ignoreSupersededRemoteNavigationEvent(event: BrowserEngineEvent): Boolean {
+        val safeUrl = event.address?.let(BrowserUriPolicy::normalizeHttpUrl) ?: return false
+        if (safeUrl !in supersededRemoteSyncNavigationUrls[event.tabId].orEmpty()) return false
+        if (
+            event.type == BrowserEngineEventType.NavigationCommitted ||
+            event.type == BrowserEngineEventType.NavigationFailed ||
+            event.isLoading == false
+        ) {
+            val expectedUrl = remoteSyncNavigationUrls[event.tabId] ?: return true
+            geckoEngineSessions[event.tabId]?.let { session ->
+                loadGeckoWithPrivacy(event.tabId, session, expectedUrl)
+            }
+        }
+        return true
+    }
+
+    private fun clearRemoteSyncNavigationTracking(tabId: String) {
+        remoteSyncNavigationUrls.remove(tabId)
+        supersededRemoteSyncNavigationUrls.remove(tabId)
+    }
+
+    private fun applySyncedTabNavigation(navigation: SyncedTabNavigation) {
+        val safeUrl = prepareSyncedTabHydration(navigation) ?: return
+        geckoEngineSessions[navigation.runtimeTabId]?.let { session ->
+            loadGeckoWithPrivacy(navigation.runtimeTabId, session, safeUrl)
+        }
+    }
+
+    private fun scheduleSyncedTabNavigation(
+        tabId: String,
+        remoteNavigationFinished: Boolean = false,
+    ) {
         if (isSessionEphemeralTab(tabId)) {
             pendingSyncNavigationRunnables.remove(tabId)?.let(mainHandler::removeCallbacks)
             return
@@ -11436,8 +8960,11 @@ class BrowserController(
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (!isSyncTargetProfile(tab.profileId) || tab.isIncognito) return
         remoteSyncNavigationUrls[tabId]?.let { expectedUrl ->
-            remoteSyncNavigationUrls.remove(tabId)
-            if (BrowserUriPolicy.normalizeHttpUrl(tab.url) == expectedUrl) return
+            if (BrowserUriPolicy.normalizeHttpUrl(tab.url) == expectedUrl) {
+                if (remoteNavigationFinished) clearRemoteSyncNavigationTracking(tabId)
+                return
+            }
+            clearRemoteSyncNavigationTracking(tabId)
         }
         pendingSyncNavigationRunnables.remove(tabId)?.let(mainHandler::removeCallbacks)
         val runnable = Runnable {
@@ -11458,8 +8985,10 @@ class BrowserController(
         if (tabIndex < 0) return
         val outbound = SyncedProfileRuntimeRules.outboundTab(tab, tabIndex, selectedTabId) ?: return
         val remote = syncState.profiles.firstOrNull { it.deviceId == targetDeviceId }
+        val remoteTab = remote?.tabs?.firstOrNull { it.candyId == outbound.candyId }
+        if (remoteTab?.url == outbound.url && remoteTab.title == outbound.title) return
         val mutationId = UUID.randomUUID().toString()
-        val mutation = if (remote?.tabs?.any { it.candyId == outbound.candyId } == true) {
+        val mutation = if (remoteTab != null) {
             SyncPendingMutation.Navigate(
                 mutationId = mutationId,
                 targetDeviceId = targetDeviceId,
@@ -11475,7 +9004,7 @@ class BrowserController(
                 tab = outbound,
             )
         }
-        syncRepository.mutate(mutation)
+        mutateSync(mutation)
     }
 
     private fun enqueueSyncedTabClose(tab: BrowserTab) {
@@ -11484,7 +9013,7 @@ class BrowserController(
         val targetDeviceId = syncTargetDeviceId(tab.profileId) ?: return
         pendingSyncNavigationRunnables.remove(tab.id)?.let(mainHandler::removeCallbacks)
         locallyPendingSyncCandyIds.remove(candyId)
-        syncRepository.mutate(
+        mutateSync(
             SyncPendingMutation.Close(
                 mutationId = UUID.randomUUID().toString(),
                 targetDeviceId = targetDeviceId,
@@ -11499,7 +9028,7 @@ class BrowserController(
             tab.profileId == profileId && !isSessionEphemeralTab(tab.id)
         }
             .mapNotNull(BrowserTab::syncCandyId)
-        syncRepository.mutate(
+        mutateSync(
             SyncPendingMutation.Reorder(
                 mutationId = UUID.randomUUID().toString(),
                 targetDeviceId = targetDeviceId,
@@ -11513,7 +9042,7 @@ class BrowserController(
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         val candyId = tab.syncCandyId ?: return
         val targetDeviceId = syncTargetDeviceId(tab.profileId) ?: return
-        syncRepository.mutate(
+        mutateSync(
             SyncPendingMutation.SetPinned(
                 mutationId = UUID.randomUUID().toString(),
                 targetDeviceId = targetDeviceId,
@@ -11521,6 +9050,11 @@ class BrowserController(
                 pinned = pinned,
             ),
         )
+    }
+
+    private fun mutateSync(mutation: SyncPendingMutation) {
+        syncMutationObserverForTesting?.invoke(mutation)
+        syncRepository.mutate(mutation)
     }
 
     private fun rebuildCandyMatcher() {
@@ -11535,13 +9069,11 @@ class BrowserController(
     private fun onFilterRulesChanged(persist: Boolean) {
         rebuildCandyMatcher()
         geckoEngineSessions.forEach { (tabId, session) ->
-            geckoPrivacyPolicyFor(tabId)?.let(session::updatePrivacyPolicy)
+            geckoPrivacyPolicyFor(tabId)?.let { policy ->
+                session.updatePrivacyPolicy(policy)
+            }
         }
-        webViews.forEach { (tabId, webView) ->
-            installCosmeticDocumentStartScripts(tabId, webView)
-            webView.evaluateJavascript(CandyCosmeticScript.cleanupScript, null)
-            injectCandyCosmeticFallback(tabId, webView, pageUrls[tabId] ?: webView.url)
-        }
+
         if (persist) savePersistentFilterRules()
     }
 
@@ -11670,19 +9202,20 @@ class BrowserController(
         preserveFaviconGeneration: Boolean = false,
     ) {
         closeGeckoEngineSession(tabId)
+        geckoSessionStateStore.delete(tabId)
         pendingSyncNavigationRunnables.remove(tabId)?.let(mainHandler::removeCallbacks)
+        clearRemoteSyncNavigationTracking(tabId)
         tabs.firstOrNull { it.id == tabId }?.syncCandyId?.let(locallyPendingSyncCandyIds::remove)
         clearPermissionActivity(tabId)
         clearPrivacyDataForTab(tabId)
-        webViews.remove(tabId)?.let(::destroyWebView)
-        residentWebViewAccessOrder.remove(tabId)
-        webViewProfileKeys.remove(tabId)
+        residentSessionAccessOrder.remove(tabId)
         edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
-        mainFrameTlsNavigations.remove(tabId)
         pageUrls.remove(tabId)
+        extensionTabMuteOverrides.remove(tabId)
         bottomBarCompactStates.remove(tabId)
+        browserChromeScrollStates.remove(tabId)
         candyTrailHistoryBindings.remove(tabId)
         pendingCandyTrailTargets.remove(tabId)
         pendingPopupNavigations.remove(tabId)
@@ -11701,7 +9234,6 @@ class BrowserController(
         candyTrails.remove(tabId)
         candyTrailGenerations.remove(tabId)
         candyTrailRepository.delete(tabId)
-        webViewStateRepository.delete(tabId)
         previews.remove(tabId)
         previewRepository.delete(tabId)
         invalidateFavicon(tabId)
@@ -11711,16 +9243,14 @@ class BrowserController(
     private fun removeTabRuntimeForSnooze(tab: BrowserTab) {
         candyTrails[tab.id]?.let { trail -> candyTrailRepository.save(tab, trail) }
         closeGeckoEngineSession(tab.id)
-        webViews[tab.id]?.let { webView -> persistWebViewState(tab.id, webView) }
+
         clearPrivacyDataForTab(tab.id)
-        webViews.remove(tab.id)?.let(::destroyWebView)
-        residentWebViewAccessOrder.remove(tab.id)
-        webViewProfileKeys.remove(tab.id)
+        residentSessionAccessOrder.remove(tab.id)
         edgeToEdgePages.remove(tab.id)
         navigationGenerations.remove(tab.id)
-        mainFrameTlsNavigations.remove(tab.id)
         pageUrls.remove(tab.id)
         bottomBarCompactStates.remove(tab.id)
+        browserChromeScrollStates.remove(tab.id)
         candyTrailHistoryBindings.remove(tab.id)
         pendingCandyTrailTargets.remove(tab.id)
         pendingPopupNavigations.remove(tab.id)
@@ -11834,19 +9364,8 @@ class BrowserController(
         ).show()
     }
 
-    private fun cookiesFor(tabId: String, url: String): String? {
-        val webView = webViews[tabId]
-        if (webView != null) return cookieManagerFor(webView).getCookie(url)
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return null
-        return if (profileAssignmentFor(tab) == WebViewProfileAssignment.Default) {
-            CookieManager.getInstance().getCookie(url)
-        } else {
-            null
-        }
-    }
 
     private fun referrerFor(tabId: String): String? = pageUrls[tabId]
-        ?: webViews[tabId]?.url
         ?: tabs.firstOrNull { it.id == tabId }?.url
 
     private fun clearPrivacyDataForTab(
@@ -12005,7 +9524,7 @@ class BrowserController(
         return ProtectionRequestContext(
             profileId = tab.profileId,
             isIncognito = tab.isIncognito,
-            storageKey = profileAssignmentFor(tab).storageKey,
+            storageKey = GeckoProfileStorageRules.privacyStorageKey(tab),
             pageHost = pageHost,
             cookieBannerRemovalDisabled = pageHost == null ||
                 isCookieBannerRemovalDisabled(tab, pageHost),
@@ -12125,69 +9644,6 @@ class BrowserController(
         return !isCookieBannerRemovalDisabled(tab, host)
     }
 
-    private fun applyCookiePolicy(tabId: String, webView: WebView, pageUrl: String?) {
-        val acceptThirdPartyCookies = PrivacyPolicyRules.acceptsThirdPartyCookies(
-            blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
-            sitePaused = isSiteProtectionPaused(tabId, pageUrl),
-            thirdPartyLoginAllowed = isFederatedLoginCompatibilityEnabled(tabId, pageUrl),
-            captchaCompatibilityAllowed = isCaptchaCompatibilityEnabled(tabId, pageUrl),
-        )
-        cookieManagerFor(webView).setAcceptThirdPartyCookies(webView, acceptThirdPartyCookies)
-    }
-
-    private fun applyExternalLinkPreviewCookiePolicy(
-        tab: BrowserTab,
-        state: LinkPeekProtectionState,
-        webView: WebView,
-    ) {
-        val pageHost = PrivacyRequestSanitizer.webHost(state.pageUrl)
-        val sitePaused = pageHost != null && SiteExceptionRules.isPaused(
-            pageHost,
-            permanentSiteExceptions[tab.profileId].orEmpty(),
-        )
-        val acceptThirdPartyCookies = PrivacyPolicyRules.acceptsThirdPartyCookies(
-            blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
-            sitePaused = sitePaused,
-        )
-        cookieManagerFor(webView).setAcceptThirdPartyCookies(webView, acceptThirdPartyCookies)
-    }
-
-    private fun applySiteProtectionForNavigation(
-        tabId: String,
-        webView: WebView,
-        pageUrl: String,
-    ) {
-        applyCookiePolicy(tabId, webView, pageUrl)
-        installSiteCompatibilityDocumentStartScripts(tabId, webView, pageUrl)
-        installCosmeticDocumentStartScripts(tabId, webView, pageUrl)
-        if (!workerSettings.hideCookieConsent) {
-            webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
-        } else if (!isCookieBannerRemovalEnabled(tabId, pageUrl)) {
-            webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
-        }
-    }
-
-    private fun loadUrlWithProtection(tabId: String, webView: WebView, pageUrl: String) {
-        if (!blockingStartGate.isReady) {
-            invalidatePendingDesktopNavigationOverride(webView)
-            enqueueBlockingStart(
-                tabId,
-                PendingBlockingStart(
-                    webView = webView,
-                    pageUrl = pageUrl,
-                    restoreState = false,
-                ),
-            )
-            return
-        }
-        loadUrlWithProtectionNow(tabId, webView, pageUrl)
-    }
-
-    private fun enqueueBlockingStart(tabId: String, start: PendingBlockingStart) {
-        suppressedInitialBlankTabIds.add(tabId)
-        blockingStartGate.enqueue(tabId, start)
-    }
-
     private fun cancelPendingBlockingStart(tabId: String) {
         blockingStartGate.cancel(tabId)
         suppressedInitialBlankTabIds.remove(tabId)
@@ -12198,213 +9654,46 @@ class BrowserController(
         suppressedInitialBlankTabIds.clear()
     }
 
-    private fun loadUrlWithProtectionNow(
-        tabId: String,
-        webView: WebView,
-        pageUrl: String,
-        preserveExternalNavigationGrant: Boolean = false,
-    ) {
-        prepareWebViewForNavigation(
-            tabId = tabId,
-            webView = webView,
-            pageUrl = pageUrl,
-            preserveExternalNavigationGrant = preserveExternalNavigationGrant,
-        )
-        activatePendingInitialExternalNavigationGrant(tabId, pageUrl)
-        webView.loadUrl(pageUrl)
-    }
-
-    private fun resumePendingBlockingStarts(pendingStarts: Map<String, PendingBlockingStart>) {
-        pendingStarts.forEach { (tabId, pending) ->
-            if (destroyed || webViews[tabId] !== pending.webView) return@forEach
-            val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return@forEach
-            val restored = pending.restoreState && tab.url == pending.pageUrl &&
-                restoreWebViewStateWithProtection(tab, pending.webView)
-            if (!restored) {
-                loadUrlWithProtectionNow(tabId, pending.webView, pending.pageUrl)
-            }
-        }
-    }
-
     private fun reloadTabWithProtection(tabId: String) {
-        if (usesGeckoEngine) {
-            updateProtectionRequestContext(tabId, pageUrls[tabId])
-            val session = geckoEngineSessionFor(tabId)
-            geckoPrivacyPolicyFor(tabId)?.let { policy ->
-                session.updatePrivacyPolicy(policy) {
-                    session.execute(BrowserEngineCommands.reload())
-                }
+        updateProtectionRequestContext(tabId, pageUrls[tabId])
+        val session = geckoEngineSessionFor(tabId)
+        geckoPrivacyPolicyFor(tabId)?.let { policy ->
+            session.updatePrivacyPolicy(policy) {
+                session.execute(BrowserEngineCommands.reload())
             }
-            return
         }
-        cancelPendingHttpAuthChallenge(tabId)
-        val webView = webViewFor(tabId)
-        val pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
-        clearExternalNavigationAuthorization(tabId)
-        invalidatePendingDesktopNavigationOverride(webView)
-        if (!blockingStartGate.isReady && pageUrl != null && pageUrl != BLANK_URL) {
-            enqueueBlockingStart(
-                tabId,
-                PendingBlockingStart(
-                    webView = webView,
-                    pageUrl = pageUrl,
-                    restoreState = false,
-                ),
-            )
-            return
-        }
-        webView.stopLoading()
-        updateProtectionRequestContext(tabId, pageUrl)
-        applyDesktopViewPolicy(tabId, webView, pageUrl)
-        applyCookiePolicy(tabId, webView, pageUrl)
-        installCosmeticDocumentStartScripts(tabId, webView)
-        installSiteCompatibilityDocumentStartScripts(tabId, webView)
-        if (!isCookieBannerRemovalEnabled(tabId, pageUrl)) {
-            webView.evaluateJavascript(contentBlocker.consentRemovalScript, null)
-        }
-        updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
-        webView.reload()
     }
 
     private fun refreshProtectionForProfile(profileId: String) {
-        if (usesGeckoEngine) {
-            tabs.asSequence()
-                .filter { tab -> tab.profileId == profileId && !tab.isIncognito }
-                .forEach { tab ->
-                    updateProtectionRequestContext(tab.id, pageUrls[tab.id] ?: tab.url)
-                    geckoEngineSessions[tab.id]?.let { session ->
-                        geckoPrivacyPolicyFor(tab.id)?.let(session::updatePrivacyPolicy)
-                    }
-                }
-            return
-        }
         tabs.asSequence()
             .filter { tab -> tab.profileId == profileId && !tab.isIncognito }
             .forEach { tab ->
-                val webView = webViews[tab.id] ?: return@forEach
-                val pageUrl = pageUrls[tab.id] ?: tab.url
-                updateProtectionRequestContext(tab.id, pageUrl)
-                installSiteCompatibilityDocumentStartScripts(tab.id, webView)
-                installCosmeticDocumentStartScripts(tab.id, webView)
-                applySiteProtectionForNavigation(tab.id, webView, pageUrl)
+                updateProtectionRequestContext(tab.id, pageUrls[tab.id] ?: tab.url)
+                geckoEngineSessions[tab.id]?.let { session ->
+                    geckoPrivacyPolicyFor(tab.id)?.let { policy ->
+                        session.updatePrivacyPolicy(policy)
+                    }
+                }
             }
     }
 
-    private fun cookieManagerFor(webView: WebView): CookieManager =
-        if (isProfileIsolationSupported) {
-            WebViewCompat.getProfile(webView).cookieManager
-        } else {
-            CookieManager.getInstance()
-        }
-
-    private fun profileAssignmentFor(tab: BrowserTab): WebViewProfileAssignment =
-        WebViewProfileRules.assignment(
-            tab = tab,
-            profiles = profiles,
-            multiProfileSupported = isProfileIsolationSupported,
-            incognitoProfileName = incognitoWebViewProfileName,
-        )
-
-    private fun recreateWebViews(
+    private fun recreateEngineSessions(
         tabIds: Set<String>,
         reloadImmediately: Boolean = false,
     ) {
         if (tabIds.isEmpty()) return
-        if (usesGeckoEngine) {
-            tabIds.forEach(::closeGeckoEngineSession)
-            webViewRevision++
-            if (reloadImmediately) {
-                tabIds.forEach { tabId ->
-                    tabs.firstOrNull { tab -> tab.id == tabId && tab.url != BLANK_URL }
-                        ?.let { geckoEngineSessionFor(tabId) }
-                }
-            }
-            return
-        }
-        val transientIds = tabIds.filterTo(mutableSetOf()) { tabId ->
-            tabId in transientPopupTabIds ||
-                tabId in pendingPopupNavigations ||
-                blockedPopupOffer?.popupTabId == tabId
-        }
-        transientIds.forEach(::discardTransientPopup)
-        val retainedTabIds = tabIds - transientIds - federatedLoginPopupTabIds
-        pendingPopunderNavigations.entries.removeAll { (_, pending) ->
-            pending.openerTabId in tabIds || pending.popupTabId in tabIds
-        }
-        clearServiceWorkerClientsLosingLastWebView(retainedTabIds)
-        retainedTabIds.forEach { tabId ->
-            cancelPendingBlockingStart(tabId)
-            clearPermissionActivity(tabId)
-            clearPrivacyDataForTab(tabId, clearTemporarySiteOverrides = false)
-            candyTrailHistoryBindings.remove(tabId)
-            pendingCandyTrailTargets.remove(tabId)
-            webViews[tabId]?.let { webView -> persistWebViewState(tabId, webView) }
-            webViews.remove(tabId)?.let(::destroyWebView)
-            residentWebViewAccessOrder.remove(tabId)
-            webViewProfileKeys.remove(tabId)
-            edgeToEdgePages.remove(tabId)
-            navigationGenerations.remove(tabId)
-            clearExternalNavigationAuthorization(tabId)
-            mainFrameTlsNavigations.remove(tabId)
-            pageUrls.remove(tabId)
-        }
-        webViewRevision++
+        tabIds.forEach(::closeGeckoEngineSession)
+        engineViewRevision++
         if (reloadImmediately) {
-            retainedTabIds.forEach { tabId ->
-                tabs.firstOrNull { tab -> tab.id == tabId }?.let { tab ->
-                    webViewFor(tabId, initialUrlOverride = tab.url)
-                }
+            tabIds.forEach { tabId ->
+                tabs.firstOrNull { tab -> tab.id == tabId && tab.url != BLANK_URL }
+                    ?.let { geckoEngineSessionFor(tabId) }
             }
         }
-    }
-
-    private fun tryDeleteNamedWebViewProfile(profileName: String): Boolean {
-        configuredServiceWorkerProfiles.remove(profileName)
-        return runCatching {
-            val profileStore = ProfileStore.getInstance()
-            profileName !in profileStore.allProfileNames || profileStore.deleteProfile(profileName)
-        }.getOrDefault(false)
-    }
-
-    private fun deleteOrScheduleWebViewProfile(profileName: String) {
-        if (usesGeckoEngine || !isProfileIsolationSupported) return
-        profileDeletionCoordinator.deleteOrSchedule(profileName)
-    }
-
-    private fun deletePendingWebViewProfiles() {
-        if (!isProfileIsolationSupported) return
-        val orphanedIncognitoProfiles = runCatching { ProfileStore.getInstance().allProfileNames }
-            .getOrDefault(emptyList())
-            .filterTo(linkedSetOf()) { it.startsWith(INCOGNITO_WEBVIEW_PROFILE_PREFIX) }
-        profileDeletionCoordinator.retry(
-            store.loadPendingWebViewProfileDeletions() + orphanedIncognitoProfiles,
-        )
-    }
-
-    private fun clearServiceWorkerClientsLosingLastWebView(tabIds: Set<String>) {
-        WebViewProfileRules.storageKeysLosingLastWebView(
-            assignments = webViewProfileKeys.toMap(),
-            removedTabIds = tabIds,
-        ).forEach(::clearProfileServiceWorkerClient)
-    }
-
-    private fun clearProfileServiceWorkerClient(profileName: String) {
-        existingWebViewForProfile(profileName)?.let { webView ->
-            runCatching {
-                WebViewCompat.getProfile(webView).serviceWorkerController.setServiceWorkerClient(null)
-            }
-        }
-        configuredServiceWorkerProfiles.remove(profileName)
     }
 
     private fun prepareIncognitoProfileForRemoval() {
-        if (usesGeckoEngine) {
-            if (geckoLinkPeekBindings.isNotEmpty()) contentActions.dismiss()
-            return
-        }
-        destroyLinkPeekPreviewWebViews(incognitoWebViewProfileName)
-        clearExistingWebViewProfileData(incognitoWebViewProfileName)
-        clearProfileServiceWorkerClient(incognitoWebViewProfileName)
+        if (geckoLinkPeekBindings.isNotEmpty()) contentActions.dismiss()
     }
 
     private fun clearIncognitoProfile() {
@@ -12419,108 +9708,6 @@ class BrowserController(
             ephemeralRuleIds.clear()
             onFilterRulesChanged(persist = false)
         }
-        if (usesGeckoEngine) return
-        if (!isProfileIsolationSupported) return
-        deleteOrScheduleWebViewProfile(incognitoWebViewProfileName)
-        incognitoWebViewProfileName = newIncognitoWebViewProfileName()
-    }
-
-    private fun clearAllWebViewProfileData() {
-        destroyLinkPeekPreviewWebViews()
-        if (usesGeckoEngine) {
-            geckoEngineSessionFactory.clearAllData()
-            return
-        }
-        clearProfileData(
-            webStorage = WebStorage.getInstance(),
-            cookieManager = CookieManager.getInstance(),
-            geolocationPermissions = GeolocationPermissions.getInstance(),
-        )
-        if (!isProfileIsolationSupported) return
-        val profileNames = runCatching { ProfileStore.getInstance().allProfileNames }
-            .getOrDefault(emptyList())
-            .filter { profileName ->
-                profileName.startsWith(INCOGNITO_WEBVIEW_PROFILE_PREFIX) ||
-                    WebViewProfileRules.isManagedIsolatedProfileName(profileName)
-            }
-        profileNames.forEach(::clearNamedWebViewProfileData)
-    }
-
-    private fun clearNamedWebViewProfileData(profileName: String) {
-        val existingWebView = existingWebViewForProfile(profileName)
-        val temporaryWebView = if (existingWebView == null) {
-            WebView(activity).also { webView -> WebViewCompat.setProfile(webView, profileName) }
-        } else {
-            null
-        }
-        val webView = existingWebView ?: temporaryWebView ?: return
-        runCatching {
-            val profile = WebViewCompat.getProfile(webView)
-            clearProfileData(
-                webStorage = profile.webStorage,
-                cookieManager = profile.cookieManager,
-                geolocationPermissions = profile.geolocationPermissions,
-            )
-        }
-        temporaryWebView?.let(::destroyWebView)
-    }
-
-    private fun clearExistingWebViewProfileData(profileName: String) {
-        val webView = existingWebViewForProfile(profileName) ?: return
-        runCatching {
-            val profile = WebViewCompat.getProfile(webView)
-            clearProfileData(
-                webStorage = profile.webStorage,
-                cookieManager = profile.cookieManager,
-                geolocationPermissions = profile.geolocationPermissions,
-            )
-        }
-    }
-
-    private fun existingWebViewForProfile(profileName: String): WebView? =
-        webViews.entries
-            .firstOrNull { (tabId, _) -> webViewProfileKeys[tabId] == profileName }
-            ?.value
-
-    private fun clearProfileData(
-        webStorage: WebStorage,
-        cookieManager: CookieManager,
-        geolocationPermissions: GeolocationPermissions,
-    ) {
-        geolocationPermissions.clearAll()
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)) {
-            WebStorageCompat.deleteBrowsingData(webStorage) {}
-        } else {
-            cookieManager.removeAllCookies(null)
-            cookieManager.flush()
-            webStorage.deleteAllData()
-        }
-    }
-
-    private fun destroyWebView(webView: WebView) {
-        cancelPendingHttpAuthChallenge(webView = webView)
-        if (findInPageSession?.webView === webView) closeFindInPage()
-        fullscreenVideoSession
-            ?.takeIf { session -> session.webView === webView }
-            ?.let { session -> dismissFullscreenVideo(session, notifyPage = true) }
-        removeWebMediaBridge(webView)
-        genericCosmeticBridges.remove(webView)
-        removeDesktopViewportDocumentStartScript(webView)
-        removeSiteCompatibilityDocumentStartScripts(webView)
-        removeWebContentTopInsetDocumentStartScript(webView)
-        webContentTopInsetNativeFallbacks.remove(webView)
-        removeCosmeticDocumentStartScripts(webView)
-        removeVideoAutoplayDocumentStartScript(webView)
-        removeUserScripts(webView)
-        webView.removeJavascriptInterface(WebContentTopInsetScript.bridgeName)
-        defaultUserAgentMetadataBySettings.remove(webView.settings)
-        desktopNavigationOverrideTokens.remove(webView)
-        webView.setOnScrollChangeListener(null)
-        (webView.parent as? FrameLayout)?.removeView(webView)
-        webView.stopLoading()
-        webView.clearHistory()
-        webView.removeAllViews()
-        webView.destroy()
     }
 
     private fun updateSelectedTabId(tabId: String) {
@@ -12534,85 +9721,19 @@ class BrowserController(
         }
         selectedTabId = tabId
         if (usesGeckoEngine && previousTabId != tabId) {
-            geckoEngineSessions[tabId]?.setActive(true)
-        }
-    }
-
-    private fun destroyLinkPeekPreviewWebViews(storageKey: String? = null) {
-        if (storageKey == null) {
-            geckoLinkPeekBindings.keys.toList().forEach(::releaseLinkPeekPreviewView)
-        }
-        val targets = linkPeekPreviewAssignments
-            .filterValues { assignment -> storageKey == null || assignment.storageKey == storageKey }
-            .keys
-            .toList()
-        targets.forEach { webView ->
-            linkPeekPreviewAssignments.remove(webView)
-            destroyWebView(webView)
-        }
-    }
-
-    private fun newIncognitoWebViewProfileName(): String =
-        INCOGNITO_WEBVIEW_PROFILE_PREFIX + UUID.randomUUID().toString()
-
-    private fun pauseWebView(webView: WebView) {
-        val tabId = webViews.entries.firstOrNull { (_, candidate) -> candidate === webView }?.key
-        val keepsFullscreenSourceResumed = tabId != null &&
-            FullscreenVideoRules.keepsWebViewResumed(
-                sessionTabId = fullscreenVideoSession?.tabId,
-                tabId = tabId,
-                isPrivate = fullscreenVideoSession?.isPrivate == true,
+            geckoEngineSessions[tabId]?.setActive(
+                isActivityResumed && externalLinkPreviewState == null,
             )
-        val keepsPresentedSourceResumed = tabId != null &&
-            webMediaPresentation?.key?.tabId == tabId &&
-            tabs.firstOrNull { it.id == tabId }?.isIncognito == false
-        val keepsBackgroundAudioResumed = activeBackgroundAudioChannel()
-            ?.takeIf { channel -> channel.payload.isPlaying }
-            ?.webView === webView
-        if (
-            keepsFullscreenSourceResumed ||
-            keepsPresentedSourceResumed ||
-            keepsBackgroundAudioResumed
-        ) {
-            webView.settings.allowContinuousMediaPlayback()
-            return
+            geckoEngineSessionFactory.notifySelectedExtensionTabChanged()
+            castMediaCandidate = geckoMediaStates[tabId]?.let { state ->
+                geckoCastMediaCandidate(tabId, state)
+            }
+            notifyMediaStateChanged()
         }
-        forcePauseWebView(webView)
     }
 
-    private fun forcePauseWebView(webView: WebView) {
-        webView.onPause()
-        webView.settings.requireMediaPlaybackGesture()
-    }
-
-    private fun resumeFullscreenVideoWebView(session: FullscreenVideoSession) {
-        if (fullscreenVideoSession !== session || webViews[session.tabId] !== session.webView) return
-        resumeWebView(session.tabId, session.webView)
-        session.webView.settings.allowContinuousMediaPlayback()
-    }
-
-    private fun resumeWebView(tabId: String, webView: WebView) {
-        applyMediaPlaybackPolicy(tabId, webView)
-        applyDomainMutePolicy(
-            tabId = tabId,
-            webView = webView,
-            pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url,
-        )
-        webView.onResume()
-    }
-
-    private fun applyMediaPlaybackPolicy(tabId: String, webView: WebView) {
-        if (
-            MediaPlaybackPolicy.requiresUserGesture(
-                tabId = tabId,
-                selectedTabId = selectedTabId,
-                isActivityResumed = isActivityResumed,
-            )
-        ) {
-            webView.settings.requireMediaPlaybackGesture()
-        } else {
-            webView.settings.allowContinuousMediaPlayback()
-        }
+    private fun destroyLinkPeekPreviewSessions() {
+        geckoLinkPeekBindings.keys.toList().forEach(::releaseLinkPeekPreviewView)
     }
 
     private fun isDomainMuted(tab: BrowserTab, pageUrl: String?): Boolean {
@@ -12622,6 +9743,21 @@ class BrowserController(
             permanentMutedDomains[tab.profileId]
         }
         return DomainMuteRules.isMuted(pageUrl, mutedDomains.orEmpty())
+    }
+
+    private fun isTabAudioMuted(tab: BrowserTab, pageUrl: String?): Boolean =
+        GeckoExtensionChromeRules.effectiveAudioMuted(
+            domainMuted = isDomainMuted(tab, pageUrl),
+            extensionOverride = extensionTabMuteOverrides[tab.id],
+        )
+
+    private fun setExtensionTabMuted(tabId: String, muted: Boolean): Boolean {
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return false
+        extensionTabMuteOverrides[tabId] = muted
+        geckoEngineSessions[tabId]?.setAudioMuted(
+            isTabAudioMuted(tab, pageUrls[tabId] ?: tab.url),
+        )
+        return true
     }
 
     private fun isDesktopView(tab: BrowserTab, pageUrl: String?): Boolean {
@@ -12642,239 +9778,21 @@ class BrowserController(
         return PopupSiteRules.shouldAlwaysBlock(pageUrl, domains.orEmpty())
     }
 
-    private fun prepareWebViewForNavigation(
-        tabId: String,
-        webView: WebView,
-        pageUrl: String,
-        preserveExternalNavigationGrant: Boolean = false,
-    ) {
-        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
-        cancelPendingHttpAuthChallenge(tabId)
-        if (!preserveExternalNavigationGrant) externalNavigationGrants.remove(tabId)
-        invalidatePendingDesktopNavigationOverride(webView)
-        webView.stopLoading()
-        applyDesktopViewPolicy(tab, webView, pageUrl)
-        webView.stopLoading()
-        applySiteProtectionForNavigation(tabId, webView, pageUrl)
-    }
-
-    private fun overrideWebRequestedNavigationForDesktopView(
-        tab: BrowserTab,
-        webView: WebView,
-        request: WebResourceRequest,
-        isCurrent: () -> Boolean,
-        navigate: (String) -> Unit,
-    ): Boolean {
-        if (!request.isForMainFrame) return false
-        val overrideToken = invalidatePendingDesktopNavigationOverride(webView)
-        val targetUrl = request.url.toString()
-        installDesktopViewportDocumentStartScript(tab, webView, targetUrl)
-        if (
-            !DesktopNavigationRules.shouldReplayForUserAgentChange(
-                isForMainFrame = request.isForMainFrame,
-                method = request.method,
-                isTargetUserAgentApplied =
-                    isDesktopViewUserAgentApplied(tab, webView, targetUrl),
-            )
-        ) return false
-        mainHandler.post {
-            if (!destroyed &&
-                desktopNavigationOverrideTokens[webView] == overrideToken &&
-                isCurrent()
-            ) {
-                navigate(targetUrl)
-            }
-        }
-        return true
-    }
-
-    private fun invalidatePendingDesktopNavigationOverride(webView: WebView): Long {
-        desktopNavigationOverrideSequence++
-        return desktopNavigationOverrideSequence.also { token ->
-            desktopNavigationOverrideTokens[webView] = token
-        }
-    }
-
-    private fun applyFinishedNavigationDesktopViewPolicy(
-        tab: BrowserTab,
-        webView: WebView,
-        pageUrl: String,
-        isCurrent: () -> Boolean,
-    ) {
-        if (!isCurrent() || webView.url != pageUrl) return
-        injectDesktopViewportFallback(tab, webView, pageUrl)
-        if (webView.progress < 100) return
-        if (isDesktopViewUserAgentApplied(tab, webView, pageUrl)) return
-        applyDesktopViewPolicy(tab, webView, pageUrl)
-    }
-
     private fun reloadDesktopViewDomain(
         profileId: String,
         isIncognito: Boolean,
         domain: String,
     ) {
-        if (usesGeckoEngine) {
-            tabs.asSequence()
-                .filter { tab -> tab.profileId == profileId && tab.isIncognito == isIncognito }
-                .filter { tab ->
-                    DesktopSiteRules.domainForUrl(pageUrls[tab.id] ?: tab.url) == domain
-                }
-                .forEach { tab ->
-                    val session = geckoEngineSessionFor(tab.id)
-                    session.setDesktopMode(isDesktopView(tab, pageUrls[tab.id] ?: tab.url))
-                    session.execute(BrowserEngineCommands.reload())
-                }
-            return
-        }
         tabs.asSequence()
             .filter { tab -> tab.profileId == profileId && tab.isIncognito == isIncognito }
             .filter { tab ->
                 DesktopSiteRules.domainForUrl(pageUrls[tab.id] ?: tab.url) == domain
             }
-            .mapNotNull { tab -> webViews[tab.id]?.let { webView -> tab.id to webView } }
-            .forEach { (tabId, webView) ->
-                webView.stopLoading()
-                applyDesktopViewPolicy(
-                    tabId = tabId,
-                    webView = webView,
-                    pageUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url,
-                )
-                reloadTabWithProtection(tabId)
+            .forEach { tab ->
+                val session = geckoEngineSessionFor(tab.id)
+                session.setDesktopMode(isDesktopView(tab, pageUrls[tab.id] ?: tab.url))
+                session.execute(BrowserEngineCommands.reload())
             }
-    }
-
-    private fun applyDesktopViewPolicy(tabId: String, webView: WebView, pageUrl: String?) {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        applyDesktopViewPolicy(tab, webView, pageUrl)
-    }
-
-    private fun applyDesktopViewPolicy(tab: BrowserTab, webView: WebView, pageUrl: String?) {
-        val enabled = isDesktopView(tab, pageUrl)
-        val federatedLoginCompatibility = tab.id in federatedLoginCompatibilityTabIds ||
-            isFederatedLoginCompatibilityEnabled(tab, pageUrl)
-        val desiredUserAgent = desiredDesktopViewUserAgent(tab, pageUrl)
-        val defaultMetadata = defaultUserAgentMetadata(webView.settings)
-        with(webView.settings) {
-            if (userAgentString != desiredUserAgent) {
-                userAgentString = if (enabled || federatedLoginCompatibility) {
-                    desiredUserAgent
-                } else {
-                    null
-                }
-            }
-            if (useWideViewPort != enabled) useWideViewPort = enabled
-            if (loadWithOverviewMode != enabled) loadWithOverviewMode = enabled
-        }
-        applyDesktopUserAgentMetadata(webView.settings, enabled, defaultMetadata)
-        installDesktopViewportDocumentStartScript(tab, webView, pageUrl)
-    }
-
-    private fun isDesktopViewUserAgentApplied(
-        tab: BrowserTab,
-        webView: WebView,
-        pageUrl: String?,
-    ): Boolean {
-        return webView.settings.userAgentString == desiredDesktopViewUserAgent(tab, pageUrl)
-    }
-
-    private fun desiredDesktopViewUserAgent(
-        tab: BrowserTab,
-        pageUrl: String?,
-    ): String {
-        val enabled = isDesktopView(tab, pageUrl)
-        val federatedLoginCompatibility = tab.id in federatedLoginCompatibilityTabIds ||
-            isFederatedLoginCompatibilityEnabled(tab, pageUrl)
-        val defaultUserAgent = WebSettings.getDefaultUserAgent(activity)
-        return when {
-            enabled -> DesktopSiteRules.desktopUserAgent(defaultUserAgent)
-            federatedLoginCompatibility -> FederatedLoginRules.compatibleUserAgent(defaultUserAgent)
-            else -> defaultUserAgent
-        }
-    }
-
-    private fun defaultUserAgentMetadata(settings: WebSettings): UserAgentMetadata? {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.USER_AGENT_METADATA)) {
-            return null
-        }
-        return defaultUserAgentMetadataBySettings[settings] ?: runCatching {
-            WebSettingsCompat.getUserAgentMetadata(settings)
-        }.getOrNull()?.also { metadata ->
-            defaultUserAgentMetadataBySettings[settings] = metadata
-        }
-    }
-
-    private fun applyDesktopUserAgentMetadata(
-        settings: WebSettings,
-        enabled: Boolean,
-        defaultMetadata: UserAgentMetadata?,
-    ) {
-        defaultMetadata ?: return
-        val desiredMetadata = if (enabled) {
-            UserAgentMetadata.Builder(defaultMetadata)
-                .setMobile(false)
-                .setPlatform("Linux")
-                .setPlatformVersion("")
-                .setArchitecture("x86")
-                .setModel("")
-                .setBitness(64)
-                .setWow64(false)
-                .let { builder ->
-                    if (
-                        WebViewFeature.isFeatureSupported(
-                            WebViewFeature.USER_AGENT_METADATA_FORM_FACTORS,
-                        )
-                    ) {
-                        builder.setFormFactors(listOf(UserAgentMetadata.FORM_FACTOR_DESKTOP))
-                    } else {
-                        builder
-                    }
-                }
-                .build()
-        } else {
-            defaultMetadata
-        }
-        val currentMetadata = runCatching {
-            WebSettingsCompat.getUserAgentMetadata(settings)
-        }.getOrNull()
-        if (currentMetadata == desiredMetadata) return
-        runCatching { WebSettingsCompat.setUserAgentMetadata(settings, desiredMetadata) }
-    }
-
-    private fun installDesktopViewportDocumentStartScript(
-        tab: BrowserTab,
-        view: WebView,
-        pageUrl: String?,
-    ) {
-        removeDesktopViewportDocumentStartScript(view)
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
-        val domains = desktopViewDomains(tab)
-        val script = DesktopViewportScript.create(domains)
-        if (script.isEmpty()) return
-        val allowedOrigins = DesktopViewportScript.allowedOrigins(domains).toMutableSet()
-        if (isDesktopView(tab, pageUrl)) {
-            CandyDocumentStartOrigin.fromUrl(pageUrl)?.let(allowedOrigins::add)
-        }
-        runCatching {
-            WebViewCompat.addDocumentStartJavaScript(
-                view,
-                script,
-                allowedOrigins,
-            )
-        }.getOrNull()?.let { handler ->
-            desktopViewportScriptHandlers[view] = handler
-            desktopViewportScriptOrigins[view] = allowedOrigins.toSet()
-        }
-    }
-
-    private fun injectDesktopViewportFallback(tab: BrowserTab, view: WebView, pageUrl: String?) {
-        if (!isDesktopView(tab, pageUrl)) return
-        if (DesktopViewportScript.covers(pageUrl, desktopViewportScriptOrigins[view].orEmpty())) {
-            return
-        }
-        val domain = DesktopSiteRules.domainForUrl(pageUrl) ?: return
-        DesktopViewportScript.create(setOf(domain))
-            .takeIf(String::isNotEmpty)
-            ?.let { script -> view.evaluateJavascript(script, null) }
     }
 
     private fun desktopViewDomains(tab: BrowserTab): Set<String> = if (tab.isIncognito) {
@@ -12883,26 +9801,15 @@ class BrowserController(
         permanentDesktopViewDomains[tab.profileId].orEmpty()
     }
 
-    private fun removeDesktopViewportDocumentStartScript(view: WebView) {
-        desktopViewportScriptOrigins.remove(view)
-        desktopViewportScriptHandlers.remove(view)?.let { handler ->
-            runCatching(handler::remove)
-        }
-    }
-
     private fun refreshDomainMuteForProfile(profileId: String, isIncognito: Boolean) {
-        tabs.asSequence()
-            .filter { tab -> tab.profileId == profileId && tab.isIncognito == isIncognito }
-            .forEach { tab ->
-                val webView = webViews[tab.id] ?: return@forEach
-                applyDomainMutePolicy(tab.id, webView, pageUrls[tab.id] ?: tab.url)
-            }
+        tabs.filter { it.profileId == profileId && it.isIncognito == isIncognito }
+            .forEach { tab -> refreshDomainMuteForTab(tab.id) }
     }
 
-    private fun applyDomainMutePolicy(tabId: String, webView: WebView, pageUrl: String?) {
-        if (!isDomainMuteSupported) return
+    private fun refreshDomainMuteForTab(tabId: String) {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
-        WebViewCompat.setAudioMuted(webView, isDomainMuted(tab, pageUrl))
+        val session = geckoEngineSessions[tabId] ?: return
+        session.setAudioMuted(isTabAudioMuted(tab, pageUrls[tabId] ?: tab.url))
     }
 
     private companion object {
@@ -12920,6 +9827,12 @@ class BrowserController(
             WindowInsetsCompat.Type.displayCutout(),
         )
         const val PREVIEW_CAPTURE_TIMEOUT_MS = 64L
+        const val CAMERA_FACING_EXTRA = "android.intent.extras.CAMERA_FACING"
+        const val CAMERA_FACING_BACK = 0
+        const val CAMERA_FACING_FRONT = 1
+        const val GECKO_PREVIEW_CAPTURE_TIMEOUT_MS = 1_000L
+        const val BOTTOM_BAR_COLLAPSE_THRESHOLD_DP = 24f
+        const val BOTTOM_BAR_EXPAND_THRESHOLD_DP = 16f
         const val PREVIEW_NEAR_BLACK_CHANNEL_MAX = 16
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
         const val SYNC_REFRESH_INTERVAL_MILLIS = 15_000L
@@ -12937,8 +9850,8 @@ class BrowserController(
         const val WEB_MEDIA_RATE_WINDOW_MILLIS = 1_000L
         const val PICTURE_IN_PICTURE_FALLBACK_GRACE_MILLIS = 900L
         const val PICTURE_IN_PICTURE_EXIT_GUARD_DELAY_MILLIS = 350L
-        const val PICTURE_IN_PICTURE_PLAY_RETRY_DELAY_MILLIS = 250L
-        const val PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS = 2_000L
+        val PICTURE_IN_PICTURE_PLAY_RETRY_DELAYS_MILLIS = longArrayOf(250L, 1_000L, 2_000L)
+        const val PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS = 5_000L
         const val WEB_PICTURE_IN_PICTURE_FULLSCREEN_CLEANUP_DELAY_MILLIS = 250L
         const val WEB_PICTURE_IN_PICTURE_REQUEST_TIMEOUT_MILLIS = 5_000L
         const val WEB_PERMISSION_REQUEST_CODE = 7_041
@@ -12961,21 +9874,45 @@ class BrowserController(
     private data class PendingHttpAuthChallenge(
         val promptId: Long,
         val tabId: String,
-        val webView: WebView,
+            val geckoSession: AndroidBrowserEngineSessionPort?,
         val navigationGeneration: Int,
-        val handler: HttpAuthHandler,
+        val confirm: (String, String) -> Unit,
+        val dismiss: () -> Unit,
+    )
+
+    private data class PendingGeckoAndroidPermissionRequest(
+        val tabId: String,
+        val session: AndroidBrowserEngineSessionPort,
+        val navigationGeneration: Int,
+        val request: BrowserEngineAndroidPermissionRequest,
+    )
+
+    private data class PendingWebPrompt(
+        val promptId: Long,
+        val tabId: String,
+        val session: AndroidBrowserEngineSessionPort,
+        val navigationGeneration: Int,
+        val response: BrowserEngineWebPromptResponse,
     )
 
     private enum class PendingPermissionKind {
         WebResource,
         Geolocation,
+        Gecko,
     }
 
     private data class PendingFileChooser(
         val identity: FileChooserIdentity,
         val delivery: FileChooserResultDelivery<Array<Uri>?>,
+        val geckoSession: AndroidBrowserEngineSessionPort?,
         val allowMultiple: Boolean,
         val acceptTypes: Array<String>,
+        val captureOutput: FileCaptureOutput?,
+    )
+
+    private data class FileCaptureOutput(
+        val uri: Uri,
+        val mimeType: String,
     )
 
     private data class ProtectionRequestContext(
@@ -12993,15 +9930,27 @@ class BrowserController(
         val requestContext: ProtectionRequestContext,
     )
 
+    private sealed interface ExternalLinkPreviewEngineBinding {
+        val view: View
+
+        data class Gecko(
+            val session: AndroidBrowserEngineSessionPort,
+            override val view: View,
+        ) : ExternalLinkPreviewEngineBinding
+    }
+
     private data class ExternalLinkPreviewRuntime(
         val sessionId: Long,
         val generation: Int,
         val policyTab: BrowserTab,
-        val profileAssignment: WebViewProfileAssignment,
-        val webView: WebView,
+        val binding: ExternalLinkPreviewEngineBinding,
         var hasStarted: Boolean = false,
         var downloadGrant: ExternalPreviewDownloadGrant? = null,
-    )
+        var pendingInternalNavigationUrl: String? = null,
+    ) {
+        val geckoBinding: ExternalLinkPreviewEngineBinding.Gecko
+            get() = binding as ExternalLinkPreviewEngineBinding.Gecko
+    }
 }
 
 private fun defaultSearchSuggestionProvider(): SearchSuggestionProvider =

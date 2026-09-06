@@ -24,9 +24,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
-import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
+import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.shared.ui.settings.TabDismissResistanceSettings
+import dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSettings
+import dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSettingsStrings
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
@@ -59,10 +62,6 @@ internal fun TabsAndGesturesSettingsPage(
     onBack: () -> Unit,
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
-    var overviewModeMenuExpanded by remember { mutableStateOf(false) }
-    var resistancePercent by remember(dismissResistancePercent) {
-        mutableFloatStateOf(dismissResistancePercent.toFloat())
-    }
     var residentLimit by remember(residentTabLimit) {
         mutableFloatStateOf(residentTabLimit.toFloat())
     }
@@ -72,37 +71,25 @@ internal fun TabsAndGesturesSettingsPage(
     ) {
         SettingsSectionTitle(stringResource(R.string.settings_section_tabs))
         Spacer(Modifier.height(8.dp))
-        Box {
-            SettingsChoice(
-                title = stringResource(R.string.settings_tab_overview_mode),
-                value = tabOverviewMode.displayName(),
-                expanded = overviewModeMenuExpanded,
-                onClick = { overviewModeMenuExpanded = true },
-            )
-            SettingsDropdown(
-                expanded = overviewModeMenuExpanded,
-                onDismissRequest = { overviewModeMenuExpanded = false },
-            ) {
-                TabOverviewMode.entries.forEach { mode ->
-                    SettingsDropdownItem(
-                        label = mode.displayName(),
-                        selected = mode == tabOverviewMode,
-                        onClick = {
-                            overviewModeMenuExpanded = false
-                            onTabOverviewModeChanged(mode)
-                        },
-                    )
-                }
-            }
-        }
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.settings_tab_list_starts_at_bottom_title),
-            subtitle = stringResource(R.string.settings_tab_list_starts_at_bottom_subtitle),
-            checked = tabListStartsAtBottom,
-            enabled = tabOverviewMode == TabOverviewMode.List,
-            onCheckedChange = onTabListStartsAtBottomChanged,
-            modifier = Modifier.testTag(TabSettingsTestTags.ListStartsAtBottom),
+        TabOverviewSettings(
+            mode = tabOverviewMode,
+            listStartsAtBottom = tabListStartsAtBottom,
+            strings = TabOverviewSettingsStrings(
+                overviewMode = stringResource(R.string.settings_tab_overview_mode),
+                modeNames = TabOverviewMode.entries.associateWith { it.displayName() },
+                listStartsAtBottom = stringResource(
+                    R.string.settings_tab_list_starts_at_bottom_title,
+                ),
+                listStartsAtBottomSummary = stringResource(
+                    R.string.settings_tab_list_starts_at_bottom_subtitle,
+                ),
+            ),
+            containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+            onModeChanged = onTabOverviewModeChanged,
+            onListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
+            listStartsAtBottomModifier = Modifier.testTag(
+                TabSettingsTestTags.ListStartsAtBottom,
+            ),
         )
         Spacer(Modifier.height(2.dp))
         SettingsSwitch(
@@ -139,10 +126,10 @@ internal fun TabsAndGesturesSettingsPage(
                         onResidentTabLimitChanged(residentLimit.roundToInt())
                     },
                     modifier = Modifier.testTag(TabSettingsTestTags.ResidentTabLimit),
-                    valueRange = TabWebViewResidencyRules.MIN_LIMIT.toFloat()..
-                        TabWebViewResidencyRules.MAX_LIMIT.toFloat(),
-                    steps = TabWebViewResidencyRules.MAX_LIMIT -
-                        TabWebViewResidencyRules.MIN_LIMIT - 1,
+                    valueRange = BrowserSessionResidencyRules.MIN_LIMIT.toFloat()..
+                        BrowserSessionResidencyRules.MAX_LIMIT.toFloat(),
+                    steps = BrowserSessionResidencyRules.MAX_LIMIT -
+                        BrowserSessionResidencyRules.MIN_LIMIT - 1,
                 )
             }
         }
@@ -195,34 +182,15 @@ internal fun TabsAndGesturesSettingsPage(
             modifier = Modifier.testTag(TabSettingsTestTags.AddressBarDocking),
         )
         Spacer(Modifier.height(2.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
-                Text(
-                    stringResource(R.string.settings_tab_dismiss_resistance),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    stringResource(
-                        R.string.settings_tab_dismiss_resistance_summary,
-                        resistancePercent.roundToInt(),
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Slider(
-                    value = resistancePercent,
-                    onValueChange = { resistancePercent = it },
-                    onValueChangeFinished = {
-                        onDismissResistancePercentChanged(resistancePercent.roundToInt())
-                    },
-                    valueRange = 10f..90f,
-                    steps = 7,
-                )
-            }
-        }
+        TabDismissResistanceSettings(
+            valuePercent = dismissResistancePercent,
+            title = stringResource(R.string.settings_tab_dismiss_resistance),
+            summary = { value ->
+                stringResource(R.string.settings_tab_dismiss_resistance_summary, value)
+            },
+            containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+            enabled = true,
+            onValueChanged = onDismissResistancePercentChanged,
+        )
     }
 }

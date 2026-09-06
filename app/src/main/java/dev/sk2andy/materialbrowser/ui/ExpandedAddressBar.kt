@@ -31,9 +31,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
@@ -81,7 +78,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -97,6 +93,7 @@ import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.shared.ui.AddressBarFieldContent
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import dev.sk2andy.materialbrowser.ui.theme.addressFieldContainerColor
@@ -243,8 +240,7 @@ internal fun ExpandedBottomBarContent(
         canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
         isForceVerticalScrollingEnabled = isForceVerticalScrollingEnabled,
         canUsePageActions = tab.url != BLANK_URL,
-        canOpenReader = supportsPageContentActions &&
-            ReaderStudioSessionRules.isSupportedSource(tab.url),
+        canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
         canCloseTab = TabDeletionRules.canDelete(tab),
         canParkRight = canDock,
         newTabPulseScale = newTabPulseScale,
@@ -324,19 +320,22 @@ internal fun ExpandedBottomBarContent(
                 shape = RoundedCornerShape(addressChromeTokens.cornerRadius),
                 color = addressFieldContainerColor(),
             ) {
-                Box {
-                    if (editing) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        BasicTextField(
-                            value = editValue,
-                            onValueChange = onEditValueChange,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag(AddressBarTestTags.Editor)
-                                .onPreviewKeyEvent { event ->
+                AddressBarFieldContent(
+                    editing = editing,
+                    editValue = editValue,
+                    onEditValueChange = onEditValueChange,
+                    ghostCompletion = ghostCompletion,
+                    placeholder = stringResource(R.string.search_or_enter_url),
+                    displayText = if (tab.url == BLANK_URL) {
+                        stringResource(R.string.address_empty_hint)
+                    } else {
+                        AddressResolver.displayText(tab.url)
+                    },
+                    onSubmitAddress = onSubmitAddress,
+                    submissionText = AddressEditorCompletionRules::submissionText,
+                    editorModifier = Modifier
+                        .testTag(AddressBarTestTags.Editor)
+                        .onPreviewKeyEvent { event ->
                                     when (event.key) {
                                         Key.DirectionDown -> {
                                             if (event.type == KeyEventType.KeyDown) {
@@ -375,62 +374,15 @@ internal fun ExpandedBottomBarContent(
                                         else -> false
                                     }
                                 }
-                                .focusRequester(focusRequester)
-                                .onFocusChanged { addressFieldFocused = it.isFocused },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                            ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                            keyboardActions = KeyboardActions(
-                                onGo = {
-                                    onSubmitAddress(
-                                        AddressEditorCompletionRules.submissionText(
-                                            input = editValue.text,
-                                            ghostCompletion = ghostCompletion,
-                                        ),
-                                    )
-                                },
-                            ),
-                            decorationBox = { innerTextField ->
-                                Box(
-                                    modifier = Modifier.padding(
-                                        start = 8.dp,
-                                        top = 10.dp,
-                                        bottom = 10.dp,
-                                    ),
-                                    contentAlignment = Alignment.CenterStart,
-                                ) {
-                                    if (editValue.text.isEmpty()) {
-                                        Text(
-                                            stringResource(R.string.search_or_enter_url),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    } else if (ghostCompletion != null) {
-                                        Row {
-                                            Text(
-                                                editValue.text,
-                                                color = Color.Transparent,
-                                                maxLines = 1,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                            )
-                                            Text(
-                                                ghostCompletion.drop(editValue.text.length),
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    .copy(alpha = 0.58f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Clip,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                            )
-                                        }
-                                    }
-                                    innerTextField()
-                                }
-                            },
-                        )
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { addressFieldFocused = it.isFocused },
+                    displayTextModifier = Modifier.addressBarReaderActions(
+                        readerEnabled = ReaderStudioSessionRules.isSupportedSource(tab.url),
+                        onClick = onAddress,
+                        onReaderStudio = onReaderStudio,
+                        readerLabel = stringResource(R.string.reader_open_action),
+                    ),
+                    editorTrailingContent = {
                         if (tab.url == BLANK_URL) {
                             BlankTabIncognitoModeButton(
                                 enabled = tab.isIncognito,
@@ -451,34 +403,8 @@ internal fun ExpandedBottomBarContent(
                                 contentDescription = stringResource(R.string.cd_close_address_input),
                             )
                         }
-                    }
-                    } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = if (tab.url == BLANK_URL) {
-                                    stringResource(R.string.address_empty_hint)
-                                } else {
-                                    AddressResolver.displayText(tab.url)
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .addressBarReaderActions(
-                                        readerEnabled = ReaderStudioSessionRules
-                                            .isSupportedSource(tab.url),
-                                        onClick = onAddress,
-                                        onReaderStudio = onReaderStudio,
-                                        readerLabel = stringResource(R.string.reader_open_action),
-                                    )
-                                    .padding(
-                                        start = 13.dp,
-                                        end = 6.dp,
-                                        top = 15.dp,
-                                        bottom = 15.dp,
-                                    ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelLarge,
-                            )
+                    },
+                    displayTrailingContent = {
                             PrivacyXRayBadge(
                                 blockedCount = tab.blockedCount,
                                 onClick = onPrivacyXRay,
@@ -492,9 +418,8 @@ internal fun ExpandedBottomBarContent(
                                 onClick = onPermissionRadar,
                                 modifier = Modifier.padding(end = 2.dp),
                             )
-                        }
-                    }
-                }
+                    },
+                )
             }
             AnimatedVisibility(
                 visible = !editorUsesFullWidth,
@@ -549,8 +474,7 @@ internal fun ExpandedBottomBarContent(
                                 isPinned = isPinned,
                                 canUsePageActions = tab.url != BLANK_URL,
                                 canUseDocumentActions = tab.url != BLANK_URL,
-                                canOpenReader = supportsPageContentActions &&
-                                    ReaderStudioSessionRules.isSupportedSource(tab.url),
+                                canOpenReader = ReaderStudioSessionRules.isSupportedSource(tab.url),
                                 canTranslatePage = PageTranslationRules.canTranslate(
                                     provider = pageTranslationProvider,
                                     sourceUrl = tab.url,

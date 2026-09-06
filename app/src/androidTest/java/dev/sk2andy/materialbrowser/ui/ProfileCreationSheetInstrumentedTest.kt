@@ -30,7 +30,7 @@ class ProfileCreationSheetInstrumentedTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val profileEmojis by lazy {
         context.assets.open("candy_sync_device_icons_v1.json").use { input ->
-            SyncDeviceIconCatalog.decode(input).icons.map { it.emoji }
+            SyncDeviceIconCatalog.decode(input.bufferedReader().readText()).icons.map { it.emoji }
         }
     }
 

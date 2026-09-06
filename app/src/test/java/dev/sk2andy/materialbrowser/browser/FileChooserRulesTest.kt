@@ -70,4 +70,27 @@ class FileChooserRulesTest {
         assertFalse(delivery.complete("late-result"))
         assertEquals(listOf<String?>(null), delivered)
     }
+
+    @Test
+    fun captureUsesOnlyExplicitMediaAcceptTypes() {
+        assertEquals(
+            "android.media.action.IMAGE_CAPTURE",
+            FileChooserRules.captureAction(BrowserEngineFileCapture.User, listOf("image/*")),
+        )
+        assertEquals(
+            "android.media.action.VIDEO_CAPTURE",
+            FileChooserRules.captureAction(
+                BrowserEngineFileCapture.Environment,
+                listOf("video/mp4"),
+            ),
+        )
+        assertEquals(
+            null,
+            FileChooserRules.captureAction(BrowserEngineFileCapture.Any, listOf("*/*")),
+        )
+        assertEquals(
+            null,
+            FileChooserRules.captureAction(BrowserEngineFileCapture.None, listOf("image/*")),
+        )
+    }
 }

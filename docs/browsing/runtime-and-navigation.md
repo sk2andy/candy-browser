@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Activity | Android lifecycle, incoming intents, permission/file chooser launchers and root composition | [`MainActivity.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivity.kt) |
 | Activity support | System PiP state, launcher-shortcut dispatch, userscript import, update prompt and appearance night mode | [`MainActivityPictureInPictureController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/MainActivityPictureInPictureController.kt), [`LauncherShortcutIntentHandler.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/LauncherShortcutIntentHandler.kt), [`UserScriptImporter.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/UserScriptImporter.kt), [`AppUpdatePrompt.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/AppUpdatePrompt.kt), [`AppearanceNightMode.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/AppearanceNightMode.kt) |
-| Controller | WebView creation, tab/profile state, navigation, persistence coordination, platform and fullscreen-video callbacks | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
+| Controller | Gecko session creation, tab/profile state, navigation, persistence coordination, platform and fullscreen-video callbacks | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
 | Platform engine adapters | Own GeckoView sessions/extensions on Android and WKWebView/Toppings on iOS | [`platform-engines.md`](platform-engines.md) |
 | Compose root | Read controller state, own transient screen state and route browser surfaces | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt) |
 | Compose surfaces | Host WebView/preview content, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
@@ -17,18 +17,20 @@
 | Input | Path | Boundary |
 | --- | --- | --- |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
-| Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy. The optional external-link preview keeps the page memory-only until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
+| Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank WebView page |
-| Link Peek | `LinkPeekPreviewNavigationPolicy` → preview WebView | Keep only HTTP(S); do not hand off preview navigation |
+| Link Peek | `LinkPeekPreviewNavigationPolicy` → transient Gecko session | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
-| Desktop view | `DesktopSiteRules` / `DesktopNavigationRules` / `DesktopViewportScript` → controller → WebView settings | Store registrable domains per profile; coordinate desktop user-agent, client hints and wide viewport changes with the target navigation |
-| Always block pop-ups | `PopupSiteRules` → controller → `onCreateWindow` | Reject every popup synchronously for configured registrable opener domains; persist regular state per profile and keep private state memory-only |
+| Desktop view | `DesktopSiteRules` / `DesktopNavigationRules` → controller → engine session | Store registrable domains per profile; coordinate Gecko's desktop user-agent and viewport mode with the target navigation |
+| Always block pop-ups | `PopupSiteRules` → controller → Gecko navigation delegate | Reject popups for configured registrable opener domains; preserve transient popup/popunder quarantine and pending-window policy; persist regular settings per profile and keep private settings memory-only |
 | Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
 | CAPTCHA compatibility | `CaptchaCompatibilityRules` → controller → Snackbar and `AlertDialog` | Detect strict cross-site Cloudflare, Google reCAPTCHA, or hCaptcha endpoints; allow third-party cookies only after explicit consent |
 | HTTP Basic authentication | `HttpAuthPromptRules` → `BrowserController` → `HttpAuthPromptDialog` | Prompt only for a selected, resumed tab when challenge host matches current top-level HTTP(S) host; keep credentials memory-only and warn on cleartext HTTP |
-| Local userscript | `UserScriptRules` → AndroidX WebKit document-start handler | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
+| Gecko downloads and uploads | `BrowserEngineDownloadRules` / `FileChooserRules` → controller → Android download/file presenters | Accept bounded HTTP(S) downloads and readable `content://` file results only; reject stale session/navigation/activity results |
+| Gecko permissions and prompts | `PermissionRequestRules` / `BrowserWebPromptRules` → controller → existing Candy dialogs and Android permission presenter | Preserve profile/private permission scope, deny stale prompts, and fail closed for unsupported sensitive prompt classes |
+| Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 
 ## Invariants
 
@@ -45,17 +47,15 @@
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Keep the external-app return marker memory-only and scoped to the tab opened by the latest
   `ACTION_VIEW`. Web history consumes Back first; normal root tabs keep the tab-close/overview flow.
-- Keep external-link preview sessions, URLs, WebViews, progress, and target-profile selection out of
+- Keep external-link preview sessions, URLs, engine views, progress, and target-profile selection out of
   tab/session, history, Candy Trail, favicon, WebView-state, and tab-preview persistence. Recreate
-  the preview WebView when its target profile changes and reload the final normalized HTTP(S) URL
+  the transient engine session when its target profile changes and reload the final normalized HTTP(S) URL
   when promoting it to a regular tab. Show the profile chooser only when multiple profiles exist.
   Preview loads still use the selected profile's cookies and
   DOM storage, so the feature is disposable UI rather than a private-browsing mode.
-- On every cold external `ACTION_VIEW` launch, start WebView and registrable-domain initialization
-  in parallel off the main thread, whether external preview is enabled or not. Keep native browser
-  chrome interactive until both are ready, and defer unrelated Cast, media-session, and release-note
-  initialization from this launch path. If asynchronous WebView startup fails, avoid further WebView
-  API calls, show terminal feedback, and return to the caller instead of leaving an endless loader.
+- On cold external `ACTION_VIEW` launches, keep native chrome interactive while Gecko and
+  registrable-domain initialization complete. Defer unrelated Cast, media-session, and release-note
+  work from this launch path. There is no Android WebView startup or renderer fallback.
 - Keep federated-login popup tabs session-ephemeral for their complete window lifetime. App
   backgrounding pauses their live WebView and resumes it on return, while tab/session, History,
   Recall, Candy Trail, WebView-state, and preview persistence exclude them. Process death therefore
@@ -77,9 +77,11 @@
   shortcut. External previews retain one bounded, memory-only download grant for the exact active
   main-frame URL and its observed redirect chain until its first download, completion, error, or
   expiry, so a slow authorized redirect cannot lose user intent or authorize unrelated content.
-  Server-declared APK downloads continue through the WebView download listener, and requests with a
+  Server-declared APK downloads continue through Gecko's external-response listener, and requests with a
   sanitized `.apk` filename always use the Android package MIME type.
-- Treat WebView callbacks as stale-capable: bind work to tab/request/navigation identity before applying results.
+- Treat Gecko delegate callbacks as stale-capable: bind downloads, file selection, runtime/content/media
+  permissions, authentication and web prompts to the exact session plus navigation generation.
+  Navigation, tab replacement, backgrounding and destruction cancel pending delivery exactly once.
 - Keep private tab state memory-only and skip remote suggestions for private input.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.
 - Desktop view must present one coherent desktop identity: desktop user-agent text, Linux desktop
@@ -87,72 +89,58 @@
   configured registrable domains, preserve unrelated directives such as `viewport-fit`, and restore
   page defaults through the required reload when desktop view is disabled.
 - Keep private always-block-popup domains memory-only; persist regular domains per profile only.
-- Keep `CREDENTIAL_MANAGER_SET_ORIGIN` declared while WebViews use browser WebAuthn mode. Android
-  Credential Manager requires it before a browser can request passkeys for a website origin. Ship
-  the AndroidX Credential Manager runtime in both distributions and its Google Password Manager
-  fallback only in the full distribution. Credential providers must separately trust Candy's
-  package and release signing certificate in their privileged-browser allowlist.
-- Handle HTTP Basic authentication through WebView's `HttpAuthHandler` only on main thread. Keep
-  entered credentials out of app storage and logs. Cancel a pending challenge when its tab,
-  WebView, navigation, selection, or activity lifetime becomes stale. Reject cross-host
-  subresource challenges because WebView does not expose a main-frame flag for this callback.
-  Cleartext HTTP remains usable for legacy and self-hosted sites, but its prompt warns that
-  credentials can be exposed. WebView reports challenge hostname but not scheme or port, so Candy
-  can reject cross-host subresource challenges but cannot distinguish same-host protection spaces.
-- Never register userscript handlers on private or Link Peek WebViews. Userscript source is global
+- Keep `CREDENTIAL_MANAGER_SET_ORIGIN` declared for GeckoView's origin-bound WebAuthn and Candy's
+  password Credential Manager bridge. GeckoView 140 uses Android's framework Credential Manager for
+  passkeys on API 34+ when `android.software.credentials` exists. Regular HTTPS Gecko views expose
+  native virtual Autofill nodes; private views do not. Login save/select and FedCM callbacks carry a
+  tab, profile, session, origin and navigation identity and deny stale, private or cross-origin work.
+  Candy stores no credential database and logs no credential values. Ship AndroidX Credential Manager
+  in both distributions and its Google Password Manager fallback only in Full. Providers must
+  separately trust Candy's package and release signing certificate in their privileged-browser
+  allowlist. Provider storage is origin-scoped by Android, not partitioned by Candy profile.
+- Handle HTTP authentication through Gecko's prompt delegate on the main thread. Keep entered
+  credentials out of app storage and logs. Cancel a pending challenge when its tab, session,
+  navigation, selection, or activity lifetime becomes stale. Validate the challenge against the
+  current top-level origin; cleartext HTTP prompts warn that credentials can be exposed.
+- Never register Topping handlers on private or Link Peek engine sessions. Topping source is global
   regular-browser configuration, not private session state.
-- Stop the active load before changing desktop-view user-agent settings for controller-owned loads,
-  reloads, and History traversal. When a web-requested main-frame GET changes user-agent policy,
-  cancel that not-yet-started target and post one controller-owned load with the target policy;
-  let WebView rebuild request headers instead of copying intercepted headers. Never replay a committed
-  navigation, convert POST to GET, or mutate the user agent inside `shouldOverrideUrlLoading`. For non-overridable flows,
-  apply the target policy only after completion for future requests. Android WebView otherwise
-  restarts the page when its user agent changes during loading, which can race Back/Forward, return
-  a clicked link to the page being left, or repeat a one-time request. Reload matching open tabs only
-  when the user explicitly changes the domain preference.
-- Keep the WebView's measured frame stable while normal pages scroll. A document-start root spacer
-  starts normal flow content below the status bar and scrolls away in Chromium's own render path,
-  without changing layout params or redispatching insets from the scroll callback. Explicit
-  `viewport-fit=cover` pages remove the spacer. The per-site force-safe-area override,
-  edge-to-edge-disabled audit mode, and unavailable or rejected document-start styling use a
-  static native safe-area margin. Compact absolute or fixed page controls covering the reserved
-  top strip receive a local document-owned offset, keeping the WebView edge-to-edge without hiding
-  those controls behind system icons. Interaction-triggered fixed side drawers receive the same
-  offset plus a bounded height, while empty full-screen backdrops may continue behind system icons.
-  If a root-level spacer is neutralized by a site's own scroll container, Candy moves the spacer
-  to that normal-flow page wrapper so headers still scroll away.
-  Viewport-sized fixed roots and layouts that cannot be moved safely use the native fallback.
-  Force-safe-area remains the manual compatibility path for pages using their own scroll container.
-  The status-bar overlay still
-  redraws a blurred content layer with a surface-tinted fade so system icons stay legible.
-- Read page-scroll range, extent and offset through `BrowserWebView`. The optional Compose scroll
-  thumb observes scroll changes without replacing the controller's WebView scroll listener and is
-  removed from fullscreen/video-only presentation.
-- Keep each WebView touch stream owned by `BrowserWebView` from `ACTION_DOWN` through its terminal
-  event. Compose parents must not cancel an active page gesture while arbitrating AndroidView input.
-- Preserve rapid reverse-flick momentum at the `BrowserWebView` boundary. Keep healthy native
-  WebView flings; only replace a fast reverse fling after three consecutive stalled frames while
-  a decaying reference fling still expects fast movement.
-  Programmatic scroll-bar jumps clear transient momentum state before changing the offset.
+- Apply desktop identity to the target Gecko session before controller-owned navigation or history
+  traversal. Never replay a committed navigation or convert POST to GET. Reload matching open tabs
+  only when the user explicitly changes the domain preference.
+- Keep the engine view's measured frame stable while pages scroll. `GeckoViewInsetRules` keeps the
+  normal Gecko renderer edge to edge, while Gecko's native cutout integration owns CSS safe-area
+  values and `setVerticalClipping` keeps fixed bottom content above system navigation. Compose
+  chrome consumes the same system-bar insets. The explicit per-site **Force safe area** override
+  converts all safe edges to native margins; refreshing that override redispatches current insets.
+  Gecko views use the TextureView backend so Candy's shared backdrop blur and tab motion can sample
+  and transform rendered pixels. The status-bar overlay keeps system icons legible.
+- Read page-scroll metrics through the engine port. The optional `BrowserScrollBar` observes them
+  without replacing the pill-collapse scroll listener and is absent in fullscreen/video-only mode.
+- Keep page touch streams and native fling physics in GeckoView. Compose parents must not cancel
+  an active page gesture while arbitrating AndroidView input. No Chromium-specific reverse-fling
+  workaround runs in the Gecko renderer.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
 ## TLS trust channels
 
 | Build | Trust anchors | Release asset |
 | --- | --- | --- |
-| Standard | Android system CA store | `CandyBrowser-v<version>-release.apk` |
-| User CA | Android system and user CA stores | `CandyBrowser-v<version>-user-ca-release.apk` |
+| Standard | Gecko built-in roots for page/engine requests; Android system roots for Android networking | `CandyBrowser-v<version>-release.apk` |
+| User CA | Standard roots plus user-installed Android CA roots | `CandyBrowser-v<version>-user-ca-release.apk` |
 
-- Network Security Config is static and app-wide. Android WebView cannot safely switch trust anchors
-  from a runtime preference, so broader trust requires installing the explicitly labeled User CA APK.
+- The build channel controls trust for both networking stacks: Android Network Security Config
+  controls Android requests; `GeckoRuntimeSettingsFactory` passes `BuildConfig.TRUST_USER_CERTIFICATES`
+  to Gecko's `enterpriseRootsEnabled`. Gecko owns a separate root store, so the XML configuration
+  alone is insufficient. Broader trust requires installing the explicitly labeled User CA APK.
 - Both channels use the same application ID and signing key. Update selection preserves the installed
   channel and rejects a release that contains only the other channel's asset.
 - User CA trust applies to all app HTTPS connections, not only rendered pages or a selected profile.
   The settings warning must remain visible in User CA builds.
-- `BrowserController.onReceivedSslError` always cancels. Only an error URL matching the current
-  main-frame target becomes a page-level error; failed embedded resources stay local to the page.
-  Never use `SslErrorHandler.proceed()` to approximate user-CA support; valid user-CA chains are
-  accepted before that callback.
+- Gecko validates certificate chains; Candy does not bypass certificate errors. Only errors bound
+  to the current main-frame session/navigation may become page-level errors. User-CA support imports
+  roots through Gecko's native setting, not a certificate-error exception.
+- API contract: [Gecko trust architecture](https://firefox-source-docs.mozilla.org/mobile/android/geckoview/contributor/geckoview-architecture.html)
+  and [enterpriseRootsEnabled](https://mozilla.github.io/geckoview/javadoc/mozilla-central/org/mozilla/geckoview/GeckoRuntimeSettings.Builder.html#enterpriseRootsEnabled(boolean)).
 
 ## Domain compatibility overrides
 
@@ -166,6 +154,15 @@
 
 - Compatibility overrides match the exact current host. Regular tabs persist them per profile;
   private tabs keep them in memory for that tab only.
+- GeckoView 140 exposes `ACCEPT_FIRST_PARTY` only as a runtime-wide hard policy and provides no
+  public site-scoped override for it. Candy therefore keeps that strict mode by default, then uses
+  `ACCEPT_ALL` only while a selected session has a confirmed, exact-current-host SSO, CAPTCHA, or
+  paused-site exception. Normal and private modes are coordinated separately. The coordinator
+  restores strict mode before cross-host main-frame navigation and as soon as that session becomes
+  inactive, loses the exception, or closes. Gecko's runtime is shared, so inactive same-mode sibling
+  sessions technically share the temporary setting. Candy marks them inactive through Gecko's
+  session lifecycle, but GeckoView does not guarantee that inactivity stops every background network
+  actor.
 - Changing an override reloads affected pages. Document-start scripts handle direct navigation and
   commit-visible fallbacks cover redirects whose final host was not known before navigation.
 - A detected Google Identity Services SDK first produces a dismissible Snackbar. **Options** opens
@@ -249,7 +246,7 @@ WebView request state.
 | WebView settings or callbacks | Focused browser instrumented test |
 | Federated login | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, and popup-blocker regression tests |
 | CAPTCHA compatibility | `CaptchaCompatibilityRulesTest`, `CaptchaCompatibilityPromptInstrumentedTest`, `BrowserControllerCaptchaCompatibilityInstrumentedTest`, and `BrowserSessionStoreInstrumentedTest` |
-| Browser WebAuthn runtime, provider setting and manifest contract | `SystemWebViewCredentialsInstrumentedTest` on API 34+ |
+| Gecko password Autofill, Credential Manager and browser-origin manifest contract | `GeckoCredentialsInstrumentedTest` on API 34+ |
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Web media, fullscreen and PiP policy | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` on API 34+ |
