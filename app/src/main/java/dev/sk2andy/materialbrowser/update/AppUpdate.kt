@@ -29,7 +29,7 @@ internal enum class AppReleaseChannel(
     val assetSuffix: String,
 ) {
     Standard("release"),
-    UserCa("user-ca-release"),
+    UserCa("ca-release"),
 
     ;
 

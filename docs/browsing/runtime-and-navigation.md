@@ -147,15 +147,16 @@
 
 ## TLS trust channels
 
-| Build | Trust anchors | Release asset |
-| --- | --- | --- |
-| Standard | Android system CA store | `CandyBrowser-v<version>-release.apk` |
-| User CA | Android system and user CA stores | `CandyBrowser-v<version>-user-ca-release.apk` |
+| Build | Application ID | Trust anchors | Release asset |
+| --- | --- | --- | --- |
+| Standard | `dev.sk2andy.materialbrowser` | Android system CA store | `CandyBrowser-v<version>-release.apk` |
+| User CA | `dev.sk2andy.materialbrowser.ca` | Android system and user CA stores | `CandyBrowser-v<version>-ca-release.apk` |
 
 - Network Security Config is static and app-wide. Android WebView cannot safely switch trust anchors
   from a runtime preference, so broader trust requires installing the explicitly labeled User CA APK.
-- Both channels use the same application ID and signing key. Update selection preserves the installed
-  channel and rejects a release that contains only the other channel's asset.
+- Separate application IDs isolate app data and allow both channels to stay installed. Update
+  selection preserves the installed channel and rejects a release that contains only the other
+  channel's asset.
 - User CA trust applies to all app HTTPS connections, not only rendered pages or a selected profile.
   The settings warning must remain visible in User CA builds.
 - `BrowserController.onReceivedSslError` always cancels. Only an error URL matching the current
@@ -263,4 +264,4 @@ WebView request state.
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Web media, fullscreen and PiP policy | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` on API 34+ |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `BrowserIntentFilterInstrumentedTest`, plus `MainActivityExternalBackInstrumentedTest` when lifecycle matters |
-| TLS trust channels | `./gradlew testFullDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
+| Distribution and TLS channels | `./gradlew testFullDebugUnitTest testFossDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFossDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
