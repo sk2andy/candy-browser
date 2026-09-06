@@ -117,6 +117,7 @@ class MainActivityExternalBackInstrumentedTest {
                 assertEquals(1, controller.tabs.size)
                 assertEquals(EXTERNAL_URL, controller.externalLinkPreviewState?.currentUrl)
             }
+            scenario.onActivity { activity -> activity.intent = launchIntent }
         }
     }
 
@@ -126,10 +127,10 @@ class MainActivityExternalBackInstrumentedTest {
         val context = instrumentation.targetContext
         clearSession(context)
         GestureOnboardingStore(context).markCompleted()
+        val launchIntent = Intent(context, MainActivity::class.java)
+            .setAction(Intent.ACTION_MAIN)
 
-        ActivityScenario.launch<MainActivity>(
-            Intent(context, MainActivity::class.java).setAction(Intent.ACTION_MAIN),
-        ).use { scenario ->
+        ActivityScenario.launch<MainActivity>(launchIntent).use { scenario ->
             lateinit var controller: BrowserController
             lateinit var initialTabIds: List<String>
             scenario.onActivity { activity ->
@@ -158,6 +159,7 @@ class MainActivityExternalBackInstrumentedTest {
                 assertEquals(initialTabIds, controller.tabs.map { it.id })
                 assertEquals(null, controller.externalLinkPreviewState)
             }
+            scenario.onActivity { activity -> activity.intent = launchIntent }
         }
     }
 
