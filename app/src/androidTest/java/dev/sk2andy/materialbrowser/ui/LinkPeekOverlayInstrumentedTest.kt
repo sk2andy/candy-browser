@@ -20,6 +20,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.data.LinkPeekAction
+import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -34,6 +36,71 @@ import org.junit.runner.RunWith
 class LinkPeekOverlayInstrumentedTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun emptyConfiguredSlotsStayEmptyAroundFixedPlus() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                LinkPeekOverlay(
+                    url = "https://example.com/empty-slots",
+                    progress = 0f,
+                    armed = false,
+                    actionLayout = LinkPeekActionLayout(
+                        listOf(null, LinkPeekAction.OpenPrivate, null),
+                    ),
+                    createPreviewWebView = ::previewWebView,
+                    releasePreviewWebView = WebView::destroy,
+                    onOpen = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenPrivate).assertIsDisplayed()
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget).assertIsDisplayed()
+        composeRule.onNodeWithTag(LinkPeekTestTags.CopyLink).assertDoesNotExist()
+        composeRule.onNodeWithTag(LinkPeekTestTags.Share).assertDoesNotExist()
+    }
+
+    @Test
+    fun configuredActionsStayInSlotsAndUseCommittedPreviewUrl() {
+        val readerUrl = AtomicReference<String>()
+        val favoriteUrl = AtomicReference<String>()
+        val foregroundUrl = AtomicReference<String>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                LinkPeekOverlay(
+                    url = "https://redirect.example/start",
+                    progress = 0f,
+                    armed = false,
+                    actionLayout = LinkPeekActionLayout(
+                        listOf(
+                            LinkPeekAction.ReaderLater,
+                            LinkPeekAction.Favorite,
+                            LinkPeekAction.OpenForeground,
+                        ),
+                    ),
+                    createPreviewWebView = ::previewWebView,
+                    releasePreviewWebView = WebView::destroy,
+                    onOpen = {},
+                    onSaveReaderOffline = { url, _ -> readerUrl.set(url) },
+                    onFavorite = { url, _ -> favoriteUrl.set(url) },
+                    onOpenForeground = foregroundUrl::set,
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(LinkPeekTestTags.ReaderLater).performClick()
+        composeRule.onNodeWithTag(LinkPeekTestTags.Favorite).performClick()
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenForeground).performClick()
+        composeRule.onNodeWithTag(LinkPeekTestTags.OpenTarget).assertIsDisplayed()
+        composeRule.onNodeWithTag(LinkPeekTestTags.CopyLink).assertDoesNotExist()
+
+        assertEquals("https://example.com/preview", readerUrl.get())
+        assertEquals("https://example.com/preview", favoriteUrl.get())
+        assertEquals("https://example.com/preview", foregroundUrl.get())
+    }
 
     @Test
     fun actionTargetsUseIconsAndCurrentPreviewUrl() {
@@ -116,10 +183,17 @@ class LinkPeekOverlayInstrumentedTest {
         val overlayTargetBounds = composeRule
             .onNodeWithTag(LinkPeekTestTags.NewTabTargetOverlay)
             .fetchSemanticsNode().boundsInRoot
-        assertEquals(100f, overlayTargetBounds.left, 1f)
         assertEquals(100f, overlayTargetBounds.top, 1f)
-        assertEquals(220f, overlayTargetBounds.right, 1f)
         assertEquals(220f, overlayTargetBounds.bottom, 1f)
+        val copyBounds = composeRule.onNodeWithTag(LinkPeekTestTags.CopyLink)
+            .fetchSemanticsNode().boundsInRoot
+        val privateBounds = composeRule.onNodeWithTag(LinkPeekTestTags.OpenPrivate)
+            .fetchSemanticsNode().boundsInRoot
+        val shareBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Share)
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(copyBounds.left < privateBounds.left)
+        assertTrue(privateBounds.left < overlayTargetBounds.left)
+        assertTrue(overlayTargetBounds.left < shareBounds.left)
 
         assertEquals(1, opens.get())
         assertEquals("https://example.com/preview", copiedUrl.get())
@@ -279,7 +353,7 @@ class LinkPeekOverlayInstrumentedTest {
     }
 
     @Test
-    fun newTabTargetUsesAbsoluteRootBoundsInRtl() {
+    fun newTabTargetKeepsLogicalThirdSlotInRtl() {
         composeRule.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 MaterialBrowserTheme {
@@ -299,10 +373,17 @@ class LinkPeekOverlayInstrumentedTest {
 
         val overlayBounds = composeRule.onNodeWithTag(LinkPeekTestTags.NewTabTargetOverlay)
             .fetchSemanticsNode().boundsInRoot
-        assertEquals(100f, overlayBounds.left, 1f)
         assertEquals(100f, overlayBounds.top, 1f)
-        assertEquals(220f, overlayBounds.right, 1f)
         assertEquals(220f, overlayBounds.bottom, 1f)
+        val copyBounds = composeRule.onNodeWithTag(LinkPeekTestTags.CopyLink)
+            .fetchSemanticsNode().boundsInRoot
+        val privateBounds = composeRule.onNodeWithTag(LinkPeekTestTags.OpenPrivate)
+            .fetchSemanticsNode().boundsInRoot
+        val shareBounds = composeRule.onNodeWithTag(LinkPeekTestTags.Share)
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(shareBounds.left < overlayBounds.left)
+        assertTrue(overlayBounds.left < privateBounds.left)
+        assertTrue(privateBounds.left < copyBounds.left)
     }
 
     @Test

@@ -263,6 +263,7 @@
     <string name="action_open_link_background_tab">Link in neuem Hintergrund-Tab öffnen</string>
     <string name="link_peek_title">Link-Vorschau</string>
     <string name="action_open_in_new_tab">In neuem Tab öffnen</string>
+    <string name="action_open_in_new_tab_and_switch">In neuem Tab öffnen und wechseln</string>
     <string name="action_open_link_in_private_tab">Link im privaten Modus öffnen</string>
     <string name="action_download_link">Link herunterladen</string>
     <string name="action_download_image">Bild herunterladen</string>
@@ -395,6 +396,13 @@
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>
     <string name="settings_section_gestures">Gesten</string>
     <string name="settings_link_long_press_action">Aktion bei langem Drücken auf Links</string>
+    <string name="settings_link_peek_actions_title">Link-Peek-Schaltflächen</string>
+    <string name="settings_link_peek_actions_summary">Bis zu drei Schnellaktionen auswählen und anordnen</string>
+    <string name="settings_link_peek_actions_instructions">Aktionen lange drücken und in freie Slots ziehen. Eine Aktion zurück zu „Verfügbare Aktionen“ ziehen, um ihren Slot freizulassen. Das pulsierende + bleibt immer im dritten Slot und öffnet einen Hintergrund-Tab.</string>
+    <string name="settings_link_peek_actions_available">Verfügbare Aktionen</string>
+    <string name="settings_link_peek_actions_empty_slot">Leerer Slot</string>
+    <string name="settings_link_peek_actions_move_to_slot">In Slot verschieben</string>
+    <string name="settings_link_peek_actions_move_to_available">Zu verfügbaren Aktionen verschieben</string>
     <string name="settings_address_bar_actions_title">Adressleisten-Schaltflächen</string>
     <string name="settings_address_bar_actions_summary">Bis zu drei Schaltflächen rund um das Adressfeld auswählen und anordnen.</string>
     <string name="settings_address_bar_actions_instructions">Schaltfläche gedrückt halten und links oder rechts neben das Adressfeld ziehen. Mehr bleibt fest und zählt als vierte Schaltfläche.</string>
@@ -796,6 +804,7 @@
     <string name="reader_extraction_invalid">Die Seite hat sich geändert oder ungültige Inhalte geliefert. Erneut versuchen oder zum Original zurückkehren.</string>
     <string name="reader_retry">Erneut versuchen</string>
     <string name="reader_save_offline">Offline speichern</string>
+    <string name="reader_saved_offline_confirmation">Zum Offline-Lesen gespeichert</string>
     <string name="reader_offline_short">Offline</string>
     <string name="reader_theme_system">System</string>
     <string name="reader_theme_paper">Papier</string>

@@ -6,6 +6,10 @@ import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
+import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
+import org.junit.Assume.assumeTrue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -43,6 +47,61 @@ class LinkPeekPreviewWebViewInstrumentedTest {
             assertEquals(1, controller.activeLinkPeekPreviewCountForTesting)
             controller.destroy()
             assertEquals(0, controller.activeLinkPeekPreviewCountForTesting)
+        }
+    }
+
+    @Test
+    fun loadingPreviewCannotBePersistedToReader() {
+        activityRule.scenario.onActivity { activity ->
+            val controller = BrowserController(activity)
+            val url = "https://example.com/article"
+            controller.contentActions.show(
+                target = WebContentTarget(linkUrl = url),
+                sourceTabId = controller.selectedTabId,
+            )
+            val preview = controller.createLinkPeekPreviewWebView(
+                url = url,
+                onProgressChanged = {},
+                onCommittedUrlChanged = {},
+            )
+            var result: ReaderExtractionResult? = null
+
+            controller.saveLinkPeekToReader(preview, url) { result = it }
+
+            assertEquals(
+                ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse),
+                result,
+            )
+            assertEquals(1, controller.activeLinkPeekPreviewCountForTesting)
+            controller.destroy()
+        }
+    }
+
+    @Test
+    fun privatePreviewCannotBePersistedToReader() {
+        activityRule.scenario.onActivity { activity ->
+            val controller = BrowserController(activity)
+            assumeTrue(controller.canOpenLinkInPrivate)
+            val url = "https://example.com/private-article"
+            val privateTabId = controller.createTab(isIncognito = true)
+            controller.contentActions.show(
+                target = WebContentTarget(linkUrl = url),
+                sourceTabId = privateTabId,
+            )
+            val preview = controller.createLinkPeekPreviewWebView(
+                url = url,
+                onProgressChanged = {},
+                onCommittedUrlChanged = {},
+            )
+            var result: ReaderExtractionResult? = null
+
+            controller.saveLinkPeekToReader(preview, url) { result = it }
+
+            assertEquals(
+                ReaderExtractionResult.Failure(ReaderExtractionFailure.UnsupportedPage),
+                result,
+            )
+            controller.destroy()
         }
     }
 

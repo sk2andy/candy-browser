@@ -6,6 +6,7 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,8 @@ import dev.sk2andy.materialbrowser.browser.commands.CommandConfirmation
 import dev.sk2andy.materialbrowser.browser.commands.CommandCookieScope
 import dev.sk2andy.materialbrowser.browser.commands.CommandSuggestion
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 
 @Composable
 internal fun BrowserTransientOverlays(
@@ -40,8 +43,14 @@ internal fun BrowserTransientOverlays(
     addressNewTabButtonBounds: Rect?,
     pendingCapsuleDelete: SiteCapsule?,
     onPendingCapsuleDeleteDismiss: () -> Unit,
+    onFavoriteLink: (String, String?) -> Unit,
+    onSnoozeLink: (String, String?, String) -> Unit,
 ) {
     val rootView = LocalView.current
+    val readerSavedMessage = stringResource(R.string.reader_saved_offline_confirmation)
+    val readerUnsupportedMessage = stringResource(R.string.reader_extraction_unsupported)
+    val readerEmptyMessage = stringResource(R.string.reader_extraction_empty)
+    val readerInvalidMessage = stringResource(R.string.reader_extraction_invalid)
     if (clearDialogVisible) {
         AlertDialog(
             onDismissRequest = { onClearDialogDismiss() },
@@ -152,6 +161,10 @@ internal fun BrowserTransientOverlays(
                 rootView.performConfirmHaptic()
                 controller.openContextLinkInBackground()
             },
+            onOpenUrl = { currentUrl ->
+                rootView.performConfirmHaptic()
+                controller.openContextLinkInBackground(currentUrl)
+            },
             onCopyLink = { currentUrl ->
                 controller.contentActions.dismiss()
                 controller.copyLink(currentUrl)
@@ -163,6 +176,34 @@ internal fun BrowserTransientOverlays(
                 controller.contentActions.dismiss()
                 controller.shareLink(currentUrl)
             },
+            onSaveReaderOffline = { currentUrl, previewWebView ->
+                controller.saveLinkPeekToReader(previewWebView, currentUrl) { result ->
+                    val message = when (result) {
+                        is ReaderExtractionResult.Success -> readerSavedMessage
+                        is ReaderExtractionResult.Failure -> when (result.reason) {
+                            ReaderExtractionFailure.UnsupportedPage -> readerUnsupportedMessage
+                            ReaderExtractionFailure.EmptyArticle -> readerEmptyMessage
+                            ReaderExtractionFailure.InvalidResponse -> readerInvalidMessage
+                        }
+                    }
+                    Toast.makeText(rootView.context, message, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onFavorite = onFavoriteLink,
+            onSnooze = { currentUrl, title ->
+                controller.contextLinkSourceTabId?.let { sourceTabId ->
+                    controller.contentActions.dismiss()
+                    onSnoozeLink(currentUrl, title, sourceTabId)
+                }
+            },
+            onOpenForeground = { currentUrl ->
+                controller.openContextLinkInForeground(currentUrl)
+            },
+            actionLayout = controller.linkPeekActionLayout,
+            isFavorite = controller::isFavorite,
+            canSaveReaderOffline = controller.canPersistContextLink,
+            canFavorite = controller.canPersistContextLink,
+            canSnooze = controller.canSnoozeContextLink,
             canOpenInPrivate = controller.canOpenLinkInPrivate,
             onDownloadLink = controller::downloadContextLink,
             onDownloadImage = linkTarget.takeIf { it?.canDownloadImage == true }?.let {

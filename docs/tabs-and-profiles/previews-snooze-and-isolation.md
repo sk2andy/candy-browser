@@ -21,6 +21,10 @@
 | `BrowserSessionStore.saveTabsAndSnoozedImmediately` | Commit active+snoozed snapshot together and roll back on failure |
 | `SnoozeScheduler` / `SnoozeWakeNotifier` | Android alarm and notification edges |
 
+Link Peek can snooze its committed preview URL without first creating an active tab. Confirmation
+adds one regular local-profile tab directly to the atomic snoozed snapshot; cancellation leaves no
+tab, history or WebView state. Private, synced and ephemeral sources cannot persist snoozed links.
+
 ## Profiles and WebView storage
 
 | Case | `WebViewProfileRules` assignment |

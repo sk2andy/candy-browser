@@ -30,6 +30,8 @@ import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
+import dev.sk2andy.materialbrowser.data.LinkPeekAction
+import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
@@ -41,6 +43,7 @@ internal enum class SettingsDestination {
     Search,
     TabsAndGestures,
     AddressBarActions,
+    LinkPeekActions,
     Appearance,
     Browser,
     Downloads,
@@ -64,6 +67,7 @@ internal fun SettingsScreen(
     searchEngine: SearchEngine,
     pageTranslationProvider: PageTranslationProvider,
     linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
+    linkPeekActionLayout: LinkPeekActionLayout = LinkPeekActionLayout.Default,
     searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
     searchSuggestionProvider: SearchSuggestionProvider,
@@ -105,6 +109,7 @@ internal fun SettingsScreen(
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
+    onLinkPeekActionLayoutChanged: (LinkPeekActionLayout) -> Unit = {},
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
@@ -162,6 +167,8 @@ internal fun SettingsScreen(
                     initialState == SettingsDestination.ToppingCatalog &&
                     targetState == SettingsDestination.Userscripts ||
                     initialState == SettingsDestination.AddressBarActions &&
+                    targetState == SettingsDestination.TabsAndGestures ||
+                    initialState == SettingsDestination.LinkPeekActions &&
                     targetState == SettingsDestination.TabsAndGestures
                 ) {
                     (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith
@@ -217,6 +224,9 @@ internal fun SettingsScreen(
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onAddressBarDockingEnabledChanged = onAddressBarDockingEnabledChanged,
                     onLinkLongPressActionChanged = onLinkLongPressActionChanged,
+                    onLinkPeekActions = {
+                        onDestinationChanged(SettingsDestination.LinkPeekActions)
+                    },
                     onAddressBarActions = {
                         onDestinationChanged(SettingsDestination.AddressBarActions)
                     },
@@ -246,6 +256,38 @@ internal fun SettingsScreen(
                         afterLabel = stringResource(R.string.settings_address_bar_actions_after),
                         moreLabel = stringResource(R.string.cd_more_options),
                         fullMessage = stringResource(R.string.settings_address_bar_actions_full),
+                        actionLabel = actionLabels::getValue,
+                    )
+                }
+
+                SettingsDestination.LinkPeekActions -> {
+                    val actionLabels = LinkPeekAction.entries.associateWith { action ->
+                        stringResource(action.labelRes())
+                    }
+                    LinkPeekActionEditorPage(
+                        layout = linkPeekActionLayout,
+                        onLayoutChanged = onLinkPeekActionLayoutChanged,
+                        onBack = {
+                            onDestinationChanged(SettingsDestination.TabsAndGestures)
+                        },
+                        backLabel = stringResource(R.string.action_back),
+                        title = stringResource(R.string.settings_link_peek_actions_title),
+                        instructions = stringResource(
+                            R.string.settings_link_peek_actions_instructions,
+                        ),
+                        availableTitle = stringResource(
+                            R.string.settings_link_peek_actions_available,
+                        ),
+                        fixedPlusLabel = stringResource(R.string.action_open_in_new_tab),
+                        emptySlotLabel = stringResource(
+                            R.string.settings_link_peek_actions_empty_slot,
+                        ),
+                        moveToSlotLabel = stringResource(
+                            R.string.settings_link_peek_actions_move_to_slot,
+                        ),
+                        moveToAvailableLabel = stringResource(
+                            R.string.settings_link_peek_actions_move_to_available,
+                        ),
                         actionLabel = actionLabels::getValue,
                     )
                 }
@@ -351,4 +393,14 @@ internal fun SettingsScreen(
             }
         }
     }
+}
+
+private fun LinkPeekAction.labelRes(): Int = when (this) {
+    LinkPeekAction.ReaderLater -> R.string.reader_save_offline
+    LinkPeekAction.OpenPrivate -> R.string.action_open_link_in_private_tab
+    LinkPeekAction.Copy -> R.string.external_link_preview_copy_link
+    LinkPeekAction.Share -> R.string.action_share
+    LinkPeekAction.Favorite -> R.string.action_favorite
+    LinkPeekAction.Snooze -> R.string.action_snooze_tab
+    LinkPeekAction.OpenForeground -> R.string.action_open_in_new_tab_and_switch
 }

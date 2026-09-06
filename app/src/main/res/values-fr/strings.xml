@@ -263,6 +263,7 @@
     <string name="action_open_link_background_tab">Ouvrir le lien dans un nouvel onglet en arrière-plan</string>
     <string name="link_peek_title">Aperçu du lien</string>
     <string name="action_open_in_new_tab">Ouvrir dans un nouvel onglet</string>
+    <string name="action_open_in_new_tab_and_switch">Ouvrir dans un nouvel onglet et y accéder</string>
     <string name="action_open_link_in_private_tab">Ouvrir le lien dans un onglet privé</string>
     <string name="action_download_link">Télécharger le lien</string>
     <string name="action_download_image">Télécharger l’image</string>
@@ -398,6 +399,13 @@
     <string name="settings_make_default_browser">Définir Candy Browser comme navigateur par défaut</string>
     <string name="settings_section_gestures">Gestes</string>
     <string name="settings_link_long_press_action">Action lors d’un appui prolongé sur un lien</string>
+    <string name="settings_link_peek_actions_title">Boutons Link Peek</string>
+    <string name="settings_link_peek_actions_summary">Choisir et organiser jusqu’à trois actions rapides</string>
+    <string name="settings_link_peek_actions_instructions">Appuyez longuement sur les actions et faites-les glisser dans des emplacements vides. Faites-en glisser une vers Actions disponibles pour laisser son emplacement vide. Le + pulsant reste toujours au troisième emplacement et ouvre un onglet en arrière-plan.</string>
+    <string name="settings_link_peek_actions_available">Actions disponibles</string>
+    <string name="settings_link_peek_actions_empty_slot">Emplacement vide</string>
+    <string name="settings_link_peek_actions_move_to_slot">Déplacer vers l’emplacement</string>
+    <string name="settings_link_peek_actions_move_to_available">Déplacer vers les actions disponibles</string>
     <string name="settings_address_bar_actions_title">Boutons de la barre d’adresse</string>
     <string name="settings_address_bar_actions_summary">Choisissez et organisez jusqu’à trois boutons autour du champ d’adresse.</string>
     <string name="settings_address_bar_actions_instructions">Maintenez un bouton puis faites-le glisser à gauche ou à droite du champ. Plus reste fixe et compte comme quatrième bouton.</string>
@@ -801,6 +809,7 @@
     <string name="reader_extraction_invalid">La page a changé ou renvoyé un contenu invalide. Réessayez ou revenez à l’original.</string>
     <string name="reader_retry">Réessayer</string>
     <string name="reader_save_offline">Enregistrer hors ligne</string>
+    <string name="reader_saved_offline_confirmation">Enregistré pour la lecture hors ligne</string>
     <string name="reader_offline_short">Offline</string>
     <string name="reader_theme_system">Système</string>
     <string name="reader_theme_paper">Papier</string>

@@ -92,6 +92,12 @@ Frosted exposes three persisted controls while selected:
 - Tabs & gestures owns the global long-press link action. Invalid stored values fall back to Link
   Peek. Image-only long presses keep their content sheet, and private-open falls back to Link Peek
   when the active profile cannot create private tabs.
+- Tabs & gestures also owns the Link Peek action editor. It reuses the address-action editor's
+  breakaway, snap, settle, haptic and accessibility behavior. Its three configurable positions may
+  hold unique actions or remain empty; dragging a toolbar action back to the palette clears that
+  exact position. Only empty configurable positions advertise and accept drops; occupied actions
+  and the fixed `+` at slot three show no drop marker. Duplicate, excess or unknown persisted actions
+  normalize to positions without silently filling user-cleared slots.
 - The Browser setting for the draggable page scroll bar is global and defaults off. When enabled,
   native WebView scroll bars are replaced by a touch-sized thumb that appears during scrolling,
   supports direct dragging, and fades after interaction.
