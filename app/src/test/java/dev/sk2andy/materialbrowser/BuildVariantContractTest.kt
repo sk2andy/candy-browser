@@ -25,4 +25,24 @@ class BuildVariantContractTest {
 
         assertEquals(expectedFoss, BuildConfig.FOSS_DISTRIBUTION)
     }
+
+    @Test
+    fun `production application identity isolates release channels`() {
+        val flavorSuffix = when (BuildConfig.FLAVOR) {
+            "full" -> ""
+            "foss" -> ".foss"
+            else -> error("Unknown flavor: ${BuildConfig.FLAVOR}")
+        }
+        val buildTypeSuffix = when (BuildConfig.BUILD_TYPE) {
+            "release" -> ""
+            "userCaRelease" -> ".ca"
+            "debug", "localRelease", "userCaDebug" -> return
+            else -> error("Unknown build type: ${BuildConfig.BUILD_TYPE}")
+        }
+
+        assertEquals(
+            "dev.sk2andy.materialbrowser$flavorSuffix$buildTypeSuffix",
+            BuildConfig.APPLICATION_ID,
+        )
+    }
 }
