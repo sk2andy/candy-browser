@@ -7,7 +7,9 @@ enum class TabOverviewMode(val wireValue: String) {
     ;
 
     companion object {
-        fun fromWireValue(value: String?): TabOverviewMode =
-            entries.firstOrNull { it.wireValue == value } ?: Hero
+        fun fromWireValue(
+            value: String?,
+            fallback: TabOverviewMode = Hero,
+        ): TabOverviewMode = entries.firstOrNull { it.wireValue == value } ?: fallback
     }
 }

@@ -9,7 +9,8 @@
 | Pin/order | `TabPinningRules`, `TabReorderingRules`, `TabAutoSortingRules` | Pins stay before regular tabs. Optional automatic sorting orders each group by last access, oldest first and newest last, and disables manual reordering. |
 | Delete/duplicate | `TabDeletionRules`, `TabDuplicateRules` | Policy chooses valid targets before controller side effects |
 | Retention | `TabRetentionRules`, `InactiveTabLifetime` | Timed retention never expires selected/protected or non-deletable tabs. `Immediately` closes the complete tab session, including pinned tabs, when the app becomes fully hidden, except during configuration changes or picture-in-picture; a fresh blank tab replaces the cleared active profile session. |
-| Overview mode | `TabOverviewMode` and `ui/TabOverview*Rules` | Cover flow uses an Android-switcher-like card at roughly 74% of screen width and 0.45 aspect, with the favicon and title overlaid at top-left; grid and list share the same controller tab state; list mode can open and anchor short content at the bottom; the overview locks the activity to portrait until it closes |
+| Overview mode | `TabOverviewMode` and `ui/TabOverview*Rules` | Users choose Coverflow, Grid, or List. Missing and unknown values fall back to Coverflow. List can open and anchor short content at the bottom; the overview locks the activity to portrait until it closes. Shared hero rules own Coverflow and entry/exit morphing. |
+| Candy Stacks prototype | `TabStack`, `TabStackRules`, `TabStackUi` | A stack contains at least two tabs with the same profile, privacy mode, and pin state. Coverflow and Grid show an inline marker on every expanded member. The marker animates every visible member behind the tapped trigger tab and collapses them into a layered card at that position; tapping that card opens a separately configurable Coverflow, Grid, or List member folder. The chosen preview tab supplies collapsed content independently from the trigger anchor. Main List remains flat, and reordering is disabled while a stack is collapsed. |
 
 ## Persistence
 
@@ -17,6 +18,8 @@
 | --- | --- | --- |
 | Tabs and selection | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Exclude incognito tabs; fall back to most recently accessed persistent tab |
 | Overview ordering preferences | `BrowserSessionStore` | Persist list-bottom anchoring and automatic recent-use sorting; both default off |
+| Overview presentation preferences | `BrowserSessionStore` | Persist normal overview and Stack-folder modes independently. Normal overview defaults to Coverflow; Stack folders default to Grid. |
+| Candy Stack metadata | `BrowserSessionStore` | Persist validated regular-tab stacks with bounded names, stable colors, member IDs, chosen preview ID, collapse-trigger anchor ID, and collapsed state. Missing or stale preview and anchor IDs fall back to the first valid member. Private or mixed-private stacks are rejected at the storage boundary and remain memory-only. Missing members and stacks reduced below two tabs are discarded. |
 | History and favorites | `BrowsingHistoryRepository`, `BrowserSessionStore`, `BrowsingLibrary` | Keep local, bounded, canonicalized records; history is owned by a regular profile and can be viewed across a user-selected profile set |
 | WebView history state | `TabWebViewStateStore`/`Repository` | Persist separately from the tab summary and prune orphan files |
 | Deletion side data | Controller + repositories | Remove preview, favicon, WebView state and trail consistently |
@@ -42,6 +45,9 @@
 - Keep selection valid after deletion, retention, profile moves and snooze restore.
 - When automatic sorting is enabled, derive visible order from `lastAccessedAt`; keep pins grouped
   first and reject manual reorder mutations.
+- Keep stack grouping separate from the flat tab order. Creating or extending a stack must keep all
+  members in one profile, privacy mode, and pin state. Closing, snoozing, moving, or repinning a
+  member reconciles the stack and dissolves it below two members.
 - End an owning fullscreen-video session before its tab or WebView is removed. Private sessions end
   when selection leaves their tab; regular sessions may remain transiently attached as a mini-player.
 - Never reassign history when deleting a profile; delete that profile's rows. Private tabs never

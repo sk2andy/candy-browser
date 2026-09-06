@@ -9,6 +9,8 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.TabStack
+import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
@@ -82,6 +84,108 @@ class BrowserSessionStoreInstrumentedTest {
         assertEquals(listOf(true, false), tabs.map(BrowserTab::isPinned))
         assertEquals("regular", tabs.first().openerTabId)
         assertEquals("regular", selectedId)
+    }
+
+    @Test
+    fun tabStacksRoundTripWithRegularMembers() {
+        val store = BrowserSessionStore(context)
+        val tabs = listOf(
+            BrowserTab(id = "one", lastAccessedAt = 10L),
+            BrowserTab(id = "two", lastAccessedAt = 20L),
+        )
+        val stack = TabStack(
+            id = "ideas",
+            profileId = DEFAULT_PROFILE_ID,
+            name = "Ideas",
+            color = TabStackColor.Blueberry,
+            tabIds = tabs.map(BrowserTab::id),
+            previewTabId = "two",
+            collapsedAnchorTabId = "two",
+            isCollapsed = true,
+        )
+
+        store.saveTabStacks(listOf(stack), tabs)
+
+        assertEquals(listOf(stack), store.loadTabStacks(tabs))
+    }
+
+    @Test
+    fun privateTabStackMetadataNeverEntersPreferences() {
+        val store = BrowserSessionStore(context)
+        val tabs = listOf(
+            BrowserTab(id = "private-one", lastAccessedAt = 10L, isIncognito = true),
+            BrowserTab(id = "private-two", lastAccessedAt = 20L, isIncognito = true),
+        )
+        val stack = TabStack(
+            id = "private-stack",
+            profileId = DEFAULT_PROFILE_ID,
+            name = "secret stack name",
+            color = TabStackColor.Cherry,
+            tabIds = tabs.map(BrowserTab::id),
+            previewTabId = "private-two",
+        )
+
+        store.saveTabStacks(listOf(stack), tabs)
+
+        assertEquals("[]", preferences.getString("tab_stacks", null))
+        assertFalse(preferences.getString("tab_stacks", null).orEmpty().contains("secret"))
+        assertFalse(preferences.getString("tab_stacks", null).orEmpty().contains("private-two"))
+        assertTrue(store.loadTabStacks(tabs).isEmpty())
+    }
+
+    @Test
+    fun tabStackLoadDropsMissingAndSingleMemberStacks() {
+        preferences.edit().putString(
+            "tab_stacks",
+            """[{"id":"orphan","profileId":"candy","name":"Old","color":"grape","tabIds":["one","missing"]}]""",
+        ).commit()
+
+        val restored = BrowserSessionStore(context).loadTabStacks(
+            listOf(BrowserTab(id = "one", lastAccessedAt = 1L)),
+        )
+
+        assertTrue(restored.isEmpty())
+    }
+
+    @Test
+    fun legacyTabStackWithoutPreviewUsesFirstMember() {
+        preferences.edit().putString(
+            "tab_stacks",
+            """[{"id":"legacy","profileId":"candy","name":"Legacy","color":"grape","tabIds":["one","two"]}]""",
+        ).commit()
+
+        val restored = BrowserSessionStore(context).loadTabStacks(
+            listOf(
+                BrowserTab(id = "one", lastAccessedAt = 1L),
+                BrowserTab(id = "two", lastAccessedAt = 2L),
+            ),
+        )
+
+        assertEquals("one", restored.single().previewTabId)
+        assertEquals("one", restored.single().collapsedAnchorTabId)
+    }
+
+    @Test
+    fun tabStackLoadRejectsOversizedPayloadAndCollections() {
+        val tabs = listOf(
+            BrowserTab(id = "one", lastAccessedAt = 1L),
+            BrowserTab(id = "two", lastAccessedAt = 2L),
+        )
+        val stackJson =
+            """{"id":"stack","profileId":"candy","name":"Ideas","tabIds":["one","two"]}"""
+        val tooManyStacks = List(TabStackRules.MAX_STACKS + 1) { stackJson }
+            .joinToString(prefix = "[", postfix = "]")
+
+        preferences.edit().putString("tab_stacks", tooManyStacks).commit()
+        assertTrue(BrowserSessionStore(context).loadTabStacks(tabs).isEmpty())
+
+        val tooManyMembers =
+            """[{"id":"stack","profileId":"candy","name":"Ideas","tabIds":["one","two","three"]}]"""
+        preferences.edit().putString("tab_stacks", tooManyMembers).commit()
+        assertTrue(BrowserSessionStore(context).loadTabStacks(tabs).isEmpty())
+
+        preferences.edit().putString("tab_stacks", " ".repeat(256 * 1024 + 1)).commit()
+        assertTrue(BrowserSessionStore(context).loadTabStacks(tabs).isEmpty())
     }
 
     @Test
@@ -500,18 +604,24 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
-    fun tabOverviewModeRoundTripsAndUnknownValueFallsBackToHero() {
+    fun tabOverviewAndStackFolderModesRoundTripIndependently() {
         val store = BrowserSessionStore(context)
         assertEquals(TabOverviewMode.Hero, store.loadTabOverviewMode())
+        assertEquals(TabOverviewMode.Grid, store.loadTabStackFolderMode())
 
-        store.saveTabOverviewMode(TabOverviewMode.Grid)
-        assertEquals(TabOverviewMode.Grid, store.loadTabOverviewMode())
+        store.saveTabOverviewMode(TabOverviewMode.Hero)
+        assertEquals(TabOverviewMode.Hero, store.loadTabOverviewMode())
 
         store.saveTabOverviewMode(TabOverviewMode.List)
+        store.saveTabStackFolderMode(TabOverviewMode.Hero)
         assertEquals(TabOverviewMode.List, store.loadTabOverviewMode())
+        assertEquals(TabOverviewMode.Hero, store.loadTabStackFolderMode())
 
         preferences.edit().putString("tab_overview_mode", "unknown").commit()
         assertEquals(TabOverviewMode.Hero, store.loadTabOverviewMode())
+
+        preferences.edit().putString("tab_stack_folder_mode", "unknown").commit()
+        assertEquals(TabOverviewMode.Grid, store.loadTabStackFolderMode())
     }
 
     @Test

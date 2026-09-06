@@ -53,7 +53,7 @@ kinetic typography, and camera motion are generated entirely from repository-own
 ## Tablet support
 
 Candy adapts its fullscreen browsing and visual tab overviews to larger screens, including
-landscape-oriented previews for cover flow and compact grid layouts.
+landscape-oriented previews in Coverflow and the compact grid layout.
 
 <p align="center">
   <img src="docs/screenshots/candy-tablet.png" width="90%" alt="Candy Browser running fullscreen on an Android tablet in landscape">
@@ -97,7 +97,10 @@ landscape-oriented previews for cover flow and compact grid layouts.
 ### Tabs, profiles, and journeys
 
 - Persistent tabs with saved page previews, favicons, pinning, reordering, and automatic cleanup
-- Cover flow, compact grid, and preview-free list layouts
+- Coverflow, compact grid, and preview-free list layouts
+- **Candy Stacks prototype:** group compatible tabs by name and color, choose the stack preview,
+  collapse from the card marker in Coverflow or Grid, and choose Coverflow, Grid, or List for the
+  folder-style member view
 - Tab snoozing with scheduled returns, notifications, and a dedicated snoozed-tab manager
 - Optional per-profile WebView storage isolation where the installed provider supports it
 - Optional profile controls for a simpler single-profile setup
