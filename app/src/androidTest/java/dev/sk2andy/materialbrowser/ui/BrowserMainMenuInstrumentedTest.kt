@@ -48,6 +48,7 @@ class BrowserMainMenuInstrumentedTest {
     fun usesApprovedGroupsAndDismissesAfterAction() {
         val dismissals = AtomicInteger()
         val dockActions = AtomicInteger()
+        val duplicateActions = AtomicInteger()
         val cookieChanges = AtomicInteger()
         val scrollChanges = AtomicInteger()
         val popupChanges = AtomicInteger()
@@ -55,6 +56,7 @@ class BrowserMainMenuInstrumentedTest {
         val zoomChanges = AtomicInteger()
         val safeAreaChanges = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        var setMenuExpanded: (Boolean) -> Unit = {}
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             val configuration = LocalConfiguration.current
@@ -67,6 +69,7 @@ class BrowserMainMenuInstrumentedTest {
             CompositionLocalProvider(LocalConfiguration provides shortConfiguration) {
                 MaterialBrowserTheme {
                     var expanded by remember { mutableStateOf(true) }
+                    setMenuExpanded = { expanded = it }
                     var cookieRemovalEnabled by remember { mutableStateOf(false) }
                     var forceVerticalScrolling by remember { mutableStateOf(false) }
                     var alwaysBlockPopups by remember { mutableStateOf(false) }
@@ -148,6 +151,7 @@ class BrowserMainMenuInstrumentedTest {
                             onSummarize = {},
                             onSnooze = {},
                             onSnoozedTabs = {},
+                            onDuplicateTab = duplicateActions::incrementAndGet,
                             onDockAddressBar = dockActions::incrementAndGet,
                             onHistory = {},
                             onSettings = {},
@@ -174,6 +178,7 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNode(
             pageGroup and
                 hasAnyDescendant(hasText(context.getString(R.string.reader_open_action))) and
+                hasAnyDescendant(hasText(context.getString(R.string.action_duplicate_tab))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_translate_page))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_share))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_open_in_app))) and
@@ -310,6 +315,15 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
         assertEquals(1, dockActions.get())
+
+        composeRule.runOnIdle { setMenuExpanded(true) }
+        composeRule.mainClock.advanceTimeBy(200L)
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DuplicateTab)
+            .assertIsDisplayed()
+            .performClick()
+
+        assertEquals(2, dismissals.get())
+        assertEquals(1, duplicateActions.get())
     }
 
     @Test
@@ -392,6 +406,7 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.reader_open_action),
         ).assertIsNotEnabled()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DuplicateTab).assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Translate).assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
             .assertDoesNotExist()
