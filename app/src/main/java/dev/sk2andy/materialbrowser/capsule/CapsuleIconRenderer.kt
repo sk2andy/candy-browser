@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -18,6 +19,7 @@ object CapsuleIconRenderer {
         iconEmoji: String,
         iconColor: CapsuleIconColor,
         favicon: Bitmap?,
+        customIcon: Bitmap? = null,
     ): Bitmap {
         val output = Bitmap.createBitmap(ICON_SIZE, ICON_SIZE, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
@@ -25,7 +27,22 @@ object CapsuleIconRenderer {
             color = iconColor.backgroundArgb.toInt()
         }
         canvas.drawRoundRect(RectF(8f, 8f, 184f, 184f), 48f, 48f, frame)
-        if (favicon != null && !favicon.isRecycled) {
+        if (customIcon != null && !customIcon.isRecycled) {
+            val iconBounds = RectF(25f, 25f, 167f, 167f)
+            canvas.save()
+            canvas.clipPath(
+                Path().apply {
+                    addRoundRect(iconBounds, 38f, 38f, Path.Direction.CW)
+                },
+            )
+            canvas.drawBitmap(
+                customIcon,
+                Rect(0, 0, customIcon.width, customIcon.height),
+                iconBounds,
+                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
+            )
+            canvas.restore()
+        } else if (favicon != null && !favicon.isRecycled) {
             canvas.drawRoundRect(
                 RectF(25f, 25f, 167f, 167f),
                 38f,

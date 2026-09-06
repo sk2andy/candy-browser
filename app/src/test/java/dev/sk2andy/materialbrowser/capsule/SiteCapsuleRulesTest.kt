@@ -71,6 +71,8 @@ class SiteCapsuleRulesTest {
         assertEquals(CapsuleIconColor.Charcoal, capsule?.iconColor)
         assertEquals(SiteCapsuleRules.DEFAULT_ICON_EMOJI, defaulted?.iconEmoji)
         assertEquals(CapsuleIconColor.Light, CapsuleIconColor.fromWireValue("unknown"))
+        assertEquals(CapsuleIconMode.Custom, CapsuleIconMode.fromWireValue("custom"))
+        assertEquals(CapsuleIconMode.Favicon, CapsuleIconMode.fromWireValue("unknown"))
     }
 
     @Test

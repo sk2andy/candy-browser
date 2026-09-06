@@ -28,6 +28,7 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorRequest
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -243,5 +244,94 @@ class SiteCapsuleScreenInstrumentedTest {
         composeRule.onNodeWithTag(SiteCapsuleTestTags.iconColor(CapsuleIconColor.Charcoal))
             .performScrollTo()
             .assertIsSelected()
+    }
+
+    @Test
+    fun editorSubmitsCustomIconAndOpensCropControls() {
+        val submission = AtomicReference<dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorSubmission?>()
+        val editRequests = java.util.concurrent.atomic.AtomicInteger()
+        val customIcon = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888)
+        composeRule.setContent {
+            MaterialTheme {
+                SiteCapsuleEditorScreen(
+                    request = SiteCapsuleEditorRequest(
+                        existing = null,
+                        sourceTabId = "source-tab",
+                        sourceTitle = "Custom Capsule",
+                        sourceUrl = "https://custom.example",
+                        profiles = listOf(BrowserProfile("candy", "🍬")),
+                        activeProfileId = "candy",
+                        profileIsolationSupported = true,
+                        pinningSupported = true,
+                        canCreate = true,
+                        canCreateDedicatedProfile = true,
+                        previewIcon = null,
+                    ),
+                    onSubmit = submission::set,
+                    onDismiss = {},
+                    customIcon = customIcon,
+                    customIconRevision = 1,
+                    onEditCustomIcon = { editRequests.incrementAndGet() },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.CustomIcon)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.EditCustomIcon)
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.Save)
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(1, editRequests.get())
+        assertEquals(CapsuleIconMode.Custom, submission.get()?.iconMode)
+        assertSame(customIcon, submission.get()?.customIcon)
+
+    }
+
+    @Test
+    fun retainedCustomIconDoesNotOverrideSelectedFallbackMode() {
+        val submission = AtomicReference<dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorSubmission?>()
+        val customIcon = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888)
+        composeRule.setContent {
+            MaterialTheme {
+                SiteCapsuleEditorScreen(
+                    request = SiteCapsuleEditorRequest(
+                        existing = SiteCapsule(
+                            id = "04a74ad8-7533-460c-bfbf-a135968940d5",
+                            name = "Fallback",
+                            startUrl = "https://fallback.example",
+                            profileId = "candy",
+                            iconMode = CapsuleIconMode.ProfileFallback,
+                            createdAtMillis = 1L,
+                            updatedAtMillis = 2L,
+                        ),
+                        sourceTabId = null,
+                        sourceTitle = "",
+                        sourceUrl = "",
+                        profiles = listOf(BrowserProfile("candy", "🍬")),
+                        activeProfileId = "candy",
+                        profileIsolationSupported = true,
+                        pinningSupported = true,
+                        canCreate = true,
+                        canCreateDedicatedProfile = true,
+                        previewIcon = null,
+                        customIcon = customIcon,
+                    ),
+                    onSubmit = submission::set,
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.Save)
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(CapsuleIconMode.ProfileFallback, submission.get()?.iconMode)
+        assertSame(customIcon, submission.get()?.customIcon)
     }
 }

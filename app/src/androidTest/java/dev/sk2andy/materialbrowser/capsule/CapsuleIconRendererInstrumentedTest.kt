@@ -12,6 +12,26 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class CapsuleIconRendererInstrumentedTest {
     @Test
+    fun customIconFillsRoundedInnerTileAndKeepsCandyFrame() {
+        val custom = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.GREEN)
+        }
+        val icon = CapsuleIconRenderer.render(
+            name = "Custom",
+            iconEmoji = "🧩",
+            iconColor = CapsuleIconColor.Purple,
+            favicon = null,
+            customIcon = custom,
+        )
+
+        assertEquals(CapsuleIconColor.Purple.backgroundArgb.toInt(), icon.getPixel(16, 96))
+        assertEquals(Color.GREEN, icon.getPixel(96, 96))
+
+        custom.recycle()
+        icon.recycle()
+    }
+
+    @Test
     fun selectedColorRepaintsIconTileAroundFavicon() {
         val favicon = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888).apply {
             eraseColor(Color.RED)

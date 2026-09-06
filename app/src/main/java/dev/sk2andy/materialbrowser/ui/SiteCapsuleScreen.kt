@@ -47,10 +47,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -101,6 +103,8 @@ object SiteCapsuleTestTags {
     const val Save = "site_capsule_save"
     const val Chrome = "site_capsule_chrome"
     const val IconEmoji = "site_capsule_icon_emoji"
+    const val CustomIcon = "site_capsule_custom_icon"
+    const val EditCustomIcon = "site_capsule_edit_custom_icon"
 
     fun iconColor(color: CapsuleIconColor): String = "site_capsule_icon_color:${color.wireValue}"
 
@@ -332,6 +336,9 @@ fun SiteCapsuleEditorScreen(
     request: SiteCapsuleEditorRequest,
     onSubmit: (SiteCapsuleEditorSubmission) -> Unit,
     onDismiss: () -> Unit,
+    customIcon: Bitmap? = request.customIcon,
+    customIconRevision: Int = 0,
+    onEditCustomIcon: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val existing = request.existing
@@ -379,6 +386,16 @@ fun SiteCapsuleEditorScreen(
     var iconColor by rememberSaveable(existing?.id) {
         mutableStateOf(existing?.iconColor ?: CapsuleIconColor.Light)
     }
+    var handledCustomIconRevision by rememberSaveable(existing?.id) { mutableIntStateOf(0) }
+    LaunchedEffect(customIconRevision) {
+        if (
+            customIcon != null &&
+            customIconRevision > handledCustomIconRevision
+        ) {
+            iconMode = CapsuleIconMode.Custom
+            handledCustomIconRevision = customIconRevision
+        }
+    }
     val iconPreview = remember(
         name,
         iconEmoji,
@@ -386,6 +403,7 @@ fun SiteCapsuleEditorScreen(
         iconMode,
         request.previewIcon,
         request.previewIconIsRendered,
+        customIcon,
     ) {
         if (
             request.previewIconIsRendered &&
@@ -401,12 +419,15 @@ fun SiteCapsuleEditorScreen(
                 favicon = request.previewIcon.takeIf {
                     iconMode == CapsuleIconMode.Favicon && !request.previewIconIsRendered
                 },
+                customIcon = customIcon.takeIf { iconMode == CapsuleIconMode.Custom },
             )
         }
     }
     DisposableEffect(iconPreview) {
         onDispose {
-            if (iconPreview !== request.previewIcon) iconPreview.recycle()
+            if (iconPreview !== request.previewIcon) {
+                iconPreview.recycle()
+            }
         }
     }
     Surface(
@@ -466,6 +487,27 @@ fun SiteCapsuleEditorScreen(
                     enabled = request.previewIcon != null && !request.previewIconIsRendered,
                     onClick = { iconMode = CapsuleIconMode.Favicon },
                 )
+                CapsuleOptionRow(
+                    title = stringResource(R.string.capsule_icon_custom),
+                    subtitle = stringResource(R.string.capsule_icon_custom_summary),
+                    selected = iconMode == CapsuleIconMode.Custom,
+                    onClick = {
+                        if (customIcon == null) {
+                            onEditCustomIcon()
+                        } else {
+                            iconMode = CapsuleIconMode.Custom
+                        }
+                    },
+                    modifier = Modifier.testTag(SiteCapsuleTestTags.CustomIcon),
+                )
+                if (iconMode == CapsuleIconMode.Custom) {
+                    TextButton(
+                        onClick = onEditCustomIcon,
+                        modifier = Modifier.testTag(SiteCapsuleTestTags.EditCustomIcon),
+                    ) {
+                        Text(stringResource(R.string.capsule_icon_custom_edit))
+                    }
+                }
                 CapsuleOptionRow(
                     title = stringResource(R.string.capsule_icon_fallback),
                     subtitle = stringResource(R.string.capsule_icon_fallback_summary),
@@ -669,6 +711,7 @@ fun SiteCapsuleEditorScreen(
                                 sourceFavicon = request.previewIcon.takeUnless {
                                     request.previewIconIsRendered
                                 },
+                                customIcon = customIcon,
                             ),
                         )
                     },
@@ -851,13 +894,14 @@ private fun CapsuleOptionRow(
     title: String,
     subtitle: String,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(18.dp),

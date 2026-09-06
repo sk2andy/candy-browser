@@ -31,6 +31,7 @@ enum class CapsuleChromeMode(val wireValue: String) {
 
 enum class CapsuleIconMode(val wireValue: String) {
     Favicon("favicon"),
+    Custom("custom"),
     ProfileFallback("profile_fallback"),
     ;
 

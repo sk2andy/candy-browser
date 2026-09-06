@@ -11,6 +11,7 @@ class CapsuleIconUpdateRulesTest {
             CapsuleIconUpdateRules.resolveMode(
                 requestedMode = CapsuleIconMode.Favicon,
                 hasSourceFavicon = false,
+                hasCustomIcon = false,
                 hasRenderedIcon = true,
                 customizationChanged = false,
             ),
@@ -20,6 +21,7 @@ class CapsuleIconUpdateRulesTest {
             CapsuleIconUpdateRules.resolveMode(
                 requestedMode = CapsuleIconMode.Favicon,
                 hasSourceFavicon = false,
+                hasCustomIcon = false,
                 hasRenderedIcon = true,
                 customizationChanged = true,
             ),
@@ -33,6 +35,7 @@ class CapsuleIconUpdateRulesTest {
             CapsuleIconUpdateRules.resolveMode(
                 requestedMode = CapsuleIconMode.Favicon,
                 hasSourceFavicon = true,
+                hasCustomIcon = false,
                 hasRenderedIcon = false,
                 customizationChanged = true,
             ),
@@ -42,7 +45,32 @@ class CapsuleIconUpdateRulesTest {
             CapsuleIconUpdateRules.resolveMode(
                 requestedMode = CapsuleIconMode.Favicon,
                 hasSourceFavicon = false,
+                hasCustomIcon = false,
                 hasRenderedIcon = false,
+                customizationChanged = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `custom mode requires a stored or submitted custom icon`() {
+        assertEquals(
+            CapsuleIconMode.Custom,
+            CapsuleIconUpdateRules.resolveMode(
+                requestedMode = CapsuleIconMode.Custom,
+                hasSourceFavicon = true,
+                hasCustomIcon = true,
+                hasRenderedIcon = false,
+                customizationChanged = true,
+            ),
+        )
+        assertEquals(
+            CapsuleIconMode.ProfileFallback,
+            CapsuleIconUpdateRules.resolveMode(
+                requestedMode = CapsuleIconMode.Custom,
+                hasSourceFavicon = true,
+                hasCustomIcon = false,
+                hasRenderedIcon = true,
                 customizationChanged = false,
             ),
         )
