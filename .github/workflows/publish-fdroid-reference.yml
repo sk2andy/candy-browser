@@ -39,6 +39,9 @@ jobs:
             v0.33)
               expected_commit="4d7400de2ee3316743e69fefe396fe5807ad0b9d"
               ;;
+            v0.36)
+              expected_commit="3721a82f351dacea522be36773df45c36cede965"
+              ;;
             *)
               echo "Release tag is not explicitly allowlisted." >&2
               exit 1
@@ -141,6 +144,9 @@ jobs:
               ;;
             v0.33)
               expected_commit="4d7400de2ee3316743e69fefe396fe5807ad0b9d"
+              ;;
+            v0.36)
+              expected_commit="3721a82f351dacea522be36773df45c36cede965"
               ;;
             *)
               echo "Release tag is not explicitly allowlisted." >&2
