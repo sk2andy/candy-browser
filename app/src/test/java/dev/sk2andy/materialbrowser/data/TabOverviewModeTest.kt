@@ -12,8 +12,12 @@ class TabOverviewModeTest {
     }
 
     @Test
-    fun `unknown value falls back to hero`() {
+    fun `unknown values use the requested fallback`() {
         assertEquals(TabOverviewMode.Hero, TabOverviewMode.fromWireValue(null))
         assertEquals(TabOverviewMode.Hero, TabOverviewMode.fromWireValue("unknown"))
+        assertEquals(
+            TabOverviewMode.Grid,
+            TabOverviewMode.fromWireValue("unknown", fallback = TabOverviewMode.Grid),
+        )
     }
 }

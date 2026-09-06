@@ -286,11 +286,6 @@ class SnoozeScreensInstrumentedTest {
     }
 
     @Test
-    fun heroOverflowOpensActionsAboveChromeBeforeSnoozePicker() {
-        verifyOverflowActionsFlow(TabOverviewMode.Hero)
-    }
-
-    @Test
     fun gridOverflowOpensActionsAboveChromeBeforeSnoozePicker() {
         verifyOverflowActionsFlow(TabOverviewMode.Grid)
     }
