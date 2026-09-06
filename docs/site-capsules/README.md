@@ -12,7 +12,7 @@
 | Surface | Tests |
 | --- | --- |
 | Model, navigation, profile rules | `capsule/*RulesTest` |
-| Editor and launch contracts | `SiteCapsuleEditorContractInstrumentedTest`, `SiteCapsuleLaunchInstrumentedTest` |
-| Storage | `SiteCapsuleStoreInstrumentedTest` |
-| Compose UI | `SiteCapsuleScreenInstrumentedTest` |
-
+| Editor and launch contracts | `SiteCapsuleEditorContractInstrumentedTest`, `CapsuleCustomIconEditorContractInstrumentedTest`, `CapsuleIconPackPickerContractInstrumentedTest`, `SiteCapsuleLaunchInstrumentedTest` |
+| Icon crop, packs and rendering | `CapsuleIconCropRulesTest`, `CapsuleIconPackRulesTest`, `CapsuleCustomIconProcessorInstrumentedTest`, `CapsuleIconPackParserInstrumentedTest`, `CapsuleIconRendererInstrumentedTest` |
+| Storage | `SiteCapsuleStoreInstrumentedTest`, `SiteCapsuleIconStoreInstrumentedTest` |
+| Compose UI | `SiteCapsuleScreenInstrumentedTest`, `CapsuleCustomIconEditorScreenInstrumentedTest`, `CapsuleIconPackPickerScreenInstrumentedTest` |

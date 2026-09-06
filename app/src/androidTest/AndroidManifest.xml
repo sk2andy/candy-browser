@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Candy Test Icon Pack">
+        <activity
+            android:name="dev.sk2andy.materialbrowser.capsule.IconPackFixtureActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.novalauncher.THEME" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

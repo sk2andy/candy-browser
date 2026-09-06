@@ -360,8 +360,8 @@ internal fun BrowserScreen(
                 iconEmoji = submission.iconEmoji,
                 iconColor = submission.iconColor,
             ),
-            sourceFavicon = submission.sourceTabId?.let { controller.favicons[it] }
-                ?: submission.sourceFavicon,
+            sourceFavicon = submission.sourceFavicon,
+            customIcon = submission.customIcon,
         )
         if (controller.activeProfileId != previousProfileId) {
             controller.selectProfile(previousProfileId)
@@ -372,6 +372,7 @@ internal fun BrowserScreen(
             CapsuleSaveResult.PinRequestFailed -> R.string.capsule_pin_failed
             CapsuleSaveResult.Updated -> R.string.capsule_updated
             CapsuleSaveResult.UpdateFailed -> R.string.capsule_update_failed
+            CapsuleSaveResult.IconSaveFailed -> R.string.capsule_icon_save_failed
             CapsuleSaveResult.LimitReached -> R.string.capsule_limit_reached
             CapsuleSaveResult.Invalid -> R.string.capsule_invalid_configuration
         }
@@ -412,6 +413,9 @@ internal fun BrowserScreen(
         val storedSourceIcon = existing?.let { capsule ->
             controller.siteCapsuleSourceIcon(capsule.id)
         }
+        val storedCustomIcon = existing?.let { capsule ->
+            controller.siteCapsuleCustomIcon(capsule.id)
+        }
         val legacyRenderedIcon = existing
             ?.takeIf { capsule ->
                 capsule.iconMode == CapsuleIconMode.Favicon && storedSourceIcon == null
@@ -437,6 +441,7 @@ internal fun BrowserScreen(
                     ?: legacyRenderedIcon
                     ?: sourceTab?.let { controller.favicons[it.id] },
                 previewIconIsRendered = legacyRenderedIcon != null,
+                customIcon = storedCustomIcon,
             ),
         )
         rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)

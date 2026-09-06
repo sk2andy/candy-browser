@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.capsule.CapsuleChromeMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconColor
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationMode
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
@@ -41,6 +42,7 @@ class SiteCapsuleStoreInstrumentedTest {
             isolatedStorageRequested = true,
             navigationMode = CapsuleNavigationMode.SameRegistrableDomain,
             chromeMode = CapsuleChromeMode.NoControls,
+            iconMode = CapsuleIconMode.Custom,
             iconEmoji = "📬",
             iconColor = CapsuleIconColor.Sky,
             createdAtMillis = 10L,

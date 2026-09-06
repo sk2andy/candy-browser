@@ -3432,7 +3432,11 @@ class BrowserController(
         return createTab(BLANK_URL, isIncognito = false) != previousTabId
     }
 
-    fun upsertSiteCapsule(draft: SiteCapsuleDraft, sourceFavicon: Bitmap? = null): CapsuleSaveResult {
+    fun upsertSiteCapsule(
+        draft: SiteCapsuleDraft,
+        sourceFavicon: Bitmap? = null,
+        customIcon: Bitmap? = null,
+    ): CapsuleSaveResult {
         val existing = draft.id?.let { id -> siteCapsules.firstOrNull { it.id == id } }
         if (existing == null && !SiteCapsuleRules.canCreate(siteCapsules.size)) {
             return CapsuleSaveResult.LimitReached
@@ -3459,6 +3463,14 @@ class BrowserController(
         } ?: return CapsuleSaveResult.Invalid
         val storedIcon = siteCapsuleIconStore.load(proposedCapsule.id)
         val storedSourceFavicon = siteCapsuleIconStore.loadSource(proposedCapsule.id)
+        val storedCustomIcon = siteCapsuleIconStore.loadCustom(proposedCapsule.id)
+        val customIconChanged = customIcon != null && runCatching {
+            storedCustomIcon?.sameAs(customIcon) != true
+        }.getOrDefault(true)
+        if (
+            customIconChanged &&
+            !siteCapsuleIconStore.saveCustom(proposedCapsule.id, checkNotNull(customIcon))
+        ) return CapsuleSaveResult.IconSaveFailed
         val iconCustomizationChanged = existing == null ||
             existing.iconMode != proposedCapsule.iconMode ||
             existing.iconEmoji != proposedCapsule.iconEmoji ||
@@ -3467,6 +3479,7 @@ class BrowserController(
             iconMode = CapsuleIconUpdateRules.resolveMode(
                 requestedMode = proposedCapsule.iconMode,
                 hasSourceFavicon = sourceFavicon != null || storedSourceFavicon != null,
+                hasCustomIcon = customIcon != null || storedCustomIcon != null,
                 hasRenderedIcon = storedIcon != null,
                 customizationChanged = iconCustomizationChanged,
             ),
@@ -3476,14 +3489,20 @@ class BrowserController(
         siteCapsules += SiteCapsuleRules.bounded(updated)
         siteCapsuleStore.save(siteCapsules)
         if (sourceFavicon != null) siteCapsuleIconStore.saveSource(capsule.id, sourceFavicon)
-        val icon = if (
+        val icon = when {
+            capsule.iconMode == CapsuleIconMode.Custom -> {
+                CapsuleIconRenderer.render(
+                    name = capsule.name,
+                    iconEmoji = capsule.iconEmoji,
+                    iconColor = capsule.iconColor,
+                    favicon = null,
+                    customIcon = checkNotNull(customIcon ?: storedCustomIcon),
+                )
+            }
             capsule.iconMode == CapsuleIconMode.Favicon &&
-            sourceFavicon == null && storedSourceFavicon == null &&
-            storedIcon != null
-        ) {
-            storedIcon
-        } else {
-            CapsuleIconRenderer.render(
+                sourceFavicon == null && storedSourceFavicon == null &&
+                storedIcon != null -> storedIcon
+            else -> CapsuleIconRenderer.render(
                 name = capsule.name,
                 iconEmoji = capsule.iconEmoji,
                 iconColor = capsule.iconColor,
@@ -3579,6 +3598,9 @@ class BrowserController(
 
     fun siteCapsuleSourceIcon(capsuleId: String): Bitmap? =
         siteCapsuleIconStore.loadSource(capsuleId)
+
+    fun siteCapsuleCustomIcon(capsuleId: String): Bitmap? =
+        siteCapsuleIconStore.loadCustom(capsuleId)
 
     fun siteCapsuleRenderedIcon(capsuleId: String): Bitmap? = siteCapsuleIconStore.load(capsuleId)
 
@@ -12499,6 +12521,7 @@ enum class CapsuleSaveResult {
     PinRequestFailed,
     Updated,
     UpdateFailed,
+    IconSaveFailed,
     LimitReached,
     Invalid,
 }

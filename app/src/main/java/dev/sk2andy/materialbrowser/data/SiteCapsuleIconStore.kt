@@ -16,15 +16,23 @@ class SiteCapsuleIconStore(context: Context) {
     @Synchronized
     fun loadSource(capsuleId: String): Bitmap? = load(capsuleId, source = true)
 
-    private fun load(capsuleId: String, source: Boolean): Bitmap? {
+    @Synchronized
+    fun loadCustom(capsuleId: String): Bitmap? = load(capsuleId, custom = true)
+
+    private fun load(
+        capsuleId: String,
+        source: Boolean = false,
+        custom: Boolean = false,
+    ): Bitmap? {
         val id = SiteCapsuleRules.opaqueId(capsuleId) ?: return null
-        val target = iconFile(id, source)
+        val target = iconFile(id, source = source, custom = custom)
         if (!target.isFile || target.length() !in 1..MAX_ICON_BYTES) return null
-        return runCatching {
+        val bitmap = runCatching {
             AtomicFile(target).openRead().use(BitmapFactory::decodeStream)
-        }.getOrNull()?.takeIf { bitmap ->
-            bitmap.width in 1..MAX_ICON_SIZE && bitmap.height in 1..MAX_ICON_SIZE
-        }
+        }.getOrNull() ?: return null
+        if (bitmap.width in 1..MAX_ICON_SIZE && bitmap.height in 1..MAX_ICON_SIZE) return bitmap
+        bitmap.recycle()
+        return null
     }
 
     @Synchronized
@@ -32,7 +40,21 @@ class SiteCapsuleIconStore(context: Context) {
 
     @Synchronized
     fun saveSource(capsuleId: String, bitmap: Bitmap): Boolean {
+        return saveBoundedSource(capsuleId, bitmap, custom = false)
+    }
+
+    @Synchronized
+    fun saveCustom(capsuleId: String, bitmap: Bitmap): Boolean {
+        return saveBoundedSource(capsuleId, bitmap, custom = true)
+    }
+
+    private fun saveBoundedSource(
+        capsuleId: String,
+        bitmap: Bitmap,
+        custom: Boolean,
+    ): Boolean {
         if (bitmap.isRecycled || bitmap.width <= 0 || bitmap.height <= 0) return false
+        if (custom && bitmap.width != bitmap.height) return false
         val scale = minOf(
             1f,
             MAX_ICON_SIZE.toFloat() / maxOf(bitmap.width, bitmap.height).toFloat(),
@@ -48,18 +70,23 @@ class SiteCapsuleIconStore(context: Context) {
             bitmap
         }
         return try {
-            save(capsuleId, bounded, source = true)
+            save(capsuleId, bounded, source = !custom, custom = custom)
         } finally {
             if (bounded !== bitmap) bounded.recycle()
         }
     }
 
-    private fun save(capsuleId: String, bitmap: Bitmap, source: Boolean): Boolean {
+    private fun save(
+        capsuleId: String,
+        bitmap: Bitmap,
+        source: Boolean = false,
+        custom: Boolean = false,
+    ): Boolean {
         val id = SiteCapsuleRules.opaqueId(capsuleId) ?: return false
         if (bitmap.isRecycled || bitmap.width !in 1..MAX_ICON_SIZE || bitmap.height !in 1..MAX_ICON_SIZE) {
             return false
         }
-        val file = AtomicFile(iconFile(id, source))
+        val file = AtomicFile(iconFile(id, source = source, custom = custom))
         val stream = file.startWrite()
         return try {
             val compressed = bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
@@ -82,27 +109,44 @@ class SiteCapsuleIconStore(context: Context) {
         SiteCapsuleRules.opaqueId(capsuleId)?.let { id ->
             AtomicFile(iconFile(id, source = false)).delete()
             AtomicFile(iconFile(id, source = true)).delete()
+            AtomicFile(iconFile(id, custom = true)).delete()
         }
     }
 
     @Synchronized
     fun cleanup(knownCapsuleIds: Set<String>) {
         directory.listFiles().orEmpty().forEach { file ->
-            val id = file.name
-                .removeSuffix(".png")
-                .removeSuffix(SOURCE_SUFFIX)
-            if (!file.name.endsWith(".png") || id !in knownCapsuleIds) file.delete()
+            val id = when {
+                file.name.endsWith("$SOURCE_SUFFIX.png") -> {
+                    file.name.removeSuffix("$SOURCE_SUFFIX.png")
+                }
+                file.name.endsWith("$CUSTOM_SUFFIX.png") -> {
+                    file.name.removeSuffix("$CUSTOM_SUFFIX.png")
+                }
+                file.name.endsWith(".png") -> file.name.removeSuffix(".png")
+                else -> null
+            }
+            if (id == null || id !in knownCapsuleIds) file.delete()
         }
     }
 
-    private fun iconFile(id: String, source: Boolean): File = File(
+    private fun iconFile(
+        id: String,
+        source: Boolean = false,
+        custom: Boolean = false,
+    ): File = File(
         directory,
-        if (source) "$id$SOURCE_SUFFIX.png" else "$id.png",
+        when {
+            custom -> "$id$CUSTOM_SUFFIX.png"
+            source -> "$id$SOURCE_SUFFIX.png"
+            else -> "$id.png"
+        },
     )
 
     private companion object {
         const val DIRECTORY_NAME = "site_capsule_icons"
         const val SOURCE_SUFFIX = ".source"
+        const val CUSTOM_SUFFIX = ".custom"
         const val MAX_ICON_SIZE = 256
         const val MAX_ICON_BYTES = 256L * 1024L
     }
