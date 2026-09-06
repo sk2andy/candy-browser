@@ -105,7 +105,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MaterialBrowser"
-        tools:targetApi="s">
+        tools:targetApi="s"
+        tools:ignore="CredManMissingDal">
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
@@ -157,7 +158,7 @@
             android:process=":dataTransfer" />
 
         <service
-            android:name=".browser.WebMediaPlaybackService"
+            android:name=".browser.BrowserMediaPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 

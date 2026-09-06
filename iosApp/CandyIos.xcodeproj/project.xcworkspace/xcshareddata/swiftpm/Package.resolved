@@ -1,0 +1,15 @@
+{
+  "originHash" : "0f2cb79e73722934096e1143a9d335850f8621b64be3ba25d57716fcba9e2f6e",
+  "pins" : [
+    {
+      "identity" : "argon2-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mimiclone/argon2-swift.git",
+      "state" : {
+        "revision" : "0f6581ee4051a9160f735e9b4b7f47431151b89d",
+        "version" : "1.0.4"
+      }
+    }
+  ],
+  "version" : 3
+}

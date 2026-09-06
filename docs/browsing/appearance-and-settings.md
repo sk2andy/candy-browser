@@ -4,12 +4,12 @@
 
 | Layer | Responsibility | Main code |
 | --- | --- | --- |
-| Model | Stable, persisted appearance choices and safe fallback values | `data/AppearanceSettings.kt` |
+| Model | Stable, persisted appearance choices and safe fallback values | `shared/src/commonMain/.../data/AppearanceSettings.kt` |
 | Persistence | Global appearance preference round trips | `data/BrowserSessionStore.kt` |
 | State | Observable selection and update wiring | `browser/BrowserController.kt` |
 | Theme | Platform design language, color schemes, motion, Android night resources, root/system-bar wiring, website color-scheme preference, surface treatment, shape tokens and AMOLED surfaces | `MainActivity.kt`, `AppearanceNightMode.kt`, `browser/BrowserController.kt`, `browser/WebViewSettings.kt`, `ui/theme/CandyDesignSystem.kt`, `ui/theme/MaterialBrowserTheme.kt` |
-| Settings routing | Destination transition and callback wiring | `ui/SettingsScreen.kt`, `ui/SettingsHomePage.kt`, `ui/SettingsComponents.kt` |
-| Appearance UI | Appearance destination and live selection controls | `ui/AppearanceSettingsPage.kt` |
+| Settings routing | Shared destination model, transition, home, controls and core pages; platform resources, icons, effects and persisted state stay adapters | `shared/src/commonMain/.../SettingsDestination.kt`, `shared/src/commonMain/.../ui/settings`, Android `ui/SettingsScreen.kt` adapters |
+| Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
 | Page scroll bar | Persisted opt-in, WebView scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, `BrowserWebView`, `ui/WebViewScrollBar` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
@@ -30,7 +30,19 @@
 | Startup animation | Off, on | On |
 | Open home page on startup | Off, on | Off |
 | Candy Recall | Off, on | Off |
-| Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Google Translate |
+| Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Yandex Translate on Android; Google Translate on iOS |
+| Prevent automatic video playback | Off, on | Off |
+
+## Cross-platform settings migration
+
+Android and iOS compile the same settings destination model, transition, page shell, controls, home
+ordering and core page renderers from `shared/src/commonMain`. Android resolves existing localized
+resources, drawable icons, frosted container color and persisted state through thin adapters. Appearance
+is fully shared; Tabs & Gestures shares overview-mode and dismiss-resistance controls; Browser shares the
+translation-provider control. iOS routes to those shared pages without SwiftUI replacements. Its existing
+tab-overview state and translation-provider choice are live and persisted; settings without equivalent
+iOS backend state stay visibly disabled. Other
+destination bodies remain pending.
 
 ### Surface semantics
 
@@ -109,3 +121,19 @@ Frosted exposes three persisted controls while selected:
   supports direct dragging, and fades after interaction.
 - Page translation provider is global and persists across regular and private browsing. Translation
   itself remains an explicit page action; no source URL or translated content is stored separately.
+- **Prevent automatic video playback** is applied to every existing and newly created Gecko session.
+  Gecko's native content-permission delegate denies both audible and inaudible autoplay when the
+  setting is enabled and explicitly allows both when disabled. Unrelated content permissions remain
+  deferred to their dedicated handlers. Existing Gecko site permissions are synchronized to the
+  global setting so an older site decision cannot override it. Because the current document also
+  caches its autoplay decision, changing the setting reloads already navigated Gecko sessions only
+  after both stored permission values confirm the new policy. GeckoView 140 does not expose a
+  completion callback for permission writes, so Candy retries the read for at most two seconds. If
+  confirmation times out, the current document stays unchanged instead of reloading under an
+  unconfirmed policy. Permission reads use Gecko's reported URI, context ID and private-mode scope;
+  private decisions therefore remain session-private. This path does not inject JavaScript into the
+  page. GeckoView 140 can still reject a synchronous audible `play()` before its asynchronous
+  embedder permission result arrives (Mozilla bug 2049064). The exact case remains a named skipped
+  device regression until Candy can adopt a Gecko build containing the platform fix; Gecko 154's
+  published Android metadata requires compile SDK 37 and AGP 9.1, while Candy currently uses compile
+  SDK 35 and AGP 8.7.3.

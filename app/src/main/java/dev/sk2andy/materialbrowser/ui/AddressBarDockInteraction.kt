@@ -29,6 +29,12 @@ internal data class AddressBarDockInteractionState(
     val onRestoreClick: () -> Unit,
 )
 
+internal data class AddressBarDockHaptics(
+    val startMovement: () -> Unit,
+    val stopMovement: () -> Unit,
+    val confirm: () -> Unit,
+)
+
 @Composable
 internal fun rememberAddressBarDockInteractionState(
     presentation: AddressBarPresentation,
@@ -39,10 +45,19 @@ internal fun rememberAddressBarDockInteractionState(
     density: Density,
     onPlacementChanged: (AddressBarDockPlacement) -> Unit,
     onRestoreAndEdit: () -> Unit,
+    haptics: AddressBarDockHaptics? = null,
 ): AddressBarDockInteractionState {
     val motionScheme = LocalCandyMotionScheme.current
     val hapticView = LocalView.current
     val hapticScope = rememberCoroutineScope()
+    val platformHaptics = remember(hapticView) {
+        AddressBarDockHaptics(
+            startMovement = hapticView::startRubberbandHaptic,
+            stopMovement = hapticView::stopRubberbandHaptic,
+            confirm = hapticView::performConfirmHaptic,
+        )
+    }
+    val currentHaptics by rememberUpdatedState(haptics ?: platformHaptics)
     val currentPlacement by rememberUpdatedState(placement)
     val currentHorizontalTravelPx by rememberUpdatedState(horizontalTravelPx)
     val currentVerticalTravelPx by rememberUpdatedState(verticalTravelPx)
@@ -72,7 +87,7 @@ internal fun rememberAddressBarDockInteractionState(
     fun stopMovementHaptic() {
         movementHapticStopJob?.cancel()
         movementHapticStopJob = null
-        if (movementHapticActive) hapticView.stopRubberbandHaptic()
+        if (movementHapticActive) currentHaptics.stopMovement()
         movementHapticActive = false
     }
 
@@ -86,13 +101,13 @@ internal fun rememberAddressBarDockInteractionState(
             return
         }
         if (!movementHapticActive) {
-            hapticView.startRubberbandHaptic()
+            currentHaptics.startMovement()
             movementHapticActive = true
         }
         movementHapticStopJob?.cancel()
         movementHapticStopJob = hapticScope.launch {
             delay(DOCK_MOVEMENT_HAPTIC_IDLE_MILLIS)
-            if (movementHapticActive) hapticView.stopRubberbandHaptic()
+            if (movementHapticActive) currentHaptics.stopMovement()
             movementHapticActive = false
             movementHapticStopJob = null
         }
@@ -165,13 +180,13 @@ internal fun rememberAddressBarDockInteractionState(
             )
         ) {
             stopMovementHaptic()
-            hapticView.performConfirmHaptic()
+            currentHaptics.confirm()
             normalAnchorReleased = true
             normalAnchorResistanceProgress = 0f
             emittedConfirmHaptic = true
             brokeAwayFromNormalAnchor = true
         }
-        val nextPosition = AddressBarDockingRules.positionAfterDrag(
+        val unsnappedPosition = AddressBarDockingRules.positionAfterDrag(
             startPosition = dragStartPosition,
             dragDistancePx = dragDistancePx,
             horizontalTravelPx = currentHorizontalTravelPx,
@@ -179,6 +194,13 @@ internal fun rememberAddressBarDockInteractionState(
             resistNormalAnchor = startedAtNormalAnchor && !normalAnchorReleased,
             density = currentDensity.density,
         )
+        val normalAnchorSnap = AddressBarDockingRules.normalAnchorSnap(
+            position = unsnappedPosition,
+            verticalTravelPx = currentVerticalTravelPx,
+            density = currentDensity.density,
+            enabled = normalAnchorReleased,
+        )
+        val nextPosition = normalAnchorSnap.position
         position = nextPosition
         if (brokeAwayFromNormalAnchor) {
             breakawaySpringJob?.cancel()
@@ -196,14 +218,10 @@ internal fun rememberAddressBarDockInteractionState(
                 breakawaySpringJob = null
             }
         }
-        val inSnapZone = AddressBarDockingRules.isInNormalAnchorSnapZone(
-            positionY = position.y,
-            verticalTravelPx = currentVerticalTravelPx,
-            density = currentDensity.density,
-        )
+        val inSnapZone = normalAnchorSnap.snappedToNormalAnchor
         if (normalAnchorReleased && inSnapZone && !normalSnapZoneActive) {
             stopMovementHaptic()
-            hapticView.performConfirmHaptic()
+            currentHaptics.confirm()
             emittedConfirmHaptic = true
         }
         normalSnapZoneActive = inSnapZone
@@ -221,7 +239,7 @@ internal fun rememberAddressBarDockInteractionState(
             position = position,
             snapToNormalAnchor = snapToNormalAnchor,
         )
-        hapticView.performConfirmHaptic()
+        currentHaptics.confirm()
         currentOnPlacementChanged(settledPlacement)
         normalAnchorResistanceProgress = 0f
         dragActive = false
@@ -242,7 +260,7 @@ internal fun rememberAddressBarDockInteractionState(
         breakawaySpringJob = null
         breakawaySpringOffset = Offset.Zero
         normalAnchorResistanceProgress = 0f
-        hapticView.performConfirmHaptic()
+        currentHaptics.confirm()
         currentOnRestoreAndEdit()
     }
 

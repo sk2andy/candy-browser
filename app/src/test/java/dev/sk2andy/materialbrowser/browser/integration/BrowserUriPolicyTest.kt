@@ -211,7 +211,7 @@ class BrowserUriPolicyTest {
             ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
                 grant = redirected,
                 callbackUrl = initialUrl,
-                currentWebViewUrl = redirectUrl,
+                currentBrowserUrl = redirectUrl,
                 nowElapsedRealtime = 1_002L,
             ),
         )
@@ -219,7 +219,7 @@ class BrowserUriPolicyTest {
             ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
                 grant = redirected,
                 callbackUrl = redirectUrl,
-                currentWebViewUrl = redirectUrl,
+                currentBrowserUrl = redirectUrl,
                 nowElapsedRealtime = 1_002L,
             ),
         )
@@ -361,7 +361,7 @@ class BrowserUriPolicyTest {
             ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
                 grant = redirected,
                 callbackUrl = started.currentUrl,
-                currentWebViewUrl = redirectUrl,
+                currentBrowserUrl = redirectUrl,
                 nowElapsedRealtime = 1_002L,
             ),
         )
@@ -369,7 +369,7 @@ class BrowserUriPolicyTest {
             ExternalPreviewDownloadGrantRules.shouldClearForMainFrameCallback(
                 grant = redirected,
                 callbackUrl = redirectUrl,
-                currentWebViewUrl = redirectUrl,
+                currentBrowserUrl = redirectUrl,
                 nowElapsedRealtime = 1_002L,
             ),
         )

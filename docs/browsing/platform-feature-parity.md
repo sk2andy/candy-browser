@@ -62,6 +62,13 @@ flowchart TD
 | Sync, import and export | shared protocol/repositories | Android platform I/O | iOS platform I/O |
 | Firefox extensions | not shared with Toppings | signed XPI manager and Gecko APIs | not applicable by Apple engine policy |
 
+Android's Firefox-only row includes Candy-rendered action entry points, guarded popup sessions,
+options in normal Candy tabs, supported GeckoView tab/download delegates and engine-owned extension
+APIs. Exact GeckoView 140 coverage and exclusions live in the
+[`platform-engines.md` capability matrix](platform-engines.md#firefox-webextension-capability-matrix-geckoview-140).
+This additive row does not authorize a second browser window, platform-specific address bar or a
+claim of arbitrary Firefox Desktop extension compatibility.
+
 ## Completion gates
 
 | Gate | Required evidence |

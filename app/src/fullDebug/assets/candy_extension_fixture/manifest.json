@@ -1,0 +1,43 @@
+{
+  "manifest_version": 2,
+  "name": "Candy Firefox Conformance Fixture",
+  "version": "2.0.4",
+  "description": "Deterministic built-in GeckoView WebExtension fixture.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "candy-firefox-fixture@sk2andy.dev"
+    }
+  },
+  "permissions": [
+    "downloads",
+    "geckoViewAddons",
+    "nativeMessaging",
+    "nativeMessagingFromContent",
+    "storage",
+    "tabs",
+    "webNavigation",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "browser_action": {
+    "default_title": "Candy fixture",
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*.candy.localhost/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}

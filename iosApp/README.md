@@ -1,11 +1,16 @@
 # Candy iOS scaffold
 
 This target is a thin Apple host around a shared Compose Multiplatform browser root.
-Browser-neutral URL/navigation, engine commands/events, tab intents, feature menu,
-chrome gestures, visible chrome and Hero/Grid/List overview live in `../shared`.
-Apple owns lifecycle, one `WKWebView` per tab and mandatory system presenters only.
-`CandyComposeHost` mounts the shared `ComposeUIViewController` and overlays Find, Reader,
-Translate, Share and error presentation; it does not render a second browser bar or overview.
+Browser-neutral URL/navigation, engine commands/events, tab intents and chrome gestures live in
+`../shared`. The existing Candy production `BrowserMainMenu`, Hero pager, `CompactTabGrid`,
+`CompactTabList` and overview bottom chrome have also been physically moved there and compile for both
+Android and iOS. Apple owns lifecycle, one `WKWebView` per tab, native image/effect adapters and mandatory
+system presenters. `CandyComposeHost` mounts the shared `ComposeUIViewController` and overlays the native
+address/menu chrome, Find,
+Share and error presentation; Reader and Candy Trails render through the same shared Compose surfaces as
+Android. The iOS address bar and menu are deliberately native presentation duplicates because Liquid
+Glass is central to the product; their state, item ordering, enabled/checked values and actions still come
+from Kotlin. The host does not duplicate overview, Settings, Reader or Trail screens.
 `WKWebViewBrowserSessionAdapter` is the only engine boundary: it executes shared
 commands and reports WebKit navigation callbacks as shared events. The shared controller
 therefore manages sessions without knowing WebKit.
@@ -21,22 +26,16 @@ match: tab ID, `WKWebView` session ID, navigation revision, latest request ID an
 current page URL. The URL identity also rejects a late snapshot after a same-document
 or SPA navigation.
 Closing a tab, replacing its web view or starting another navigation invalidates
-the pending result.
+the pending result. A navigation keeps the previous accepted image visible until a newer capture
+succeeds. Opening the overview waits for the visible WebKit capture before detaching the viewport.
 
-The legacy native overview can render accepted images with aspect-fill inside the Candy hero
-card. The active shared Compose overview reads the same `BrowserTabOverviewLayoutRules.heroCard` Kotlin model as
-Android: portrait width is 74% clamped to 244...360 points with a 0.45 aspect
-ratio; landscape width is 68% clamped to
-360...720 points and additionally capped by 66% viewport height at a 1.6 aspect
-ratio. Card radius is 28 points and page spacing is 12 points. Grid geometry comes
-from the same shared `grid` rule: two columns on phones, three in
-landscape from 900 points, 16-point padding, 12-point spacing, and portrait/landscape
-preview ratios of 0.72/1.6. List rows mirror Android's 64-point height, 16-point
-horizontal padding, 8-point spacing and 18-point radius through the shared `list`
-rule. All modes render the same
-title/address fallback and selected outline. Native `UIImage` snapshots are deliberately not
-passed through the current platform-neutral Compose seam yet. This is an explicit migration gap,
-not claimed preview parity. Snapshot placement rules remain shared for the next adapter slice.
+Accepted `UIImage` snapshots cross the `iosMain` UIKit adapter and render inside the same shared Hero and
+Grid preview slots used by Android's production overview. The adapter stores the `UIImage`, not a
+single-parent `UIImageView`; every simultaneous hero/card composition receives its own image view.
+Hero sizing, coverflow, dismissal physics,
+Grid geometry and List rows therefore come from the physically shared production composables and their
+shared rule objects, not a second iOS lazy-list implementation. Snapshot acceptance remains guarded by
+the native identity rules above; UIKit image handles do not enter `commonMain`.
 
 Hero, grid and list can be changed through the visible switcher in the overview
 header. Only that presentation preference is stored in `UserDefaults`; snapshots
@@ -46,43 +45,87 @@ remain memory-only. Missing or unknown stored values safely fall back to Hero.
 
 | Area | iOS difference |
 | --- | --- |
-| Transition | Shared iOS Compose currently uses basic lazy-list transitions; Android morphs the live viewport into the selected card and back |
-| Background | Shared iOS Compose currently uses the common neutral surface; Liquid Glass is deferred until sharing is complete |
-| Previews | Shared overview currently shows title/address fallbacks; native memory-only `UIImage` snapshots are not connected to Compose |
-| Chrome | Shared anatomy/actions/icons/gestures are in place; exact Android typography, motion and profile artwork remain to be extracted |
-| Icon and fallback | Shared Compose uses Material vectors and text fallback; favicon/domain artwork remains to be moved into the common model |
-| Selection | Shared Compose draws a three-point accent outline in every mode; Android uses additional mode-specific motion/treatment |
-| List preview | Shared Compose has no native image handle yet; Android's row can show a favicon |
-| Mode control | Shared Compose exposes three buttons in the overview header; Android also exposes the preference in tab settings |
-| Extended behavior | Android additionally has drag-dismiss, drag-reorder, pinned-tab jump, private/profile treatments and haptics |
+| Overview orchestration | Shared production components, entry/exit hero motion, profile switcher and profile icon/isolation sheets are active. Profile identity, active-profile selection, remembered tab ownership, icon and isolation mutations and count are owned by shared Kotlin. The Apple host persists the local profile ID/icon/isolation envelope; reorder state remains open. |
+| Artwork adapters | Native favicon and incognito artwork are not connected; fallback vectors remain visible |
+| Tab Actions | Production menu and action-state call site are shared; unsupported backend actions remain disabled |
+| Settings destinations | `OpenSettings` opens shared production home/routing plus Appearance, Tabs & Gestures, Browser and Toppings pages; Toppings list/add/edit/toggle/delete call the native validated runtime, while controls without iOS backend state stay visibly disabled |
+| Feature actions | History, snooze and other Android-only feature implementations must be added before their menu actions can be enabled on iOS |
+| Native sheets | Find remains Apple-native; Reader uses the shared Candy Reader surface, with iOS speech currently unavailable |
 
-These are renderer and interaction differences. Tab IDs, engine sessions, selection,
-close behavior, Hero/Grid geometry and stale-result rules keep the same
-core ownership boundaries.
+These are orchestration, adapter and feature-implementation gaps, not permission to create parallel tab,
+Settings, Reader or Trail renderers. Tab IDs, engine sessions, selection, close behavior, overview presentation and
+stale-result rules keep the shared ownership boundaries.
 
-The shared Compose bottom Candy chrome is `tab count | address | plus | vertical more`. Back,
+## Profiles
+
+The iOS host does not define a second profile model. `BrowserProfile`, `BrowserTabState.profileId`,
+`BrowserTabsState.activeProfileId`, profile creation, selection, remembered tab selection and active-profile
+tab counts come from the shared Kotlin session controller. `CandyComposeHost` only maps canonical profile
+presentation fields into the shared `ProfileSwitcher`, including synced display/icon metadata and the sync-linked
+badge. The Android profile picker/actions implementation is physically shared; Android supplies localized resources
+and iOS supplies the same canonical icon catalog plus platform symbol rendering. Local ID, icon and isolation values
+survive an iOS process restart through a bounded `UserDefaults` adapter; invalid,
+duplicate and over-limit entries are rejected again by the shared controller while restoring.
+
+An isolated local iOS profile binds every regular tab to one persistent named `WKWebsiteDataStore`, derived from
+the stable UUID profile ID. This separates cookies, sign-ins, site data, cache and service workers. Non-isolated
+profiles share WebKit's default store; private or ephemeral sessions always use a non-persistent store. Changing
+isolation recreates only that profile's WebKit sessions while preserving the shared tab records and URLs.
+
+Candy Sync's repository, protocol codecs, mutation rules, durable-outbox policy, settings model and Settings UI
+live in shared Kotlin and are used by both platforms. The iOS host contributes only the required Apple edges:
+bounded `URLSession`/WebSocket transport, CryptoKit primitives, SwiftArgon2 recovery derivation, Keychain vault,
+encrypted atomic cache and serial dispatch. The selected local profile is linked to this device and reconciled
+through the same `SyncedProfileRuntimeRules` used on Android. Other devices appear as canonical synced profiles;
+their tabs use stable, isolated named `WKWebsiteDataStore` instances. Private and non-HTTP(S) tabs never enter
+the encrypted outbox. Endpoint, account, local-profile binding, device icon/accent, enrollment and manual refresh
+are available on the shared Sync Settings page; server and E2EE passwords are never persisted.
+Native ATS permits the self-hosted protocol's explicit HTTP compatibility mode, but the transport still sends
+no Basic or bearer credential until unauthenticated discovery returns `allowHttp: true`; HTTPS remains the default.
+
+The iOS-native bottom Candy chrome is `tab count | address | plus | more`, backed by the shared Kotlin
+snapshot and action sink. Back,
 forward, reload/stop, favorite/pin, new tab, close tab and tabs live in the more menu
-projected and rendered from shared `BrowserFeatureMenuRules`. Both the count button and a dominant 56-point upward drag open the same
+projected from shared `BrowserFeatureMenuRules`. Both the count button and a dominant 56-point upward drag open the same
 overview. A horizontal address-bar swipe selects the adjacent tab after 24% viewport
 travel, or after 24 points at 900 points/second. Address editing suppresses both gestures.
+
+On iOS 26+, one stable native `UIGlassEffect(style: .clear)` backdrop changes geometry between the
+address bar and menu. The menu's scroll content is a non-lazy, animation-free foreground above that
+backdrop, avoiding effect invalidation and flicker while scrolling. A light semantic tint preserves
+text contrast; the refractive material fades toward the left/right lens edges to prevent mirrored web
+text. Reduce Motion removes the spring; Reduce Transparency switches to an opaque semantic fallback.
+iOS 18–25 use system ultra-thin material. SF Symbols, 44-point targets, semantic colors and native
+switches provide Apple-oriented presentation while Android keeps Candy's Material chrome.
 
 | iOS feature action | Native implementation |
 | --- | --- |
 | Favorite / pin | In-memory URL favorite and per-tab pin state; dynamic label plus badges in every overview mode; pin disables/hides close until unpinned |
 | Find in page | Liquid-Glass search bar backed by `WKWebView.find` with previous/next/wrap; callbacks are bound to source tab and WebKit session |
-| Reader | JavaScript-bounded `article`/`main`/body text extraction into a native readable sheet, accepted only for the initiating tab/session/URL/request |
-| Translate | The same bounded and stale-safe extraction opens Apple's system translation presentation; its privacy consent remains system-owned |
+| Reader | JavaScript-bounded `article`/`main`/body extraction, accepted only for the initiating tab/session/URL/request, mapped into the shared Candy Reader model and renderer |
+| Candy Trail | WebKit back/forward history is reconciled through shared Trail rules and rendered by the shared Candy Trail graph; state is session-memory-only on iOS |
+| Translate | Shared `PageTranslationRules` build the URL for the persisted Browser-settings provider (Google by default on iOS) with the current language, then the selected `WKWebView` session navigates normally; no reader extraction or translation sheet is created |
 | Share / external / print | `UIActivityViewController`, `UIApplication.open`, and `UIPrintInteractionController` with the web view formatter |
 
 Actions without an iOS implementation are not rendered. Current explicit gaps are
-address-bar docking, site toggles, dynamic Topping commands, Candy Trail, Site Capsule,
-summarization, snoozing, snoozed tabs, history and settings. Firefox Extensions remains Android-only. Favorite
+address-bar docking, site toggles, Site Capsule,
+summarization, snoozing, snoozed tabs, history and settings destination bodies. Firefox Extensions remains Android-only. Favorite
 and pin state are currently session-memory only; persistence and pinned-tab ordering are
 still future storage work.
 
-`ToppingInstaller` installs validated JavaScript as a top-frame-only `WKUserScript`
-in a named `WKContentWorld`. This is not a Safari Web Extension host and does not
-promise WebExtension API compatibility.
+`ToppingDependencyResolver` resolves bounded `@require` and `@resource` declarations only during
+explicit import/update, using public allowlisted HTTPS endpoints, bounded redirects, DNS/private-IP
+checks and optional SHA-256. `ToppingInstaller` then installs the persisted local payload as a
+top-frame-only `WKUserScript` in a per-Topping named `WKContentWorld`. A revision-scoped
+`WKScriptMessageHandlerWithReply` authorizes the live URL before source execution and implements
+bounded, grant-checked GM values, dynamic menu commands and `GM_openInTab`; private tabs attach no
+scripts or bridge. This is not a Safari Web Extension host and does not promise WebExtension API
+compatibility beyond the documented Candy Topping contract.
+
+Topping management is rendered by shared Compose, not SwiftUI. The Swift bridge publishes only small
+ID/name/enabled records; full source is requested lazily for edit. Save preserves an existing Topping's
+enabled state, while new Toppings start enabled. Store reads are cached for the launch/viewport path;
+successful mutations reconcile the active WKWebView runtimes through the existing native adapter.
 
 `CandyContentBlockerCompiler` emits one escaped host per WebKit rule and never uses regex
 disjunction. It splits network assets into lists with at most 45,000 host rules and cosmetic assets
@@ -145,4 +188,35 @@ xcrun swiftc \
   iosApp/Tests/BrowserPageExtractionRulesTests.swift \
   -o /tmp/candy-ios-page-extraction-tests
 /tmp/candy-ios-page-extraction-tests
+
+xcrun swiftc \
+  iosApp/CandyIos/ToppingValueRules.swift \
+  iosApp/Tests/ToppingValueRulesTests.swift \
+  -o /tmp/candy-ios-topping-value-tests
+/tmp/candy-ios-topping-value-tests
+
+xcrun swiftc \
+  iosApp/CandyIos/BrowserTranslationProviderPreference.swift \
+  iosApp/Tests/BrowserTranslationProviderPreferenceTests.swift \
+  -o /tmp/candy-ios-translation-provider-tests
+/tmp/candy-ios-translation-provider-tests
+
+xcrun swiftc \
+  iosApp/CandyIos/LiquidGlassPresentationRules.swift \
+  iosApp/Tests/LiquidGlassPresentationRulesTests.swift \
+  -o /tmp/candy-ios-liquid-glass-tests
+/tmp/candy-ios-liquid-glass-tests
+```
+
+The six platform-edge executables above are the current iOS standalone test
+gate. Run them all from the repository root with:
+
+```bash
+set -e
+xcrun swiftc iosApp/CandyIos/BrowserTabSnapshotRules.swift iosApp/Tests/BrowserTabSnapshotRulesTests.swift -o /tmp/candy-ios-snapshot-rules-tests && /tmp/candy-ios-snapshot-rules-tests
+xcrun swiftc iosApp/CandyIos/BrowserTabOverviewMode.swift iosApp/Tests/BrowserTabOverviewModeTests.swift -o /tmp/candy-ios-overview-mode-tests && /tmp/candy-ios-overview-mode-tests
+xcrun swiftc iosApp/CandyIos/BrowserPageExtractionRules.swift iosApp/Tests/BrowserPageExtractionRulesTests.swift -o /tmp/candy-ios-page-extraction-tests && /tmp/candy-ios-page-extraction-tests
+xcrun swiftc iosApp/CandyIos/ToppingValueRules.swift iosApp/Tests/ToppingValueRulesTests.swift -o /tmp/candy-ios-topping-value-tests && /tmp/candy-ios-topping-value-tests
+xcrun swiftc iosApp/CandyIos/BrowserTranslationProviderPreference.swift iosApp/Tests/BrowserTranslationProviderPreferenceTests.swift -o /tmp/candy-ios-translation-provider-tests && /tmp/candy-ios-translation-provider-tests
+xcrun swiftc iosApp/CandyIos/LiquidGlassPresentationRules.swift iosApp/Tests/LiquidGlassPresentationRulesTests.swift -o /tmp/candy-ios-liquid-glass-tests && /tmp/candy-ios-liquid-glass-tests
 ```

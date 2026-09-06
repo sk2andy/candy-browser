@@ -18,9 +18,9 @@ class CapsuleProfileRulesTest {
 
         assertEquals("work", supported.profileId)
         assertTrue(supported.isolationEnabled)
-        assertTrue(supported.webViewProfileName!!.startsWith("candy_profile_v1_"))
+        assertEquals("work", supported.storageContextId)
         assertFalse(unsupported.isolationEnabled)
-        assertNull(unsupported.webViewProfileName)
+        assertEquals("work", unsupported.storageContextId)
         assertNull(CapsuleProfileRules.resolve(capsule("missing"), profiles, true))
     }
 

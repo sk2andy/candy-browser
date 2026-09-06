@@ -42,8 +42,15 @@ object ReaderExtractionParser {
     fun parse(webViewResult: String?): ReaderExtractionResult {
         val jsonText = decodeJavascriptString(webViewResult)
             ?: return ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse)
+        return parseJson(jsonText)
+    }
+
+    internal fun parseJson(jsonText: String?): ReaderExtractionResult {
+        val boundedJson = jsonText
+            ?.takeIf { value -> value.length <= MAX_JSON_CHARS }
+            ?: return ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse)
         return runCatching {
-            val root = JSONObject(jsonText)
+            val root = JSONObject(boundedJson)
             if (root.has("error")) {
                 return@runCatching ReaderExtractionResult.Failure(
                     ReaderExtractionFailure.EmptyArticle,
@@ -89,10 +96,12 @@ object ReaderExtractionParser {
     }
 
     private fun decodeJavascriptString(result: String?): String? {
-        val value = result?.takeIf { it != "null" && it.length <= 2_000_000 } ?: return null
+        val value = result?.takeIf { it != "null" && it.length <= MAX_JSON_CHARS } ?: return null
         return runCatching { JSONArray("[$value]").getString(0) }.getOrNull()
     }
 
     private fun JSONObject.optionalString(key: String): String? =
         if (has(key) && !isNull(key)) optString(key) else null
+
+    private const val MAX_JSON_CHARS = 2_000_000
 }

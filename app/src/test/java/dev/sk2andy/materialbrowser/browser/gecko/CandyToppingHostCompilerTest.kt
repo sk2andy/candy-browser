@@ -33,8 +33,12 @@ class CandyToppingHostCompilerTest {
         assertTrue(registration.id.startsWith("candy-"))
         assertFalse(registration.id.startsWith("_"))
         assertTrue(registration.worldId.startsWith("candy.topping."))
-        assertTrue(registration.javascript.contains("GM_addStyle"))
-        assertTrue(registration.javascript.contains("body { color: red; }"))
+        assertTrue(registration.javascriptSources.any { source -> source.contains("GM_addStyle") })
+        assertTrue(
+            registration.javascriptSources.any { source ->
+                source.contains("body { color: red; }")
+            },
+        )
     }
 
     @Test
@@ -86,10 +90,36 @@ class CandyToppingHostCompilerTest {
     }
 
     @Test
-    fun `compiler rejects grants and dependencies requiring native parity`() {
+    fun `value mutation refreshes registration without invalidating the live world`() {
+        val script = parse(
+            id = "values",
+            metadata = "// @match https://example.net/*\n// @grant GM_setValue",
+        )
+
+        val before = CandyToppingHostCompiler.compile(
+            scripts = listOf(script),
+            encodedValues = { emptyMap() },
+        ).registrations.single()
+        val after = CandyToppingHostCompiler.compile(
+            scripts = listOf(script),
+            encodedValues = { mapOf("theme" to "\"dark\"") },
+        ).registrations.single()
+
+        assertFalse(before.id == after.id)
+        assertEquals(before.worldId, after.worldId)
+    }
+
+    @Test
+    fun `compiler supports value grants and resolved dependencies through shared bootstrap`() {
         val valueScript = parse(
             id = "values",
-            metadata = "// @match https://example.com/*\n// @grant GM_getValue",
+            metadata = """
+                // @match https://example.com/*
+                // @grant GM_getValue
+                // @grant GM_setValue
+                // @grant GM_registerMenuCommand
+                // @grant GM_openInTab
+            """.trimIndent(),
         )
         val dependencyScript = parse(
             id = "dependency",
@@ -106,15 +136,40 @@ class CandyToppingHostCompilerTest {
             )
         }
 
-        val plan = CandyToppingHostCompiler.compile(listOf(valueScript, dependencyScript))
+        val plan = CandyToppingHostCompiler.compile(
+            scripts = listOf(valueScript, dependencyScript),
+            encodedValues = { scriptId ->
+                if (scriptId == "values") mapOf("theme" to "\"dark\"") else emptyMap()
+            },
+        )
+
+        assertTrue(plan.unsupportedScripts.isEmpty())
+        val valueSources = plan.registrations.single { it.scriptId == "values" }
+            .javascriptSources.joinToString("\n")
+        val dependencySources = plan.registrations.single { it.scriptId == "dependency" }
+            .javascriptSources.joinToString("\n")
+        assertTrue(valueSources.contains("__candyUserscriptBridge"))
+        assertTrue(valueSources.contains("GM_setValue"))
+        assertTrue(valueSources.contains("\\\"dark\\\""))
+        assertTrue(dependencySources.indexOf("requiredLoaded") < dependencySources.indexOf("candyToppingLoaded"))
+    }
+
+    @Test
+    fun `compiler rejects unresolved dependency without partial execution`() {
+        val unresolved = parse(
+            id = "dependency",
+            metadata = """
+                // @match https://example.com/*
+                // @require https://cdn.jsdelivr.net/example.js
+                // @grant none
+            """.trimIndent(),
+        )
+
+        val plan = CandyToppingHostCompiler.compile(listOf(unresolved))
 
         assertTrue(plan.registrations.isEmpty())
         assertEquals(
-            GeckoToppingUnsupportedReason.PrivilegedGrant,
-            plan.unsupportedScripts["values"],
-        )
-        assertEquals(
-            GeckoToppingUnsupportedReason.Dependencies,
+            GeckoToppingUnsupportedReason.InvalidSnapshot,
             plan.unsupportedScripts["dependency"],
         )
     }

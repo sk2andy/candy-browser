@@ -19,7 +19,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileWallpaperRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
-import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
+import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.sync.SyncTabRules
 import org.json.JSONArray
@@ -216,17 +216,6 @@ class BrowserSessionStore internal constructor(
 
     fun saveProfilesEnabled(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_PROFILES_ENABLED, enabled).apply()
-    }
-
-    fun loadPendingWebViewProfileDeletions(): Set<String> =
-        preferences.getStringSet(KEY_PENDING_WEBVIEW_PROFILE_DELETIONS, emptySet())
-            ?.toSet()
-            .orEmpty()
-
-    fun savePendingWebViewProfileDeletions(profileNames: Set<String>) {
-        preferences.edit()
-            .putStringSet(KEY_PENDING_WEBVIEW_PROFILE_DELETIONS, profileNames)
-            .apply()
     }
 
     @Synchronized
@@ -564,14 +553,14 @@ class BrowserSessionStore internal constructor(
     fun loadResidentTabLimit(): Int = runCatching {
         preferences.getInt(
             KEY_RESIDENT_TAB_LIMIT,
-            TabWebViewResidencyRules.DEFAULT_LIMIT,
+            BrowserSessionResidencyRules.DEFAULT_LIMIT,
         )
-    }.getOrDefault(TabWebViewResidencyRules.DEFAULT_LIMIT)
-        .let(TabWebViewResidencyRules::normalizedLimit)
+    }.getOrDefault(BrowserSessionResidencyRules.DEFAULT_LIMIT)
+        .let(BrowserSessionResidencyRules::normalizedLimit)
 
     fun saveResidentTabLimit(limit: Int) {
         preferences.edit()
-            .putInt(KEY_RESIDENT_TAB_LIMIT, TabWebViewResidencyRules.normalizedLimit(limit))
+            .putInt(KEY_RESIDENT_TAB_LIMIT, BrowserSessionResidencyRules.normalizedLimit(limit))
             .apply()
     }
 
@@ -976,7 +965,6 @@ class BrowserSessionStore internal constructor(
         const val KEY_PROFILES = "profiles"
         const val KEY_ACTIVE_PROFILE = "active_profile"
         const val KEY_PROFILES_ENABLED = "profiles_enabled"
-        const val KEY_PENDING_WEBVIEW_PROFILE_DELETIONS = "pending_webview_profile_deletions"
         const val KEY_BLOCK_ADS = "block_ads"
         const val KEY_HIDE_CONSENT = "hide_consent"
         const val KEY_BLOCK_THIRD_PARTY_COOKIES = "block_third_party_cookies"

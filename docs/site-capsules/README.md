@@ -12,7 +12,8 @@
 | Surface | Tests |
 | --- | --- |
 | Model, navigation, profile rules | `capsule/*RulesTest` |
+| Full Candy transition contract | `CapsuleFullCandyTransitionRulesTest` |
 | Editor and launch contracts | `SiteCapsuleEditorContractInstrumentedTest`, `SiteCapsuleLaunchInstrumentedTest` |
 | Storage | `SiteCapsuleStoreInstrumentedTest` |
 | Compose UI | `SiteCapsuleScreenInstrumentedTest` |
-
+| Gecko renderer/session handoff | `GeckoSiteCapsuleTransitionInstrumentedTest` |

@@ -11,7 +11,6 @@ import android.provider.DocumentsContract
 import android.view.Gravity
 import android.window.OnBackInvokedDispatcher
 import android.widget.TextView
-import androidx.webkit.WebViewCompat
 import dev.sk2andy.materialbrowser.data.AppDataArchiveCodec
 import dev.sk2andy.materialbrowser.data.AppDataArchiveManifest
 import dev.sk2andy.materialbrowser.data.AppDataArchiveRestore
@@ -78,10 +77,9 @@ internal object AppDataTransferContract {
     internal const val EXTRA_STAGED_FILE_NAME = "staged_file_name"
 }
 
-internal fun Context.currentWebViewIdentity(): String? =
-    WebViewCompat.getCurrentWebViewPackage(this)?.let { packageInfo ->
-        "${packageInfo.packageName}@${packageInfo.versionName}"
-    }
+/** Engine identity recorded with an archive so restore can reject incompatible Gecko state. */
+internal fun currentBrowserEngineIdentity(): String =
+    "org.mozilla.geckoview@${org.mozilla.geckoview.BuildConfig.MOZ_APP_VERSION}"
 
 class AppDataTransferActivity : Activity() {
     private lateinit var statusView: TextView
@@ -245,7 +243,7 @@ class AppDataTransferActivity : Activity() {
         packageName = packageName,
         appVersionName = BuildConfig.VERSION_NAME,
         appVersionCode = BuildConfig.VERSION_CODE.toLong(),
-        webViewVersion = currentWebViewIdentity(),
+        webViewVersion = currentBrowserEngineIdentity(),
         sdkInt = Build.VERSION.SDK_INT,
         exportedAtEpochMillis = System.currentTimeMillis(),
     )

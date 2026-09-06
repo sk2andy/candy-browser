@@ -1,7 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
 import kotlin.math.absoluteValue
-import kotlin.math.min
+import dev.sk2andy.materialbrowser.shared.ui.AddressBarMorphRules
 
 internal enum class AddressBarOverviewGestureDirection {
     Pending,
@@ -20,10 +20,8 @@ internal data class AddressBarOverviewGestureUpdate(
     val shouldCommit: Boolean,
 )
 
-internal data class AddressBarMorphCornerRadii(
-    val horizontal: Float,
-    val vertical: Float,
-)
+internal typealias AddressBarMorphCornerRadii =
+    dev.sk2andy.materialbrowser.shared.ui.AddressBarMorphCornerRadii
 
 internal object AddressBarOverviewGestureRules {
     val Idle = AddressBarOverviewGestureState()
@@ -82,10 +80,7 @@ internal object AddressBarOverviewGestureRules {
         return (-dragDistance / threshold).coerceIn(0f, 1f)
     }
 
-    fun resistedProgress(progress: Float): Float {
-        val boundedProgress = progress.coerceIn(0f, 1f)
-        return boundedProgress * (RESISTANCE_BASE + RESISTANCE_GROWTH * boundedProgress)
-    }
+    fun resistedProgress(progress: Float): Float = AddressBarMorphRules.resistedProgress(progress)
 
     fun contentAlpha(progress: Float): Float =
         (1f - progress.coerceIn(0f, 1f) / CONTENT_FADE_END).coerceIn(0f, 1f)
@@ -106,11 +101,8 @@ internal object AddressBarOverviewGestureRules {
         exitHeroVisible: Boolean,
     ): Boolean = tabOverviewVisible && (!destinationChromeVisible || exitHeroVisible)
 
-    fun containerScale(progress: Float, sourceSize: Float, targetSize: Float): Float {
-        if (sourceSize <= 0f || targetSize <= 0f) return 1f
-        val boundedProgress = resistedProgress(progress)
-        return 1f + (targetSize / sourceSize - 1f) * boundedProgress
-    }
+    fun containerScale(progress: Float, sourceSize: Float, targetSize: Float): Float =
+        AddressBarMorphRules.containerScale(progress, sourceSize, targetSize)
 
     fun morphCornerRadii(
         progress: Float,
@@ -118,31 +110,13 @@ internal object AddressBarOverviewGestureRules {
         sourceHeight: Float,
         targetSize: Float,
         sourceCornerRadius: Float? = null,
-    ): AddressBarMorphCornerRadii {
-        if (
-            !sourceWidth.isFinite() ||
-            !sourceHeight.isFinite() ||
-            !targetSize.isFinite() ||
-            sourceWidth <= 0f ||
-            sourceHeight <= 0f ||
-            targetSize <= 0f
-        ) {
-            return AddressBarMorphCornerRadii(horizontal = 0f, vertical = 0f)
-        }
-        val morphProgress = resistedProgress(progress)
-        val maximumSourceRadius = min(sourceWidth, sourceHeight) / 2f
-        val sourceRadius = sourceCornerRadius
-            ?.takeIf(Float::isFinite)
-            ?.coerceIn(0f, maximumSourceRadius)
-            ?: maximumSourceRadius
-        val displayedRadius = sourceRadius + (targetSize / 2f - sourceRadius) * morphProgress
-        val scaleX = containerScale(progress, sourceWidth, targetSize)
-        val scaleY = containerScale(progress, sourceHeight, targetSize)
-        return AddressBarMorphCornerRadii(
-            horizontal = (displayedRadius / scaleX).coerceIn(0f, sourceWidth / 2f),
-            vertical = (displayedRadius / scaleY).coerceIn(0f, sourceHeight / 2f),
-        )
-    }
+    ): AddressBarMorphCornerRadii = AddressBarMorphRules.cornerRadii(
+        progress = progress,
+        sourceWidth = sourceWidth,
+        sourceHeight = sourceHeight,
+        targetSize = targetSize,
+        sourceCornerRadius = sourceCornerRadius,
+    )
 
     fun landingTranslation(
         progress: Float,
@@ -150,8 +124,6 @@ internal object AddressBarOverviewGestureRules {
         targetCenter: Float,
     ): Float = (targetCenter - sourceCenter) * resistedProgress(progress)
 
-    private const val RESISTANCE_BASE = 0.7f
-    private const val RESISTANCE_GROWTH = 0.3f
     private const val CONTENT_FADE_END = 0.52f
     private const val TARGET_FADE_START = 0.28f
     private const val TARGET_FADE_END = 0.78f

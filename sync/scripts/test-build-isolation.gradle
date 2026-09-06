@@ -1,0 +1,14 @@
+def isolatedBuildRoot = System.getenv("CANDY_SYNC_GRADLE_BUILD_ROOT")
+
+if (isolatedBuildRoot == null || isolatedBuildRoot.trim().isEmpty()) {
+    throw new GradleException("CANDY_SYNC_GRADLE_BUILD_ROOT must name an isolated build directory")
+}
+
+gradle.beforeProject { project ->
+    def projectDirectoryName = project.path == ":"
+        ? "root"
+        : project.path.substring(1).replace(':', '/')
+    project.layout.buildDirectory.set(
+        new File(isolatedBuildRoot, projectDirectoryName),
+    )
+}

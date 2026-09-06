@@ -5,6 +5,13 @@ import android.os.Looper
 import android.util.Log
 import androidx.annotation.UiThread
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptBridgeContract
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptBridgeRequest
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptGrant
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptOpenTabRequest
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
+import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import org.json.JSONArray
 import org.json.JSONObject
 import org.mozilla.geckoview.WebExtension
@@ -13,6 +20,7 @@ import org.mozilla.geckoview.WebExtensionController
 /** GeckoView edge for Candy's private, bundled MV3 Topping host. */
 internal class GeckoViewToppingHostRuntime(
     private val controller: WebExtensionController,
+    private val valueStore: UserScriptValueStore,
     private val mainHandler: Handler = Handler(Looper.getMainLooper()),
 ) : GeckoToppingHostRuntime {
     private val gate = GeckoToppingInitializationGate()
@@ -20,6 +28,14 @@ internal class GeckoViewToppingHostRuntime(
     private var revision = 0L
     private var hostInstalled = false
     private var port: WebExtension.Port? = null
+    private var scriptsById: Map<String, UserScript> = emptyMap()
+    private var interactionDelegate: GeckoToppingInteractionDelegate =
+        GeckoToppingInteractionDelegate.None
+    private var activeCandyTabId: String? = null
+    private val candyTabIdsByGeckoTab = mutableMapOf<Long, String>()
+    private val menuCommands = linkedMapOf<GeckoMenuCommandKey, String>()
+    private val rateWindows = mutableMapOf<Pair<Long, String>, GeckoMessageRateWindow>()
+    private val openTabRateWindows = mutableMapOf<Pair<Long, String>, GeckoMessageRateWindow>()
     private val timeout = Runnable {
         if (gate.state == GeckoToppingHostState.Initializing) {
             fail(IllegalStateException("Candy Topping host initialization timed out"))
@@ -36,7 +52,14 @@ internal class GeckoViewToppingHostRuntime(
 
     @UiThread
     override fun reconcile(scripts: List<UserScript>) {
-        plan = CandyToppingHostCompiler.compile(scripts)
+        scriptsById = scripts.associateBy(UserScript::id)
+        plan = CandyToppingHostCompiler.compile(scripts, valueStore::snapshot)
+        val retainedIds = plan.registrations.mapTo(mutableSetOf(), GeckoToppingRegistration::scriptId)
+        val affectedTabs = menuCommands.keys.mapNotNull { key ->
+            candyTabIdsByGeckoTab[key.geckoTabId]
+        }.toSet()
+        menuCommands.keys.removeAll { key -> key.scriptId !in retainedIds }
+        affectedTabs.forEach(::publishCommands)
         revision += 1
         if (!gate.beginRevision()) return
         mainHandler.removeCallbacks(timeout)
@@ -50,6 +73,37 @@ internal class GeckoViewToppingHostRuntime(
 
     override fun setStateListener(listener: (GeckoToppingHostState) -> Unit) {
         gate.setStateListener(listener)
+    }
+
+    override fun setInteractionDelegate(delegate: GeckoToppingInteractionDelegate) {
+        interactionDelegate = delegate
+        candyTabIdsByGeckoTab.values.distinct().forEach(::publishCommands)
+    }
+
+    override fun setActiveTab(tabId: String?) {
+        activeCandyTabId = tabId
+        if (tabId != null) publishActiveTabBinding()
+    }
+
+    override fun invokeMenuCommand(command: UserScriptMenuCommand) {
+        val entry = menuCommands.entries.firstOrNull { (key, caption) ->
+            candyTabIdsByGeckoTab[key.geckoTabId] == command.tabId &&
+                key.scriptId == command.scriptId &&
+                key.commandId == command.commandId &&
+                caption == command.caption
+        } ?: return
+        port?.postMessage(
+            JSONObject()
+                .put("type", "menu-invoke")
+                .put("protocolVersion", CandyToppingHostContract.PROTOCOL_VERSION)
+                .put("geckoTabId", entry.key.geckoTabId)
+                .put("scriptId", entry.key.scriptId)
+                .put("commandId", entry.key.commandId),
+        )
+    }
+
+    override fun clearValues(scriptId: String) {
+        valueStore.clear(scriptId)
     }
 
     private fun ensureHost() {
@@ -121,11 +175,31 @@ internal class GeckoViewToppingHostRuntime(
             .onFailure(::fail)
     }
 
+    private fun publishActiveTabBinding() {
+        val tabId = activeCandyTabId ?: return
+        port?.postMessage(
+            JSONObject()
+                .put("type", "bind-active")
+                .put("protocolVersion", CandyToppingHostContract.PROTOCOL_VERSION)
+                .put("candyTabId", tabId),
+        )
+    }
+
     private fun onPortMessage(message: Any, sourcePort: WebExtension.Port) {
-        if (gate.state != GeckoToppingHostState.Initializing) return
         if (sourcePort !== port) return
         val value = message as? JSONObject ?: return
         if (value.optInt("protocolVersion", -1) != CandyToppingHostContract.PROTOCOL_VERSION) return
+        when (value.optString("type")) {
+            "bridge" -> {
+                handleBridgeMessage(value, sourcePort)
+                return
+            }
+            "tab-bound" -> {
+                bindTab(value)
+                return
+            }
+        }
+        if (gate.state != GeckoToppingHostState.Initializing) return
         val responseRevision = value.optLong("revision", -1L)
         if (responseRevision != revision) return
         when (value.optString("type")) {
@@ -140,6 +214,160 @@ internal class GeckoViewToppingHostRuntime(
                 ),
             )
         }
+    }
+
+    private fun bindTab(message: JSONObject) {
+        val geckoTabId = message.optLong("geckoTabId", -1L).takeIf { it >= 0L } ?: return
+        val candyTabId = message.optString("candyTabId").takeIf(String::isNotBlank) ?: return
+        if (candyTabId != activeCandyTabId) return
+        val previous = candyTabIdsByGeckoTab.put(geckoTabId, candyTabId)
+        previous?.takeIf { it != candyTabId }?.let(::publishCommands)
+        publishCommands(candyTabId)
+    }
+
+    private fun handleBridgeMessage(message: JSONObject, sourcePort: WebExtension.Port) {
+        val bridgeId = message.optLong("bridgeId", -1L).takeIf { it in 1..Int.MAX_VALUE } ?: return
+        val scriptId = message.optString("scriptId").takeIf(String::isNotBlank) ?: return
+        val geckoTabId = message.optLong("geckoTabId", -1L).takeIf { it >= 0L } ?: return
+        bindActiveBridgeTab(message, geckoTabId)
+        val pageUrl = message.optString("url")
+        val script = scriptsById[scriptId]
+        val request = message.optString("payload").takeIf(String::isNotBlank)
+            ?.let(UserScriptBridgeContract::parse)
+        val accepted = script != null &&
+            !message.optBoolean("incognito", true) &&
+            request != null &&
+            UserScriptRules.matches(script, pageUrl) &&
+            rateWindows.getOrPut(geckoTabId to scriptId, ::GeckoMessageRateWindow)
+                .accept(System.currentTimeMillis())
+        val response = if (accepted) {
+            applyBridgeRequest(
+                geckoTabId = geckoTabId,
+                script = requireNotNull(script),
+                request = requireNotNull(request),
+            )
+        } else {
+            bridgeFailure(request)
+        }
+        runCatching {
+            sourcePort.postMessage(
+                JSONObject()
+                    .put("type", "bridge-response")
+                    .put("protocolVersion", CandyToppingHostContract.PROTOCOL_VERSION)
+                    .put("bridgeId", bridgeId)
+                    .put("response", response),
+            )
+        }
+    }
+
+    private fun bindActiveBridgeTab(message: JSONObject, geckoTabId: Long) {
+        val candyTabId = message.optString("candyTabId").takeIf(String::isNotBlank) ?: return
+        if (!message.optBoolean("active", false) || candyTabId != activeCandyTabId) return
+        val previous = candyTabIdsByGeckoTab.put(geckoTabId, candyTabId)
+        previous?.takeIf { it != candyTabId }?.let(::publishCommands)
+    }
+
+    private fun applyBridgeRequest(
+        geckoTabId: Long,
+        script: UserScript,
+        request: UserScriptBridgeRequest,
+    ): JSONObject = when (request) {
+        is UserScriptBridgeRequest.SetValue -> {
+            val succeeded = UserScriptGrant.SetValue in script.grants && valueStore.set(
+                scriptId = script.id,
+                key = request.key,
+                encodedValue = request.encodedValue,
+            )
+            valueResponse(request.requestId, script.id, succeeded).also {
+                if (succeeded) reconcile(scriptsById.values.toList())
+            }
+        }
+        is UserScriptBridgeRequest.DeleteValue -> {
+            val succeeded = UserScriptGrant.DeleteValue in script.grants &&
+                valueStore.delete(script.id, request.key)
+            valueResponse(request.requestId, script.id, succeeded).also {
+                if (succeeded) reconcile(scriptsById.values.toList())
+            }
+        }
+        is UserScriptBridgeRequest.RegisterMenu -> {
+            val key = GeckoMenuCommandKey(geckoTabId, script.id, request.commandId)
+            val scriptCount = menuCommands.keys.count { candidate ->
+                candidate.geckoTabId == geckoTabId && candidate.scriptId == script.id
+            }
+            val tabCount = menuCommands.keys.count { candidate ->
+                candidate.geckoTabId == geckoTabId
+            }
+            val succeeded = UserScriptGrant.RegisterMenuCommand in script.grants &&
+                (key in menuCommands || scriptCount < MAX_MENU_COMMANDS_PER_SCRIPT) &&
+                (key in menuCommands || tabCount < MAX_MENU_COMMANDS_PER_TAB)
+            if (succeeded) {
+                menuCommands[key] = request.caption
+                candyTabIdsByGeckoTab[geckoTabId]?.let(::publishCommands)
+            }
+            JSONObject().put("ok", succeeded)
+        }
+        is UserScriptBridgeRequest.UnregisterMenu -> {
+            val key = GeckoMenuCommandKey(geckoTabId, script.id, request.commandId)
+            val succeeded = UserScriptGrant.UnregisterMenuCommand in script.grants &&
+                menuCommands.remove(key) != null
+            candyTabIdsByGeckoTab[geckoTabId]?.let(::publishCommands)
+            JSONObject().put("ok", succeeded)
+        }
+        is UserScriptBridgeRequest.OpenTab -> {
+            val candyTabId = candyTabIdsByGeckoTab[geckoTabId]
+            val succeeded = candyTabId != null &&
+                UserScriptGrant.OpenInTab in script.grants &&
+                openTabRateWindows.getOrPut(geckoTabId to script.id) {
+                    GeckoMessageRateWindow(
+                        maxMessages = MAX_OPEN_TABS_PER_WINDOW,
+                        windowMillis = OPEN_TAB_RATE_WINDOW_MILLIS,
+                    )
+                }.accept(System.currentTimeMillis())
+            if (succeeded) {
+                interactionDelegate.onOpenTab(
+                    UserScriptOpenTabRequest(
+                        tabId = requireNotNull(candyTabId),
+                        scriptId = script.id,
+                        url = request.url,
+                        active = request.active,
+                    ),
+                )
+            }
+            JSONObject().put("ok", succeeded)
+        }
+    }
+
+    private fun bridgeFailure(request: UserScriptBridgeRequest?): JSONObject = when (request) {
+        is UserScriptBridgeRequest.SetValue -> JSONObject()
+            .put("id", request.requestId)
+            .put("ok", false)
+        is UserScriptBridgeRequest.DeleteValue -> JSONObject()
+            .put("id", request.requestId)
+            .put("ok", false)
+        else -> JSONObject().put("ok", false)
+    }
+
+    private fun valueResponse(requestId: Long, scriptId: String, succeeded: Boolean): JSONObject =
+        JSONObject()
+            .put("id", requestId)
+            .put("ok", succeeded)
+            .apply {
+                if (succeeded) put("snapshot", valueStore.encodedSnapshot(scriptId))
+            }
+
+    private fun publishCommands(tabId: String) {
+        val commands = menuCommands.mapNotNull { (key, caption) ->
+            if (candyTabIdsByGeckoTab[key.geckoTabId] != tabId) return@mapNotNull null
+            val script = scriptsById[key.scriptId] ?: return@mapNotNull null
+            UserScriptMenuCommand(
+                tabId = tabId,
+                scriptId = script.id,
+                scriptName = script.name,
+                commandId = key.commandId,
+                caption = caption,
+            )
+        }
+        interactionDelegate.onMenuCommandsChanged(tabId, commands)
     }
 
     private fun fail(error: Throwable) {
@@ -174,6 +402,7 @@ internal class GeckoViewToppingHostRuntime(
                 },
             )
             publishPlanIfReady()
+            publishActiveTabBinding()
         }
     }
 
@@ -181,6 +410,34 @@ internal class GeckoViewToppingHostRuntime(
         const val TAG = "CandyToppingHost"
         const val INITIALIZATION_TIMEOUT_MILLIS = 15_000L
         const val MAX_FAILURE_CHARS = 512
+        const val MAX_MENU_COMMANDS_PER_SCRIPT = 32
+        const val MAX_MENU_COMMANDS_PER_TAB = 128
+        const val MAX_OPEN_TABS_PER_WINDOW = 4
+        const val OPEN_TAB_RATE_WINDOW_MILLIS = 10_000L
+    }
+}
+
+private data class GeckoMenuCommandKey(
+    val geckoTabId: Long,
+    val scriptId: String,
+    val commandId: String,
+)
+
+private class GeckoMessageRateWindow(
+    private val maxMessages: Int = 128,
+    private val windowMillis: Long = 1_000L,
+) {
+    private var startedAtMillis = 0L
+    private var count = 0
+
+    fun accept(nowMillis: Long): Boolean {
+        if (nowMillis - startedAtMillis >= windowMillis) {
+            startedAtMillis = nowMillis
+            count = 0
+        }
+        if (count >= maxMessages) return false
+        count++
+        return true
     }
 }
 
@@ -197,8 +454,14 @@ private fun GeckoToppingPlan.toMessage(revision: Long): JSONObject = JSONObject(
 
 private fun GeckoToppingRegistration.toJson(): JSONObject = JSONObject()
     .put("id", id)
+    .put("scriptId", scriptId)
     .put("worldId", worldId)
-    .put("js", JSONArray().put(JSONObject().put("code", javascript)))
+    .put(
+        "js",
+        JSONArray().also { values ->
+            javascriptSources.forEach { source -> values.put(JSONObject().put("code", source)) }
+        },
+    )
     .put("matches", JSONArray(matchPatterns))
     .put("includeGlobs", JSONArray(includeGlobs))
     .put("excludeGlobs", JSONArray(excludeGlobs))

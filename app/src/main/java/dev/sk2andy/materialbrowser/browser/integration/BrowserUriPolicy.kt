@@ -122,19 +122,19 @@ internal object ExternalNavigationGrantRules {
     fun shouldClearForMainFrameCallback(
         grant: ExternalNavigationGrant,
         callbackUrl: String?,
-        currentWebViewUrl: String?,
+        currentBrowserUrl: String?,
         nowElapsedRealtime: Long,
     ): Boolean {
         if (!isActive(grant, nowElapsedRealtime)) return true
         val safeCallbackUrl = BrowserUriPolicy.normalizeHttpUrl(callbackUrl) ?: return false
-        val safeCurrentUrl = BrowserUriPolicy.normalizeHttpUrl(currentWebViewUrl) ?: return false
+        val safeCurrentUrl = BrowserUriPolicy.normalizeHttpUrl(currentBrowserUrl) ?: return false
         return safeCallbackUrl == grant.currentUrl && safeCurrentUrl == grant.currentUrl
     }
 
     internal const val MAX_LIFETIME_MILLIS = 15_000L
 }
 
-/** Routes an explicit APK navigation to the download pipeline before WebView renders it. */
+/** Routes an explicit APK navigation to the download pipeline before the renderer displays it. */
 object ApkDownloadNavigationRules {
     fun shouldRoute(
         url: String?,
@@ -203,12 +203,12 @@ internal object ExternalPreviewDownloadGrantRules {
     fun shouldClearForMainFrameCallback(
         grant: ExternalPreviewDownloadGrant,
         callbackUrl: String?,
-        currentWebViewUrl: String?,
+        currentBrowserUrl: String?,
         nowElapsedRealtime: Long,
     ): Boolean {
         if (!isActive(grant, nowElapsedRealtime)) return true
         val safeCallbackUrl = BrowserUriPolicy.normalizeHttpUrl(callbackUrl) ?: return false
-        val safeCurrentUrl = BrowserUriPolicy.normalizeHttpUrl(currentWebViewUrl) ?: return false
+        val safeCurrentUrl = BrowserUriPolicy.normalizeHttpUrl(currentBrowserUrl) ?: return false
         return safeCallbackUrl == grant.currentUrl && safeCurrentUrl == grant.currentUrl
     }
 
@@ -221,7 +221,7 @@ internal object ExternalPreviewDownloadGrantRules {
     private const val MAX_URLS = 10
 }
 
-/** Link Peek never hands non-web navigation to another app or internal WebView scheme. */
+/** Link Peek never hands non-web navigation to another app or an internal engine scheme. */
 object LinkPeekPreviewNavigationPolicy {
     fun shouldBlock(url: String?): Boolean = BrowserUriPolicy.normalizeHttpUrl(url) == null
 }

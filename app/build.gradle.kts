@@ -455,19 +455,16 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.core:core-ktx:1.15.0")
-    // Keep the currently verified Credential Manager runtime until the browser-engine migration
-    // has its own compatibility pass.
+    // Gecko uses Android's framework Credential Manager for WebAuthn on API 34+. AndroidX keeps
+    // password save/select available across system and Full-build Google providers.
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.webkit:webkit:1.16.0") {
-        // WebKit is Java-only. Avoid pulling an additional stdlib copy into both distributions.
-        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
-    }
     implementation("com.google.guava:guava:33.2.1-android")
     implementation("com.github.Dimezis:BlurView:version-3.2.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.lambdapioneer.argon2kt:argon2kt:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     implementation("org.mozilla.geckoview:geckoview:140.0.20250707120347")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.foundation:foundation")

@@ -8,23 +8,11 @@ import org.junit.Test
 
 class FullscreenVideoRulesTest {
     @Test
-    fun `system pip keeps web view in its existing browser host`() {
-        assertFalse(
-            FullscreenVideoRules.hostsSourceInOverlay(
-                host = FullscreenVideoHost.Browser,
-                videoOnlyPresentation = true,
-            ),
-        )
+    fun `gecko presentation always uses overlay host`() {
         assertTrue(
             FullscreenVideoRules.hostsSourceInOverlay(
                 host = FullscreenVideoHost.Overlay,
                 videoOnlyPresentation = true,
-            ),
-        )
-        assertTrue(
-            FullscreenVideoRules.hostsSourceInOverlay(
-                host = FullscreenVideoHost.Browser,
-                videoOnlyPresentation = false,
             ),
         )
         assertTrue(
@@ -91,36 +79,6 @@ class FullscreenVideoRulesTest {
                 selectedTabId = "other",
                 minimizedByUser = true,
                 videoOnlyPresentation = true,
-            ),
-        )
-    }
-
-    @Test
-    fun `only owning web view stays resumed`() {
-        assertTrue(FullscreenVideoRules.keepsWebViewResumed("video", "video", isPrivate = false))
-        assertFalse(FullscreenVideoRules.keepsWebViewResumed("video", "other", isPrivate = false))
-        assertFalse(FullscreenVideoRules.keepsWebViewResumed("video", "video", isPrivate = true))
-        assertFalse(FullscreenVideoRules.keepsWebViewResumed(null, "video", isPrivate = false))
-    }
-
-    @Test
-    fun `private fullscreen video never auto enters system picture in picture`() {
-        assertTrue(
-            FullscreenVideoRules.isPictureInPictureEligible(
-                sessionTabId = "regular",
-                isPrivate = false,
-            ),
-        )
-        assertFalse(
-            FullscreenVideoRules.isPictureInPictureEligible(
-                sessionTabId = "private",
-                isPrivate = true,
-            ),
-        )
-        assertFalse(
-            FullscreenVideoRules.isPictureInPictureEligible(
-                sessionTabId = null,
-                isPrivate = null,
             ),
         )
     }

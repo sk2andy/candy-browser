@@ -26,6 +26,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -36,6 +38,37 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+    }
+}
+
+tasks.register<Exec>("iosSimulatorArm64IsolatedTest") {
+    group = "verification"
+    description = "Runs shared tests on the explicitly configured isolated iOS simulator."
+    dependsOn("linkDebugTestIosSimulatorArm64")
+
+    val deviceSet = providers.environmentVariable("CANDY_IOS_SIMULATOR_DEVICE_SET")
+    val deviceId = providers.environmentVariable("CANDY_IOS_SIMULATOR_UDID")
+    val testExecutable = layout.buildDirectory.file(
+        "bin/iosSimulatorArm64/debugTest/test.kexe",
+    )
+
+    doFirst {
+        check(deviceSet.isPresent) {
+            "CANDY_IOS_SIMULATOR_DEVICE_SET must point to this session's dedicated device set."
+        }
+        check(deviceId.isPresent) {
+            "CANDY_IOS_SIMULATOR_UDID must identify this session's dedicated simulator."
+        }
+        commandLine(
+            "/usr/bin/xcrun",
+            "simctl",
+            "--set",
+            deviceSet.get(),
+            "spawn",
+            "--standalone",
+            deviceId.get(),
+            testExecutable.get().asFile.absolutePath,
+        )
     }
 }
 

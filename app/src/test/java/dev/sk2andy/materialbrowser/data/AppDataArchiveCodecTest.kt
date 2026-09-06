@@ -64,13 +64,14 @@ class AppDataArchiveCodecTest {
         ZipInputStream(ByteArrayInputStream(archiveBytes)).use { zip ->
             assertEquals(AppDataArchiveRules.MANIFEST_ENTRY_NAME, zip.nextEntry.name)
             val manifestJson = JSONObject(String(zip.readBytes(), StandardCharsets.UTF_8))
-            assertEquals(1, manifestJson.getInt("formatVersion"))
+            assertEquals(2, manifestJson.getInt("formatVersion"))
             assertEquals("dev.example.browser", manifestJson.getString("packageName"))
             assertEquals("1.2.3", manifestJson.getString("appVersionName"))
             assertEquals(42L, manifestJson.getLong("appVersionCode"))
             assertEquals("125.0", manifestJson.getString("webViewVersion"))
             assertEquals(35, manifestJson.getInt("sdkInt"))
             assertEquals(1_723_456_789_000L, manifestJson.getLong("exportedAtEpochMillis"))
+            assertEquals("candy-owned-only", manifestJson.getString("websiteState"))
         }
 
         val inspection = AppDataArchiveCodec.inspect(ByteArrayInputStream(archiveBytes))
@@ -181,7 +182,7 @@ class AppDataArchiveCodecTest {
             }.failure,
         )
 
-        val futureManifest = manifestJson(formatVersion = 2)
+        val futureManifest = manifestJson(formatVersion = 3)
         assertEquals(
             AppDataArchiveFailure.UnsupportedFormatVersion,
             assertThrows(AppDataArchiveException::class.java) {
@@ -248,7 +249,7 @@ class AppDataArchiveCodecTest {
 
         val futureTarget = temporaryFolder.newFolder("future-target").toPath()
         val futureArchive = rawZipOf(
-            AppDataArchiveRules.MANIFEST_ENTRY_NAME to manifestJson(formatVersion = 2),
+            AppDataArchiveRules.MANIFEST_ENTRY_NAME to manifestJson(formatVersion = 3),
             "data/files/value" to byteArrayOf(1),
         )
         val futureFailure = assertThrows(AppDataArchiveException::class.java) {
@@ -256,6 +257,29 @@ class AppDataArchiveCodecTest {
         }
         assertEquals(AppDataArchiveFailure.UnsupportedFormatVersion, futureFailure.failure)
         assertFalse(Files.newDirectoryStream(futureTarget).use { entries -> entries.iterator().hasNext() })
+    }
+
+    @Test
+    fun `legacy archive preserves Candy data and explicitly excludes engine website state`() {
+        val archive = rawZipOf(
+            AppDataArchiveRules.MANIFEST_ENTRY_NAME to manifestJson(formatVersion = 1),
+            "data/shared_prefs/settings.xml" to "settings".toByteArray(StandardCharsets.UTF_8),
+            "data/no_backup/tab_webview_states/tab.bin" to byteArrayOf(1, 2, 3),
+        )
+        val inspection = AppDataArchiveCodec.inspect(ByteArrayInputStream(archive))
+        val target = temporaryFolder.newFolder("legacy-target").toPath()
+        val extraction = AppDataArchiveCodec.extract(ByteArrayInputStream(archive), target)
+
+        assertEquals(AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded, inspection.websiteState)
+        assertEquals(AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded, extraction.websiteState)
+        assertEquals(
+            "settings",
+            String(
+                Files.readAllBytes(target.resolve("shared_prefs/settings.xml")),
+                StandardCharsets.UTF_8,
+            ),
+        )
+        assertFalse(Files.exists(target.resolve("no_backup/tab_webview_states/tab.bin")))
     }
 
     private fun manifest() = AppDataArchiveManifest(
@@ -267,7 +291,7 @@ class AppDataArchiveCodecTest {
         exportedAtEpochMillis = 1_723_456_789_000L,
     )
 
-    private fun manifestJson(formatVersion: Int = 1): ByteArray = JSONObject()
+    private fun manifestJson(formatVersion: Int = 2): ByteArray = JSONObject()
         .put("formatVersion", formatVersion)
         .put("packageName", "dev.example.browser")
         .put("appVersionName", "1.2.3")
@@ -275,6 +299,9 @@ class AppDataArchiveCodecTest {
         .put("webViewVersion", "125.0")
         .put("sdkInt", 35)
         .put("exportedAtEpochMillis", 1_723_456_789_000L)
+        .apply {
+            if (formatVersion == 2) put("websiteState", "candy-owned-only")
+        }
         .toString()
         .toByteArray(StandardCharsets.UTF_8)
 

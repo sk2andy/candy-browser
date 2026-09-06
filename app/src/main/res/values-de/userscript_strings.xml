@@ -6,7 +6,7 @@
     <string name="settings_home_userscripts_summary">Passende Seiten mit Toppings anpassen</string>
     <string name="userscript_risk_title">Nur vertrauenswürdige Toppings verwenden</string>
     <string name="userscript_risk_body">Topping-Code kann auf passenden Seiten Inhalte und Sitzungsdaten lesen oder ändern, als angemeldeter Nutzer handeln und den Seiten-Renderer verlangsamen. Füge nur Toppings aus vertrauenswürdigen Quellen hinzu.</string>
-    <string name="userscript_runtime_unsupported">Das installierte Android System WebView kann keine Toppings ausführen. Aktualisiere System WebView, um sie zu aktivieren.</string>
+    <string name="userscript_runtime_unsupported">Der Gecko-Topping-Host konnte nicht starten. Starte oder aktualisiere Candy, um Toppings zu aktivieren.</string>
     <string name="userscript_scope_title">Vor dem Hinzufügen eines Toppings</string>
     <string name="userscript_regular_tabs_only">Toppings laufen nur in regulären Tabs, niemals in privaten Tabs.</string>
     <string name="userscript_no_gm_apis">Unterstützt wird nur normales Seiten-JavaScript. GM_* und Erweiterungs-APIs sind nicht verfügbar.</string>

@@ -6,6 +6,22 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewGridRules
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroRules
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewEdgeAction
+import dev.sk2andy.materialbrowser.shared.ui.TabHeroLayer
+import dev.sk2andy.materialbrowser.shared.ui.TabDismissPhysics
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroPager
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroPagerHaptics
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroPagerReorder
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewBottomChrome
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
+import dev.sk2andy.materialbrowser.shared.ui.TabTitleRow
+import dev.sk2andy.materialbrowser.shared.ui.CompactTabGrid
+import dev.sk2andy.materialbrowser.shared.ui.CompactTabList
+import dev.sk2andy.materialbrowser.ui.ProfileSwitcher
+import dev.sk2andy.materialbrowser.ui.allowTopOverflow
+
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
@@ -17,7 +33,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
@@ -26,8 +41,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,14 +64,12 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PageSize
-import androidx.compose.foundation.pager.PagerDefaults
-import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -111,6 +123,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -190,13 +203,6 @@ internal fun TabOverview(
         } else {
             initialPage
         },
-    )
-    val pagerFlingBehavior = PagerDefaults.flingBehavior(
-        state = pagerState,
-        pagerSnapDistance = PagerSnapDistance.atMost(10),
-        decayAnimationSpec = exponentialDecay(frictionMultiplier = 0.62f),
-        snapAnimationSpec = spring(dampingRatio = 0.95f, stiffness = 1_000f),
-        snapPositionalThreshold = 0.11f,
     )
     val initialTabId = remember(visible) { controller.selectedTabId }
     val initialTab = remember(initialTabId, overviewTabs) {
@@ -312,7 +318,7 @@ internal fun TabOverview(
                 exitHeroProgress.animateTo(
                     targetValue = 1f,
                     animationSpec = tween(
-                        durationMillis = 200,
+                        durationMillis = TabOverviewHeroRules.EXIT_DURATION_MILLIS,
                         easing = FastOutSlowInEasing,
                     ),
                 )
@@ -1026,345 +1032,119 @@ internal fun TabOverview(
                 Spacer(Modifier.height(TAB_OVERVIEW_PROFILE_SPACING))
             }
             when (controller.tabOverviewMode) {
-                TabOverviewMode.Hero -> HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .weight(1f)
-                    .graphicsLayer {
-                        val progress = profileSwitchProgress.value
-                        alpha = progress
-                        translationY = (1f - progress) * 14f
-                        val scale = 0.97f + progress * 0.03f
-                        scaleX = scale
-                        scaleY = scale
-                    }
-                    .allowTopOverflow(heroPagerTopOverflow)
-                    .testTag(TabOverviewChromeTestTags.HeroPager),
-                contentPadding = PaddingValues(
-                    start = pageHorizontalPadding,
-                    top = heroPagerTopOverflow + HERO_PAGER_VERTICAL_PADDING,
-                    end = pageHorizontalPadding,
-                    bottom = HERO_PAGER_VERTICAL_PADDING,
-                ),
-                pageSpacing = 0.dp,
-                pageSize = PageSize.Fixed(pageSlotWidth),
-                flingBehavior = pagerFlingBehavior,
-                verticalAlignment = Alignment.CenterVertically,
-                beyondViewportPageCount = if (reorderAnimation == null) {
-                    1
-                } else {
-                    (controller.activeTabs.size - 1).coerceAtLeast(0)
-                },
-                userScrollEnabled = dismissingTabId == null &&
-                    movingTabId == null &&
-                    exitHero == null &&
-                    reorderAnimation == null &&
-                    !heroReorderDropAnimating &&
-                    activeTabReorder == null &&
-                    tabActionsTabId == null,
-                key = { page ->
-                    if (reorderAnimation == null && !heroReorderDropAnimating) {
-                        controller.activeTabs[page].id
-                    } else {
-                        "tab-reorder-$page"
-                    }
-                },
-                ) { page ->
-                val tab = controller.activeTabs[page]
-                val cardGestureScope = rememberCoroutineScope()
-                var dismissOffset by remember(tab.id) { mutableFloatStateOf(0f) }
-                var rawDismissOffset by remember(tab.id) { mutableFloatStateOf(0f) }
-                val breakFreeProgress = remember(tab.id) { Animatable(0f) }
-                var breakFreeJob by remember(tab.id) { mutableStateOf<Job?>(null) }
-                var dragActive by remember(tab.id) { mutableStateOf(false) }
-                var resistanceCleared by remember(tab.id) { mutableStateOf(false) }
-                var rubberbandHapticActive by remember(tab.id) { mutableStateOf(false) }
-                var dismissHapticPlayed by remember(tab.id) { mutableStateOf(false) }
-                var cardBounds by remember(tab.id) { mutableStateOf<Rect?>(null) }
-                DisposableEffect(tab.id) {
-                    onDispose {
-                        if (tabCardBounds[tab.id] == cardBounds) {
+                TabOverviewMode.Hero -> TabOverviewHeroPager(
+                    pagerState = pagerState,
+                    tabs = controller.activeTabs,
+                    initialTabId = initialTabId,
+                    tabCardWidth = tabCardWidth,
+                    cardAspectRatio = coverflowCardLayout.aspectRatio,
+                    pageSlotWidth = pageSlotWidth,
+                    pageHorizontalPadding = pageHorizontalPadding,
+                    topPadding = heroPagerTopOverflow + HERO_PAGER_VERTICAL_PADDING,
+                    bottomPadding = HERO_PAGER_VERTICAL_PADDING,
+                    heroProgress = { heroProgress.value },
+                    heroCompleted = heroCompleted,
+                    heroVisible = heroVisible,
+                    rootHeightPx = rootHeightPx,
+                    dismissResistanceFraction = controller.dismissResistancePercent / 100f,
+                    dismissingTabId = dismissingTabId,
+                    movingTabId = movingTabId,
+                    movingProgress = { moveProgress.value },
+                    exitHeroTabId = exitHero?.tabId,
+                    tabActionsTabId = tabActionsTabId,
+                    reorder = TabOverviewHeroPagerReorder(
+                        animationTabId = reorderAnimation?.tabId,
+                        layoutReady = reorderLayoutReady,
+                        pageSlotWidthPx = pageSlotWidthPx,
+                        progress = { reorderProgress.value },
+                        indexDelta = { tabId ->
+                            reorderAnimation?.indexDeltas?.get(tabId) ?: 0
+                        },
+                        activeTabId = activeTabReorder?.tabId,
+                        visualModifier = { tab ->
+                            Modifier.tabReorderVisualMotion(
+                                sessionId = activeTabReorder?.tabId,
+                                isDragged = activeTabReorder?.tabId == tab.id,
+                                targetOffset = reorderTranslation(tab.id),
+                            )
+                        },
+                        dropAnimating = heroReorderDropAnimating,
+                    ),
+                    operationScope = overviewScope,
+                    currentTabs = { controller.activeTabs },
+                    selectedTabId = { controller.selectedTabId },
+                    onDismissingTabChanged = { dismissingTabId = it },
+                    onSelectDismissAnchor = controller::selectTab,
+                    onSelectTab = controller::selectTab,
+                    onCloseTab = controller::closeTab,
+                    onCloseOverview = onClose,
+                    onStartExitHero = ::startExitHero,
+                    onCardBounds = { tab, bounds, isInitialCard ->
+                        tabCardBounds[tab.id] = bounds
+                        tabReorderBounds[tab.id] = bounds
+                        if (isInitialCard) {
+                            heroTargetBounds = bounds
+                            heroTargetMode = TabOverviewMode.Hero
+                            heroTargetTabId = tab.id
+                        }
+                    },
+                    onCardBoundsDisposed = { tab, bounds ->
+                        if (tabCardBounds[tab.id] == bounds) {
                             tabCardBounds.remove(tab.id)
                         }
-                        if (tabReorderBounds[tab.id] == cardBounds) {
+                        if (tabReorderBounds[tab.id] == bounds) {
                             tabReorderBounds.remove(tab.id)
                         }
-                    }
-                }
-                val dismissThreshold = with(density) {
-                    tabCardWidth.toPx() * TabDismissPhysics.CARD_DISMISS_THRESHOLD_FRACTION
-                }
-                val resistanceFraction = controller.dismissResistancePercent / 100f
-                val dragState = rememberDraggableState { delta ->
-                    if (delta < 0f || rawDismissOffset < 0f) {
-                        rawDismissOffset = (rawDismissOffset + delta).coerceAtMost(0f)
-                        val rawDistance = -rawDismissOffset
-                        val hasClearedResistance = TabDismissPhysics.hasClearedResistance(
-                            rawDistance = rawDistance,
-                            dismissThreshold = dismissThreshold,
-                            resistanceFraction = resistanceFraction,
+                    },
+                    canDelete = TabDeletionRules::canDelete,
+                    haptics = TabOverviewHeroPagerHaptics(
+                        startRubberband = rootView::startRubberbandHaptic,
+                        stopRubberband = rootView::stopRubberbandHaptic,
+                        confirm = rootView::performConfirmHaptic,
+                    ),
+                    previewContent = { tab ->
+                        TabPreviewContent(
+                            tab = tab,
+                            preview = controller.previews[tab.id],
+                            favicon = controller.favicons[tab.id],
+                            favorites = controller.favorites,
                         )
-                        val shouldVibrate = TabDismissPhysics.isInResistancePhase(
-                            rawDistance = rawDistance,
-                            dismissThreshold = dismissThreshold,
-                            resistanceFraction = resistanceFraction,
-                        )
-                        if (shouldVibrate && !rubberbandHapticActive) {
-                            rootView.startRubberbandHaptic()
-                            rubberbandHapticActive = true
-                        } else if (!shouldVibrate && rubberbandHapticActive) {
-                            rootView.stopRubberbandHaptic()
-                            rubberbandHapticActive = false
-                        }
-                        if (hasClearedResistance != resistanceCleared) {
-                            resistanceCleared = hasClearedResistance
-                            breakFreeJob?.cancel()
-                            breakFreeJob = cardGestureScope.launch {
-                                breakFreeProgress.animateTo(
-                                    targetValue = if (hasClearedResistance) 1f else 0f,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.72f,
-                                        stiffness = 800f,
-                                    ),
-                                )
-                            }
-                        }
-                        if (
-                            hasClearedResistance &&
-                            !dismissHapticPlayed
-                        ) {
-                            rootView.performConfirmHaptic()
-                            dismissHapticPlayed = true
-                        }
-                    }
-                }
-                val isInitialCard = tab.id == initialTabId
-                val realCardVisible = TabOverviewHeroRules.isCardVisible(
-                    isInitialCard = isInitialCard,
-                    progress = if (heroCompleted) 1f else 0f,
-                    isExitTarget = exitHero?.tabId == tab.id,
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(
-                            when {
-                                activeTabReorder?.tabId == tab.id -> 6f
-                                reorderAnimation?.tabId == tab.id -> 4f
-                                dragActive || dismissOffset < 0f -> 2f
-                                else -> 0f
-                            },
-                        )
-                        .graphicsLayer {
-                            alpha = 1f
-                            translationX = TabReorderMotion.translationX(
-                                indexDelta = if (reorderLayoutReady) {
-                                    reorderAnimation?.indexDeltas?.get(tab.id) ?: 0
-                                } else {
-                                    0
-                                },
-                                pageSlotWidthPx = pageSlotWidthPx,
-                                progress = reorderProgress.value,
-                            )
-                        }
-                        .tabReorderVisualMotion(
-                            sessionId = activeTabReorder?.tabId,
-                            isDragged = activeTabReorder?.tabId == tab.id,
-                            targetOffset = reorderTranslation(tab.id),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .graphicsLayer {
-                                clip = false
-                                compositingStrategy = CompositingStrategy.ModulateAlpha
-                                val currentDismissOffset = if (dragActive) {
-                                    -TabDismissPhysics.visualDistance(
-                                        rawDistance = -rawDismissOffset,
-                                        releaseProgress = breakFreeProgress.value,
-                                    )
-                                } else {
-                                    dismissOffset
-                                }
-                                translationY = currentDismissOffset
-                                val dismissProgress =
-                                    (-currentDismissOffset / (dismissThreshold * 1.7f))
+                    },
+                    titleContent = { tab, isInitialCard, modifier ->
+                        TabTitleRow(
+                            tab = tab,
+                            visuals = tabOverviewHeroVisuals(
+                                tab = tab,
+                                favicon = controller.favicons[tab.id],
+                            ),
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            alpha = {
+                                if (isInitialCard) {
+                                    ((heroProgress.value - 0.72f) / 0.28f)
                                         .coerceIn(0f, 1f)
-                                val entryAlpha = if (isInitialCard) {
+                                } else {
                                     1f
-                                } else {
-                                    TabOverviewHeroRules.neighborAlpha(heroProgress.value)
                                 }
-                                val movingProgress = if (movingTabId == tab.id) {
-                                    moveProgress.value
-                                } else {
-                                    0f
-                                }
-                                alpha = (1f - dismissProgress * 0.72f) *
-                                    entryAlpha *
-                                    (1f - movingProgress * 0.82f)
-                                translationX = movingProgress * 48f
-                                val scale = (1f - dismissProgress * 0.05f) *
-                                    (1f - movingProgress * 0.06f)
-                                scaleX = scale
-                                scaleY = scale
-                            }
-                            .draggable(
-                                state = dragState,
-                                orientation = Orientation.Vertical,
-                                enabled = heroCompleted && !heroVisible &&
-                                    TabDeletionRules.canDelete(tab) &&
-                                    dismissingTabId == null &&
-                                    movingTabId == null &&
-                                    exitHero == null &&
-                                    reorderAnimation == null &&
-                                    activeTabReorder == null &&
-                                    tabActionsTabId == null,
-                                onDragStarted = {
-                                    breakFreeJob?.cancel()
-                                    breakFreeProgress.snapTo(0f)
-                                    rootView.stopRubberbandHaptic()
-                                    rawDismissOffset = 0f
-                                    dragActive = true
-                                    resistanceCleared = false
-                                    rubberbandHapticActive = false
-                                    dismissHapticPlayed = false
-                                },
-                                onDragStopped = {
-                                    rootView.stopRubberbandHaptic()
-                                    rubberbandHapticActive = false
-                                    breakFreeJob?.cancel()
-                                    breakFreeProgress.stop()
-                                    dismissOffset = -TabDismissPhysics.visualDistance(
-                                        rawDistance = -rawDismissOffset,
-                                        releaseProgress = breakFreeProgress.value,
-                                    )
-                                    dragActive = false
-                                    val farEnough = TabDismissPhysics.hasClearedResistance(
-                                        rawDistance = -rawDismissOffset,
-                                        dismissThreshold = dismissThreshold,
-                                        resistanceFraction = resistanceFraction,
-                                    )
-                                    if (farEnough) {
-                                        val dismissedId = tab.id
-                                        val tabs = controller.activeTabs
-                                        val centeredId = tabs
-                                            .getOrNull(pagerState.currentPage)?.id
-                                        val anchorId = if (centeredId == dismissedId) {
-                                            tabs.getOrNull(page + 1)?.id
-                                                ?: tabs.getOrNull(page - 1)?.id
-                                        } else {
-                                            centeredId
-                                        }
-                                        dismissingTabId = dismissedId
-                                        overviewScope.launch {
-                                            try {
-                                                Animatable(dismissOffset).animateTo(
-                                                    targetValue = -rootHeightPx,
-                                                    animationSpec = tween(
-                                                        durationMillis = 180,
-                                                        easing = FastOutSlowInEasing,
-                                                    ),
-                                                ) { dismissOffset = value }
-                                                anchorId?.let { stableAnchorId ->
-                                                    val oldAnchorIndex = controller.activeTabs
-                                                        .indexOfFirst { it.id == stableAnchorId }
-                                                    if (
-                                                        oldAnchorIndex >= 0 &&
-                                                        pagerState.currentPage != oldAnchorIndex
-                                                    ) {
-                                                        pagerState.animateScrollToPage(
-                                                            page = oldAnchorIndex,
-                                                            animationSpec = tween(
-                                                                durationMillis = 240,
-                                                                easing = FastOutSlowInEasing,
-                                                            ),
-                                                        )
-                                                    }
-                                                    controller.selectTab(stableAnchorId)
-                                                }
-                                                controller.closeTab(dismissedId)
-                                                val targetId = anchorId ?: controller.selectedTabId
-                                                val newAnchorIndex = controller.activeTabs
-                                                    .indexOfFirst { it.id == targetId }
-                                                    .coerceAtLeast(0)
-                                                if (pagerState.currentPage != newAnchorIndex) {
-                                                    pagerState.scrollToPage(newAnchorIndex)
-                                                }
-                                            } finally {
-                                                dismissingTabId = null
-                                            }
-                                        }
-                                    } else {
-                                        Animatable(dismissOffset).animateTo(
-                                            targetValue = 0f,
-                                            animationSpec = spring(dampingRatio = 0.78f, stiffness = 520f),
-                                        ) { dismissOffset = value }
-                                        rawDismissOffset = 0f
-                                        breakFreeProgress.snapTo(0f)
-                                        resistanceCleared = false
-                                        dismissHapticPlayed = false
-                                    }
-                                },
-                            )
-                            .padding(horizontal = 4.dp, vertical = 28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Spacer(Modifier.height(8.dp))
-                        Box(modifier = Modifier.width(tabCardWidth)) {
-                            TabCard(
-                                tab = tab,
-                                preview = controller.previews[tab.id],
-                                favicon = controller.favicons[tab.id],
-                                favorites = controller.favorites,
-                                cardWidth = tabCardWidth,
-                                cardAspectRatio = coverflowCardLayout.aspectRatio,
-                                modifier = Modifier
-                                    .testTag(SnoozeTestTags.overviewTab(tab.id))
-                                    .graphicsLayer {
-                                        alpha = if (realCardVisible) 1f else 0f
-                                    }
-                                    .onGloballyPositioned { coordinates ->
-                                        val bounds = coordinates.boundsInRoot()
-                                        cardBounds = bounds
-                                        tabCardBounds[tab.id] = bounds
-                                        tabReorderBounds[tab.id] = bounds
-                                        if (isInitialCard) {
-                                            heroTargetBounds = bounds
-                                            heroTargetMode = TabOverviewMode.Hero
-                                            heroTargetTabId = tab.id
-                                        }
-                                    },
-                                onClick = {
-                                    val bounds = cardBounds
-                                    if (bounds == null) {
-                                        onSelect(tab.id)
-                                        onClose()
-                                        return@TabCard
-                                    }
-                                    startExitHero(tab, bounds)
-                                },
-                            )
-                            TabTitleRow(
-                                tab = tab,
-                                favicon = controller.favicons[tab.id],
-                                contentColor = MaterialTheme.colorScheme.onSurface,
-                                alpha = {
-                                    if (isInitialCard) {
-                                        ((heroProgress.value - 0.72f) / 0.28f).coerceIn(0f, 1f)
-                                    } else {
-                                        1f
-                                    }
-                                },
-                                modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(start = 12.dp, top = 4.dp, end = 12.dp),
-                            )
+                            },
+                            modifier = modifier,
+                        )
+                    },
+                    cardModifier = { tab ->
+                        Modifier.testTag(SnoozeTestTags.overviewTab(tab.id))
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .graphicsLayer {
+                            val progress = profileSwitchProgress.value
+                            alpha = progress
+                            translationY = (1f - progress) * 14f
+                            val scale = 0.97f + progress * 0.03f
+                            scaleX = scale
+                            scaleY = scale
                         }
-                    }
-                }
-                }
+                        .allowTopOverflow(heroPagerTopOverflow)
+                        .testTag(TabOverviewChromeTestTags.HeroPager),
+                )
                 TabOverviewMode.Grid -> CompactTabGrid(
                     gridState = gridState,
                     layout = gridLayout,
@@ -1372,9 +1152,17 @@ internal fun TabOverview(
                     visible = visible,
                     selectedTabId = controller.selectedTabId,
                     initialTabId = initialTabId,
-                    previews = controller.previews,
-                    favicons = controller.favicons,
-                    favorites = controller.favorites,
+                    visuals = { tab ->
+                        tabOverviewHeroVisuals(tab, controller.favicons[tab.id])
+                    },
+                    previewContent = { tab ->
+                        TabPreviewContent(
+                            tab = tab,
+                            preview = controller.previews[tab.id],
+                            favicon = controller.favicons[tab.id],
+                            favorites = controller.favorites,
+                        )
+                    },
                     heroProgress = { heroProgress.value },
                     heroCompleted = heroCompleted,
                     heroVisible = entryHeroVisible,
@@ -1388,21 +1176,40 @@ internal fun TabOverview(
                         tabActionsTabId == null,
                     reorderSessionId = activeTabReorder?.tabId,
                     reorderDraggedTabId = activeTabReorder?.tabId,
-                    reorderTranslation = ::reorderTranslation,
-                    reorderPointerInRoot = activeTabReorder
-                        ?.takeUnless(ActiveTabReorder::settling)
-                        ?.let {
-                        it.sourceBounds.center + it.dragOffset
+                    reorderModifier = { tab ->
+                        Modifier.tabReorderVisualMotion(
+                            sessionId = activeTabReorder?.tabId,
+                            isDragged = activeTabReorder?.tabId == tab.id,
+                            targetOffset = reorderTranslation(tab.id),
+                        )
                     },
-                    reorderCanScrollBackward = activeTabReorder?.let {
-                        it.destinationIndex > it.allowedRange.first
-                    } ?: false,
-                    reorderCanScrollForward = activeTabReorder?.let {
-                        it.destinationIndex < it.allowedRange.last
-                    } ?: false,
-                    onReorderAutoScroll = { consumed ->
-                        advanceVerticalTabReorderAutoScroll(consumed)
+                    reorderAutoScroll = { gridBounds ->
+                        TabReorderEdgeAutoScroll(
+                            sessionId = activeTabReorder?.tabId,
+                            pointerInRoot = activeTabReorder
+                                ?.takeUnless(ActiveTabReorder::settling)
+                                ?.let { it.sourceBounds.center + it.dragOffset },
+                            viewportBounds = gridBounds,
+                            orientation = Orientation.Vertical,
+                            canScrollBackward = gridState.canScrollBackward &&
+                                (activeTabReorder?.let {
+                                    it.destinationIndex > it.allowedRange.first
+                                } ?: false),
+                            canScrollForward = gridState.canScrollForward &&
+                                (activeTabReorder?.let {
+                                    it.destinationIndex < it.allowedRange.last
+                                } ?: false),
+                            scrollBy = { delta -> gridState.scrollBy(delta) },
+                            onScrolled = ::advanceVerticalTabReorderAutoScroll,
+                        )
                     },
+                    viewportSize = { IntSize(rootView.width, rootView.height) },
+                    canDelete = TabDeletionRules::canDelete,
+                    haptics = TabOverviewHeroPagerHaptics(
+                        startRubberband = rootView::startRubberbandHaptic,
+                        stopRubberband = rootView::stopRubberbandHaptic,
+                        confirm = rootView::performConfirmHaptic,
+                    ),
                     onReorderBounds = { tab, bounds -> tabReorderBounds[tab.id] = bounds },
                     onReorderBoundsDisposed = { tab, bounds ->
                         if (tabReorderBounds[tab.id] == bounds) tabReorderBounds.remove(tab.id)
@@ -1443,6 +1250,8 @@ internal fun TabOverview(
                             controller.closeTab(tab.id)
                         }
                     },
+                    gridTestTag = TabOverviewChromeTestTags.Grid,
+                    tabTestTag = { tab -> SnoozeTestTags.overviewTab(tab.id) },
                     modifier = Modifier
                         .weight(1f)
                         .graphicsLayer {
@@ -1458,7 +1267,9 @@ internal fun TabOverview(
                     visible = visible,
                     selectedTabId = controller.selectedTabId,
                     initialTabId = initialTabId,
-                    favicons = controller.favicons,
+                    visuals = { tab ->
+                        tabOverviewHeroVisuals(tab, controller.favicons[tab.id])
+                    },
                     heroProgress = { heroProgress.value },
                     heroCompleted = heroCompleted,
                     heroVisible = entryHeroVisible,
@@ -1471,20 +1282,30 @@ internal fun TabOverview(
                         tabActionsTabId == null,
                     reorderSessionId = activeTabReorder?.tabId,
                     reorderDraggedTabId = activeTabReorder?.tabId,
-                    reorderTranslation = ::reorderTranslation,
-                    reorderPointerInRoot = activeTabReorder
-                        ?.takeUnless(ActiveTabReorder::settling)
-                        ?.let {
-                        it.sourceBounds.center + it.dragOffset
+                    reorderModifier = { tab ->
+                        Modifier.tabReorderVisualMotion(
+                            sessionId = activeTabReorder?.tabId,
+                            isDragged = activeTabReorder?.tabId == tab.id,
+                            targetOffset = reorderTranslation(tab.id),
+                        )
                     },
-                    reorderCanScrollBackward = activeTabReorder?.let {
-                        it.destinationIndex > it.allowedRange.first
-                    } ?: false,
-                    reorderCanScrollForward = activeTabReorder?.let {
-                        it.destinationIndex < it.allowedRange.last
-                    } ?: false,
-                    onReorderAutoScroll = { consumed ->
-                        advanceVerticalTabReorderAutoScroll(consumed)
+                    reorderAutoScroll = { listBounds ->
+                        TabReorderEdgeAutoScroll(
+                            sessionId = activeTabReorder?.tabId,
+                            pointerInRoot = activeTabReorder
+                                ?.takeUnless(ActiveTabReorder::settling)
+                                ?.let { it.sourceBounds.center + it.dragOffset },
+                            viewportBounds = listBounds,
+                            orientation = Orientation.Vertical,
+                            canScrollBackward = activeTabReorder?.let {
+                                it.destinationIndex > it.allowedRange.first
+                            } ?: false,
+                            canScrollForward = activeTabReorder?.let {
+                                it.destinationIndex < it.allowedRange.last
+                            } ?: false,
+                            scrollBy = { delta -> listState.scrollBy(delta) },
+                            onScrolled = ::advanceVerticalTabReorderAutoScroll,
+                        )
                     },
                     onRowBounds = { tab, bounds ->
                         tabCardBounds[tab.id] = bounds
@@ -1506,6 +1327,8 @@ internal fun TabOverview(
                             controller.closeTab(tab.id)
                         }
                     },
+                    listTestTag = TabOverviewChromeTestTags.List,
+                    tabTestTag = { tab -> SnoozeTestTags.overviewTab(tab.id) },
                     modifier = Modifier
                         .weight(1f)
                         .graphicsLayer {
@@ -1515,125 +1338,122 @@ internal fun TabOverview(
                         },
                 )
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .padding(horizontal = 4.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                val actionTargetId = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
-                    controller.activeTabs.getOrNull(pagerState.currentPage)?.id
-                } else {
-                    controller.selectedTabId
-                }
-                val chromeEnabled = destinationChromeVisible &&
-                    dismissingTabId == null &&
-                    movingTabId == null &&
-                    exitHero == null &&
-                    reorderAnimation == null &&
-                    !heroReorderDropAnimating &&
-                    activeTabReorder == null &&
-                    tabActionsTabId == null
-                val overviewChromeTokens = browserChromeSurfaceTokens(
-                    BrowserChromeSurfaceRole.AddressBar,
-                )
-                val pinnedTabsJumpVisible = destinationChromeVisible &&
-                    controller.activeTabs.any(BrowserTab::isPinned) &&
-                    !pinnedTabsVisible
-                TabOverviewEdgeAction(
-                    visible = pinnedTabsJumpVisible,
-                    enabled = chromeEnabled,
-                    contentDescription = stringResource(R.string.cd_scroll_to_pinned_tabs),
-                    testTag = TabOverviewChromeTestTags.PinnedTabsJump,
-                    animationLabel = "pinned-tabs-jump-alpha",
-                    onClick = {
-                        overviewScope.launch {
-                            when (controller.tabOverviewMode) {
-                                TabOverviewMode.Hero ->
-                                    pagerState.animateScrollToPage(
-                                        page = 0,
-                                        animationSpec = spring(
-                                            dampingRatio = 0.86f,
-                                            stiffness = 720f,
-                                        ),
-                                    )
-                                TabOverviewMode.Grid -> gridState.animateScrollToItem(0)
-                                TabOverviewMode.List -> listState.animateScrollToItem(0)
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .zIndex(1f),
-                ) {
-                    Icon(
-                        imageVector = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
-                            Icons.AutoMirrored.Filled.KeyboardArrowLeft
-                        } else {
-                            Icons.Default.KeyboardArrowUp
-                        },
-                        contentDescription = null,
-                        modifier = Modifier.size(17.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                    )
-                    Icon(
-                        painter = painterResource(R.drawable.ic_push_pin),
-                        contentDescription = null,
-                        modifier = Modifier.size(17.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                    )
-                }
-                TabOverviewEdgeAction(
-                    visible = destinationChromeVisible,
-                    enabled = chromeEnabled,
-                    contentDescription = stringResource(R.string.action_settings),
-                    testTag = TabOverviewChromeTestTags.Settings,
-                    animationLabel = "tab-overview-settings-alpha",
-                    onClick = onOpenSettings,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .zIndex(1f),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_settings),
-                        contentDescription = null,
-                        modifier = Modifier.size(17.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                    )
-                }
-                Surface(
-                    modifier = Modifier
-                        .width(AddressBarMotion.OVERVIEW_WIDTH)
-                        .height(56.dp)
-                        .testTag(TabOverviewChromeTestTags.Bar)
-                        .graphicsLayer {
-                            alpha = if (destinationChromeVisible) 1f else 0f
-                        }
-                        .then(
-                            if (destinationChromeVisible) {
-                                Modifier
-                            } else {
-                                Modifier.clearAndSetSemantics { }
-                            },
-                    ),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = overviewChromeTokens.containerColor,
-                    tonalElevation = overviewChromeTokens.tonalElevation,
-                    shadowElevation = overviewChromeTokens.shadowElevation,
-                ) {
-                    OverviewAddressBarContent(
-                        onNewTab = onNewTab,
-                        onMore = {
-                            actionTargetId?.let { tabId ->
-                                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                                tabActionsTabId = tabId
-                            }
-                        },
-                        enabled = chromeEnabled,
-                    )
-                }
+            val actionTargetId = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
+                controller.activeTabs.getOrNull(pagerState.currentPage)?.id
+            } else {
+                controller.selectedTabId
             }
+            val chromeEnabled = destinationChromeVisible &&
+                dismissingTabId == null &&
+                movingTabId == null &&
+                exitHero == null &&
+                reorderAnimation == null &&
+                !heroReorderDropAnimating &&
+                activeTabReorder == null &&
+                tabActionsTabId == null
+            val overviewChromeTokens = browserChromeSurfaceTokens(
+                BrowserChromeSurfaceRole.AddressBar,
+            )
+            val pinnedTabsJumpVisible = destinationChromeVisible &&
+                controller.activeTabs.any(BrowserTab::isPinned) &&
+                !pinnedTabsVisible
+            TabOverviewBottomChrome(
+                visible = destinationChromeVisible,
+                enabled = chromeEnabled,
+                onNewTab = onNewTab,
+                onMore = {
+                    actionTargetId?.let { tabId ->
+                        rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        tabActionsTabId = tabId
+                    }
+                },
+                containerColor = overviewChromeTokens.containerColor,
+                tonalElevation = overviewChromeTokens.tonalElevation,
+                shadowElevation = overviewChromeTokens.shadowElevation,
+                newTabIcon = {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = stringResource(R.string.cd_new_tab),
+                    )
+                },
+                moreIcon = {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.cd_more_options),
+                    )
+                },
+                leadingAction = {
+                    TabOverviewEdgeAction(
+                        visible = pinnedTabsJumpVisible,
+                        enabled = chromeEnabled,
+                        contentDescription = stringResource(R.string.cd_scroll_to_pinned_tabs),
+                        testTag = TabOverviewChromeTestTags.PinnedTabsJump,
+                        animationLabel = "pinned-tabs-jump-alpha",
+                        onHaptic = {
+                            rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        },
+                        onClick = {
+                            overviewScope.launch {
+                                when (controller.tabOverviewMode) {
+                                    TabOverviewMode.Hero ->
+                                        pagerState.animateScrollToPage(
+                                            page = 0,
+                                            animationSpec = spring(
+                                                dampingRatio = 0.86f,
+                                                stiffness = 720f,
+                                            ),
+                                        )
+                                    TabOverviewMode.Grid -> gridState.animateScrollToItem(0)
+                                    TabOverviewMode.List -> listState.animateScrollToItem(0)
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .zIndex(1f),
+                    ) {
+                        Icon(
+                            imageVector = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
+                                Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                            } else {
+                                Icons.Default.KeyboardArrowUp
+                            },
+                            contentDescription = null,
+                            modifier = Modifier.size(17.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.ic_push_pin),
+                            contentDescription = null,
+                            modifier = Modifier.size(17.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                        )
+                    }
+                },
+                trailingAction = {
+                    TabOverviewEdgeAction(
+                        visible = destinationChromeVisible,
+                        enabled = chromeEnabled,
+                        contentDescription = stringResource(R.string.action_settings),
+                        testTag = TabOverviewChromeTestTags.Settings,
+                        animationLabel = "tab-overview-settings-alpha",
+                        onHaptic = {
+                            rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        },
+                        onClick = onOpenSettings,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .zIndex(1f),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_settings),
+                            contentDescription = null,
+                            modifier = Modifier.size(17.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                        )
+                    }
+                },
+            )
         }
 
         activeTabReorder?.let { reorder ->
@@ -1672,7 +1492,7 @@ internal fun TabOverview(
                 },
             ) {
                 when (controller.tabOverviewMode) {
-                    TabOverviewMode.List -> TabListHeroContent(
+                    TabOverviewMode.List -> AndroidTabListHeroContent(
                         tab = initialTab,
                         preview = heroPreview,
                         favicon = heroFavicon,
@@ -1684,7 +1504,7 @@ internal fun TabOverview(
                         bottomBarTopPx = bottomBarTopPx,
                         targetFraction = { heroProgress.value },
                     )
-                    TabOverviewMode.Hero -> TabCardHeroContent(
+                    TabOverviewMode.Hero -> AndroidTabCardHeroContent(
                         tab = initialTab,
                         preview = heroPreview,
                         favicon = heroFavicon,
@@ -1696,7 +1516,7 @@ internal fun TabOverview(
                         bottomBarTopPx = bottomBarTopPx,
                         targetFraction = { heroProgress.value },
                     )
-                    TabOverviewMode.Grid -> TabCardHeroContent(
+                    TabOverviewMode.Grid -> AndroidTabCardHeroContent(
                         tab = initialTab,
                         preview = heroPreview,
                         favicon = heroFavicon,
@@ -1742,7 +1562,7 @@ internal fun TabOverview(
                 val preview = hero.preview
                 val heroTab = controller.activeTabs.firstOrNull { it.id == hero.tabId }
                 if (hero.mode == TabOverviewMode.List && heroTab != null) {
-                    TabListHeroContent(
+                    AndroidTabListHeroContent(
                         tab = heroTab,
                         preview = preview,
                         favicon = controller.favicons[hero.tabId],
@@ -1754,8 +1574,11 @@ internal fun TabOverview(
                         bottomBarTopPx = bottomBarTopPx,
                         targetFraction = { 1f - exitHeroProgress.value },
                     )
-                } else if (hero.mode == TabOverviewMode.Hero && heroTab != null) {
-                    TabCardHeroContent(
+                } else if (
+                    heroTab != null &&
+                    (hero.mode == TabOverviewMode.Hero || hero.mode == TabOverviewMode.Grid)
+                ) {
+                    AndroidTabCardHeroContent(
                         tab = heroTab,
                         preview = preview,
                         favicon = controller.favicons[hero.tabId],
@@ -1899,7 +1722,7 @@ internal fun TabOverview(
                                     exitHeroProgress.animateTo(
                                         targetValue = 1f,
                                         animationSpec = tween(
-                                            durationMillis = 200,
+                                            durationMillis = TabOverviewHeroRules.EXIT_DURATION_MILLIS,
                                             easing = FastOutSlowInEasing,
                                         ),
                                     )
@@ -2100,6 +1923,15 @@ internal fun TabOverview(
                 if (controller.closeAllTabs() > 0) rootView.performConfirmHaptic()
             },
             onDismiss = { tabActionsTabId = null },
+            extensionActions = if (actionTab?.id == controller.selectedTabId) {
+                controller.firefoxExtensionActions
+            } else {
+                emptyList()
+            },
+            onExtensionAction = { actionKey ->
+                tabActionsTabId = null
+                controller.clickFirefoxExtensionAction(actionKey)
+            },
         )
 
         val actionProfile = profileActionsProfileId?.let { profileId ->
@@ -2243,51 +2075,6 @@ internal fun TabOverviewBackground(
                     .windowInsetsBottomHeight(navigationBarInsets)
                     .background(colors.surface.copy(alpha = 0.92f)),
             )
-        }
-    }
-}
-
-@Composable
-private fun TabOverviewEdgeAction(
-    visible: Boolean,
-    enabled: Boolean,
-    contentDescription: String,
-    testTag: String,
-    animationLabel: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    val rootView = LocalView.current
-    val animatedAlpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = if (visible) 180 else 140),
-        label = animationLabel,
-    )
-    IconButton(
-        onClick = {
-            rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            onClick()
-        },
-        enabled = visible && enabled,
-        modifier = modifier
-            .graphicsLayer { alpha = animatedAlpha }
-            .then(
-                if (visible) {
-                    Modifier
-                        .testTag(testTag)
-                        .semantics { this.contentDescription = contentDescription }
-                } else {
-                    Modifier.clearAndSetSemantics { }
-                },
-            )
-            .size(48.dp),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            content()
         }
     }
 }

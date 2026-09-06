@@ -6,6 +6,8 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroRules
+
 import android.view.HapticFeedbackConstants
 import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
@@ -637,7 +639,8 @@ internal fun BrowserScreen(
         }
     }
     val commandActions = object : CommandActions {
-        override fun clearCacheAndReload(): Boolean = controller.clearCacheAndReload()
+        override fun clearCacheAndReload(onComplete: (Boolean) -> Unit): Boolean =
+            controller.clearCacheAndReload(onComplete)
         override fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean =
             controller.clearCookiesAndReload(onComplete)
         override fun reload(): Boolean {
@@ -1501,4 +1504,5 @@ internal fun BrowserScreen(
         pendingCapsuleDelete = pendingCapsuleDelete,
         onPendingCapsuleDeleteDismiss = { pendingCapsuleDelete = null },
     )
+    FirefoxExtensionChrome(controller)
 }

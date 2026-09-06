@@ -26,6 +26,9 @@
     <true/>
     <key>NSAppTransportSecurity</key>
     <dict>
+        <!-- Sync accepts cleartext only after Candy's discovery handshake advertises allowHttp. -->
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
         <key>NSAllowsArbitraryLoadsInWebContent</key>
         <true/>
     </dict>

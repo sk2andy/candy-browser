@@ -1,7 +1,9 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
+import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
+import org.mozilla.geckoview.GeckoSession
 
 /** Process-owned browser engine handle without exposing the underlying GeckoRuntime. */
 internal interface GeckoRuntimeHandle {
@@ -10,13 +12,40 @@ internal interface GeckoRuntimeHandle {
 
     fun createSession(
         profileId: String,
+        isolationEnabled: Boolean = false,
         isPrivate: Boolean,
         privacyPolicy: GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled,
         privacyEventSink: GeckoPrivacyEventSink = GeckoPrivacyEventSink { },
     ): GeckoBrowserSession
 
+    /**
+     * Adopts the unopened session returned from WebExtension tabs.create.
+     *
+     * GeckoView owns opening this session with its generated browsing-context ID after the
+     * TabDelegate result resolves. Implementations must install Candy delegates without opening it.
+     */
+    fun adoptExtensionSession(
+        session: GeckoSession,
+        profileId: String,
+        isolationEnabled: Boolean = false,
+        isPrivate: Boolean,
+        privacyPolicy: GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled,
+        privacyEventSink: GeckoPrivacyEventSink = GeckoPrivacyEventSink { },
+    ): GeckoBrowserSession? = null
+
+    fun clearBrowsingData(
+        data: GeckoBrowsingData,
+        onComplete: (Boolean) -> Unit = {},
+    )
+
+    /** Dispatches context-scoped deletion after its sessions close. Gecko exposes no completion. */
+    fun requestProfileDataDeletion(profileId: String): Boolean = false
+
+    @UiThread
+    fun setBlockThirdPartyCookies(blocked: Boolean)
+
     fun clearAllData(onComplete: (Boolean) -> Unit = {}) {
-        onComplete(true)
+        clearBrowsingData(GeckoBrowsingData.All, onComplete)
     }
 }
 

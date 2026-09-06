@@ -8,7 +8,7 @@ data class ExternalLinkPreviewState(
     val currentUrl: String,
     val targetProfileId: String,
     val appHandoffExpiresAtElapsedRealtime: Long? = null,
-    val isWebViewReady: Boolean = false,
+    val isContentReady: Boolean = false,
     val progress: Int = 0,
     val isLoading: Boolean = true,
     val canGoBack: Boolean = false,
@@ -21,6 +21,12 @@ sealed interface ExternalLinkPreviewCommitResult {
 }
 
 internal object ExternalLinkPreviewRules {
+    fun isCurrent(
+        state: ExternalLinkPreviewState?,
+        sessionId: Long,
+        generation: Int,
+    ): Boolean = state?.sessionId == sessionId && state.generation == generation
+
     fun targetProfileId(
         profiles: List<BrowserProfile>,
         profilesEnabled: Boolean,

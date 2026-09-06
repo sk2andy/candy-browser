@@ -2,6 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+build_root=""
 sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 if [[ -z "$sdk_root" ]]; then
   if [[ -d "$HOME/Library/Android/sdk" ]]; then
@@ -33,6 +34,7 @@ if [[ ! -d "$sdk_root/system-images/android-${api}/google_apis_playstore/${abi}"
     [[ -d "$sdk_root/system-images/android-${api}/google_apis_playstore/${abi}" ]]
 fi
 
+build_root="$(mktemp -d -t candy-sync-gradle.XXXXXX)"
 avd_name="candy_sync_test_${$}"
 printf 'no\n' | "$avdmanager" create avd \
   --force \
@@ -50,6 +52,9 @@ cleanup() {
     kill "$emulator_pid" >/dev/null 2>&1 || true
   fi
   "$avdmanager" delete avd --name "$avd_name" >/dev/null 2>&1 || true
+  if [[ -n "$build_root" && -d "$build_root" && "$(basename "$build_root")" == candy-sync-gradle.* ]]; then
+    rm -rf -- "$build_root"
+  fi
 }
 trap cleanup EXIT INT TERM
 
@@ -98,6 +103,13 @@ fi
 "$adb" -s "$serial" shell input keyevent 82
 
 cd "$repo_root"
-./gradlew testFullDebugUnitTest testFossDebugUnitTest
-ANDROID_SERIAL="$serial" ./gradlew connectedFullDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.data.BrowserSessionStoreInstrumentedTest,dev.sk2andy.materialbrowser.data.sync.AndroidSyncSecurityInstrumentedTest,dev.sk2andy.materialbrowser.ui.ProfileCreationSheetInstrumentedTest,dev.sk2andy.materialbrowser.ui.ProfileSwitcherInstrumentedTest,dev.sk2andy.materialbrowser.ui.SyncSettingsPageInstrumentedTest
+gradle_args=(
+  --no-daemon
+  --max-workers=1
+  -I "$repo_root/sync/scripts/test-build-isolation.gradle"
+)
+CANDY_SYNC_GRADLE_BUILD_ROOT="$build_root" ./gradlew "${gradle_args[@]}" \
+  testFullDebugUnitTest testFossDebugUnitTest
+ANDROID_SERIAL="$serial" CANDY_SYNC_GRADLE_BUILD_ROOT="$build_root" \
+  ./gradlew "${gradle_args[@]}" connectedFullDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.data.BrowserSessionStoreInstrumentedTest,dev.sk2andy.materialbrowser.data.sync.AndroidSyncSecurityInstrumentedTest,dev.sk2andy.materialbrowser.browser.BrowserControllerSyncInstrumentedTest,dev.sk2andy.materialbrowser.ui.ProfileCreationSheetInstrumentedTest,dev.sk2andy.materialbrowser.ui.ProfileSwitcherInstrumentedTest,dev.sk2andy.materialbrowser.ui.SyncSettingsPageInstrumentedTest

@@ -107,7 +107,7 @@
     <string name="action_move_tab_to_profile">In Profil verschieben</string>
     <string name="settings_profile_isolation_title">Eigener Speicher · Isolationsmodus</string>
     <string name="settings_profile_isolation_subtitle">Trennt Cookies, Logins, Website-Daten, Cache und Service Worker für dieses Profil</string>
-    <string name="settings_profile_isolation_unsupported">Nicht verfügbar: Der installierte WebView-Anbieter unterstützt keinen getrennten Profilspeicher</string>
+    <string name="settings_profile_isolation_unsupported">Nicht verfügbar: Gecko konnte keinen getrennten Profilspeicher initialisieren</string>
     <string name="profile_isolation_confirm_title">Profilspeicher wechseln?</string>
     <string name="profile_isolation_enable_message">Tabs dieses Profils werden mit getrenntem Speicher neu geladen. Bestehende gemeinsame Logins werden nicht übernommen.</string>
     <string name="profile_isolation_disable_message">Tabs dieses Profils werden mit gemeinsamem Speicher neu geladen. Logins aus dem isolierten Speicher sind dann nicht mehr aktiv.</string>
@@ -185,12 +185,12 @@
 
     <!-- Adress-Commands -->
     <string name="command_clear_cache_reload_name">Cache leeren &amp; neu laden</string>
-    <string name="command_clear_cache_reload_effect">Löscht Candys gemeinsamen WebView-Cache und lädt diesen Tab neu</string>
+    <string name="command_clear_cache_reload_effect">Löscht Candys gemeinsamen Browser-Cache und lädt diesen Tab neu</string>
     <string name="command_delete_cookies_reload_name">Cookies löschen &amp; neu laden</string>
     <string name="command_delete_cookies_reload_effect_regular">Löscht Cookies aller normalen Candy-Profile und lädt diesen Tab neu</string>
     <string name="command_delete_cookies_reload_effect_isolated">Löscht Cookies nur dieses isolierten Candy-Profils und lädt diesen Tab neu</string>
     <string name="command_delete_cookies_reload_effect_private">Löscht Cookies aller privaten Tabs und lädt diesen Tab neu</string>
-    <string name="command_delete_cookies_reload_effect_all">Löscht Cookies aller Candy-WebViews und lädt diesen Tab neu</string>
+    <string name="command_delete_cookies_reload_effect_all">Löscht Cookies aller Candy-Browserprofile und lädt diesen Tab neu</string>
     <string name="command_reload_effect">Lädt den aktuellen Tab neu</string>
     <string name="command_stop_loading_effect">Stoppt das Laden des aktuellen Tabs</string>
     <string name="command_pin_tab_effect">Hält diesen Tab offen und setzt ihn nach vorn</string>
@@ -230,7 +230,7 @@
     <string name="command_cookie_confirm_regular">Alle normalen Candy-Profile teilen diese Cookies und können abgemeldet werden. Dieser Tab wird danach neu geladen.</string>
     <string name="command_cookie_confirm_isolated">Tabs in diesem isolierten Candy-Profil teilen diese Cookies und können abgemeldet werden. Dieser Tab wird danach neu geladen.</string>
     <string name="command_cookie_confirm_private">Alle privaten Tabs teilen diese Cookies und können abgemeldet werden. Dieser Tab wird danach neu geladen.</string>
-    <string name="command_cookie_confirm_all">Alle Candy-WebViews teilen diese Cookies und können abgemeldet werden. Dieser Tab wird danach neu geladen.</string>
+    <string name="command_cookie_confirm_all">Alle Candy-Browserprofile können abgemeldet werden. Dieser Tab wird danach neu geladen.</string>
     <string name="command_duplicates_confirm_title">Doppelte Tabs schließen?</string>
     <plurals name="command_duplicates_confirm_message">
         <item quantity="one">%1$d doppelten Tab schließen? Angepinnte Tabs und der aktuelle Tab bleiben offen.</item>
@@ -287,7 +287,7 @@
     <string name="data_archive_export_action">Speicherort wählen</string>
     <string name="data_archive_import_confirm_title">Alle Candy-Daten ersetzen?</string>
     <string name="data_archive_import_confirm_message">Importiere nur ein selbst erstelltes oder vertrauenswürdiges Backup. Es kann aktivierte Userscripts enthalten, die Code auf Websites ausführen. Dieses Backup wurde mit Candy %1$s erstellt und enthält %2$d Dateien. Der Import ersetzt aktuelle Einstellungen, Tabs, Snoozes, Regeln, Cookies und Website-Speicher. Candy startet danach neu.</string>
-    <string name="data_archive_import_version_warning">Warnung: Dieses Backup wurde mit einer anderen App-, Android- oder WebView-Version erstellt. Website-Sitzungen oder neuere Einstellungen lassen sich möglicherweise nicht korrekt wiederherstellen.</string>
+    <string name="data_archive_import_version_warning">Warnung: Dieses Backup wurde mit einer anderen App-, Android- oder Browser-Engine-Version erstellt. Website-Sitzungen oder neuere Einstellungen lassen sich möglicherweise nicht korrekt wiederherstellen.</string>
     <string name="data_archive_import_action">Importieren und neu starten</string>
     <string name="data_archive_import_mismatch_action">Trotzdem importieren</string>
     <string name="data_archive_preparing">App-Daten werden vorbereitet…</string>
@@ -366,7 +366,7 @@
     <string name="scroll_bar_content_description">Scrollleiste der Seite</string>
     <string name="settings_video_autoplay_title">Automatische Videowiedergabe verhindern</string>
     <string name="settings_video_autoplay_subtitle">Videos starten nur, wenn du sie selbst abspielst.</string>
-    <string name="settings_video_autoplay_unsupported">Erfordert eine neuere Android-WebView-Version.</string>
+    <string name="settings_video_autoplay_unsupported">Erfordert eine neuere Gecko-Engine-Version.</string>
     <string name="settings_default_browser">Standardbrowser</string>
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>
@@ -436,12 +436,12 @@
     <string name="toast_printing_unavailable">Drucken ist auf diesem Gerät nicht verfügbar</string>
     <string name="toast_qr_scan_failed">QR-Code konnte nicht gescannt werden</string>
     <string name="toast_browsing_data_cleared">Browserdaten gelöscht</string>
-    <string name="toast_incognito_unsupported">Inkognito ist nicht verfügbar, weil dieser WebView-Anbieter den Speicher nicht isolieren kann</string>
+    <string name="toast_incognito_unsupported">Inkognito ist nicht verfügbar, weil Gecko den Profilspeicher nicht isolieren konnte</string>
     <string name="error_unsafe_tls_blocked">Unsichere TLS-Verbindung blockiert</string>
     <string name="error_unsafe_site_blocked">Unsichere Website blockiert</string>
     <string name="error_renderer_crashed">Web-Renderer wurde unerwartet beendet</string>
     <string name="error_renderer_terminated">Web-Renderer wurde vom System beendet</string>
-    <string name="toast_webview_startup_failed">Webinhalte konnten nicht gestartet werden. Android System WebView aktualisieren und erneut versuchen.</string>
+    <string name="toast_webview_startup_failed">Webinhalte konnten nicht gestartet werden. Candy neu starten oder aktualisieren und erneut versuchen.</string>
     <string name="toast_download_type_unsupported">Download-Typ nicht unterstützt</string>
     <string name="toast_download_started">Download gestartet: %1$s</string>
     <string name="toast_download_handed_off">An %1$s übergeben</string>
@@ -464,7 +464,7 @@
     <string name="capsule_dedicated_profile">Neues dediziertes Profil</string>
     <string name="capsule_dedicated_profile_summary">Erstellt einen eigenen Candy-Bereich. Getrennte Cookies und Anmeldungen erfordern „Eigener Speicher“.</string>
     <string name="capsule_own_storage">Eigener Speicher</string>
-    <string name="capsule_own_storage_summary">Nutzt echte WebView-Profilisolation für Cookies, Logins und Website-Daten</string>
+    <string name="capsule_own_storage_summary">Nutzt ein getrenntes Gecko-Profil für Cookies, Logins und Website-Daten</string>
     <string name="capsule_navigation_mode">Link-Navigation</string>
     <string name="capsule_navigation_same_origin">Gleiche Origin</string>
     <string name="capsule_navigation_same_origin_summary">Andere Origins öffnen sich in einem vollständigen Candy-Tab</string>
@@ -846,9 +846,12 @@
     <string name="captcha_compatibility_allow_for_profile">Für das Profil erlauben</string>
     <string name="captcha_compatibility_deny">Nicht erlauben</string>
     <string name="http_auth_dialog_title">Anmelden</string>
+    <string name="http_auth_proxy_dialog_title">Proxy-Anmeldung</string>
     <string name="http_auth_dialog_message">%1$s erfordert einen Benutzernamen und ein Passwort.</string>
+    <string name="http_auth_proxy_dialog_message">Der Proxy %1$s erfordert einen Benutzernamen und ein Passwort.</string>
     <string name="http_auth_dialog_realm">Bereich: %1$s</string>
     <string name="http_auth_dialog_insecure_warning">Diese Seite verwendet kein HTTPS. Ihre Zugangsdaten könnten offengelegt werden.</string>
+    <string name="http_auth_proxy_insecure_warning">Diese Proxy-Verbindung ist nicht verschlüsselt. Ihre Zugangsdaten könnten offengelegt werden.</string>
     <string name="http_auth_username">Benutzername</string>
     <string name="http_auth_password">Passwort</string>
     <string name="http_auth_show_password">Passwort anzeigen</string>
@@ -875,6 +878,15 @@
     <string name="gecko_address_or_search">Adresse oder Suche</string>
     <string name="gecko_stop_loading">Laden stoppen</string>
     <string name="gecko_reload">Neu laden</string>
+    <string name="web_prompt_title">Mitteilung der Website</string>
+    <string name="web_prompt_ok">OK</string>
+    <string name="web_prompt_leave_title">Diese Seite verlassen?</string>
+    <string name="web_prompt_leave_message">Ihre Änderungen werden möglicherweise nicht gespeichert.</string>
+    <string name="web_prompt_leave">Verlassen</string>
+    <string name="web_prompt_stay">Bleiben</string>
+    <string name="web_prompt_repost_title">Formular erneut senden?</string>
+    <string name="web_prompt_repost_message">Beim Zurückkehren zu dieser Seite werden Ihre eingegebenen Daten erneut gesendet.</string>
+    <string name="web_prompt_resend">Erneut senden</string>
     <string name="action_allow">Erlauben</string>
     <string name="action_deny">Ablehnen</string>
 </resources>

@@ -1,0 +1,30 @@
+{
+  "object" : {
+    "artifacts" : [
+
+    ],
+    "dependencies" : [
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "argon2-swift",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/mimiclone/argon2-swift.git",
+          "name" : "SwiftArgon2"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "0f6581ee4051a9160f735e9b4b7f47431151b89d",
+            "version" : "1.0.4"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "argon2-swift"
+      }
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}

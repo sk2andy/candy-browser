@@ -103,6 +103,37 @@ generated entirely from repository-owned sources.
 - **Feels at home on Android.** Dynamic color, edge-to-edge content, Predictive Back, Autofill,
   passkeys, downloads, sharing, printing, and default-browser integration.
 
+## Architecture
+
+Candy keeps browser behavior and production UI in shared Kotlin. The address bar, gestures, menus,
+tab switcher, Hero/Grid/List previews, settings structure, and their motion rules are not rebuilt for
+each platform. Small platform adapters connect that shared product layer to the native browser engine,
+image types, resources, haptics, and visual effects.
+
+```mermaid
+flowchart TD
+    K[Shared Kotlin behavior and state] --> C[Shared Compose UI and motion]
+    C --> A[Android platform adapter]
+    C --> I[iOS platform adapter]
+    A --> G[GeckoView sessions]
+    G --> F[Signed Firefox WebExtensions]
+    K --> T[Shared Topping model and grants]
+    T --> GT[Gecko userScripts host]
+    T --> WT[WKUserScript host]
+    I --> W[WKWebView sessions]
+    W --> WT
+```
+
+Android uses GeckoView as its only product renderer; there is no Android System WebView fallback.
+Each Candy tab owns a Gecko session behind an engine-neutral controller boundary. iOS uses WKWebView
+behind the same shared Kotlin contracts and Compose browser chrome, with native Liquid Glass supplied
+through an iOS effect adapter. Firefox extensions remain Android-only because they require Gecko;
+Toppings use the shared model on both engines with platform-specific injection hosts.
+
+Implementation boundaries, invariants, and the current parity status are documented in
+[Platform engines](docs/browsing/platform-engines.md) and
+[Platform feature parity](docs/browsing/platform-feature-parity.md).
+
 ## Tablet support
 
 Candy adapts its fullscreen browsing and visual tab overviews to larger screens, including
@@ -116,7 +147,7 @@ landscape-oriented previews for cover flow and compact grid layouts.
 
 ### Browsing and gestures
 
-- Floating chrome over edge-to-edge WebView content, with configurable actions around the fixed
+- Floating chrome over edge-to-edge browser-engine content, with configurable actions around the fixed
   address field and a docked edge mode
 - Pull to refresh, direct URL navigation, QR scanning, local domain completion, and optional
   provider-backed search suggestions (disabled in private tabs)
@@ -157,7 +188,7 @@ landscape-oriented previews for cover flow and compact grid layouts.
 - Persistent tabs with saved page previews, favicons, pinning, reordering, and automatic cleanup
 - Cover flow, compact grid, and preview-free list layouts
 - Tab snoozing with scheduled returns, notifications, and a dedicated snoozed-tab manager
-- Optional per-profile WebView storage isolation where the installed provider supports it
+- Per-profile browser-engine storage isolation with private sessions kept in memory
 - Optional profile controls for a simpler single-profile setup
 - Private tabs that keep their session and journey data in memory only
 - **Candy Trails:** persistent branching navigation graphs with pan, zoom, direct navigation,
@@ -196,6 +227,21 @@ landscape-oriented previews for cover flow and compact grid layouts.
 <p align="center">
   <img src="docs/screenshots/candy-reader.png" width="32%" alt="Candy Browser Reader Studio">
 </p>
+
+### Firefox Extension Support
+
+- Android can install Mozilla-signed Firefox extensions directly from an HTTPS XPI URL. Candy uses
+  GeckoView for signature validation, permission approval, installation, updates, enable/disable,
+  uninstall, and explicit private-browsing access.
+- Supported extension UI stays inside Candy's shared browser chrome: browser/page actions, popups,
+  and options pages do not introduce a second address bar, menu system, or tab switcher.
+- Candy supports the public WebExtension APIs exposed by the pinned GeckoView 140 runtime. This is
+  not a guarantee that every Firefox Desktop extension is compatible. Desktop-only APIs and fields
+  GeckoView rejects before Candy can handle them cannot be emulated reliably. For example,
+  `tabs.update({ muted: ... })` and `tabs.update({ pinned: ... })` are rejected by GeckoView 140's
+  extension schema.
+- See the tested [Firefox WebExtension capability matrix](docs/browsing/platform-engines.md#firefox-webextension-capability-matrix-geckoview-140)
+  for supported APIs and exact platform boundaries.
 
 ### Media, fullscreen, and picture-in-picture
 
@@ -412,16 +458,18 @@ keystore and credentials securely: Android updates must always use the same sign
 
 ## Privacy and limitations
 
-Candy uses Android System WebView as its only browser engine and renderer. It does not bundle a
-Chromium fork, extension runtime, proxy, VPN, or second rendering engine. Filtering stays inside
-each WebView through local request interception, document-start CSS/DOM rules, and service-worker
-interception. WebSockets,
-CNAME cloaking, some redirects, and content inside closed cross-origin or Shadow DOM contexts may
-get through. Candy pre-registers cosmetic CSS for known GET navigations. Android WebView does not
-expose cross-origin form POST targets early enough for origin-scoped document-start registration;
-those navigations receive the existing page-commit fallback and can show a brief cosmetic flash.
+Candy uses GeckoView as Android's only browser engine and WKWebView for the iOS target. It does not
+fall back to Android System WebView, bundle a Chromium fork, or route traffic through a proxy or VPN.
+Shared Candy filtering policy stays local but crosses an engine adapter: Android uses Gecko request
+and content-script bridges; iOS compiles the supported network subset to `WKContentRuleList` and
+uses Candy-owned cosmetic scripts.
 
-Privacy X-Ray includes only blocked requests that WebView can reliably attribute to one tab.
+Engine APIs still define the visibility boundary. WebSockets, CNAME cloaking, some redirects, and
+content inside closed cross-origin or Shadow DOM contexts may get through. Firefox extensions can
+use only GeckoView's public embedder surface; Firefox Desktop support does not imply GeckoView
+support. WKWebView cannot run Firefox extensions, so iOS customization uses bounded Toppings.
+
+Privacy X-Ray includes only blocked requests that the active browser engine can reliably attribute to one tab.
 Service-worker requests are filtered but excluded from per-tab telemetry when no reliable tab ID
 is available.
 

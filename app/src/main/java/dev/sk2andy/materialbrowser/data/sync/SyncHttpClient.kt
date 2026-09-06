@@ -14,7 +14,16 @@ import dev.sk2andy.materialbrowser.sync.SyncRecoveryEnvelope
 import dev.sk2andy.materialbrowser.sync.SyncRealtimeEvent
 import dev.sk2andy.materialbrowser.sync.SyncRealtimeTicket
 import dev.sk2andy.materialbrowser.sync.SyncServerSnapshot
+import dev.sk2andy.materialbrowser.sync.SyncTransport
+import dev.sk2andy.materialbrowser.sync.SyncTransportException
+import dev.sk2andy.materialbrowser.sync.SyncEnrollmentResponse
+import dev.sk2andy.materialbrowser.sync.SyncPutResponse
 import dev.sk2andy.materialbrowser.sync.parseStrictJsonObject
+import dev.sk2andy.materialbrowser.sync.requireArray
+import dev.sk2andy.materialbrowser.sync.requireExactKeys
+import dev.sk2andy.materialbrowser.sync.strictBoolean
+import dev.sk2andy.materialbrowser.sync.strictInt
+import dev.sk2andy.materialbrowser.sync.strictString
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -27,56 +36,14 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import org.json.JSONObject
-
-data class SyncEnrollmentResponse(
-    val workspaceId: String,
-    val deviceId: String,
-    val token: String,
-    val cursor: String,
-)
-
-data class SyncPutResponse(
-    val revision: Long,
-    val cursor: String,
-)
-
-class SyncTransportException(
-    val statusCode: Int?,
-    val problemCode: String?,
-    cause: Throwable? = null,
-) : Exception("Candy Sync transport failed", cause)
-
-interface SyncTransport {
-    fun discover()
-    fun bootstrap(username: String, password: ByteArray): SyncBootstrap
-    fun enroll(
-        username: String,
-        password: ByteArray,
-        identity: SyncDeviceIdentity,
-        encryptedName: SyncEncryptedValue,
-        encryptedIcon: SyncEncryptedValue,
-        recoveryEnvelope: SyncRecoveryEnvelope?,
-    ): SyncEnrollmentResponse
-    fun listDevices(token: String): List<SyncDeviceRecord>
-    fun pull(token: String, cursor: String): SyncPullPage
-    fun snapshot(token: String): SyncServerSnapshot
-    fun putTabs(token: String, change: SyncEncryptedChange): SyncPutResponse
-    fun acknowledge(token: String, cursor: String)
-    fun supportsTabMutationsV2(): Boolean = false
-    fun supportsRealtime(): Boolean = false
-    fun pullDeltas(token: String, cursor: String): SyncDeltaPullPage =
-        throw UnsupportedOperationException("Protocol v2 is unavailable")
-    fun pushDelta(token: String, change: SyncEncryptedDelta): SyncPutResponse =
-        throw UnsupportedOperationException("Protocol v2 is unavailable")
-    fun requestRealtimeTicket(token: String): SyncRealtimeTicket =
-        throw UnsupportedOperationException("Realtime is unavailable")
-    fun connectRealtime(
-        ticket: SyncRealtimeTicket,
-        onEvent: (SyncRealtimeEvent) -> Unit,
-        onClosed: (Throwable?) -> Unit,
-    ): AutoCloseable = throw UnsupportedOperationException("Realtime is unavailable")
-}
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 class SyncHttpClient(endpoint: String) : SyncTransport {
     private val endpoint = URI(requireNotNull(SyncEndpointRules.normalize(endpoint, allowRemoteHttp = true)))
@@ -87,26 +54,25 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
 
     override fun discover() {
         val value = parseStrictJsonObject(request(".well-known/candy-sync", "GET"))
-        require(value.keys().asSequence().toSet() == setOf("protocol", "versions", "allowHttp", "features", "limits"))
-        require(value.strictString("protocol", 32) == "candy-sync")
-        val versions = value.getJSONArray("versions")
-        require(versions.length() in 1..16)
-        require((0 until versions.length()).all { versions.get(it) is Int })
-        require((0 until versions.length()).any { versions.get(it) == 1 })
-        val allowHttp = value.get("allowHttp") as? Boolean
-            ?: throw IllegalArgumentException("Invalid allowHttp")
+        value.requireExactKeys("protocol", "versions", "allowHttp", "features", "limits")
+        require(value.strictString("protocol", maximum = 32) == "candy-sync")
+        val versions = value.requireArray("versions")
+        require(versions.size in 1..16)
+        val versionValues = versions.map { it.jsonPrimitive.intOrNull ?: throw IllegalArgumentException("Invalid version") }
+        require(1 in versionValues)
+        val allowHttp = value.strictBoolean("allowHttp")
         require(!requiresRemoteHttpApproval || allowHttp)
-        val features = value.getJSONArray("features")
-        require(features.length() in 1..32)
-        val supported = (0 until features.length()).map { index ->
-            features.get(index) as? String ?: throw IllegalArgumentException("Invalid feature")
+        val features = value.requireArray("features")
+        require(features.size in 1..32)
+        val supported = features.map { feature ->
+            feature.jsonPrimitive.contentOrNull ?: throw IllegalArgumentException("Invalid feature")
         }.toSet()
         require(supported.containsAll(setOf("e2ee", "tab-snapshots", "encrypted-device-icons")))
-        tabMutationsV2 = 2 in (0 until versions.length()).map { versions.getInt(it) } &&
+        tabMutationsV2 = 2 in versionValues &&
             "tab-mutations-v2" in supported
         realtime = tabMutationsV2 && "realtime" in supported
-        val limits = value.getJSONObject("limits")
-        require(limits.keys().asSequence().toSet() == setOf("batchChanges", "payloadBytes", "devices"))
+        val limits = value["limits"] as? JsonObject ?: throw IllegalArgumentException("Invalid limits")
+        limits.requireExactKeys("batchChanges", "payloadBytes", "devices")
         require(limits.strictInt("batchChanges") in 1..1_000)
         require(limits.strictInt("payloadBytes") in 1_024..MAX_RESPONSE_BYTES)
         require(limits.strictInt("devices") in 1..10_000)
@@ -140,13 +106,13 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
             ),
         )
         val allowed = setOf("workspaceId", "deviceId", "token", "cursor", "expiresAt")
-        require(value.keys().asSequence().all { it in allowed })
-        require(value.has("workspaceId") && value.has("deviceId") && value.has("token") && value.has("cursor"))
+        require(value.keys.all { it in allowed })
+        require(value.keys.containsAll(setOf("workspaceId", "deviceId", "token", "cursor")))
         return SyncEnrollmentResponse(
             workspaceId = value.identifier("workspaceId"),
             deviceId = value.identifier("deviceId"),
-            token = value.strictString("token", 512).also { require(it.none(Char::isWhitespace)) },
-            cursor = value.strictString("cursor", 260).also(SyncProtocolCodec::requireCursor),
+            token = value.strictString("token", maximum = 512).also { require(it.none(Char::isWhitespace)) },
+            cursor = value.strictString("cursor", maximum = 260).also(SyncProtocolCodec::requireCursor),
         )
     }
 
@@ -175,10 +141,10 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
                 idempotencyKey = change.changeId,
             ),
         )
-        require(value.keys().asSequence().toSet() == setOf("revision", "cursor"))
+        value.requireExactKeys("revision", "cursor")
         return SyncPutResponse(
             revision = value.strictRevision("revision"),
-            cursor = value.strictString("cursor", 260).also(SyncProtocolCodec::requireCursor),
+            cursor = value.strictString("cursor", maximum = 260).also(SyncProtocolCodec::requireCursor),
         )
     }
 
@@ -187,7 +153,7 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
             path = "v1/sync/ack",
             method = "POST",
             authorization = bearer(token),
-            body = JSONObject().put("cursor", cursor).toString(),
+            body = buildJsonObject { put("cursor", cursor) }.toString(),
             expectBody = false,
         )
     }
@@ -206,9 +172,9 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
         )
 
     override fun pushDelta(token: String, change: SyncEncryptedDelta): SyncPutResponse {
-        val body = JSONObject()
-            .put("changes", org.json.JSONArray().put(JSONObject(SyncProtocolCodec.encodeDelta(change))))
-            .toString()
+        val body = buildJsonObject {
+            put("changes", JsonArray(listOf(parseStrictJsonObject(SyncProtocolCodec.encodeDelta(change)))))
+        }.toString()
         val value = parseStrictJsonObject(
             request(
                 path = "v2/sync/push",
@@ -219,14 +185,14 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
             ),
         )
         value.requireExactKeys("cursor", "results")
-        val results = value.getJSONArray("results")
-        require(results.length() == 1)
-        val result = results.getJSONObject(0)
+        val results = value.requireArray("results")
+        require(results.size == 1)
+        val result = results.single() as? JsonObject ?: throw IllegalArgumentException("Invalid result")
         result.requireExactKeys("changeId", "revision")
         require(result.identifier("changeId") == change.changeId)
         return SyncPutResponse(
             revision = result.strictRevision("revision"),
-            cursor = value.strictString("cursor", 260).also(SyncProtocolCodec::requireCursor),
+            cursor = value.strictString("cursor", maximum = 260).also(SyncProtocolCodec::requireCursor),
         )
     }
 
@@ -241,8 +207,8 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
         )
         value.requireExactKeys("ticket", "expiresAt")
         return SyncRealtimeTicket(
-            ticket = value.strictString("ticket", 512).also { require(it.none(Char::isWhitespace)) },
-            expiresAt = value.strictString("expiresAt", 64).also { require(runCatching { Instant.parse(it) }.isSuccess) },
+            ticket = value.strictString("ticket", maximum = 512).also { require(it.none(Char::isWhitespace)) },
+            expiresAt = value.strictString("expiresAt", maximum = 64).also { require(runCatching { Instant.parse(it) }.isSuccess) },
         )
     }
 
@@ -368,7 +334,10 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
     }
 
     private fun problemCode(raw: ByteArray): String? = runCatching {
-        parseStrictJsonObject(raw.decodeUtf8()).optString("code").takeIf(String::isNotEmpty)
+        (parseStrictJsonObject(raw.decodeUtf8())["code"] as? JsonPrimitive)
+            ?.takeIf(JsonPrimitive::isString)
+            ?.content
+            ?.takeIf(String::isNotEmpty)
     }.getOrNull()
 
     private fun java.io.InputStream.readBytesLimited(maximum: Int): ByteArray {
@@ -385,27 +354,14 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
         return output.toByteArray()
     }
 
-    private fun JSONObject.strictString(name: String, maximum: Int): String = (get(name) as? String).also {
-        requireNotNull(it)
-    }!!.also {
-        require(it.isNotEmpty() && it.length <= maximum)
-    }
-
-    private fun JSONObject.strictInt(name: String): Int = get(name) as? Int
-        ?: throw IllegalArgumentException("Invalid $name")
-
-    private fun JSONObject.strictRevision(name: String): Long {
-        val value = strictString(name, 19)
+    private fun JsonObject.strictRevision(name: String): Long {
+        val value = strictString(name, maximum = 19)
         require(value == "0" || value.first() in '1'..'9')
         return value.toLongOrNull()?.also { require(it >= 0) }
             ?: throw IllegalArgumentException("Invalid $name")
     }
 
-    private fun JSONObject.requireExactKeys(vararg expected: String) {
-        require(keys().asSequence().toSet() == expected.toSet())
-    }
-
-    private fun JSONObject.identifier(name: String): String = strictString(name, 128).also {
+    private fun JsonObject.identifier(name: String): String = strictString(name, maximum = 128).also {
         require(it.matches(IDENTIFIER))
     }
 

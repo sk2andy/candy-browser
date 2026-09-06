@@ -1,9 +1,9 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
-import dev.sk2andy.materialbrowser.browser.userscript.UserScriptApi
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptGrant
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptInjection
+import dev.sk2andy.materialbrowser.browser.userscript.UserScriptInjectionSources
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRunAt
 
@@ -12,13 +12,14 @@ internal object CandyToppingHostContract {
     const val EXTENSION_LOCATION = "resource://android/assets/candy_toppings/"
     const val NATIVE_APP = "dev.sk2andy.materialbrowser.toppings"
     const val OPTIONAL_PERMISSION = "userScripts"
-    const val PROTOCOL_VERSION = 1
+    const val PROTOCOL_VERSION = 2
 }
 
 internal data class GeckoToppingRegistration(
     val id: String,
+    val scriptId: String,
     val worldId: String,
-    val javascript: String,
+    val javascriptSources: List<String>,
     val matchPatterns: List<String>,
     val includeGlobs: List<String>,
     val excludeGlobs: List<String>,
@@ -27,8 +28,7 @@ internal data class GeckoToppingRegistration(
 
 internal enum class GeckoToppingUnsupportedReason {
     InvalidSnapshot,
-    Dependencies,
-    PrivilegedGrant,
+    InvalidInjection,
 }
 
 internal data class GeckoToppingPlan(
@@ -38,7 +38,10 @@ internal data class GeckoToppingPlan(
 
 /** Builds GeckoView-140 browser.userScripts registrations from Candy's persisted model. */
 internal object CandyToppingHostCompiler {
-    fun compile(scripts: List<UserScript>): GeckoToppingPlan {
+    fun compile(
+        scripts: List<UserScript>,
+        encodedValues: (String) -> Map<String, String> = { emptyMap() },
+    ): GeckoToppingPlan {
         if (!UserScriptRules.isWithinCollectionBounds(scripts)) {
             return GeckoToppingPlan(
                 registrations = emptyList(),
@@ -52,12 +55,16 @@ internal object CandyToppingHostCompiler {
             scripts = scripts,
             isPrivate = false,
         ).mapNotNull { script ->
-            val reason = unsupportedReason(script)
-            if (reason != null) {
-                unsupported[script.id] = reason
+            val values = encodedValues(script.id)
+            val sources = UserScriptInjection.sources(
+                script = script,
+                encodedValues = values,
+            )
+            if (sources == null) {
+                unsupported[script.id] = GeckoToppingUnsupportedReason.InvalidInjection
                 return@mapNotNull null
             }
-            registration(script)
+            registration(script, sources, values)
         }
         return GeckoToppingPlan(
             registrations = registrations.sortedBy(GeckoToppingRegistration::id),
@@ -65,52 +72,62 @@ internal object CandyToppingHostCompiler {
         )
     }
 
-    private fun unsupportedReason(script: UserScript): GeckoToppingUnsupportedReason? = when {
-        script.requires.isNotEmpty() || script.resources.isNotEmpty() ->
-            GeckoToppingUnsupportedReason.Dependencies
-
-        script.grants.any { grant -> grant !in LOCAL_GRANTS } ->
-            GeckoToppingUnsupportedReason.PrivilegedGrant
-
-        else -> null
-    }
-
-    private fun registration(script: UserScript): GeckoToppingRegistration {
-        val worldId = UserScriptInjection.executionWorldName(
-            buildString {
-                append(script.id)
-                append('\u0000')
-                append(script.source)
-                append('\u0000')
-                append(script.matchPatterns.joinToString("\u0000"))
-                append('\u0000')
-                append(script.includePatterns.joinToString("\u0000"))
-                append('\u0000')
-                append(script.excludePatterns.joinToString("\u0000"))
-                append('\u0000')
-                append(script.runAt.name)
-            },
-        )
-        val registrationRevision = worldId.substringAfterLast('.').take(REGISTRATION_REVISION_CHARS)
+    private fun registration(
+        script: UserScript,
+        sources: UserScriptInjectionSources,
+        encodedValues: Map<String, String>,
+    ): GeckoToppingRegistration {
+        val worldSeed = buildString {
+            append(script.id)
+            append('\u0000')
+            append(script.source)
+            append('\u0000')
+            append(script.matchPatterns.joinToString("\u0000"))
+            append('\u0000')
+            append(script.includePatterns.joinToString("\u0000"))
+            append('\u0000')
+            append(script.excludePatterns.joinToString("\u0000"))
+            append('\u0000')
+            append(script.runAt.name)
+            append('\u0000')
+            append(script.requires.joinToString("\u0000") { require -> require.source.orEmpty() })
+            append('\u0000')
+            append(script.resources.joinToString("\u0000") { resource ->
+                "${resource.name}:${resource.mimeType}:${resource.encodedContent}"
+            })
+        }
+        val worldId = UserScriptInjection.executionWorldName(worldSeed)
+        val registrationRevision = UserScriptInjection.executionWorldName(
+            "$worldSeed\u0000${encodedValues.toSortedMap().entries.joinToString("\u0000")}",
+        ).substringAfterLast('.').take(REGISTRATION_REVISION_CHARS)
         return GeckoToppingRegistration(
             // Firefox can retain the previous source when a dynamic registration is updated in
             // place. A content-addressed ID makes each catalog revision an atomic remove/add.
             id = "candy-$registrationRevision",
+            scriptId = script.id,
             worldId = worldId,
-            javascript = buildString {
-                append("(async () => {\n")
-                append("const __candyRuntime = globalThis.browser?.runtime;\n")
-                append("if (!__candyRuntime) return;\n")
-                append("const __candyAccess = await __candyRuntime.sendMessage({")
-                append("type: 'private-check', protocolVersion: ")
-                append(CandyToppingHostContract.PROTOCOL_VERSION)
-                append("});\n")
-                append("if (__candyAccess?.allowed !== true) return;\n")
-                append("{ const browser = undefined; const chrome = undefined;\n")
-                append(UserScriptApi.bootstrap(script, encodedValues = emptyMap()))
-                append('\n')
-                append(script.source)
-                append("\n}\n})();")
+            javascriptSources = buildList {
+                add(sources.guardSource)
+                if (script.grants.any(BRIDGE_GRANTS::contains)) {
+                    add(bridgeSource(script))
+                }
+                add(
+                    buildString {
+                        append("(async () => {\n")
+                        append("const __candyRuntime = globalThis.browser?.runtime;\n")
+                        append("if (!__candyRuntime) return;\n")
+                        append("const __candyAccess = await __candyRuntime.sendMessage({")
+                        append("type: 'private-check', protocolVersion: ")
+                        append(CandyToppingHostContract.PROTOCOL_VERSION)
+                        append(", scriptId: '")
+                        append(script.id.javascriptSingleQuoted())
+                        append("'});\n")
+                        append("if (__candyAccess?.allowed !== true) return;\n")
+                        append("{ const browser = undefined; const chrome = undefined;\n")
+                        append(sources.userSource)
+                        append("\n}\n})();")
+                    },
+                )
             },
             matchPatterns = script.matchPatterns.flatMap { pattern ->
                 if (pattern == "<all_urls>") {
@@ -132,13 +149,63 @@ internal object CandyToppingHostCompiler {
         )
     }
 
-    private val LOCAL_GRANTS = setOf(
-        UserScriptGrant.AddStyle,
-        UserScriptGrant.Info,
+    private fun bridgeSource(script: UserScript): String = """
+        (() => {
+            "use strict";
+            const runtime = globalThis.browser?.runtime;
+            if (!runtime || typeof runtime.sendMessage !== "function" ||
+                typeof runtime.connect !== "function") return;
+            const scriptPort = runtime.connect({ name: "candy-topping-user-script" });
+            const bridge = {
+                onmessage: null,
+                postMessage(raw) {
+                    Promise.resolve(runtime.sendMessage({
+                        type: "bridge",
+                        protocolVersion: ${CandyToppingHostContract.PROTOCOL_VERSION},
+                        scriptId: "${script.id.javascriptDoubleQuoted()}",
+                        payload: String(raw),
+                    })).then((response) => {
+                        if (response !== undefined && typeof bridge.onmessage === "function") {
+                            bridge.onmessage({ data: JSON.stringify(response) });
+                        }
+                    }).catch(() => {});
+                },
+            };
+            Object.defineProperty(globalThis, "${dev.sk2andy.materialbrowser.browser.userscript.UserScriptBridgeContract.BRIDGE_NAME}", {
+                value: bridge,
+                writable: false,
+                configurable: false,
+            });
+            scriptPort.onMessage.addListener((message) => {
+                if (message?.type !== "menu-invoke" ||
+                    message?.scriptId !== "${script.id.javascriptDoubleQuoted()}") return;
+                if (typeof bridge.onmessage === "function") {
+                    bridge.onmessage({ data: JSON.stringify(message) });
+                }
+            });
+        })();
+    """.trimIndent()
+
+    private val BRIDGE_GRANTS = setOf(
+        UserScriptGrant.DeleteValue,
+        UserScriptGrant.OpenInTab,
+        UserScriptGrant.RegisterMenuCommand,
+        UserScriptGrant.SetValue,
+        UserScriptGrant.UnregisterMenuCommand,
     )
 
     private const val REGISTRATION_REVISION_CHARS = 32
 }
+
+private fun String.javascriptSingleQuoted(): String = replace("\\", "\\\\")
+    .replace("'", "\\'")
+    .replace("\n", "\\n")
+    .replace("\r", "\\r")
+
+private fun String.javascriptDoubleQuoted(): String = replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+    .replace("\n", "\\n")
+    .replace("\r", "\\r")
 
 internal enum class GeckoToppingHostState {
     Initializing,
@@ -196,4 +263,34 @@ internal interface GeckoToppingHostRuntime {
     fun runAfterInitialization(action: () -> Unit)
 
     fun setStateListener(listener: (GeckoToppingHostState) -> Unit)
+
+    fun setInteractionDelegate(delegate: GeckoToppingInteractionDelegate) = Unit
+
+    fun setActiveTab(tabId: String?) = Unit
+
+    fun invokeMenuCommand(command: dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand) = Unit
+
+    fun clearValues(scriptId: String) = Unit
+}
+
+internal interface GeckoToppingInteractionDelegate {
+    fun onMenuCommandsChanged(
+        tabId: String,
+        commands: List<dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand>,
+    )
+
+    fun onOpenTab(request: dev.sk2andy.materialbrowser.browser.userscript.UserScriptOpenTabRequest)
+
+    companion object {
+        val None = object : GeckoToppingInteractionDelegate {
+            override fun onMenuCommandsChanged(
+                tabId: String,
+                commands: List<dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand>,
+            ) = Unit
+
+            override fun onOpenTab(
+                request: dev.sk2andy.materialbrowser.browser.userscript.UserScriptOpenTabRequest,
+            ) = Unit
+        }
+    }
 }

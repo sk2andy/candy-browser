@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Rule

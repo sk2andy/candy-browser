@@ -1,163 +1,170 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuAction
+import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuItem
+import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuLabelKey
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuState
 import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuEffects
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuContainerRole
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuResources
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenu as SharedBrowserMainMenu
 
-internal object BrowserMainMenuMotion {
-    const val EXIT_DURATION_MILLIS = 160
-    const val EXIT_SCALE = 0.9f
-}
+internal typealias BrowserMainMenuMotion =
+    dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuMotion
+internal typealias BrowserMainMenuTestTags =
+    dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuTestTags
+internal typealias DomainMuteMenuTestTags =
+    dev.sk2andy.materialbrowser.shared.ui.DomainMuteMenuTestTags
 
-private fun BrowserMainMenuPresentation.toSharedMenuState(
-    canCloseTab: Boolean,
-    canDockAddressBar: Boolean,
-    overflowAddressBarActions: List<AddressBarAction>,
-    toppingCommands: List<UserScriptMenuCommand>,
-) = BrowserFeatureMenuState(
-    canGoBack = canGoBack,
-    canGoForward = canGoForward,
-    isLoading = isLoading,
-    hasPage = canUsePageActions,
-    canCloseTab = canCloseTab,
-    canToggleFavorite = canToggleFavorite,
-    isFavorite = isFavorite,
-    isPinned = isPinned,
-    canOpenReader = canOpenReader,
-    canTranslatePage = canTranslatePage,
-    canUseDocumentActions = canUseDocumentActions,
-    canToggleCookieBannerRemoval = canToggleCookieBannerRemoval,
-    isCookieBannerRemovalEnabled = isCookieBannerRemovalEnabled,
-    canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
-    isForceVerticalScrollingEnabled = isForceVerticalScrollingEnabled,
-    canToggleForcePageZooming = canToggleForcePageZooming,
-    isForcePageZoomingEnabled = isForcePageZoomingEnabled,
-    canToggleForceSafeArea = canToggleForceSafeArea,
-    isForceSafeAreaEnabled = isForceSafeAreaEnabled,
-    canToggleAlwaysBlockPopups = canToggleAlwaysBlockPopups,
-    isAlwaysBlockPopupsEnabled = isAlwaysBlockPopupsEnabled,
-    canToggleDesktopView = canToggleDesktopView,
-    isDesktopView = isDesktopView,
-    canToggleDomainMute = canToggleDomainMute,
-    isDomainMuted = isDomainMuted,
-    canAddSiteCapsule = canAddSiteCapsule,
-    canSnooze = canSnooze,
-    canDockAddressBar = canDockAddressBar,
-    overflowPageActions = overflowAddressBarActions.mapNotNull(AddressBarAction::sharedMenuAction),
-    toppingCommands = toppingCommands.map { command ->
-        BrowserToppingMenuCommand(
-            scriptId = command.scriptId,
-            commandId = command.commandId,
-            caption = command.caption,
-            scriptName = command.scriptName,
+private val AndroidBrowserMainMenuResources = object : BrowserMainMenuResources {
+    @Composable
+    override fun title(): String = stringResource(R.string.browser_menu_title)
+
+    @Composable
+    override fun sectionTitle(section: BrowserFeatureMenuSection): String = stringResource(
+        when (section) {
+            BrowserFeatureMenuSection.Page -> R.string.browser_menu_page_group
+            BrowserFeatureMenuSection.Toppings -> R.string.browser_menu_toppings_group
+            BrowserFeatureMenuSection.Browser -> R.string.browser_menu_browser_group
+            BrowserFeatureMenuSection.Toolbar,
+            BrowserFeatureMenuSection.Candy,
+            -> R.string.browser_menu_title
+        },
+    )
+
+    @Composable
+    override fun label(item: BrowserFeatureMenuItem, toolbar: Boolean): String {
+        item.dynamicLabel?.let { return it }
+        if (toolbar && item.action == BrowserFeatureMenuAction.ToggleFavorite) {
+            return stringResource(R.string.action_favorite)
+        }
+        if (item.action == BrowserFeatureMenuAction.ToggleDomainMute) {
+            return stringResource(R.string.action_mute_domain)
+        }
+        return stringResource(item.labelKey.androidStringResource())
+    }
+
+    @Composable
+    override fun accessibilityLabel(item: BrowserFeatureMenuItem): String? = when (item.action) {
+        BrowserFeatureMenuAction.ToggleFavorite,
+        BrowserFeatureMenuAction.TogglePinned,
+        -> label(item)
+        else -> null
+    }
+
+    @Composable
+    override fun supportingText(
+        item: BrowserFeatureMenuItem,
+        snoozedTabCount: Int,
+    ): String? = when (item.action) {
+        BrowserFeatureMenuAction.ToggleCookieBannerRemoval -> stringResource(
+            if (item.enabled) {
+                R.string.privacy_cookie_banner_remove_description
+            } else {
+                R.string.privacy_cookie_banner_remove_unavailable
+            },
         )
-    },
-)
+        BrowserFeatureMenuAction.ToggleForceVerticalScrolling ->
+            stringResource(R.string.privacy_force_vertical_scrolling_description)
+        BrowserFeatureMenuAction.ToggleForcePageZooming ->
+            stringResource(R.string.privacy_force_page_zooming_description)
+        BrowserFeatureMenuAction.ToggleForceSafeArea ->
+            stringResource(R.string.compatibility_force_safe_area_description)
+        BrowserFeatureMenuAction.ToggleAlwaysBlockPopups ->
+            stringResource(R.string.action_always_block_popups_description)
+        BrowserFeatureMenuAction.ToggleDesktopView ->
+            stringResource(R.string.action_desktop_view_description)
+        BrowserFeatureMenuAction.SnoozeTab -> if (item.enabled) {
+            null
+        } else {
+            stringResource(R.string.snooze_unavailable_private)
+        }
+        BrowserFeatureMenuAction.OpenSnoozedTabs -> if (snoozedTabCount == 0) {
+            stringResource(R.string.snoozed_tabs_settings_summary)
+        } else {
+            pluralStringResource(
+                R.plurals.snoozed_tabs_settings_count,
+                snoozedTabCount,
+                snoozedTabCount,
+            )
+        }
+        BrowserFeatureMenuAction.InvokeToppingCommand -> item.supportingText
+        else -> null
+    }
 
-private fun AddressBarAction.sharedMenuAction(): BrowserFeatureMenuAction? = when (this) {
-    AddressBarAction.Tabs -> BrowserFeatureMenuAction.ShowTabs
-    AddressBarAction.NewTab -> BrowserFeatureMenuAction.NewTab
-    AddressBarAction.CloseTab -> BrowserFeatureMenuAction.CloseTab
-    AddressBarAction.ParkRight -> BrowserFeatureMenuAction.ParkAddressBarRight
-    else -> null
+    @Composable
+    override fun icon(item: BrowserFeatureMenuItem, modifier: Modifier) {
+        Icon(
+            painter = painterResource(item.androidDrawableResource()),
+            contentDescription = null,
+            modifier = modifier,
+        )
+    }
+
+    @Composable
+    override fun trailingIcon(modifier: Modifier) {
+        Icon(
+            painter = painterResource(R.drawable.ic_symbol_chevron_right),
+            contentDescription = null,
+            modifier = modifier,
+        )
+    }
 }
 
-private fun BrowserFeatureMenuAction.addressBarAction(): AddressBarAction? = when (this) {
-    BrowserFeatureMenuAction.ShowTabs -> AddressBarAction.Tabs
-    BrowserFeatureMenuAction.NewTab -> AddressBarAction.NewTab
-    BrowserFeatureMenuAction.CloseTab -> AddressBarAction.CloseTab
-    BrowserFeatureMenuAction.ParkAddressBarRight -> AddressBarAction.ParkRight
-    else -> null
+private class AndroidBrowserMainMenuEffects(
+    private val backdropSource: CandyChromeBackdropSource?,
+) : BrowserMainMenuEffects {
+    @Composable
+    override fun menuSurface(
+        modifier: Modifier,
+        shape: Shape,
+        content: @Composable () -> Unit,
+    ) {
+        val tokens = browserChromeSurfaceTokens()
+        CandyChromeSurface(
+            backdropSource = backdropSource,
+            tokens = tokens,
+            modifier = modifier,
+            shape = shape,
+            blurCornerRadius = tokens.largeCornerRadius,
+            content = content,
+        )
+    }
+
+    @Composable
+    override fun containerColor(
+        color: Color,
+        frostedAlpha: Float,
+        role: BrowserMainMenuContainerRole,
+    ): Color =
+        browserChromeColor(color, frostedAlpha)
+
+    override fun popupState(expanded: Boolean, visible: Boolean) {
+        BrowserInputDiagnostics.popupState(expanded, visible)
+    }
 }
-
-private val OVERFLOW_MENU_ACTIONS = setOf(
-    BrowserFeatureMenuAction.ShowTabs,
-    BrowserFeatureMenuAction.NewTab,
-    BrowserFeatureMenuAction.CloseTab,
-    BrowserFeatureMenuAction.ParkAddressBarRight,
-)
-
-internal data class BrowserMainMenuPresentation(
-    val pageSubtitle: String,
-    val canGoBack: Boolean,
-    val canGoForward: Boolean,
-    val isLoading: Boolean,
-    val canToggleFavorite: Boolean,
-    val isFavorite: Boolean,
-    val isPinned: Boolean,
-    val canUsePageActions: Boolean,
-    val canUseDocumentActions: Boolean,
-    val canOpenReader: Boolean,
-    val canTranslatePage: Boolean,
-    val canToggleDomainMute: Boolean,
-    val isDomainMuted: Boolean,
-    val canToggleAlwaysBlockPopups: Boolean,
-    val isAlwaysBlockPopupsEnabled: Boolean,
-    val canToggleDesktopView: Boolean,
-    val isDesktopView: Boolean,
-    val canToggleCookieBannerRemoval: Boolean,
-    val isCookieBannerRemovalEnabled: Boolean,
-    val canToggleForceVerticalScrolling: Boolean,
-    val isForceVerticalScrollingEnabled: Boolean,
-    val canToggleForcePageZooming: Boolean,
-    val isForcePageZoomingEnabled: Boolean,
-    val canToggleForceSafeArea: Boolean,
-    val isForceSafeAreaEnabled: Boolean,
-    val canAddSiteCapsule: Boolean,
-    val canSnooze: Boolean,
-)
 
 @Composable
 internal fun BrowserMainMenu(
@@ -228,48 +235,19 @@ internal fun BrowserMainMenu(
     onHistory: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
-    val chromeTokens = browserChromeSurfaceTokens()
-    val menuShape = MaterialTheme.shapes.large
-    val outerCorners = MaterialTheme.shapes.medium
-    val innerCorners = MaterialTheme.shapes.extraSmall
-    val firstItemShape = RoundedCornerShape(
-        topStart = outerCorners.topStart,
-        topEnd = outerCorners.topEnd,
-        bottomEnd = innerCorners.bottomEnd,
-        bottomStart = innerCorners.bottomStart,
-    )
-    val lastItemShape = RoundedCornerShape(
-        topStart = innerCorners.topStart,
-        topEnd = innerCorners.topEnd,
-        bottomEnd = outerCorners.bottomEnd,
-        bottomStart = outerCorners.bottomStart,
-    )
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val menuWidth = minOf(400.dp, screenWidth - 24.dp)
-    val compactToolbar = menuWidth < 340.dp
-    val menuMaxHeight = screenHeight * BROWSER_MAIN_MENU_MAX_HEIGHT_FRACTION
-    val menuScrollState = rememberScrollState()
-    val popupOffset = with(LocalDensity.current) { IntOffset(0, (-10).dp.roundToPx()) }
-    val requestedPresentation = BrowserMainMenuPresentation(
-        pageSubtitle = pageSubtitle,
+    val configuration = LocalConfiguration.current
+    val menuState = BrowserFeatureMenuState(
         canGoBack = canGoBack,
         canGoForward = canGoForward,
         isLoading = isLoading,
+        hasPage = canUsePageActions,
+        canCloseTab = canCloseTab,
         canToggleFavorite = canToggleFavorite,
         isFavorite = isFavorite,
         isPinned = isPinned,
-        canUsePageActions = canUsePageActions,
-        canUseDocumentActions = canUseDocumentActions,
         canOpenReader = canOpenReader,
         canTranslatePage = canTranslatePage,
-        canToggleDomainMute = canToggleDomainMute,
-        isDomainMuted = isDomainMuted,
-        canToggleAlwaysBlockPopups = canToggleAlwaysBlockPopups,
-        isAlwaysBlockPopupsEnabled = isAlwaysBlockPopupsEnabled,
-        canToggleDesktopView = canToggleDesktopView,
-        isDesktopView = isDesktopView,
+        canUseDocumentActions = canUseDocumentActions,
         canToggleCookieBannerRemoval = canToggleCookieBannerRemoval,
         isCookieBannerRemovalEnabled = isCookieBannerRemovalEnabled,
         canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
@@ -278,535 +256,184 @@ internal fun BrowserMainMenu(
         isForcePageZoomingEnabled = isForcePageZoomingEnabled,
         canToggleForceSafeArea = canToggleForceSafeArea,
         isForceSafeAreaEnabled = isForceSafeAreaEnabled,
+        canToggleAlwaysBlockPopups = canToggleAlwaysBlockPopups,
+        isAlwaysBlockPopupsEnabled = isAlwaysBlockPopupsEnabled,
+        canToggleDesktopView = canToggleDesktopView,
+        isDesktopView = isDesktopView,
+        canToggleDomainMute = canToggleDomainMute,
+        isDomainMuted = isDomainMuted,
         canAddSiteCapsule = canAddSiteCapsule,
         canSnooze = canSnooze,
+        canDockAddressBar = canDockAddressBar,
+        overflowPageActions = overflowAddressBarActions.mapNotNull(AddressBarAction::sharedMenuAction),
+        toppingCommands = userScriptMenuCommands.map(UserScriptMenuCommand::sharedMenuCommand),
     )
-    var presentation by remember { mutableStateOf(requestedPresentation) }
-    if (expanded && requestedPresentation != presentation) {
-        presentation = requestedPresentation
-    }
-    val sharedMenuItems = BrowserFeatureMenuRules.items(
-        state = presentation.toSharedMenuState(
-            canCloseTab = canCloseTab,
-            canDockAddressBar = canDockAddressBar,
-            overflowAddressBarActions = overflowAddressBarActions,
-            toppingCommands = userScriptMenuCommands,
-        ),
-    )
-    var popupVisible by remember { mutableStateOf(expanded) }
-    var actionCommitted by remember { mutableStateOf(false) }
-    val exitProgress = remember { Animatable(if (expanded) 1f else 0f) }
-    val menuTransformOrigin = if (LocalLayoutDirection.current == LayoutDirection.Ltr) {
-        TransformOrigin(1f, 1f)
-    } else {
-        TransformOrigin(0f, 1f)
-    }
-    LaunchedEffect(expanded) {
-        if (expanded) {
-            actionCommitted = false
-            val reversingExit = popupVisible
-            popupVisible = true
-            if (reversingExit) {
-                exitProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
-                        easing = LinearOutSlowInEasing,
-                    ),
-                )
-            } else {
-                menuScrollState.scrollTo(0)
-                exitProgress.snapTo(1f)
-            }
-        } else if (popupVisible) {
-            exitProgress.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(
-                    durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
-                    easing = FastOutLinearInEasing,
-                ),
-            )
-            popupVisible = false
-        }
-    }
-    LaunchedEffect(expanded, popupVisible) {
-        BrowserInputDiagnostics.popupState(expanded, popupVisible)
-    }
-    fun dismissThen(action: () -> Unit) {
-        if (!expanded || actionCommitted) return
-        actionCommitted = true
-        onDismissRequest()
-        action()
-    }
-
-    if (popupVisible) Popup(
-        alignment = Alignment.BottomEnd,
-        offset = popupOffset,
+    val items = BrowserFeatureMenuRules.items(menuState)
+    SharedBrowserMainMenu(
+        expanded = expanded,
         onDismissRequest = onDismissRequest,
-        properties = PopupProperties(focusable = true),
-    ) {
-        CandyChromeSurface(
-            backdropSource = backdropSource,
-            tokens = chromeTokens,
-            modifier = Modifier
-                .width(menuWidth)
-                .height(menuMaxHeight)
-                .graphicsLayer {
-                    alpha = exitProgress.value
-                    val scale = BrowserMainMenuMotion.EXIT_SCALE +
-                        (1f - BrowserMainMenuMotion.EXIT_SCALE) * exitProgress.value
-                    scaleX = scale
-                    scaleY = scale
-                    transformOrigin = menuTransformOrigin
+        pageSubtitle = pageSubtitle,
+        items = items,
+        snoozedTabCount = snoozedTabCount,
+        screenSize = DpSize(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp),
+        resources = AndroidBrowserMainMenuResources,
+        effects = rememberAndroidBrowserMainMenuEffects(backdropSource),
+        onAction = { item ->
+            when (item.action) {
+                BrowserFeatureMenuAction.Back -> onBack()
+                BrowserFeatureMenuAction.Forward -> onForward()
+                BrowserFeatureMenuAction.Reload,
+                BrowserFeatureMenuAction.Stop,
+                -> onReloadOrStop()
+                BrowserFeatureMenuAction.ToggleFavorite -> onToggleFavorite()
+                BrowserFeatureMenuAction.TogglePinned -> onTogglePinned()
+                BrowserFeatureMenuAction.ShowTabs -> onTabs()
+                BrowserFeatureMenuAction.NewTab -> onNewTab()
+                BrowserFeatureMenuAction.CloseTab -> onCloseTab()
+                BrowserFeatureMenuAction.ParkAddressBarRight -> onParkAddressBarRight()
+                BrowserFeatureMenuAction.OpenReader -> onOpenReader()
+                BrowserFeatureMenuAction.TranslatePage -> onTranslate()
+                BrowserFeatureMenuAction.FindInPage -> onFindInPage()
+                BrowserFeatureMenuAction.Share -> onShare()
+                BrowserFeatureMenuAction.OpenExternal -> onOpenExternal()
+                BrowserFeatureMenuAction.Print -> onPrint()
+                BrowserFeatureMenuAction.ToggleCookieBannerRemoval ->
+                    onCookieBannerRemovalEnabledChange(item.checked != true)
+                BrowserFeatureMenuAction.ToggleForceVerticalScrolling ->
+                    onForceVerticalScrollingChange(item.checked != true)
+                BrowserFeatureMenuAction.ToggleForcePageZooming ->
+                    onForcePageZoomingChange(item.checked != true)
+                BrowserFeatureMenuAction.ToggleForceSafeArea ->
+                    onForceSafeAreaChange(item.checked != true)
+                BrowserFeatureMenuAction.ToggleAlwaysBlockPopups ->
+                    onAlwaysBlockPopupsChange(item.checked != true)
+                BrowserFeatureMenuAction.ToggleDesktopView ->
+                    onDesktopViewChange(item.checked != true)
+                BrowserFeatureMenuAction.ToggleDomainMute ->
+                    onDomainMutedChange(item.checked != true)
+                BrowserFeatureMenuAction.OpenCandyTrail -> onOpenCandyTrail()
+                BrowserFeatureMenuAction.AddSiteCapsule -> onAddSiteCapsule()
+                BrowserFeatureMenuAction.Summarize -> onSummarize()
+                BrowserFeatureMenuAction.SnoozeTab -> onSnooze()
+                BrowserFeatureMenuAction.DockAddressBar -> onDockAddressBar()
+                BrowserFeatureMenuAction.OpenSnoozedTabs -> onSnoozedTabs()
+                BrowserFeatureMenuAction.OpenHistory -> onHistory()
+                BrowserFeatureMenuAction.OpenSettings -> onSettings()
+                BrowserFeatureMenuAction.InvokeToppingCommand -> {
+                    userScriptMenuCommands.firstOrNull { command ->
+                        command.scriptId == item.toppingScriptId &&
+                            command.commandId == item.toppingCommandId
+                    }?.let(onUserScriptMenuCommand)
                 }
-                .clip(menuShape)
-                .testTag(BrowserMainMenuTestTags.Menu),
-            shape = menuShape,
-            blurCornerRadius = chromeTokens.largeCornerRadius,
-        ) {
-            Column(
-                modifier = Modifier
-                    .verticalScroll(menuScrollState)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-            Text(
-                text = stringResource(R.string.browser_menu_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = presentation.pageSubtitle,
-                modifier = Modifier.padding(top = 2.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelMedium,
-                color = colors.onSurfaceVariant,
-            )
+                BrowserFeatureMenuAction.OpenFirefoxExtensions -> Unit
+            }
+        },
+    )
+}
 
-            Spacer(Modifier.height(10.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(BrowserMainMenuTestTags.Toolbar),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    MenuToolbarAction(
-                        label = stringResource(R.string.action_back),
-                        iconRes = R.drawable.ic_symbol_arrow_back,
-                        enabled = presentation.canGoBack,
-                        onClick = { dismissThen(onBack) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    MenuToolbarAction(
-                        label = stringResource(R.string.action_forward),
-                        iconRes = R.drawable.ic_symbol_arrow_forward,
-                        enabled = presentation.canGoForward,
-                        onClick = { dismissThen(onForward) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    MenuToolbarAction(
-                        label = stringResource(
-                            if (presentation.isLoading) {
-                                R.string.action_stop_loading
-                            } else {
-                                R.string.action_reload
-                            },
-                        ),
-                        iconRes = if (presentation.isLoading) {
-                            R.drawable.ic_symbol_close
-                        } else {
-                            R.drawable.ic_symbol_refresh
-                        },
-                        onClick = { dismissThen(onReloadOrStop) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (!compactToolbar) {
-                        BrowserMainMenuFavoriteAction(
-                            presentation = presentation,
-                            onClick = { dismissThen(onToggleFavorite) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        BrowserMainMenuPinAction(
-                            isPinned = presentation.isPinned,
-                            onClick = { dismissThen(onTogglePinned) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-                if (compactToolbar) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        BrowserMainMenuFavoriteAction(
-                            presentation = presentation,
-                            onClick = { dismissThen(onToggleFavorite) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        BrowserMainMenuPinAction(
-                            isPinned = presentation.isPinned,
-                            onClick = { dismissThen(onTogglePinned) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
+@Composable
+private fun rememberAndroidBrowserMainMenuEffects(
+    backdropSource: CandyChromeBackdropSource?,
+): BrowserMainMenuEffects = androidx.compose.runtime.remember(backdropSource) {
+    AndroidBrowserMainMenuEffects(backdropSource)
+}
 
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.browser_menu_page_group),
-                modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = colors.primary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Column(
-                modifier = Modifier.testTag(BrowserMainMenuTestTags.PageGroup),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                val overflowMenuItems = sharedMenuItems.filter { item ->
-                    item.section == BrowserFeatureMenuSection.Page &&
-                        item.action in OVERFLOW_MENU_ACTIONS
-                }
-                overflowMenuItems.forEachIndexed { index, item ->
-                    val action = item.action.addressBarAction() ?: return@forEachIndexed
-                    val iconRes = when (action) {
-                        AddressBarAction.Tabs -> R.drawable.ic_switch_to_tab
-                        AddressBarAction.NewTab -> R.drawable.ic_symbol_add
-                        AddressBarAction.CloseTab -> R.drawable.ic_symbol_close
-                        AddressBarAction.ParkRight ->
-                            R.drawable.ic_symbol_chevron_physical_right
-                        else -> return@forEachIndexed
-                    }
-                    val callback = when (action) {
-                        AddressBarAction.Tabs -> onTabs
-                        AddressBarAction.NewTab -> onNewTab
-                        AddressBarAction.CloseTab -> onCloseTab
-                        AddressBarAction.ParkRight -> onParkAddressBarRight
-                    }
-                    MenuRow(
-                        label = stringResource(action.labelRes()),
-                        iconRes = iconRes,
-                        enabled = item.enabled,
-                        shape = if (index == 0) firstItemShape else innerCorners,
-                        onClick = { dismissThen(callback) },
-                    )
-                }
-                MenuRow(
-                    label = stringResource(R.string.reader_open_action),
-                    iconRes = R.drawable.ic_reader_align_start,
-                    enabled = presentation.canOpenReader,
-                    shape = if (overflowMenuItems.isEmpty()) {
-                        firstItemShape
-                    } else {
-                        innerCorners
-                    },
-                    onClick = { dismissThen(onOpenReader) },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_translate_page),
-                    iconRes = R.drawable.ic_symbol_translate,
-                    enabled = presentation.canTranslatePage,
-                    shape = innerCorners,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.Translate),
-                    onClick = { dismissThen(onTranslate) },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_find_in_page),
-                    iconRes = R.drawable.ic_symbol_find_in_page,
-                    enabled = presentation.canUseDocumentActions,
-                    shape = innerCorners,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.FindInPage),
-                    onClick = { dismissThen(onFindInPage) },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_share),
-                    iconRes = R.drawable.ic_symbol_share,
-                    enabled = presentation.canUsePageActions,
-                    shape = innerCorners,
-                    onClick = { dismissThen(onShare) },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_open_in_app),
-                    iconRes = R.drawable.ic_symbol_open_in_new,
-                    enabled = presentation.canUsePageActions,
-                    shape = innerCorners,
-                    onClick = { dismissThen(onOpenExternal) },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_print),
-                    iconRes = R.drawable.ic_symbol_print,
-                    enabled = presentation.canUseDocumentActions,
-                    shape = innerCorners,
-                    onClick = { dismissThen(onPrint) },
-                )
-                if (
-                    presentation.canToggleForceVerticalScrolling ||
-                    presentation.canToggleForcePageZooming ||
-                    presentation.canToggleForceSafeArea
-                ) {
-                    BrowserMenuToggleItem(
-                        label = stringResource(R.string.privacy_cookie_banner_remove),
-                        supportingText = stringResource(
-                            if (presentation.canToggleCookieBannerRemoval) {
-                                R.string.privacy_cookie_banner_remove_description
-                            } else {
-                                R.string.privacy_cookie_banner_remove_unavailable
-                            },
-                        ),
-                        checked = presentation.isCookieBannerRemovalEnabled,
-                        enabled = presentation.canToggleCookieBannerRemoval,
-                        onCheckedChange = onCookieBannerRemovalEnabledChange,
-                        modifier = Modifier.testTag(
-                            BrowserMainMenuTestTags.CookieBannerRemoval,
-                        ),
-                        shape = innerCorners,
-                    )
-                    if (presentation.canToggleForceVerticalScrolling) {
-                        BrowserMenuToggleItem(
-                            label = stringResource(R.string.privacy_force_vertical_scrolling),
-                            supportingText = stringResource(
-                                R.string.privacy_force_vertical_scrolling_description,
-                            ),
-                            checked = presentation.isForceVerticalScrollingEnabled,
-                            enabled = true,
-                            onCheckedChange = onForceVerticalScrollingChange,
-                            modifier = Modifier.testTag(
-                                BrowserMainMenuTestTags.ForceVerticalScrolling,
-                            ),
-                            shape = innerCorners,
-                        )
-                    }
-                    if (presentation.canToggleForcePageZooming) {
-                        BrowserMenuToggleItem(
-                            label = stringResource(R.string.privacy_force_page_zooming),
-                            supportingText = stringResource(
-                                R.string.privacy_force_page_zooming_description,
-                            ),
-                            checked = presentation.isForcePageZoomingEnabled,
-                            enabled = true,
-                            onCheckedChange = onForcePageZoomingChange,
-                            modifier = Modifier.testTag(
-                                BrowserMainMenuTestTags.ForcePageZooming,
-                            ),
-                            shape = innerCorners,
-                        )
-                    }
-                    if (presentation.canToggleForceSafeArea) {
-                        BrowserMenuToggleItem(
-                            label = stringResource(R.string.compatibility_force_safe_area),
-                            supportingText = stringResource(
-                                R.string.compatibility_force_safe_area_description,
-                            ),
-                            checked = presentation.isForceSafeAreaEnabled,
-                            enabled = true,
-                            onCheckedChange = onForceSafeAreaChange,
-                            modifier = Modifier.testTag(
-                                BrowserMainMenuTestTags.ForceSafeArea,
-                            ),
-                            shape = innerCorners,
-                        )
-                    }
-                }
-                BrowserMenuToggleItem(
-                    label = stringResource(R.string.action_always_block_popups),
-                    supportingText = stringResource(
-                        R.string.action_always_block_popups_description,
-                    ),
-                    checked = presentation.isAlwaysBlockPopupsEnabled,
-                    enabled = presentation.canToggleAlwaysBlockPopups,
-                    onCheckedChange = onAlwaysBlockPopupsChange,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.AlwaysBlockPopups),
-                    shape = innerCorners,
-                )
-                BrowserMenuToggleItem(
-                    label = stringResource(R.string.action_desktop_view),
-                    supportingText = stringResource(R.string.action_desktop_view_description),
-                    checked = presentation.isDesktopView,
-                    enabled = presentation.canToggleDesktopView,
-                    onCheckedChange = onDesktopViewChange,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.DesktopView),
-                    shape = innerCorners,
-                )
-                DomainMuteMenuItem(
-                    enabled = presentation.canToggleDomainMute,
-                    muted = presentation.isDomainMuted,
-                    onMutedChange = onDomainMutedChange,
-                    shape = lastItemShape,
-                )
-            }
+private fun AddressBarAction.sharedMenuAction(): BrowserFeatureMenuAction? = when (this) {
+    AddressBarAction.Tabs -> BrowserFeatureMenuAction.ShowTabs
+    AddressBarAction.NewTab -> BrowserFeatureMenuAction.NewTab
+    AddressBarAction.CloseTab -> BrowserFeatureMenuAction.CloseTab
+    AddressBarAction.ParkRight -> BrowserFeatureMenuAction.ParkAddressBarRight
+    else -> null
+}
 
-            val toppingMenuItems = sharedMenuItems.filter { item ->
-                item.section == BrowserFeatureMenuSection.Toppings
-            }
-            if (toppingMenuItems.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.browser_menu_toppings_group),
-                    modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = colors.primary,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Column(
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.ToppingsGroup),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    toppingMenuItems.forEachIndexed { index, item ->
-                        val shape = when {
-                            toppingMenuItems.size == 1 -> outerCorners
-                            index == 0 -> firstItemShape
-                            index == toppingMenuItems.lastIndex -> lastItemShape
-                            else -> innerCorners
-                        }
-                        val command = userScriptMenuCommands.first { command ->
-                            command.scriptId == item.toppingScriptId &&
-                                command.commandId == item.toppingCommandId
-                        }
-                        MenuRow(
-                            label = requireNotNull(item.dynamicLabel),
-                            iconRes = R.drawable.ic_symbol_extension,
-                            shape = shape,
-                            supportingText = item.supportingText,
-                            modifier = Modifier.testTag(
-                                BrowserMainMenuTestTags.userScriptCommand(command.commandId),
-                            ),
-                            onClick = { dismissThen { onUserScriptMenuCommand(command) } },
-                        )
-                    }
-                }
-            }
+private fun UserScriptMenuCommand.sharedMenuCommand() = BrowserToppingMenuCommand(
+    scriptId = scriptId,
+    commandId = commandId,
+    caption = caption,
+    scriptName = scriptName,
+)
 
-            Spacer(Modifier.height(8.dp))
-            Column(
-                modifier = Modifier.testTag(BrowserMainMenuTestTags.CandyGroup),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                MenuRow(
-                    label = stringResource(R.string.action_open_candy_trail),
-                    iconRes = R.drawable.ic_symbol_route,
-                    enabled = presentation.canUsePageActions,
-                    shape = firstItemShape,
-                    containerColor = colors.tertiaryContainer,
-                    contentColor = colors.onTertiaryContainer,
-                    onClick = { dismissThen(onOpenCandyTrail) },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_add_site_capsule),
-                    iconRes = R.drawable.ic_symbol_add_to_home_screen,
-                    enabled = presentation.canAddSiteCapsule,
-                    shape = innerCorners,
-                    containerColor = colors.tertiaryContainer,
-                    contentColor = colors.onTertiaryContainer,
-                    onClick = { dismissThen(onAddSiteCapsule) },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_summarize),
-                    iconRes = R.drawable.ic_symbol_auto_awesome,
-                    enabled = presentation.canUsePageActions,
-                    shape = innerCorners,
-                    containerColor = colors.tertiaryContainer,
-                    contentColor = colors.onTertiaryContainer,
-                    onClick = { dismissThen(onSummarize) },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_snooze_tab),
-                    iconRes = R.drawable.ic_snooze,
-                    enabled = presentation.canSnooze,
-                    shape = lastItemShape,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.Snooze),
-                    containerColor = colors.tertiaryContainer,
-                    contentColor = colors.onTertiaryContainer,
-                    supportingText = if (presentation.canSnooze) {
-                        null
-                    } else {
-                        stringResource(R.string.snooze_unavailable_private)
-                    },
-                    onClick = { dismissThen(onSnooze) },
-                )
-            }
+@StringRes
+private fun BrowserFeatureMenuLabelKey.androidStringResource(): Int = when (this) {
+    BrowserFeatureMenuLabelKey.Back -> R.string.action_back
+    BrowserFeatureMenuLabelKey.Forward -> R.string.action_forward
+    BrowserFeatureMenuLabelKey.Reload -> R.string.action_reload
+    BrowserFeatureMenuLabelKey.StopLoading -> R.string.action_stop_loading
+    BrowserFeatureMenuLabelKey.AddFavorite -> R.string.action_add_favorite
+    BrowserFeatureMenuLabelKey.RemoveFavorite -> R.string.action_remove_favorite
+    BrowserFeatureMenuLabelKey.PinTab -> R.string.action_pin_tab
+    BrowserFeatureMenuLabelKey.UnpinTab -> R.string.action_remove_pin
+    BrowserFeatureMenuLabelKey.Tabs -> R.string.address_bar_action_tabs
+    BrowserFeatureMenuLabelKey.NewTab -> R.string.cd_new_tab
+    BrowserFeatureMenuLabelKey.CloseTab -> R.string.cd_close_tab
+    BrowserFeatureMenuLabelKey.ParkAddressBarRight -> R.string.action_park_address_pill_right
+    BrowserFeatureMenuLabelKey.Reader -> R.string.reader_open_action
+    BrowserFeatureMenuLabelKey.Translate -> R.string.action_translate_page
+    BrowserFeatureMenuLabelKey.FindInPage -> R.string.action_find_in_page
+    BrowserFeatureMenuLabelKey.Share -> R.string.action_share
+    BrowserFeatureMenuLabelKey.OpenExternal -> R.string.action_open_in_app
+    BrowserFeatureMenuLabelKey.Print -> R.string.action_print
+    BrowserFeatureMenuLabelKey.CookieBannerRemoval -> R.string.privacy_cookie_banner_remove
+    BrowserFeatureMenuLabelKey.ForceVerticalScrolling -> R.string.privacy_force_vertical_scrolling
+    BrowserFeatureMenuLabelKey.ForcePageZooming -> R.string.privacy_force_page_zooming
+    BrowserFeatureMenuLabelKey.ForceSafeArea -> R.string.compatibility_force_safe_area
+    BrowserFeatureMenuLabelKey.AlwaysBlockPopups -> R.string.action_always_block_popups
+    BrowserFeatureMenuLabelKey.DesktopView -> R.string.action_desktop_view
+    BrowserFeatureMenuLabelKey.MuteDomain,
+    BrowserFeatureMenuLabelKey.UnmuteDomain,
+    -> R.string.action_mute_domain
+    BrowserFeatureMenuLabelKey.CandyTrail -> R.string.action_open_candy_trail
+    BrowserFeatureMenuLabelKey.AddSiteCapsule -> R.string.action_add_site_capsule
+    BrowserFeatureMenuLabelKey.Summarize -> R.string.action_summarize
+    BrowserFeatureMenuLabelKey.SnoozeTab -> R.string.action_snooze_tab
+    BrowserFeatureMenuLabelKey.DockAddressBar -> R.string.action_dock_address_bar
+    BrowserFeatureMenuLabelKey.SnoozedTabs -> R.string.snoozed_tabs_title
+    BrowserFeatureMenuLabelKey.History -> R.string.action_history
+    BrowserFeatureMenuLabelKey.Settings -> R.string.action_settings
+    BrowserFeatureMenuLabelKey.FirefoxExtensions -> R.string.action_settings
+    BrowserFeatureMenuLabelKey.ToppingsCommand -> R.string.browser_menu_toppings_group
+}
 
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.browser_menu_browser_group),
-                modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = colors.primary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Column(
-                modifier = Modifier.testTag(BrowserMainMenuTestTags.BrowserGroup),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                val dockItem = sharedMenuItems.firstOrNull { item ->
-                    item.action == BrowserFeatureMenuAction.DockAddressBar
-                }
-                if (dockItem != null) {
-                    MenuRow(
-                        label = stringResource(R.string.action_dock_address_bar),
-                        iconRes = R.drawable.ic_symbol_chevron_right,
-                        shape = firstItemShape,
-                        modifier = Modifier.testTag(BrowserMainMenuTestTags.DockAddressBar),
-                        onClick = { dismissThen(onDockAddressBar) },
-                    )
-                }
-                MenuRow(
-                    label = stringResource(R.string.snoozed_tabs_title),
-                    iconRes = R.drawable.ic_snooze,
-                    shape = if (
-                        dockItem != null
-                    ) {
-                        innerCorners
-                    } else {
-                        firstItemShape
-                    },
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.SnoozedTabs),
-                    supportingText = if (snoozedTabCount == 0) {
-                        stringResource(R.string.snoozed_tabs_settings_summary)
-                    } else {
-                        pluralStringResource(
-                            R.plurals.snoozed_tabs_settings_count,
-                            snoozedTabCount,
-                            snoozedTabCount,
-                        )
-                    },
-                    onClick = { dismissThen(onSnoozedTabs) },
-                    trailingContent = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_symbol_chevron_right),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_history),
-                    iconRes = R.drawable.ic_history,
-                    shape = innerCorners,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.History),
-                    onClick = { dismissThen(onHistory) },
-                    trailingContent = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_symbol_chevron_right),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                )
-                MenuRow(
-                    label = stringResource(R.string.action_settings),
-                    iconRes = R.drawable.ic_symbol_settings,
-                    shape = lastItemShape,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.Settings),
-                    onClick = { dismissThen(onSettings) },
-                    trailingContent = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_symbol_chevron_right),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                )
-            }
-            }
-        }
+@DrawableRes
+private fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (action) {
+    BrowserFeatureMenuAction.Back -> R.drawable.ic_symbol_arrow_back
+    BrowserFeatureMenuAction.Forward -> R.drawable.ic_symbol_arrow_forward
+    BrowserFeatureMenuAction.Reload -> R.drawable.ic_symbol_refresh
+    BrowserFeatureMenuAction.Stop -> R.drawable.ic_symbol_close
+    BrowserFeatureMenuAction.ToggleFavorite -> if (checked == true) {
+        R.drawable.ic_symbol_favorite_filled
+    } else {
+        R.drawable.ic_symbol_favorite
     }
+    BrowserFeatureMenuAction.TogglePinned -> R.drawable.ic_push_pin
+    BrowserFeatureMenuAction.ShowTabs -> R.drawable.ic_switch_to_tab
+    BrowserFeatureMenuAction.NewTab -> R.drawable.ic_symbol_add
+    BrowserFeatureMenuAction.CloseTab -> R.drawable.ic_symbol_close
+    BrowserFeatureMenuAction.ParkAddressBarRight -> R.drawable.ic_symbol_chevron_physical_right
+    BrowserFeatureMenuAction.OpenReader -> R.drawable.ic_reader_align_start
+    BrowserFeatureMenuAction.TranslatePage -> R.drawable.ic_symbol_translate
+    BrowserFeatureMenuAction.FindInPage -> R.drawable.ic_symbol_find_in_page
+    BrowserFeatureMenuAction.Share -> R.drawable.ic_symbol_share
+    BrowserFeatureMenuAction.OpenExternal -> R.drawable.ic_symbol_open_in_new
+    BrowserFeatureMenuAction.Print -> R.drawable.ic_symbol_print
+    BrowserFeatureMenuAction.ToggleDomainMute -> R.drawable.ic_symbol_volume_off
+    BrowserFeatureMenuAction.OpenCandyTrail -> R.drawable.ic_symbol_route
+    BrowserFeatureMenuAction.AddSiteCapsule -> R.drawable.ic_symbol_add_to_home_screen
+    BrowserFeatureMenuAction.Summarize -> R.drawable.ic_symbol_auto_awesome
+    BrowserFeatureMenuAction.SnoozeTab,
+    BrowserFeatureMenuAction.OpenSnoozedTabs,
+    -> R.drawable.ic_snooze
+    BrowserFeatureMenuAction.DockAddressBar -> R.drawable.ic_symbol_chevron_right
+    BrowserFeatureMenuAction.OpenHistory -> R.drawable.ic_history
+    BrowserFeatureMenuAction.OpenSettings -> R.drawable.ic_symbol_settings
+    BrowserFeatureMenuAction.OpenFirefoxExtensions,
+    BrowserFeatureMenuAction.InvokeToppingCommand,
+    -> R.drawable.ic_symbol_extension
+    BrowserFeatureMenuAction.ToggleCookieBannerRemoval,
+    BrowserFeatureMenuAction.ToggleForceVerticalScrolling,
+    BrowserFeatureMenuAction.ToggleForcePageZooming,
+    BrowserFeatureMenuAction.ToggleForceSafeArea,
+    BrowserFeatureMenuAction.ToggleAlwaysBlockPopups,
+    BrowserFeatureMenuAction.ToggleDesktopView,
+    -> R.drawable.ic_symbol_settings
 }

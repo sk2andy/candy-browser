@@ -3,8 +3,9 @@ package dev.sk2andy.materialbrowser.shared.browser
 /**
  * Platform-neutral identity and ordering for Candy's complete browser menu.
  *
- * Android and iOS own their native rendering and localized strings, but must render the same
- * ordered sections from this contract. Firefox extensions are the only Android-only addition.
+ * Android renders these ordered sections with the commonMain menu composable. iOS projects the
+ * same state and actions into its native Liquid Glass menu so the Apple chrome can morph without
+ * duplicating browser behavior. Firefox extensions are the only Android-only addition.
  */
 enum class BrowserFeatureMenuSection {
     Toolbar,
@@ -197,6 +198,7 @@ object BrowserFeatureMenuRules {
             },
             BrowserFeatureMenuSection.Toolbar,
             state.canToggleFavorite,
+            checked = state.isFavorite,
         ),
         command(
             BrowserFeatureMenuAction.TogglePinned,
@@ -207,6 +209,7 @@ object BrowserFeatureMenuRules {
             },
             BrowserFeatureMenuSection.Toolbar,
             true,
+            checked = state.isPinned,
         ),
     )
 
@@ -421,6 +424,7 @@ object BrowserFeatureMenuRules {
         labelKey: BrowserFeatureMenuLabelKey,
         section: BrowserFeatureMenuSection = BrowserFeatureMenuSection.Page,
         enabled: Boolean = true,
+        checked: Boolean? = null,
     ) = BrowserFeatureMenuItem(
         stableId = action.name,
         action = action,
@@ -428,6 +432,7 @@ object BrowserFeatureMenuRules {
         section = section,
         kind = BrowserFeatureMenuItemKind.Command,
         enabled = enabled,
+        checked = checked,
     )
 
     private fun toggle(

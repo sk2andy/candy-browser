@@ -1,7 +1,7 @@
 "use strict";
 
 const NATIVE_APP = "dev.sk2andy.materialbrowser.privacy";
-const PROTOCOL_VERSION = 1;
+const PROTOCOL_VERSION = 2;
 const RULE_FILES = {
   blocked: [
     "blocked_hosts.txt",
@@ -194,7 +194,17 @@ browser.webRequest.onBeforeRequest.addListener((details) => {
   if (!bundledRules || !policy) return { cancel: true };
   const requestHost = hostFromUrl(details.url);
   const pageHost = policy.pageHost;
-  if (!requestHost || isPaused(policy, pageHost)) return {};
+  if (!requestHost) return {};
+  const observesCompatibility = Array.isArray(policy.compatibilityRequestHosts) &&
+    policy.compatibilityRequestHosts.some((host) => hostMatches(requestHost, host));
+  if (observesCompatibility) {
+    queueEvent(token, policy.revision, {
+      requestUrl: details.url,
+      pageUrl: pageHost ? `https://${pageHost}/` : null,
+      compatibilityObservation: true,
+    });
+  }
+  if (isPaused(policy, pageHost)) return {};
   if (policy.blockAds) {
     const decision = candyDecision(policy, requestHost, pageHost);
     if (decision) {
@@ -255,6 +265,23 @@ browser.runtime.onMessage.addListener((message, sender) => {
     const policy = policiesByToken.get(message.token);
     return Promise.resolve({ type: "bound", revision: policy.revision });
   }
+  if (
+    message.type === "binding-acknowledged" &&
+    message.protocolVersion === PROTOCOL_VERSION &&
+    typeof message.token === "string" &&
+    Number.isSafeInteger(message.revision)
+  ) {
+    const policy = policiesByToken.get(message.token);
+    if (policy && message.revision >= 1 && message.revision <= policy.revision && nativePort) {
+      nativePort.postMessage({
+        type: "session-bound",
+        protocolVersion: PROTOCOL_VERSION,
+        token: message.token,
+        revision: message.revision,
+      });
+    }
+    return undefined;
+  }
   if (message.type === "cosmetics") {
     const token = tokenByTab.get(sender.tab.id);
     const policy = token && policiesByToken.get(token);
@@ -277,6 +304,48 @@ browser.tabs.onRemoved.addListener((tabId) => {
   if (token) policiesByToken.delete(token);
 });
 
+function postReaderResult(message, payload) {
+  if (!nativePort) return;
+  nativePort.postMessage({
+    type: "reader-result",
+    protocolVersion: PROTOCOL_VERSION,
+    token: message.token,
+    revision: message.revision,
+    requestId: message.requestId,
+    payload,
+  });
+}
+
+function extractReader(message) {
+  const policy = policiesByToken.get(message.token);
+  if (!policy || policy.revision !== message.revision || !Number.isSafeInteger(message.requestId)) {
+    postReaderResult(message, null);
+    return;
+  }
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) {
+    postReaderResult(message, null);
+    return;
+  }
+  browser.tabs.sendMessage(tabEntry[0], { type: "reader-extract" }, { frameId: 0 }).then(
+    (payload) => postReaderResult(message, payload || null),
+    () => postReaderResult(message, null),
+  );
+}
+
+function updatePictureInPicturePlayback(message) {
+  const policy = policiesByToken.get(message.token);
+  if (!policy || policy.revision !== message.revision || typeof message.expected !== "boolean") {
+    return;
+  }
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) return;
+  browser.tabs.sendMessage(tabEntry[0], {
+    type: "picture-in-picture-playback",
+    expected: message.expected,
+  }).catch(() => {});
+}
+
 function connectNative() {
   nativePort = browser.runtime.connectNative(NATIVE_APP);
   nativePort.onMessage.addListener((message) => {
@@ -292,6 +361,13 @@ function connectNative() {
     } else if (message.type === "remove" && typeof message.token === "string") {
       policiesByToken.delete(message.token);
       for (const [tabId, token] of tokenByTab) if (token === message.token) tokenByTab.delete(tabId);
+    } else if (message.type === "reader-extract" && typeof message.token === "string") {
+      extractReader(message);
+    } else if (
+      message.type === "picture-in-picture-playback" &&
+      typeof message.token === "string"
+    ) {
+      updatePictureInPicturePlayback(message);
     }
   });
   nativePort.onDisconnect.addListener(() => { nativePort = null; });

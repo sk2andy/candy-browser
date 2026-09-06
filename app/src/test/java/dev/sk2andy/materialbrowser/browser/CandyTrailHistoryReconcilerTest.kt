@@ -5,6 +5,28 @@ import org.junit.Test
 
 class CandyTrailHistoryReconcilerTest {
     @Test
+    fun `early Gecko location event cannot rewrite current trail topology`() {
+        val trail = CandyTrailRules.recordNavigation(null, TAB_ID, A, "A", 1L)
+
+        val earlyLocation = CandyTrailHistoryReconciler.refineCurrentTitle(
+            trail = trail,
+            url = B,
+            title = "stale A title",
+            visitedAt = 2L,
+        )
+        val matchingTitle = CandyTrailHistoryReconciler.refineCurrentTitle(
+            trail = trail,
+            url = A,
+            title = "A refined",
+            visitedAt = 3L,
+        )
+
+        assertEquals(trail, earlyLocation)
+        assertEquals(A, matchingTitle.nodes.single().url)
+        assertEquals("A refined", matchingTitle.nodes.single().title)
+    }
+
+    @Test
     fun `restore merge remaps runtime binding so back reactivates existing node`() {
         val restored = CandyTrail(
             tabId = TAB_ID,

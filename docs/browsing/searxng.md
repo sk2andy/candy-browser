@@ -9,7 +9,7 @@
 | Search | Search input opens `GET {instance}/search?q={encodedQuery}` as an HTML navigation. Candy does not require the instance JSON API because instances may disable it. | `SearxngRules`, `AddressResolver` |
 | Suggestions | The optional provider calls `GET {instance}/autocompleter?q={encodedQuery}` after four characters and accepts OpenSearch or flat JSON arrays. The instance must enable autocomplete and expose the endpoint without a separate browser-login challenge. | `SearchSuggestionRules`, `SearchSuggestionClient` |
 | Fallback | Optional suggestion fallback is disabled by default. It runs only after a failed SearXNG request, never after a valid empty response, and may send the typed query to the selected second provider. | `SearxngSettings`, `SearchSuggestionClient` |
-| Persistence | Instance and fallback are global browser preferences. Inputs are trimmed, bounded, and recursive SearXNG fallback is removed at the store boundary. | `BrowserSessionStore` |
+| Persistence | Instance and fallback are global browser preferences. Inputs are trimmed and bounded at the shared rule boundary; recursive SearXNG fallback is removed at the Android store boundary. iOS persists only the shared stable provider ID and normalized instance URL. | `SearchSettingsRules`, `BrowserSessionStore`, iOS preference adapter |
 | Private tabs | Remote suggestions and their fallback never run. Search navigation still uses the selected SearXNG instance, while private tab state remains memory-only. | `SearchSuggestionRules`, `BrowserController` |
 
 ## Failure behavior

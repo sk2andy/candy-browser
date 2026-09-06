@@ -11,6 +11,12 @@ internal data class AddressBarDockState(
     val placement: AddressBarDockPlacement?,
 )
 
+@Immutable
+internal data class AddressBarDockSnap(
+    val position: Offset,
+    val snappedToNormalAnchor: Boolean,
+)
+
 internal object AddressBarDockingRules {
     const val NORMAL_ANCHOR_BREAKAWAY_DP = 72f
     const val NORMAL_ANCHOR_SNAP_DP = 28f
@@ -115,11 +121,30 @@ internal object AddressBarDockingRules {
         positionY: Float,
         verticalTravelPx: Float,
         density: Float,
-    ): Boolean {
-        if (!positionY.isFinite() || !density.isFinite() || density <= 0f) return false
+    ): Boolean = normalAnchorSnap(
+        position = Offset(0f, positionY),
+        verticalTravelPx = verticalTravelPx,
+        density = density,
+        enabled = true,
+    ).snappedToNormalAnchor
+
+    fun normalAnchorSnap(
+        position: Offset,
+        verticalTravelPx: Float,
+        density: Float,
+        enabled: Boolean,
+    ): AddressBarDockSnap {
+        val safePosition = position.sanitized()
         val safeVerticalTravel = verticalTravelPx.safePositive()
-        return positionY.coerceIn(0f, 1f) * safeVerticalTravel <=
-            NORMAL_ANCHOR_SNAP_DP * density
+        val canResolvePhysicalDistance = safeVerticalTravel > 0f &&
+            density.isFinite() &&
+            density > 0f
+        val snapped = enabled && canResolvePhysicalDistance &&
+            safePosition.y * safeVerticalTravel <= NORMAL_ANCHOR_SNAP_DP * density
+        return AddressBarDockSnap(
+            position = if (snapped) safePosition.copy(y = 0f) else safePosition,
+            snappedToNormalAnchor = snapped,
+        )
     }
 
     fun offsetMoved(previousOffsetPx: Offset, currentOffsetPx: Offset): Boolean =

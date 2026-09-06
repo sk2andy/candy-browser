@@ -1,7 +1,9 @@
 package dev.sk2andy.materialbrowser.browser
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExternalLinkPreviewRulesTest {
@@ -69,5 +71,20 @@ class ExternalLinkPreviewRulesTest {
         )
         assertNull(ExternalLinkPreviewRules.safeCurrentUrl("javascript:alert(1)"))
         assertNull(ExternalLinkPreviewRules.safeCurrentUrl("file:///tmp/page.html"))
+    }
+
+    @Test
+    fun `runtime identity rejects stale session and generation callbacks`() {
+        val state = ExternalLinkPreviewState(
+            sessionId = 7,
+            generation = 3,
+            currentUrl = "https://example.com/",
+            targetProfileId = "default",
+        )
+
+        assertTrue(ExternalLinkPreviewRules.isCurrent(state, sessionId = 7, generation = 3))
+        assertFalse(ExternalLinkPreviewRules.isCurrent(state, sessionId = 8, generation = 3))
+        assertFalse(ExternalLinkPreviewRules.isCurrent(state, sessionId = 7, generation = 4))
+        assertFalse(ExternalLinkPreviewRules.isCurrent(null, sessionId = 7, generation = 3))
     }
 }

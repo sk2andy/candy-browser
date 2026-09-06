@@ -3,8 +3,10 @@ package dev.sk2andy.materialbrowser.data.sync
 import dev.sk2andy.materialbrowser.sync.SyncBase64
 import dev.sk2andy.materialbrowser.sync.SyncBootstrap
 import dev.sk2andy.materialbrowser.sync.SyncCache
+import dev.sk2andy.materialbrowser.sync.SyncCacheStore
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncCrypto
+import dev.sk2andy.materialbrowser.sync.SyncDeltaPullPage
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDescriptor
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDefinition
@@ -15,17 +17,24 @@ import dev.sk2andy.materialbrowser.sync.SyncEncryptedChange
 import dev.sk2andy.materialbrowser.sync.SyncEncryptedDelta
 import dev.sk2andy.materialbrowser.sync.SyncEncryptedValue
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
+import dev.sk2andy.materialbrowser.sync.SyncEnrollmentResponse
 import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
 import dev.sk2andy.materialbrowser.sync.SyncProfile
 import dev.sk2andy.materialbrowser.sync.SyncPullPage
-import dev.sk2andy.materialbrowser.sync.SyncDeltaPullPage
+import dev.sk2andy.materialbrowser.sync.SyncPutResponse
 import dev.sk2andy.materialbrowser.sync.SyncRecoveryEnvelope
+import dev.sk2andy.materialbrowser.sync.SyncRecoveryKeyDeriver
+import dev.sk2andy.materialbrowser.sync.SyncRecoveryKdf
 import dev.sk2andy.materialbrowser.sync.SyncRealtimeEvent
 import dev.sk2andy.materialbrowser.sync.SyncRealtimeTicket
 import dev.sk2andy.materialbrowser.sync.SyncServerSnapshot
+import dev.sk2andy.materialbrowser.sync.SyncSettingsStore
 import dev.sk2andy.materialbrowser.sync.SyncTab
 import dev.sk2andy.materialbrowser.sync.SyncTabSnapshot
+import dev.sk2andy.materialbrowser.sync.SyncTransport
+import dev.sk2andy.materialbrowser.sync.SyncTransportException
 import dev.sk2andy.materialbrowser.sync.SyncVaultSecrets
+import dev.sk2andy.materialbrowser.sync.SyncVaultStore
 import dev.sk2andy.materialbrowser.sync.SyncWriteOutcome
 import java.time.Clock
 import java.time.Instant
@@ -409,7 +418,12 @@ class CandySyncRepositoryTest {
             ),
         ),
         transportFactory = { transport },
-        recoveryKeyDeriver = { _, _ -> error("Not used") },
+        recoveryKeyDeriver = object : SyncRecoveryKeyDeriver {
+            override fun derive(
+                passphrase: ByteArray,
+                kdf: SyncRecoveryKdf,
+            ): ByteArray = error("Not used")
+        },
         clock = Clock.fixed(Instant.parse(NOW), ZoneOffset.UTC),
     )
 

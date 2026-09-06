@@ -1,7 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.commands
 
 interface CommandActions {
-    fun clearCacheAndReload(): Boolean
+    fun clearCacheAndReload(onComplete: (Boolean) -> Unit): Boolean
     fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean
     fun reload(): Boolean
     fun stopLoading(): Boolean
@@ -20,11 +20,22 @@ object CommandDispatcher {
         onPendingOutcome: (CommandDispatchOutcome) -> Unit = {},
     ): CommandDispatchOutcome {
         return when (command.kind) {
-            BrowserCommandKind.ClearCacheAndReload -> outcome(
-                command,
-                actions.clearCacheAndReload(),
-                CommandResult.CacheClearedAndReloaded,
-            )
+            BrowserCommandKind.ClearCacheAndReload -> {
+                val started = actions.clearCacheAndReload { completed ->
+                    onPendingOutcome(
+                        outcome(
+                            command,
+                            completed,
+                            CommandResult.CacheClearedAndReloaded,
+                        ),
+                    )
+                }
+                if (started) {
+                    CommandDispatchOutcome.Pending(command.kind)
+                } else {
+                    CommandDispatchOutcome.Rejected(command.kind)
+                }
+            }
             BrowserCommandKind.ClearCookiesAndReload -> {
                 val started = actions.clearCookiesAndReload { completed ->
                     onPendingOutcome(

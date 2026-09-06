@@ -55,7 +55,7 @@ class SiteCapsuleScreenInstrumentedTest {
         }
 
         composeRule.onNodeWithTag(SiteCapsuleTestTags.Screen).assertIsDisplayed()
-        composeRule.onNodeWithTag(SiteCapsuleTestTags.WebView).assertIsDisplayed()
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.WebContent).assertIsDisplayed()
     }
 
     @Test
@@ -81,7 +81,7 @@ class SiteCapsuleScreenInstrumentedTest {
             MaterialTheme { SiteCapsuleBrowserScreen(browserController, capsule) }
         }
 
-        composeRule.onNodeWithTag(SiteCapsuleTestTags.WebView).assertIsDisplayed()
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.WebContent).assertIsDisplayed()
         composeRule.onNodeWithTag(SiteCapsuleTestTags.Chrome).assertDoesNotExist()
     }
 

@@ -1,7 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.cast
 
-import dev.sk2andy.materialbrowser.browser.WebMediaKind
-import dev.sk2andy.materialbrowser.browser.WebMediaState
+import dev.sk2andy.materialbrowser.browser.BrowserMediaKind
+import dev.sk2andy.materialbrowser.browser.BrowserMediaState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -68,22 +68,15 @@ class CastMediaRulesTest {
         )
     }
 
-    private fun videoState(): WebMediaState = WebMediaState(
+    private fun videoState(): BrowserMediaState = BrowserMediaState(
         tabId = "tab",
         title = "Video",
         origin = "media.example",
-        kind = WebMediaKind.Video,
+        kind = BrowserMediaKind.Video,
         isPlaying = true,
         currentPositionMillis = 1_000,
         durationMillis = 20_000,
         playbackRate = 1f,
-        muted = false,
-        volume = 1f,
-        videoWidth = 1920,
-        videoHeight = 1080,
-        clientWidth = 960,
-        clientHeight = 540,
-        visibleRatio = 1f,
         sourceUrl = "https://media.example/video.m3u8?token=short",
         contentType = "Application/X-MpegURL; codecs=avc1",
         posterUrl = "https://media.example/poster.jpg",

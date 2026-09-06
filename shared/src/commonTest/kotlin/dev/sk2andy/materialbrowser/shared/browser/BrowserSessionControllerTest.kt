@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.shared.browser
 
+import dev.sk2andy.materialbrowser.browser.SearchEngine
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -45,6 +46,25 @@ class BrowserSessionControllerTest {
         assertEquals("Example", committed.title)
         assertTrue(committed.canGoBack)
         assertFalse(committed.isLoading)
+    }
+
+    @Test
+    fun `selected search provider is applied before the engine load adapter`() {
+        val controller = BrowserSessionController()
+        val session = FakeBrowserEngineSessionPort(tabId = "tab-1")
+        controller.attach(session)
+        controller.updateSearchSettings(
+            searchEngine = SearchEngine.Kagi,
+            searxngInstanceUrl = "",
+        )
+
+        val resolution = controller.navigateSelected("candy browser")
+
+        assertEquals(AddressResolutionKind.Search, resolution.kind)
+        assertEquals(
+            BrowserEngineCommands.load("https://kagi.com/search?q=candy%20browser"),
+            session.commands.single(),
+        )
     }
 
     @Test
@@ -175,6 +195,21 @@ class BrowserSessionControllerTest {
         assertTrue(controller.attachedTabIds.isEmpty())
         assertEquals(BrowserEngineCommands.close(), first.commands.last())
         assertEquals(BrowserEngineCommands.close(), second.commands.last())
+    }
+
+    @Test
+    fun `detaching a session preserves tab state for isolated storage recreation`() {
+        val controller = BrowserSessionController()
+        val original = FakeBrowserEngineSessionPort(tabId = "tab-1")
+        controller.attach(original)
+
+        assertTrue(controller.detachSession("tab-1"))
+        assertEquals(listOf("tab-1"), controller.state.tabs.map(BrowserTabState::id))
+        assertTrue(controller.attachedTabIds.isEmpty())
+        assertEquals(BrowserEngineCommands.close(), original.commands.last())
+
+        val replacement = FakeBrowserEngineSessionPort(tabId = "tab-1")
+        assertTrue(controller.attach(replacement))
     }
 
     @Test

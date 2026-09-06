@@ -6,6 +6,8 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewContrastRules
+
 import android.graphics.Bitmap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -126,4 +128,3 @@ internal fun TabPreviewPlaceholder(
         }
     }
 }
-

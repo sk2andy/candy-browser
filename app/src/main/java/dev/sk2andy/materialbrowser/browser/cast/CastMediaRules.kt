@@ -1,7 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.cast
 
-import dev.sk2andy.materialbrowser.browser.WebMediaKind
-import dev.sk2andy.materialbrowser.browser.WebMediaState
+import dev.sk2andy.materialbrowser.browser.BrowserMediaKind
+import dev.sk2andy.materialbrowser.browser.BrowserMediaState
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import java.net.URI
 
@@ -29,11 +29,11 @@ internal data class CastMediaCandidate(
 
 internal object CastMediaRules {
     fun source(
-        state: WebMediaState?,
+        state: BrowserMediaState?,
         isPrivate: Boolean,
         isSelectedTab: Boolean,
     ): CastMediaSource? {
-        if (state == null || isPrivate || !isSelectedTab || state.kind != WebMediaKind.Video) {
+        if (state == null || isPrivate || !isSelectedTab || state.kind != BrowserMediaKind.Video) {
             return null
         }
         val url = BrowserUriPolicy.normalizeHttpUrl(state.sourceUrl) ?: return null

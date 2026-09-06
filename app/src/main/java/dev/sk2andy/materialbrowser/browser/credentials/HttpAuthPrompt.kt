@@ -9,6 +9,7 @@ data class HttpAuthPrompt(
     val host: String,
     val realm: String?,
     val isPageSecure: Boolean,
+    val isProxy: Boolean = false,
 )
 
 internal data class HttpAuthChallengeDetails(
@@ -35,17 +36,36 @@ internal object HttpAuthPromptRules {
         val pageHost = canonicalHost(page.host) ?: return null
         if (challengeHost != pageHost) return null
         val displayHost = if (':' in pageHost) "[$pageHost]" else pageHost
-        val displayRealm = realm
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-            ?.takeIf { value -> value.length <= MAX_REALM_LENGTH }
-            ?.takeIf { value -> value.none(::isUnsafeDisplayCharacter) }
         return HttpAuthChallengeDetails(
             host = displayHost,
-            realm = displayRealm,
+            realm = displayRealm(realm),
             isPageSecure = scheme == "https",
         )
     }
+
+    fun proxyChallengeDetails(
+        host: String?,
+        realm: String?,
+        proxyUrl: String?,
+    ): HttpAuthChallengeDetails? {
+        val proxyHost = canonicalHost(host) ?: return null
+        val scheme = proxyUrl?.let { value -> runCatching { URI(value) }.getOrNull() }
+            ?.takeIf { uri -> uri.isAbsolute && !uri.isOpaque && uri.rawUserInfo == null }
+            ?.scheme
+            ?.lowercase()
+            ?.takeIf { value -> value == "http" || value == "https" }
+        return HttpAuthChallengeDetails(
+            host = if (':' in proxyHost) "[$proxyHost]" else proxyHost,
+            realm = displayRealm(realm),
+            isPageSecure = scheme == "https",
+        )
+    }
+
+    private fun displayRealm(realm: String?): String? = realm
+        ?.trim()
+        ?.takeIf(String::isNotEmpty)
+        ?.takeIf { value -> value.length <= MAX_REALM_LENGTH }
+        ?.takeIf { value -> value.none(::isUnsafeDisplayCharacter) }
 
     private fun canonicalHost(value: String?): String? {
         val candidate = value

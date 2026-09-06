@@ -144,6 +144,70 @@ class AddressBarDockingRulesTest {
     }
 
     @Test
+    fun `normal anchor snap resolves visible position while preserving physical edge`() {
+        assertEquals(
+            AddressBarDockSnap(
+                position = Offset(-0.75f, 0f),
+                snappedToNormalAnchor = true,
+            ),
+            AddressBarDockingRules.normalAnchorSnap(
+                position = Offset(-0.75f, 0.05f),
+                verticalTravelPx = 400f,
+                density = 1f,
+                enabled = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `normal anchor snap threshold follows inset adjusted vertical travel`() {
+        assertTrue(
+            AddressBarDockingRules.normalAnchorSnap(
+                position = Offset(1f, 0.05f),
+                verticalTravelPx = 560f,
+                density = 1f,
+                enabled = true,
+            ).snappedToNormalAnchor,
+        )
+        assertFalse(
+            AddressBarDockingRules.normalAnchorSnap(
+                position = Offset(1f, 0.05f),
+                verticalTravelPx = 600f,
+                density = 1f,
+                enabled = true,
+            ).snappedToNormalAnchor,
+        )
+    }
+
+    @Test
+    fun `normal anchor snap rejects top edge disabled and unresolved geometry`() {
+        assertFalse(
+            AddressBarDockingRules.normalAnchorSnap(
+                position = Offset(1f, 1f),
+                verticalTravelPx = 400f,
+                density = 1f,
+                enabled = true,
+            ).snappedToNormalAnchor,
+        )
+        assertFalse(
+            AddressBarDockingRules.normalAnchorSnap(
+                position = Offset(1f, 0.01f),
+                verticalTravelPx = 400f,
+                density = 1f,
+                enabled = false,
+            ).snappedToNormalAnchor,
+        )
+        assertFalse(
+            AddressBarDockingRules.normalAnchorSnap(
+                position = Offset(1f, 0f),
+                verticalTravelPx = 0f,
+                density = 1f,
+                enabled = true,
+            ).snappedToNormalAnchor,
+        )
+    }
+
+    @Test
     fun `movement haptic ignores stationary position`() {
         assertFalse(AddressBarDockingRules.offsetMoved(Offset(80f, 20f), Offset(80.003f, 20f)))
         assertTrue(AddressBarDockingRules.offsetMoved(Offset(80f, 20f), Offset(80.01f, 20f)))

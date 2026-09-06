@@ -6,6 +6,8 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.GridTabPreviewChrome
+
 import android.graphics.Bitmap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateValueAsState
@@ -314,7 +316,7 @@ internal fun DraggedTabReorderOverlay(
                     )
                     GridTabPreviewChrome(
                         tab = tab,
-                        favicon = favicon,
+                        visuals = tabOverviewHeroVisuals(tab, favicon),
                         interactionsEnabled = false,
                         onClose = null,
                         modifier = Modifier.fillMaxSize(),
@@ -380,4 +382,3 @@ internal fun DraggedTabReorderOverlay(
         }
     }
 }
-

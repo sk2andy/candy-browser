@@ -1,5 +1,87 @@
 "use strict";
 
+const candyUsesBackgroundVideoVisibilityFix =
+  /(^|\.)youtube(?:-nocookie)?\.com$/.test(location.hostname);
+if (candyUsesBackgroundVideoVisibilityFix) {
+  try {
+    Object.defineProperties(document.wrappedJSObject, {
+      hidden: { value: false },
+      visibilityState: { value: "visible" },
+    });
+  } catch (_) { }
+  window.addEventListener("visibilitychange", (event) => {
+    event.stopImmediatePropagation();
+  }, true);
+}
+
+const candyPictureInPicturePlayback = {
+  candidates: new Set(),
+  expected: false,
+  generation: 0,
+};
+
+function rememberCandyPictureInPictureVideos() {
+  document.querySelectorAll("video").forEach((video) => {
+    if (!video.paused && !video.ended) candyPictureInPicturePlayback.candidates.add(video);
+  });
+}
+
+function playCandyPictureInPictureVideos(generation) {
+  if (
+    !candyPictureInPicturePlayback.expected ||
+    candyPictureInPicturePlayback.generation !== generation
+  ) return;
+  candyPictureInPicturePlayback.candidates.forEach((video) => {
+    if (!video.isConnected || video.ended) {
+      candyPictureInPicturePlayback.candidates.delete(video);
+      return;
+    }
+    Promise.resolve(video.play()).catch(() => {});
+  });
+}
+
+function scheduleCandyPictureInPicturePlayback() {
+  if (!candyPictureInPicturePlayback.expected) return;
+  const generation = candyPictureInPicturePlayback.generation;
+  [0, 100, 400, 1200, 2500].forEach((delayMillis) => {
+    setTimeout(() => playCandyPictureInPictureVideos(generation), delayMillis);
+  });
+}
+
+function updateCandyPictureInPicturePlayback(expected) {
+  candyPictureInPicturePlayback.generation += 1;
+  candyPictureInPicturePlayback.expected = expected;
+  if (!expected) {
+    candyPictureInPicturePlayback.candidates.clear();
+    return;
+  }
+  rememberCandyPictureInPictureVideos();
+  scheduleCandyPictureInPicturePlayback();
+}
+
+document.addEventListener("play", (event) => {
+  if (
+    candyPictureInPicturePlayback.expected &&
+    event.target instanceof HTMLVideoElement
+  ) {
+    candyPictureInPicturePlayback.candidates.add(event.target);
+  }
+}, true);
+document.addEventListener("pause", (event) => {
+  if (
+    candyPictureInPicturePlayback.expected &&
+    event.target instanceof HTMLVideoElement &&
+    candyPictureInPicturePlayback.candidates.has(event.target)
+  ) {
+    scheduleCandyPictureInPicturePlayback();
+  }
+}, true);
+document.addEventListener("visibilitychange", scheduleCandyPictureInPicturePlayback, true);
+window.addEventListener("visibilitychange", (event) => {
+  if (!candyPictureInPicturePlayback.expected) return;
+  scheduleCandyPictureInPicturePlayback();
+}, true);
+
 (function installCandyCosmetics() {
   for (let frame = self; frame !== top;) {
     frame = frame.parent;
@@ -99,3 +181,59 @@
   }).catch(() => { });
 
 })();
+
+function extractCandyReaderPayload() {
+  const source = document.querySelector("article") || document.querySelector("main") || document.body;
+  if (!source) return { error: "missing-root" };
+  const root = source.cloneNode(true);
+  root.querySelectorAll("script,style,noscript,template,iframe,object,embed,canvas,svg,form,input,button,nav,aside,footer,video,audio").forEach((node) => node.remove());
+  const clean = (value, maxLength) => (value || "").replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ").trim().slice(0, maxLength);
+  const blocks = [];
+  let totalChars = 0;
+  let totalLinks = 0;
+  root.querySelectorAll("h1,h2,h3,h4,h5,h6,p,blockquote,li").forEach((node) => {
+    if (blocks.length >= 600 || totalChars >= 500000) return;
+    const text = clean(
+      node.innerText || node.textContent,
+      Math.min(12000, 500000 - totalChars),
+    );
+    if (!text || text.length < 2) return;
+    const tag = node.tagName.toLowerCase();
+    const kind = tag.startsWith("h") ? "heading" : tag === "blockquote" ? "quote" :
+      tag === "li" ? "listitem" : "paragraph";
+    const links = Array.from(node.querySelectorAll("a[href]"))
+      .slice(0, Math.min(40, 500 - totalLinks)).map((anchor) => ({
+        label: clean(anchor.innerText || anchor.textContent, 300),
+        url: (anchor.href || "").slice(0, 2048),
+      }));
+    blocks.push({
+      kind,
+      level: kind === "heading" ? Number(tag.substring(1)) : 0,
+      text,
+      links,
+    });
+    totalChars += text.length;
+    totalLinks += links.length;
+  });
+  return {
+    title: clean(document.querySelector('meta[property="og:title"]')?.content, 500) ||
+      clean(document.title, 500),
+    siteName: clean(document.querySelector('meta[property="og:site_name"]')?.content, 200) ||
+      clean(location.hostname, 200),
+    sourceUrl: location.href.slice(0, 2048),
+    blocks,
+  };
+}
+
+browser.runtime.onMessage.addListener((message) => {
+  if (!message) return undefined;
+  if (message.type === "picture-in-picture-playback" && typeof message.expected === "boolean") {
+    updateCandyPictureInPicturePlayback(message.expected);
+    return undefined;
+  }
+  if (self === top && message.type === "reader-extract") {
+    return Promise.resolve(extractCandyReaderPayload());
+  }
+  return undefined;
+});

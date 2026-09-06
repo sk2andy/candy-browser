@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewGridRules
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

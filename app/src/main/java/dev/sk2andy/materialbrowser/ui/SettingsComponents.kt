@@ -66,34 +66,12 @@ internal fun SettingsPage(
     onBack: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 24.dp)
-            .verticalScroll(rememberScrollState())
-            .imePadding(),
-    ) {
-        Row(
-            modifier = Modifier.padding(top = 8.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                )
-            }
-            Text(
-                title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        content()
-    }
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPage(
+        title = title,
+        backContentDescription = stringResource(R.string.action_back),
+        onBack = onBack,
+        content = content,
+    )
 }
 
 @Composable
@@ -209,12 +187,7 @@ internal fun BrowserShapeStyle.displayName(): String = when (this) {
 
 @Composable
 internal fun SettingsSectionTitle(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-    )
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSectionTitle(text)
 }
 
 @Composable
@@ -225,48 +198,14 @@ internal fun SettingsChoice(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val chevronRotation by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 620f),
-        label = "Selection indicator",
-    )
-    Surface(
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsChoice(
+        title = title,
+        value = value,
+        expanded = expanded,
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    value,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.width(16.dp))
-            Surface(
-                modifier = Modifier.size(42.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .graphicsLayer { rotationZ = chevronRotation },
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                }
-            }
-        }
-    }
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -275,11 +214,9 @@ internal fun SettingsDropdown(
     onDismissRequest: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    DropdownMenu(
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsDropdown(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        modifier = Modifier.clip(MaterialTheme.shapes.extraLarge),
-        shape = MaterialTheme.shapes.extraLarge,
         content = content,
     )
 }
@@ -290,13 +227,10 @@ internal fun SettingsDropdownItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    DropdownMenuItem(
-        text = { Text(label) },
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsDropdownItem(
+        label = label,
+        selected = selected,
         onClick = onClick,
-        modifier = Modifier.semantics { this.selected = selected },
-        trailingIcon = {
-            if (selected) Icon(Icons.Default.Check, contentDescription = null)
-        },
     )
 }
 
@@ -307,47 +241,20 @@ internal fun SettingsLink(
     subtitle: String,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                }
-            }
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.width(16.dp))
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsLink(
+        title = title,
+        subtitle = subtitle,
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        icon = { modifier, tint ->
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                modifier = modifier,
+                tint = tint,
             )
-        }
-    }
+        },
+        onClick = onClick,
+    )
 }
 
 @Composable
@@ -359,41 +266,17 @@ internal fun SettingsSwitch(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                },
-            )
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                    alpha = if (enabled) 1f else 0.6f,
-                ),
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Switch(
-            checked = checked,
-            enabled = enabled,
-            onCheckedChange = onCheckedChange,
-        )
-    }
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSwitch(
+        title = title,
+        subtitle = subtitle,
+        checked = checked,
+        enabled = enabled,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+    )
 }
 
 @Composable
 internal fun SettingsPageSpacer() {
-    Spacer(Modifier.height(12.dp))
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPageSpacer()
 }

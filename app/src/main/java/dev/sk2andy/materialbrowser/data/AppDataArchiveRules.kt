@@ -11,7 +11,14 @@ internal data class AppDataArchiveManifest(
     val webViewVersion: String?,
     val sdkInt: Int,
     val exportedAtEpochMillis: Long,
+    val websiteState: AppDataArchiveWebsiteState = AppDataArchiveWebsiteState.CandyOwnedOnly,
 )
+
+/** Archive contract for browser-engine bytes; Candy-owned records stay portable across engines. */
+internal enum class AppDataArchiveWebsiteState {
+    CandyOwnedOnly,
+    LegacyWebsiteStateExcluded,
+}
 
 internal data class AppDataArchiveEnvironment(
     val packageName: String,
@@ -24,13 +31,14 @@ internal data class AppDataArchiveEnvironment(
 internal enum class AppDataArchiveCompatibility {
     Same,
     AppMismatch,
-    WebViewMismatch,
+    BrowserEngineMismatch,
     PlatformMismatch,
 }
 
 internal object AppDataArchiveRules {
     const val TRANSFER_STATE_DIRECTORY_NAME = "app_data_transfer"
-    const val FORMAT_VERSION = 1
+    const val FORMAT_VERSION = 2
+    const val LEGACY_FORMAT_VERSION = 1
     const val MANIFEST_ENTRY_NAME = "manifest.json"
     const val DATA_ENTRY_PREFIX = "data/"
     const val MAX_ENTRY_COUNT = 100_000
@@ -53,8 +61,36 @@ internal object AppDataArchiveRules {
         name.isNotEmpty() && name !in excludedTopLevelNames
 
     fun shouldExportRelativePath(path: String): Boolean =
+        isAllowedArchiveRelativePath(path) && !isEngineSpecificWebsiteState(path)
+
+    fun isAllowedArchiveRelativePath(path: String): Boolean =
         path != RECALL_DATABASE_RELATIVE_PATH &&
             !path.startsWith("$RECALL_DATABASE_RELATIVE_PATH-")
+
+    /**
+     * Gecko and Chromium session/profile bytes are implementation data, not Candy archive data.
+     * Keep this exact and narrow: other Candy-owned files under these roots remain portable.
+     */
+    fun isEngineSpecificWebsiteState(path: String): Boolean =
+        path == "no_backup/tab_webview_states" ||
+            path.startsWith("no_backup/tab_webview_states/") ||
+            path == "no_backup/gecko_session_states" ||
+            path.startsWith("no_backup/gecko_session_states/") ||
+            path == "files/mozilla" ||
+            path.startsWith("files/mozilla/") ||
+            path == "app_webview" ||
+            path.startsWith("app_webview/") ||
+            path.startsWith("app_webview_")
+
+    fun websiteStateFor(
+        formatVersion: Int,
+        entries: List<AppDataArchiveEntry>,
+    ): AppDataArchiveWebsiteState = when {
+        formatVersion == LEGACY_FORMAT_VERSION && entries.any { entry ->
+            isEngineSpecificWebsiteState(entry.relativePath)
+        } -> AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded
+        else -> AppDataArchiveWebsiteState.CandyOwnedOnly
+    }
 
     fun persistentRootNames(dataDirectory: File): Set<String> =
         dataDirectory.list()
@@ -101,7 +137,7 @@ internal object AppDataArchiveRules {
             return null
         }
         if (!shouldExportTopLevel(segments.first())) return null
-        if (!shouldExportRelativePath(relativePath)) return null
+        if (!isAllowedArchiveRelativePath(relativePath)) return null
         return relativePath
     }
 
@@ -112,8 +148,9 @@ internal object AppDataArchiveRules {
         current.packageName != archive.packageName ||
             current.appVersionName != archive.appVersionName ||
             current.appVersionCode != archive.appVersionCode -> AppDataArchiveCompatibility.AppMismatch
-        current.webViewVersion != archive.webViewVersion ->
-            AppDataArchiveCompatibility.WebViewMismatch
+        archive.websiteState != AppDataArchiveWebsiteState.CandyOwnedOnly &&
+            current.webViewVersion != archive.webViewVersion ->
+            AppDataArchiveCompatibility.BrowserEngineMismatch
         current.sdkInt != archive.sdkInt -> AppDataArchiveCompatibility.PlatformMismatch
         else -> AppDataArchiveCompatibility.Same
     }

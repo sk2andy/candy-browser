@@ -1,5 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.TabSwitchPreviewLayout
+import dev.sk2andy.materialbrowser.shared.ui.TabSwitchPreviewLayoutRules
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

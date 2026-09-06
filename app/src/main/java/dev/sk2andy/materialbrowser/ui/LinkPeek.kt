@@ -96,8 +96,8 @@ internal fun <T : View> LinkPeekOverlay(
     armed: Boolean,
     committing: Boolean = false,
     newTabTargetBounds: Rect? = null,
-    createPreviewWebView: ((Int) -> Unit, (String) -> Unit) -> T,
-    releasePreviewWebView: (T) -> Unit,
+    createPreviewView: ((Int) -> Unit, (String) -> Unit) -> T,
+    releasePreviewView: (T) -> Unit,
     onOpen: () -> Unit,
     onCommitRequested: () -> Unit = onOpen,
     onCopyLink: (String) -> Unit = {},
@@ -216,12 +216,19 @@ internal fun <T : View> LinkPeekOverlay(
         val fallbackTargetBottom = constraints.maxHeight -
             WindowInsets.navigationBars.getBottom(density) -
             verticalMarginPx
-        val actionTargetBounds = newTabTargetBounds ?: Rect(
+        val fallbackTargetBounds = Rect(
             left = fallbackTargetRight - fallbackTargetSizePx,
             top = fallbackTargetBottom - fallbackTargetSizePx,
             right = fallbackTargetRight,
             bottom = fallbackTargetBottom,
         )
+        val actionTargetBounds = newTabTargetBounds
+            ?.takeIf { bounds ->
+                bounds.width > 0f && bounds.height > 0f &&
+                    bounds.left >= 0f && bounds.top >= 0f &&
+                    bounds.right <= constraints.maxWidth && bounds.bottom <= constraints.maxHeight
+            }
+            ?: fallbackTargetBounds
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -338,7 +345,7 @@ internal fun <T : View> LinkPeekOverlay(
                     key(url) {
                         AndroidView(
                             factory = {
-                                createPreviewWebView(
+                                createPreviewView(
                                     { loaded -> previewProgress = loaded },
                                     { committed -> committedUrl = committed },
                                 )
@@ -347,7 +354,7 @@ internal fun <T : View> LinkPeekOverlay(
                                 .fillMaxWidth()
                                 .weight(1f)
                                 .testTag(LinkPeekTestTags.Preview),
-                            onRelease = releasePreviewWebView,
+                            onRelease = releasePreviewView,
                         )
                     }
                     if (onDownloadLink != null) {
