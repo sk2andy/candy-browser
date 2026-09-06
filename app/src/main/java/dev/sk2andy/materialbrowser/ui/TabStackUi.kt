@@ -17,9 +17,12 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,6 +36,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed as lazyItemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -73,7 +77,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -103,11 +106,13 @@ internal object TabStackTestTags {
     const val FolderList = "tab-stack-folder-list"
     const val Name = "tab-stack-name"
     const val DialogConfirm = "tab-stack-dialog-confirm"
+    const val ColorChoices = "tab-stack-color-choices"
 
     fun marker(stackId: String, tabId: String) = "tab-stack-marker-$stackId-$tabId"
     fun collapsedCard(stackId: String) = "tab-stack-collapsed-$stackId"
     fun candidate(tabId: String) = "tab-stack-candidate-$tabId"
     fun previewChoice(tabId: String) = "tab-stack-preview-$tabId"
+    fun color(color: TabStackColor) = "tab-stack-color-${color.wireValue}"
     fun folderTab(tabId: String) = "tab-stack-folder-tab-$tabId"
     fun motionCard(tabId: String) = "tab-stack-motion-card-$tabId"
 }
@@ -284,12 +289,13 @@ internal fun TabStackFolderDialog(
         onDismissRequest = { dismissAfter(onDismiss) },
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(20.dp),
             contentAlignment = Alignment.Center,
         ) {
+            val layout = TabStackFolderLayoutRules.layout(maxWidth.value)
             AnimatedVisibility(
                 visibleState = folderVisibility,
                 enter = fadeIn(
@@ -322,6 +328,7 @@ internal fun TabStackFolderDialog(
             ) {
                 Surface(
                     modifier = Modifier
+                        .widthIn(max = layout.dialogMaxWidth.dp)
                         .fillMaxWidth()
                         .heightIn(max = 640.dp)
                         .testTag(TabStackTestTags.Folder),
@@ -330,7 +337,9 @@ internal fun TabStackFolderDialog(
                     tonalElevation = 8.dp,
                     shadowElevation = 16.dp,
                 ) {
-                    Column(modifier = Modifier.padding(18.dp)) {
+                    Column(
+                        modifier = Modifier.padding(TabStackFolderLayoutRules.CONTENT_PADDING.dp),
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -371,6 +380,8 @@ internal fun TabStackFolderDialog(
                                 favicons = favicons,
                                 favorites = favorites,
                                 interactionsEnabled = !dismissPending,
+                                pageWidth = layout.coverflowPageWidth.dp,
+                                contentPadding = layout.coverflowContentPadding.dp,
                                 onSelectTab = animatedSelectTab,
                                 onPreviewTabChanged = onPreviewTabChanged,
                             )
@@ -381,6 +392,7 @@ internal fun TabStackFolderDialog(
                                 favicons = favicons,
                                 favorites = favorites,
                                 interactionsEnabled = !dismissPending,
+                                columnCount = layout.gridColumnCount,
                                 onSelectTab = animatedSelectTab,
                                 onPreviewTabChanged = onPreviewTabChanged,
                             )
@@ -410,6 +422,8 @@ private fun TabStackFolderCoverflow(
     favicons: Map<String, Bitmap>,
     favorites: List<FavoriteEntry>,
     interactionsEnabled: Boolean,
+    pageWidth: Dp,
+    contentPadding: Dp,
     onSelectTab: (String) -> Unit,
     onPreviewTabChanged: (String) -> Unit,
 ) {
@@ -427,9 +441,9 @@ private fun TabStackFolderCoverflow(
             .fillMaxWidth()
             .height(390.dp)
             .testTag(TabStackTestTags.FolderHero),
-        contentPadding = PaddingValues(horizontal = 44.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = contentPadding, vertical = 12.dp),
         pageSpacing = 12.dp,
-        pageSize = PageSize.Fixed(232.dp),
+        pageSize = PageSize.Fixed(pageWidth),
         verticalAlignment = Alignment.CenterVertically,
         userScrollEnabled = interactionsEnabled,
         key = { page -> tabs[page].id },
@@ -469,11 +483,12 @@ private fun TabStackFolderGrid(
     favicons: Map<String, Bitmap>,
     favorites: List<FavoriteEntry>,
     interactionsEnabled: Boolean,
+    columnCount: Int,
     onSelectTab: (String) -> Unit,
     onPreviewTabChanged: (String) -> Unit,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(columnCount),
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = 540.dp)
@@ -780,30 +795,38 @@ internal fun TabStackCreateDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 8.dp)
+                        .testTag(TabStackTestTags.ColorChoices)
+                        .selectableGroup(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     TabStackColor.entries.forEach { candidateColor ->
                         val colorName = stringResource(candidateColor.labelResource())
-                        Surface(
+                        Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(48.dp)
+                                .testTag(TabStackTestTags.color(candidateColor))
                                 .semantics {
-                                    selected = color == candidateColor
                                     contentDescription = colorName
                                 }
-                                .clickable(
+                                .selectable(
+                                    selected = color == candidateColor,
                                     role = Role.RadioButton,
                                     onClick = { color = candidateColor },
                                 ),
-                            shape = CircleShape,
-                            color = stackColors(candidateColor).accent,
-                            border = if (color == candidateColor) {
-                                BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface)
-                            } else {
-                                null
-                            },
-                        ) {}
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(38.dp),
+                                shape = CircleShape,
+                                color = stackColors(candidateColor).accent,
+                                border = if (color == candidateColor) {
+                                    BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface)
+                                } else {
+                                    null
+                                },
+                            ) {}
+                        }
                     }
                 }
                 Text(
