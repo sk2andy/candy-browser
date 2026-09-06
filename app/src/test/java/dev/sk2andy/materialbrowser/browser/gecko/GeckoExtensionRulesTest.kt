@@ -1,11 +1,23 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GeckoExtensionRulesTest {
+    @Test
+    fun `internal Candy hosts are hidden from user extension manager`() {
+        listOf(
+            CandyPrivacyHostContract.EXTENSION_ID,
+            CandyToppingHostContract.EXTENSION_ID,
+        ).forEach { extensionId ->
+            assertFalse(GeckoExtensionRules.isVisibleToUserManager(extensionId))
+        }
+        assertTrue(GeckoExtensionRules.isVisibleToUserManager("addon@example.com"))
+    }
+
     @Test
     fun `signed XPI URI accepts normalized HTTPS without credentials`() {
         assertEquals(

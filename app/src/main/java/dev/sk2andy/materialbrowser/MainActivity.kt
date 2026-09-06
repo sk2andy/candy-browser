@@ -44,10 +44,10 @@ import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.WebMediaSystemSession
-import dev.sk2andy.materialbrowser.browser.WebViewProcessStartup
-import dev.sk2andy.materialbrowser.browser.WebViewStartupRules
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinator
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
@@ -70,6 +70,7 @@ import dev.sk2andy.materialbrowser.ui.AppDataImportConfirmationDialog
 import dev.sk2andy.materialbrowser.ui.AppDataImportPreview
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
+import dev.sk2andy.materialbrowser.ui.FirefoxExtensionManagerOverlay
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
@@ -103,6 +104,8 @@ class MainActivity : AppCompatActivity() {
     private var externalLaunchTabId by mutableStateOf<String?>(null)
     private var appDataExportWarningVisible by mutableStateOf(false)
     private var pendingAppDataImport by mutableStateOf<AppDataImportPreview?>(null)
+    private var firefoxExtensionsVisible by mutableStateOf(false)
+    private var firefoxExtensionManager: GeckoExtensionManagerCoordinator? = null
     private var appDataImportLoading = false
     private var appDataTransferActive = false
     private var activityDestroyed = false
@@ -191,14 +194,6 @@ class MainActivity : AppCompatActivity() {
         val isColdStart = savedInstanceState == null
         val hasIncomingBrowserRequest = IncomingBrowserIntent.from(intent) != null
         val isColdExternalLinkLaunch = isColdStart && hasIncomingBrowserRequest
-        val shouldStartWebViewAsynchronously = WebViewStartupRules.shouldStartAsynchronously(
-            isColdStart = isColdStart,
-            hasIncomingBrowserRequest = hasIncomingBrowserRequest,
-            isWebViewProcessUnused = WebViewProcessStartup.isUnused,
-        )
-        if (shouldStartWebViewAsynchronously) WebViewProcessStartup.start(applicationContext)
-        val deferWebViewRuntimeStartup = WebViewProcessStartup.shouldDeferWebViewRuntime
-        if (!deferWebViewRuntimeStartup) WebViewProcessStartup.markReady()
         val onboardingStore = GestureOnboardingStore(this)
         val onboardingRequired = onboardingStore.shouldShow()
         onboardingVisible = onboardingRequired
@@ -243,7 +238,9 @@ class MainActivity : AppCompatActivity() {
             },
             onWebPictureInPictureRequested = ::onPictureInPictureRequested,
             onWebPictureInPictureRequestTimedOut = ::cancelPictureInPictureTransition,
-            deferWebViewRuntimeStartup = deferWebViewRuntimeStartup,
+            // Android production browsing is Gecko-only. Keep the legacy WebView runtime cold
+            // while the remaining migration-only classes are removed in focused slices.
+            deferWebViewRuntimeStartup = true,
         )
         pictureInPictureController = MainActivityPictureInPictureController(
             activity = this,
@@ -264,12 +261,6 @@ class MainActivity : AppCompatActivity() {
             onNavigationRequested = { incomingBrowserNavigationRequestId++ },
             onAddressEditorRequested = { launcherAddressEditorRequestId++ },
         )
-        if (deferWebViewRuntimeStartup) {
-            WebViewProcessStartup.whenReady(
-                onReady = browserController::onWebViewProcessReady,
-                onFailure = ::onWebViewProcessStartupFailed,
-            )
-        }
         if (!isColdExternalLinkLaunch) ensureMediaControllers()
         applyBrowserSystemUi()
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
@@ -435,12 +426,31 @@ class MainActivity : AppCompatActivity() {
                                 arrayOf("application/zip", "application/octet-stream"),
                             )
                         },
-                        onOpenFirefoxExtensions = {
-                            startActivity(GeckoBrowserActivity.createIntent(this@MainActivity))
+                        onOpenFirefoxExtensions = if (browserController.usesGeckoEngine) {
+                            ::openFirefoxExtensions
+                        } else {
+                            null
                         },
                         openAddressEditorOnLaunch = startupPresentation.openAddressEditor,
                         launcherAddressEditorRequestId = launcherAddressEditorRequestId,
                     )
+                    if (firefoxExtensionsVisible) {
+                        firefoxExtensionManager?.let { manager ->
+                            FirefoxExtensionManagerOverlay(
+                                state = manager.state,
+                                onInstall = manager::install,
+                                onSetEnabled = manager::setEnabled,
+                                onSetPrivate = manager::setAllowedInPrivateBrowsing,
+                                onUpdate = manager::update,
+                                onUninstall = manager::uninstall,
+                                onPermissionDecision = manager::completePermissionRequest,
+                                onDismiss = {
+                                    manager.dismiss()
+                                    firefoxExtensionsVisible = false
+                                },
+                            )
+                        }
+                    }
                     if (videoOnlyPresentation && !webViewVideoOnlyPresentation) {
                         Box(modifier = Modifier.fillMaxSize().background(Color.Black))
                     }
@@ -655,6 +665,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         activityDestroyed = true
+        firefoxExtensionManager?.close()
+        firefoxExtensionManager = null
         if (appDataTransferActive) {
             super.onDestroy()
             return
@@ -664,6 +676,23 @@ class MainActivity : AppCompatActivity() {
         if (::browserController.isInitialized) browserController.destroy()
         if (::webMediaSystemSession.isInitialized) webMediaSystemSession.release()
         super.onDestroy()
+    }
+
+    private fun openFirefoxExtensions() {
+        if (!::browserController.isInitialized) return
+        val selectedTab = browserController.selectedTab
+        val manager = firefoxExtensionManager ?: GeckoExtensionManagerCoordinator.create(
+            context = applicationContext,
+            scope = lifecycleScope,
+            onPageRuntimeChanged = browserController::reloadSelectedPageAfterExtensionChange,
+        ).also { created -> firefoxExtensionManager = created }
+        manager.open(
+            GeckoExtensionManagementContext(
+                profileId = selectedTab.profileId,
+                isPrivate = selectedTab.isIncognito,
+            ),
+        )
+        firefoxExtensionsVisible = true
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -984,12 +1013,6 @@ class MainActivity : AppCompatActivity() {
                 onSeekTo = browserController::seekActiveWebMedia,
             )
         }
-    }
-
-    private fun onWebViewProcessStartupFailed() {
-        if (activityDestroyed) return
-        Toast.makeText(this, R.string.toast_webview_startup_failed, Toast.LENGTH_LONG).show()
-        finish()
     }
 
     private fun applyBrowserSystemUi() {

@@ -200,6 +200,7 @@ internal fun BrowserBottomBar(
     onOpenCandyTrail: () -> Unit,
     onSnooze: () -> Unit,
     onAddSiteCapsule: () -> Unit,
+    supportsPageContentActions: Boolean = true,
     overviewGestureEnabled: Boolean,
     overviewGestureProgress: FloatState,
     showingTabOverview: Boolean,
@@ -226,7 +227,8 @@ internal fun BrowserBottomBar(
     val pulseScale = remember { Animatable(1f) }
     val newTabPulseScale = remember { Animatable(1f) }
     val domain = AddressResolver.displayText(tab.url)
-    val readerSupported = ReaderStudioSessionRules.isSupportedSource(tab.url)
+    val readerSupported = supportsPageContentActions &&
+        ReaderStudioSessionRules.isSupportedSource(tab.url)
     val readerOpenLabel = stringResource(R.string.reader_open_action)
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
@@ -564,6 +566,7 @@ internal fun BrowserBottomBar(
                                 onOpenCandyTrail = onOpenCandyTrail,
                                 onSnooze = onSnooze,
                                 onAddSiteCapsule = onAddSiteCapsule,
+                                supportsPageContentActions = supportsPageContentActions,
                                 canDock = dockingEnabled,
                                 onDock = onDock,
                                 onParkRight = onParkRight,

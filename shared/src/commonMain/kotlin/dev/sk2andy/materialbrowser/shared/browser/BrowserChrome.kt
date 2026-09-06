@@ -1,7 +1,7 @@
 package dev.sk2andy.materialbrowser.shared.browser
 
 data class BrowserChromeState(
-    val address: String = "https://www.mozilla.org",
+    val address: String = "",
     val pageTitle: String = "Candy",
     val canGoBack: Boolean = false,
     val canGoForward: Boolean = false,

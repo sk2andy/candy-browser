@@ -364,7 +364,7 @@ internal fun BrowserViewport(
             .background(MaterialTheme.colorScheme.surface),
     ) {
         if (selectedTab.url != BLANK_URL) {
-            ActiveWebView(
+            ActiveBrowserEngineView(
                 controller = controller,
                 visible = webViewVideoOnlyPresentation ||
                     !tabOverviewVisible ||
@@ -451,7 +451,7 @@ internal fun BrowserViewport(
 }
 
 @Composable
-private fun ActiveWebView(
+private fun ActiveBrowserEngineView(
     controller: BrowserController,
     visible: Boolean,
     showStatusBarFrostedGlass: Boolean,
@@ -475,7 +475,7 @@ private fun ActiveWebView(
     AndroidView(
         factory = { context ->
             StatusBarFrostedGlassHost(context).apply {
-                tag = WebViewHostState(blurTarget)
+                tag = BrowserEngineViewHostState(blurTarget)
             }
         },
         update = { hostView ->
@@ -486,25 +486,24 @@ private fun ActiveWebView(
                 tint = statusBarTint,
                 visible = showStatusBarFrostedGlass,
             )
-            val hostState = hostView.tag as WebViewHostState
-            controller.attachSelectedWebView(hostState.container)
-            val attachedWebView = hostState.container.getChildAt(0) as? WebView
-            if (attachedWebView != null) {
+            val hostState = hostView.tag as BrowserEngineViewHostState
+            val attachedView = controller.attachSelectedBrowserEngineView(hostState.container)
+            if (attachedView != null) {
                 hostState.bind(
                     tabId = selectedTabId,
                     revision = webViewRevision,
-                    webView = attachedWebView,
+                    view = attachedView,
                 ) {
                     currentOnLiveFrame(it)
                 }
             }
-            currentOnWebViewChanged(attachedWebView as? BrowserWebView)
+            currentOnWebViewChanged(attachedView as? BrowserWebView)
         },
         onRelease = { hostView ->
-            val hostState = hostView.tag as? WebViewHostState
+            val hostState = hostView.tag as? BrowserEngineViewHostState
             hostState?.release()
             hostView.tag = null
-            hostState?.let { controller.detachWebView(it.container) }
+            hostState?.let { controller.detachBrowserEngineView(it.container) }
             hostView.release()
             currentOnBlurTargetReleased(hostView.blurTarget)
             currentOnWebViewChanged(null)
@@ -513,10 +512,10 @@ private fun ActiveWebView(
     )
 }
 
-private class WebViewHostState(val container: FrameLayout) {
+private class BrowserEngineViewHostState(val container: FrameLayout) {
     private var boundTabId: String? = null
     private var boundRevision = -1
-    private var boundWebView: WebView? = null
+    private var boundView: View? = null
     private var generation = 0
     private var drawObserver: android.view.ViewTreeObserver? = null
     private var drawListener: android.view.ViewTreeObserver.OnDrawListener? = null
@@ -526,18 +525,18 @@ private class WebViewHostState(val container: FrameLayout) {
     fun bind(
         tabId: String,
         revision: Int,
-        webView: WebView,
+        view: View,
         reportLiveFrame: (String) -> Unit,
     ) {
         if (
             boundTabId == tabId &&
             boundRevision == revision &&
-            boundWebView === webView
+            boundView === view
         ) return
         clearCallbacks()
         boundTabId = tabId
         boundRevision = revision
-        boundWebView = webView
+        boundView = view
         val currentGeneration = ++generation
         var frameReported = false
 
@@ -545,30 +544,30 @@ private class WebViewHostState(val container: FrameLayout) {
             generation == currentGeneration &&
                 boundTabId == tabId &&
                 boundRevision == revision &&
-                boundWebView === webView &&
-                webView.parent === container
+                boundView === view &&
+                view.parent === container
 
         lateinit var report: () -> Unit
         fun awaitNextDraw() {
             if (!isCurrent() || frameReported || drawListener != null) return
-            val observer = webView.viewTreeObserver
+            val observer = view.viewTreeObserver
             var drawObserved = false
             val listener = object : android.view.ViewTreeObserver.OnDrawListener {
                 override fun onDraw() {
                     if (drawObserved) return
                     drawObserved = true
-                    webView.post {
+                    view.post {
                         if (observer.isAlive) observer.removeOnDrawListener(this)
                         if (drawListener === this) drawListener = null
                     }
                     drawCompletion = Runnable(report)
-                    webView.postOnAnimation(drawCompletion)
+                    view.postOnAnimation(drawCompletion)
                 }
             }
             drawObserver = observer
             drawListener = listener
             observer.addOnDrawListener(listener)
-            webView.invalidate()
+            view.invalidate()
         }
 
         report = report@{
@@ -578,12 +577,16 @@ private class WebViewHostState(val container: FrameLayout) {
             reportLiveFrame(tabId)
         }
 
-        webView.postVisualStateCallback(
-            System.nanoTime(),
-            object : WebView.VisualStateCallback() {
-                override fun onComplete(requestId: Long) = awaitNextDraw()
-            },
-        )
+        if (view is WebView) {
+            view.postVisualStateCallback(
+                System.nanoTime(),
+                object : WebView.VisualStateCallback() {
+                    override fun onComplete(requestId: Long) = awaitNextDraw()
+                },
+            )
+        } else {
+            view.post(::awaitNextDraw)
+        }
         drawFallback = Runnable(::awaitNextDraw).also { container.postDelayed(it, 500L) }
     }
 
@@ -592,7 +595,7 @@ private class WebViewHostState(val container: FrameLayout) {
         clearCallbacks()
         boundTabId = null
         boundRevision = -1
-        boundWebView = null
+        boundView = null
     }
 
     private fun clearCallbacks() {
@@ -601,7 +604,7 @@ private class WebViewHostState(val container: FrameLayout) {
         }
         drawListener = null
         drawObserver = null
-        drawCompletion?.let { boundWebView?.removeCallbacks(it) }
+        drawCompletion?.let { boundView?.removeCallbacks(it) }
         drawCompletion = null
         drawFallback?.let(container::removeCallbacks)
         drawFallback = null

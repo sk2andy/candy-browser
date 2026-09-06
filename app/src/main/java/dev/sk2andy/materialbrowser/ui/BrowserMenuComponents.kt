@@ -1,12 +1,9 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,24 +15,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMenuRow as SharedBrowserMenuRow
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMenuToggleItem as SharedBrowserMenuToggleItem
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMenuToolbarAction as SharedBrowserMenuToolbarAction
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 
 @Composable
@@ -98,71 +92,23 @@ internal fun MenuToolbarAction(
 ) {
     val colors = MaterialTheme.colorScheme
     val containerColor = if (selected) colors.primaryContainer else colors.surfaceContainerHighest
-    val accessibilityModifier = if (accessibilityLabel != null) {
-        Modifier.semantics(mergeDescendants = true) {
-            this.selected = selected
-            contentDescription = accessibilityLabel
-        }
-    } else {
-        Modifier
-    }
-    val contentColor = when {
-        !enabled -> colors.onSurface.copy(alpha = 0.38f)
-        selected -> colors.onPrimaryContainer
-        else -> colors.onSurface
-    }
-    Surface(
+    SharedBrowserMenuToolbarAction(
+        label = label,
+        icon = {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+            )
+        },
         onClick = onClick,
-        modifier = modifier
-            .heightIn(min = 64.dp)
-            .then(accessibilityModifier),
+        modifier = modifier,
         enabled = enabled,
-        shape = MaterialTheme.shapes.large,
-        color = browserChromeColor(containerColor),
-        contentColor = contentColor,
-    ) {
-        if (horizontalContent) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = label,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
-        } else {
-            Column(
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = label,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 11.sp,
-                )
-            }
-        }
-    }
+        selected = selected,
+        accessibilityLabel = accessibilityLabel,
+        horizontalContent = horizontalContent,
+        containerColor = browserChromeColor(containerColor),
+    )
 }
 
 @Composable
@@ -178,49 +124,24 @@ internal fun MenuRow(
     supportingText: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 44.dp),
-        enabled = enabled,
-        shape = shape,
-        color = browserChromeColor(containerColor, frostedAlpha = 0.68f),
-        contentColor = if (enabled) contentColor else contentColor.copy(alpha = 0.38f),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    SharedBrowserMenuRow(
+        label = label,
+        icon = {
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
             )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                if (supportingText != null) {
-                    Text(
-                        text = supportingText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = contentColor.copy(alpha = 0.72f),
-                    )
-                }
-            }
-            if (trailingContent != null) {
-                Spacer(Modifier.width(12.dp))
-                trailingContent()
-            }
-        }
-    }
+        },
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        shape = shape,
+        containerColor = browserChromeColor(containerColor, frostedAlpha = 0.68f),
+        contentColor = if (enabled) contentColor else contentColor.copy(alpha = 0.38f),
+        supportingText = supportingText,
+        trailingContent = trailingContent,
+    )
 }
 
 @Composable
@@ -234,47 +155,16 @@ internal fun BrowserMenuToggleItem(
     shape: Shape = MaterialTheme.shapes.medium,
 ) {
     val colors = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 52.dp)
-            .semantics(mergeDescendants = true) {}
-            .toggleable(
-                value = checked,
-                enabled = enabled,
-                role = Role.Switch,
-                onValueChange = onCheckedChange,
-            ),
+    SharedBrowserMenuToggleItem(
+        label = label,
+        supportingText = supportingText,
+        checked = checked,
+        enabled = enabled,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
         shape = shape,
-        color = browserChromeColor(colors.surfaceContainer),
-        contentColor = if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f),
-    ) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = supportingText,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f),
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Switch(
-                checked = checked,
-                onCheckedChange = null,
-                modifier = Modifier.clearAndSetSemantics {},
-                enabled = enabled,
-            )
-        }
-    }
+        containerColor = browserChromeColor(colors.surfaceContainer),
+    )
 }
 
 @Composable

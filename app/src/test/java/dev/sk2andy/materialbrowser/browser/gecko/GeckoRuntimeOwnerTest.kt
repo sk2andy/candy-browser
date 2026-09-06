@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -35,11 +36,28 @@ class GeckoRuntimeOwnerTest {
 
     private class FakeRuntimeHandle : GeckoRuntimeHandle {
         override val extensions = FakeExtensionRuntime()
+        override val toppings = FakeToppingHostRuntime()
 
         override fun createSession(
             profileId: String,
             isPrivate: Boolean,
+            privacyPolicy: GeckoPrivacyPolicy,
+            privacyEventSink: GeckoPrivacyEventSink,
         ): GeckoBrowserSession = error("Not used")
+    }
+
+    private class FakeToppingHostRuntime : GeckoToppingHostRuntime {
+        override val state = GeckoToppingHostState.Ready
+
+        override fun reconcile(
+            scripts: List<UserScript>,
+        ) = Unit
+
+        override fun runAfterInitialization(action: () -> Unit) = action()
+
+        override fun setStateListener(listener: (GeckoToppingHostState) -> Unit) {
+            listener(state)
+        }
     }
 
     private class FakeExtensionRuntime : GeckoExtensionRuntime {

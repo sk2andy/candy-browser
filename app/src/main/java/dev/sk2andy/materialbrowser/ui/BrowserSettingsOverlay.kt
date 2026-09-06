@@ -59,7 +59,7 @@ internal fun BrowserSettingsOverlay(
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
-    onOpenFirefoxExtensions: () -> Unit = {},
+    onOpenFirefoxExtensions: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val toppingCatalogResult = controller.toppingCatalogResult

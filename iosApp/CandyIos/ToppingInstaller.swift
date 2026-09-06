@@ -2,7 +2,18 @@ import CandyShared
 import WebKit
 
 enum ToppingInstaller {
+    @MainActor
     static func install(
+        _ plans: [ToppingInjectionPlan],
+        into controller: WKUserContentController
+    ) {
+        plans.forEach { plan in
+            install(plan, into: controller)
+        }
+    }
+
+    @MainActor
+    private static func install(
         _ plan: ToppingInjectionPlan,
         into controller: WKUserContentController
     ) {

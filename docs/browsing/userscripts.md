@@ -1,7 +1,8 @@
 # Toppings (local userscripts)
 
-Toppings are the cross-platform lightweight customization model. Android's primary WebView runtime
-uses the implementation below; the iOS vertical slice consumes the shared metadata/injection plan
+Toppings are the cross-platform lightweight customization model. Android's Gecko runtime uses a
+private bundled MV3 host extension; the WebView migration fallback uses the implementation below.
+The iOS vertical slice consumes the shared metadata/injection plan
 and installs it as a main-frame `WKUserScript` in a named `WKContentWorld`. Android Gecko separately
 supports Mozilla-signed Firefox WebExtensions. See [`platform-engines.md`](platform-engines.md) for
 the engine boundary; WebExtensions and Toppings intentionally remain different capability models.
@@ -12,7 +13,7 @@ the engine boundary; WebExtensions and Toppings intentionally remain different c
 | --- | --- | --- |
 | Model and policy | Parse bounded metadata, match HTTP(S) URLs, derive origin rules and build guarded injection sources | `browser/userscript/` |
 | Persistence | Atomically store validated local source, bounded per-script GM values and the last valid catalog outside browser-session state | `data/UserScriptStore.kt`, `data/UserScriptValueStore.kt`, `data/ToppingCatalogStore.kt` |
-| Runtime | Register isolated scripts and their world-scoped native bridge on normal tab WebViews | `browser/userscript/UserScriptRuntime.kt`, `browser/BrowserController.kt` |
+| Runtime | Register isolated scripts in regular Gecko sessions through the bundled Candy host; keep the world-scoped native bridge on fallback WebViews | `browser/gecko/GeckoToppingHostRuntime.kt`, `browser/userscript/UserScriptRuntime.kt`, `browser/BrowserController.kt` |
 | UI and import | Manage local Toppings and explicitly install catalog entries | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
 
 ## Discovery catalog
@@ -73,12 +74,29 @@ the engine boundary; WebExtensions and Toppings intentionally remain different c
 
 ## Lifecycle and boundaries
 
+- GeckoView 140 installs or updates the fixed `candy-topping-host@sk2andy.dev` built-in extension,
+  grants its optional `userScripts` permission and reconciles enabled persisted Toppings through a
+  revisioned native-messaging port. The first regular navigation waits for a successful registration
+  acknowledgement or a bounded initialization failure, preserving `document-start` on cold start.
+- Gecko registrations use a dedicated `USER_SCRIPT` world, `allFrames=false`, Candy's exact
+  `@match`/`@include`/`@exclude` scopes and `document-start`/`document-end` timing. GeckoView 140 has
+  no CSS member on `RegisteredUserScript`; CSS in this slice is supported through the local
+  `GM_addStyle`/`GM.addStyle` bootstrap. `GM_info`/`GM.info` is also local.
+- Gecko currently skips a complete Topping when it declares `@require`, `@resource`, persistent
+  values, menu commands or `GM_openInTab`. It does not expose a partial privileged API. GeckoView
+  140 can keep a built-in extension marked private-capable even after requesting the opposite.
+  Therefore every registered script performs a fail-closed `private-check` over the dedicated
+  user-script messaging channel before user source runs. The host handles only that bounded message,
+  never appears in the Firefox extension manager and cannot be mutated through that manager.
 - AndroidX WebKit frame/world event-injection support is required. Guard handlers are installed
   before all source handlers and before navigation, then removed on script mutation, renderer loss,
   WebView recreation and controller destruction.
 - Native allowed-origin rules provide the first origin boundary; the isolated-world guard then
   checks the complete URL, exclusions and top-frame identity before executing source.
-- Script changes apply to future documents. Reload an already open page to apply an edit or toggle.
+- Android Gecko catalog changes are guaranteed after the next app/runtime start. GeckoView 140 does
+  not reliably expose a changed dynamic registration to an already-created session, even after the
+  extension API acknowledges it; rebuilding live sessions without losing history remains a parity
+  gap. On the Android WebView compatibility path, reloading applies the changed script immediately.
 - Userscripts are global user configuration across regular profiles and survive clearing browsing
   data. GM values are removed when their script is deleted. Scripts and their GM values are never
   copied into private runtime or private persistence.

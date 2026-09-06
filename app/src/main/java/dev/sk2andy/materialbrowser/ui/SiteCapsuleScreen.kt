@@ -197,11 +197,11 @@ private fun CapsuleWebViewHost(
                 tint = statusBarTint,
                 visible = showStatusBarFrostedGlass,
             )
-            controller.attachSelectedWebView(host.blurTarget)
-            currentOnWebViewChanged(host.blurTarget.getChildAt(0) as? BrowserWebView)
+            val attachedView = controller.attachSelectedBrowserEngineView(host.blurTarget)
+            currentOnWebViewChanged(attachedView as? BrowserWebView)
         },
         onRelease = { host ->
-            controller.detachWebView(host.blurTarget)
+            controller.detachBrowserEngineView(host.blurTarget)
             host.release()
             currentOnWebViewChanged(null)
         },

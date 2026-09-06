@@ -6,11 +6,18 @@ import androidx.annotation.VisibleForTesting
 /** Process-owned browser engine handle without exposing the underlying GeckoRuntime. */
 internal interface GeckoRuntimeHandle {
     val extensions: GeckoExtensionRuntime
+    val toppings: GeckoToppingHostRuntime
 
     fun createSession(
         profileId: String,
         isPrivate: Boolean,
+        privacyPolicy: GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled,
+        privacyEventSink: GeckoPrivacyEventSink = GeckoPrivacyEventSink { },
     ): GeckoBrowserSession
+
+    fun clearAllData(onComplete: (Boolean) -> Unit = {}) {
+        onComplete(true)
+    }
 }
 
 /** Creates GeckoRuntime through an application-context-owned integration edge. */

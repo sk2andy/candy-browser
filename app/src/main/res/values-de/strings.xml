@@ -860,6 +860,7 @@
     <string name="gecko_extension_invalid_xpi">Verwende eine direkte HTTPS-Adresse zu einem von Mozilla signierten XPI-Paket.</string>
     <string name="gecko_extension_action_rejected">Candy hat diese Erweiterungsaktion abgelehnt.</string>
     <string name="gecko_extension_action_failed">Die Firefox-Erweiterungsaktion ist fehlgeschlagen.</string>
+    <string name="gecko_extension_private_management_disabled">Erweiterungen können nicht geändert werden, solange ein privater Tab ausgewählt ist.</string>
     <string name="gecko_extensions_manager_summary">Mozilla-signierte XPI-Pakete für den Gecko-Browser</string>
     <string name="gecko_extensions_empty">Noch keine Firefox-Erweiterung installiert.</string>
     <string name="gecko_extension_install">Erweiterung installieren</string>

@@ -6,7 +6,7 @@ struct CandyIosApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(browser: browser)
+            CandyComposeHost(browser: browser)
         }
     }
 }

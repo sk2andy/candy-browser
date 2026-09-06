@@ -49,12 +49,85 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarAction
+import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuAction
+import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
+import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuState
+import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 
 internal object BrowserMainMenuMotion {
     const val EXIT_DURATION_MILLIS = 160
     const val EXIT_SCALE = 0.9f
 }
+
+private fun BrowserMainMenuPresentation.toSharedMenuState(
+    canCloseTab: Boolean,
+    canDockAddressBar: Boolean,
+    overflowAddressBarActions: List<AddressBarAction>,
+    toppingCommands: List<UserScriptMenuCommand>,
+) = BrowserFeatureMenuState(
+    canGoBack = canGoBack,
+    canGoForward = canGoForward,
+    isLoading = isLoading,
+    hasPage = canUsePageActions,
+    canCloseTab = canCloseTab,
+    canToggleFavorite = canToggleFavorite,
+    isFavorite = isFavorite,
+    isPinned = isPinned,
+    canOpenReader = canOpenReader,
+    canTranslatePage = canTranslatePage,
+    canUseDocumentActions = canUseDocumentActions,
+    canToggleCookieBannerRemoval = canToggleCookieBannerRemoval,
+    isCookieBannerRemovalEnabled = isCookieBannerRemovalEnabled,
+    canToggleForceVerticalScrolling = canToggleForceVerticalScrolling,
+    isForceVerticalScrollingEnabled = isForceVerticalScrollingEnabled,
+    canToggleForcePageZooming = canToggleForcePageZooming,
+    isForcePageZoomingEnabled = isForcePageZoomingEnabled,
+    canToggleForceSafeArea = canToggleForceSafeArea,
+    isForceSafeAreaEnabled = isForceSafeAreaEnabled,
+    canToggleAlwaysBlockPopups = canToggleAlwaysBlockPopups,
+    isAlwaysBlockPopupsEnabled = isAlwaysBlockPopupsEnabled,
+    canToggleDesktopView = canToggleDesktopView,
+    isDesktopView = isDesktopView,
+    canToggleDomainMute = canToggleDomainMute,
+    isDomainMuted = isDomainMuted,
+    canAddSiteCapsule = canAddSiteCapsule,
+    canSnooze = canSnooze,
+    canDockAddressBar = canDockAddressBar,
+    overflowPageActions = overflowAddressBarActions.mapNotNull(AddressBarAction::sharedMenuAction),
+    toppingCommands = toppingCommands.map { command ->
+        BrowserToppingMenuCommand(
+            scriptId = command.scriptId,
+            commandId = command.commandId,
+            caption = command.caption,
+            scriptName = command.scriptName,
+        )
+    },
+)
+
+private fun AddressBarAction.sharedMenuAction(): BrowserFeatureMenuAction? = when (this) {
+    AddressBarAction.Tabs -> BrowserFeatureMenuAction.ShowTabs
+    AddressBarAction.NewTab -> BrowserFeatureMenuAction.NewTab
+    AddressBarAction.CloseTab -> BrowserFeatureMenuAction.CloseTab
+    AddressBarAction.ParkRight -> BrowserFeatureMenuAction.ParkAddressBarRight
+    else -> null
+}
+
+private fun BrowserFeatureMenuAction.addressBarAction(): AddressBarAction? = when (this) {
+    BrowserFeatureMenuAction.ShowTabs -> AddressBarAction.Tabs
+    BrowserFeatureMenuAction.NewTab -> AddressBarAction.NewTab
+    BrowserFeatureMenuAction.CloseTab -> AddressBarAction.CloseTab
+    BrowserFeatureMenuAction.ParkAddressBarRight -> AddressBarAction.ParkRight
+    else -> null
+}
+
+private val OVERFLOW_MENU_ACTIONS = setOf(
+    BrowserFeatureMenuAction.ShowTabs,
+    BrowserFeatureMenuAction.NewTab,
+    BrowserFeatureMenuAction.CloseTab,
+    BrowserFeatureMenuAction.ParkAddressBarRight,
+)
 
 internal data class BrowserMainMenuPresentation(
     val pageSubtitle: String,
@@ -65,6 +138,7 @@ internal data class BrowserMainMenuPresentation(
     val isFavorite: Boolean,
     val isPinned: Boolean,
     val canUsePageActions: Boolean,
+    val canUseDocumentActions: Boolean,
     val canOpenReader: Boolean,
     val canTranslatePage: Boolean,
     val canToggleDomainMute: Boolean,
@@ -98,6 +172,7 @@ internal fun BrowserMainMenu(
     isFavorite: Boolean,
     isPinned: Boolean,
     canUsePageActions: Boolean,
+    canUseDocumentActions: Boolean = canUsePageActions,
     canOpenReader: Boolean,
     canTranslatePage: Boolean,
     canToggleDomainMute: Boolean,
@@ -186,6 +261,7 @@ internal fun BrowserMainMenu(
         isFavorite = isFavorite,
         isPinned = isPinned,
         canUsePageActions = canUsePageActions,
+        canUseDocumentActions = canUseDocumentActions,
         canOpenReader = canOpenReader,
         canTranslatePage = canTranslatePage,
         canToggleDomainMute = canToggleDomainMute,
@@ -209,6 +285,14 @@ internal fun BrowserMainMenu(
     if (expanded && requestedPresentation != presentation) {
         presentation = requestedPresentation
     }
+    val sharedMenuItems = BrowserFeatureMenuRules.items(
+        state = presentation.toSharedMenuState(
+            canCloseTab = canCloseTab,
+            canDockAddressBar = canDockAddressBar,
+            overflowAddressBarActions = overflowAddressBarActions,
+            toppingCommands = userScriptMenuCommands,
+        ),
+    )
     var popupVisible by remember { mutableStateOf(expanded) }
     var actionCommitted by remember { mutableStateOf(false) }
     val exitProgress = remember { Animatable(if (expanded) 1f else 0f) }
@@ -378,7 +462,12 @@ internal fun BrowserMainMenu(
                 modifier = Modifier.testTag(BrowserMainMenuTestTags.PageGroup),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                overflowAddressBarActions.forEachIndexed { index, action ->
+                val overflowMenuItems = sharedMenuItems.filter { item ->
+                    item.section == BrowserFeatureMenuSection.Page &&
+                        item.action in OVERFLOW_MENU_ACTIONS
+                }
+                overflowMenuItems.forEachIndexed { index, item ->
+                    val action = item.action.addressBarAction() ?: return@forEachIndexed
                     val iconRes = when (action) {
                         AddressBarAction.Tabs -> R.drawable.ic_switch_to_tab
                         AddressBarAction.NewTab -> R.drawable.ic_symbol_add
@@ -387,22 +476,16 @@ internal fun BrowserMainMenu(
                             R.drawable.ic_symbol_chevron_physical_right
                         else -> return@forEachIndexed
                     }
-                    val enabled = when (action) {
-                        AddressBarAction.CloseTab -> canCloseTab
-                        AddressBarAction.ParkRight -> canDockAddressBar
-                        else -> true
-                    }
                     val callback = when (action) {
                         AddressBarAction.Tabs -> onTabs
                         AddressBarAction.NewTab -> onNewTab
                         AddressBarAction.CloseTab -> onCloseTab
                         AddressBarAction.ParkRight -> onParkAddressBarRight
-                        else -> return@forEachIndexed
                     }
                     MenuRow(
                         label = stringResource(action.labelRes()),
                         iconRes = iconRes,
-                        enabled = enabled,
+                        enabled = item.enabled,
                         shape = if (index == 0) firstItemShape else innerCorners,
                         onClick = { dismissThen(callback) },
                     )
@@ -411,7 +494,7 @@ internal fun BrowserMainMenu(
                     label = stringResource(R.string.reader_open_action),
                     iconRes = R.drawable.ic_reader_align_start,
                     enabled = presentation.canOpenReader,
-                    shape = if (overflowAddressBarActions.isEmpty()) {
+                    shape = if (overflowMenuItems.isEmpty()) {
                         firstItemShape
                     } else {
                         innerCorners
@@ -429,7 +512,7 @@ internal fun BrowserMainMenu(
                 MenuRow(
                     label = stringResource(R.string.action_find_in_page),
                     iconRes = R.drawable.ic_symbol_find_in_page,
-                    enabled = presentation.canUsePageActions,
+                    enabled = presentation.canUseDocumentActions,
                     shape = innerCorners,
                     modifier = Modifier.testTag(BrowserMainMenuTestTags.FindInPage),
                     onClick = { dismissThen(onFindInPage) },
@@ -451,7 +534,7 @@ internal fun BrowserMainMenu(
                 MenuRow(
                     label = stringResource(R.string.action_print),
                     iconRes = R.drawable.ic_symbol_print,
-                    enabled = presentation.canUsePageActions,
+                    enabled = presentation.canUseDocumentActions,
                     shape = innerCorners,
                     onClick = { dismissThen(onPrint) },
                 )
@@ -551,7 +634,10 @@ internal fun BrowserMainMenu(
                 )
             }
 
-            if (userScriptMenuCommands.isNotEmpty()) {
+            val toppingMenuItems = sharedMenuItems.filter { item ->
+                item.section == BrowserFeatureMenuSection.Toppings
+            }
+            if (toppingMenuItems.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = stringResource(R.string.browser_menu_toppings_group),
@@ -564,18 +650,22 @@ internal fun BrowserMainMenu(
                     modifier = Modifier.testTag(BrowserMainMenuTestTags.ToppingsGroup),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    userScriptMenuCommands.forEachIndexed { index, command ->
+                    toppingMenuItems.forEachIndexed { index, item ->
                         val shape = when {
-                            userScriptMenuCommands.size == 1 -> outerCorners
+                            toppingMenuItems.size == 1 -> outerCorners
                             index == 0 -> firstItemShape
-                            index == userScriptMenuCommands.lastIndex -> lastItemShape
+                            index == toppingMenuItems.lastIndex -> lastItemShape
                             else -> innerCorners
                         }
+                        val command = userScriptMenuCommands.first { command ->
+                            command.scriptId == item.toppingScriptId &&
+                                command.commandId == item.toppingCommandId
+                        }
                         MenuRow(
-                            label = command.caption,
+                            label = requireNotNull(item.dynamicLabel),
                             iconRes = R.drawable.ic_symbol_extension,
                             shape = shape,
-                            supportingText = command.scriptName,
+                            supportingText = item.supportingText,
                             modifier = Modifier.testTag(
                                 BrowserMainMenuTestTags.userScriptCommand(command.commandId),
                             ),
@@ -646,10 +736,10 @@ internal fun BrowserMainMenu(
                 modifier = Modifier.testTag(BrowserMainMenuTestTags.BrowserGroup),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                if (
-                    canDockAddressBar &&
-                    AddressBarAction.ParkRight !in overflowAddressBarActions
-                ) {
+                val dockItem = sharedMenuItems.firstOrNull { item ->
+                    item.action == BrowserFeatureMenuAction.DockAddressBar
+                }
+                if (dockItem != null) {
                     MenuRow(
                         label = stringResource(R.string.action_dock_address_bar),
                         iconRes = R.drawable.ic_symbol_chevron_right,
@@ -662,8 +752,7 @@ internal fun BrowserMainMenu(
                     label = stringResource(R.string.snoozed_tabs_title),
                     iconRes = R.drawable.ic_snooze,
                     shape = if (
-                        canDockAddressBar &&
-                        AddressBarAction.ParkRight !in overflowAddressBarActions
+                        dockItem != null
                     ) {
                         innerCorners
                     } else {

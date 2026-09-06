@@ -140,6 +140,7 @@ android {
         manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config"
         buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
         buildConfigField("boolean", "FOSS_DISTRIBUTION", "false")
+        buildConfigField("boolean", "USE_GECKO_ENGINE", "true")
         buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
         buildConfigField("String", "RELEASE_NOTES_VERSION", "\"${candyVersionName.get()}\"")
 
@@ -219,6 +220,7 @@ android {
     sourceSets {
         getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/candySyncIcons/assets"))
         getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/releaseNotes/assets"))
+        getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/geckoPrivacy/assets"))
         getByName("userCaDebug").res.srcDir("src/userCa/res")
         getByName("userCaRelease").res.srcDir("src/userCa/res")
     }
@@ -266,6 +268,31 @@ val generateCandySyncDeviceIconAsset by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("generated/candySyncIcons/assets"))
     rename { "candy_sync_device_icons_v1.json" }
     duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+
+val generateGeckoPrivacyRuleAssets by tasks.registering(Sync::class) {
+    val ruleAssets = listOf(
+        "blocked_hosts.txt",
+        "easylist_blocked_hosts.txt",
+        "hagezi_blocked_hosts.txt",
+        "uassets_blocked_hosts.txt",
+        "uassets_blocked_host_pairs.txt",
+        "easylist_allowed_host_pairs.txt",
+        "uassets_allowed_host_pairs.txt",
+        "first_party_family_allowed_host_pairs.txt",
+        "uassets_advanced_filters.txt",
+        "easylist_cosmetic_rules.txt",
+        "uassets_cosmetic_rules.txt",
+        "uassets_procedural_cosmetic_rules.txt",
+        "candy_default_rules.txt",
+    )
+    from(ruleAssets.map { fileName -> layout.projectDirectory.file("src/main/assets/$fileName") })
+    into(layout.buildDirectory.dir("generated/geckoPrivacy/assets/candy_privacy/rules"))
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(generateGeckoPrivacyRuleAssets)
 }
 
 val validateReleaseNotes by tasks.registering {

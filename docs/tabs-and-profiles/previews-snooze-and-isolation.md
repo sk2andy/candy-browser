@@ -9,6 +9,7 @@
 | `TabPreviewRepository` | Serialize preview file I/O on one executor and prune unknown tab IDs |
 | `TabPreviewStore` | Validate bitmap dimensions/encoding and bound stored data |
 | `AtomicTabFileDirectory` | Share safe UUID filenames, atomic writes, pruning and explicit directory lifecycle with favicon and WebView-state stores |
+| iOS `BrowserTabSnapshotStore` | Keep one native `UIImage` per live tab in memory for Hero/Grid/List, invalidate it at navigation start/session replacement/tab close, and reject late `WKWebView` results by tab, session, navigation revision, request identity and current page URL |
 | External Link Preview | Own one interactive, controller-managed WebView without registering a tab. The session is memory-only, foreground-only, uses the selected regular profile's storage boundary, blocks non-HTTP(S) navigation, records no browser history or Candy Trail, and is recreated for every profile change. Promotion destroys the preview and reloads its final normalized URL as one regular tab; a user-driven departure from Candy discards it. |
 
 ## Snoozing
@@ -32,3 +33,4 @@
 - Recreate affected WebViews when their storage assignment changes.
 - Delay deletion of provider storage while WebViews still reference it; retry pending deletions.
 - Move/delete tabs and side data as one controller operation; preserve private/non-private boundary.
+- iOS tab previews are intentionally never persisted; this also preserves the private-tab boundary when private tabs are added to the iOS target.

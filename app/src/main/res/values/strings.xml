@@ -873,6 +873,7 @@
     <string name="gecko_extension_invalid_xpi">Use a direct HTTPS URL to a Mozilla-signed XPI package.</string>
     <string name="gecko_extension_action_rejected">Candy rejected this extension action.</string>
     <string name="gecko_extension_action_failed">The Firefox extension action failed.</string>
+    <string name="gecko_extension_private_management_disabled">Extension changes are unavailable while a private tab is selected.</string>
     <string name="gecko_extensions_manager_summary">Mozilla-signed XPI packages for the Gecko browser</string>
     <string name="gecko_extensions_empty">No Firefox extension installed yet.</string>
     <string name="gecko_extension_install">Install extension</string>

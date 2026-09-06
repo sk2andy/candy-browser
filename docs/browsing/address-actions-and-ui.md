@@ -2,13 +2,12 @@
 
 ## Cross-platform presentation
 
-Target architecture uses one Compose Multiplatform address component. Address-bar state, presentation
-modes, action ordering and content remain one Compose component model.
-`CandyTheme` supplies platform design and motion tokens. `CandyChromeSurface` owns the replaceable material
-boundary, so Android can render Material 3/frosted chrome and iOS can render native Liquid Glass without a
-second address-bar implementation. Platform-specific animation `if` branches do not belong in address
-components; named values live in `CandyMotionScheme`. Current Android-only source still contains Android
-haptics and window integration; those move behind platform ports during the KMP extraction.
+The cross-platform contract shares browser tabs, engine commands/events, core menu availability and
+gesture decisions in Kotlin. Rendering remains native: Android keeps the existing Candy Compose address
+chrome, while iOS draws a SwiftUI Liquid Glass chrome. This deliberately avoids forcing Material widgets
+onto iOS. The two renderers consume the same semantic state and actions, so the address field is not a
+second browser implementation even though the platform view code differs. Android-only haptics and window
+integration and iOS glass effects stay behind their platform boundaries.
 
 ## Address flow
 
@@ -43,15 +42,15 @@ editor closes.
 | Layer | Source | Boundary |
 | --- | --- | --- |
 | State and rules | [`FindInPage.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/FindInPage.kt) | Query changes reset result state; match ordinals and counts are normalized without Android dependencies. |
-| WebView session | `browser/BrowserController.kt` | Native `findAllAsync`, `findNext` and `clearMatches` calls are bound to the selected tab, exact WebView and navigation generation. Tab changes, navigation, close and controller destruction clear the listener and matches. |
+| Android legacy WebView session | `browser/BrowserController.kt` | Native `findAllAsync`, `findNext` and `clearMatches` calls are bound to the selected tab, exact WebView and navigation generation. The action stays disabled in the Gecko migration build until a Gecko find delegate is connected. |
 | UI | [`FindInPageBar.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FindInPageBar.kt), `ui/BrowserMainMenu.kt` | The main menu and configurable action open the same focused search bar. It reports the current/total match, disables navigation until matches exist and closes through Back or its close action. Find mode forwards IME insets to WebView so native match navigation scrolls results above the keyboard. |
 
 ## Gestures and actions
 
 | Interaction | Source | Boundary |
 | --- | --- | --- |
-| Horizontal tab switch | `AddressBarGestureRules`, `AddressBarTabSwitchRules` | Pure distance/velocity decision; controller changes selection |
-| Upward overview morph | `AddressBarOverviewGestureRules`, `AddressBarMotion` | Pure progress/motion math; Compose owns pointer input and animation |
+| Horizontal tab switch | Android `AddressBarGestureRules` / `AddressBarTabSwitchRules`; shared `BrowserChromeGestureRules` | Pure distance/velocity decision; the platform controller changes selection |
+| Upward overview morph | Android `AddressBarOverviewGestureRules` / `AddressBarMotion`; shared `BrowserChromeGestureRules` | Pure gesture decision; each native renderer owns its visual transition |
 | Address-bar parking | `AddressBarDockingRules`, `AddressBarMotion` | The existing park action creates an edge pill. Its single physical chevron points toward the last parked edge and sits on that same side of the centered address text. The parked pill can be dragged in two dimensions and snaps to the nearest physical edge at the released height. The normal-height anchor visibly stretches the pill under resistance, then releases it with a spring. Live movement haptics stop when movement pauses; edge snaps and anchor breakaway use confirm feedback. Parked, centered and overview positions share one spring path. |
 | Configurable right parking | `AddressBarAction.ParkRight`, `BrowserController.parkAddressBarOnRight` | Keeps a right-park button in the configured address actions. It reuses the remembered vertical position, forces only the right edge, and leaves the resulting pill draggable. |
 | Link Peek | [`LinkPeek.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/LinkPeek.kt), `WebContentActionState` | Temporary preview with copy, private-open, share, and explicit link-download actions; actions use the current committed HTTP(S) URL, while downloads retain the original target URL and source-tab session headers. Switching tabs invalidates the target, and only the plus target owns commit motion. |
@@ -68,7 +67,7 @@ editor closes.
 | Address chrome orchestration and tab-swipe presentation | `ui/BrowserAddressChrome.kt` |
 | Popup, federated-login and CAPTCHA offer feedback | `ui/BrowserOfferSnackbarEffects.kt` |
 | Browser dialogs, Link Peek and content-action overlays | `ui/BrowserTransientOverlays.kt` |
-| WebView and external-preview hosting | `ui/BrowserViewport.kt` |
+| Android engine renderer and external-preview hosting | `ui/BrowserViewport.kt` |
 | New-tab content | `ui/NewTabPage.kt` |
 | Compact and docked address chrome | `ui/BrowserBottomBar.kt` |
 | Expanded editor and actions | `ui/ExpandedAddressBar.kt` |

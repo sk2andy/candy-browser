@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Candy Topping Host",
+  "version": "1.0.1",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "candy-topping-host@sk2andy.dev"
+    }
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "permissions": [
+    "geckoViewAddons",
+    "nativeMessaging"
+  ],
+  "optional_permissions": [
+    "userScripts"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
+}

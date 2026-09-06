@@ -4,6 +4,9 @@ import java.net.URI
 import java.util.Locale
 
 internal object GeckoExtensionRules {
+    fun isVisibleToUserManager(extensionId: String): Boolean =
+        extensionId !in INTERNAL_EXTENSION_IDS
+
     fun normalizeSignedXpiUri(rawUri: String): String? {
         if (rawUri.isBlank() || rawUri.length > MAX_URI_LENGTH || rawUri.any(Char::isISOControl)) {
             return null
@@ -107,4 +110,8 @@ internal object GeckoExtensionRules {
     private const val MAX_EXTENSION_VERSION_LENGTH = 128
     private const val MAX_PERMISSION_VALUES = 256
     private const val MAX_PERMISSION_VALUE_LENGTH = 2_048
+    private val INTERNAL_EXTENSION_IDS = setOf(
+        CandyPrivacyHostContract.EXTENSION_ID,
+        CandyToppingHostContract.EXTENSION_ID,
+    )
 }
