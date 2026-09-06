@@ -229,7 +229,20 @@ jobs:
             assembleFossRelease \
             assembleFullUserCaRelease
           CANDY_STANDARD_APK="app/build/outputs/apk/full/release/app-full-release.apk" \
+            CANDY_FOSS_APK="app/build/outputs/apk/foss/release/app-foss-release.apk" \
             CANDY_USER_CA_APK="app/build/outputs/apk/full/userCaRelease/app-full-userCaRelease.apk" \
+            CANDY_STANDARD_APPLICATION_ID="dev.sk2andy.materialbrowser" \
+            CANDY_FOSS_APPLICATION_ID="dev.sk2andy.materialbrowser.foss" \
+            CANDY_USER_CA_APPLICATION_ID="dev.sk2andy.materialbrowser.ca" \
+            CANDY_STANDARD_APP_LABEL="Candy Browser" \
+            CANDY_FOSS_APP_LABEL="Candy FOSS" \
+            CANDY_USER_CA_APP_LABEL="Candy CA" \
+            CANDY_STANDARD_LAUNCHER_FOREGROUND="drawable/ic_launcher_foreground" \
+            CANDY_FOSS_LAUNCHER_FOREGROUND="drawable/ic_launcher_foreground_foss" \
+            CANDY_USER_CA_LAUNCHER_FOREGROUND="drawable/ic_launcher_foreground_ca" \
+            CANDY_STANDARD_LAUNCHER_MONOCHROME="drawable/ic_launcher_monochrome" \
+            CANDY_FOSS_LAUNCHER_MONOCHROME="drawable/ic_launcher_monochrome_foss" \
+            CANDY_USER_CA_LAUNCHER_MONOCHROME="drawable/ic_launcher_monochrome_ca" \
             python3 scripts/test_network_security_apks.py
 
       - name: Verify and checksum APKs
@@ -240,7 +253,7 @@ jobs:
           set -euo pipefail
 
           release_apk="CandyBrowser-${RELEASE_TAG}-release.apk"
-          user_ca_release_apk="CandyBrowser-${RELEASE_TAG}-user-ca-release.apk"
+          user_ca_release_apk="CandyBrowser-${RELEASE_TAG}-ca-release.apk"
           cp "app/build/outputs/apk/full/release/app-full-release.apk" "$release_apk"
           cp \
             "app/build/outputs/apk/full/userCaRelease/app-full-userCaRelease.apk" \

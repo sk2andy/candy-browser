@@ -1,0 +1,1 @@
+Install Universal, FOSS, and CA builds side by side with isolated app data and clearly badged launcher icons.

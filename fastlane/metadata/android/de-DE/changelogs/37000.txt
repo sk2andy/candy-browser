@@ -1,0 +1,1 @@
+Installiere Universal-, FOSS- und CA-Builds parallel – mit getrennten App-Daten und klar gekennzeichneten Launcher-Icons.
