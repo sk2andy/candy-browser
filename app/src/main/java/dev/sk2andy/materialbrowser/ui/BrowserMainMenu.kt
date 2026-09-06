@@ -2,7 +2,8 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -53,8 +54,11 @@ import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
 
 internal object BrowserMainMenuMotion {
+    const val ENTER_DAMPING_RATIO = 0.72f
+    const val ENTER_STIFFNESS = Spring.StiffnessMediumLow
     const val EXIT_DURATION_MILLIS = 160
-    const val EXIT_SCALE = 0.9f
+    const val CLOSED_SCALE = 0.82f
+    const val CLOSED_TRANSLATION_Y_DP = 20f
 }
 
 internal data class BrowserMainMenuPresentation(
@@ -213,7 +217,7 @@ internal fun BrowserMainMenu(
     }
     var popupVisible by remember { mutableStateOf(expanded) }
     var actionCommitted by remember { mutableStateOf(false) }
-    val exitProgress = remember { Animatable(if (expanded) 1f else 0f) }
+    val visibilityProgress = remember { Animatable(if (expanded) 1f else 0f) }
     val menuTransformOrigin = if (LocalLayoutDirection.current == LayoutDirection.Ltr) {
         TransformOrigin(1f, 1f)
     } else {
@@ -222,22 +226,21 @@ internal fun BrowserMainMenu(
     LaunchedEffect(expanded) {
         if (expanded) {
             actionCommitted = false
-            val reversingExit = popupVisible
+            val wasVisible = popupVisible
             popupVisible = true
-            if (reversingExit) {
-                exitProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
-                        easing = LinearOutSlowInEasing,
-                    ),
-                )
-            } else {
+            if (!wasVisible) {
                 menuScrollState.scrollTo(0)
-                exitProgress.snapTo(1f)
+                visibilityProgress.snapTo(0f)
             }
+            visibilityProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = BrowserMainMenuMotion.ENTER_DAMPING_RATIO,
+                    stiffness = BrowserMainMenuMotion.ENTER_STIFFNESS,
+                ),
+            )
         } else if (popupVisible) {
-            exitProgress.animateTo(
+            visibilityProgress.animateTo(
                 targetValue = 0f,
                 animationSpec = tween(
                     durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
@@ -270,11 +273,14 @@ internal fun BrowserMainMenu(
                 .width(menuWidth)
                 .height(menuMaxHeight)
                 .graphicsLayer {
-                    alpha = exitProgress.value
-                    val scale = BrowserMainMenuMotion.EXIT_SCALE +
-                        (1f - BrowserMainMenuMotion.EXIT_SCALE) * exitProgress.value
+                    val progress = visibilityProgress.value
+                    alpha = progress.coerceIn(0f, 1f)
+                    val scale = BrowserMainMenuMotion.CLOSED_SCALE +
+                        (1f - BrowserMainMenuMotion.CLOSED_SCALE) * progress
                     scaleX = scale
                     scaleY = scale
+                    translationY = BrowserMainMenuMotion.CLOSED_TRANSLATION_Y_DP.dp.toPx() *
+                        (1f - progress)
                     transformOrigin = menuTransformOrigin
                 }
                 .clip(menuShape)
@@ -312,6 +318,7 @@ internal fun BrowserMainMenu(
                     MenuToolbarAction(
                         label = stringResource(R.string.action_back),
                         iconRes = R.drawable.ic_symbol_arrow_back,
+                        blurTarget = blurTarget,
                         enabled = presentation.canGoBack,
                         onClick = { dismissThen(onBack) },
                         modifier = Modifier.weight(1f),
@@ -319,6 +326,7 @@ internal fun BrowserMainMenu(
                     MenuToolbarAction(
                         label = stringResource(R.string.action_forward),
                         iconRes = R.drawable.ic_symbol_arrow_forward,
+                        blurTarget = blurTarget,
                         enabled = presentation.canGoForward,
                         onClick = { dismissThen(onForward) },
                         modifier = Modifier.weight(1f),
@@ -336,17 +344,20 @@ internal fun BrowserMainMenu(
                         } else {
                             R.drawable.ic_symbol_refresh
                         },
+                        blurTarget = blurTarget,
                         onClick = { dismissThen(onReloadOrStop) },
                         modifier = Modifier.weight(1f),
                     )
                     if (!compactToolbar) {
                         BrowserMainMenuFavoriteAction(
                             presentation = presentation,
+                            blurTarget = blurTarget,
                             onClick = { dismissThen(onToggleFavorite) },
                             modifier = Modifier.weight(1f),
                         )
                         BrowserMainMenuPinAction(
                             isPinned = presentation.isPinned,
+                            blurTarget = blurTarget,
                             onClick = { dismissThen(onTogglePinned) },
                             modifier = Modifier.weight(1f),
                         )
@@ -356,11 +367,13 @@ internal fun BrowserMainMenu(
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         BrowserMainMenuFavoriteAction(
                             presentation = presentation,
+                            blurTarget = blurTarget,
                             onClick = { dismissThen(onToggleFavorite) },
                             modifier = Modifier.weight(1f),
                         )
                         BrowserMainMenuPinAction(
                             isPinned = presentation.isPinned,
+                            blurTarget = blurTarget,
                             onClick = { dismissThen(onTogglePinned) },
                             modifier = Modifier.weight(1f),
                         )

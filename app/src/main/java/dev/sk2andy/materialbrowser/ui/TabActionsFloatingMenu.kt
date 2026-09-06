@@ -218,6 +218,7 @@ internal fun TabActionsFloatingMenu(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                     ) {
                         TabActionsMenuContent(
+                            blurTarget = blurTarget,
                             pageSubtitle = if (presentedTab.url == BLANK_URL) {
                                 stringResource(R.string.new_tab_title)
                             } else {

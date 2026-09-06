@@ -4,6 +4,7 @@ import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewOutlineProvider
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
@@ -34,17 +35,15 @@ internal fun BrowserChromeSurface(
     blurCornerRadius: Dp = tokens.cornerRadius,
     containerColor: Color = tokens.containerColor,
     backdropBlurEnabled: Boolean = tokens.backdropBlurEnabled,
+    onClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    contentColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val drawsBackdropBlur = backdropBlurEnabled && blurTarget != null
     val blurCornerRadiusPx = with(LocalDensity.current) { blurCornerRadius.toPx() }
-    Surface(
-        modifier = modifier,
-        shape = shape,
-        color = if (drawsBackdropBlur) Color.Transparent else containerColor,
-        tonalElevation = tokens.tonalElevation,
-        shadowElevation = tokens.shadowElevation,
-    ) {
+    val resolvedContentColor = contentColor ?: LocalContentColor.current
+    val surfaceContent: @Composable () -> Unit = {
         Box {
             if (drawsBackdropBlur && blurTarget != null) {
                 key(blurTarget) {
@@ -88,5 +87,28 @@ internal fun BrowserChromeSurface(
                 content()
             }
         }
+    }
+    if (onClick == null) {
+        Surface(
+            modifier = modifier,
+            shape = shape,
+            color = if (drawsBackdropBlur) Color.Transparent else containerColor,
+            contentColor = resolvedContentColor,
+            tonalElevation = tokens.tonalElevation,
+            shadowElevation = tokens.shadowElevation,
+            content = surfaceContent,
+        )
+    } else {
+        Surface(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            shape = shape,
+            color = if (drawsBackdropBlur) Color.Transparent else containerColor,
+            contentColor = resolvedContentColor,
+            tonalElevation = tokens.tonalElevation,
+            shadowElevation = tokens.shadowElevation,
+            content = surfaceContent,
+        )
     }
 }

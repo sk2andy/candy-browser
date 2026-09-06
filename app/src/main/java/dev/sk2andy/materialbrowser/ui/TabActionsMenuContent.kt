@@ -22,9 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import eightbitlab.com.blurview.BlurTarget
 
 @Composable
 internal fun TabActionsMenuContent(
+    blurTarget: BlurTarget?,
     pageSubtitle: String,
     canToggleFavorite: Boolean,
     isFavorite: Boolean,
@@ -89,6 +91,7 @@ internal fun TabActionsMenuContent(
         ) {
             MenuToolbarAction(
                 label = stringResource(R.string.action_favorite),
+                blurTarget = blurTarget,
                 iconRes = if (isFavorite) {
                     R.drawable.ic_symbol_favorite_filled
                 } else {
@@ -111,6 +114,7 @@ internal fun TabActionsMenuContent(
                     if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
                 ),
                 iconRes = R.drawable.ic_push_pin,
+                blurTarget = blurTarget,
                 accessibilityLabel = stringResource(
                     if (isPinned) R.string.action_remove_pin else R.string.action_pin_tab,
                 ),
@@ -232,4 +236,3 @@ internal fun TabActionsMenuContent(
         )
     }
 }
-

@@ -67,7 +67,7 @@ Frosted exposes three persisted controls while selected:
 - General transparency controls menus and other browser chrome; address-bar transparency independently controls the browsing and tab-overview address bars.
 - Blur strength is global across frosted address chrome, menus, search suggestions and supported sheets.
 - Tab options blur the visible tab-overview cards behind the menu instead of falling back to a sharp translucent surface.
-- The main `…` menu shares the active browser-content blur source, including the new-tab page; its rows remain translucent so the effect stays visible.
+- The main `…` menu shares the active browser-content blur source, including the new-tab page; its rows remain translucent and its individual quick-action tiles use the configured blur strength. It opens from the address-bar action with a spring scale-and-rise transition and leaves with a short fade-and-shrink transition.
 - Bottom sheets use the general Frosted transparency setting; Privacy X-Ray also blurs the active browser content. Clear and AMOLED sheets remain opaque.
 - Forced light, dark and AMOLED modes update system-bar icon contrast independently from system night mode.
 - Appearance mode also selects Android's activity night resources. WebView therefore exposes the
