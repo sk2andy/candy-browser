@@ -30,6 +30,21 @@ class BrowserIntentFilterInstrumentedTest {
         assertFalse(resolvesCandyBrowser(scheme = "https", mimeType = "application/pdf"))
     }
 
+    @Test
+    fun resolvesPlainTextAndHtmlShares() {
+        assertTrue(resolvesCandyShare(action = Intent.ACTION_SEND, mimeType = "text/plain"))
+        assertTrue(resolvesCandyShare(action = Intent.ACTION_SEND, mimeType = "text/html"))
+    }
+
+    @Test
+    fun doesNotResolveUnsupportedOrMultipleShares() {
+        assertFalse(resolvesCandyShare(action = Intent.ACTION_SEND, mimeType = "application/pdf"))
+        assertFalse(resolvesCandyShare(action = Intent.ACTION_SEND, mimeType = "text/rtf"))
+        assertFalse(
+            resolvesCandyShare(action = Intent.ACTION_SEND_MULTIPLE, mimeType = "text/plain"),
+        )
+    }
+
     private fun resolvesCandyBrowser(scheme: String, mimeType: String?): Boolean {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val uri = Uri.parse("$scheme://example.com/article")
@@ -41,6 +56,22 @@ class BrowserIntentFilterInstrumentedTest {
             } else {
                 setDataAndType(uri, mimeType)
             }
+        }
+
+        return context.packageManager.queryIntentActivities(
+            intent,
+            PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()),
+        ).any { resolveInfo ->
+            resolveInfo.activityInfo.packageName == context.packageName &&
+                resolveInfo.activityInfo.name == MainActivity::class.java.name
+        }
+    }
+
+    private fun resolvesCandyShare(action: String, mimeType: String): Boolean {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val intent = Intent(action).apply {
+            setPackage(context.packageName)
+            type = mimeType
         }
 
         return context.packageManager.queryIntentActivities(

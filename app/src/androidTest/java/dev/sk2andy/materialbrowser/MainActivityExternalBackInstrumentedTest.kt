@@ -65,6 +65,103 @@ class MainActivityExternalBackInstrumentedTest {
     }
 
     @Test
+    fun coldSharedWebLinkUsesNormalNewTabFlow() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        clearSession(context)
+        GestureOnboardingStore(context).markCompleted()
+        val launchIntent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_SEND
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, EXTERNAL_URL)
+        }
+
+        ActivityScenario.launch<MainActivity>(launchIntent).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertEquals(2, controller.tabs.size)
+                assertEquals(EXTERNAL_URL, controller.selectedTab.url)
+            }
+        }
+    }
+
+    @Test
+    fun warmSharedWebLinkUsesEnabledExternalPreview() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        clearSession(context)
+        GestureOnboardingStore(context).markCompleted()
+        val launchIntent = Intent(context, MainActivity::class.java)
+            .setAction(Intent.ACTION_MAIN)
+
+        ActivityScenario.launch<MainActivity>(launchIntent).use { scenario ->
+            lateinit var controller: BrowserController
+            scenario.onActivity { activity ->
+                controller = activity.browserControllerForTesting()
+                controller.updateExternalLinkPreviewEnabled(true)
+            }
+            context.startActivity(
+                Intent(context, MainActivity::class.java).apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/html"
+                    putExtra(Intent.EXTRA_TEXT, EXTERNAL_URL)
+                    putExtra(
+                        Intent.EXTRA_HTML_TEXT,
+                        "<a href=\"$EXTERNAL_URL\">Shared article</a>",
+                    )
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                },
+            )
+
+            waitUntil { controller.externalLinkPreviewState != null }
+            instrumentation.runOnMainSync {
+                assertEquals(1, controller.tabs.size)
+                assertEquals(EXTERNAL_URL, controller.externalLinkPreviewState?.currentUrl)
+            }
+        }
+    }
+
+    @Test
+    fun malformedWarmShareDoesNotCreateTab() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        clearSession(context)
+        GestureOnboardingStore(context).markCompleted()
+
+        ActivityScenario.launch<MainActivity>(
+            Intent(context, MainActivity::class.java).setAction(Intent.ACTION_MAIN),
+        ).use { scenario ->
+            lateinit var controller: BrowserController
+            lateinit var initialTabIds: List<String>
+            scenario.onActivity { activity ->
+                controller = activity.browserControllerForTesting()
+                initialTabIds = controller.tabs.map { it.id }
+            }
+            context.startActivity(
+                Intent(context, MainActivity::class.java).apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, "Read $EXTERNAL_URL")
+                    putExtra(EXTRA_DELIVERY_MARKER, MALFORMED_SHARE_DELIVERY_MARKER)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                },
+            )
+
+            waitUntil {
+                var delivered = false
+                scenario.onActivity { activity ->
+                    delivered = activity.intent.getStringExtra(EXTRA_DELIVERY_MARKER) ==
+                        MALFORMED_SHARE_DELIVERY_MARKER
+                }
+                delivered
+            }
+            scenario.onActivity {
+                assertEquals(initialTabIds, controller.tabs.map { it.id })
+                assertEquals(null, controller.externalLinkPreviewState)
+            }
+        }
+    }
+
+    @Test
     fun enabledPreviewKeepsTabsUnchangedAndBackDiscardsPreview() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
@@ -225,7 +322,10 @@ class MainActivityExternalBackInstrumentedTest {
     }
 
     private companion object {
+        const val EXTRA_DELIVERY_MARKER =
+            "dev.sk2andy.materialbrowser.test.EXTRA_DELIVERY_MARKER"
         const val EXTERNAL_URL = "https://example.com/from-another-app"
+        const val MALFORMED_SHARE_DELIVERY_MARKER = "malformed-share-delivered"
         const val TIMEOUT_MILLIS = 5_000L
         const val POLL_INTERVAL_MILLIS = 50L
     }
