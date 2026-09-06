@@ -29,6 +29,7 @@
 | Shape | Angular, rounded, extra rounded | Rounded |
 | Startup animation | Off, on | On |
 | Open home page on startup | Off, on | Off |
+| Long-press link action | Link Peek, copy link, open in new tab, open in private tab, share | Link Peek |
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Google Translate |
 
@@ -85,6 +86,9 @@ Frosted exposes three persisted controls while selected:
   off clears stored Recall text; ordinary History remains governed by its own settings.
 - Tabs & gestures owns the expanded address-bar action editor. The former standalone tab-button
   visibility switch is intentionally absent because **Tabs** is now an ordinary configurable action.
+- Tabs & gestures owns the global long-press link action. Invalid stored values fall back to Link
+  Peek. Image-only long presses keep their content sheet, and private-open falls back to Link Peek
+  when the active profile cannot create private tabs.
 - The Browser setting for the draggable page scroll bar is global and defaults off. When enabled,
   native WebView scroll bars are replaced by a touch-sized thumb that appears during scrolling,
   supports direct dragging, and fades after interaction.

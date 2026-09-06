@@ -392,6 +392,7 @@
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>
     <string name="settings_section_gestures">Gesten</string>
+    <string name="settings_link_long_press_action">Aktion bei langem Drücken auf Links</string>
     <string name="settings_address_bar_actions_title">Adressleisten-Schaltflächen</string>
     <string name="settings_address_bar_actions_summary">Bis zu drei Schaltflächen rund um das Adressfeld auswählen und anordnen.</string>
     <string name="settings_address_bar_actions_instructions">Schaltfläche gedrückt halten und links oder rechts neben das Adressfeld ziehen. Mehr bleibt fest und zählt als vierte Schaltfläche.</string>

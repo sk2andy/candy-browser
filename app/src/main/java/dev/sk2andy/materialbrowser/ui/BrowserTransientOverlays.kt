@@ -6,9 +6,6 @@
 
 package dev.sk2andy.materialbrowser.ui
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -21,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -45,7 +41,6 @@ internal fun BrowserTransientOverlays(
     pendingCapsuleDelete: SiteCapsule?,
     onPendingCapsuleDeleteDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
     val rootView = LocalView.current
     if (clearDialogVisible) {
         AlertDialog(
@@ -159,13 +154,7 @@ internal fun BrowserTransientOverlays(
             },
             onCopyLink = { currentUrl ->
                 controller.contentActions.dismiss()
-                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(
-                    ClipData.newPlainText(
-                        context.getString(R.string.external_link_preview_copy_label),
-                        currentUrl,
-                    ),
-                )
-                Toast.makeText(context, R.string.toast_link_copied, Toast.LENGTH_SHORT).show()
+                controller.copyLink(currentUrl)
             },
             onOpenInPrivate = { currentUrl ->
                 if (controller.openLinkInPrivate(currentUrl)) rootView.performConfirmHaptic()

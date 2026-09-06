@@ -402,6 +402,7 @@
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>
     <string name="settings_section_gestures">Gestures</string>
+    <string name="settings_link_long_press_action">Long-press link action</string>
     <string name="settings_address_bar_actions_title">Address bar buttons</string>
     <string name="settings_address_bar_actions_summary">Choose and arrange up to three buttons around the address field.</string>
     <string name="settings_address_bar_actions_instructions">Touch and hold a button, then drag it left or right of the address field. More stays fixed and counts as the fourth button.</string>

@@ -25,6 +25,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.TabWebViewResidencyRules
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
@@ -37,6 +38,7 @@ internal object TabSettingsTestTags {
     const val ListStartsAtBottom = "tab_settings_list_starts_at_bottom"
     const val AutomaticSorting = "tab_settings_automatic_sorting"
     const val AddressBarDocking = "tab_settings_address_bar_docking"
+    const val LinkLongPressAction = "tab_settings_link_long_press_action"
 }
 
 @Composable
@@ -50,6 +52,7 @@ internal fun TabsAndGesturesSettingsPage(
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isAddressBarDockingEnabled: Boolean,
+    linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
@@ -59,12 +62,14 @@ internal fun TabsAndGesturesSettingsPage(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
+    onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
     onAddressBarActions: () -> Unit,
     onBack: () -> Unit,
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
     var overviewModeMenuExpanded by remember { mutableStateOf(false) }
     var stackFolderModeMenuExpanded by remember { mutableStateOf(false) }
+    var linkLongPressActionMenuExpanded by remember { mutableStateOf(false) }
     var resistancePercent by remember(dismissResistancePercent) {
         mutableFloatStateOf(dismissResistancePercent.toFloat())
     }
@@ -209,6 +214,30 @@ internal fun TabsAndGesturesSettingsPage(
         Spacer(Modifier.height(14.dp))
         SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
         Spacer(Modifier.height(2.dp))
+        Box(modifier = Modifier.testTag(TabSettingsTestTags.LinkLongPressAction)) {
+            SettingsChoice(
+                title = stringResource(R.string.settings_link_long_press_action),
+                value = stringResource(linkLongPressAction.labelRes()),
+                expanded = linkLongPressActionMenuExpanded,
+                onClick = { linkLongPressActionMenuExpanded = true },
+            )
+            SettingsDropdown(
+                expanded = linkLongPressActionMenuExpanded,
+                onDismissRequest = { linkLongPressActionMenuExpanded = false },
+            ) {
+                LinkLongPressAction.entries.forEach { action ->
+                    SettingsDropdownItem(
+                        label = stringResource(action.labelRes()),
+                        selected = action == linkLongPressAction,
+                        onClick = {
+                            linkLongPressActionMenuExpanded = false
+                            onLinkLongPressActionChanged(action)
+                        },
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(2.dp))
         SettingsLink(
             icon = ImageVector.vectorResource(R.drawable.ic_switch_to_tab),
             title = stringResource(R.string.settings_address_bar_actions_title),
@@ -254,4 +283,12 @@ internal fun TabsAndGesturesSettingsPage(
             }
         }
     }
+}
+
+private fun LinkLongPressAction.labelRes(): Int = when (this) {
+    LinkLongPressAction.LinkPeek -> R.string.link_peek_title
+    LinkLongPressAction.CopyLink -> R.string.external_link_preview_copy_link
+    LinkLongPressAction.OpenInNewTab -> R.string.action_open_in_new_tab
+    LinkLongPressAction.OpenInPrivateTab -> R.string.action_open_link_in_private_tab
+    LinkLongPressAction.Share -> R.string.action_share
 }

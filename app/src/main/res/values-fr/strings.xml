@@ -395,6 +395,7 @@
     <string name="settings_default_browser_active">Candy Browser est votre navigateur par défaut</string>
     <string name="settings_make_default_browser">Définir Candy Browser comme navigateur par défaut</string>
     <string name="settings_section_gestures">Gestes</string>
+    <string name="settings_link_long_press_action">Action lors d’un appui prolongé sur un lien</string>
     <string name="settings_address_bar_actions_title">Boutons de la barre d’adresse</string>
     <string name="settings_address_bar_actions_summary">Choisissez et organisez jusqu’à trois boutons autour du champ d’adresse.</string>
     <string name="settings_address_bar_actions_instructions">Maintenez un bouton puis faites-le glisser à gauche ou à droite du champ. Plus reste fixe et compte comme quatrième bouton.</string>

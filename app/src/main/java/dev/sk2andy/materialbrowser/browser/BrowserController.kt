@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.browser
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -122,8 +124,12 @@ import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadLaunchResult
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressOutcome
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressRules
 import dev.sk2andy.materialbrowser.browser.actions.PendingDownloadChoice
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
+import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.actions.WebViewHitTestResolver
 import dev.sk2andy.materialbrowser.browser.cast.CastMediaCandidate
 import dev.sk2andy.materialbrowser.browser.cast.CastMediaIdentity
@@ -464,6 +470,8 @@ class BrowserController(
     var searchEngine by mutableStateOf(SearchEngine.Google)
         private set
     var pageTranslationProvider by mutableStateOf(PageTranslationProvider.Google)
+        private set
+    var linkLongPressAction by mutableStateOf(LinkLongPressAction.LinkPeek)
         private set
     var searxngSettings by mutableStateOf(SearxngSettings())
         private set
@@ -1562,6 +1570,7 @@ class BrowserController(
         residentTabLimit = store.loadResidentTabLimit()
         searchEngine = store.loadSearchEngine()
         pageTranslationProvider = store.loadPageTranslationProvider()
+        linkLongPressAction = store.loadLinkLongPressAction()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
         isRecallEnabled = store.loadRecallEnabled()
         if (!isRecallEnabled) recallRepository.clearAsync()
@@ -4544,6 +4553,35 @@ class BrowserController(
         }
     }
 
+    private fun handleWebContentLongPress(target: WebContentTarget, tabId: String) {
+        when (
+            LinkLongPressRules.outcome(
+                action = linkLongPressAction,
+                target = target,
+                canOpenInPrivate = canOpenLinkInPrivate,
+            )
+        ) {
+            LinkLongPressOutcome.ShowContext -> contentActions.show(target, tabId)
+            LinkLongPressOutcome.CopyLink -> {
+                contentActions.dismiss()
+                copyLink(requireNotNull(target.linkUrl))
+            }
+            LinkLongPressOutcome.OpenInNewTab -> {
+                contentActions.dismiss()
+                createBackgroundTab(requireNotNull(target.linkUrl), openerTabId = tabId)
+            }
+            LinkLongPressOutcome.OpenInPrivateTab -> {
+                if (!openLinkInPrivate(requireNotNull(target.linkUrl))) {
+                    contentActions.show(target, tabId)
+                }
+            }
+            LinkLongPressOutcome.Share -> {
+                contentActions.dismiss()
+                shareLink(requireNotNull(target.linkUrl))
+            }
+        }
+    }
+
     fun openLinkInPrivate(url: String): Boolean {
         if (!canOpenLinkInPrivate) return false
         val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
@@ -4799,6 +4837,17 @@ class BrowserController(
     }
 
     fun shareSelectedPage() = sharePage(selectedTabId)
+
+    fun copyLink(url: String) {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
+        activity.getSystemService(ClipboardManager::class.java).setPrimaryClip(
+            ClipData.newPlainText(
+                activity.getString(R.string.external_link_preview_copy_label),
+                safeUrl,
+            ),
+        )
+        Toast.makeText(activity, R.string.toast_link_copied, Toast.LENGTH_SHORT).show()
+    }
 
     fun shareLink(url: String) {
         val request = PageShareRequest.create(url = url, title = "") ?: return
@@ -5755,6 +5804,12 @@ class BrowserController(
         isExternalLinkPreviewEnabled = enabled
         store.saveExternalLinkPreviewEnabled(enabled)
         if (!enabled) dismissExternalLinkPreview()
+    }
+
+    fun updateLinkLongPressAction(action: LinkLongPressAction) {
+        if (linkLongPressAction == action) return
+        linkLongPressAction = action
+        store.saveLinkLongPressAction(action)
     }
 
     fun updateAddressBarActionLayout(layout: AddressBarActionLayout) {
@@ -7008,7 +7063,7 @@ class BrowserController(
                     hitType = hitType,
                     extra = hitExtra,
                 ) ?: return@setOnLongClickListener false
-                contentActions.show(target, tabId)
+                handleWebContentLongPress(target, tabId)
                 return@setOnLongClickListener true
             }
 
@@ -7031,7 +7086,7 @@ class BrowserController(
                         extra = hitExtra,
                         focusedLinkUrl = message.data.getString("url"),
                         focusedImageUrl = message.data.getString("src"),
-                    )?.let { target -> contentActions.show(target, tabId) }
+                    )?.let { target -> handleWebContentLongPress(target, tabId) }
                 }
                 true
             }
