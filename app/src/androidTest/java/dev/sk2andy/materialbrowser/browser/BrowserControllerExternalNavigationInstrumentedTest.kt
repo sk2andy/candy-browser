@@ -83,6 +83,72 @@ class BrowserControllerExternalNavigationInstrumentedTest {
     }
 
     @Test
+    fun incomingAppLinkHandsDirectlyToEligibleApp() {
+        activityRule.scenario.onActivity { activity ->
+            val recordingContext = RecordingContext(activity)
+            val browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(recordingContext),
+            ).also { controller = it }
+
+            assertTrue(browserController.openIncomingAppLink(APP_LINK_URL))
+            assertEquals(APP_LINK_URL, recordingContext.lastIntent?.dataString)
+            assertTrue(
+                requireNotNull(recordingContext.lastIntent).flags and
+                    Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0,
+            )
+            assertTrue(
+                requireNotNull(recordingContext.lastIntent).flags and
+                    Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0,
+            )
+        }
+    }
+
+    @Test
+    fun incomingAppLinkWithoutEligibleHandlerKeepsWebFallbackAvailable() {
+        HangingServer().use { server ->
+            lateinit var recordingContext: RecordingContext
+            lateinit var webView: WebView
+            activityRule.scenario.onActivity { activity ->
+                recordingContext = RecordingContext(activity).apply {
+                    rejectWebLinks = true
+                }
+                val browserController = BrowserController(
+                    activity = activity,
+                    externalApps = ExternalAppLauncher(recordingContext),
+                ).also { controller = it }
+
+                assertFalse(browserController.openIncomingAppLink(server.url))
+                assertTrue(
+                    browserController.openUrl(
+                        url = server.url,
+                        inNewTab = true,
+                        authorizeInitialExternalNavigation = true,
+                    ),
+                )
+                webView = browserController.selectedWebViewForTesting()
+            }
+            waitForWebViewUrl(webView, server.url)
+
+            activityRule.scenario.onActivity {
+                recordingContext.rejectWebLinks = false
+                recordingContext.lastIntent = null
+                assertTrue(
+                    webView.webViewClient.shouldOverrideUrlLoading(
+                        webView,
+                        TestWebResourceRequest(
+                            url = APP_LINK_URL,
+                            hasGesture = false,
+                            isRedirect = true,
+                        ),
+                    ),
+                )
+                assertEquals(APP_LINK_URL, recordingContext.lastIntent?.dataString)
+            }
+        }
+    }
+
+    @Test
     fun externalPreviewRequiresGestureGrantForSpecialSchemeRedirect() {
         activityRule.scenario.onActivity { activity ->
             val recordingContext = RecordingContext(activity).apply {
@@ -222,6 +288,48 @@ class BrowserControllerExternalNavigationInstrumentedTest {
 
                 assertTrue(handled)
                 assertEquals(APP_LINK_URL, recordingContext.lastIntent?.dataString)
+            }
+        }
+    }
+
+    @Test
+    fun incomingRegularTabAuthorizesSafeIntentRedirect() {
+        HangingServer().use { server ->
+            lateinit var recordingContext: RecordingContext
+            lateinit var webView: WebView
+            activityRule.scenario.onActivity { activity ->
+                recordingContext = RecordingContext(activity).apply {
+                    rejectWebLinks = true
+                }
+                val browserController = BrowserController(
+                    activity = activity,
+                    externalApps = ExternalAppLauncher(recordingContext),
+                ).also { controller = it }
+                assertTrue(
+                    browserController.openUrl(
+                        url = server.url,
+                        inNewTab = true,
+                        authorizeInitialExternalNavigation = true,
+                    ),
+                )
+                webView = browserController.selectedWebViewForTesting()
+            }
+            waitForWebViewUrl(webView, server.url)
+
+            activityRule.scenario.onActivity {
+                assertTrue(
+                    webView.webViewClient.shouldOverrideUrlLoading(
+                        webView,
+                        TestWebResourceRequest(
+                            url = SAFE_INTENT_URL,
+                            hasGesture = false,
+                            isRedirect = true,
+                        ),
+                    ),
+                )
+                assertEquals(SPECIAL_SCHEME_URL, recordingContext.lastIntent?.dataString)
+                assertEquals(SAFE_INTENT_PACKAGE, recordingContext.lastIntent?.`package`)
+                assertEquals(null, recordingContext.lastIntent?.extras)
             }
         }
     }
@@ -441,6 +549,10 @@ class BrowserControllerExternalNavigationInstrumentedTest {
         const val REPLACEMENT_URL = "https://replacement.example.invalid/page"
         const val SPECIAL_SCHEME_URL = "candy-app://open/authorized"
         const val SECOND_SPECIAL_SCHEME_URL = "candy-app://open/passive"
+        const val SAFE_INTENT_PACKAGE = "dev.example.reader"
+        const val SAFE_INTENT_URL =
+            "intent://open/authorized#Intent;scheme=candy-app;" +
+                "package=$SAFE_INTENT_PACKAGE;S.untrusted=secret;end"
         const val DESKTOP_HOST = "desktop.127.0.0.1.nip.io"
         const val TIMEOUT_MILLIS = 5_000L
         const val POLL_INTERVAL_MILLIS = 25L

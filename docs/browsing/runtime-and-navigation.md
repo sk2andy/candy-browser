@@ -16,7 +16,7 @@
 | Input | Path | Boundary |
 | --- | --- | --- |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
-| Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. The optional external-link preview keeps the page memory-only until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
+| Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. An incoming `ACTION_VIEW` app link first gets one direct non-browser-default handoff attempt; shared URLs stay in Candy. The optional external-link preview keeps the Candy page memory-only until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank WebView page |
@@ -67,6 +67,9 @@
   restores the opener instead of an identity-provider page.
 - Resolve external intents on every permitted handoff attempt so apps installed while Candy remains
   open are immediately eligible. Show handoff feedback only after Android accepts the external launch.
+- Offer an incoming `ACTION_VIEW` URL directly to its verified non-browser default before starting
+  WebView. If Android rejects that handoff, preserve the same URL and bounded initial-navigation grant
+  through the existing preview or regular-tab web fallback. Shared `ACTION_SEND` URLs stay in Candy.
 - Offer user-tapped HTTP(S) links to Android only when a direct non-browser default handler can
   receive them. Requiring both a default and a non-browser handler prevents browser/chooser loops;
   unavailable or ambiguous app links continue in the current WebView.

@@ -3,8 +3,10 @@ package dev.sk2andy.materialbrowser.data
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.capsule.CapsuleChromeMode
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconColor
 import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationMode
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,6 +41,8 @@ class SiteCapsuleStoreInstrumentedTest {
             isolatedStorageRequested = true,
             navigationMode = CapsuleNavigationMode.SameRegistrableDomain,
             chromeMode = CapsuleChromeMode.NoControls,
+            iconEmoji = "📬",
+            iconColor = CapsuleIconColor.Sky,
             createdAtMillis = 10L,
             updatedAtMillis = 20L,
         )
@@ -46,6 +50,18 @@ class SiteCapsuleStoreInstrumentedTest {
         store.save(listOf(capsule))
 
         assertEquals(listOf(capsule), SiteCapsuleStore(context).load())
+    }
+
+    @Test
+    fun versionOneCapsuleGetsSafeIconCustomizationDefaults() {
+        storeFile.writeText(
+            """{"version":1,"capsules":[{"id":"04a74ad8-7533-460c-bfbf-a135968940d5","name":"Mail","startUrl":"https://mail.example","profileId":"work","createdAtMillis":10,"updatedAtMillis":20}]}""",
+        )
+
+        val capsule = store.load().single()
+
+        assertEquals(SiteCapsuleRules.DEFAULT_ICON_EMOJI, capsule.iconEmoji)
+        assertEquals(CapsuleIconColor.Light, capsule.iconColor)
     }
 
     @Test

@@ -7,7 +7,10 @@
 | Create/update/sanitize | [`SiteCapsule.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/capsule/SiteCapsule.kt) | Validate opaque ID, name, HTTP(S) URL and profile; cap collection at 64 |
 | Profile projection | [`CapsuleProfileRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/capsule/CapsuleProfileRules.kt) | Referenced profile must exist; isolation requires provider support |
 | Chrome | `CapsuleChromeMode` | Persist explicit mode; UI derives control visibility from it |
-| Icon | `CapsuleIconMode` | Use favicon or profile fallback through explicit projection |
+| Icon source | `CapsuleIconMode` | Use the stored source favicon or the Capsule-owned emoji fallback; render favicons on a light/dark neutral inner surface selected from the favicon luminance |
+| Icon customization | `iconEmoji`, `CapsuleIconColor` | Persist a Capsule-owned symbol and an accessible, icon-only tile color independently from the profile |
+
+The selected tile color stays visible as the outer icon frame. The neutral inner favicon surface is intentionally separate: light transparent marks receive a dark surface, while dark marks receive a light surface.
 
 ## Navigation decisions
 
@@ -25,4 +28,3 @@
 - Reject credentials, malformed authorities and unsafe schemes.
 - Do not weaken navigation scope because a shortcut or persisted record is trusted.
 - Keep dedicated-profile ownership explicit; profile isolation is capability-dependent.
-

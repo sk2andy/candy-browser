@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 import android.content.Context
 import android.util.AtomicFile
 import dev.sk2andy.materialbrowser.capsule.CapsuleChromeMode
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconColor
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationMode
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
@@ -56,6 +57,8 @@ class SiteCapsuleStore(context: Context) {
                         .put("navigationMode", capsule.navigationMode.wireValue)
                         .put("chromeMode", capsule.chromeMode.wireValue)
                         .put("iconMode", capsule.iconMode.wireValue)
+                        .put("iconEmoji", capsule.iconEmoji)
+                        .put("iconColor", capsule.iconColor.wireValue)
                         .put("createdAtMillis", capsule.createdAtMillis)
                         .put("updatedAtMillis", capsule.updatedAtMillis),
                 )
@@ -87,13 +90,18 @@ class SiteCapsuleStore(context: Context) {
             navigationMode = CapsuleNavigationMode.fromWireValue(item.optString("navigationMode")),
             chromeMode = CapsuleChromeMode.fromWireValue(item.optString("chromeMode")),
             iconMode = CapsuleIconMode.fromWireValue(item.optString("iconMode")),
+            iconEmoji = item.optString(
+                "iconEmoji",
+                SiteCapsuleRules.DEFAULT_ICON_EMOJI,
+            ),
+            iconColor = CapsuleIconColor.fromWireValue(item.optString("iconColor")),
             createdAtMillis = item.optLong("createdAtMillis", 0L),
             updatedAtMillis = item.optLong("updatedAtMillis", 0L),
         )
     }.getOrNull()
 
     private companion object {
-        const val CURRENT_VERSION = 1
+        const val CURRENT_VERSION = 2
         const val FILE_NAME = "site_capsules_v1.json"
         const val MAX_JSON_BYTES = 512 * 1024
     }
