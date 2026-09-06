@@ -29,6 +29,9 @@
   <img src="docs/screenshots/candy-privacy.png" width="30%" alt="Candy Browser Privacy X-Ray">
 </p>
 
+> [!NOTE]
+> I am working on a Gecko-Webview-Implementation that brings Firefox extensions to the app. I have already a working draft but I cannot say for sure that this will work. Also this takes most of my time right now to fix all the broken stuff. So bare with me that I am maybe not that responsive in fixing your bugs or adding your feature requests. Thanks <3 
+
 ## Cross-device sync
 
 **Candy Sync turns every connected Android, Chromium, or Firefox device into a writable profile.**
