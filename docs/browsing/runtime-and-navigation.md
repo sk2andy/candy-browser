@@ -43,8 +43,11 @@
   `ACTION_SEND_MULTIPLE`.
 - Show WebView custom views above browser chrome and enable sensor rotation for their lifetime.
   Web fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
-  the current browser orientation and system-bar policy. Tab overview requests portrait only on
-  compact screens; tablets and other `sw600dp` windows preserve their current orientation.
+  the current browser orientation, system-bar policy and soft-input adjustment. While system bars
+  are hidden, keep the Activity at full height and let Compose IME insets move browser chrome above
+  the keyboard; this avoids OEM `adjustResize` implementations leaving a black keyboard-sized area
+  after the IME closes. Tab overview requests portrait only on compact screens; tablets and other
+  `sw600dp` windows preserve their current orientation.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Keep the external-app return marker memory-only and scoped to the tab opened by the latest
   accepted `ACTION_VIEW` or `ACTION_SEND`. Web history consumes Back first; normal root tabs keep

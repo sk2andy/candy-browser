@@ -1010,7 +1010,10 @@ class MainActivity : AppCompatActivity() {
                     resources.configuration.smallestScreenWidthDp,
                 ),
         )
-        applyFullImmersiveMode(state.isImmersive)
+        applyFullImmersiveMode(
+            enabled = state.isImmersive,
+            keepWindowFullHeightForIme = true,
+        )
         val orientation = when (state.requestedOrientation) {
             BrowserRequestedOrientation.Sensor -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
             BrowserRequestedOrientation.Portrait -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
