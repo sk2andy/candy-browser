@@ -48,8 +48,9 @@ import dev.sk2andy.materialbrowser.browser.WebViewProcessStartup
 import dev.sk2andy.materialbrowser.browser.WebViewStartupRules
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
-import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
+import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
+import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
@@ -333,6 +334,10 @@ class MainActivity : AppCompatActivity() {
                     activeProfileId = browserController.activeProfileId,
                     profilesEnabled = browserController.profilesEnabled,
                 )
+                val candySearchWidgetState = CandySearchWidgetRules.state(
+                    profiles = browserController.localBrowserProfiles,
+                    profilesEnabled = browserController.profilesEnabled,
+                )
                 var splashVisible by remember {
                     mutableStateOf(startupPresentation.showSplash)
                 }
@@ -358,6 +363,12 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(launcherShortcutState) {
                     launcherShortcutPublisher.publishSerially(launcherShortcutState)
+                }
+                LaunchedEffect(candySearchWidgetState) {
+                    CandySearchWidgetProvider.updateAll(
+                        context = applicationContext,
+                        state = candySearchWidgetState,
+                    )
                 }
                 LaunchedEffect(showReleaseNotes) {
                     if (showReleaseNotes) {
@@ -822,6 +833,10 @@ class MainActivity : AppCompatActivity() {
         File(applicationInfo.dataDir, AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME)
 
     private fun openIntent(intent: Intent) {
+        if (
+            intent.action == LauncherShortcutRules.ACTION_OPEN_APP &&
+            launcherShortcutIntentHandler.open(intent)
+        ) return
         externalLaunchTabId = null
         val incomingRequest = IncomingBrowserIntent.from(intent)
         if (incomingRequest == null) browserController.dismissExternalLinkPreview()
