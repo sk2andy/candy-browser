@@ -7,7 +7,10 @@
 | Create/update/sanitize | [`SiteCapsule.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/capsule/SiteCapsule.kt) | Validate opaque ID, name, HTTP(S) URL and profile; cap collection at 64 |
 | Profile projection | [`CapsuleProfileRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/capsule/CapsuleProfileRules.kt) | Referenced profile must exist; isolation requires provider support |
 | Chrome | `CapsuleChromeMode` | Persist explicit mode; UI derives control visibility from it |
-| Icon | `CapsuleIconMode` | Use favicon or profile fallback through explicit projection |
+| Icon source | `CapsuleIconMode` | Use the stored source favicon, a separately stored imported custom crop, or the Capsule-owned emoji fallback; missing custom sources fail safely to the fallback |
+| Icon customization | `iconEmoji`, `CapsuleIconColor` | Persist a Capsule-owned symbol and an accessible, icon-only tile color independently from the profile |
+
+The selected tile color stays visible as the outer icon frame. Custom crops fill the rounded inner tile. The neutral inner favicon surface is intentionally separate: light transparent marks receive a dark surface, while dark marks receive a light surface.
 
 ## Navigation decisions
 

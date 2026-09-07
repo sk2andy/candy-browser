@@ -5,6 +5,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 
 class SiteCapsuleRulesTest {
     @Test
@@ -44,6 +47,42 @@ class SiteCapsuleRulesTest {
                 multiProfileSupported = true,
             ),
         )
+    }
+
+    @Test
+    fun `icon customization is normalized independently from profile`() {
+        val capsule = SiteCapsuleRules.create(
+            draft = draft().copy(
+                iconEmoji = "  🚀  ",
+                iconColor = CapsuleIconColor.Charcoal,
+            ),
+            id = ID,
+            nowMillis = 10L,
+            multiProfileSupported = true,
+        )
+        val defaulted = SiteCapsuleRules.create(
+            draft = draft().copy(iconEmoji = "   "),
+            id = ID,
+            nowMillis = 10L,
+            multiProfileSupported = true,
+        )
+
+        assertEquals("🚀", capsule?.iconEmoji)
+        assertEquals(CapsuleIconColor.Charcoal, capsule?.iconColor)
+        assertEquals(SiteCapsuleRules.DEFAULT_ICON_EMOJI, defaulted?.iconEmoji)
+        assertEquals(CapsuleIconColor.Light, CapsuleIconColor.fromWireValue("unknown"))
+        assertEquals(CapsuleIconMode.Custom, CapsuleIconMode.fromWireValue("custom"))
+        assertEquals(CapsuleIconMode.Favicon, CapsuleIconMode.fromWireValue("unknown"))
+    }
+
+    @Test
+    fun `icon palette foregrounds meet accessible text contrast`() {
+        CapsuleIconColor.entries.forEach { color ->
+            assertTrue(
+                "${color.wireValue} contrast",
+                contrastRatio(color.foregroundArgb, color.backgroundArgb) >= 4.5,
+            )
+        }
     }
 
     @Test
@@ -97,6 +136,21 @@ class SiteCapsuleRulesTest {
         createdAtMillis = 1L,
         updatedAtMillis = updated,
     )
+
+    private fun contrastRatio(foreground: Long, background: Long): Double {
+        val foregroundLuminance = relativeLuminance(foreground)
+        val backgroundLuminance = relativeLuminance(background)
+        return (max(foregroundLuminance, backgroundLuminance) + 0.05) /
+            (min(foregroundLuminance, backgroundLuminance) + 0.05)
+    }
+
+    private fun relativeLuminance(argb: Long): Double {
+        fun channel(shift: Int): Double {
+            val value = ((argb shr shift) and 0xFF).toDouble() / 255.0
+            return if (value <= 0.04045) value / 12.92 else ((value + 0.055) / 1.055).pow(2.4)
+        }
+        return channel(16) * 0.2126 + channel(8) * 0.7152 + channel(0) * 0.0722
+    }
 
     private companion object {
         const val ID = "04a74ad8-7533-460c-bfbf-a135968940d5"

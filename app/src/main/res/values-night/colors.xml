@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="candy_widget_surface">#FF242127</color>
+    <color name="candy_widget_divider">#FF49434D</color>
+    <color name="candy_widget_on_surface">#FFF0EAF2</color>
+    <color name="candy_widget_on_surface_variant">#FFC9C1CC</color>
+</resources>

@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +55,7 @@ internal fun TabActionsFloatingMenu(
     onSummarize: () -> Unit,
     onSnooze: () -> Unit,
     onCloseAllTabs: () -> Unit,
+    stackContent: @Composable ColumnScope.() -> Unit = {},
     onDismiss: () -> Unit,
     extensionActions: List<GeckoExtensionActionState> = emptyList(),
     onExtensionAction: (GeckoExtensionActionKey) -> Unit = {},
@@ -147,5 +149,6 @@ internal fun TabActionsFloatingMenu(
                 onAction = onExtensionAction,
             )
         },
+        profileContent = stackContent,
     )
 }

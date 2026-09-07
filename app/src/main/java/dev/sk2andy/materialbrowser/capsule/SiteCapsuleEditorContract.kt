@@ -23,6 +23,8 @@ data class SiteCapsuleEditorRequest(
     val canCreate: Boolean,
     val canCreateDedicatedProfile: Boolean,
     val previewIcon: Bitmap?,
+    val previewIconIsRendered: Boolean = false,
+    val customIcon: Bitmap? = null,
 )
 
 data class SiteCapsuleEditorSubmission(
@@ -37,7 +39,10 @@ data class SiteCapsuleEditorSubmission(
     val navigationMode: CapsuleNavigationMode,
     val chromeMode: CapsuleChromeMode,
     val iconMode: CapsuleIconMode,
+    val iconEmoji: String,
+    val iconColor: CapsuleIconColor,
     val sourceFavicon: Bitmap?,
+    val customIcon: Bitmap? = null,
 )
 
 class SiteCapsuleEditorContract :
@@ -61,7 +66,16 @@ class SiteCapsuleEditorContract :
             putExtra(EXTRA_PINNING_SUPPORTED, input.pinningSupported)
             putExtra(EXTRA_CAN_CREATE, input.canCreate)
             putExtra(EXTRA_CAN_CREATE_DEDICATED_PROFILE, input.canCreateDedicatedProfile)
-            input.previewIcon?.toPreviewPng()?.let { putExtra(EXTRA_PREVIEW_ICON, it) }
+            putExtra(EXTRA_PREVIEW_ICON_IS_RENDERED, input.previewIconIsRendered)
+            input.previewIcon?.toPreviewPng(MAX_PREVIEW_DIMENSION)?.let {
+                putExtra(EXTRA_PREVIEW_ICON, it)
+            }
+            input.customIcon?.toPreviewPng(
+                MAX_CUSTOM_ICON_DIMENSION,
+                requireSquare = true,
+            )?.let {
+                putExtra(EXTRA_CUSTOM_ICON, it)
+            }
             input.existing?.let { existing ->
                 putExtra(EXTRA_EXISTING_NAME, existing.name)
                 putExtra(EXTRA_EXISTING_URL, existing.startUrl)
@@ -71,6 +85,8 @@ class SiteCapsuleEditorContract :
                 putExtra(EXTRA_EXISTING_NAVIGATION, existing.navigationMode.wireValue)
                 putExtra(EXTRA_EXISTING_CHROME, existing.chromeMode.wireValue)
                 putExtra(EXTRA_EXISTING_ICON, existing.iconMode.wireValue)
+                putExtra(EXTRA_EXISTING_ICON_EMOJI, existing.iconEmoji)
+                putExtra(EXTRA_EXISTING_ICON_COLOR, existing.iconColor.wireValue)
                 putExtra(EXTRA_EXISTING_CREATED_AT, existing.createdAtMillis)
                 putExtra(EXTRA_EXISTING_UPDATED_AT, existing.updatedAtMillis)
             }
@@ -113,8 +129,23 @@ class SiteCapsuleEditorContract :
             iconMode = CapsuleIconMode.fromWireValue(
                 intent.getStringExtra(EXTRA_RESULT_ICON),
             ),
+            iconEmoji = SiteCapsuleRules.normalizeIconEmoji(
+                intent.safeString(
+                    EXTRA_RESULT_ICON_EMOJI,
+                    SiteCapsuleRules.MAX_ICON_EMOJI_LENGTH,
+                ).orEmpty(),
+            ),
+            iconColor = CapsuleIconColor.fromWireValue(
+                intent.getStringExtra(EXTRA_RESULT_ICON_COLOR),
+            ),
             sourceFavicon = decodePreviewPng(
                 intent.getByteArrayExtra(EXTRA_RESULT_SOURCE_FAVICON),
+                MAX_PREVIEW_DIMENSION,
+            ),
+            customIcon = decodePreviewPng(
+                intent.getByteArrayExtra(EXTRA_RESULT_CUSTOM_ICON),
+                MAX_CUSTOM_ICON_DIMENSION,
+                requireSquare = true,
             ),
         )
     }
@@ -124,6 +155,7 @@ class SiteCapsuleEditorContract :
         private const val MAX_OPAQUE_ID_LENGTH = 128
         private const val MAX_EMOJI_LENGTH = 16
         private const val MAX_PREVIEW_DIMENSION = 96
+        private const val MAX_CUSTOM_ICON_DIMENSION = CapsuleCustomIconProcessor.OUTPUT_SIZE
         private const val MAX_PREVIEW_BYTES = 256 * 1_024
 
         private const val EXTRA_EXISTING_ID = "capsule_editor.existing_id"
@@ -140,6 +172,9 @@ class SiteCapsuleEditorContract :
         private const val EXTRA_CAN_CREATE_DEDICATED_PROFILE =
             "capsule_editor.can_create_dedicated_profile"
         private const val EXTRA_PREVIEW_ICON = "capsule_editor.preview_icon"
+        private const val EXTRA_CUSTOM_ICON = "capsule_editor.custom_icon"
+        private const val EXTRA_PREVIEW_ICON_IS_RENDERED =
+            "capsule_editor.preview_icon_is_rendered"
         private const val EXTRA_EXISTING_NAME = "capsule_editor.existing_name"
         private const val EXTRA_EXISTING_URL = "capsule_editor.existing_url"
         private const val EXTRA_EXISTING_PROFILE_ID = "capsule_editor.existing_profile_id"
@@ -148,6 +183,8 @@ class SiteCapsuleEditorContract :
         private const val EXTRA_EXISTING_NAVIGATION = "capsule_editor.existing_navigation"
         private const val EXTRA_EXISTING_CHROME = "capsule_editor.existing_chrome"
         private const val EXTRA_EXISTING_ICON = "capsule_editor.existing_icon"
+        private const val EXTRA_EXISTING_ICON_EMOJI = "capsule_editor.existing_icon_emoji"
+        private const val EXTRA_EXISTING_ICON_COLOR = "capsule_editor.existing_icon_color"
         private const val EXTRA_EXISTING_CREATED_AT = "capsule_editor.existing_created_at"
         private const val EXTRA_EXISTING_UPDATED_AT = "capsule_editor.existing_updated_at"
 
@@ -164,7 +201,10 @@ class SiteCapsuleEditorContract :
         private const val EXTRA_RESULT_NAVIGATION = "capsule_editor.result.navigation"
         private const val EXTRA_RESULT_CHROME = "capsule_editor.result.chrome"
         private const val EXTRA_RESULT_ICON = "capsule_editor.result.icon"
+        private const val EXTRA_RESULT_ICON_EMOJI = "capsule_editor.result.icon_emoji"
+        private const val EXTRA_RESULT_ICON_COLOR = "capsule_editor.result.icon_color"
         private const val EXTRA_RESULT_SOURCE_FAVICON = "capsule_editor.result.source_favicon"
+        private const val EXTRA_RESULT_CUSTOM_ICON = "capsule_editor.result.custom_icon"
 
         fun requestFrom(intent: Intent): SiteCapsuleEditorRequest? {
             val profileIds = intent.getStringArrayListExtra(EXTRA_PROFILE_IDS).orEmpty()
@@ -218,6 +258,15 @@ class SiteCapsuleEditorContract :
                     iconMode = CapsuleIconMode.fromWireValue(
                         intent.getStringExtra(EXTRA_EXISTING_ICON),
                     ),
+                    iconEmoji = SiteCapsuleRules.normalizeIconEmoji(
+                        intent.safeString(
+                            EXTRA_EXISTING_ICON_EMOJI,
+                            SiteCapsuleRules.MAX_ICON_EMOJI_LENGTH,
+                        ).orEmpty(),
+                    ),
+                    iconColor = CapsuleIconColor.fromWireValue(
+                        intent.getStringExtra(EXTRA_EXISTING_ICON_COLOR),
+                    ),
                     createdAtMillis = intent.getLongExtra(EXTRA_EXISTING_CREATED_AT, 0L),
                     updatedAtMillis = intent.getLongExtra(EXTRA_EXISTING_UPDATED_AT, 0L),
                 )
@@ -245,7 +294,19 @@ class SiteCapsuleEditorContract :
                     EXTRA_CAN_CREATE_DEDICATED_PROFILE,
                     false,
                 ),
-                previewIcon = decodePreviewPng(intent.getByteArrayExtra(EXTRA_PREVIEW_ICON)),
+                previewIcon = decodePreviewPng(
+                    intent.getByteArrayExtra(EXTRA_PREVIEW_ICON),
+                    MAX_PREVIEW_DIMENSION,
+                ),
+                previewIconIsRendered = intent.getBooleanExtra(
+                    EXTRA_PREVIEW_ICON_IS_RENDERED,
+                    false,
+                ),
+                customIcon = decodePreviewPng(
+                    intent.getByteArrayExtra(EXTRA_CUSTOM_ICON),
+                    MAX_CUSTOM_ICON_DIMENSION,
+                    requireSquare = true,
+                ),
             )
         }
 
@@ -261,21 +322,34 @@ class SiteCapsuleEditorContract :
             putExtra(EXTRA_RESULT_NAVIGATION, submission.navigationMode.wireValue)
             putExtra(EXTRA_RESULT_CHROME, submission.chromeMode.wireValue)
             putExtra(EXTRA_RESULT_ICON, submission.iconMode.wireValue)
-            submission.sourceFavicon?.toPreviewPng()?.let {
+            putExtra(EXTRA_RESULT_ICON_EMOJI, submission.iconEmoji)
+            putExtra(EXTRA_RESULT_ICON_COLOR, submission.iconColor.wireValue)
+            submission.sourceFavicon?.toPreviewPng(MAX_PREVIEW_DIMENSION)?.let {
                 putExtra(EXTRA_RESULT_SOURCE_FAVICON, it)
+            }
+            submission.customIcon?.toPreviewPng(
+                MAX_CUSTOM_ICON_DIMENSION,
+                requireSquare = true,
+            )?.let {
+                putExtra(EXTRA_RESULT_CUSTOM_ICON, it)
             }
         }
 
         private fun Intent.safeString(key: String, maxLength: Int): String? =
             getStringExtra(key)?.takeIf { it.length <= maxLength }
 
-        private fun decodePreviewPng(bytes: ByteArray?): Bitmap? {
+        private fun decodePreviewPng(
+            bytes: ByteArray?,
+            maxDimension: Int,
+            requireSquare: Boolean = false,
+        ): Bitmap? {
             val boundedBytes = bytes?.takeIf { it.size <= MAX_PREVIEW_BYTES } ?: return null
             val bitmap = BitmapFactory.decodeByteArray(boundedBytes, 0, boundedBytes.size)
                 ?: return null
             return if (
-                bitmap.width <= MAX_PREVIEW_DIMENSION &&
-                bitmap.height <= MAX_PREVIEW_DIMENSION
+                bitmap.width in 1..maxDimension &&
+                bitmap.height in 1..maxDimension &&
+                (!requireSquare || bitmap.width == bitmap.height)
             ) {
                 bitmap
             } else {
@@ -284,11 +358,15 @@ class SiteCapsuleEditorContract :
             }
         }
 
-        private fun Bitmap.toPreviewPng(): ByteArray? {
+        private fun Bitmap.toPreviewPng(
+            maxDimension: Int,
+            requireSquare: Boolean = false,
+        ): ByteArray? {
             if (isRecycled || width <= 0 || height <= 0) return null
+            if (requireSquare && width != height) return null
             val scale = minOf(
                 1f,
-                MAX_PREVIEW_DIMENSION.toFloat() / maxOf(width, height).toFloat(),
+                maxDimension.toFloat() / maxOf(width, height).toFloat(),
             )
             val preview = if (scale < 1f) {
                 Bitmap.createScaledBitmap(

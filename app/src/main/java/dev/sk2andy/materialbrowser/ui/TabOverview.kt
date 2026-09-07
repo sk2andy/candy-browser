@@ -349,7 +349,9 @@ internal fun TabOverview(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
                 rootView.stopRubberbandHaptic()
-                while (tabFocusHapticEvents.tryReceive().isSuccess) Unit
+                while (tabFocusHapticEvents.tryReceive().isSuccess) {
+                    // Drain queued haptics while overview is backgrounded.
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -372,7 +374,9 @@ internal fun TabOverview(
             when (interaction) {
                 is DragInteraction.Start -> {
                     pagerSessionEndJob?.cancel()
-                    while (tabFocusHapticEvents.tryReceive().isSuccess) Unit
+                    while (tabFocusHapticEvents.tryReceive().isSuccess) {
+                        // A new drag owns focus feedback from this point onward.
+                    }
                     userPagerGestureActive = true
                     lastHapticPage = pagerState.currentPage
                 }

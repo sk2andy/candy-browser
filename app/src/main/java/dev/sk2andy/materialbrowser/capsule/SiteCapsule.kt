@@ -31,12 +31,33 @@ enum class CapsuleChromeMode(val wireValue: String) {
 
 enum class CapsuleIconMode(val wireValue: String) {
     Favicon("favicon"),
+    Custom("custom"),
     ProfileFallback("profile_fallback"),
     ;
 
     companion object {
         fun fromWireValue(value: String?): CapsuleIconMode =
             entries.firstOrNull { it.wireValue == value } ?: Favicon
+    }
+}
+
+enum class CapsuleIconColor(
+    val wireValue: String,
+    val backgroundArgb: Long,
+    val foregroundArgb: Long,
+) {
+    Light("light", 0xFFF9F5FAL, 0xFF472D74L),
+    Pink("pink", 0xFFFFD9E2L, 0xFF3F0018L),
+    Purple("purple", 0xFFE8DEFFL, 0xFF21005DL),
+    Amber("amber", 0xFFFFE082L, 0xFF332B00L),
+    Mint("mint", 0xFFB8F0D0L, 0xFF00391FL),
+    Sky("sky", 0xFFCBE6FFL, 0xFF00344FL),
+    Charcoal("charcoal", 0xFF312A3AL, 0xFFF4EEFFL),
+    ;
+
+    companion object {
+        fun fromWireValue(value: String?): CapsuleIconColor =
+            entries.firstOrNull { it.wireValue == value } ?: Light
     }
 }
 
@@ -50,6 +71,8 @@ data class SiteCapsule(
     val navigationMode: CapsuleNavigationMode = CapsuleNavigationMode.SameOrigin,
     val chromeMode: CapsuleChromeMode = CapsuleChromeMode.Compact,
     val iconMode: CapsuleIconMode = CapsuleIconMode.Favicon,
+    val iconEmoji: String = SiteCapsuleRules.DEFAULT_ICON_EMOJI,
+    val iconColor: CapsuleIconColor = CapsuleIconColor.Light,
     val createdAtMillis: Long,
     val updatedAtMillis: Long,
 )
@@ -64,6 +87,8 @@ data class SiteCapsuleDraft(
     val navigationMode: CapsuleNavigationMode = CapsuleNavigationMode.SameOrigin,
     val chromeMode: CapsuleChromeMode = CapsuleChromeMode.Compact,
     val iconMode: CapsuleIconMode = CapsuleIconMode.Favicon,
+    val iconEmoji: String = SiteCapsuleRules.DEFAULT_ICON_EMOJI,
+    val iconColor: CapsuleIconColor = CapsuleIconColor.Light,
 )
 
 object SiteCapsuleRules {
@@ -71,6 +96,8 @@ object SiteCapsuleRules {
     const val MAX_NAME_LENGTH = 48
     const val MAX_URL_LENGTH = 4_096
     const val MAX_PROFILE_ID_LENGTH = 128
+    const val MAX_ICON_EMOJI_LENGTH = 16
+    const val DEFAULT_ICON_EMOJI = "🧩"
 
     fun canCreate(existingCount: Int): Boolean = existingCount in 0 until MAX_CAPSULES
 
@@ -101,6 +128,8 @@ object SiteCapsuleRules {
             navigationMode = draft.navigationMode,
             chromeMode = draft.chromeMode,
             iconMode = draft.iconMode,
+            iconEmoji = normalizeIconEmoji(draft.iconEmoji),
+            iconColor = draft.iconColor,
             createdAtMillis = nowMillis,
             updatedAtMillis = nowMillis,
         )
@@ -139,10 +168,16 @@ object SiteCapsuleRules {
             name = name,
             startUrl = startUrl,
             profileId = profileId,
+            iconEmoji = normalizeIconEmoji(capsule.iconEmoji),
             createdAtMillis = createdAt,
             updatedAtMillis = capsule.updatedAtMillis.coerceAtLeast(createdAt),
         )
     }
+
+    fun normalizeIconEmoji(value: String): String = value.trim()
+        .take(MAX_ICON_EMOJI_LENGTH)
+        .takeIf(String::isNotEmpty)
+        ?: DEFAULT_ICON_EMOJI
 
     fun opaqueId(value: String?): String? {
         val candidate = value?.trim()?.takeIf { it.length in 32..64 } ?: return null

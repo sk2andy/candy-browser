@@ -104,6 +104,7 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorContract
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorRequest
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
+import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSession
@@ -132,6 +133,19 @@ private enum class BrowserBackTarget {
     WebHistory,
     ExternalApp,
     RootTab,
+}
+
+private data class PendingLinkSnooze(
+    val url: String,
+    val title: String?,
+    val sourceTabId: String,
+) {
+    fun displayTab(): BrowserTab = BrowserTab(
+        id = "link-peek-snooze:$sourceTabId:${url.hashCode()}",
+        lastAccessedAt = 0L,
+        title = title.orEmpty(),
+        url = url,
+    )
 }
 
 @Composable
@@ -190,6 +204,7 @@ internal fun BrowserScreen(
     var settingsDestination by rememberSaveable { mutableStateOf(SettingsDestination.Home) }
     var snoozedTabsVisible by rememberSaveable { mutableStateOf(false) }
     var snoozeTabId by remember { mutableStateOf<String?>(null) }
+    var pendingLinkSnooze by remember { mutableStateOf<PendingLinkSnooze?>(null) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
     var permissionRadarTabId by remember { mutableStateOf<String?>(null) }
     var permissionRadarOrigin by remember { mutableStateOf<String?>(null) }
@@ -360,13 +375,11 @@ internal fun BrowserScreen(
                 navigationMode = submission.navigationMode,
                 chromeMode = submission.chromeMode,
                 iconMode = submission.iconMode,
+                iconEmoji = submission.iconEmoji,
+                iconColor = submission.iconColor,
             ),
-            sourceFavicon = if (existing == null) {
-                submission.sourceTabId?.let { controller.favicons[it] }
-                    ?: submission.sourceFavicon
-            } else {
-                null
-            },
+            sourceFavicon = submission.sourceFavicon,
+            customIcon = submission.customIcon,
         )
         if (controller.activeProfileId != previousProfileId) {
             controller.selectProfile(previousProfileId)
@@ -377,6 +390,7 @@ internal fun BrowserScreen(
             CapsuleSaveResult.PinRequestFailed -> R.string.capsule_pin_failed
             CapsuleSaveResult.Updated -> R.string.capsule_updated
             CapsuleSaveResult.UpdateFailed -> R.string.capsule_update_failed
+            CapsuleSaveResult.IconSaveFailed -> R.string.capsule_icon_save_failed
             CapsuleSaveResult.LimitReached -> R.string.capsule_limit_reached
             CapsuleSaveResult.Invalid -> R.string.capsule_invalid_configuration
         }
@@ -414,6 +428,17 @@ internal fun BrowserScreen(
             sourceTab?.url?.let(AddressResolver::displayText).orEmpty()
         }
         val sourceUrl = existing?.startUrl ?: sourceTab?.url.orEmpty()
+        val storedSourceIcon = existing?.let { capsule ->
+            controller.siteCapsuleSourceIcon(capsule.id)
+        }
+        val storedCustomIcon = existing?.let { capsule ->
+            controller.siteCapsuleCustomIcon(capsule.id)
+        }
+        val legacyRenderedIcon = existing
+            ?.takeIf { capsule ->
+                capsule.iconMode == CapsuleIconMode.Favicon && storedSourceIcon == null
+            }
+            ?.let { capsule -> controller.siteCapsuleRenderedIcon(capsule.id) }
         siteCapsuleEditorLauncher.launch(
             SiteCapsuleEditorRequest(
                 existing = existing,
@@ -430,11 +455,11 @@ internal fun BrowserScreen(
                 canCreateDedicatedProfile = controller.profilesEnabled &&
                     controller.localBrowserProfiles.size < MAX_PROFILES &&
                     controller.tabs.size < MAX_TABS,
-                previewIcon = if (existing?.iconMode == CapsuleIconMode.Favicon) {
-                    controller.siteCapsuleIcon(existing.id)
-                } else {
-                    sourceTab?.let { controller.favicons[it.id] }
-                },
+                previewIcon = storedSourceIcon
+                    ?: legacyRenderedIcon
+                    ?: sourceTab?.let { controller.favicons[it.id] },
+                previewIconIsRendered = legacyRenderedIcon != null,
+                customIcon = storedCustomIcon,
             ),
         )
         rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -444,31 +469,32 @@ internal fun BrowserScreen(
     val favoriteRemovedMessage = stringResource(R.string.favorite_removed_confirmation)
     val snoozeConfirmationMessage = stringResource(R.string.snooze_confirmation)
     val undoLabel = stringResource(R.string.action_undo)
-    val toggleFavoriteWithFeedback: (String) -> Unit = { tabId ->
-        controller.toggleFavorite(tabId)?.let { mutation ->
-            rootView.performConfirmHaptic()
-            favoriteFeedbackId++
-            favoriteFeedbackEvent = FavoriteFeedbackEvent(
-                id = favoriteFeedbackId,
-                added = mutation.added,
+    val showFavoriteMutation: (FavoriteMutation) -> Unit = { mutation ->
+        rootView.performConfirmHaptic()
+        favoriteFeedbackId++
+        favoriteFeedbackEvent = FavoriteFeedbackEvent(
+            id = favoriteFeedbackId,
+            added = mutation.added,
+        )
+        feedbackSnackbarJob?.cancel()
+        feedbackSnackbarJob = backAnimationScope.launch {
+            val result = feedbackSnackbarHostState.showSnackbar(
+                message = if (mutation.added) {
+                    favoriteAddedMessage
+                } else {
+                    favoriteRemovedMessage
+                },
+                actionLabel = undoLabel,
+                withDismissAction = true,
+                duration = SnackbarDuration.Short,
             )
-            feedbackSnackbarJob?.cancel()
-            feedbackSnackbarJob = backAnimationScope.launch {
-                val result = feedbackSnackbarHostState.showSnackbar(
-                    message = if (mutation.added) {
-                        favoriteAddedMessage
-                    } else {
-                        favoriteRemovedMessage
-                    },
-                    actionLabel = undoLabel,
-                    withDismissAction = true,
-                    duration = SnackbarDuration.Short,
-                )
-                if (result == SnackbarResult.ActionPerformed) {
-                    controller.undoFavorite(mutation)
-                }
+            if (result == SnackbarResult.ActionPerformed) {
+                controller.undoFavorite(mutation)
             }
         }
+    }
+    val toggleFavoriteWithFeedback: (String) -> Unit = { tabId ->
+        controller.toggleFavorite(tabId)?.let(showFavoriteMutation)
     }
     BrowserOfferSnackbarEffects(controller, feedbackSnackbarHostState)
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
@@ -962,6 +988,8 @@ internal fun BrowserScreen(
                         SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
                         SettingsDestination.AddressBarActions ->
                             SettingsDestination.TabsAndGestures
+                        SettingsDestination.LinkPeekActions ->
+                            SettingsDestination.TabsAndGestures
                         else -> SettingsDestination.Home
                     }
                 }
@@ -1386,8 +1414,30 @@ internal fun BrowserScreen(
         }
 
         SnoozeTabDialog(
-            tab = snoozeTabId?.let { id -> controller.tabs.firstOrNull { it.id == id } },
+            tab = pendingLinkSnooze?.displayTab()
+                ?: snoozeTabId?.let { id -> controller.tabs.firstOrNull { it.id == id } },
             onSnooze = { wakeAtMillis ->
+                pendingLinkSnooze?.let { pending ->
+                    val undoToken = controller.snoozeContextLink(
+                        url = pending.url,
+                        title = pending.title,
+                        wakeAtMillis = wakeAtMillis,
+                        sourceTabId = pending.sourceTabId,
+                    )
+                    if (undoToken != null) {
+                        feedbackSnackbarJob?.cancel()
+                        feedbackSnackbarJob = backAnimationScope.launch {
+                            showSnoozeUndoFeedback(
+                                hostState = feedbackSnackbarHostState,
+                                message = snoozeConfirmationMessage,
+                                undoLabel = undoLabel,
+                            ) {
+                                controller.undoSnooze(undoToken)
+                            }
+                        }
+                    }
+                    return@SnoozeTabDialog undoToken != null
+                }
                 val tabId = snoozeTabId ?: return@SnoozeTabDialog false
                 val undoToken = controller.snoozeTab(tabId, wakeAtMillis)
                 if (undoToken != null) {
@@ -1404,7 +1454,10 @@ internal fun BrowserScreen(
                 }
                 undoToken != null
             },
-            onDismiss = { snoozeTabId = null },
+            onDismiss = {
+                snoozeTabId = null
+                pendingLinkSnooze = null
+            },
         )
 
         BrowserSettingsOverlay(
@@ -1503,6 +1556,12 @@ internal fun BrowserScreen(
         addressNewTabButtonBounds = addressNewTabButtonBounds,
         pendingCapsuleDelete = pendingCapsuleDelete,
         onPendingCapsuleDeleteDismiss = { pendingCapsuleDelete = null },
+        onFavoriteLink = { url, title ->
+            controller.toggleContextLinkFavorite(url, title)?.let(showFavoriteMutation)
+        },
+        onSnoozeLink = { url, title, sourceTabId ->
+            pendingLinkSnooze = PendingLinkSnooze(url, title, sourceTabId)
+        },
     )
     FirefoxExtensionChrome(controller)
 }

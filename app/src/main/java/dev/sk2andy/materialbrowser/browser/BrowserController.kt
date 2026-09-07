@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.browser
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -67,6 +69,7 @@ import dev.sk2andy.materialbrowser.capsule.CapsuleFullCandyTransition
 import dev.sk2andy.materialbrowser.capsule.CapsuleFullCandyTransitionRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconRenderer
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconUpdateRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
 import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationDecision
@@ -80,6 +83,9 @@ import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadLaunchResult
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressOutcome
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressRules
 import dev.sk2andy.materialbrowser.browser.actions.PendingDownloadChoice
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
@@ -197,6 +203,8 @@ import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryClearRequest
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
+import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.data.LinkPeekActionLayoutRules
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
 import dev.sk2andy.materialbrowser.data.PendingCandyTrailRedaction
@@ -219,6 +227,7 @@ import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabDuplicateRules
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabReorderingRules
+import dev.sk2andy.materialbrowser.data.TabStackRules
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
 import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.TabPreviewQuality
@@ -330,8 +339,14 @@ private data class GeckoViewBinding(
 )
 
 private data class GeckoLinkPeekBinding(
+    val sourceTabId: String,
+    val contentRevision: Long,
     val session: AndroidBrowserEngineSessionPort,
     val view: View,
+    var committedUrl: String,
+    var title: String? = null,
+    var progress: Int = 0,
+    var isLoading: Boolean = true,
 )
 
 class BrowserController(
@@ -358,6 +373,7 @@ class BrowserController(
         get() = true
 
     val tabs = mutableStateListOf<BrowserTab>()
+    val tabStacks = mutableStateListOf<TabStack>()
     val profiles = mutableStateListOf<BrowserProfile>()
     val previews = mutableStateMapOf<String, Bitmap>()
     val favicons = mutableStateMapOf<String, Bitmap>()
@@ -415,6 +431,8 @@ class BrowserController(
         private set
     var pageTranslationProvider by mutableStateOf(PageTranslationProvider.Google)
         private set
+    var linkLongPressAction by mutableStateOf(LinkLongPressAction.LinkPeek)
+        private set
     var searxngSettings by mutableStateOf(SearxngSettings())
         private set
     var isAiModeToggleVisible by mutableStateOf(false)
@@ -428,6 +446,8 @@ class BrowserController(
     var dismissResistancePercent by mutableIntStateOf(40)
         private set
     var tabOverviewMode by mutableStateOf(TabOverviewMode.Hero)
+        private set
+    var tabStackFolderMode by mutableStateOf(TabOverviewMode.Grid)
         private set
     var tabListStartsAtBottom by mutableStateOf(false)
         private set
@@ -445,6 +465,8 @@ class BrowserController(
     var isExternalLinkPreviewEnabled by mutableStateOf(false)
         private set
     var addressBarActionLayout by mutableStateOf(AddressBarActionLayout.Default)
+        private set
+    var linkPeekActionLayout by mutableStateOf(LinkPeekActionLayout.Default)
         private set
     internal var findInPageState by mutableStateOf<FindInPageState?>(null)
         private set
@@ -875,6 +897,27 @@ class BrowserController(
 
     private fun isBoundSyncProfile(profileId: String): Boolean =
         !isSyncedProfile(profileId) && syncTargetDeviceId(profileId) != null
+
+    val activeTabStacks: List<TabStack>
+        get() = TabStackRules.sanitized(tabStacks, activeTabs)
+
+    val stackAwareOverviewTabs: List<BrowserTab>
+        get() = TabStackRules.visibleTabs(
+            tabs = activeTabs,
+            stacks = activeTabStacks,
+        )
+
+    val gridOverviewTabs: List<BrowserTab>
+        get() = stackAwareOverviewTabs
+
+    fun tabStackFor(tabId: String): TabStack? =
+        activeTabStacks.firstOrNull { stack -> tabId in stack.tabIds }
+
+    fun stackAwareOverviewTabId(tabId: String): String = TabStackRules.visibleTabId(
+        tabId = tabId,
+        tabs = activeTabs,
+        stacks = activeTabStacks,
+    )
 
     val canToggleSelectedDomainMute: Boolean
         get() = supportsPageContentActions && canToggleDomainMute(selectedTabId)
@@ -1659,6 +1702,8 @@ class BrowserController(
         residentTabLimit = store.loadResidentTabLimit()
         searchEngine = store.loadSearchEngine()
         pageTranslationProvider = store.loadPageTranslationProvider()
+        linkLongPressAction = store.loadLinkLongPressAction()
+        linkPeekActionLayout = store.loadLinkPeekActionLayout()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
         isRecallEnabled = store.loadRecallEnabled()
         if (!isRecallEnabled) recallRepository.clearAsync()
@@ -1668,6 +1713,7 @@ class BrowserController(
         isHistorySuggestionsEnabled = store.loadHistorySuggestionsEnabled()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
+        tabStackFolderMode = store.loadTabStackFolderMode()
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
         automaticTabSortingEnabled = store.loadAutomaticTabSortingEnabled()
         isAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
@@ -1810,6 +1856,7 @@ class BrowserController(
                 touchTab(selectedTabId, nowMillis)
             }
         }
+        tabStacks += store.loadTabStacks(tabs)
         persist()
         geckoSessionStateStore.prune(
             (tabs.asSequence() + snoozedTabs.asSequence().map(SnoozedTab::tab))
@@ -2241,20 +2288,47 @@ class BrowserController(
         onCommittedUrlChanged: (String) -> Unit,
     ): View {
         val previewTabId = "link-peek-${++nextGeckoLinkPeekId}"
-        val session = geckoEngineSessionFactory.create(
+        var binding: GeckoLinkPeekBinding? = null
+        val initialContext = protectionRequestContextFor(sourceTab, url)
+        lateinit var session: AndroidBrowserEngineSessionPort
+        session = geckoEngineSessionFactory.create(
             tabId = previewTabId,
             profileId = sourceTab.profileId,
             isolationEnabled = profileForId(sourceTab.profileId)?.isolationEnabled == true,
             isPrivate = sourceTab.isIncognito,
+            privacyPolicy = geckoPrivacyPolicyFor(
+                tab = sourceTab,
+                pageUrl = url,
+                context = initialContext,
+            ),
+            privacyEventSink = GeckoPrivacyEventSink { },
             eventSink = { event ->
-                event.address
-                    ?.let(BrowserUriPolicy::normalizeHttpUrl)
-                    ?.let(onCommittedUrlChanged)
+                event.address?.let(BrowserUriPolicy::normalizeHttpUrl)?.let { committedUrl ->
+                    binding?.committedUrl = committedUrl
+                    binding?.title = event.title?.takeIf(String::isNotBlank)
+                    session.setDesktopMode(isDesktopView(sourceTab, committedUrl))
+                    session.updatePrivacyPolicy(
+                        geckoPrivacyPolicyFor(
+                            tab = sourceTab,
+                            pageUrl = committedUrl,
+                            context = protectionRequestContextFor(sourceTab, committedUrl),
+                        ),
+                    )
+                    onCommittedUrlChanged(committedUrl)
+                }
                 when (event.type) {
-                    BrowserEngineEventType.NavigationStarted -> onProgressChanged(0)
+                    BrowserEngineEventType.NavigationStarted -> {
+                        binding?.isLoading = true
+                        binding?.progress = 0
+                        onProgressChanged(0)
+                    }
                     BrowserEngineEventType.NavigationCommitted,
                     BrowserEngineEventType.NavigationFailed,
-                    -> onProgressChanged(100)
+                    -> {
+                        binding?.isLoading = false
+                        binding?.progress = 100
+                        onProgressChanged(100)
+                    }
                     BrowserEngineEventType.StateChanged,
                     BrowserEngineEventType.Crashed,
                     BrowserEngineEventType.Closed,
@@ -2269,7 +2343,16 @@ class BrowserController(
             isLongClickable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }
-        geckoLinkPeekBindings[view] = GeckoLinkPeekBinding(session = session, view = view)
+        session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
+        session.setDesktopMode(isDesktopView(sourceTab, url))
+        binding = GeckoLinkPeekBinding(
+            sourceTabId = sourceTab.id,
+            contentRevision = contentActions.revision,
+            session = session,
+            view = view,
+            committedUrl = url,
+        )
+        geckoLinkPeekBindings[view] = binding
         session.execute(BrowserEngineCommands.load(url))
         return view
     }
@@ -3213,7 +3296,11 @@ class BrowserController(
         return createTab(BLANK_URL, isIncognito = false) != previousTabId
     }
 
-    fun upsertSiteCapsule(draft: SiteCapsuleDraft, sourceFavicon: Bitmap? = null): CapsuleSaveResult {
+    fun upsertSiteCapsule(
+        draft: SiteCapsuleDraft,
+        sourceFavicon: Bitmap? = null,
+        customIcon: Bitmap? = null,
+    ): CapsuleSaveResult {
         val existing = draft.id?.let { id -> siteCapsules.firstOrNull { it.id == id } }
         if (existing == null && !SiteCapsuleRules.canCreate(siteCapsules.size)) {
             return CapsuleSaveResult.LimitReached
@@ -3223,7 +3310,7 @@ class BrowserController(
             isSyncedProfile(draft.profileId)
         ) return CapsuleSaveResult.Invalid
         val nowMillis = System.currentTimeMillis()
-        val capsule = if (existing == null) {
+        val proposedCapsule = if (existing == null) {
             SiteCapsuleRules.create(
                 draft = draft,
                 id = UUID.randomUUID().toString(),
@@ -3238,23 +3325,56 @@ class BrowserController(
                 multiProfileSupported = isProfileIsolationSupported,
             )
         } ?: return CapsuleSaveResult.Invalid
+        val storedIcon = siteCapsuleIconStore.load(proposedCapsule.id)
+        val storedSourceFavicon = siteCapsuleIconStore.loadSource(proposedCapsule.id)
+        val storedCustomIcon = siteCapsuleIconStore.loadCustom(proposedCapsule.id)
+        val customIconChanged = customIcon != null && runCatching {
+            storedCustomIcon?.sameAs(customIcon) != true
+        }.getOrDefault(true)
+        if (
+            customIconChanged &&
+            !siteCapsuleIconStore.saveCustom(proposedCapsule.id, checkNotNull(customIcon))
+        ) return CapsuleSaveResult.IconSaveFailed
+        val iconCustomizationChanged = existing == null ||
+            existing.iconMode != proposedCapsule.iconMode ||
+            existing.iconEmoji != proposedCapsule.iconEmoji ||
+            existing.iconColor != proposedCapsule.iconColor
+        val capsule = proposedCapsule.copy(
+            iconMode = CapsuleIconUpdateRules.resolveMode(
+                requestedMode = proposedCapsule.iconMode,
+                hasSourceFavicon = sourceFavicon != null || storedSourceFavicon != null,
+                hasCustomIcon = customIcon != null || storedCustomIcon != null,
+                hasRenderedIcon = storedIcon != null,
+                customizationChanged = iconCustomizationChanged,
+            ),
+        )
         val updated = siteCapsules.filterNot { it.id == capsule.id } + capsule
         siteCapsules.clear()
         siteCapsules += SiteCapsuleRules.bounded(updated)
         siteCapsuleStore.save(siteCapsules)
-        val profileEmoji = profiles.firstOrNull { it.id == capsule.profileId }?.emoji.orEmpty()
-        val storedIcon = siteCapsuleIconStore.load(capsule.id)
-        val icon = if (
+        if (sourceFavicon != null) siteCapsuleIconStore.saveSource(capsule.id, sourceFavicon)
+        val icon = when {
+            capsule.iconMode == CapsuleIconMode.Custom -> {
+                CapsuleIconRenderer.render(
+                    name = capsule.name,
+                    iconEmoji = capsule.iconEmoji,
+                    iconColor = capsule.iconColor,
+                    favicon = null,
+                    customIcon = checkNotNull(customIcon ?: storedCustomIcon),
+                )
+            }
             capsule.iconMode == CapsuleIconMode.Favicon &&
-            sourceFavicon == null &&
-            storedIcon != null
-        ) {
-            storedIcon
-        } else {
-            CapsuleIconRenderer.render(
+                sourceFavicon == null && storedSourceFavicon == null &&
+                storedIcon != null -> storedIcon
+            else -> CapsuleIconRenderer.render(
                 name = capsule.name,
-                profileEmoji = profileEmoji,
-                favicon = sourceFavicon.takeIf { capsule.iconMode == CapsuleIconMode.Favicon },
+                iconEmoji = capsule.iconEmoji,
+                iconColor = capsule.iconColor,
+                favicon = if (capsule.iconMode == CapsuleIconMode.Favicon) {
+                    sourceFavicon ?: storedSourceFavicon
+                } else {
+                    null
+                },
             )
         }
         siteCapsuleIconStore.save(capsule.id, icon)
@@ -3340,7 +3460,13 @@ class BrowserController(
         return true
     }
 
-    fun siteCapsuleIcon(capsuleId: String): Bitmap? = siteCapsuleIconStore.load(capsuleId)
+    fun siteCapsuleSourceIcon(capsuleId: String): Bitmap? =
+        siteCapsuleIconStore.loadSource(capsuleId)
+
+    fun siteCapsuleCustomIcon(capsuleId: String): Bitmap? =
+        siteCapsuleIconStore.loadCustom(capsuleId)
+
+    fun siteCapsuleRenderedIcon(capsuleId: String): Bitmap? = siteCapsuleIconStore.load(capsuleId)
 
     internal fun refreshToppingCatalog() {
         val generation = ++toppingCatalogRefreshGeneration
@@ -3590,13 +3716,15 @@ class BrowserController(
             val icon = if (capsule.iconMode == CapsuleIconMode.ProfileFallback) {
                 CapsuleIconRenderer.render(
                     name = capsule.name,
-                    profileEmoji = fallbackProfile.emoji,
+                    iconEmoji = capsule.iconEmoji,
+                    iconColor = capsule.iconColor,
                     favicon = null,
                 )
             } else {
                 siteCapsuleIconStore.load(capsule.id) ?: CapsuleIconRenderer.render(
                     name = capsule.name,
-                    profileEmoji = fallbackProfile.emoji,
+                    iconEmoji = capsule.iconEmoji,
+                    iconColor = capsule.iconColor,
                     favicon = null,
                 )
             }
@@ -3671,6 +3799,16 @@ class BrowserController(
         enqueueSyncedTab(tab.id)
         persist()
         return tab.id
+    }
+
+    fun duplicateSelectedTab(): String? {
+        val sourceTab = selectedTab
+        if (sourceTab.url == BLANK_URL) return null
+        val duplicateTabId = createTab(
+            initialUrl = sourceTab.url,
+            isIncognito = sourceTab.isIncognito,
+        )
+        return duplicateTabId.takeUnless { it == sourceTab.id }
     }
 
     fun createBackgroundTab(
@@ -4285,9 +4423,30 @@ class BrowserController(
         if (cancellation == null) reportFailure()
     }
 
+    private fun contextActionSourceTab(): BrowserTab? {
+        val tabId = contentActions.sourceTabId ?: selectedTabId
+        if (tabId != selectedTabId) return null
+        return tabs.firstOrNull { tab -> tab.id == tabId }
+    }
+
+    private fun contextLinkSourceTab(): BrowserTab? = contextActionSourceTab()
+        ?.takeIf { contentActions.target?.linkUrl != null }
+
+    val canPersistContextLink: Boolean
+        get() = contextLinkSourceTab()?.isIncognito == false
+
+    val contextLinkSourceTabId: String?
+        get() = contextLinkSourceTab()?.id
+
+    val canSnoozeContextLink: Boolean
+        get() = contextLinkSourceTab()?.let { tab ->
+            !tab.isIncognito &&
+                !isSyncedProfile(tab.profileId) &&
+                !isSessionEphemeralTab(tab.id)
+        } == true
+
     private fun currentContentActionTabId(): String? {
-        val tabId = contentActions.sourceTabId
-        if (tabId == selectedTabId && tabs.any { tab -> tab.id == tabId }) return tabId
+        contextActionSourceTab()?.let { tab -> return tab.id }
         contentActions.dismiss()
         return null
     }
@@ -4316,9 +4475,58 @@ class BrowserController(
 
     fun openContextLinkInBackground() {
         val url = contentActions.target?.openLinkInBackgroundAction()?.url ?: return
+        openContextLinkInBackground(url)
+    }
+
+    fun openContextLinkInBackground(url: String): Boolean {
+        val sourceTab = contextLinkSourceTab() ?: return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
         contentActions.dismiss()
-        if (createBackgroundTab(url, openerTabId = selectedTabId) != null) {
+        if (createBackgroundTab(safeUrl, openerTabId = sourceTab.id) != null) {
             contentActions.requestLinkPeekNewTabPulse()
+            return true
+        }
+        return false
+    }
+
+    fun openContextLinkInForeground(url: String): Boolean {
+        val sourceTab = contextLinkSourceTab() ?: return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        contentActions.dismiss()
+        val tabId = createTab(
+            initialUrl = safeUrl,
+            isIncognito = sourceTab.isIncognito,
+            openerTabId = sourceTab.id,
+        )
+        return tabId != sourceTab.id && selectedTabId == tabId
+    }
+
+    private fun handleWebContentLongPress(target: WebContentTarget, tabId: String) {
+        when (
+            LinkLongPressRules.outcome(
+                action = linkLongPressAction,
+                target = target,
+                canOpenInPrivate = canOpenLinkInPrivate,
+            )
+        ) {
+            LinkLongPressOutcome.ShowContext -> contentActions.show(target, tabId)
+            LinkLongPressOutcome.CopyLink -> {
+                contentActions.dismiss()
+                copyLink(requireNotNull(target.linkUrl))
+            }
+            LinkLongPressOutcome.OpenInNewTab -> {
+                contentActions.dismiss()
+                createBackgroundTab(requireNotNull(target.linkUrl), openerTabId = tabId)
+            }
+            LinkLongPressOutcome.OpenInPrivateTab -> {
+                if (!openLinkInPrivate(requireNotNull(target.linkUrl))) {
+                    contentActions.show(target, tabId)
+                }
+            }
+            LinkLongPressOutcome.Share -> {
+                contentActions.dismiss()
+                shareLink(requireNotNull(target.linkUrl))
+            }
         }
     }
 
@@ -4446,6 +4654,12 @@ class BrowserController(
         }
     }
 
+    fun openIncomingAppLink(url: String): Boolean {
+        if (externalApps.openWebUrlExternally(url) != ExternalLaunchResult.Launched) return false
+        showExternalAppOpenedToast()
+        return true
+    }
+
     fun summarizeSelectedPageWithAssistant() = summarizePageWithAssistant(selectedTabId)
 
     fun summarizePageWithAssistant(tabId: String) {
@@ -4500,6 +4714,88 @@ class BrowserController(
             }
         }
     }
+
+    fun saveLinkPeekToReader(
+        previewView: View,
+        expectedUrl: String,
+        onResult: (ReaderExtractionResult) -> Unit,
+    ) {
+        val safeExpectedUrl = BrowserUriPolicy.normalizeHttpUrl(expectedUrl)
+        val binding = geckoLinkPeekBindings[previewView]
+        val sourceTab = binding?.sourceTabId?.let { sourceTabId ->
+            tabs.firstOrNull { tab -> tab.id == sourceTabId }
+        }
+        if (
+            safeExpectedUrl == null ||
+            binding == null ||
+            sourceTab == null ||
+            sourceTab.isIncognito
+        ) {
+            onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.UnsupportedPage))
+            return
+        }
+        if (
+            binding.isLoading ||
+            binding.progress < 100 ||
+            !isCurrentLinkPeekPreview(previewView, binding, safeExpectedUrl)
+        ) {
+            onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+            return
+        }
+
+        binding.session.extractPageForReader { rawResult ->
+            if (!isCurrentLinkPeekPreview(previewView, binding, safeExpectedUrl)) {
+                onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+                return@extractPageForReader
+            }
+            val result = ReaderExtractionParser.parseJson(rawResult)
+            val document = (result as? ReaderExtractionResult.Success)?.document
+            if (
+                document == null ||
+                BrowserUriPolicy.normalizeHttpUrl(document.sourceUrl) != safeExpectedUrl
+            ) {
+                onResult(
+                    result.takeIf { document == null }
+                        ?: ReaderExtractionResult.Failure(
+                            ReaderExtractionFailure.InvalidResponse,
+                        ),
+                )
+                return@extractPageForReader
+            }
+            ReaderLibraryRepository.get(activity).saveSnapshotWithResult(
+                document = document,
+                progress = 0f,
+                isPrivate = false,
+            ) { snapshot ->
+                if (snapshot == null) {
+                    onResult(
+                        ReaderExtractionResult.Failure(
+                            ReaderExtractionFailure.InvalidResponse,
+                        ),
+                    )
+                    return@saveSnapshotWithResult
+                }
+                if (isCurrentLinkPeekPreview(previewView, binding, safeExpectedUrl)) {
+                    contentActions.dismiss()
+                }
+                onResult(result)
+            }
+        }
+    }
+
+    private fun isCurrentLinkPeekPreview(
+        previewView: View,
+        binding: GeckoLinkPeekBinding,
+        expectedUrl: String,
+    ): Boolean = !destroyed &&
+        geckoLinkPeekBindings[previewView] === binding &&
+        contentActions.isLinkPeekVisible &&
+        contentActions.revision == binding.contentRevision &&
+        (contentActions.sourceTabId ?: selectedTabId) == binding.sourceTabId &&
+        selectedTabId == binding.sourceTabId &&
+        tabs.firstOrNull { tab -> tab.id == binding.sourceTabId }?.isIncognito == false &&
+        binding.committedUrl == expectedUrl &&
+        !binding.isLoading
 
     fun openFindInPage(): Boolean {
         val tab = selectedTab
@@ -4613,6 +4909,17 @@ class BrowserController(
     }
 
     fun shareSelectedPage() = sharePage(selectedTabId)
+
+    fun copyLink(url: String) {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
+        activity.getSystemService(ClipboardManager::class.java).setPrimaryClip(
+            ClipData.newPlainText(
+                activity.getString(R.string.external_link_preview_copy_label),
+                safeUrl,
+            ),
+        )
+        Toast.makeText(activity, R.string.toast_link_copied, Toast.LENGTH_SHORT).show()
+    }
 
     fun shareLink(url: String) {
         val request = PageShareRequest.create(url = url, title = "") ?: return
@@ -4807,6 +5114,93 @@ class BrowserController(
         }
     }
 
+    fun snoozeContextLink(
+        url: String,
+        title: String?,
+        wakeAtMillis: Long,
+    ): SnoozeUndoToken? {
+        val sourceTabId = contextLinkSourceTab()?.id ?: return null
+        return snoozeContextLink(
+            url = url,
+            title = title,
+            wakeAtMillis = wakeAtMillis,
+            sourceTabId = sourceTabId,
+        )
+    }
+
+    fun snoozeContextLink(
+        url: String,
+        title: String?,
+        wakeAtMillis: Long,
+        sourceTabId: String,
+    ): SnoozeUndoToken? = snoozeContextLink(
+        url = url,
+        title = title,
+        wakeAtMillis = wakeAtMillis,
+        sourceTabId = sourceTabId,
+        nowMillis = System.currentTimeMillis(),
+    )
+
+    @VisibleForTesting
+    internal fun snoozeContextLink(
+        url: String,
+        title: String?,
+        wakeAtMillis: Long,
+        sourceTabId: String,
+        nowMillis: Long,
+    ): SnoozeUndoToken? {
+        if (selectedTabId != sourceTabId) return null
+        val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return null
+        if (
+            sourceTab.isIncognito ||
+            isSyncedProfile(sourceTab.profileId) ||
+            isSessionEphemeralTab(sourceTab.id)
+        ) return null
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
+        val snoozedTab = newTabState(
+            url = safeUrl,
+            nowMillis = nowMillis,
+            isIncognito = false,
+            openerTabId = sourceTab.id,
+            profileId = sourceTab.profileId,
+        ).copy(
+            title = title.orEmpty().trim().take(MAX_CONTEXT_LINK_TITLE_CHARS).ifEmpty {
+                AddressResolver.displayText(safeUrl)
+            },
+        )
+        if (!SnoozeRules.canSnooze(snoozedTab, wakeAtMillis, nowMillis)) return null
+        val appliedSnoozedTab = SnoozedTab(
+            tab = snoozedTab,
+            wakeAtMillis = wakeAtMillis,
+            createdAtMillis = nowMillis,
+        )
+        val updatedSnoozed = (snoozedTabs + appliedSnoozedTab)
+            .sortedWith(compareBy<SnoozedTab>({ it.wakeAtMillis }, { it.tab.id }))
+        if (!store.saveTabsAndSnoozedImmediately(
+                tabs = persistableTabs(tabs),
+                selectedTabId = selectedTabId,
+                snoozedTabs = updatedSnoozed,
+            )
+        ) return null
+
+        snoozedTabs.clear()
+        snoozedTabs += updatedSnoozed
+        snoozeScheduler.schedule(updatedSnoozed, nowMillis)
+        runCatching(requestSnoozeNotificationPermission)
+        contentActions.dismiss()
+        return SnoozeUndoToken(
+            tabId = snoozedTab.id,
+            appliedSnoozedTab = appliedSnoozedTab,
+            originalIndex = (tabs.indexOfFirst { tab -> tab.id == sourceTab.id } + 1)
+                .coerceAtLeast(0),
+            originalSelectedTabId = selectedTabId,
+            selectedTabIdAfterSnooze = selectedTabId,
+            replacementTabId = null,
+            touchedTabBefore = null,
+            touchedTabAfter = null,
+        )
+    }
+
     fun snoozeTab(
         tabId: String,
         wakeAtMillis: Long,
@@ -4818,6 +5212,7 @@ class BrowserController(
         if (isSyncedProfile(tab.profileId)) return null
         if (isSessionEphemeralTab(tabId)) return null
         if (!SnoozeRules.canSnooze(tab, wakeAtMillis, nowMillis)) return null
+        val originalTabStack = tabStacks.firstOrNull { tabId in it.tabIds }
         val updatedSnoozed = (snoozedTabs.filterNot { it.tab.id == tabId } +
             SnoozedTab(tab, wakeAtMillis, nowMillis))
             .sortedWith(compareBy<SnoozedTab>({ it.wakeAtMillis }, { it.tab.id }))
@@ -4880,6 +5275,10 @@ class BrowserController(
             replacementTabId = replacementTabId,
             touchedTabBefore = touchedTabBefore,
             touchedTabAfter = touchedTabAfter,
+            originalTabStack = originalTabStack,
+            tabStackAfterSnooze = originalTabStack?.let { original ->
+                tabStacks.firstOrNull { it.id == original.id }
+            },
         )
     }
 
@@ -4905,6 +5304,17 @@ class BrowserController(
         result.removedReplacementTabId?.let(::removeTabResources)
         tabs.clear()
         tabs += result.tabs
+        token.originalTabStack?.let { originalStack ->
+            val restoredStacks = TabStackRules.restoreSnoozedMember(
+                stacks = tabStacks,
+                tabs = tabs,
+                restoredTabId = result.restoredTab.id,
+                originalStack = originalStack,
+                stackAfterSnooze = token.tabStackAfterSnooze,
+            )
+            tabStacks.clear()
+            tabStacks += restoredStacks
+        }
         snoozedTabs.clear()
         snoozedTabs += result.snoozedTabs
         updateSelectedTabId(result.selectedTabId)
@@ -5000,6 +5410,96 @@ class BrowserController(
         if (updatedTabs == activeTabs) return false
         replaceProfileTabs(activeProfileId, updatedTabs)
         enqueueSyncedTabPinned(tabId, isPinned)
+        persist()
+        return true
+    }
+
+    fun createTabStack(
+        tabIds: List<String>,
+        name: String,
+        color: TabStackColor,
+        previewTabId: String? = null,
+    ): String? {
+        val activeTabIds = activeTabs.mapTo(hashSetOf(), BrowserTab::id)
+        if (tabIds.any { it !in activeTabIds }) return null
+        val stackId = UUID.randomUUID().toString()
+        val updated = TabStackRules.create(
+            stacks = tabStacks,
+            tabs = tabs,
+            tabIds = tabIds,
+            stackId = stackId,
+            name = name,
+            color = color,
+            previewTabId = previewTabId,
+        ) ?: return null
+        tabStacks.replaceWith(updated)
+        persist()
+        return stackId
+    }
+
+    fun addTabToStack(tabId: String, stackId: String): Boolean {
+        val updated = TabStackRules.addTab(
+            stacks = tabStacks,
+            tabs = tabs,
+            tabId = tabId,
+            stackId = stackId,
+        ) ?: return false
+        if (updated == tabStacks) return false
+        tabStacks.replaceWith(updated)
+        persist()
+        return true
+    }
+
+    fun updateTabStack(
+        stackId: String,
+        tabIds: List<String>,
+        name: String,
+        color: TabStackColor,
+        previewTabId: String? = null,
+    ): Boolean {
+        val activeTabIds = activeTabs.mapTo(hashSetOf(), BrowserTab::id)
+        if (tabIds.any { it !in activeTabIds }) return false
+        val updated = TabStackRules.update(
+            stacks = tabStacks,
+            tabs = tabs,
+            stackId = stackId,
+            tabIds = tabIds,
+            name = name,
+            color = color,
+            previewTabId = previewTabId,
+        ) ?: return false
+        if (updated == tabStacks) return false
+        tabStacks.replaceWith(updated)
+        persist()
+        return true
+    }
+
+    fun removeTabFromStack(tabId: String): Boolean {
+        val updated = TabStackRules.removeTab(tabStacks, tabId)
+        if (updated == tabStacks) return false
+        tabStacks.replaceWith(updated)
+        persist()
+        return true
+    }
+
+    fun toggleTabStackCollapsed(stackId: String, triggerTabId: String? = null): Boolean {
+        val updated = TabStackRules.toggleCollapsed(
+            stacks = tabStacks,
+            stackId = stackId,
+            triggerTabId = triggerTabId,
+        ) ?: return false
+        tabStacks.replaceWith(updated)
+        persist()
+        return true
+    }
+
+    fun setTabStackPreview(stackId: String, tabId: String): Boolean {
+        if (activeTabStacks.none { stack -> stack.id == stackId && tabId in stack.tabIds }) {
+            return false
+        }
+        val updated = TabStackRules.setPreviewTab(tabStacks, stackId, tabId) ?: return false
+        if (updated == tabStacks) return false
+        tabStacks.replaceWith(updated)
         persist()
         return true
     }
@@ -5387,13 +5887,32 @@ class BrowserController(
     fun toggleFavorite(tabId: String = selectedTabId): FavoriteMutation? {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return null
         if (tab.isIncognito || tab.url == BLANK_URL) return null
+        return toggleFavoriteEntry(
+            url = tab.url,
+            title = tab.title,
+        )
+    }
+
+    fun toggleContextLinkFavorite(url: String, title: String?): FavoriteMutation? {
+        val sourceTab = contextLinkSourceTab() ?: return null
+        if (sourceTab.isIncognito) return null
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
+        val mutation = toggleFavoriteEntry(
+            url = safeUrl,
+            title = title.orEmpty(),
+        )
+        if (mutation != null) contentActions.dismiss()
+        return mutation
+    }
+
+    private fun toggleFavoriteEntry(url: String, title: String): FavoriteMutation? {
         val before = favorites.toList()
-        val wasFavorite = BrowsingLibraryRules.isFavorite(favorites, tab.url)
+        val wasFavorite = BrowsingLibraryRules.isFavorite(favorites, url)
         val updated = BrowsingLibraryRules.toggleFavorite(
             current = favorites,
             entry = FavoriteEntry(
-                url = tab.url,
-                title = tab.title,
+                url = url,
+                title = title,
                 addedAt = System.currentTimeMillis(),
             ),
         )
@@ -5411,7 +5930,7 @@ class BrowserController(
 
     fun undoFavorite(mutation: FavoriteMutation): Boolean {
         val restored = FavoriteUndoRules.restore(
-            current = favorites,
+            current = favorites.toList(),
             currentRevision = favoriteRevision,
             mutation = mutation,
         ) ?: return false
@@ -5471,11 +5990,24 @@ class BrowserController(
         if (!enabled) dismissExternalLinkPreview()
     }
 
+    fun updateLinkLongPressAction(action: LinkLongPressAction) {
+        if (linkLongPressAction == action) return
+        linkLongPressAction = action
+        store.saveLinkLongPressAction(action)
+    }
+
     fun updateAddressBarActionLayout(layout: AddressBarActionLayout) {
         val normalized = AddressBarActionLayoutRules.normalize(layout)
         if (addressBarActionLayout == normalized) return
         addressBarActionLayout = normalized
         store.saveAddressBarActionLayout(normalized)
+    }
+
+    fun updateLinkPeekActionLayout(layout: LinkPeekActionLayout) {
+        val normalized = LinkPeekActionLayoutRules.normalize(layout)
+        if (linkPeekActionLayout == normalized) return
+        linkPeekActionLayout = normalized
+        store.saveLinkPeekActionLayout(normalized)
     }
 
     fun updateFullImmersiveModeEnabled(enabled: Boolean) {
@@ -5869,6 +6401,11 @@ class BrowserController(
     fun updateTabOverviewMode(mode: TabOverviewMode) {
         tabOverviewMode = mode
         store.saveTabOverviewMode(mode)
+    }
+
+    fun updateTabStackFolderMode(mode: TabOverviewMode) {
+        tabStackFolderMode = mode
+        store.saveTabStackFolderMode(mode)
     }
 
     fun updateTabListStartsAtBottom(enabled: Boolean) {
@@ -6893,7 +7430,7 @@ class BrowserController(
         ) {
             return
         }
-        contentActions.show(target, tabId)
+        handleWebContentLongPress(target, tabId)
     }
 
     private fun onGeckoMediaState(
@@ -8695,13 +9232,22 @@ class BrowserController(
     }
 
     private fun persist() {
-        store.saveTabs(persistableTabs(tabs), selectedTabId)
+        val reconciledStacks = TabStackRules.sanitized(tabStacks, tabs)
+        if (reconciledStacks != tabStacks) tabStacks.replaceWith(reconciledStacks)
+        val persistentTabs = persistableTabs(tabs)
+        store.saveTabs(persistentTabs, selectedTabId)
+        store.saveTabStacks(tabStacks, persistentTabs)
         val persistentProfiles = localProfiles
         val persistentActiveProfileId = activeProfileId
             .takeIf { id -> persistentProfiles.any { it.id == id } }
             ?: persistentProfiles.first().id
         store.saveProfiles(persistentProfiles, persistentActiveProfileId)
         savePersistentFilterRules()
+    }
+
+    private fun <T> MutableList<T>.replaceWith(values: List<T>) {
+        clear()
+        addAll(values)
     }
 
     private fun persistableTabs(source: Collection<BrowserTab>): List<BrowserTab> =
@@ -9842,6 +10388,7 @@ class BrowserController(
         const val MAX_GENERIC_POLICY_CACHE_ENTRIES = 64
         const val MAX_REPORTED_ALLOW_DECISIONS = 64
         const val MAX_TLS_MAIN_FRAME_TARGETS = 16
+        const val MAX_CONTEXT_LINK_TITLE_CHARS = 500
         const val MAX_WEB_MEDIA_TITLE_LENGTH = 160
         const val MAX_WEB_MEDIA_ORIGIN_LENGTH = 255
         const val MAX_WEB_MEDIA_CHANNELS_PER_WEBVIEW = 32
@@ -9966,6 +10513,7 @@ enum class CapsuleSaveResult {
     PinRequestFailed,
     Updated,
     UpdateFailed,
+    IconSaveFailed,
     LimitReached,
     Invalid,
 }

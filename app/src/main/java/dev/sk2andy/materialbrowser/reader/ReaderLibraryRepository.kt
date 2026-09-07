@@ -65,6 +65,25 @@ class ReaderLibraryRepository private constructor(context: Context) : ReaderLibr
         }
     }
 
+    fun saveSnapshotWithResult(
+        document: ReaderDocument,
+        progress: Float,
+        isPrivate: Boolean,
+        onSaved: (ReaderSnapshot?) -> Unit,
+    ) {
+        enqueue {
+            val snapshot = try {
+                store.saveSnapshot(document, progress, isPrivate)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Throwable) {
+                Log.e(TAG, "Reader snapshot save failed", error)
+                null
+            }
+            onMain { onSaved(snapshot) }
+        }
+    }
+
     override fun deleteSnapshot(
         snapshotId: String,
         isPrivate: Boolean,

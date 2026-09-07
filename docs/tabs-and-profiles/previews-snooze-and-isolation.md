@@ -10,20 +10,13 @@
 | `BrowserController` | Own Gecko `capturePixels` timing, reject stale captures by tab/session/navigation generation, and validate the selected renderer binding again before reporting live content to Compose. |
 | `TabPreviewRepository` | Serialize preview file I/O on one executor and prune unknown tab IDs |
 | `TabPreviewStore` | Validate bitmap dimensions/encoding and bound stored data |
-| `AtomicTabFileDirectory` | Share safe UUID filenames, atomic writes, pruning and explicit directory lifecycle with favicon and WebView-state stores |
+| `AtomicTabFileDirectory` | Share safe UUID filenames, atomic writes, pruning and explicit directory lifecycle with favicon and Gecko-session-state stores |
 | iOS `BrowserTabSnapshotStore` | Keep one native `UIImage` per live tab in memory for Hero/Grid/List, invalidate it at navigation start/session replacement/tab close, and reject late `WKWebView` results by tab, session, navigation revision, request identity and current page URL |
 | External Link Preview | Own one interactive, controller-managed engine session without registering a tab. Android uses a transient Gecko session and keeps the migration-only WebView runtime as a separate sealed binding. The session is memory-only, foreground-only, uses the selected regular profile's storage boundary, accepts only normalized HTTP(S) navigation unless a bounded external-app grant authorizes a handoff, records no browser history or Candy Trail, and is recreated for every profile change. Promotion destroys the preview and reloads its final normalized URL as one regular tab; a user-driven departure from Candy discards it. |
 
 Hero and Grid use the same shared `TabCardHeroContent` interpolation on entry and exit. Android
 supplies platform bitmaps and renderer readiness at the edge; the transition geometry, durations and
 card crop stay in shared Compose so iOS and Android do not fork the tab-overview animation.
-
-## Gecko profile storage deletion
-
-Regular profiles without isolation share Gecko's default context. Deleting one therefore never
-calls Gecko's context-wide deletion API, which would affect the remaining profiles. Only isolated
-profiles request native context deletion after their sessions are closed; private contexts remain
-separate through the `private:<profileId>` mapping.
 
 ## Snoozing
 
@@ -35,15 +28,22 @@ separate through the `private:<profileId>` mapping.
 | `BrowserSessionStore.saveTabsAndSnoozedImmediately` | Commit active+snoozed snapshot together and roll back on failure |
 | `SnoozeScheduler` / `SnoozeWakeNotifier` | Android alarm and notification edges |
 
+Link Peek can snooze its committed preview URL without first creating an active tab. Confirmation
+adds one regular local-profile tab directly to the atomic snoozed snapshot; cancellation leaves no
+tab, history or Gecko session state. Private, synced and ephemeral sources cannot persist snoozed links.
+
 ## Profiles and Gecko storage
 
 | Case | Gecko context |
 | --- | --- |
-| Regular tab | Stable Candy profile ID |
-| Private tab | Same profile ID plus Gecko's private-mode storage boundary; no persisted native snapshot |
-| Profile move | Close old session, discard old native snapshot, reopen under the target profile ID |
+| Regular non-isolated tab | Shared default context |
+| Regular isolated tab | Stable Candy profile ID |
+| Private tab | Stable `private:<profileId>` context regardless of regular-profile isolation; no persisted native snapshot |
+| Profile move | Close old session, discard old native snapshot, reopen under the target profile mapping |
 
 - Close affected Gecko sessions before deleting their storage context.
+- Never call Gecko's context-wide deletion API for a non-isolated regular profile; its default context is shared.
+- Delete an isolated profile's native context only after its sessions are closed. Private contexts remain separate.
 - Use Gecko's context-specific deletion API; never clear another profile's storage as a fallback.
 - Gecko dispatches context deletion without exposing a completion callback; do not report a verified completion from that API.
 - Move/delete tabs and side data as one controller operation; preserve private/non-private boundary.
@@ -62,10 +62,6 @@ separate through the `private:<profileId>` mapping.
 - Changing isolation detaches and recreates only sessions owned by that profile. The shared tab records and current
   URLs remain intact and are reloaded into the new storage boundary.
 - iOS tab previews are intentionally never persisted; this also preserves the private-tab boundary when private tabs are added to the iOS target.
-# Gecko profile storage
 
-On Android, regular profiles with isolation disabled intentionally use Gecko's shared default
-context. A profile explicitly marked as isolated gets a stable context named by its profile ID;
-private sessions always use a separate `private:<profileId>` context and are never joined to a
-regular context. This mapping is centralized in `GeckoProfileStorageRules.contextId` so session
-creation, restoration and profile moves cannot drift apart.
+Android's mapping is centralized in `GeckoProfileStorageRules.contextId` so session creation,
+restoration and profile moves cannot drift apart.

@@ -20,6 +20,9 @@ import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
+import dev.sk2andy.materialbrowser.browser.TabStack
+import dev.sk2andy.materialbrowser.browser.TabStackColor
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.sync.SyncTabRules
 import org.json.JSONArray
@@ -131,6 +134,62 @@ class BrowserSessionStore internal constructor(
 
     fun saveSelectedTab(selectedTabId: String) {
         preferences.edit().putString(KEY_SELECTED_TAB, selectedTabId).apply()
+    }
+
+    fun loadTabStacks(tabs: Collection<BrowserTab>): List<TabStack> {
+        val raw = preferences.getString(KEY_TAB_STACKS, null) ?: return emptyList()
+        if (raw.length > MAX_TAB_STACKS_JSON_LENGTH) return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            check(array.length() <= TabStackRules.MAX_STACKS)
+            val stacks = buildList {
+                for (index in 0 until array.length()) {
+                    val item = array.getJSONObject(index)
+                    val tabIdsArray = item.optJSONArray("tabIds") ?: JSONArray()
+                    check(tabIdsArray.length() <= tabs.size)
+                    val tabIds = buildList {
+                        for (tabIndex in 0 until tabIdsArray.length()) {
+                            tabIdsArray.optString(tabIndex)
+                                .takeIf(String::isNotBlank)
+                                ?.let(::add)
+                        }
+                    }
+                    add(
+                        TabStack(
+                            id = item.getString("id"),
+                            profileId = item.getString("profileId"),
+                            name = item.getString("name"),
+                            color = TabStackColor.fromWireValue(item.optString("color")),
+                            tabIds = tabIds,
+                            previewTabId = item.optString("previewTabId")
+                                .takeIf(String::isNotBlank),
+                            collapsedAnchorTabId = item.optString("collapsedAnchorTabId")
+                                .takeIf(String::isNotBlank),
+                            isCollapsed = item.optBoolean("isCollapsed", false),
+                        ),
+                    )
+                }
+            }
+            TabStackRules.persistent(stacks, tabs)
+        }.getOrDefault(emptyList())
+    }
+
+    fun saveTabStacks(stacks: List<TabStack>, tabs: Collection<BrowserTab>) {
+        val array = JSONArray()
+        TabStackRules.persistent(stacks, tabs).forEach { stack ->
+            array.put(
+                JSONObject()
+                    .put("id", stack.id)
+                    .put("profileId", stack.profileId)
+                    .put("name", stack.name)
+                    .put("color", stack.color.wireValue)
+                    .put("tabIds", JSONArray(stack.tabIds))
+                    .put("previewTabId", stack.previewTabId)
+                    .put("collapsedAnchorTabId", stack.collapsedAnchorTabId)
+                    .put("isCollapsed", stack.isCollapsed),
+            )
+        }
+        preferences.edit().putString(KEY_TAB_STACKS, array.toString()).apply()
     }
 
     fun loadProfiles(): Pair<List<BrowserProfile>, String> {
@@ -658,6 +717,16 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_TAB_OVERVIEW_MODE, mode.wireValue).apply()
     }
 
+    fun loadTabStackFolderMode(): TabOverviewMode =
+        TabOverviewMode.fromWireValue(
+            value = preferences.getString(KEY_TAB_STACK_FOLDER_MODE, null),
+            fallback = TabOverviewMode.Grid,
+        )
+
+    fun saveTabStackFolderMode(mode: TabOverviewMode) {
+        preferences.edit().putString(KEY_TAB_STACK_FOLDER_MODE, mode.wireValue).apply()
+    }
+
     fun loadTabListStartsAtBottom(): Boolean =
         preferences.getBoolean(KEY_TAB_LIST_STARTS_AT_BOTTOM, false)
 
@@ -730,6 +799,33 @@ class BrowserSessionStore internal constructor(
 
     fun saveExternalLinkPreviewEnabled(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_EXTERNAL_LINK_PREVIEW_ENABLED, enabled).apply()
+    }
+
+    fun loadLinkLongPressAction(): LinkLongPressAction = LinkLongPressAction.fromStableId(
+        preferences.getString(KEY_LINK_LONG_PRESS_ACTION, null),
+    )
+
+    fun saveLinkLongPressAction(action: LinkLongPressAction) {
+        preferences.edit().putString(KEY_LINK_LONG_PRESS_ACTION, action.stableId).apply()
+    }
+
+    fun loadLinkPeekActionLayout(): LinkPeekActionLayout {
+        val stored = preferences.getString(KEY_LINK_PEEK_ACTION_LAYOUT, null)
+            ?: return LinkPeekActionLayout.Default
+        return runCatching {
+            val encoded = JSONArray(stored)
+            LinkPeekActionLayoutRules.fromWireValues(
+                List(encoded.length()) { index -> encoded.opt(index) as? String },
+            )
+        }.getOrDefault(LinkPeekActionLayout.Default)
+    }
+
+    fun saveLinkPeekActionLayout(layout: LinkPeekActionLayout) {
+        val normalized = LinkPeekActionLayoutRules.normalize(layout)
+        val encoded = JSONArray().apply {
+            normalized.actions.forEach { action -> put(action?.wireValue ?: JSONObject.NULL) }
+        }
+        preferences.edit().putString(KEY_LINK_PEEK_ACTION_LAYOUT, encoded.toString()).apply()
     }
 
     fun loadAddressBarActionLayout(): AddressBarActionLayout {
@@ -962,6 +1058,7 @@ class BrowserSessionStore internal constructor(
         const val PREFERENCES_NAME = "browser_session"
         const val KEY_TABS = "tabs"
         const val KEY_SELECTED_TAB = "selected_tab"
+        const val KEY_TAB_STACKS = "tab_stacks"
         const val KEY_PROFILES = "profiles"
         const val KEY_ACTIVE_PROFILE = "active_profile"
         const val KEY_PROFILES_ENABLED = "profiles_enabled"
@@ -990,6 +1087,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_HISTORY_SUGGESTIONS_ENABLED = "history_suggestions_enabled"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
+        const val KEY_TAB_STACK_FOLDER_MODE = "tab_stack_folder_mode"
         const val KEY_TAB_LIST_STARTS_AT_BOTTOM = "tab_list_starts_at_bottom"
         const val KEY_AUTOMATIC_TAB_SORTING_ENABLED = "automatic_tab_sorting_enabled"
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
@@ -998,6 +1096,8 @@ class BrowserSessionStore internal constructor(
             "address_bar_dock_vertical_fraction"
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
+        const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
+        const val KEY_LINK_PEEK_ACTION_LAYOUT = "link_peek_action_layout"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
@@ -1021,6 +1121,7 @@ class BrowserSessionStore internal constructor(
         const val DEFAULT_DISMISS_RESISTANCE_START_PERCENT = 40
         const val MIN_DISMISS_RESISTANCE_START_PERCENT = 10
         const val MAX_DISMISS_RESISTANCE_START_PERCENT = 90
+        private const val MAX_TAB_STACKS_JSON_LENGTH = 256 * 1024
     }
 }
 

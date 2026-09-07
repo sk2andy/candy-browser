@@ -65,6 +65,9 @@ class NewTabFavoriteInstrumentedTest {
             R.string.cd_close_address_input,
         )
         composeRule.onNodeWithContentDescription(closeAddressDescription).assertExists()
+        composeRule.onNodeWithText(
+            composeRule.activity.getString(R.string.favorites_title),
+        ).assertDoesNotExist()
 
         composeRule.onNodeWithText(favoriteTitle)
             .assertHasClickAction()

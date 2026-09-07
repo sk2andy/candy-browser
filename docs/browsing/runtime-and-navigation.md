@@ -9,7 +9,7 @@
 | Controller | Gecko session creation, tab/profile state, navigation, persistence coordination, platform and fullscreen-video callbacks | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
 | Platform engine adapters | Own GeckoView sessions/extensions on Android and WKWebView/Toppings on iOS | [`platform-engines.md`](platform-engines.md) |
 | Compose root | Read controller state, own transient screen state and route browser surfaces | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt) |
-| Compose surfaces | Host WebView/preview content, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
+| Compose surfaces | Host engine/preview content, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
 | Policies | Resolve input, URLs, settings, media, file chooser and external routes | [`browser/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/) |
 
 ## Navigation paths
@@ -17,10 +17,10 @@
 | Input | Path | Boundary |
 | --- | --- | --- |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
-| Android intent | `IncomingBrowserIntent` → controller | Accept normalized web URLs through shared URI policy. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
+| Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. An incoming `ACTION_VIEW` app link first gets one direct non-browser-default handoff attempt; shared URLs stay in Candy. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
-| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in WebView; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
-| APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank WebView page |
+| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
+| APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank engine page |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → transient Gecko session | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
 | Desktop view | `DesktopSiteRules` / `DesktopNavigationRules` → controller → engine session | Store registrable domains per profile; coordinate Gecko's desktop user-agent and viewport mode with the target navigation |
@@ -40,38 +40,52 @@
   except for their existing local presentation state.
 - Keep separate browser intent filters for untyped HTTP(S) links and HTTP(S) links carrying the
   `text/html` MIME type. Adding a MIME type to the untyped filter makes ordinary links ineligible.
-- Show WebView custom views above browser chrome and enable sensor rotation for their lifetime.
-  Web fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
-  the current browser orientation and system-bar policy. Tab overview requests portrait only on
-  compact screens; tablets and other `sw600dp` windows preserve their current orientation.
+- Register shares only for `ACTION_SEND` `text/plain` and `text/html`. Treat `EXTRA_TEXT` as the
+  canonical literal payload for both types, require the complete value to normalize as one HTTP(S)
+  URL within 32,768 characters, and never select a URL from prose, `EXTRA_HTML_TEXT`, or
+  `ACTION_SEND_MULTIPLE`.
+- Show Gecko fullscreen content above browser chrome and enable sensor rotation for its lifetime.
+  Web-content fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
+  the current browser orientation, system-bar policy and soft-input adjustment. While system bars
+  are hidden, keep the Activity at full height and let Compose IME insets move browser chrome above
+  the keyboard; this avoids OEM `adjustResize` implementations leaving a black keyboard-sized area
+  after the IME closes. Tab overview requests portrait only on compact screens; tablets and other
+  `sw600dp` windows preserve their current orientation.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
-- Keep the external-app return marker memory-only and scoped to the tab opened by the latest
-  `ACTION_VIEW`. Web history consumes Back first; normal root tabs keep the tab-close/overview flow.
+- Keep the external-app return marker memory-only and scoped to the tab opened by the latest accepted
+  `ACTION_VIEW` or `ACTION_SEND`. Engine history consumes Back first; normal root tabs keep
+  the tab-close/overview flow.
 - Keep external-link preview sessions, URLs, engine views, progress, and target-profile selection out of
-  tab/session, history, Candy Trail, favicon, WebView-state, and tab-preview persistence. Recreate
+  tab/session, history, Candy Trail, favicon, Gecko-session-state, and tab-preview persistence. Recreate
   the transient engine session when its target profile changes and reload the final normalized HTTP(S) URL
   when promoting it to a regular tab. Show the profile chooser only when multiple profiles exist.
   Preview loads still use the selected profile's cookies and
   DOM storage, so the feature is disposable UI rather than a private-browsing mode.
-- On cold external `ACTION_VIEW` launches, keep native chrome interactive while Gecko and
-  registrable-domain initialization complete. Defer unrelated Cast, media-session, and release-note
-  work from this launch path. There is no Android WebView startup or renderer fallback.
+- On every cold accepted `ACTION_VIEW` or `ACTION_SEND` launch, keep native chrome interactive while
+  Gecko and registrable-domain initialization complete, whether external preview is enabled or not.
+  Defer unrelated Cast, media-session, and release-note work from this launch path. If Gecko preparation
+  fails, show terminal feedback and return to the caller instead of leaving an endless loader. There is
+  no Android WebView startup or renderer fallback.
 - Keep federated-login popup tabs session-ephemeral for their complete window lifetime. App
-  backgrounding pauses their live WebView and resumes it on return, while tab/session, History,
-  Recall, Candy Trail, WebView-state, and preview persistence exclude them. Process death therefore
+  backgrounding pauses their live Gecko session and resumes it on return, while tab/session, History,
+  Recall, Candy Trail, Gecko-session-state, and preview persistence exclude them. Process death therefore
   restores the opener instead of an identity-provider page.
 - Resolve external intents on every permitted handoff attempt so apps installed while Candy remains
   open are immediately eligible. Show handoff feedback only after Android accepts the external launch.
+- Offer an incoming `ACTION_VIEW` URL directly to its verified non-browser default before starting
+  Gecko. If Android rejects that handoff, preserve the same URL and bounded initial-navigation grant
+  through the existing preview or regular-tab web fallback. Shared `ACTION_SEND` URLs stay in Candy.
 - Offer user-tapped HTTP(S) links to Android only when a direct non-browser default handler can
   receive them. Requiring both a default and a non-browser handler prevents browser/chooser loops;
-  unavailable or ambiguous app links continue in the current WebView.
-- Carry user intent across script-driven handoffs with a short-lived, tab- and WebView-bound grant
+  unavailable or ambiguous app links continue in the current engine session.
+- Carry user intent across script-driven handoffs with a short-lived, tab- and engine-session-bound grant
   after a tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff,
   ends on page completion or error, and is consumed by the first accepted external launch attempt.
   A passive special-scheme redirect without this grant stays blocked.
-- Treat a newly delivered external `ACTION_VIEW` as the same bounded user intent for its initial
-  redirect chain, with or without external preview. Preserve only its original expiry across Activity
-  recreation; replacing, reloading, stopping, or navigating away from its WebView revokes it.
+- Treat a newly delivered accepted `ACTION_VIEW` or `ACTION_SEND` as the same bounded user
+  intent for its initial redirect chain, with or without external preview. Preserve only its original
+  expiry across Activity recreation; replacing, reloading, stopping, or navigating away from its
+  engine session revokes it.
 - Route only user-tapped main-frame APK links and their authorized redirects into downloads.
   Passive navigation, subframes, malformed URLs, and embedded credentials remain blocked from this
   shortcut. External previews retain one bounded, memory-only download grant for the exact active
@@ -123,17 +137,18 @@
 
 ## TLS trust channels
 
-| Build | Trust anchors | Release asset |
-| --- | --- | --- |
-| Standard | Gecko built-in roots for page/engine requests; Android system roots for Android networking | `CandyBrowser-v<version>-release.apk` |
-| User CA | Standard roots plus user-installed Android CA roots | `CandyBrowser-v<version>-user-ca-release.apk` |
+| Build | Application ID | Trust anchors | Release asset |
+| --- | --- | --- | --- |
+| Standard | `dev.sk2andy.materialbrowser` | Gecko built-in roots for page/engine requests; Android system roots for Android networking | `CandyBrowser-v<version>-release.apk` |
+| User CA | `dev.sk2andy.materialbrowser.ca` | Standard roots plus user-installed Android CA roots | `CandyBrowser-v<version>-ca-release.apk` |
 
 - The build channel controls trust for both networking stacks: Android Network Security Config
   controls Android requests; `GeckoRuntimeSettingsFactory` passes `BuildConfig.TRUST_USER_CERTIFICATES`
   to Gecko's `enterpriseRootsEnabled`. Gecko owns a separate root store, so the XML configuration
   alone is insufficient. Broader trust requires installing the explicitly labeled User CA APK.
-- Both channels use the same application ID and signing key. Update selection preserves the installed
-  channel and rejects a release that contains only the other channel's asset.
+- Separate application IDs isolate app data and allow both channels to stay installed. Update
+  selection preserves the installed channel and rejects a release that contains only the other
+  channel's asset.
 - User CA trust applies to all app HTTPS connections, not only rendered pages or a selected profile.
   The settings warning must remain visible in User CA builds.
 - Gecko validates certificate chains; Candy does not bypass certificate errors. Only errors bound
@@ -148,8 +163,8 @@
 | --- | --- |
 | Force vertical scrolling | Removes vertical page scroll locks without changing horizontal overflow |
 | Force page zooming | Removes viewport `user-scalable`, minimum-scale and maximum-scale restrictions while preserving other viewport directives |
-| Force safe area | Keeps the WebView below the top system-bar/display-cutout inset while scrolling and ignores `viewport-fit=cover` for that host |
-| Federated-login compatibility | Allows third-party cookies for the exact site host, removes WebView-only user-agent markers, and permits user-initiated popups only to recognized identity-provider authentication paths |
+| Force safe area | Keeps the Gecko renderer inside native safe-area margins and ignores `viewport-fit=cover` for that host |
+| Federated-login compatibility | Allows third-party cookies for the exact site host, removes embedded-browser user-agent markers, and permits user-initiated popups only to recognized identity-provider authentication paths |
 | CAPTCHA compatibility | Allows third-party cookies for the exact site host without changing the user agent or popup policy |
 
 - Compatibility overrides match the exact current host. Regular tabs persist them per profile;
@@ -250,5 +265,5 @@ WebView request state.
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Web media, fullscreen and PiP policy | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` on API 34+ |
-| Android intent routing | Integration unit test plus launch instrumented test when lifecycle matters |
-| TLS trust channels | `./gradlew testFullDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
+| Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `BrowserIntentFilterInstrumentedTest`, plus `MainActivityExternalBackInstrumentedTest` when lifecycle matters |
+| Distribution and TLS channels | `./gradlew testFullDebugUnitTest testFossDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFossDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |

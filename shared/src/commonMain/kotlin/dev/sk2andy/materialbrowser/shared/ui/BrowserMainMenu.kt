@@ -718,6 +718,7 @@ private fun BrowserFeatureMenuItem.testTagModifier(): Modifier = when (action) {
     BrowserFeatureMenuAction.TogglePinned -> Modifier.testTag(BrowserMainMenuTestTags.Pin)
     BrowserFeatureMenuAction.TranslatePage -> Modifier.testTag(BrowserMainMenuTestTags.Translate)
     BrowserFeatureMenuAction.FindInPage -> Modifier.testTag(BrowserMainMenuTestTags.FindInPage)
+    BrowserFeatureMenuAction.DuplicateTab -> Modifier.testTag(BrowserMainMenuTestTags.DuplicateTab)
     BrowserFeatureMenuAction.ToggleCookieBannerRemoval ->
         Modifier.testTag(BrowserMainMenuTestTags.CookieBannerRemoval)
     BrowserFeatureMenuAction.ToggleForceVerticalScrolling ->
@@ -760,6 +761,7 @@ object BrowserMainMenuTestTags {
     const val ForceVerticalScrolling = "browser_main_menu_force_vertical_scrolling"
     const val DesktopView = "browser_main_menu_desktop_view"
     const val FindInPage = "browser_main_menu_find_in_page"
+    const val DuplicateTab = "browser_main_menu_duplicate_tab"
     const val ForcePageZooming = "browser_main_menu_force_page_zooming"
     const val ForceSafeArea = "browser_main_menu_force_safe_area"
 

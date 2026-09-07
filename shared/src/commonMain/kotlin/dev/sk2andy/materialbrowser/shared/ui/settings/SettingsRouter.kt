@@ -35,6 +35,8 @@ fun SettingsRouter(
                     initialState == SettingsDestination.ToppingCatalog &&
                     targetState == SettingsDestination.Userscripts ||
                     initialState == SettingsDestination.AddressBarActions &&
+                    targetState == SettingsDestination.TabsAndGestures ||
+                    initialState == SettingsDestination.LinkPeekActions &&
                     targetState == SettingsDestination.TabsAndGestures
                 ) {
                     (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith

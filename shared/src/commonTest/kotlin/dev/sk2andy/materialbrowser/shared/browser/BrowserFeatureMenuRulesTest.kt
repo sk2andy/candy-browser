@@ -34,6 +34,7 @@ class BrowserFeatureMenuRulesTest {
                 BrowserFeatureMenuAction.ShowTabs,
                 BrowserFeatureMenuAction.NewTab,
                 BrowserFeatureMenuAction.CloseTab,
+                BrowserFeatureMenuAction.DuplicateTab,
                 BrowserFeatureMenuAction.OpenReader,
                 BrowserFeatureMenuAction.TranslatePage,
                 BrowserFeatureMenuAction.FindInPage,
@@ -58,6 +59,17 @@ class BrowserFeatureMenuRulesTest {
             ),
             items.map(BrowserFeatureMenuItem::action),
         )
+    }
+
+    @Test
+    fun `duplicate tab is shared and follows page availability`() {
+        val unavailable = BrowserFeatureMenuRules.items(BrowserFeatureMenuState(hasPage = false))
+            .single { it.action == BrowserFeatureMenuAction.DuplicateTab }
+        val available = BrowserFeatureMenuRules.items(BrowserFeatureMenuState(hasPage = true))
+            .single { it.action == BrowserFeatureMenuAction.DuplicateTab }
+
+        assertFalse(unavailable.enabled)
+        assertTrue(available.enabled)
     }
 
     @Test

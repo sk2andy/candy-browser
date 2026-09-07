@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingHorizontal="2dp">
+
+    <LinearLayout
+        android:id="@android:id/background"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_gravity="center_vertical"
+        android:background="@drawable/bg_candy_widget"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="4dp">
+
+        <ImageView
+            android:id="@+id/candy_widget_logo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="@string/widget_open_app"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_launcher_foreground" />
+
+        <FrameLayout
+            android:layout_width="1dp"
+            android:layout_height="30dp"
+            android:layout_marginHorizontal="2dp"
+            android:background="@color/candy_widget_divider" />
+
+        <TextView
+            android:id="@+id/candy_widget_search"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:contentDescription="@string/widget_search_hint"
+            android:ellipsize="end"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:paddingHorizontal="2dp"
+            android:text="@string/widget_search_hint"
+            android:textColor="@color/candy_widget_on_surface_variant"
+            android:textSize="14sp" />
+
+        <ImageView
+            android:id="@+id/candy_widget_private"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:contentDescription="@string/widget_open_private_tab"
+            android:padding="6dp"
+            android:src="@drawable/ic_widget_incognito" />
+
+        <TextView
+            android:id="@+id/candy_widget_profile_one"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="@string/widget_preview_profile_one"
+            android:textSize="21sp" />
+
+        <TextView
+            android:id="@+id/candy_widget_profile_two"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="@string/widget_preview_profile_two"
+            android:textSize="21sp" />
+
+    </LinearLayout>
+
+</FrameLayout>
