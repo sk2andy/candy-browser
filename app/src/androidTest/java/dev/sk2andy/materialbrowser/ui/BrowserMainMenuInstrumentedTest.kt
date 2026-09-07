@@ -19,6 +19,7 @@ import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -31,7 +32,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import eightbitlab.com.blurview.BlurTarget
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -48,6 +52,7 @@ class BrowserMainMenuInstrumentedTest {
     fun usesApprovedGroupsAndDismissesAfterAction() {
         val dismissals = AtomicInteger()
         val dockActions = AtomicInteger()
+        val duplicateActions = AtomicInteger()
         val cookieChanges = AtomicInteger()
         val scrollChanges = AtomicInteger()
         val popupChanges = AtomicInteger()
@@ -55,6 +60,7 @@ class BrowserMainMenuInstrumentedTest {
         val zoomChanges = AtomicInteger()
         val safeAreaChanges = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        var setMenuExpanded: (Boolean) -> Unit = {}
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             val configuration = LocalConfiguration.current
@@ -65,8 +71,15 @@ class BrowserMainMenuInstrumentedTest {
                 }
             }
             CompositionLocalProvider(LocalConfiguration provides shortConfiguration) {
-                MaterialBrowserTheme {
+                MaterialBrowserTheme(
+                    settings = AppearanceSettings(
+                        surfaceStyle = BrowserSurfaceStyle.Frosted,
+                        frostedBlurPercent = 100,
+                    ),
+                ) {
                     var expanded by remember { mutableStateOf(true) }
+                    var blurTarget by remember { mutableStateOf<BlurTarget?>(null) }
+                    setMenuExpanded = { expanded = it }
                     var cookieRemovalEnabled by remember { mutableStateOf(false) }
                     var forceVerticalScrolling by remember { mutableStateOf(false) }
                     var alwaysBlockPopups by remember { mutableStateOf(false) }
@@ -74,9 +87,14 @@ class BrowserMainMenuInstrumentedTest {
                     var forcePageZooming by remember { mutableStateOf(false) }
                     var forceSafeArea by remember { mutableStateOf(false) }
                     Box {
+                        BrowserContentBlurTarget(
+                            enabled = true,
+                            onTargetAttached = { blurTarget = it },
+                            onTargetReleased = { if (blurTarget === it) blurTarget = null },
+                        ) {}
                         BrowserMainMenu(
                             expanded = expanded,
-                            backdropSource = null,
+                            backdropSource = blurTarget.asCandyChromeBackdropSource(),
                             onDismissRequest = {
                                 if (expanded) dismissals.incrementAndGet()
                                 expanded = false
@@ -148,6 +166,7 @@ class BrowserMainMenuInstrumentedTest {
                             onSummarize = {},
                             onSnooze = {},
                             onSnoozedTabs = {},
+                            onDuplicateTab = duplicateActions::incrementAndGet,
                             onDockAddressBar = dockActions::incrementAndGet,
                             onHistory = {},
                             onSettings = {},
@@ -159,6 +178,8 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.mainClock.advanceTimeBy(200L)
 
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
+        composeRule.onAllNodesWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
+            .assertCountEquals(1)
         val menuBounds = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
             .fetchSemanticsNode().boundsInRoot
         val favoriteBounds = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Favorite)
@@ -174,6 +195,7 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNode(
             pageGroup and
                 hasAnyDescendant(hasText(context.getString(R.string.reader_open_action))) and
+                hasAnyDescendant(hasText(context.getString(R.string.action_duplicate_tab))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_translate_page))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_share))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_open_in_app))) and
@@ -310,6 +332,15 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
         assertEquals(1, dockActions.get())
+
+        composeRule.runOnIdle { setMenuExpanded(true) }
+        composeRule.mainClock.advanceTimeBy(200L)
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DuplicateTab)
+            .assertIsDisplayed()
+            .performClick()
+
+        assertEquals(2, dismissals.get())
+        assertEquals(1, duplicateActions.get())
     }
 
     @Test
@@ -392,6 +423,7 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.reader_open_action),
         ).assertIsNotEnabled()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DuplicateTab).assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Translate).assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
             .assertDoesNotExist()

@@ -1,99 +1,102 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.geometry.Rect
-import kotlin.math.floor
 import kotlin.math.min
 
 internal object LinkPeekActionLayoutRules {
-    fun horizontalOffsets(
+    fun actionBarSlots(
         containerBounds: Rect,
-        targetBounds: Rect,
-        actionCount: Int,
+        newTabTargetBounds: Rect,
+        slotCount: Int,
+        fixedNewTabSlotIndex: Int,
         preferredSpacingPx: Float,
-    ): List<Float> {
+    ): List<Rect> {
         if (
-            actionCount <= 0 ||
-            targetBounds.width <= 0f ||
+            slotCount <= 0 ||
+            fixedNewTabSlotIndex !in 0 until slotCount ||
+            newTabTargetBounds.width <= 0f ||
+            newTabTargetBounds.height <= 0f ||
             preferredSpacingPx < 0f ||
-            targetBounds.left < containerBounds.left ||
-            targetBounds.right > containerBounds.right ||
-            targetBounds.top < containerBounds.top ||
-            targetBounds.bottom > containerBounds.bottom
+            newTabTargetBounds.top < containerBounds.top ||
+            newTabTargetBounds.bottom > containerBounds.bottom
         ) {
             return emptyList()
         }
-        val actionWidth = targetBounds.width
-        val leftSpace = targetBounds.left - containerBounds.left
-        val rightSpace = containerBounds.right - targetBounds.right
-        val actionsWidth = actionCount * actionWidth
-        if (leftSpace >= actionsWidth || rightSpace >= actionsWidth) {
-            return if (leftSpace >= rightSpace && leftSpace >= actionsWidth) {
-                offsetsBefore(
-                    edge = targetBounds.left,
-                    availableSpace = leftSpace,
-                    actionWidth = actionWidth,
-                    actionCount = actionCount,
-                    preferredSpacingPx = preferredSpacingPx,
-                )
-            } else {
-                offsetsAfter(
-                    edge = targetBounds.right,
-                    availableSpace = rightSpace,
-                    actionWidth = actionWidth,
-                    actionCount = actionCount,
-                    preferredSpacingPx = preferredSpacingPx,
-                )
-            }
+        val slotWidth = newTabTargetBounds.width
+        val minimumSingleRowWidth = slotCount * slotWidth
+        if (minimumSingleRowWidth > containerBounds.width) {
+            return stackedActionBarSlots(
+                containerBounds = containerBounds,
+                newTabTargetBounds = newTabTargetBounds,
+                slotCount = slotCount,
+                fixedNewTabSlotIndex = fixedNewTabSlotIndex,
+                preferredSpacingPx = preferredSpacingPx,
+            )
         }
+        val spacing = if (slotCount == 1) {
+            0f
+        } else {
+            min(
+                preferredSpacingPx,
+                (containerBounds.width - minimumSingleRowWidth) / (slotCount - 1),
+            )
+        }
+        val totalWidth = minimumSingleRowWidth + (slotCount - 1) * spacing
 
-        val leftCapacity = floor(leftSpace / actionWidth).toInt().coerceIn(0, actionCount)
-        val leftCount = (0..leftCapacity).lastOrNull { candidate ->
-            rightSpace >= (actionCount - candidate) * actionWidth
-        } ?: return emptyList()
-        val rightCount = actionCount - leftCount
-        return offsetsBefore(
-            edge = targetBounds.left,
-            availableSpace = leftSpace,
-            actionWidth = actionWidth,
-            actionCount = leftCount,
-            preferredSpacingPx = preferredSpacingPx,
-        ) + offsetsAfter(
-            edge = targetBounds.right,
-            availableSpace = rightSpace,
-            actionWidth = actionWidth,
-            actionCount = rightCount,
-            preferredSpacingPx = preferredSpacingPx,
+        val minimumStart = containerBounds.left
+        val maximumStart = containerBounds.right - totalWidth
+        val preferredStart = newTabTargetBounds.left -
+            fixedNewTabSlotIndex * (slotWidth + spacing)
+        val start = preferredStart.coerceIn(minimumStart, maximumStart)
+        return List(slotCount) { index ->
+            val left = start + index * (slotWidth + spacing)
+            Rect(
+                left = left,
+                top = newTabTargetBounds.top,
+                right = left + slotWidth,
+                bottom = newTabTargetBounds.bottom,
+            )
+        }
+    }
+
+    private fun stackedActionBarSlots(
+        containerBounds: Rect,
+        newTabTargetBounds: Rect,
+        slotCount: Int,
+        fixedNewTabSlotIndex: Int,
+        preferredSpacingPx: Float,
+    ): List<Rect> {
+        if (slotCount != 4 || fixedNewTabSlotIndex != 2) return emptyList()
+        val slotWidth = newTabTargetBounds.width
+        val slotHeight = newTabTargetBounds.height
+        if (containerBounds.width < slotWidth * 2f || containerBounds.height < slotHeight * 2f) {
+            return emptyList()
+        }
+        val horizontalSpacing = min(
+            preferredSpacingPx,
+            containerBounds.width - slotWidth * 2f,
         )
+        val verticalSpacing = min(
+            preferredSpacingPx,
+            containerBounds.height - slotHeight * 2f,
+        )
+        val totalWidth = slotWidth * 2f + horizontalSpacing
+        val start = newTabTargetBounds.left.coerceIn(
+            containerBounds.left,
+            containerBounds.right - totalWidth,
+        )
+        val lowerTop = newTabTargetBounds.top.coerceIn(
+            containerBounds.top + slotHeight + verticalSpacing,
+            containerBounds.bottom - slotHeight,
+        )
+        val upperTop = lowerTop - slotHeight - verticalSpacing
+        return List(slotCount) { index ->
+            val row = index / 2
+            val column = index % 2
+            val left = start + column * (slotWidth + horizontalSpacing)
+            val top = if (row == 0) upperTop else lowerTop
+            Rect(left, top, left + slotWidth, top + slotHeight)
+        }
     }
 
-    private fun offsetsBefore(
-        edge: Float,
-        availableSpace: Float,
-        actionWidth: Float,
-        actionCount: Int,
-        preferredSpacingPx: Float,
-    ): List<Float> {
-        if (actionCount == 0) return emptyList()
-        val spacing = min(
-            preferredSpacingPx,
-            (availableSpace - actionCount * actionWidth) / actionCount,
-        ).coerceAtLeast(0f)
-        val start = edge - actionCount * (actionWidth + spacing)
-        return List(actionCount) { index -> start + index * (actionWidth + spacing) }
-    }
-
-    private fun offsetsAfter(
-        edge: Float,
-        availableSpace: Float,
-        actionWidth: Float,
-        actionCount: Int,
-        preferredSpacingPx: Float,
-    ): List<Float> {
-        if (actionCount == 0) return emptyList()
-        val spacing = min(
-            preferredSpacingPx,
-            (availableSpace - actionCount * actionWidth) / actionCount,
-        ).coerceAtLeast(0f)
-        return List(actionCount) { index -> edge + spacing + index * (actionWidth + spacing) }
-    }
 }

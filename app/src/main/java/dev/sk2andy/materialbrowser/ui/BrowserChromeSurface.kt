@@ -59,7 +59,7 @@ internal object AndroidCandyChromeSurfaceRenderer : CandyChromeSurfaceRenderer {
             shadowElevation = tokens.shadowElevation,
         ) {
             Box {
-                if (drawsBackdropBlur && blurTarget != null) {
+                if (drawsBackdropBlur) {
                     key(blurTarget) {
                         AndroidView(
                             factory = { context ->

@@ -48,8 +48,9 @@ import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinator
-import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
+import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
+import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
@@ -319,6 +320,10 @@ class MainActivity : AppCompatActivity() {
                     activeProfileId = browserController.activeProfileId,
                     profilesEnabled = browserController.profilesEnabled,
                 )
+                val candySearchWidgetState = CandySearchWidgetRules.state(
+                    profiles = browserController.localBrowserProfiles,
+                    profilesEnabled = browserController.profilesEnabled,
+                )
                 var splashVisible by remember {
                     mutableStateOf(startupPresentation.showSplash)
                 }
@@ -344,6 +349,12 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(launcherShortcutState) {
                     launcherShortcutPublisher.publishSerially(launcherShortcutState)
+                }
+                LaunchedEffect(candySearchWidgetState) {
+                    CandySearchWidgetProvider.updateAll(
+                        context = applicationContext,
+                        state = candySearchWidgetState,
+                    )
                 }
                 LaunchedEffect(showReleaseNotes) {
                     if (showReleaseNotes) {
@@ -855,6 +866,10 @@ class MainActivity : AppCompatActivity() {
         File(applicationInfo.dataDir, AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME)
 
     private fun openIntent(intent: Intent) {
+        if (
+            intent.action == LauncherShortcutRules.ACTION_OPEN_APP &&
+            launcherShortcutIntentHandler.open(intent)
+        ) return
         externalLaunchTabId = null
         val incomingRequest = IncomingBrowserIntent.from(intent)
         if (incomingRequest == null) browserController.dismissExternalLinkPreview()
@@ -885,6 +900,13 @@ class MainActivity : AppCompatActivity() {
         }
         if (intent.action == Intent.ACTION_MAIN) browserController.leaveSiteCapsule()
         incomingRequest?.let { request ->
+            if (
+                intent.action == Intent.ACTION_VIEW &&
+                browserController.openIncomingAppLink(request.url)
+            ) {
+                incomingBrowserNavigationRequestId++
+                return
+            }
             if (
                 browserController.isExternalLinkPreviewEnabled &&
                 browserController.openExternalLinkPreview(
@@ -1030,7 +1052,10 @@ class MainActivity : AppCompatActivity() {
                     resources.configuration.smallestScreenWidthDp,
                 ),
         )
-        applyFullImmersiveMode(state.isImmersive)
+        applyFullImmersiveMode(
+            enabled = state.isImmersive,
+            keepWindowFullHeightForIme = true,
+        )
         val orientation = when (state.requestedOrientation) {
             BrowserRequestedOrientation.Sensor -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
             BrowserRequestedOrientation.Portrait -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT

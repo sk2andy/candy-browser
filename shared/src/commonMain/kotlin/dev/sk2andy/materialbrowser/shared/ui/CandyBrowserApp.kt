@@ -92,6 +92,7 @@ import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Extension
@@ -1639,6 +1640,8 @@ private object CandyBrowserMainMenuResources : BrowserMainMenuResources {
             BrowserFeatureMenuAction.SnoozeTab ->
                 if (item.enabled) null else "Im Inkognitomodus nicht verfügbar"
             BrowserFeatureMenuAction.OpenSnoozedTabs -> "Tabs verwalten, die später zurückkehren"
+            BrowserFeatureMenuAction.DuplicateTab ->
+                "Nur die Adresse wird in den neuen Tab übernommen."
             else -> null
         }
 
@@ -1752,6 +1755,7 @@ private fun BrowserMenuActionIcon(
             if (useFilledVariant) Icons.Filled.PushPin else Icons.Outlined.PushPin
         BrowserFeatureMenuAction.ShowTabs -> Icons.Filled.ViewCarousel
         BrowserFeatureMenuAction.NewTab -> Icons.Filled.Add
+        BrowserFeatureMenuAction.DuplicateTab -> Icons.Filled.ContentCopy
         BrowserFeatureMenuAction.CloseTab -> Icons.Filled.Close
         BrowserFeatureMenuAction.ParkAddressBarRight,
         BrowserFeatureMenuAction.DockAddressBar,
@@ -1804,6 +1808,7 @@ private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: wh
     BrowserFeatureMenuLabelKey.UnpinTab -> "Tab lösen"
     BrowserFeatureMenuLabelKey.Tabs -> "Tabs"
     BrowserFeatureMenuLabelKey.NewTab -> "Neuer Tab"
+    BrowserFeatureMenuLabelKey.DuplicateTab -> "Tab duplizieren"
     BrowserFeatureMenuLabelKey.CloseTab -> "Tab schließen"
     BrowserFeatureMenuLabelKey.ParkAddressBarRight -> "Adressleiste rechts parken"
     BrowserFeatureMenuLabelKey.Reader -> "Lesemodus"

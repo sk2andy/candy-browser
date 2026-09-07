@@ -38,7 +38,7 @@ class AppUpdateRulesTest {
     @Test
     fun `keeps user CA installs on user CA release channel`() {
         val standardAsset = asset("v0.9", suffix = "release")
-        val userCaAsset = asset("v0.9", suffix = "user-ca-release")
+        val userCaAsset = asset("v0.9", suffix = "ca-release")
 
         val update = AppUpdateRules.findAvailableUpdate(
             currentVersionName = "0.8",
@@ -46,7 +46,7 @@ class AppUpdateRulesTest {
             channel = AppReleaseChannel.UserCa,
         )
 
-        assertEquals("CandyBrowser-v0.9-user-ca-release.apk", update?.fileName)
+        assertEquals("CandyBrowser-v0.9-ca-release.apk", update?.fileName)
     }
 
     @Test
@@ -55,6 +55,20 @@ class AppUpdateRulesTest {
             AppUpdateRules.findAvailableUpdate(
                 currentVersionName = "0.8",
                 release = release("v0.9"),
+                channel = AppReleaseChannel.UserCa,
+            ),
+        )
+    }
+
+    @Test
+    fun `does not offer legacy shared identity user CA asset`() {
+        assertNull(
+            AppUpdateRules.findAvailableUpdate(
+                currentVersionName = "0.8",
+                release = release(
+                    "v0.9",
+                    assets = listOf(asset("v0.9", suffix = "user-ca-release")),
+                ),
                 channel = AppReleaseChannel.UserCa,
             ),
         )

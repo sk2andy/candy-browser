@@ -9,11 +9,11 @@
       "altLabel": "Standard (recommended)"
     },
     {
-      "id": "dev.sk2andy.materialbrowser",
+      "id": "dev.sk2andy.materialbrowser.ca",
       "url": "https://github.com/sk2andy/candy-browser",
       "author": "sk2andy",
-      "name": "Candy Browser User CA",
-      "additionalSettings": "{\"apkFilterRegEx\":\"^CandyBrowser-v[0-9]+(?:\\\\.[0-9]+){1,2}-user-ca-release\\\\.apk$\"}",
+      "name": "Candy CA",
+      "additionalSettings": "{\"apkFilterRegEx\":\"^CandyBrowser-v[0-9]+(?:\\\\.[0-9]+){1,2}-ca-release\\\\.apk$\"}",
       "altLabel": "User CA (advanced)"
     }
   ],

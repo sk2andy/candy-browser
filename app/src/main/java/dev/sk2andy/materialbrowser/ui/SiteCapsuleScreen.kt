@@ -8,8 +8,10 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -43,16 +46,20 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -61,6 +68,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,6 +82,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.capsule.CapsuleChromeMode
+import dev.sk2andy.materialbrowser.capsule.CapsuleIconColor
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconRenderer
 import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationMode
@@ -88,6 +99,13 @@ object SiteCapsuleTestTags {
     const val Editor = "site_capsule_editor"
     const val Save = "site_capsule_save"
     const val Chrome = "site_capsule_chrome"
+    const val IconEmoji = "site_capsule_icon_emoji"
+    const val CustomIcon = "site_capsule_custom_icon"
+    const val EditCustomIcon = "site_capsule_edit_custom_icon"
+
+    fun iconColor(color: CapsuleIconColor): String = "site_capsule_icon_color:${color.wireValue}"
+
+    fun iconEmojiQuickPick(emoji: String): String = "site_capsule_icon_emoji_quick_pick:$emoji"
 }
 
 @Composable
@@ -181,7 +199,7 @@ private fun CapsuleBrowserEngineHost(
                 tint = statusBarTint,
                 visible = showStatusBarFrostedGlass,
             )
-            val attachedView = controller.attachSelectedBrowserEngineView(host.blurTarget)
+            controller.attachSelectedBrowserEngineView(host.blurTarget)
         },
         onRelease = { host ->
             controller.detachBrowserEngineView(host.blurTarget)
@@ -301,6 +319,9 @@ fun SiteCapsuleEditorScreen(
     request: SiteCapsuleEditorRequest,
     onSubmit: (SiteCapsuleEditorSubmission) -> Unit,
     onDismiss: () -> Unit,
+    customIcon: Bitmap? = request.customIcon,
+    customIconRevision: Int = 0,
+    onEditCustomIcon: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val existing = request.existing
@@ -338,20 +359,58 @@ fun SiteCapsuleEditorScreen(
             },
         )
     }
-    val fallbackEmoji = if (existing == null && createDedicatedProfile) {
-        dedicatedEmoji
-    } else {
-        profiles.firstOrNull { it.id == selectedProfileId }?.emoji ?: dedicatedEmoji
+    var iconEmoji by rememberSaveable(existing?.id) {
+        mutableStateOf(
+            existing?.iconEmoji ?: profiles.firstOrNull {
+                it.id == selectedProfileId
+            }?.emoji ?: SiteCapsuleRules.DEFAULT_ICON_EMOJI,
+        )
     }
-    val iconPreview = remember(name, fallbackEmoji, iconMode, request.previewIcon) {
-        if (existing != null && iconMode == CapsuleIconMode.Favicon) {
-            request.previewIcon ?: CapsuleIconRenderer.render(name, fallbackEmoji, null)
+    var iconColor by rememberSaveable(existing?.id) {
+        mutableStateOf(existing?.iconColor ?: CapsuleIconColor.Light)
+    }
+    var handledCustomIconRevision by rememberSaveable(existing?.id) { mutableIntStateOf(0) }
+    LaunchedEffect(customIconRevision) {
+        if (
+            customIcon != null &&
+            customIconRevision > handledCustomIconRevision
+        ) {
+            iconMode = CapsuleIconMode.Custom
+            handledCustomIconRevision = customIconRevision
+        }
+    }
+    val iconPreview = remember(
+        name,
+        iconEmoji,
+        iconColor,
+        iconMode,
+        request.previewIcon,
+        request.previewIconIsRendered,
+        customIcon,
+    ) {
+        if (
+            request.previewIconIsRendered &&
+            iconMode == CapsuleIconMode.Favicon &&
+            request.previewIcon != null
+        ) {
+            request.previewIcon
         } else {
             CapsuleIconRenderer.render(
                 name = name,
-                profileEmoji = fallbackEmoji,
-                favicon = request.previewIcon.takeIf { iconMode == CapsuleIconMode.Favicon },
+                iconEmoji = iconEmoji,
+                iconColor = iconColor,
+                favicon = request.previewIcon.takeIf {
+                    iconMode == CapsuleIconMode.Favicon && !request.previewIconIsRendered
+                },
+                customIcon = customIcon.takeIf { iconMode == CapsuleIconMode.Custom },
             )
+        }
+    }
+    DisposableEffect(iconPreview) {
+        onDispose {
+            if (iconPreview !== request.previewIcon) {
+                iconPreview.recycle()
+            }
         }
     }
     Surface(
@@ -399,7 +458,7 @@ fun SiteCapsuleEditorScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
-                CapsuleIconPreview(bitmap = iconPreview, fallback = fallbackEmoji)
+                CapsuleIconPreview(bitmap = iconPreview)
                 Text(
                     stringResource(R.string.capsule_icon_source),
                     style = MaterialTheme.typography.titleMedium,
@@ -408,14 +467,77 @@ fun SiteCapsuleEditorScreen(
                     title = stringResource(R.string.capsule_icon_favicon),
                     subtitle = stringResource(R.string.capsule_icon_favicon_summary),
                     selected = iconMode == CapsuleIconMode.Favicon,
-                    enabled = request.previewIcon != null,
+                    enabled = request.previewIcon != null && !request.previewIconIsRendered,
                     onClick = { iconMode = CapsuleIconMode.Favicon },
                 )
+                CapsuleOptionRow(
+                    title = stringResource(R.string.capsule_icon_custom),
+                    subtitle = stringResource(R.string.capsule_icon_custom_summary),
+                    selected = iconMode == CapsuleIconMode.Custom,
+                    onClick = {
+                        if (customIcon == null) {
+                            onEditCustomIcon()
+                        } else {
+                            iconMode = CapsuleIconMode.Custom
+                        }
+                    },
+                    modifier = Modifier.testTag(SiteCapsuleTestTags.CustomIcon),
+                )
+                if (iconMode == CapsuleIconMode.Custom) {
+                    TextButton(
+                        onClick = onEditCustomIcon,
+                        modifier = Modifier.testTag(SiteCapsuleTestTags.EditCustomIcon),
+                    ) {
+                        Text(stringResource(R.string.capsule_icon_custom_edit))
+                    }
+                }
                 CapsuleOptionRow(
                     title = stringResource(R.string.capsule_icon_fallback),
                     subtitle = stringResource(R.string.capsule_icon_fallback_summary),
                     selected = iconMode == CapsuleIconMode.ProfileFallback,
                     onClick = { iconMode = CapsuleIconMode.ProfileFallback },
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.capsule_icon_emoji),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                OutlinedTextField(
+                    value = iconEmoji,
+                    onValueChange = {
+                        iconEmoji = it.take(SiteCapsuleRules.MAX_ICON_EMOJI_LENGTH)
+                        if (request.previewIconIsRendered) {
+                            iconMode = CapsuleIconMode.ProfileFallback
+                        }
+                    },
+                    label = { Text(stringResource(R.string.capsule_icon_emoji_input)) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(SiteCapsuleTestTags.IconEmoji),
+                )
+                EmojiChoices(
+                    selected = iconEmoji,
+                    onSelect = {
+                        iconEmoji = it
+                        if (request.previewIconIsRendered) {
+                            iconMode = CapsuleIconMode.ProfileFallback
+                        }
+                    },
+                    testTagForEmoji = SiteCapsuleTestTags::iconEmojiQuickPick,
+                )
+                Text(
+                    stringResource(R.string.capsule_icon_background),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                CapsuleIconColorChoices(
+                    selected = iconColor,
+                    onSelect = {
+                        iconColor = it
+                        if (request.previewIconIsRendered) {
+                            iconMode = CapsuleIconMode.ProfileFallback
+                        }
+                    },
                 )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
@@ -567,11 +689,12 @@ fun SiteCapsuleEditorScreen(
                                 navigationMode = navigationMode,
                                 chromeMode = chromeMode,
                                 iconMode = iconMode,
-                                sourceFavicon = if (existing == null) {
-                                    request.previewIcon
-                                } else {
-                                    null
+                                iconEmoji = iconEmoji,
+                                iconColor = iconColor,
+                                sourceFavicon = request.previewIcon.takeUnless {
+                                    request.previewIconIsRendered
                                 },
+                                customIcon = customIcon,
                             ),
                         )
                     },
@@ -596,7 +719,7 @@ fun SiteCapsuleEditorScreen(
 }
 
 @Composable
-private fun CapsuleIconPreview(bitmap: Bitmap?, fallback: String) {
+private fun CapsuleIconPreview(bitmap: Bitmap?) {
     Surface(
         modifier = Modifier.size(72.dp),
         shape = RoundedCornerShape(22.dp),
@@ -611,7 +734,63 @@ private fun CapsuleIconPreview(bitmap: Bitmap?, fallback: String) {
                 contentScale = ContentScale.Fit,
             )
         } else {
-            Box(contentAlignment = Alignment.Center) { Text(fallback, fontSize = 30.sp) }
+            Box(contentAlignment = Alignment.Center) {
+                Text(SiteCapsuleRules.DEFAULT_ICON_EMOJI, fontSize = 30.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CapsuleIconColorChoices(
+    selected: CapsuleIconColor,
+    onSelect: (CapsuleIconColor) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        CapsuleIconColor.entries.forEach { color ->
+            val selectedColor = color == selected
+            val label = stringResource(color.labelResource())
+            val optionDescription = stringResource(
+                R.string.capsule_icon_background_option,
+                label,
+            )
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .selectable(
+                        selected = selectedColor,
+                        role = Role.RadioButton,
+                        onClick = { onSelect(color) },
+                    )
+                    .semantics {
+                        contentDescription = optionDescription
+                    }
+                    .testTag(SiteCapsuleTestTags.iconColor(color)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .border(
+                            width = if (selectedColor) 3.dp else 1.dp,
+                            color = if (selectedColor) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant
+                            },
+                            shape = CircleShape,
+                        ),
+                    shape = CircleShape,
+                    color = Color(color.backgroundArgb),
+                    contentColor = Color.Transparent,
+                ) {}
+            }
         }
     }
 }
@@ -651,7 +830,11 @@ private fun ProfileChoices(
 }
 
 @Composable
-private fun EmojiChoices(selected: String, onSelect: (String) -> Unit) {
+private fun EmojiChoices(
+    selected: String,
+    onSelect: (String) -> Unit,
+    testTagForEmoji: ((String) -> String)? = null,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -660,11 +843,22 @@ private fun EmojiChoices(selected: String, onSelect: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         listOf("🧩", "🍬", "💼", "🛒", "🎵", "📚", "🌍", "⭐").forEach { emoji ->
+            val optionDescription = stringResource(R.string.capsule_icon_emoji_option, emoji)
             Surface(
                 modifier = Modifier
                     .size(52.dp)
                     .clip(CircleShape)
-                    .clickable { onSelect(emoji) },
+                    .selectable(
+                        selected = emoji == selected,
+                        role = Role.RadioButton,
+                        onClick = { onSelect(emoji) },
+                    )
+                    .semantics { contentDescription = optionDescription }
+                    .then(
+                        testTagForEmoji?.let { tagForEmoji ->
+                            Modifier.testTag(tagForEmoji(emoji))
+                        } ?: Modifier,
+                    ),
                 shape = CircleShape,
                 color = if (emoji == selected) {
                     MaterialTheme.colorScheme.primaryContainer
@@ -683,13 +877,14 @@ private fun CapsuleOptionRow(
     title: String,
     subtitle: String,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(18.dp),
@@ -738,4 +933,14 @@ private fun CapsuleChromeMode.summaryResource(): Int = when (this) {
     CapsuleChromeMode.Minimal -> R.string.capsule_chrome_minimal_summary
     CapsuleChromeMode.Compact -> R.string.capsule_chrome_compact_summary
     CapsuleChromeMode.NoControls -> R.string.capsule_chrome_none_summary
+}
+
+private fun CapsuleIconColor.labelResource(): Int = when (this) {
+    CapsuleIconColor.Light -> R.string.capsule_icon_color_light
+    CapsuleIconColor.Pink -> R.string.capsule_icon_color_pink
+    CapsuleIconColor.Purple -> R.string.capsule_icon_color_purple
+    CapsuleIconColor.Amber -> R.string.capsule_icon_color_amber
+    CapsuleIconColor.Mint -> R.string.capsule_icon_color_mint
+    CapsuleIconColor.Sky -> R.string.capsule_icon_color_sky
+    CapsuleIconColor.Charcoal -> R.string.capsule_icon_color_charcoal
 }

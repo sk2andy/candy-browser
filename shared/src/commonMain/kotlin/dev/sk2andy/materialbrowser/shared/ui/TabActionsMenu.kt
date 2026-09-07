@@ -183,6 +183,7 @@ fun TabActionsFloatingMenu(
     onDismiss: () -> Unit,
     effects: TabActionsMenuEffects = DefaultTabActionsMenuEffects,
     extensionContent: @Composable ColumnScope.() -> Unit = {},
+    profileContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     val menuWidth = minOf(400.dp, screenSize.width - 24.dp)
     val compactToolbar = menuWidth < 340.dp
@@ -276,6 +277,7 @@ fun TabActionsFloatingMenu(
                             },
                             onCloseAllTabs = { onCloseAllTabs(presented.tabId) },
                             extensionContent = extensionContent,
+                            profileContent = profileContent,
                         )
                     }
                 }

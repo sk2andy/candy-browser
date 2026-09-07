@@ -52,8 +52,45 @@ class SiteCapsuleEditorContractInstrumentedTest {
     }
 
     @Test
+    fun editRequestRestoresCapsuleOwnedIconCustomization() {
+        val existing = SiteCapsule(
+            id = "04a74ad8-7533-460c-bfbf-a135968940d5",
+            name = "Mail",
+            startUrl = "https://mail.example",
+            profileId = "candy",
+            iconEmoji = "📬",
+            iconColor = CapsuleIconColor.Charcoal,
+            createdAtMillis = 10L,
+            updatedAtMillis = 20L,
+        )
+        val request = SiteCapsuleEditorRequest(
+            existing = existing,
+            sourceTabId = null,
+            sourceTitle = existing.name,
+            sourceUrl = existing.startUrl,
+            profiles = listOf(BrowserProfile("candy", "🍬")),
+            activeProfileId = "candy",
+            profileIsolationSupported = true,
+            pinningSupported = true,
+            canCreate = true,
+            canCreateDedicatedProfile = true,
+            previewIcon = null,
+            previewIconIsRendered = true,
+        )
+
+        val decoded = requireNotNull(
+            SiteCapsuleEditorContract.requestFrom(contract.createIntent(context, request)),
+        )
+
+        assertEquals("📬", decoded.existing?.iconEmoji)
+        assertEquals(CapsuleIconColor.Charcoal, decoded.existing?.iconColor)
+        assertTrue(decoded.previewIconIsRendered)
+    }
+
+    @Test
     fun submissionRoundTripsAndCanceledResultReturnsNull() {
         val sourceFavicon = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
+        val customIcon = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888)
         val submission = SiteCapsuleEditorSubmission(
             existingId = "04a74ad8-7533-460c-bfbf-a135968940d5",
             sourceTabId = "tab-id",
@@ -66,16 +103,26 @@ class SiteCapsuleEditorContractInstrumentedTest {
             navigationMode = CapsuleNavigationMode.SameRegistrableDomain,
             chromeMode = CapsuleChromeMode.Minimal,
             iconMode = CapsuleIconMode.ProfileFallback,
+            iconEmoji = "📬",
+            iconColor = CapsuleIconColor.Sky,
             sourceFavicon = sourceFavicon,
+            customIcon = customIcon,
         )
         val resultIntent = SiteCapsuleEditorContract.resultIntent(submission)
         val decoded = requireNotNull(contract.parseResult(Activity.RESULT_OK, resultIntent))
 
-        assertEquals(submission.copy(sourceFavicon = null), decoded.copy(sourceFavicon = null))
+        assertEquals(
+            submission.copy(sourceFavicon = null, customIcon = null),
+            decoded.copy(sourceFavicon = null, customIcon = null),
+        )
         assertEquals(48, decoded.sourceFavicon?.width)
         assertEquals(48, decoded.sourceFavicon?.height)
+        assertEquals(192, decoded.customIcon?.width)
+        assertEquals(192, decoded.customIcon?.height)
         assertNull(contract.parseResult(Activity.RESULT_CANCELED, resultIntent))
         sourceFavicon.recycle()
+        customIcon.recycle()
         decoded.sourceFavicon?.recycle()
+        decoded.customIcon?.recycle()
     }
 }

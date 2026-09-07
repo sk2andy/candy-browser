@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -65,12 +66,17 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
+import dev.sk2andy.materialbrowser.data.LinkPeekAction
+import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.data.LinkPeekActionLayoutRules as LinkPeekActionSelectionRules
+import dev.sk2andy.materialbrowser.data.LinkPeekActionSlot
 import java.net.URI
 import kotlin.math.roundToInt
 
@@ -85,6 +91,10 @@ internal object LinkPeekTestTags {
     const val CopyLink = "link_peek_copy_link"
     const val OpenPrivate = "link_peek_open_private"
     const val Share = "link_peek_share"
+    const val ReaderLater = "link_peek_reader_later"
+    const val Favorite = "link_peek_favorite"
+    const val Snooze = "link_peek_snooze"
+    const val OpenForeground = "link_peek_open_foreground"
     const val DownloadLink = "link_peek_download_link"
     const val DownloadImage = "link_peek_download_image"
 }
@@ -99,10 +109,20 @@ internal fun <T : View> LinkPeekOverlay(
     createPreviewView: ((Int) -> Unit, (String) -> Unit) -> T,
     releasePreviewView: (T) -> Unit,
     onOpen: () -> Unit,
+    onOpenUrl: (String) -> Unit = { onOpen() },
     onCommitRequested: () -> Unit = onOpen,
     onCopyLink: (String) -> Unit = {},
     onOpenInPrivate: (String) -> Unit = {},
     onShare: (String) -> Unit = {},
+    onSaveReaderOffline: (String, T) -> Unit = { _, _ -> },
+    onFavorite: (String, String?) -> Unit = { _, _ -> },
+    onSnooze: (String, String?) -> Unit = { _, _ -> },
+    onOpenForeground: (String) -> Unit = {},
+    actionLayout: LinkPeekActionLayout = LinkPeekActionLayout.Default,
+    isFavorite: (String) -> Boolean = { false },
+    canSaveReaderOffline: Boolean = true,
+    canFavorite: Boolean = true,
+    canSnooze: Boolean = true,
     canOpenInPrivate: Boolean = true,
     onDownloadLink: (() -> Unit)? = null,
     onDownloadImage: (() -> Unit)? = null,
@@ -115,13 +135,14 @@ internal fun <T : View> LinkPeekOverlay(
     var commitRequested by remember(url) { mutableStateOf(false) }
     var previewProgress by remember(url) { mutableIntStateOf(0) }
     var committedUrl by remember(url) { mutableStateOf(url) }
+    var previewView by remember(url) { mutableStateOf<T?>(null) }
     var cardBounds by remember(url) { mutableStateOf<Rect?>(null) }
     var commitStartBounds by remember(url) { mutableStateOf<Rect?>(null) }
     val commitProgress = remember(url) { Animatable(0f) }
     val openOnce = {
         if (!opened) {
             opened = true
-            onOpen()
+            onOpenUrl(committedUrl)
         }
     }
     val motionProgress by animateFloatAsState(
@@ -171,6 +192,7 @@ internal fun <T : View> LinkPeekOverlay(
     }
     val scrimAlpha = 0.42f + 0.16f * motionProgress
     val density = LocalDensity.current
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val committedUri = remember(committedUrl) {
         runCatching { URI(committedUrl) }.getOrNull()
     }
@@ -348,13 +370,16 @@ internal fun <T : View> LinkPeekOverlay(
                                 createPreviewView(
                                     { loaded -> previewProgress = loaded },
                                     { committed -> committedUrl = committed },
-                                )
+                                ).also { previewView = it }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
                                 .testTag(LinkPeekTestTags.Preview),
-                            onRelease = releasePreviewView,
+                            onRelease = { view ->
+                                if (previewView === view) previewView = null
+                                releasePreviewView(view)
+                            },
                         )
                     }
                     if (onDownloadLink != null) {
@@ -385,58 +410,72 @@ internal fun <T : View> LinkPeekOverlay(
         }
         actionTargetBounds.let { targetBounds ->
             val actionSpacingPx = with(density) { 4.dp.toPx() }
-            val actionOffsets = LinkPeekActionLayoutRules.horizontalOffsets(
+            val slotBounds = LinkPeekActionLayoutRules.actionBarSlots(
                 containerBounds = Rect(
                     left = 0f,
                     top = 0f,
                     right = constraints.maxWidth.toFloat(),
                     bottom = constraints.maxHeight.toFloat(),
                 ),
-                targetBounds = targetBounds,
-                actionCount = LINK_PEEK_ACTION_COUNT,
+                newTabTargetBounds = targetBounds,
+                slotCount = LinkPeekActionSelectionRules.TOOLBAR_SLOT_COUNT,
+                fixedNewTabSlotIndex = LinkPeekActionSelectionRules.FIXED_PLUS_SLOT_INDEX,
                 preferredSpacingPx = actionSpacingPx,
             )
-            if (actionOffsets.size == LINK_PEEK_ACTION_COUNT) {
-                LinkPeekActionTarget(
-                    targetBounds = targetBounds,
-                    offsetX = actionOffsets[0],
-                    icon = R.drawable.ic_content_copy,
-                    contentDescription = copyLabel,
-                    testTag = LinkPeekTestTags.CopyLink,
-                    enabled = !committing,
-                    alpha = 1f - flyProgress,
-                    onClick = { onCopyLink(committedUrl) },
-                )
-                LinkPeekActionTarget(
-                    targetBounds = targetBounds,
-                    offsetX = actionOffsets[1],
-                    icon = R.drawable.ic_incognito_outline,
-                    contentDescription = openPrivateLabel,
-                    testTag = LinkPeekTestTags.OpenPrivate,
-                    enabled = canOpenInPrivate && !committing,
-                    alpha = 1f - flyProgress,
-                    onClick = { onOpenInPrivate(committedUrl) },
-                )
-                LinkPeekActionTarget(
-                    targetBounds = targetBounds,
-                    offsetX = actionOffsets[2],
-                    icon = R.drawable.ic_symbol_share,
-                    contentDescription = shareLabel,
-                    testTag = LinkPeekTestTags.Share,
-                    enabled = !committing,
-                    alpha = 1f - flyProgress,
-                    onClick = { onShare(committedUrl) },
-                )
+            val visualSlotBounds = if (isRtl) slotBounds.reversed() else slotBounds
+            val runtimeSlots = LinkPeekActionSelectionRules.runtimeSlots(actionLayout)
+            val favoriteSelected = canFavorite && isFavorite(committedUrl)
+            runtimeSlots.forEachIndexed { index, slot ->
+                val bounds = visualSlotBounds.getOrNull(index) ?: return@forEachIndexed
+                if (slot is LinkPeekActionSlot.Action) {
+                    val action = slot.action
+                    LinkPeekActionTarget(
+                        targetBounds = bounds,
+                        icon = action.iconRes(favoriteSelected),
+                        contentDescription = action.contentDescription(
+                            copyLabel = copyLabel,
+                            openPrivateLabel = openPrivateLabel,
+                            shareLabel = shareLabel,
+                            isFavorite = favoriteSelected,
+                        ),
+                        testTag = action.testTag(),
+                        enabled = !committing && when (action) {
+                            LinkPeekAction.ReaderLater ->
+                                canSaveReaderOffline && previewProgress >= 100 && previewView != null
+                            LinkPeekAction.OpenPrivate -> canOpenInPrivate
+                            LinkPeekAction.Favorite -> canFavorite
+                            LinkPeekAction.Snooze -> canSnooze
+                            else -> true
+                        },
+                        alpha = 1f - flyProgress,
+                        onClick = {
+                            when (action) {
+                                LinkPeekAction.ReaderLater -> previewView?.let { view ->
+                                    onSaveReaderOffline(committedUrl, view)
+                                }
+                                LinkPeekAction.OpenPrivate -> onOpenInPrivate(committedUrl)
+                                LinkPeekAction.Copy -> onCopyLink(committedUrl)
+                                LinkPeekAction.Share -> onShare(committedUrl)
+                                LinkPeekAction.Favorite -> onFavorite(committedUrl, host)
+                                LinkPeekAction.Snooze -> onSnooze(committedUrl, host)
+                                LinkPeekAction.OpenForeground -> onOpenForeground(committedUrl)
+                            }
+                        },
+                    )
+                }
             }
-            val targetWidth = with(density) { targetBounds.width.toDp() }
-            val targetHeight = with(density) { targetBounds.height.toDp() }
+            val plusBounds = visualSlotBounds.getOrNull(
+                LinkPeekActionSelectionRules.FIXED_PLUS_SLOT_INDEX,
+            ) ?: return@let
+            val targetWidth = with(density) { plusBounds.width.toDp() }
+            val targetHeight = with(density) { plusBounds.height.toDp() }
             Box(
                 modifier = Modifier
                     .align(AbsoluteAlignment.TopLeft)
                     .absoluteOffset {
                         IntOffset(
-                            x = targetBounds.left.roundToInt(),
-                            y = targetBounds.top.roundToInt(),
+                            x = plusBounds.left.roundToInt(),
+                            y = plusBounds.top.roundToInt(),
                         )
                     }
                     .size(targetWidth, targetHeight),
@@ -541,7 +580,6 @@ internal fun <T : View> LinkPeekOverlay(
 @Composable
 private fun BoxScope.LinkPeekActionTarget(
     targetBounds: Rect,
-    offsetX: Float,
     icon: Int,
     contentDescription: String,
     testTag: String,
@@ -557,7 +595,7 @@ private fun BoxScope.LinkPeekActionTarget(
             .align(AbsoluteAlignment.TopLeft)
             .absoluteOffset {
                 IntOffset(
-                    x = offsetX.roundToInt(),
+                    x = targetBounds.left.roundToInt(),
                     y = targetBounds.top.roundToInt(),
                 )
             }
@@ -591,4 +629,44 @@ private fun BoxScope.LinkPeekActionTarget(
     }
 }
 
-private const val LINK_PEEK_ACTION_COUNT = 3
+private fun LinkPeekAction.iconRes(isFavorite: Boolean): Int = when (this) {
+    LinkPeekAction.ReaderLater -> R.drawable.ic_reader_download
+    LinkPeekAction.OpenPrivate -> R.drawable.ic_incognito_outline
+    LinkPeekAction.Copy -> R.drawable.ic_content_copy
+    LinkPeekAction.Share -> R.drawable.ic_symbol_share
+    LinkPeekAction.Favorite -> if (isFavorite) {
+        R.drawable.ic_symbol_favorite_filled
+    } else {
+        R.drawable.ic_symbol_favorite
+    }
+    LinkPeekAction.Snooze -> R.drawable.ic_snooze
+    LinkPeekAction.OpenForeground -> R.drawable.ic_symbol_open_in_new
+}
+
+@Composable
+private fun LinkPeekAction.contentDescription(
+    copyLabel: String,
+    openPrivateLabel: String,
+    shareLabel: String,
+    isFavorite: Boolean,
+): String = when (this) {
+    LinkPeekAction.ReaderLater -> stringResource(R.string.reader_save_offline)
+    LinkPeekAction.OpenPrivate -> openPrivateLabel
+    LinkPeekAction.Copy -> copyLabel
+    LinkPeekAction.Share -> shareLabel
+    LinkPeekAction.Favorite -> stringResource(
+        if (isFavorite) R.string.action_remove_favorite else R.string.action_add_favorite,
+    )
+    LinkPeekAction.Snooze -> stringResource(R.string.action_snooze_tab)
+    LinkPeekAction.OpenForeground -> stringResource(R.string.action_open_in_new_tab_and_switch)
+}
+
+private fun LinkPeekAction.testTag(): String = when (this) {
+    LinkPeekAction.ReaderLater -> LinkPeekTestTags.ReaderLater
+    LinkPeekAction.OpenPrivate -> LinkPeekTestTags.OpenPrivate
+    LinkPeekAction.Copy -> LinkPeekTestTags.CopyLink
+    LinkPeekAction.Share -> LinkPeekTestTags.Share
+    LinkPeekAction.Favorite -> LinkPeekTestTags.Favorite
+    LinkPeekAction.Snooze -> LinkPeekTestTags.Snooze
+    LinkPeekAction.OpenForeground -> LinkPeekTestTags.OpenForeground
+}

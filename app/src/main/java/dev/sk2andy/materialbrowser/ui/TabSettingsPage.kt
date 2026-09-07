@@ -25,6 +25,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
+import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabDismissResistanceSettings
@@ -34,10 +35,12 @@ import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
 internal object TabSettingsTestTags {
+    const val StackFolderMode = "tab_settings_stack_folder_mode"
     const val ResidentTabLimit = "tab_settings_resident_limit"
     const val ListStartsAtBottom = "tab_settings_list_starts_at_bottom"
     const val AutomaticSorting = "tab_settings_automatic_sorting"
     const val AddressBarDocking = "tab_settings_address_bar_docking"
+    const val LinkLongPressAction = "tab_settings_link_long_press_action"
 }
 
 @Composable
@@ -45,23 +48,30 @@ internal fun TabsAndGesturesSettingsPage(
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
     tabOverviewMode: TabOverviewMode,
+    tabStackFolderMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
     automaticTabSortingEnabled: Boolean,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isAddressBarDockingEnabled: Boolean,
+    linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
+    onTabStackFolderModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
+    onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
+    onLinkPeekActions: () -> Unit = {},
     onAddressBarActions: () -> Unit,
     onBack: () -> Unit,
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
+    var stackFolderModeMenuExpanded by remember { mutableStateOf(false) }
+    var linkLongPressActionMenuExpanded by remember { mutableStateOf(false) }
     var residentLimit by remember(residentTabLimit) {
         mutableFloatStateOf(residentTabLimit.toFloat())
     }
@@ -91,6 +101,30 @@ internal fun TabsAndGesturesSettingsPage(
                 TabSettingsTestTags.ListStartsAtBottom,
             ),
         )
+        Spacer(Modifier.height(8.dp))
+        Box(modifier = Modifier.testTag(TabSettingsTestTags.StackFolderMode)) {
+            SettingsChoice(
+                title = stringResource(R.string.settings_tab_stack_folder_mode),
+                value = tabStackFolderMode.displayName(),
+                expanded = stackFolderModeMenuExpanded,
+                onClick = { stackFolderModeMenuExpanded = true },
+            )
+            SettingsDropdown(
+                expanded = stackFolderModeMenuExpanded,
+                onDismissRequest = { stackFolderModeMenuExpanded = false },
+            ) {
+                TabOverviewMode.entries.forEach { mode ->
+                    SettingsDropdownItem(
+                        label = mode.displayName(),
+                        selected = mode == tabStackFolderMode,
+                        onClick = {
+                            stackFolderModeMenuExpanded = false
+                            onTabStackFolderModeChanged(mode)
+                        },
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(2.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_automatic_tab_sorting_title),
@@ -167,6 +201,37 @@ internal fun TabsAndGesturesSettingsPage(
         Spacer(Modifier.height(14.dp))
         SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
         Spacer(Modifier.height(2.dp))
+        Box(modifier = Modifier.testTag(TabSettingsTestTags.LinkLongPressAction)) {
+            SettingsChoice(
+                title = stringResource(R.string.settings_link_long_press_action),
+                value = stringResource(linkLongPressAction.labelRes()),
+                expanded = linkLongPressActionMenuExpanded,
+                onClick = { linkLongPressActionMenuExpanded = true },
+            )
+            SettingsDropdown(
+                expanded = linkLongPressActionMenuExpanded,
+                onDismissRequest = { linkLongPressActionMenuExpanded = false },
+            ) {
+                LinkLongPressAction.entries.forEach { action ->
+                    SettingsDropdownItem(
+                        label = stringResource(action.labelRes()),
+                        selected = action == linkLongPressAction,
+                        onClick = {
+                            linkLongPressActionMenuExpanded = false
+                            onLinkLongPressActionChanged(action)
+                        },
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(2.dp))
+        SettingsLink(
+            icon = ImageVector.vectorResource(R.drawable.ic_symbol_open_in_new),
+            title = stringResource(R.string.settings_link_peek_actions_title),
+            subtitle = stringResource(R.string.settings_link_peek_actions_summary),
+            onClick = onLinkPeekActions,
+        )
+        Spacer(Modifier.height(2.dp))
         SettingsLink(
             icon = ImageVector.vectorResource(R.drawable.ic_switch_to_tab),
             title = stringResource(R.string.settings_address_bar_actions_title),
@@ -193,4 +258,12 @@ internal fun TabsAndGesturesSettingsPage(
             onValueChanged = onDismissResistancePercentChanged,
         )
     }
+}
+
+private fun LinkLongPressAction.labelRes(): Int = when (this) {
+    LinkLongPressAction.LinkPeek -> R.string.link_peek_title
+    LinkLongPressAction.CopyLink -> R.string.external_link_preview_copy_link
+    LinkLongPressAction.OpenInNewTab -> R.string.action_open_in_new_tab
+    LinkLongPressAction.OpenInPrivateTab -> R.string.action_open_link_in_private_tab
+    LinkLongPressAction.Share -> R.string.action_share
 }

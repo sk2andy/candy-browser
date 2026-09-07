@@ -155,6 +155,8 @@ android {
 
         create("foss") {
             dimension = "distribution"
+            applicationIdSuffix = ".foss"
+            manifestPlaceholders["appLabel"] = "Candy FOSS"
             buildConfigField("boolean", "FOSS_DISTRIBUTION", "true")
         }
     }
@@ -200,7 +202,8 @@ android {
 
         create("userCaDebug") {
             initWith(getByName("debug"))
-            manifestPlaceholders["appLabel"] = "Candy Browser User CA Debug"
+            applicationIdSuffix = ".ca.debug"
+            manifestPlaceholders["appLabel"] = "Candy CA Debug"
             manifestPlaceholders["networkSecurityConfig"] =
                 "@xml/network_security_config_user_ca"
             buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "true")
@@ -209,7 +212,8 @@ android {
 
         create("userCaRelease") {
             initWith(getByName("release"))
-            manifestPlaceholders["appLabel"] = "Candy Browser User CA"
+            applicationIdSuffix = ".ca"
+            manifestPlaceholders["appLabel"] = "Candy CA"
             manifestPlaceholders["networkSecurityConfig"] =
                 "@xml/network_security_config_user_ca"
             buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "true")

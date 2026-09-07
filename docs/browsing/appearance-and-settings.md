@@ -29,6 +29,7 @@
 | Shape | Angular, rounded, extra rounded | Rounded |
 | Startup animation | Off, on | On |
 | Open home page on startup | Off, on | Off |
+| Long-press link action | Link Peek, copy link, open in new tab, open in private tab, share | Link Peek |
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Yandex Translate on Android; Google Translate on iOS |
 | Prevent automatic video playback | Off, on | Off |
@@ -97,7 +98,7 @@ Frosted exposes three persisted controls while selected:
 - General transparency controls menus and other browser chrome; address-bar transparency independently controls the browsing and tab-overview address bars.
 - Blur strength is global across frosted address chrome, menus, search suggestions and supported sheets.
 - Tab options blur the visible tab-overview cards behind the menu instead of falling back to a sharp translucent surface.
-- The main `…` menu shares the active browser-content blur source, including the new-tab page; its rows remain translucent so the effect stays visible.
+- The main `…` menu shares the active browser-content blur source, including the new-tab page; its rows remain translucent and its individual quick-action tiles use the configured blur strength. It opens from the address-bar action with a spring scale-and-rise transition and leaves with a short fade-and-shrink transition.
 - Bottom sheets use the general Frosted transparency setting; Privacy X-Ray also blurs the active browser content. Clear and AMOLED sheets remain opaque.
 - Forced light, dark and AMOLED modes update system-bar icon contrast independently from system night mode.
 - Appearance mode also selects Android's activity night resources. WebView therefore exposes the
@@ -109,6 +110,9 @@ Frosted exposes three persisted controls while selected:
   setting allows WebView to recolor sites without their own dark theme while the effective app
   appearance is dark. Websites can still respond to `prefers-color-scheme`; forced darkening may
   cause display issues by altering author-defined colors and image assets.
+- Website canvas colors remain WebView-owned. Candy does not apply a separate light or dark
+  background behind page content, so transparent documents keep their author-defined foreground
+  and canvas contrast in light, dark and forced-dark configurations.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
 - Each top-level settings destination has a distinct leading icon on the settings home page.
 - Candy Recall is an explicit opt-in under Protection & data. Its summary states that readable text
@@ -116,6 +120,15 @@ Frosted exposes three persisted controls while selected:
   off clears stored Recall text; ordinary History remains governed by its own settings.
 - Tabs & gestures owns the expanded address-bar action editor. The former standalone tab-button
   visibility switch is intentionally absent because **Tabs** is now an ordinary configurable action.
+- Tabs & gestures owns the global long-press link action. Invalid stored values fall back to Link
+  Peek. Image-only long presses keep their content sheet, and private-open falls back to Link Peek
+  when the active profile cannot create private tabs.
+- Tabs & gestures also owns the Link Peek action editor. It reuses the address-action editor's
+  breakaway, snap, settle, haptic and accessibility behavior. Its three configurable positions may
+  hold unique actions or remain empty; dragging a toolbar action back to the palette clears that
+  exact position. Only empty configurable positions advertise and accept drops; occupied actions
+  and the fixed `+` at slot three show no drop marker. Duplicate, excess or unknown persisted actions
+  normalize to positions without silently filling user-cleared slots.
 - The Browser setting for the draggable page scroll bar is global and defaults off. When enabled,
   native WebView scroll bars are replaced by a touch-sized thumb that appears during scrolling,
   supports direct dragging, and fades after interaction.

@@ -111,6 +111,8 @@ private val AndroidBrowserMainMenuResources = object : BrowserMainMenuResources 
             )
         }
         BrowserFeatureMenuAction.InvokeToppingCommand -> item.supportingText
+        BrowserFeatureMenuAction.DuplicateTab ->
+            stringResource(R.string.duplicate_tab_url_only_disclaimer)
         else -> null
     }
 
@@ -204,6 +206,7 @@ internal fun BrowserMainMenu(
     userScriptMenuCommands: List<UserScriptMenuCommand> = emptyList(),
     onTabs: () -> Unit = {},
     onNewTab: () -> Unit = {},
+    onDuplicateTab: () -> Unit = {},
     onCloseTab: () -> Unit = {},
     onBack: () -> Unit,
     onForward: () -> Unit,
@@ -289,6 +292,7 @@ internal fun BrowserMainMenu(
                 BrowserFeatureMenuAction.TogglePinned -> onTogglePinned()
                 BrowserFeatureMenuAction.ShowTabs -> onTabs()
                 BrowserFeatureMenuAction.NewTab -> onNewTab()
+                BrowserFeatureMenuAction.DuplicateTab -> onDuplicateTab()
                 BrowserFeatureMenuAction.CloseTab -> onCloseTab()
                 BrowserFeatureMenuAction.ParkAddressBarRight -> onParkAddressBarRight()
                 BrowserFeatureMenuAction.OpenReader -> onOpenReader()
@@ -365,6 +369,7 @@ private fun BrowserFeatureMenuLabelKey.androidStringResource(): Int = when (this
     BrowserFeatureMenuLabelKey.UnpinTab -> R.string.action_remove_pin
     BrowserFeatureMenuLabelKey.Tabs -> R.string.address_bar_action_tabs
     BrowserFeatureMenuLabelKey.NewTab -> R.string.cd_new_tab
+    BrowserFeatureMenuLabelKey.DuplicateTab -> R.string.action_duplicate_tab
     BrowserFeatureMenuLabelKey.CloseTab -> R.string.cd_close_tab
     BrowserFeatureMenuLabelKey.ParkAddressBarRight -> R.string.action_park_address_pill_right
     BrowserFeatureMenuLabelKey.Reader -> R.string.reader_open_action
@@ -408,6 +413,7 @@ private fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (action
     BrowserFeatureMenuAction.TogglePinned -> R.drawable.ic_push_pin
     BrowserFeatureMenuAction.ShowTabs -> R.drawable.ic_switch_to_tab
     BrowserFeatureMenuAction.NewTab -> R.drawable.ic_symbol_add
+    BrowserFeatureMenuAction.DuplicateTab -> R.drawable.ic_content_copy
     BrowserFeatureMenuAction.CloseTab -> R.drawable.ic_symbol_close
     BrowserFeatureMenuAction.ParkAddressBarRight -> R.drawable.ic_symbol_chevron_physical_right
     BrowserFeatureMenuAction.OpenReader -> R.drawable.ic_reader_align_start

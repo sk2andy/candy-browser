@@ -30,6 +30,7 @@ enum class BrowserFeatureMenuAction {
     TogglePinned,
     ShowTabs,
     NewTab,
+    DuplicateTab,
     CloseTab,
     ParkAddressBarRight,
     OpenReader,
@@ -68,6 +69,7 @@ enum class BrowserFeatureMenuLabelKey {
     UnpinTab,
     Tabs,
     NewTab,
+    DuplicateTab,
     CloseTab,
     ParkAddressBarRight,
     Reader,
@@ -233,6 +235,13 @@ object BrowserFeatureMenuRules {
                 else -> Unit
             }
         }
+        add(
+            command(
+                BrowserFeatureMenuAction.DuplicateTab,
+                BrowserFeatureMenuLabelKey.DuplicateTab,
+                enabled = state.hasPage,
+            ),
+        )
         add(
             command(
                 BrowserFeatureMenuAction.OpenReader,
