@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ShortcutManager
@@ -19,6 +20,7 @@ import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutState
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutTarget
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
+import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,6 +30,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.math.roundToInt
 
 @RunWith(AndroidJUnit4::class)
 class LauncherShortcutInstrumentedTest {
@@ -51,6 +54,9 @@ class LauncherShortcutInstrumentedTest {
     fun shortcutIntentsTargetCandyAndExposeOnlyRequiredProfileId() {
         val newTab = publisher.launchIntent(LauncherShortcutTarget.NewTab)
         val profile = publisher.launchIntent(LauncherShortcutTarget.Profile("work"))
+        val widgetProfile = publisher.dispatcherIntent(
+            LauncherShortcutTarget.NewTabInProfile("work"),
+        )
 
         assertEquals(MainActivity::class.java.name, newTab.component?.className)
         assertEquals(LauncherShortcutRules.ACTION_NEW_TAB, newTab.action)
@@ -63,6 +69,30 @@ class LauncherShortcutInstrumentedTest {
         assertEquals(LauncherShortcutRules.ACTION_OPEN_PROFILE, profile.action)
         assertEquals("work", profile.getStringExtra(LauncherShortcutRules.EXTRA_PROFILE_ID))
         assertEquals(setOf(LauncherShortcutRules.EXTRA_PROFILE_ID), profile.extras?.keySet())
+        assertEquals(LauncherShortcutActivity::class.java.name, widgetProfile.component?.className)
+        assertEquals(LauncherShortcutRules.ACTION_NEW_TAB_IN_PROFILE, widgetProfile.action)
+        assertEquals(
+            "work",
+            widgetProfile.getStringExtra(LauncherShortcutRules.EXTRA_PROFILE_ID),
+        )
+    }
+
+    @Test
+    fun widgetProviderDeclaresResponsiveHomeScreenSizingWithoutConfiguration() {
+        val provider = AppWidgetManager.getInstance(context).installedProviders.single { info ->
+            info.provider.className == CandySearchWidgetProvider::class.java.name
+        }
+
+        assertEquals(4, provider.targetCellWidth)
+        assertEquals(1, provider.targetCellHeight)
+        val expectedMinResizeWidth = (140 * context.resources.displayMetrics.density).roundToInt()
+        val expectedMinHeight = (52 * context.resources.displayMetrics.density).roundToInt()
+        assertEquals(expectedMinResizeWidth, provider.minResizeWidth)
+        assertEquals(expectedMinHeight, provider.minHeight)
+        assertEquals(expectedMinHeight, provider.minResizeHeight)
+        assertEquals(R.layout.candy_search_widget, provider.initialLayout)
+        assertEquals(R.layout.candy_search_widget, provider.previewLayout)
+        assertNull(provider.configure)
     }
 
     @Test
@@ -309,6 +339,126 @@ class LauncherShortcutInstrumentedTest {
                 val controller = activity.browserControllerForTesting()
                 assertEquals("work", controller.activeProfileId)
                 assertEquals("work-tab", controller.selectedTabId)
+                assertEquals(2, controller.tabs.size)
+            }
+        }
+    }
+
+    @Test
+    fun widgetProfileActionCreatesRegularBlankTabInRequestedProfile() {
+        seedProfiles()
+
+        ActivityScenario.launch<MainActivity>(
+            publisher.launchIntent(LauncherShortcutTarget.NewTabInProfile("work")),
+        ).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertEquals("work", controller.activeProfileId)
+                assertEquals(3, controller.tabs.size)
+                assertFalse(controller.selectedTab.isIncognito)
+                assertEquals("work", controller.selectedTab.profileId)
+                assertEquals("about:blank", controller.selectedTab.url)
+                assertTrue(controller.selectedTabId != "work-tab")
+            }
+        }
+    }
+
+    @Test
+    fun widgetProfileActionCreatesOnlyOneTabWhenRequestedProfileIsEmpty() {
+        GestureOnboardingStore(context).markCompleted()
+        val candyTab = BrowserTab(
+            id = "candy-tab",
+            lastAccessedAt = 20L,
+            profileId = "candy",
+        )
+        BrowserSessionStore(context).apply {
+            saveProfiles(
+                profiles = listOf(
+                    BrowserProfile("candy", "🍬", selectedTabId = candyTab.id),
+                    BrowserProfile("work", "💼"),
+                ),
+                activeProfileId = "candy",
+            )
+            saveTabs(listOf(candyTab), candyTab.id)
+        }
+
+        ActivityScenario.launch<MainActivity>(
+            publisher.launchIntent(LauncherShortcutTarget.NewTabInProfile("work")),
+        ).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertEquals("work", controller.activeProfileId)
+                assertEquals(2, controller.tabs.size)
+                assertEquals(1, controller.tabs.count { tab -> tab.profileId == "work" })
+                assertEquals("about:blank", controller.selectedTab.url)
+            }
+        }
+    }
+
+    @Test
+    fun widgetProfileActionCreatesOnlyOneTabWhenRequestedProfileHasOnlyStaleTab() {
+        GestureOnboardingStore(context).markCompleted()
+        val candyTab = BrowserTab(
+            id = "candy-tab",
+            lastAccessedAt = System.currentTimeMillis(),
+            profileId = "candy",
+        )
+        BrowserSessionStore(context).apply {
+            saveProfiles(
+                profiles = listOf(
+                    BrowserProfile("candy", "🍬", selectedTabId = candyTab.id),
+                    BrowserProfile("work", "💼"),
+                ),
+                activeProfileId = "candy",
+            )
+            saveTabs(listOf(candyTab), candyTab.id)
+        }
+
+        ActivityScenario.launch<MainActivity>(
+            publisher.launchIntent(LauncherShortcutTarget.OpenApp),
+        ).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                controller.updateInactiveTabLifetime(InactiveTabLifetime.SixHours)
+                controller.tabs += BrowserTab(
+                    id = "stale-work-tab",
+                    lastAccessedAt = 1L,
+                    profileId = "work",
+                )
+                var addressEditorRequests = 0
+                val handler = LauncherShortcutIntentHandler(
+                    context = activity,
+                    browserController = controller,
+                    publisher = LauncherShortcutPublisher(activity),
+                    onNavigationRequested = {},
+                    onAddressEditorRequested = { addressEditorRequests += 1 },
+                )
+
+                assertTrue(
+                    handler.open(
+                        publisher.launchIntent(LauncherShortcutTarget.NewTabInProfile("work")),
+                    ),
+                )
+                assertEquals("work", controller.activeProfileId)
+                assertEquals(2, controller.tabs.size)
+                assertEquals(1, controller.tabs.count { tab -> tab.profileId == "work" })
+                assertFalse(controller.tabs.any { tab -> tab.id == "stale-work-tab" })
+                assertEquals(1, addressEditorRequests)
+            }
+        }
+    }
+
+    @Test
+    fun widgetLogoActionOpensCandyWithoutChangingTabsOrProfile() {
+        seedProfiles()
+
+        ActivityScenario.launch<MainActivity>(
+            publisher.launchIntent(LauncherShortcutTarget.OpenApp),
+        ).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertEquals("candy", controller.activeProfileId)
+                assertEquals("candy-tab", controller.selectedTabId)
                 assertEquals(2, controller.tabs.size)
             }
         }

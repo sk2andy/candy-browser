@@ -1,5 +1,11 @@
 <resources>
     <string name="app_name">Candy Browser</string>
+    <string name="widget_name">Recherche Candy</string>
+    <string name="widget_description">Ouvrir Candy, lancer une recherche ou créer un onglet dans un profil</string>
+    <string name="widget_search_hint">Rechercher avec Candy</string>
+    <string name="widget_open_app">Ouvrir Candy</string>
+    <string name="widget_open_private_tab">Ouvrir un onglet privé dans le profil actuel</string>
+    <string name="widget_open_profile_tab">Ouvrir un nouvel onglet dans le profil %1$s</string>
     <string name="onboarding_welcome_title">Découvrez Candy Browser</string>
     <string name="onboarding_welcome_body">Un navigateur pensé pour les gestes, avec onglets, parcours et confidentialité à portée de main.</string>
     <string name="onboarding_welcome_card_title">Trois gestes. Une navigation fluide.</string>

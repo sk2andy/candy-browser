@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/candy_search_widget"
+    android:previewLayout="@layout/candy_search_widget"
+    android:maxResizeHeight="64dp"
+    android:maxResizeWidth="420dp"
+    android:minHeight="52dp"
+    android:minResizeHeight="52dp"
+    android:minResizeWidth="140dp"
+    android:minWidth="140dp"
+    android:resizeMode="horizontal"
+    android:targetCellHeight="1"
+    android:targetCellWidth="4"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

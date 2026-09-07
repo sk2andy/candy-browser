@@ -10,12 +10,20 @@ class LauncherShortcutRulesTest {
     @Test
     fun `fixed shortcut actions resolve without profile state`() {
         assertEquals(
+            LauncherShortcutTarget.OpenApp,
+            resolve(LauncherShortcutRules.ACTION_OPEN_APP),
+        )
+        assertEquals(
             LauncherShortcutTarget.NewTab,
             resolve(LauncherShortcutRules.ACTION_NEW_TAB),
         )
         assertEquals(
             LauncherShortcutTarget.NewPrivateTab,
             resolve(LauncherShortcutRules.ACTION_NEW_PRIVATE_TAB),
+        )
+        assertEquals(
+            LauncherShortcutTarget.NewPrivateTabInCurrentProfile,
+            resolve(LauncherShortcutRules.ACTION_NEW_PRIVATE_TAB_IN_CURRENT_PROFILE),
         )
     }
 
@@ -32,6 +40,21 @@ class LauncherShortcutRulesTest {
         assertNull(
             resolve(
                 action = LauncherShortcutRules.ACTION_OPEN_PROFILE,
+                profileId = "deleted",
+                availableProfileIds = setOf("candy", "work"),
+            ),
+        )
+        assertEquals(
+            LauncherShortcutTarget.NewTabInProfile("work"),
+            resolve(
+                action = LauncherShortcutRules.ACTION_NEW_TAB_IN_PROFILE,
+                profileId = "work",
+                availableProfileIds = setOf("candy", "work"),
+            ),
+        )
+        assertNull(
+            resolve(
+                action = LauncherShortcutRules.ACTION_NEW_TAB_IN_PROFILE,
                 profileId = "deleted",
                 availableProfileIds = setOf("candy", "work"),
             ),
@@ -170,6 +193,14 @@ class LauncherShortcutRulesTest {
                 profiles = profiles,
                 activeProfileId = "synced",
                 profileIsolationSupported = false,
+            ),
+        )
+        assertNull(
+            LauncherShortcutRules.privateTargetProfileId(
+                profiles = profiles,
+                activeProfileId = "synced",
+                profileIsolationSupported = true,
+                fallbackToFirstLocalProfile = false,
             ),
         )
     }

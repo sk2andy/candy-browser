@@ -1,5 +1,11 @@
 <resources>
     <string name="app_name">Candy Browser</string>
+    <string name="widget_name">Búsqueda de Candy</string>
+    <string name="widget_description">Abre Candy, inicia una búsqueda o crea una pestaña en un perfil</string>
+    <string name="widget_search_hint">Buscar con Candy</string>
+    <string name="widget_open_app">Abrir Candy</string>
+    <string name="widget_open_private_tab">Abrir una pestaña privada en el perfil actual</string>
+    <string name="widget_open_profile_tab">Abrir una pestaña nueva en el perfil %1$s</string>
     <string name="onboarding_welcome_title">Conoce Candy Browser</string>
     <string name="onboarding_welcome_body">Un navegador basado en gestos que mantiene pestañas, recorridos y privacidad al alcance de la mano.</string>
     <string name="onboarding_welcome_card_title">Tres gestos. Un flujo natural.</string>

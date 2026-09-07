@@ -1,5 +1,13 @@
 <resources>
     <string name="app_name">Candy Browser</string>
+    <string name="widget_name">Candy search</string>
+    <string name="widget_description">Open Candy, start a search, or create a tab in a profile</string>
+    <string name="widget_search_hint">Search with Candy</string>
+    <string name="widget_open_app">Open Candy</string>
+    <string name="widget_open_private_tab">Open a private tab in the current profile</string>
+    <string name="widget_open_profile_tab">Open a new tab in profile %1$s</string>
+    <string name="widget_preview_profile_one" translatable="false">🍬</string>
+    <string name="widget_preview_profile_two" translatable="false">💼</string>
     <string name="onboarding_welcome_title">Meet Candy Browser</string>
     <string name="onboarding_welcome_body">A gesture-first browser that keeps tabs, journeys and privacy controls close at hand.</string>
     <string name="onboarding_welcome_card_title">Three gestures. One fluid workflow.</string>

@@ -43,15 +43,28 @@ internal class LauncherShortcutPublisher(private val context: Context) {
         Intent(context, MainActivity::class.java)
             .setAction(
                 when (target) {
+                    LauncherShortcutTarget.OpenApp -> LauncherShortcutRules.ACTION_OPEN_APP
                     LauncherShortcutTarget.NewTab -> LauncherShortcutRules.ACTION_NEW_TAB
                     LauncherShortcutTarget.NewPrivateTab ->
                         LauncherShortcutRules.ACTION_NEW_PRIVATE_TAB
+                    LauncherShortcutTarget.NewPrivateTabInCurrentProfile ->
+                        LauncherShortcutRules.ACTION_NEW_PRIVATE_TAB_IN_CURRENT_PROFILE
                     is LauncherShortcutTarget.Profile -> LauncherShortcutRules.ACTION_OPEN_PROFILE
+                    is LauncherShortcutTarget.NewTabInProfile ->
+                        LauncherShortcutRules.ACTION_NEW_TAB_IN_PROFILE
                 },
             )
             .apply {
-                if (target is LauncherShortcutTarget.Profile) {
-                    putExtra(LauncherShortcutRules.EXTRA_PROFILE_ID, target.profileId)
+                when (target) {
+                    is LauncherShortcutTarget.Profile ->
+                        putExtra(LauncherShortcutRules.EXTRA_PROFILE_ID, target.profileId)
+                    is LauncherShortcutTarget.NewTabInProfile ->
+                        putExtra(LauncherShortcutRules.EXTRA_PROFILE_ID, target.profileId)
+                    LauncherShortcutTarget.OpenApp,
+                    LauncherShortcutTarget.NewPrivateTabInCurrentProfile,
+                    LauncherShortcutTarget.NewPrivateTab,
+                    LauncherShortcutTarget.NewTab,
+                    -> Unit
                 }
             }
             .addFlags(
@@ -74,10 +87,22 @@ internal class LauncherShortcutPublisher(private val context: Context) {
         .setRank(rank)
         .build()
 
-    private fun dispatcherIntent(target: LauncherShortcutTarget.Profile): Intent =
+    internal fun dispatcherIntent(target: LauncherShortcutTarget): Intent =
         Intent(context, LauncherShortcutActivity::class.java)
-            .setAction(LauncherShortcutRules.ACTION_OPEN_PROFILE)
-            .putExtra(LauncherShortcutRules.EXTRA_PROFILE_ID, target.profileId)
+            .setAction(launchIntent(target).action)
+            .apply {
+                when (target) {
+                    is LauncherShortcutTarget.Profile ->
+                        putExtra(LauncherShortcutRules.EXTRA_PROFILE_ID, target.profileId)
+                    is LauncherShortcutTarget.NewTabInProfile ->
+                        putExtra(LauncherShortcutRules.EXTRA_PROFILE_ID, target.profileId)
+                    LauncherShortcutTarget.NewPrivateTab,
+                    LauncherShortcutTarget.NewPrivateTabInCurrentProfile,
+                    LauncherShortcutTarget.NewTab,
+                    LauncherShortcutTarget.OpenApp,
+                    -> Unit
+                }
+            }
 
     private companion object {
         const val STATIC_SHORTCUT_COUNT = 2
