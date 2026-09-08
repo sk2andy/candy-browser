@@ -389,6 +389,12 @@
     <string name="settings_searxng_suggestion_fallback_summary">Solo se usa si falla la solicitud de sugerencias de SearXNG. La consulta también se enviará al proveedor alternativo. Desactivado en pestañas privadas.</string>
     <string name="toast_searxng_instance_required">Primero configura una URL de instancia SearXNG válida</string>
     <string name="settings_section_browser">Navegador</string>
+    <string name="settings_browser_engine_title">Motor web</string>
+    <string name="settings_browser_engine_gecko">Extensiones · GeckoView</string>
+    <string name="settings_browser_engine_system">Ahorro de memoria · Android System WebView</string>
+    <string name="settings_browser_engine_gecko_summary">Toppings y extensiones de Firefox como uBlock Origin. Usa más memoria.</string>
+    <string name="settings_browser_engine_system_summary">Usa menos memoria y admite Toppings, pero no extensiones de Firefox. La protección de Candy sigue disponible.</string>
+    <string name="settings_browser_engine_restart_warning">Cambiar el motor reinicia Candy. Las sesiones, cookies y el historial de página quedan separados por motor.</string>
     <string name="settings_startup_animation_title">Animación de inicio</string>
     <string name="settings_startup_animation_subtitle">Muestra la animación de Candy al iniciar la aplicación normalmente. Desactívala para abrir la barra de direcciones de inmediato.</string>
     <string name="settings_open_home_on_startup_title">Abrir la página de inicio al arrancar</string>

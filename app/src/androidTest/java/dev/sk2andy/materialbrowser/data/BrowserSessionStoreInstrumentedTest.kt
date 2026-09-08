@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
@@ -933,6 +934,18 @@ class BrowserSessionStoreInstrumentedTest {
 
         store.saveVideoAutoplayBlocked(true)
         assertTrue(store.loadVideoAutoplayBlocked())
+    }
+
+    @Test
+    fun `Android browser engine defaults to Gecko and round trips synchronously`() {
+        val store = BrowserSessionStore(context)
+        assertEquals(AndroidBrowserEngineKind.GeckoView, store.loadAndroidBrowserEngineKind())
+
+        assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.SystemWebView))
+        assertEquals(
+            AndroidBrowserEngineKind.SystemWebView,
+            BrowserSessionStore(context).loadAndroidBrowserEngineKind(),
+        )
     }
 
     @Test

@@ -2633,6 +2633,7 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
     private var insetLayout = GeckoViewInsetLayout(
         margins = GeckoViewInsets.Zero,
         rendererSafeAreaOverride = null,
+        scrollableTopInsetPx = 0,
     )
     private var windowInsets: WindowInsetsCompat? = null
     private val engineView = createEngineView()

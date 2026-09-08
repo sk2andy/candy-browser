@@ -407,6 +407,12 @@
     <string name="settings_searxng_suggestion_fallback_summary">Used only if the SearXNG suggestion request fails. This sends the typed query to the fallback provider too. Disabled in private tabs.</string>
     <string name="toast_searxng_instance_required">Set a valid SearXNG instance URL first</string>
     <string name="settings_section_browser">Browser</string>
+    <string name="settings_browser_engine_title">Web engine</string>
+    <string name="settings_browser_engine_gecko">Extensions · GeckoView</string>
+    <string name="settings_browser_engine_system">Memory saver · Android System WebView</string>
+    <string name="settings_browser_engine_gecko_summary">Toppings plus Firefox extensions such as uBlock Origin. Uses more memory.</string>
+    <string name="settings_browser_engine_system_summary">Uses less memory and supports Toppings, but not Firefox extensions. Candy protection remains available.</string>
+    <string name="settings_browser_engine_restart_warning">Changing the engine restarts Candy. Logins, cookies and page history stay separate for each engine.</string>
     <string name="settings_startup_animation_title">Startup animation</string>
     <string name="settings_startup_animation_subtitle">Shows the Candy animation on regular app launches. Turn it off to open the address bar immediately.</string>
     <string name="settings_open_home_on_startup_title">Open home page on startup</string>

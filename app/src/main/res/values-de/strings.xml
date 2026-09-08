@@ -386,6 +386,12 @@
     <string name="settings_searxng_suggestion_fallback_summary">Wird nur genutzt, wenn die SearXNG-Vorschlagsanfrage fehlschlägt. Die Eingabe geht dann auch an den Fallback-Anbieter. In privaten Tabs deaktiviert.</string>
     <string name="toast_searxng_instance_required">Lege zuerst eine gültige SearXNG-Instanz-URL fest</string>
     <string name="settings_section_browser">Browser</string>
+    <string name="settings_browser_engine_title">Web-Engine</string>
+    <string name="settings_browser_engine_gecko">Erweiterungen · GeckoView</string>
+    <string name="settings_browser_engine_system">Speichersparend · Android System WebView</string>
+    <string name="settings_browser_engine_gecko_summary">Toppings plus Firefox-Erweiterungen wie uBlock Origin. Benötigt mehr Arbeitsspeicher.</string>
+    <string name="settings_browser_engine_system_summary">Benötigt weniger Arbeitsspeicher und unterstützt Toppings, aber keine Firefox-Erweiterungen. Candy-Schutz bleibt verfügbar.</string>
+    <string name="settings_browser_engine_restart_warning">Ein Wechsel startet Candy neu. Logins, Cookies und Seitenverlauf bleiben pro Engine getrennt.</string>
     <string name="settings_startup_animation_title">Startanimation</string>
     <string name="settings_startup_animation_subtitle">Zeigt die Candy-Animation beim normalen App-Start. Deaktivieren, um die Adressleiste sofort zu öffnen.</string>
     <string name="settings_open_home_on_startup_title">Beim Start Startseite öffnen</string>

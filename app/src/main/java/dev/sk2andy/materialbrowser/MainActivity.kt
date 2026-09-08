@@ -45,12 +45,14 @@ import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.BrowserMediaSystemSession
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinator
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnActivityDelegate
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineProcessRestart
 import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
@@ -224,13 +226,16 @@ class MainActivity : AppCompatActivity() {
             ?.getBoolean(STATE_RELEASE_NOTES_VISIBLE)
             ?: releaseNotesRequired
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
-        geckoWebAuthnActivityDelegate = GeckoWebAuthnActivityDelegate { pendingIntent ->
-            geckoWebAuthnLauncher.launch(IntentSenderRequest.Builder(pendingIntent).build())
+        val browserEngineKind = BrowserSessionStore(this).loadAndroidBrowserEngineKind()
+        if (browserEngineKind == AndroidBrowserEngineKind.GeckoView) {
+            geckoWebAuthnActivityDelegate = GeckoWebAuthnActivityDelegate { pendingIntent ->
+                geckoWebAuthnLauncher.launch(IntentSenderRequest.Builder(pendingIntent).build())
+            }
+            GeckoRuntimeOwner.bindWebAuthnActivityDelegate(
+                context = applicationContext,
+                delegate = geckoWebAuthnActivityDelegate,
+            )
         }
-        GeckoRuntimeOwner.bindWebAuthnActivityDelegate(
-            context = applicationContext,
-            delegate = geckoWebAuthnActivityDelegate,
-        )
         browserController = BrowserController(
             activity = this,
             requestRuntimePermissions = { permissions ->
@@ -254,6 +259,9 @@ class MainActivity : AppCompatActivity() {
                     }
                     updatePictureInPictureParams()
                 }
+            },
+            onBrowserEngineChangeRequested = {
+                BrowserEngineProcessRestart.restart(this)
             },
         )
         pictureInPictureController = MainActivityPictureInPictureController(

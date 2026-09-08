@@ -22,6 +22,7 @@ class GeckoViewInsetRulesTest {
             GeckoViewInsets(left = 0, top = 0, right = 0, bottom = 34),
             layout.rendererSafeAreaOverride,
         )
+        assertEquals(96, layout.scrollableTopInsetPx)
     }
 
     @Test
@@ -117,6 +118,7 @@ class GeckoViewInsetRulesTest {
 
         assertEquals(GeckoViewInsets.Zero, layout.margins)
         assertEquals(null, layout.rendererSafeAreaOverride)
+        assertEquals(0, layout.scrollableTopInsetPx)
     }
 
     @Test
@@ -130,5 +132,6 @@ class GeckoViewInsetRulesTest {
 
         assertEquals(GeckoViewInsets.Zero, layout.margins)
         assertEquals(GeckoViewInsets.Zero, layout.rendererSafeAreaOverride)
+        assertEquals(0, layout.scrollableTopInsetPx)
     }
 }
