@@ -101,8 +101,8 @@ private class StatusBarStaticOverlayView(context: Context) : View(context) {
             0f,
             safeBlurHeight,
             intArrayOf(
-                tint.withAlpha(0.66f),
-                tint.withAlpha(0.32f),
+                tint.withAlpha(STATUS_BAR_TINT_ALPHA),
+                tint.withAlpha(STATUS_BAR_TINT_MIDPOINT_ALPHA),
                 android.graphics.Color.TRANSPARENT,
             ),
             tintStops,
@@ -142,3 +142,5 @@ private fun Int.withAlpha(alpha: Float): Int =
     (this and 0x00FFFFFF) or ((alpha.coerceIn(0f, 1f) * 255).roundToInt() shl 24)
 
 private const val STATUS_BAR_TRANSPARENT_BUFFER_DP = 8f
+private const val STATUS_BAR_TINT_ALPHA = 0.22f
+private const val STATUS_BAR_TINT_MIDPOINT_ALPHA = 0.10f

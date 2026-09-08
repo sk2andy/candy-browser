@@ -18,6 +18,22 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
+    fun `root spacer extends the first visible page background behind the status bar`() {
+        assertTrue(WebContentTopInsetScript.installScript.contains("topContentBackground"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("cssPixels + 1"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("document.elementFromPoint"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("document.elementsFromPoint"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("paintedBackground"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("return style.backgroundColor"))
+        assertFalse(WebContentTopInsetScript.installScript.contains("getComputedStyle(element, '::before')"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("meta[name=\"theme-color\"]"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("background: var"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("getPropertyValue(backgroundProperty)"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("getPropertyPriority(backgroundProperty)"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("document.body"))
+    }
+
+    @Test
     fun `script only changes the main frame after the root exists`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("documentElementObserver"))
         assertTrue(
@@ -60,12 +76,19 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("obstructionSampleStep"))
         assertTrue(WebContentTopInsetScript.installScript.contains("trailingPoint"))
         assertTrue(WebContentTopInsetScript.installScript.contains("planLocalOffset"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("isVisiblePositionedElement"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("style.opacity"))
         assertTrue(WebContentTopInsetScript.installScript.contains("translate: 0 var"))
         assertTrue(WebContentTopInsetScript.installScript.contains("position === 'fixed'"))
         assertTrue(WebContentTopInsetScript.installScript.contains("absoluteCandidate"))
         assertTrue(WebContentTopInsetScript.installScript.contains("panelMaxHeight"))
         assertTrue(WebContentTopInsetScript.installScript.contains("isBackdrop"))
         assertTrue(WebContentTopInsetScript.installScript.contains("hasPositionedPeerCollision"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("peer.contains(plan.element)"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("interactivePeerSelector"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("isInteractivePositionedPeer"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("peerIsInteractive ||"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("style.cursor === 'pointer'"))
         assertTrue(WebContentTopInsetScript.installScript.contains("findCompactViewportWidePeer"))
         assertTrue(WebContentTopInsetScript.installScript.contains("elementsFromPoint"))
         assertTrue(WebContentTopInsetScript.installScript.contains("localOffsetCollisionDetected"))
