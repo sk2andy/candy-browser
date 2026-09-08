@@ -75,17 +75,25 @@ internal fun FullscreenVideoOverlay(
     onBoundsChanged: (Rect) -> Unit,
 ) {
     val state = controller.fullscreenVideoState ?: return
-    if (
-        !FullscreenVideoRules.hostsSourceInOverlay(
-            host = state.host,
-            videoOnlyPresentation = videoOnlyPresentation,
-        )
-    ) return
     val placement = controller.fullscreenVideoPlacement(videoOnlyPresentation) ?: return
     BackHandler(
         enabled = placement == FullscreenVideoPlacement.Expanded && !videoOnlyPresentation,
         onBack = controller::exitFullscreenVideo,
     )
+    if (
+        !FullscreenVideoRules.hostsSourceInOverlay(
+            host = state.host,
+        )
+    ) {
+        BrowserViewportVideoControls(
+            controller = controller,
+            placement = placement,
+            videoOnlyPresentation = videoOnlyPresentation,
+            canMinimize = controller.canMinimizeFullscreenVideo,
+            onBoundsChanged = onBoundsChanged,
+        )
+        return
+    }
     StableFullscreenVideoHost(
         controller = controller,
         sessionTabId = state.tabId,
@@ -94,6 +102,41 @@ internal fun FullscreenVideoOverlay(
         canMinimize = controller.canMinimizeFullscreenVideo,
         onBoundsChanged = onBoundsChanged,
     )
+}
+
+@Composable
+private fun BrowserViewportVideoControls(
+    controller: BrowserController,
+    placement: FullscreenVideoPlacement,
+    videoOnlyPresentation: Boolean,
+    canMinimize: Boolean,
+    onBoundsChanged: (Rect) -> Unit,
+) {
+    if (placement != FullscreenVideoPlacement.Expanded) return
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onVideoBoundsChanged(onBoundsChanged)
+            .zIndex(FULLSCREEN_VIDEO_Z_INDEX)
+            .testTag(FullscreenVideoTestTags.Expanded),
+    ) {
+        if (!videoOnlyPresentation && canMinimize) {
+            VideoOverlayButton(
+                onClick = controller::minimizeFullscreenVideo,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(16.dp)
+                    .testTag(FullscreenVideoTestTags.Minimize),
+                contentDescription = stringResource(R.string.cd_minimize_fullscreen_video),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                )
+            }
+        }
+    }
 }
 
 @Composable

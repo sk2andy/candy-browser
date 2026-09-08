@@ -347,13 +347,12 @@ class MainActivity : AppCompatActivity() {
                 }
                 val fullscreenVideoState = browserController.fullscreenVideoState
                 val selectedTabId = browserController.selectedTabId
-                val webViewVideoOnlyPresentation = fullscreenVideoState?.let { state ->
-                    videoOnlyPresentation &&
+                val webViewVideoOnlyPresentation = videoOnlyPresentation &&
+                    fullscreenVideoState?.let { state ->
                         !FullscreenVideoRules.hostsSourceInOverlay(
                             host = state.host,
-                            videoOnlyPresentation = true,
                         )
-                } == true
+                    } == true
                 val showReleaseNotes = releaseNotesVisible &&
                     releaseNotesContent != null &&
                     !onboardingVisible &&
@@ -612,7 +611,6 @@ class MainActivity : AppCompatActivity() {
             super.onPause()
             return
         }
-        prepareForPictureInPictureTransition()
         browserController.onPause()
         super.onPause()
     }

@@ -65,6 +65,8 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setMediaStateListener(listener: GeckoMediaSessionStateListener?)
 
+    fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
+
     fun setScrollListener(listener: BrowserEngineScrollListener?)
 
     fun setContentTargetListener(listener: BrowserContentTargetListener?)
@@ -111,6 +113,8 @@ internal interface AndroidBrowserEngineSessionPort :
     fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) = Unit
 
     fun setPictureInPicturePlaybackExpected(expected: Boolean) = Unit
+
+    fun exitFullscreen() = Unit
 
     fun goToHistoryIndex(index: Int)
 
@@ -292,6 +296,7 @@ internal class GeckoBrowserEngineSessionAdapter(
 ) : AndroidBrowserEngineSessionPort {
     private var previousState = GeckoBrowserSessionState()
     private var closed = false
+    private var inPictureInPicture = false
     private var stopRequested = false
     private val trailHistoryTracker = GeckoCandyTrailHistoryTracker(tabId) { event ->
         trailHistoryEventSink.onHistoryEvent(this, event)
@@ -346,6 +351,11 @@ internal class GeckoBrowserEngineSessionAdapter(
     @UiThread
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
         session.setMediaStateListener(if (closed) null else listener)
+    }
+
+    @UiThread
+    override fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) {
+        session.setFullscreenStateListener(if (closed) null else listener)
     }
 
     @UiThread
@@ -448,12 +458,19 @@ internal class GeckoBrowserEngineSessionAdapter(
 
     @UiThread
     override fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) {
-        if (!closed) session.notifyPictureInPictureModeChanged(inPictureInPicture)
+        if (closed || this.inPictureInPicture == inPictureInPicture) return
+        this.inPictureInPicture = inPictureInPicture
+        session.notifyPictureInPictureModeChanged(inPictureInPicture)
     }
 
     @UiThread
     override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
         if (!closed) session.setPictureInPicturePlaybackExpected(expected)
+    }
+
+    @UiThread
+    override fun exitFullscreen() {
+        if (!closed) session.exitFullscreen()
     }
 
     @UiThread
@@ -552,6 +569,7 @@ internal class GeckoBrowserEngineSessionAdapter(
         session.setStateListener(null)
         session.setHistoryStateListener(null)
         session.setMediaStateListener(null)
+        session.setFullscreenStateListener(null)
         session.setScrollListener(null)
         session.setContentTargetListener(null)
         session.setNavigationRequestListener(null)
@@ -580,6 +598,7 @@ internal class GeckoBrowserEngineSessionAdapter(
             session.setStateListener(null)
             session.setHistoryStateListener(null)
             session.setMediaStateListener(null)
+            session.setFullscreenStateListener(null)
             session.setScrollListener(null)
             session.setContentTargetListener(null)
             session.setNavigationRequestListener(null)

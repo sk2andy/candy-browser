@@ -29,17 +29,17 @@ class BrowserMediaPlaybackService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (AppDataTransferLock.isActive(this)) {
-            stopPlayback()
+            stopPlayback(startId)
             return START_NOT_STICKY
         }
         if (intent?.action != ACTION_START) {
-            stopPlayback()
+            stopPlayback(startId)
             return START_NOT_STICKY
         }
         val token = intent.getParcelableExtra(EXTRA_SESSION_TOKEN, MediaSession.Token::class.java)
         val state = intent.toBrowserMediaState()
         if (token == null || state == null || state.kind != BrowserMediaKind.Audio || !state.isPlaying) {
-            stopPlayback()
+            stopPlayback(startId)
             return START_NOT_STICKY
         }
         sessionToken = token
@@ -71,6 +71,12 @@ class BrowserMediaPlaybackService : Service() {
         sessionToken = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun stopPlayback(startId: Int) {
+        if (!stopSelfResult(startId)) return
+        sessionToken = null
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     private fun Intent.toBrowserMediaState(): BrowserMediaState? {
@@ -123,7 +129,15 @@ class BrowserMediaPlaybackService : Service() {
         }
 
         internal fun stop(context: Context) {
-            context.stopService(Intent(context, BrowserMediaPlaybackService::class.java))
+            runCatching {
+                context.startService(
+                    Intent(context, BrowserMediaPlaybackService::class.java)
+                        .setAction(ACTION_STOP),
+                )
+            }
         }
+
+        private const val ACTION_STOP =
+            "dev.sk2andy.materialbrowser.action.STOP_BROWSER_MEDIA_PLAYBACK"
     }
 }
