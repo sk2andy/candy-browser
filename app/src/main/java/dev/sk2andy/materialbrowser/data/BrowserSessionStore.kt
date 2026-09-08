@@ -896,7 +896,7 @@ class BrowserSessionStore internal constructor(
     }
 
     fun loadVideoAutoplayBlocked(): Boolean =
-        preferences.getBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, false)
+        preferences.getBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, true)
 
     fun saveVideoAutoplayBlocked(blocked: Boolean) {
         preferences.edit().putBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, blocked).apply()
@@ -916,6 +916,12 @@ class BrowserSessionStore internal constructor(
             forceDarkWebsites = runCatching {
                 preferences.getBoolean(KEY_FORCE_DARK_WEBSITES, false)
             }.getOrDefault(false),
+            webContentFontSizePercent = loadBoundedInt(
+                key = KEY_WEB_CONTENT_FONT_SIZE_PERCENT,
+                defaultValue = AppearanceSettings.DEFAULT_WEB_CONTENT_FONT_SIZE_PERCENT,
+                range = AppearanceSettings.MIN_WEB_CONTENT_FONT_SIZE_PERCENT..
+                    AppearanceSettings.MAX_WEB_CONTENT_FONT_SIZE_PERCENT,
+            ),
             colorPalette = BrowserColorPalette.fromStableId(
                 preferences.getString(KEY_COLOR_PALETTE, null),
             ),
@@ -946,6 +952,7 @@ class BrowserSessionStore internal constructor(
         preferences.edit()
             .putString(KEY_APPEARANCE_MODE, normalized.appearanceMode.stableId)
             .putBoolean(KEY_FORCE_DARK_WEBSITES, normalized.forceDarkWebsites)
+            .putInt(KEY_WEB_CONTENT_FONT_SIZE_PERCENT, normalized.webContentFontSizePercent)
             .putString(KEY_COLOR_PALETTE, normalized.colorPalette.stableId)
             .putString(KEY_SURFACE_STYLE, normalized.surfaceStyle.stableId)
             .putString(KEY_SHAPE_STYLE, normalized.shapeStyle.stableId)
@@ -1107,6 +1114,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
         const val KEY_FORCE_DARK_WEBSITES = "force_dark_websites"
+        const val KEY_WEB_CONTENT_FONT_SIZE_PERCENT = "web_content_font_size_percent"
         const val KEY_COLOR_PALETTE = "color_palette"
         const val KEY_SURFACE_STYLE = "surface_style"
         const val KEY_SHAPE_STYLE = "shape_style"

@@ -14,6 +14,7 @@ import android.os.Process
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.widget.Toast
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -48,6 +49,8 @@ import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinator
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnActivityDelegate
 import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
@@ -92,6 +95,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var pictureInPictureController: MainActivityPictureInPictureController
     private lateinit var userScriptImporter: UserScriptImporter
     private lateinit var launcherShortcutIntentHandler: LauncherShortcutIntentHandler
+    private lateinit var geckoWebAuthnActivityDelegate: GeckoWebAuthnActivityDelegate
     private val launcherShortcutPublisher by lazy {
         LauncherShortcutPublisher(applicationContext)
     }
@@ -124,6 +128,13 @@ class MainActivity : AppCompatActivity() {
     ) { result ->
         if (::browserController.isInitialized) {
             browserController.onFileChooserResult(result.resultCode, result.data)
+        }
+    }
+    private val geckoWebAuthnLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (::geckoWebAuthnActivityDelegate.isInitialized) {
+            geckoWebAuthnActivityDelegate.onActivityResult(result.resultCode, result.data)
         }
     }
     private val userScriptImportLauncher = registerForActivityResult(
@@ -213,6 +224,13 @@ class MainActivity : AppCompatActivity() {
             ?.getBoolean(STATE_RELEASE_NOTES_VISIBLE)
             ?: releaseNotesRequired
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
+        geckoWebAuthnActivityDelegate = GeckoWebAuthnActivityDelegate { pendingIntent ->
+            geckoWebAuthnLauncher.launch(IntentSenderRequest.Builder(pendingIntent).build())
+        }
+        GeckoRuntimeOwner.bindWebAuthnActivityDelegate(
+            context = applicationContext,
+            delegate = geckoWebAuthnActivityDelegate,
+        )
         browserController = BrowserController(
             activity = this,
             requestRuntimePermissions = { permissions ->
@@ -679,6 +697,10 @@ class MainActivity : AppCompatActivity() {
         activityDestroyed = true
         firefoxExtensionManager?.close()
         firefoxExtensionManager = null
+        if (::geckoWebAuthnActivityDelegate.isInitialized) {
+            GeckoRuntimeOwner.unbindWebAuthnActivityDelegate(geckoWebAuthnActivityDelegate)
+            geckoWebAuthnActivityDelegate.close()
+        }
         if (appDataTransferActive) {
             super.onDestroy()
             return

@@ -1,7 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.content.Context
-import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
@@ -10,74 +9,64 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import eightbitlab.com.blurview.BlurTarget
-import eightbitlab.com.blurview.BlurView
 import kotlin.math.roundToInt
 
-internal class StatusBarFrostedGlassHost(context: Context) : FrameLayout(context) {
-    val blurTarget = BlurTarget(context)
-    private var blurAutoUpdateEnabled = true
-    private val blurView = StatusBarBlurView(context).apply {
-        tag = StatusBarFrostedGlassTestTags.Overlay
+internal class StatusBarStaticOverlayHost(
+    context: Context,
+    browserContentBlurEnabled: Boolean = false,
+) : FrameLayout(context) {
+    val contentContainer: FrameLayout = if (browserContentBlurEnabled) {
+        BlurTarget(context)
+    } else {
+        FrameLayout(context)
+    }
+    val blurTarget: BlurTarget?
+        get() = contentContainer as? BlurTarget
+    private val overlayView = StatusBarStaticOverlayView(context).apply {
+        tag = StatusBarStaticOverlayTestTags.Overlay
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         isClickable = false
         isFocusable = false
-        setupWith(blurTarget, 1f, true)
-            .setOverlayColor(android.graphics.Color.TRANSPARENT)
     }
 
     init {
         addView(
-            blurTarget,
+            contentContainer,
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT),
         )
         addView(
-            blurView,
+            overlayView,
             LayoutParams(LayoutParams.MATCH_PARENT, 0),
         )
     }
 
-    fun updateFrostedGlass(
-        geometry: StatusBarFrostedGlassGeometry,
+    fun updateOverlay(
+        geometry: StatusBarStaticOverlayGeometry,
         tint: Int,
         visible: Boolean,
     ) {
-        val showBlur = visible && geometry.overlayHeightPx > 0
-        blurView.visibility = if (showBlur) View.VISIBLE else View.GONE
-        setBlurAutoUpdate(showBlur)
-        if (!showBlur) return
-        blurView.updateFade(geometry, tint)
-        blurView.setBlurRadius(geometry.blurRadiusPx)
-        val layoutParams = blurView.layoutParams
+        val showOverlay = visible && geometry.overlayHeightPx > 0
+        overlayView.visibility = if (showOverlay) View.VISIBLE else View.GONE
+        if (!showOverlay) return
+        overlayView.updateFade(geometry, tint)
+        val layoutParams = overlayView.layoutParams
         if (layoutParams.height != geometry.overlayHeightPx) {
             layoutParams.height = geometry.overlayHeightPx
-            blurView.layoutParams = layoutParams
+            overlayView.layoutParams = layoutParams
         }
-    }
-
-    fun release() {
-        setBlurAutoUpdate(false)
-    }
-
-    private fun setBlurAutoUpdate(enabled: Boolean) {
-        if (blurAutoUpdateEnabled == enabled) return
-        blurView.setBlurAutoUpdate(enabled)
-        blurAutoUpdateEnabled = enabled
     }
 }
 
-private class StatusBarBlurView(context: Context) : BlurView(context) {
-    private val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        blendMode = BlendMode.DST_IN
-    }
+private class StatusBarStaticOverlayView(context: Context) : View(context) {
     private val tintPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var geometry = StatusBarFrostedGlassGeometry()
+    private var geometry = StatusBarStaticOverlayGeometry()
     private var tint = android.graphics.Color.TRANSPARENT
     private var gradientHeight = 0
 
     override fun onTouchEvent(event: MotionEvent): Boolean = false
 
     fun updateFade(
-        geometry: StatusBarFrostedGlassGeometry,
+        geometry: StatusBarStaticOverlayGeometry,
         tint: Int,
     ) {
         if (this.geometry == geometry && this.tint == tint) return
@@ -92,14 +81,9 @@ private class StatusBarBlurView(context: Context) : BlurView(context) {
         gradientHeight = 0
     }
 
-    override fun draw(canvas: Canvas) {
+    override fun onDraw(canvas: Canvas) {
         if (width <= 0 || height <= 0) return
         updateGradients()
-        val layer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
-        super.draw(canvas)
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), maskPaint)
-        canvas.restoreToCount(layer)
-
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), tintPaint)
     }
 
@@ -110,15 +94,6 @@ private class StatusBarBlurView(context: Context) : BlurView(context) {
             0f,
             0.55f,
             1f,
-        )
-        maskPaint.shader = LinearGradient(
-            0f,
-            0f,
-            0f,
-            safeBlurHeight,
-            android.graphics.Color.WHITE,
-            android.graphics.Color.TRANSPARENT,
-            Shader.TileMode.CLAMP,
         )
         tintPaint.shader = LinearGradient(
             0f,
@@ -137,36 +112,33 @@ private class StatusBarBlurView(context: Context) : BlurView(context) {
     }
 }
 
-internal object StatusBarFrostedGlassRules {
+internal object StatusBarStaticOverlayRules {
     fun geometry(
         statusBarHeightPx: Int,
         density: Float,
-    ): StatusBarFrostedGlassGeometry {
+    ): StatusBarStaticOverlayGeometry {
         val safeStatusBarHeight = statusBarHeightPx.coerceAtLeast(0)
         if (safeStatusBarHeight == 0 || !density.isFinite() || density <= 0f) {
-            return StatusBarFrostedGlassGeometry()
+            return StatusBarStaticOverlayGeometry()
         }
         val fadeHeightPx = (STATUS_BAR_TRANSPARENT_BUFFER_DP * density).roundToInt()
-        return StatusBarFrostedGlassGeometry(
+        return StatusBarStaticOverlayGeometry(
             statusBarHeightPx = safeStatusBarHeight,
-            blurRadiusPx = STATUS_BAR_BLUR_RADIUS_PX,
             overlayHeightPx = safeStatusBarHeight + fadeHeightPx,
         )
     }
 }
 
-internal data class StatusBarFrostedGlassGeometry(
+internal data class StatusBarStaticOverlayGeometry(
     val statusBarHeightPx: Int = 0,
-    val blurRadiusPx: Float = 0f,
     val overlayHeightPx: Int = 0,
 )
 
-internal object StatusBarFrostedGlassTestTags {
-    const val Overlay = "status_bar_frosted_glass"
+internal object StatusBarStaticOverlayTestTags {
+    const val Overlay = "status_bar_static_overlay"
 }
 
 private fun Int.withAlpha(alpha: Float): Int =
     (this and 0x00FFFFFF) or ((alpha.coerceIn(0f, 1f) * 255).roundToInt() shl 24)
 
 private const val STATUS_BAR_TRANSPARENT_BUFFER_DP = 8f
-private const val STATUS_BAR_BLUR_RADIUS_PX = 14f

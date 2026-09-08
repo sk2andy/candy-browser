@@ -276,7 +276,7 @@
     <string name="download_notification_description">Descarga</string>
     <string name="settings_title">Ajustes</string>
     <string name="settings_appearance_title">Apariencia</string>
-    <string name="settings_home_appearance_summary">Colores, superficies y formas</string>
+    <string name="settings_home_appearance_summary">Colores, texto web, superficies y formas</string>
     <string name="settings_appearance_mode">Apariencia</string>
     <string name="appearance_mode_system">Sistema</string>
     <string name="appearance_mode_light">Claro</string>
@@ -284,6 +284,7 @@
     <string name="appearance_mode_amoled">AMOLED</string>
     <string name="settings_force_dark_websites">Forzar el modo oscuro en sitios web</string>
     <string name="settings_force_dark_websites_summary">Con la apariencia oscura del navegador, oscurece automáticamente los sitios sin tema oscuro propio. Puede causar problemas de visualización.</string>
+    <string name="settings_web_content_font_size">Tamaño de letra en sitios web</string>
     <string name="settings_color_palette">Paleta de colores</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
@@ -398,7 +399,7 @@
     <string name="settings_scroll_bar_subtitle">Aparece al desplazarte y luego se desvanece. Arrástrala para recorrer páginas largas.</string>
     <string name="scroll_bar_content_description">Barra de desplazamiento de la página</string>
     <string name="settings_video_autoplay_title">Impedir la reproducción automática de vídeos</string>
-    <string name="settings_video_autoplay_subtitle">Los vídeos solo se inician cuando los reproduces.</string>
+    <string name="settings_video_autoplay_subtitle">Los vídeos solo se inician cuando los reproduces. Desactivar esta opción puede aumentar considerablemente el uso de CPU/GPU, el consumo de batería y la carga de la página.</string>
     <string name="settings_video_autoplay_unsupported">Requiere una versión más reciente del motor Gecko.</string>
     <string name="settings_default_browser">Navegador predeterminado</string>
     <string name="settings_default_browser_active">Candy Browser es tu navegador predeterminado</string>

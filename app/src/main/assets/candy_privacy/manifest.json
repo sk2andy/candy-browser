@@ -1,7 +1,7 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "Candy Privacy Host",
-  "version": "1.2.0",
+  "version": "1.5.4",
   "browser_specific_settings": {
     "gecko": {
       "id": "candy-privacy-host@sk2andy.dev"
@@ -13,6 +13,12 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
+      "js": ["content_top_inset_bridge.js", "content_top_inset.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
       "run_at": "document_start",
       "all_frames": true
@@ -22,10 +28,7 @@
     "geckoViewAddons",
     "nativeMessaging",
     "webRequest",
-    "webRequestBlocking"
-  ],
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "webRequestBlocking",
+    "<all_urls>"
   ]
 }

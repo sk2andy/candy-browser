@@ -62,6 +62,7 @@ class GeckoExtensionRulesTest {
                 permissionRequest(
                     permissions = listOf("tabs", "storage", "tabs"),
                     origins = listOf("https://b.example/*", "https://a.example/*"),
+                    dataCollectionPermissions = listOf("websiteActivity", "locationInfo"),
                 ),
             ),
         )
@@ -70,6 +71,10 @@ class GeckoExtensionRulesTest {
         assertEquals(
             listOf("https://a.example/*", "https://b.example/*"),
             normalized.origins,
+        )
+        assertEquals(
+            listOf("locationInfo", "websiteActivity"),
+            normalized.dataCollectionPermissions,
         )
     }
 
@@ -101,6 +106,36 @@ class GeckoExtensionRulesTest {
         assertEquals(false, restricted.allowInPrivateBrowsing)
     }
 
+    @Test
+    fun `technical interaction data follows explicit permission decision`() {
+        val requested = listOf("websiteActivity", "technicalAndInteraction")
+
+        assertTrue(
+            GeckoExtensionRules.grantsTechnicalAndInteractionData(
+                requested,
+                GeckoExtensionPermissionDecision(
+                    grantPermissions = true,
+                    allowInPrivateBrowsing = false,
+                ),
+            ),
+        )
+        assertFalse(
+            GeckoExtensionRules.grantsTechnicalAndInteractionData(
+                requested,
+                GeckoExtensionPermissionDecision.Denied,
+            ),
+        )
+        assertFalse(
+            GeckoExtensionRules.grantsTechnicalAndInteractionData(
+                listOf("websiteActivity"),
+                GeckoExtensionPermissionDecision(
+                    grantPermissions = true,
+                    allowInPrivateBrowsing = false,
+                ),
+            ),
+        )
+    }
+
     private fun context(isPrivate: Boolean) = GeckoExtensionManagementContext(
         profileId = "profile",
         isPrivate = isPrivate,
@@ -110,11 +145,13 @@ class GeckoExtensionRulesTest {
         kind: GeckoExtensionPermissionRequestKind = GeckoExtensionPermissionRequestKind.Install,
         permissions: List<String> = listOf("tabs"),
         origins: List<String> = listOf("https://example.com/*"),
+        dataCollectionPermissions: List<String> = emptyList(),
     ) = GeckoExtensionPermissionRequest(
         kind = kind,
         extensionId = "addon@example.com",
         extensionName = "Addon",
         permissions = permissions,
         origins = origins,
+        dataCollectionPermissions = dataCollectionPermissions,
     )
 }

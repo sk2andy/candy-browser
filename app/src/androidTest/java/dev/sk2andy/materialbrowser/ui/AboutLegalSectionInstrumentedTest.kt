@@ -74,10 +74,22 @@ class AboutLegalSectionInstrumentedTest {
         composeRule.onNodeWithTag(AboutLegalTestTags.OpenSource).performClick()
         composeRule.onNodeWithTag(AboutLegalTestTags.OpenSourceDialog).assertExists()
         composeRule.onNodeWithTag(
-            AboutLegalTestTags.licenseLink(ThirdPartyComponent.Uassets),
+            AboutLegalTestTags.sourceLink(ThirdPartyComponent.AndroidX),
             useUnmergedTree = true,
-        ).performScrollTo().performClick()
-        assertEquals(CandyLegalSources.UASSETS_LICENSE_URL, openedUrl.get())
+        ).performClick()
+        assertEquals(
+            CandyLegalSources.thirdPartyNotices.first().sourceUrl,
+            openedUrl.get(),
+        )
+        composeRule.onNodeWithTag(AboutLegalTestTags.OpenSource).performClick()
+        composeRule.onNodeWithTag(
+            AboutLegalTestTags.licenseLink(ThirdPartyComponent.AndroidX),
+            useUnmergedTree = true,
+        ).performClick()
+        assertEquals(
+            CandyLegalSources.thirdPartyNotices.first().licenseUrl,
+            openedUrl.get(),
+        )
 
         composeRule.onNodeWithTag(AboutLegalTestTags.Uassets).performClick()
         composeRule.onNodeWithTag(AboutLegalTestTags.UassetsDialog).assertExists()
@@ -107,6 +119,13 @@ class AboutLegalSectionInstrumentedTest {
         val notices = context.assets.open("third_party_notices.txt")
             .bufferedReader()
             .use { it.readText() }
+
+        assertTrue(notices.contains(CandyLegalSources.UBLOCK_ORIGIN_REVISION))
+        assertTrue(
+            notices.contains(
+                "175756d74468c9ba45863f7fc333d3be670f82d5b066314e915814dd547d1652",
+            ),
+        )
 
         if (BuildConfig.FOSS_DISTRIBUTION) {
             assertTrue(notices.contains("FOSS release runtime classpath"))

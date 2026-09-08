@@ -4,6 +4,8 @@ import java.net.URI
 import java.util.Locale
 
 internal object GeckoExtensionRules {
+    private const val TECHNICAL_AND_INTERACTION_DATA = "technicalAndInteraction"
+
     fun isVisibleToUserManager(extensionId: String): Boolean =
         extensionId !in INTERNAL_EXTENSION_IDS
 
@@ -56,12 +58,15 @@ internal object GeckoExtensionRules {
         ) return null
         val permissions = normalizeValues(request.permissions) ?: return null
         val origins = normalizeValues(request.origins) ?: return null
-        if (permissions.size + origins.size > MAX_PERMISSION_VALUES) {
+        val dataCollectionPermissions = normalizeValues(request.dataCollectionPermissions)
+            ?: return null
+        if (permissions.size + origins.size + dataCollectionPermissions.size > MAX_PERMISSION_VALUES) {
             return null
         }
         return request.copy(
             permissions = permissions,
             origins = origins,
+            dataCollectionPermissions = dataCollectionPermissions,
         )
     }
 
@@ -76,6 +81,12 @@ internal object GeckoExtensionRules {
                     request.kind == GeckoExtensionPermissionRequestKind.Install,
         )
     }
+
+    fun grantsTechnicalAndInteractionData(
+        dataCollectionPermissions: List<String>,
+        decision: GeckoExtensionPermissionDecision,
+    ): Boolean = decision.grantPermissions &&
+        TECHNICAL_AND_INTERACTION_DATA in dataCollectionPermissions
 
     private fun normalizeValues(values: List<String>): List<String>? {
         if (values.size > MAX_PERMISSION_VALUES) return null

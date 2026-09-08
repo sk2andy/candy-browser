@@ -7,7 +7,7 @@
 | Model | Stable, persisted appearance choices and safe fallback values | `shared/src/commonMain/.../data/AppearanceSettings.kt` |
 | Persistence | Global appearance preference round trips | `data/BrowserSessionStore.kt` |
 | State | Observable selection and update wiring | `browser/BrowserController.kt` |
-| Theme | Platform design language, color schemes, motion, Android night resources, root/system-bar wiring, website color-scheme preference, surface treatment, shape tokens and AMOLED surfaces | `MainActivity.kt`, `AppearanceNightMode.kt`, `browser/BrowserController.kt`, `browser/WebViewSettings.kt`, `ui/theme/CandyDesignSystem.kt`, `ui/theme/MaterialBrowserTheme.kt` |
+| Theme | Platform design language, color schemes, motion, Android night resources, root/system-bar wiring, website color-scheme and font-size preferences, surface treatment, shape tokens and AMOLED surfaces | `MainActivity.kt`, `AppearanceNightMode.kt`, `browser/BrowserController.kt`, `browser/gecko/GeckoRuntimeOwner.kt`, `ui/theme/CandyDesignSystem.kt`, `ui/theme/MaterialBrowserTheme.kt` |
 | Settings routing | Shared destination model, transition, home, controls and core pages; platform resources, icons, effects and persisted state stay adapters | `shared/src/commonMain/.../SettingsDestination.kt`, `shared/src/commonMain/.../ui/settings`, Android `ui/SettingsScreen.kt` adapters |
 | Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
@@ -24,6 +24,7 @@
 | --- | --- | --- |
 | Appearance | System, light, dark, AMOLED | System |
 | Force dark mode on websites | Off, on | Off |
+| Website font size | 50–200% in 5% steps | 100% |
 | Color palette | Material You, Candy, neutral | Material You |
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
@@ -95,6 +96,9 @@ Frosted exposes three persisted controls while selected:
 - AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.
 - Frosted uses WebView blur sources while browsing and Compose-backed blur sources on the new-tab page and tab overview.
+- The status-bar protection is a static surface-tint fade drawn above page content. It never samples
+  or continuously invalidates the browser engine; the optional Frosted address chrome keeps its
+  separate live blur source.
 - General transparency controls menus and other browser chrome; address-bar transparency independently controls the browsing and tab-overview address bars.
 - Blur strength is global across frosted address chrome, menus, search suggestions and supported sheets.
 - Tab options blur the visible tab-overview cards behind the menu instead of falling back to a sharp translucent surface.
@@ -110,6 +114,12 @@ Frosted exposes three persisted controls while selected:
   setting allows WebView to recolor sites without their own dark theme while the effective app
   appearance is dark. Websites can still respond to `prefers-color-scheme`; forced darkening may
   cause display issues by altering author-defined colors and image assets.
+- Website font size is global across regular and private browsing and changes only text rendered by
+  websites, not Candy's own interface. Android applies the persisted 50–200% value through
+  GeckoView's runtime-wide font-size factor. GeckoView requires a document reload, so Candy reloads
+  only the selected existing tab after the slider interaction finishes; background tabs adopt the
+  new factor on their next navigation or reload. New and restored sessions receive the factor before
+  rendering. Manual sizing keeps GeckoView's automatic Android system-font adjustment disabled.
 - Website canvas colors remain WebView-owned. Candy does not apply a separate light or dark
   background behind page content, so transparent documents keep their author-defined foreground
   and canvas contrast in light, dark and forced-dark configurations.
@@ -134,19 +144,19 @@ Frosted exposes three persisted controls while selected:
   supports direct dragging, and fades after interaction.
 - Page translation provider is global and persists across regular and private browsing. Translation
   itself remains an explicit page action; no source URL or translated content is stored separately.
-- **Prevent automatic video playback** is applied to every existing and newly created Gecko session.
+- **Prevent automatic video playback** defaults on and is applied to every existing and newly
+  created browser session. An explicitly stored user choice wins on both engines.
   Gecko's native content-permission delegate denies both audible and inaudible autoplay when the
   setting is enabled and explicitly allows both when disabled. Unrelated content permissions remain
   deferred to their dedicated handlers. Existing Gecko site permissions are synchronized to the
   global setting so an older site decision cannot override it. Because the current document also
   caches its autoplay decision, changing the setting reloads already navigated Gecko sessions only
-  after both stored permission values confirm the new policy. GeckoView 140 does not expose a
+  after both stored permission values confirm the new policy. GeckoView 155 does not expose a
   completion callback for permission writes, so Candy retries the read for at most two seconds. If
   confirmation times out, the current document stays unchanged instead of reloading under an
   unconfirmed policy. Permission reads use Gecko's reported URI, context ID and private-mode scope;
   private decisions therefore remain session-private. This path does not inject JavaScript into the
-  page. GeckoView 140 can still reject a synchronous audible `play()` before its asynchronous
+  page. GeckoView 155 can still reject a synchronous audible `play()` before its asynchronous
   embedder permission result arrives (Mozilla bug 2049064). The exact case remains a named skipped
-  device regression until Candy can adopt a Gecko build containing the platform fix; Gecko 154's
-  published Android metadata requires compile SDK 37 and AGP 9.1, while Candy currently uses compile
-  SDK 35 and AGP 8.7.3.
+  device regression until Mozilla ships the platform fix. Candy now compiles GeckoView 155 against
+  Android SDK 37.1 with AGP 9.4.0.

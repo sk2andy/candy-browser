@@ -8,6 +8,7 @@ internal data class GeckoExtension(
     val allowedInPrivateBrowsing: Boolean,
     val isBuiltIn: Boolean,
     val temporary: Boolean = false,
+    val signedState: Int = -1,
     val disabledFlags: Int = 0,
     val location: String? = null,
     val baseUrl: String? = null,
@@ -33,6 +34,7 @@ internal data class GeckoExtensionPermissionRequest(
     val extensionName: String?,
     val permissions: List<String>,
     val origins: List<String>,
+    val dataCollectionPermissions: List<String> = emptyList(),
 )
 
 internal data class GeckoExtensionPermissionDecision(

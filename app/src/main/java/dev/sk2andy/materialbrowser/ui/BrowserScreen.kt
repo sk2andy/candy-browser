@@ -1260,6 +1260,7 @@ internal fun BrowserScreen(
             onBlankTabModeRevealOriginChanged = { blankTabModeRevealOrigin = it },
             onSnoozedTabs = { snoozedTabsVisible = true },
             onOpenHistory = onOpenHistory,
+            onOpenFirefoxExtensions = onOpenFirefoxExtensions,
             onSettings = {
                 settingsDestination = SettingsDestination.Home
                 settingsVisible = true

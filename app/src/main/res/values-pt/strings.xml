@@ -276,7 +276,7 @@
     <string name="download_notification_description">Transferência</string>
     <string name="settings_title">Definições</string>
     <string name="settings_appearance_title">Aspeto</string>
-    <string name="settings_home_appearance_summary">Cores, superfícies e formas</string>
+    <string name="settings_home_appearance_summary">Cores, texto dos sites, superfícies e formas</string>
     <string name="settings_appearance_mode">Aspeto</string>
     <string name="appearance_mode_system">Sistema</string>
     <string name="appearance_mode_light">Claro</string>
@@ -284,6 +284,7 @@
     <string name="appearance_mode_amoled">AMOLED</string>
     <string name="settings_force_dark_websites">Forçar modo escuro em sites</string>
     <string name="settings_force_dark_websites_summary">Com a aparência escura do navegador, escurece automaticamente sites sem tema escuro próprio. Pode causar problemas de exibição.</string>
+    <string name="settings_web_content_font_size">Tamanho da letra nos sites</string>
     <string name="settings_color_palette">Paleta de cores</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
@@ -398,7 +399,7 @@
     <string name="settings_scroll_bar_subtitle">Aparece ao deslocar e depois desaparece. Arraste-a para percorrer páginas longas.</string>
     <string name="scroll_bar_content_description">Barra de deslocamento da página</string>
     <string name="settings_video_autoplay_title">Impedir a reprodução automática de vídeos</string>
-    <string name="settings_video_autoplay_subtitle">Os vídeos só começam quando você os reproduz.</string>
+    <string name="settings_video_autoplay_subtitle">Os vídeos só começam quando você os reproduz. Desativar esta opção pode aumentar significativamente o uso de CPU/GPU, o consumo de bateria e a carga da página.</string>
     <string name="settings_video_autoplay_unsupported">Requer uma versão mais recente do motor Gecko.</string>
     <string name="settings_default_browser">Navegador predefinido</string>
     <string name="settings_default_browser_active">O Candy Browser é o seu navegador predefinido</string>

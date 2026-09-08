@@ -5,10 +5,13 @@ import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
+import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAndroidPermissionRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptResponse
@@ -50,6 +53,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.mozilla.gecko.GeckoThread
 import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.Autocomplete
+import org.mozilla.geckoview.CandyGeckoViewSafeAreaBridge
 import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
@@ -167,6 +171,26 @@ internal class GeckoViewRuntimeHandle private constructor(
         cookieBehavior.setGloballyBlocked(blocked)
     }
 
+    @UiThread
+    override fun setWebContentFontSizeFactor(factor: Float) {
+        runtime.settings.automaticFontSizeAdjustment = false
+        runtime.settings.fontSizeFactor = factor
+    }
+
+    @UiThread
+    override fun bindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) {
+        runtime.activityDelegate = delegate
+    }
+
+    @UiThread
+    override fun unbindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) {
+        if (runtime.activityDelegate === delegate) runtime.activityDelegate = null
+    }
+
+    @VisibleForTesting
+    fun webAuthnActivityDelegateForTesting(): GeckoRuntime.ActivityDelegate? =
+        runtime.activityDelegate
+
     @VisibleForTesting
     fun ensureBuiltInExtensionFixture(): GeckoResult<WebExtension> =
         runtime.webExtensionController.ensureBuiltIn(
@@ -208,6 +232,10 @@ internal class GeckoViewRuntimeHandle private constructor(
                 context = appContext,
                 executor = org.mozilla.geckoview.GeckoWebExecutor(runtime),
             )
+            val defaultExtensionInstaller = GeckoViewDefaultExtensionInstaller(
+                context = appContext,
+                controller = extensionController,
+            )
             return GeckoViewRuntimeHandle(
                 runtime = runtime,
                 extensions = GeckoViewExtensionRuntime(
@@ -215,6 +243,16 @@ internal class GeckoViewRuntimeHandle private constructor(
                     controller = extensionController,
                     downloadTransfers = downloadTransfers,
                     runAfterInternalHostInitialization = privacyHost::runAfterInitialization,
+                    defaultExtensionInstaller = defaultExtensionInstaller,
+                    defaultExtensionProvisionerFactory = {
+                        GeckoDefaultExtensionProvisioner(
+                            extensions = GeckoDefaultExtensionCatalog.load(appContext),
+                            stateStore = GeckoDefaultExtensionPreferences(appContext),
+                            assetVerifier = GeckoDefaultExtensionAssets(appContext),
+                            installer = defaultExtensionInstaller,
+                            retiredExtensionIds = GeckoDefaultExtensionCatalog.retiredExtensionIds,
+                        )
+                    },
                 ),
                 toppings = toppingHost,
                 privacyHost = privacyHost,
@@ -225,7 +263,7 @@ internal class GeckoViewRuntimeHandle private constructor(
 }
 
 /**
- * GeckoView 140 exposes cookie behavior only on the shared runtime. Keep that runtime strict unless
+ * GeckoView 155 exposes cookie behavior only on the shared runtime. Keep that runtime strict unless
  * the selected session has a confirmed, host-matched compatibility exception.
  */
 private class GeckoCookieBehaviorCoordinator(
@@ -457,11 +495,14 @@ internal class GeckoViewExtensionRuntime(
     private val runAfterInternalHostInitialization: ((Boolean) -> Unit) -> Unit = { action ->
         action(true)
     },
+    private val defaultExtensionInstaller: GeckoViewDefaultExtensionInstaller,
+    defaultExtensionProvisionerFactory: suspend () -> GeckoDefaultExtensionProvisioner,
     private val callbackScope: CoroutineScope = CoroutineScope(
         SupervisorJob() + Dispatchers.Main.immediate,
     ),
 ) : GeckoExtensionRuntime {
     private var chrome: GeckoViewExtensionChrome? = null
+    private val defaultExtensionStartup: GeckoDefaultExtensionStartup
 
     @Volatile
     private var permissionPrompt = GeckoExtensionPermissionPrompt {
@@ -474,6 +515,11 @@ internal class GeckoViewExtensionRuntime(
     init {
         controller.setPromptDelegate(PromptDelegate())
         controller.setAddonManagerDelegate(AddonManagerDelegate())
+        defaultExtensionStartup = GeckoDefaultExtensionStartup(
+            scope = callbackScope,
+            runAfterInternalHostInitialization = runAfterInternalHostInitialization,
+            provisionerFactory = defaultExtensionProvisionerFactory,
+        )
     }
 
     override fun setPermissionPrompt(prompt: GeckoExtensionPermissionPrompt) {
@@ -526,7 +572,8 @@ internal class GeckoViewExtensionRuntime(
     }
 
     override suspend fun listInstalled(): List<GeckoExtension> {
-        awaitInternalHostInitialization()
+        defaultExtensionStartup.await()
+        defaultExtensionStartup.retryFailedIfDue()
         val installed = controller.list().await()
         chrome?.reconcile(installed)
         return installed
@@ -540,14 +587,19 @@ internal class GeckoViewExtensionRuntime(
         uri: String,
         installationMethod: String,
     ): GeckoExtension {
-        awaitInternalHostInitialization()
+        defaultExtensionStartup.await()
         require(installationMethod == WebExtensionController.INSTALLATION_METHOD_MANAGER) {
             "Signed user extensions must use the add-on manager installation method"
         }
-        return controller.install(
+        val installed = controller.install(
             uri,
             WebExtensionController.INSTALLATION_METHOD_MANAGER,
-        ).await().toCandyExtension()
+        ).await()
+        if (!defaultExtensionStartup.markUserInstallSucceeded(installed.id)) {
+            controller.uninstall(installed).awaitCompletion()
+            error("Default extension installation state could not be persisted")
+        }
+        return installed.toCandyExtension()
     }
 
     override suspend fun enable(extensionId: String): GeckoExtension {
@@ -580,33 +632,27 @@ internal class GeckoViewExtensionRuntime(
     ).await().toCandyExtension()
 
     override suspend fun uninstall(extensionId: String) {
-        controller.uninstall(requireInstalled(extensionId)).awaitCompletion()
-    }
-
-    private suspend fun awaitInternalHostInitialization() = suspendCancellableCoroutine { continuation ->
-        runAfterInternalHostInitialization { succeeded ->
-            if (!continuation.isActive) return@runAfterInternalHostInitialization
-            if (succeeded) {
-                continuation.resume(Unit)
-            } else {
-                continuation.resumeWithException(
-                    IllegalStateException("Candy internal extension hosts failed to initialize"),
-                )
-            }
+        val installed = requireInstalled(extensionId)
+        check(defaultExtensionStartup.markRemovalRequested(extensionId)) {
+            "Default extension removal state could not be persisted"
         }
+        controller.uninstall(installed).awaitCompletion()
     }
 
-    private suspend fun requireInstalled(extensionId: String): WebExtension =
-        requireNotNull(controller.list().await().firstOrNull { extension ->
+    private suspend fun requireInstalled(extensionId: String): WebExtension {
+        defaultExtensionStartup.await()
+        return requireNotNull(controller.list().await().firstOrNull { extension ->
             GeckoExtensionRules.isVisibleToUserManager(extensionId) &&
             extension.id == extensionId
         }) { "Gecko extension is not installed: $extensionId" }
+    }
 
     private fun <T> promptResult(
         extension: WebExtension,
         kind: GeckoExtensionPermissionRequestKind,
         permissions: Array<String>,
         origins: Array<String>,
+        dataCollectionPermissions: Array<String>,
         mapper: (GeckoExtensionPermissionDecision) -> T,
     ): GeckoResult<T> {
         val result = GeckoResult<T>()
@@ -619,6 +665,7 @@ internal class GeckoViewExtensionRuntime(
                         extensionName = extension.metaData.name,
                         permissions = permissions.toList(),
                         origins = origins.toList(),
+                        dataCollectionPermissions = dataCollectionPermissions.toList(),
                     ),
                 )
             } catch (error: CancellationException) {
@@ -647,28 +694,48 @@ internal class GeckoViewExtensionRuntime(
             extension: WebExtension,
             permissions: Array<String>,
             origins: Array<String>,
-        ): GeckoResult<WebExtension.PermissionPromptResponse> = promptResult(
-            extension = extension,
-            kind = GeckoExtensionPermissionRequestKind.Install,
-            permissions = permissions,
-            origins = origins,
-        ) { decision ->
-            WebExtension.PermissionPromptResponse(
-                decision.grantPermissions,
-                decision.allowInPrivateBrowsing,
-            )
+            dataCollectionPermissions: Array<String>,
+        ): GeckoResult<WebExtension.PermissionPromptResponse> {
+            val automatic = defaultExtensionInstaller.automaticPermissionDecision(extension)
+            if (automatic != null) {
+                return GeckoResult.fromValue(
+                    WebExtension.PermissionPromptResponse(
+                        automatic.grantPermissions,
+                        automatic.allowInPrivateBrowsing,
+                        // Bundled defaults never silently opt into technical/interaction telemetry.
+                        false,
+                    ),
+                )
+            }
+            return promptResult(
+                extension = extension,
+                kind = GeckoExtensionPermissionRequestKind.Install,
+                permissions = permissions,
+                origins = origins,
+                dataCollectionPermissions = dataCollectionPermissions,
+            ) { decision ->
+                WebExtension.PermissionPromptResponse(
+                    decision.grantPermissions,
+                    decision.allowInPrivateBrowsing,
+                    GeckoExtensionRules.grantsTechnicalAndInteractionData(
+                        dataCollectionPermissions.toList(),
+                        decision,
+                    ),
+                )
+            }
         }
 
         override fun onUpdatePrompt(
             extension: WebExtension,
-            updatedExtension: WebExtension,
             newPermissions: Array<String>,
             newOrigins: Array<String>,
+            newDataCollectionPermissions: Array<String>,
         ): GeckoResult<AllowOrDeny> = promptResult(
-            extension = updatedExtension,
+            extension = extension,
             kind = GeckoExtensionPermissionRequestKind.Update,
             permissions = newPermissions,
             origins = newOrigins,
+            dataCollectionPermissions = newDataCollectionPermissions,
             mapper = GeckoExtensionPermissionDecision::toAllowOrDeny,
         )
 
@@ -676,11 +743,13 @@ internal class GeckoViewExtensionRuntime(
             extension: WebExtension,
             permissions: Array<String>,
             origins: Array<String>,
+            dataCollectionPermissions: Array<String>,
         ): GeckoResult<AllowOrDeny> = promptResult(
             extension = extension,
             kind = GeckoExtensionPermissionRequestKind.Optional,
             permissions = permissions,
             origins = origins,
+            dataCollectionPermissions = dataCollectionPermissions,
             mapper = GeckoExtensionPermissionDecision::toAllowOrDeny,
         )
     }
@@ -796,7 +865,6 @@ private class GeckoViewBrowserSession(
     private var closed = false
     private var active = false
     private var inPictureInPicture = false
-    private var usesPictureInPictureSurfaceBackend = false
     private var pictureInPicturePlaybackExpected = false
     private var extensionIdentity: GeckoExtensionSessionIdentity? = null
     private var credentialPromptHost: CredentialPromptHost? = null
@@ -819,7 +887,7 @@ private class GeckoViewBrowserSession(
     private var privacyFailureDescription: String? = null
     private val privacyBinding: GeckoPrivacyBinding
     private val resumeRuntimeForPictureInPicture = Runnable {
-        if (!closed && inPictureInPicture && pictureInPicturePlaybackExpected) {
+        if (!closed && pictureInPicturePlaybackExpected) {
             GeckoThread.onResume()
             activeMediaSession?.play()
         }
@@ -848,11 +916,19 @@ private class GeckoViewBrowserSession(
                 screenY: Int,
                 element: GeckoSession.ContentDelegate.ContextElement,
             ) {
-                BrowserContentTargetRules.resolve(
+                val target = BrowserContentTargetRules.resolve(
                     kind = element.type.toBrowserContentTargetKind(),
                     linkUrl = element.linkUri,
                     sourceUrl = element.srcUri,
-                )?.let { target -> contentTargetListener?.onLongPress(target) }
+                ) ?: return
+                val view = boundView ?: return
+                if (
+                    !active ||
+                    !view.hasWindowFocus() ||
+                    inPictureInPicture ||
+                    pictureInPicturePlaybackExpected
+                ) return
+                contentTargetListener?.onLongPress(target)
             }
 
             override fun onExternalResponse(session: GeckoSession, response: WebResponse) {
@@ -1514,7 +1590,7 @@ private class GeckoViewBrowserSession(
 
             override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
                 updateMediaState { current -> current.copy(isPlaying = false) }
-                if (inPictureInPicture && pictureInPicturePlaybackExpected) {
+                if (pictureInPicturePlaybackExpected) {
                     mainHandler.removeCallbacks(resumeRuntimeForPictureInPicture)
                     mainHandler.postDelayed(
                         resumeRuntimeForPictureInPicture,
@@ -1780,7 +1856,7 @@ private class GeckoViewBrowserSession(
         }
         // Gecko stores site permission results and the current document caches its decision.
         // Confirm both stored values before reloading: setPermission is asynchronous and has no
-        // completion callback in GeckoView 140.
+        // completion callback in GeckoView 155.
         beginAutoplayPermissionSync(state.url)
     }
 
@@ -2040,12 +2116,6 @@ private class GeckoViewBrowserSession(
         this.inPictureInPicture = inPictureInPicture
         mainHandler.removeCallbacks(resumeRuntimeForPictureInPicture)
         if (inPictureInPicture) {
-            // SurfaceView is owned by Android's compositor and survives the Activity-to-PiP
-            // surface transfer. Restore TextureView afterward for Candy's blur and tab motion.
-            if (!usesPictureInPictureSurfaceBackend) {
-                boundView?.setPictureInPictureSurfaceBackend(true)
-                usesPictureInPictureSurfaceBackend = true
-            }
             session.compositorController.onPipModeChanged(true)
             // GeckoRuntime follows ProcessLifecycleOwner and pauses after Activity.onPause even
             // while Android keeps the Activity visible in PiP. Resume Gecko after that callback.
@@ -2055,10 +2125,6 @@ private class GeckoViewBrowserSession(
             )
         } else {
             session.compositorController.onPipModeChanged(false)
-            if (usesPictureInPictureSurfaceBackend) {
-                boundView?.setPictureInPictureSurfaceBackend(false)
-                usesPictureInPictureSurfaceBackend = false
-            }
         }
     }
 
@@ -2075,7 +2141,9 @@ private class GeckoViewBrowserSession(
 
     @UiThread
     override fun setActive(active: Boolean) {
-        if (closed || this.active == active) return
+        if (closed) return
+        if (!active) boundView?.cancelActiveTouch()
+        if (this.active == active) return
         session.setActive(active)
         extensionController.setTabActive(session, active)
         this.active = active
@@ -2136,11 +2204,16 @@ private class GeckoViewBrowserSession(
     override fun releaseView(view: View) {
         val geckoView = view as? CandyGeckoView ?: return
         if (geckoView !== boundView) return
-        invalidateCredentialPrompts(recreateHost = false)
+        // Clear ownership before releaseSession or prompt cancellation can synchronously re-enter
+        // Compose and ask the controller to attach this session again.
+        boundView = null
+        credentialNavigationGeneration++
+        val staleCredentialPromptHost = credentialPromptHost
+        credentialPromptHost = null
         geckoView.setActivityContextDelegate(null)
         geckoView.releaseSession()
-        boundView = null
         contentPresentationGate.onSurfaceDetached()
+        staleCredentialPromptHost?.close()
     }
 
     @UiThread
@@ -2401,6 +2474,7 @@ private class GeckoViewBrowserSession(
     @UiThread
     override fun close() {
         if (closed) return
+        closed = true
         if (active) extensionController.setTabActive(session, false)
         downloadTransfers.cancelOwner(session)
         extensionRuntime.detachChromeSession(session)
@@ -2426,7 +2500,6 @@ private class GeckoViewBrowserSession(
         scrollListener = null
         activeMediaSession = null
         inPictureInPicture = false
-        usesPictureInPictureSurfaceBackend = false
         pictureInPicturePlaybackExpected = false
         mainHandler.removeCallbacks(resumeRuntimeForPictureInPicture)
         pendingInitialUrl = null
@@ -2434,7 +2507,6 @@ private class GeckoViewBrowserSession(
         trackingPermissions.remove(trackingPermissionOwner)
         privacyBinding.close()
         session.close()
-        closed = true
     }
 
     private fun loadPendingUrlIfReady() {
@@ -2558,11 +2630,15 @@ private class GeckoViewBrowserSession(
  * Small GeckoView edge exposing Android's protected scroll metrics to the shared chrome.
  * Gecko still owns all scrolling; Candy only renders and drags the indicator.
  */
-private class CandyGeckoView(context: Context) : FrameLayout(context) {
-    private var pictureInPictureSurfaceBackend = false
+internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoViewInsetHost {
     private var autofillEnabled = true
     private var activityContextDelegate: GeckoView.ActivityContextDelegate? = null
-    private var engineView = createEngineView(useSurfaceBackend = false)
+    private var insetLayout = GeckoViewInsetLayout(
+        margins = GeckoViewInsets.Zero,
+        rendererSafeAreaOverride = null,
+    )
+    private var windowInsets: WindowInsetsCompat? = null
+    private val engineView = createEngineView()
 
     init {
         addEngineView(engineView)
@@ -2585,21 +2661,17 @@ private class CandyGeckoView(context: Context) : FrameLayout(context) {
 
     fun setSession(session: GeckoSession) {
         engineView.setSession(session)
+        engineView.dispatchRendererSafeAreaAfterSessionAttach()
     }
 
-    fun releaseSession(): GeckoSession? = engineView.releaseSession()
+    fun releaseSession(): GeckoSession? {
+        engineView.cancelActiveTouch()
+        return engineView.releaseSession()
+    }
 
     fun capturePixels(): GeckoResult<Bitmap> = engineView.captureContentPixels()
 
-    fun setPictureInPictureSurfaceBackend(enabled: Boolean) {
-        if (pictureInPictureSurfaceBackend == enabled) return
-        val attachedSession = engineView.releaseSession()
-        removeView(engineView)
-        pictureInPictureSurfaceBackend = enabled
-        engineView = createEngineView(useSurfaceBackend = enabled)
-        attachedSession?.let(engineView::setSession)
-        addEngineView(engineView)
-    }
+    fun cancelActiveTouch(): Boolean = engineView.cancelActiveTouch()
 
     fun scrollToVerticalOffset(offsetPx: Int) {
         engineView.panZoomController.scrollTo(
@@ -2610,27 +2682,143 @@ private class CandyGeckoView(context: Context) : FrameLayout(context) {
 
     fun engineScrollMetrics(): BrowserEngineScrollMetrics = engineView.engineScrollMetrics()
 
-    private fun createEngineView(useSurfaceBackend: Boolean): CandyGeckoEngineView =
-        CandyGeckoEngineView(context).also { view ->
-            if (!useSurfaceBackend) view.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW)
-            configureEngineView(view)
-        }
+    override fun updateInsets(
+        layout: GeckoViewInsetLayout,
+        windowInsets: WindowInsetsCompat,
+    ) {
+        insetLayout = layout
+        this.windowInsets = windowInsets
+        applyInsets(engineView)
+    }
+
+    private fun createEngineView(): CandyGeckoEngineView =
+        CandyGeckoEngineView(context).also(::configureEngineView)
 
     private fun configureEngineView(view: CandyGeckoEngineView) {
         view.importantForAutofill = importantForAutofill
         view.setAutofillEnabled(autofillEnabled)
         view.setActivityContextDelegate(activityContextDelegate)
+        view.updateRendererSafeAreaOverride(insetLayout.rendererSafeAreaOverride)
     }
 
     private fun addEngineView(view: CandyGeckoEngineView) {
+        val margins = insetLayout.margins
         addView(
             view,
-            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT),
+            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply {
+                setMargins(margins.left, margins.top, margins.right, margins.bottom)
+            },
         )
+        windowInsets?.let { insets -> ViewCompat.dispatchApplyWindowInsets(view, insets) }
+        view.updateRendererSafeAreaOverride(insetLayout.rendererSafeAreaOverride)
+    }
+
+    private fun applyInsets(view: CandyGeckoEngineView) {
+        val margins = insetLayout.margins
+        (view.layoutParams as? LayoutParams)?.let { layoutParams ->
+            if (
+                layoutParams.leftMargin != margins.left ||
+                layoutParams.topMargin != margins.top ||
+                layoutParams.rightMargin != margins.right ||
+                layoutParams.bottomMargin != margins.bottom
+            ) {
+                layoutParams.setMargins(margins.left, margins.top, margins.right, margins.bottom)
+                view.layoutParams = layoutParams
+            }
+        }
+        windowInsets?.let { insets -> ViewCompat.dispatchApplyWindowInsets(view, insets) }
+        view.updateRendererSafeAreaOverride(insetLayout.rendererSafeAreaOverride)
     }
 }
 
-private class CandyGeckoEngineView(context: Context) : GeckoView(context) {
+private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBridge(context) {
+    private var gestureState = GeckoContentGestureState()
+    private var latestTouchEvent: MotionEvent? = null
+    private var rendererSafeAreaOverride: GeckoViewInsets? = null
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (
+            event.actionMasked != MotionEvent.ACTION_DOWN &&
+            GeckoContentGestureRules.hasCancelledStream(gestureState)
+        ) {
+            return true
+        }
+        val handled = super.dispatchTouchEvent(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                gestureState = GeckoContentGestureRules.onDown(
+                    state = gestureState,
+                    downTime = event.downTime,
+                    handled = handled,
+                )
+                if (handled) rememberTouchEvent(event) else clearTouchEvent()
+            }
+
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL,
+            -> {
+                gestureState = GeckoContentGestureRules.onTerminal(
+                    state = gestureState,
+                    downTime = event.downTime,
+                )
+                if (gestureState.activeTouchDownTime == null) clearTouchEvent()
+            }
+
+            MotionEvent.ACTION_POINTER_DOWN,
+            MotionEvent.ACTION_POINTER_UP,
+            -> if (gestureState.activeTouchDownTime == event.downTime) {
+                rememberTouchEvent(event)
+            }
+
+            else -> Unit
+        }
+        return handled
+    }
+
+    fun cancelActiveTouch(): Boolean {
+        val transition = GeckoContentGestureRules.cancel(gestureState)
+        gestureState = transition.state
+        val downTime = transition.dispatchCancelDownTime ?: return false
+        val cancelEvent = latestTouchEvent?.takeIf { event -> event.downTime == downTime }
+            ?: return false
+        latestTouchEvent = null
+        cancelEvent.action = MotionEvent.ACTION_CANCEL
+        return try {
+            super.dispatchTouchEvent(cancelEvent)
+        } finally {
+            cancelEvent.recycle()
+        }
+    }
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        if (!hasWindowFocus) cancelActiveTouch()
+        super.onWindowFocusChanged(hasWindowFocus)
+    }
+
+    fun updateRendererSafeAreaOverride(insets: GeckoViewInsets?) {
+        rendererSafeAreaOverride = insets
+        dispatchRendererSafeAreaOverride()
+    }
+
+    fun dispatchRendererSafeAreaAfterSessionAttach() {
+        post(::dispatchRendererSafeAreaOverride)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        dispatchRendererSafeAreaOverride()
+    }
+
+    override fun onDetachedFromWindow() {
+        cancelActiveTouch()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight)
+        post(::dispatchRendererSafeAreaOverride)
+    }
+
     fun captureContentPixels(): GeckoResult<Bitmap> = capturePixels()
 
     fun engineScrollMetrics(): BrowserEngineScrollMetrics = BrowserEngineScrollMetrics(
@@ -2638,6 +2826,41 @@ private class CandyGeckoEngineView(context: Context) : GeckoView(context) {
         extentPx = computeVerticalScrollExtent().coerceAtLeast(0),
         rangePx = computeVerticalScrollRange().coerceAtLeast(0),
     )
+
+    private fun dispatchRendererSafeAreaOverride() {
+        val insets = rendererSafeAreaOverride ?: ViewCompat.getRootWindowInsets(this)
+            ?.getInsets(SAFE_AREA_INSET_TYPES)
+            ?.let { safeArea ->
+                GeckoViewInsets(
+                    left = safeArea.left,
+                    top = safeArea.top,
+                    right = safeArea.right,
+                    bottom = safeArea.bottom,
+                )
+            }
+            ?: return
+        dispatchCandySafeAreaInsets(
+            insets.top,
+            insets.right,
+            insets.bottom,
+            insets.left,
+        )
+    }
+
+    private fun rememberTouchEvent(event: MotionEvent) {
+        latestTouchEvent?.recycle()
+        latestTouchEvent = MotionEvent.obtainNoHistory(event)
+    }
+
+    private fun clearTouchEvent() {
+        latestTouchEvent?.recycle()
+        latestTouchEvent = null
+    }
+
+    private companion object {
+        val SAFE_AREA_INSET_TYPES =
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+    }
 }
 
 private class GeckoWebPromptResponse(
@@ -2698,6 +2921,7 @@ private fun WebExtension.toCandyExtension() = GeckoExtension(
     allowedInPrivateBrowsing = metaData.allowedInPrivateBrowsing,
     isBuiltIn = isBuiltIn,
     temporary = metaData.temporary,
+    signedState = metaData.signedState,
     disabledFlags = metaData.disabledFlags,
     location = location,
     baseUrl = metaData.baseUrl,

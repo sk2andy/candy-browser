@@ -176,6 +176,11 @@ internal class GeckoBrowserEngineSessionFactory(
     }
 
     @UiThread
+    fun setWebContentFontSizeFactor(factor: Float) {
+        runtime.setWebContentFontSizeFactor(factor)
+    }
+
+    @UiThread
     fun setExtensionChromeHost(host: GeckoExtensionChromeHost?) {
         runtime.extensions.setChromeHost(host)
     }

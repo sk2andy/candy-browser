@@ -172,3 +172,25 @@ internal fun buildBrowserMediaNotification(
     .setShowWhen(false)
     .setStyle(Notification.MediaStyle().setMediaSession(sessionToken))
     .build()
+
+internal fun buildBrowserMediaStartingNotification(context: Context): Notification {
+    val contentIntent = PendingIntent.getActivity(
+        context,
+        BrowserMediaSystemSession.FOREGROUND_NOTIFICATION_ID,
+        Intent(context, MainActivity::class.java)
+            .setAction(BrowserMediaSystemSession.ACTION_OPEN_BROWSER_MEDIA)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+    return Notification.Builder(context, BrowserMediaSystemSession.CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_media_playback)
+        .setContentTitle(context.getString(R.string.media_notification_channel_name))
+        .setContentText(context.getString(R.string.media_notification_channel_description))
+        .setContentIntent(contentIntent)
+        .setCategory(Notification.CATEGORY_TRANSPORT)
+        .setVisibility(Notification.VISIBILITY_PRIVATE)
+        .setOngoing(true)
+        .setOnlyAlertOnce(true)
+        .setShowWhen(false)
+        .build()
+}

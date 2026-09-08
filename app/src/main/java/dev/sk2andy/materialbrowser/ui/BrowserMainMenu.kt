@@ -13,11 +13,13 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuAction
+import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuCapabilities
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuItem
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuLabelKey
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuRules
@@ -27,6 +29,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuEffects
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuContainerRole
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuResources
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuStyle
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenu as SharedBrowserMainMenu
@@ -138,6 +141,12 @@ private val AndroidBrowserMainMenuResources = object : BrowserMainMenuResources 
 private class AndroidBrowserMainMenuEffects(
     private val backdropSource: CandyChromeBackdropSource?,
 ) : BrowserMainMenuEffects {
+    override val style = BrowserMainMenuStyle(
+        toolbarLabelFontSize = 12.sp,
+        rowLabelFontSize = 16.sp,
+        rowSupportingTextFontSize = 12.sp,
+    )
+
     @Composable
     override fun menuSurface(
         modifier: Modifier,
@@ -236,6 +245,7 @@ internal fun BrowserMainMenu(
     onDockAddressBar: () -> Unit,
     onParkAddressBarRight: () -> Unit = {},
     onHistory: () -> Unit,
+    onOpenFirefoxExtensions: (() -> Unit)? = null,
     onSettings: () -> Unit,
 ) {
     val configuration = LocalConfiguration.current
@@ -271,7 +281,12 @@ internal fun BrowserMainMenu(
         overflowPageActions = overflowAddressBarActions.mapNotNull(AddressBarAction::sharedMenuAction),
         toppingCommands = userScriptMenuCommands.map(UserScriptMenuCommand::sharedMenuCommand),
     )
-    val items = BrowserFeatureMenuRules.items(menuState)
+    val items = BrowserFeatureMenuRules.items(
+        state = menuState,
+        capabilities = BrowserFeatureMenuCapabilities(
+            supportsFirefoxExtensions = onOpenFirefoxExtensions != null,
+        ),
+    )
     SharedBrowserMainMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
@@ -322,6 +337,8 @@ internal fun BrowserMainMenu(
                 BrowserFeatureMenuAction.DockAddressBar -> onDockAddressBar()
                 BrowserFeatureMenuAction.OpenSnoozedTabs -> onSnoozedTabs()
                 BrowserFeatureMenuAction.OpenHistory -> onHistory()
+                BrowserFeatureMenuAction.OpenFirefoxExtensions ->
+                    onOpenFirefoxExtensions?.invoke()
                 BrowserFeatureMenuAction.OpenSettings -> onSettings()
                 BrowserFeatureMenuAction.InvokeToppingCommand -> {
                     userScriptMenuCommands.firstOrNull { command ->
@@ -329,7 +346,6 @@ internal fun BrowserMainMenu(
                             command.commandId == item.toppingCommandId
                     }?.let(onUserScriptMenuCommand)
                 }
-                BrowserFeatureMenuAction.OpenFirefoxExtensions -> Unit
             }
         },
     )
@@ -395,7 +411,7 @@ private fun BrowserFeatureMenuLabelKey.androidStringResource(): Int = when (this
     BrowserFeatureMenuLabelKey.SnoozedTabs -> R.string.snoozed_tabs_title
     BrowserFeatureMenuLabelKey.History -> R.string.action_history
     BrowserFeatureMenuLabelKey.Settings -> R.string.action_settings
-    BrowserFeatureMenuLabelKey.FirefoxExtensions -> R.string.action_settings
+    BrowserFeatureMenuLabelKey.FirefoxExtensions -> R.string.gecko_extensions_title
     BrowserFeatureMenuLabelKey.ToppingsCommand -> R.string.browser_menu_toppings_group
 }
 

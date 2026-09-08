@@ -62,6 +62,8 @@ internal data class GeckoPrivacyPolicy(
     val blockThirdPartyCookies: Boolean = true,
     val allowThirdPartyCookiesForSite: Boolean = false,
     val compatibilityRequestHosts: Set<String> = DEFAULT_COMPATIBILITY_REQUEST_HOSTS,
+    val topInsetPx: Int = 0,
+    val navigationGeneration: Int = 0,
 ) {
     companion object {
         val Disabled = GeckoPrivacyPolicy(
@@ -78,6 +80,28 @@ internal data class GeckoPrivacyPolicy(
     }
 }
 
+internal object GeckoPrivacyPolicyRules {
+    fun extensionOwnedAdFilteringWithCandyCookieDefaults(
+        pageHost: String?,
+        pausedHosts: Set<String>,
+        hideCookieConsent: Boolean,
+        cookieBannerRemovalDisabled: Boolean,
+        blockThirdPartyCookies: Boolean,
+        allowThirdPartyCookiesForSite: Boolean,
+        topInsetPx: Int = 0,
+        navigationGeneration: Int = 0,
+    ): GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
+        pageHost = pageHost,
+        pausedHosts = pausedHosts,
+        hideCookieConsent = hideCookieConsent,
+        cookieBannerRemovalDisabled = cookieBannerRemovalDisabled,
+        blockThirdPartyCookies = blockThirdPartyCookies,
+        allowThirdPartyCookiesForSite = allowThirdPartyCookiesForSite,
+        topInsetPx = topInsetPx.coerceAtLeast(0),
+        navigationGeneration = navigationGeneration.coerceAtLeast(0),
+    )
+}
+
 internal data class GeckoPrivacyEvent(
     val requestUrl: String,
     val pageUrl: String?,
@@ -85,6 +109,7 @@ internal data class GeckoPrivacyEvent(
     val wasBlocked: Boolean,
     val isBuiltIn: Boolean,
     val isCompatibilityObservation: Boolean,
+    val safeAreaFallbackNavigationGeneration: Int? = null,
 )
 
 internal fun interface GeckoPrivacyEventSink {
@@ -100,6 +125,8 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("blockAds", blockAdsAndTrackers)
     .put("hideConsent", hideCookieConsent)
     .put("cookieBannerRemovalDisabled", cookieBannerRemovalDisabled)
+    .put("topInsetPx", topInsetPx)
+    .put("navigationGeneration", navigationGeneration)
     .put(
         "compatibilityRequestHosts",
         JSONArray(compatibilityRequestHosts.sorted()),

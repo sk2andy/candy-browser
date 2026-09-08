@@ -29,9 +29,6 @@
   <img src="docs/screenshots/candy-privacy.png" width="30%" alt="Candy Browser Privacy X-Ray">
 </p>
 
-> [!NOTE]
-> I am working on a Gecko-Webview-Implementation that brings Firefox extensions to the app. I have already a working draft but I cannot say for sure that this will work. Also this takes most of my time right now to fix all the broken stuff. So bare with me that I am maybe not that responsive in fixing your bugs or adding your feature requests. Thanks <3 
-
 ## Cross-device sync
 
 **Candy Sync turns every connected Android, Chromium, or Firefox device into a writable profile.**
@@ -236,18 +233,30 @@ landscape-oriented previews in Coverflow and the compact grid layout.
 
 ### Firefox Extension Support
 
+- A clean Android Gecko profile gets uBlock Origin and **I still don't care about cookies** by
+  default from pinned, unmodified Mozilla-signed XPIs bundled for offline installation. Their
+  corresponding GPL-3.0-only sources are pinned to immutable upstream Git commits.
+- Existing installs are matched by Firefox extension ID and left unchanged. Disabling a default is
+  respected; uninstalling it records a durable removal marker, so Candy does not restore it later.
+  Default extensions are never enabled for private tabs without the user's explicit opt-in.
 - Android can install Mozilla-signed Firefox extensions directly from an HTTPS XPI URL. Candy uses
   GeckoView for signature validation, permission approval, installation, updates, enable/disable,
   uninstall, and explicit private-browsing access.
 - Supported extension UI stays inside Candy's shared browser chrome: browser/page actions, popups,
   and options pages do not introduce a second address bar, menu system, or tab switcher.
-- Candy supports the public WebExtension APIs exposed by the pinned GeckoView 140 runtime. This is
+- Candy supports the public WebExtension APIs exposed by the pinned GeckoView 155 runtime. This is
   not a guarantee that every Firefox Desktop extension is compatible. Desktop-only APIs and fields
   GeckoView rejects before Candy can handle them cannot be emulated reliably. For example,
-  `tabs.update({ muted: ... })` and `tabs.update({ pinned: ... })` are rejected by GeckoView 140's
+  `tabs.update({ muted: ... })` and `tabs.update({ pinned: ... })` are rejected by GeckoView 155's
   extension schema.
-- See the tested [Firefox WebExtension capability matrix](docs/browsing/platform-engines.md#firefox-webextension-capability-matrix-geckoview-140)
+- See the tested [Firefox WebExtension capability matrix](docs/browsing/platform-engines.md#firefox-webextension-capability-matrix-geckoview-155)
   for supported APIs and exact platform boundaries.
+
+Pinned source URLs, versions, hashes, licenses, and delivery modes live in
+`app/src/main/assets/gecko_default_extensions/catalog.json`. Maintainers verify local assets with
+`python3 scripts/generate_gecko_default_extensions.py verify`, audit both upstream files with
+`python3 scripts/generate_gecko_default_extensions.py audit-remote`, and refresh the bundled XPI
+only with `python3 scripts/generate_gecko_default_extensions.py refresh`.
 
 ### Media, fullscreen, and picture-in-picture
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -35,6 +36,38 @@ import org.junit.runner.RunWith
 class BrowserContentBlurTargetInstrumentedTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun statusOverlayIsSmallSiblingAndClearModeHasNoFullScreenBlurTarget() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val clearHost = StatusBarStaticOverlayHost(
+            context = context,
+            browserContentBlurEnabled = false,
+        )
+        clearHost.updateOverlay(
+            geometry = StatusBarStaticOverlayGeometry(
+                statusBarHeightPx = 72,
+                overlayHeightPx = 88,
+            ),
+            tint = android.graphics.Color.WHITE,
+            visible = true,
+        )
+
+        val overlay = clearHost.findViewWithTag<android.view.View>(
+            StatusBarStaticOverlayTestTags.Overlay,
+        )
+        assertTrue(clearHost.contentContainer !is BlurTarget)
+        assertTrue(clearHost.blurTarget == null)
+        assertSame(clearHost.contentContainer, clearHost.getChildAt(0))
+        assertSame(overlay, clearHost.getChildAt(1))
+        assertTrue(overlay.layoutParams.height == 88)
+
+        val frostedHost = StatusBarStaticOverlayHost(
+            context = context,
+            browserContentBlurEnabled = true,
+        )
+        assertSame(frostedHost.contentContainer, frostedHost.blurTarget)
+    }
 
     @Test
     fun composeContentProvidesBackdropAndReleasesItWhenDisabled() {

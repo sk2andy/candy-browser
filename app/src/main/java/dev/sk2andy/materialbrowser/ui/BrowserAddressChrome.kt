@@ -107,6 +107,7 @@ internal fun BoxScope.BrowserAddressChrome(
     onBlankTabModeRevealOriginChanged: (Offset) -> Unit,
     onSnoozedTabs: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenFirefoxExtensions: (() -> Unit)?,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
@@ -412,6 +413,12 @@ internal fun BoxScope.BrowserAddressChrome(
         onHistory = {
             onAddressEditorDismiss()
             onOpenHistory()
+        },
+        onOpenFirefoxExtensions = onOpenFirefoxExtensions?.let { openExtensions ->
+            {
+                onAddressEditorDismiss()
+                openExtensions()
+            }
         },
         onSettings = {
             onAddressEditorDismiss()

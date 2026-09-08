@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -43,6 +44,7 @@ fun BrowserMenuToolbarAction(
     accessibilityLabel: String? = null,
     horizontalContent: Boolean = false,
     minHeight: Dp = 64.dp,
+    verticalLabelFontSize: TextUnit = 11.sp,
     containerColor: Color = if (selected) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -100,7 +102,7 @@ fun BrowserMenuToolbarAction(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelSmall,
-                    fontSize = 11.sp,
+                    fontSize = verticalLabelFontSize,
                 )
             }
         }
@@ -122,6 +124,8 @@ fun BrowserMenuRow(
     minHeight: Dp = 44.dp,
     horizontalPadding: Dp = 16.dp,
     verticalPadding: Dp = 6.dp,
+    labelFontSize: TextUnit = TextUnit.Unspecified,
+    supportingTextFontSize: TextUnit = TextUnit.Unspecified,
 ) {
     Surface(
         onClick = onClick,
@@ -148,6 +152,7 @@ fun BrowserMenuRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
+                    fontSize = labelFontSize,
                 )
                 if (supportingText != null) {
                     Text(
@@ -155,6 +160,7 @@ fun BrowserMenuRow(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelSmall,
+                        fontSize = supportingTextFontSize,
                         color = contentColor.copy(alpha = 0.72f),
                     )
                 }
@@ -180,6 +186,8 @@ fun BrowserMenuToggleItem(
     minHeight: Dp = 52.dp,
     horizontalPadding: Dp = 16.dp,
     verticalPadding: Dp = 6.dp,
+    labelFontSize: TextUnit = TextUnit.Unspecified,
+    supportingTextFontSize: TextUnit = TextUnit.Unspecified,
     checkedTrackColor: Color? = null,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -208,12 +216,17 @@ fun BrowserMenuToggleItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = label, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = labelFontSize,
+                )
                 Text(
                     text = supportingText,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelSmall,
+                    fontSize = supportingTextFontSize,
                     color = colors.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f),
                 )
             }
@@ -249,6 +262,7 @@ fun BrowserMenuIconToggleItem(
     minHeight: Dp = 48.dp,
     horizontalPadding: Dp = 16.dp,
     verticalPadding: Dp = 0.dp,
+    labelFontSize: TextUnit = TextUnit.Unspecified,
     checkedTrackColor: Color? = null,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -282,6 +296,7 @@ fun BrowserMenuIconToggleItem(
                 text = label,
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium,
+                fontSize = labelFontSize,
             )
             Switch(
                 checked = checked,

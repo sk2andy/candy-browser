@@ -27,6 +27,7 @@ private val candyAppearanceStrings = AppearanceSettingsStrings(
     forceDarkWebsites = "Dunkelmodus auf Websites erzwingen",
     forceDarkWebsitesSummary =
         "Bei dunkler Browserdarstellung werden Websites ohne eigenes dunkles Design automatisch abgedunkelt. Kann zu Darstellungsfehlern führen.",
+    webContentFontSize = "Schriftgröße auf Websites",
     colorPalette = "Farbwelt",
     colorPaletteNames = mapOf(
         BrowserColorPalette.Dynamic to "Material You",

@@ -48,6 +48,7 @@ import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,6 +88,7 @@ import dev.sk2andy.materialbrowser.browser.FindInPageRules
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewCommitResult
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
@@ -170,6 +172,7 @@ internal fun ExternalLinkPreviewScreen(
             controller = controller,
             state = state,
             profiles = profiles,
+            backdropSource = blurTarget.asCandyChromeBackdropSource(),
             rootBottomInWindowPx = rootBottomInWindowPx,
             onReturnToExternalApp = onReturnToExternalApp,
             onCommitted = onCommitted,
@@ -182,6 +185,7 @@ private fun ExternalLinkPreviewChrome(
     controller: BrowserController,
     state: ExternalLinkPreviewState,
     profiles: List<BrowserProfile>,
+    backdropSource: CandyChromeBackdropSource?,
     rootBottomInWindowPx: Int,
     onReturnToExternalApp: () -> Unit,
     onCommitted: (String) -> Unit,
@@ -191,7 +195,7 @@ private fun ExternalLinkPreviewChrome(
         state = state,
         profiles = profiles,
         isDesktopView = controller.isExternalLinkPreviewDesktopView,
-        backdropSource = null,
+        backdropSource = backdropSource,
         rootBottomInWindowPx = rootBottomInWindowPx,
         onDismissPreview = {
             if (controller.dismissExternalLinkPreview(state.sessionId)) {
@@ -233,38 +237,42 @@ private fun ExternalLinkPreviewViewport(
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
+    val browserContentBlurEnabled = browserChromeSurfaceTokens().backdropBlurEnabled
     val density = LocalDensity.current
-    val geometry = StatusBarFrostedGlassRules.geometry(
+    val geometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
         density = density.density,
     )
     val statusBarTint = MaterialTheme.colorScheme.surface.toArgb()
     val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
-    AndroidView(
-        factory = { context -> StatusBarFrostedGlassHost(context) },
-        update = { host ->
-            currentOnBlurTargetAttached(host.blurTarget)
-            host.updateFrostedGlass(
-                geometry = geometry,
-                tint = statusBarTint,
-                visible = true,
-            )
-            if (controller.externalLinkPreviewState?.isContentReady == true) {
-                controller.attachExternalLinkPreview(host.blurTarget)
-            } else {
-                controller.detachExternalLinkPreview(host.blurTarget)
-            }
-        },
-        onRelease = { host ->
-            controller.detachExternalLinkPreview(host.blurTarget)
-            host.release()
-            currentOnBlurTargetReleased(host.blurTarget)
-        },
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface),
-    )
+    key(browserContentBlurEnabled) {
+        AndroidView(
+            factory = { context ->
+                StatusBarStaticOverlayHost(context, browserContentBlurEnabled)
+            },
+            update = { host ->
+                host.blurTarget?.let(currentOnBlurTargetAttached)
+                host.updateOverlay(
+                    geometry = geometry,
+                    tint = statusBarTint,
+                    visible = true,
+                )
+                if (controller.externalLinkPreviewState?.isContentReady == true) {
+                    controller.attachExternalLinkPreview(host.contentContainer)
+                } else {
+                    controller.detachExternalLinkPreview(host.contentContainer)
+                }
+            },
+            onRelease = { host ->
+                controller.detachExternalLinkPreview(host.contentContainer)
+                host.blurTarget?.let(currentOnBlurTargetReleased)
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface),
+        )
+    }
 }
 
 @Composable
@@ -369,7 +377,7 @@ internal fun BrowserViewport(
                 visible = webViewVideoOnlyPresentation ||
                     !tabOverviewVisible ||
                     selectedTab.isIncognito,
-                showStatusBarFrostedGlass = !webViewVideoOnlyPresentation && !tabOverviewVisible,
+                showStatusBarOverlay = !webViewVideoOnlyPresentation && !tabOverviewVisible,
                 statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
@@ -440,14 +448,15 @@ internal fun BrowserViewport(
 private fun ActiveBrowserEngineView(
     controller: BrowserController,
     visible: Boolean,
-    showStatusBarFrostedGlass: Boolean,
+    showStatusBarOverlay: Boolean,
     statusBarTint: Int,
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
+    val browserContentBlurEnabled = browserChromeSurfaceTokens().backdropBlurEnabled
     val density = LocalDensity.current
-    val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
+    val statusBarGeometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
         density = density.density,
     )
@@ -456,45 +465,46 @@ private fun ActiveBrowserEngineView(
     val currentOnLiveFrame by rememberUpdatedState(onLiveFrame)
     val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
-    AndroidView(
-        factory = { context ->
-            StatusBarFrostedGlassHost(context).apply {
-                tag = BrowserEngineViewHostState(blurTarget)
-            }
-        },
-        update = { hostView ->
-            currentOnBlurTargetAttached(hostView.blurTarget)
-            hostView.alpha = if (visible) 1f else 0f
-            hostView.updateFrostedGlass(
-                geometry = statusBarGeometry,
-                tint = statusBarTint,
-                visible = showStatusBarFrostedGlass,
-            )
-            val hostState = hostView.tag as BrowserEngineViewHostState
-            val attachedView = controller.attachSelectedBrowserEngineView(
-                container = hostState.container,
-                onContentPresented = currentOnLiveFrame,
-            )
-            if (attachedView != null) {
-                hostState.bind(
-                    tabId = selectedTabId,
-                    revision = engineViewRevision,
-                    view = attachedView,
-                ) {
-                    currentOnLiveFrame(it)
+    key(browserContentBlurEnabled) {
+        AndroidView(
+            factory = { context ->
+                StatusBarStaticOverlayHost(context, browserContentBlurEnabled).apply {
+                    tag = BrowserEngineViewHostState(contentContainer)
                 }
-            }
-        },
-        onRelease = { hostView ->
-            val hostState = hostView.tag as? BrowserEngineViewHostState
-            hostState?.release()
-            hostView.tag = null
-            hostState?.let { controller.detachBrowserEngineView(it.container) }
-            hostView.release()
-            currentOnBlurTargetReleased(hostView.blurTarget)
-        },
-        modifier = Modifier.fillMaxSize(),
-    )
+            },
+            update = { hostView ->
+                hostView.blurTarget?.let(currentOnBlurTargetAttached)
+                hostView.alpha = if (visible) 1f else 0f
+                hostView.updateOverlay(
+                    geometry = statusBarGeometry,
+                    tint = statusBarTint,
+                    visible = showStatusBarOverlay,
+                )
+                val hostState = hostView.tag as BrowserEngineViewHostState
+                val attachedView = controller.attachSelectedBrowserEngineView(
+                    container = hostState.container,
+                    onContentPresented = currentOnLiveFrame,
+                )
+                if (attachedView != null) {
+                    hostState.bind(
+                        tabId = selectedTabId,
+                        revision = engineViewRevision,
+                        view = attachedView,
+                    ) {
+                        currentOnLiveFrame(it)
+                    }
+                }
+            },
+            onRelease = { hostView ->
+                val hostState = hostView.tag as? BrowserEngineViewHostState
+                hostState?.release()
+                hostView.tag = null
+                hostState?.let { controller.detachBrowserEngineView(it.container) }
+                hostView.blurTarget?.let(currentOnBlurTargetReleased)
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }
 
 private class BrowserEngineViewHostState(val container: FrameLayout) {

@@ -297,7 +297,7 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_appearance_title">Appearance</string>
-    <string name="settings_home_appearance_summary">Colors, surfaces, and shape</string>
+    <string name="settings_home_appearance_summary">Colors, website text, surfaces, and shape</string>
     <string name="settings_appearance_mode">Appearance</string>
     <string name="appearance_mode_system">System</string>
     <string name="appearance_mode_light">Light</string>
@@ -305,6 +305,7 @@
     <string name="appearance_mode_amoled">AMOLED</string>
     <string name="settings_force_dark_websites">Force dark mode on websites</string>
     <string name="settings_force_dark_websites_summary">With a dark browser appearance, automatically darkens websites without their own dark theme. Can cause display issues.</string>
+    <string name="settings_web_content_font_size">Website font size</string>
     <string name="settings_color_palette">Color palette</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
@@ -416,7 +417,7 @@
     <string name="settings_scroll_bar_subtitle">Shows while scrolling, then fades out. Drag it to jump through long pages.</string>
     <string name="scroll_bar_content_description">Page scroll bar</string>
     <string name="settings_video_autoplay_title">Prevent video autoplay</string>
-    <string name="settings_video_autoplay_subtitle">Videos start only when you play them.</string>
+    <string name="settings_video_autoplay_subtitle">Videos start only when you play them. Turning this off can significantly increase CPU/GPU usage, battery drain, and page load.</string>
     <string name="settings_video_autoplay_unsupported">Requires a newer Gecko engine version.</string>
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>

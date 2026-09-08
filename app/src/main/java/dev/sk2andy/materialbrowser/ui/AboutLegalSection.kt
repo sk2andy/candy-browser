@@ -58,6 +58,9 @@ internal object AboutLegalTestTags {
 
     fun licenseLink(component: ThirdPartyComponent): String =
         "about_legal_license_${component.name.lowercase()}"
+
+    fun sourceLink(component: ThirdPartyComponent): String =
+        "about_legal_source_${component.name.lowercase()}"
 }
 
 private enum class AboutLegalDialog {
@@ -302,6 +305,11 @@ private fun OpenSourceLicenseEntry(notice: ThirdPartyNotice, onOpenUrl: (String)
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     LegalLinkButton(
+        text = stringResource(R.string.about_source_action),
+        tag = AboutLegalTestTags.sourceLink(notice.component),
+        onClick = { onOpenUrl(notice.sourceUrl) },
+    )
+    LegalLinkButton(
         text = stringResource(
             if (notice.component == ThirdPartyComponent.GoogleCodeScanner) {
                 R.string.about_terms_action
@@ -395,4 +403,6 @@ private fun ThirdPartyComponent.displayName(): String = when (this) {
     ThirdPartyComponent.GoogleCodeScanner -> stringResource(R.string.about_license_google_scanner)
     ThirdPartyComponent.EasyList -> stringResource(R.string.about_license_easylist)
     ThirdPartyComponent.Uassets -> stringResource(R.string.about_license_uassets)
+    ThirdPartyComponent.UblockOrigin -> "uBlock Origin"
+    ThirdPartyComponent.IStillDontCareAboutCookies -> "I still don't care about cookies"
 }

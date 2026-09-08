@@ -175,6 +175,7 @@ private fun StableFullscreenVideoHost(
                 Box {
                     FullscreenVideoView(
                         controller = controller,
+                        isInsideSafeDrawingHost = isMiniPlayer,
                         modifier = Modifier
                             .fillMaxSize()
                             .then(
@@ -288,13 +289,19 @@ private fun StableFullscreenVideoHost(
 @Composable
 private fun FullscreenVideoView(
     controller: BrowserController,
+    isInsideSafeDrawingHost: Boolean,
     modifier: Modifier,
 ) {
     AndroidView(
         factory = { context ->
             FrameLayout(context).apply { setBackgroundColor(Color.BLACK) }
         },
-        update = controller::attachFullscreenVideoView,
+        update = { container ->
+            controller.attachFullscreenVideoView(
+                container = container,
+                isInsideSafeDrawingHost = isInsideSafeDrawingHost,
+            )
+        },
         onRelease = controller::detachFullscreenVideoView,
         modifier = modifier,
     )

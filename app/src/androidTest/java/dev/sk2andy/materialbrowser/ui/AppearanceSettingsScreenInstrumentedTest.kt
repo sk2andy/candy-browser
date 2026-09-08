@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -51,6 +52,12 @@ class AppearanceSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(AppearanceSettingsTestTags.ForceDarkWebsites).performClick()
         assertTrue(settings.forceDarkWebsites)
 
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.WebContentFontSize)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
+                setProgress(150f)
+            }
+        assertEquals(150, settings.webContentFontSizePercent)
+
         composeRule.onNodeWithTag(AppearanceSettingsTestTags.ColorPalette).performClick()
         composeRule.onNodeWithText(context.getString(R.string.color_palette_candy)).performClick()
         assertEquals(BrowserColorPalette.Candy, settings.colorPalette)
@@ -76,12 +83,15 @@ class AppearanceSettingsScreenInstrumentedTest {
                 setProgress(90f)
             }
 
-        composeRule.onNodeWithTag(AppearanceSettingsTestTags.ShapeStyle).performClick()
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.ShapeStyle)
+            .performScrollTo()
+            .performClick()
         composeRule.onNodeWithText(context.getString(R.string.shape_style_angular)).performClick()
         assertEquals(
             AppearanceSettings(
                 appearanceMode = BrowserAppearanceMode.Dark,
                 forceDarkWebsites = true,
+                webContentFontSizePercent = 150,
                 colorPalette = BrowserColorPalette.Candy,
                 surfaceStyle = BrowserSurfaceStyle.Frosted,
                 shapeStyle = BrowserShapeStyle.Angular,

@@ -2,41 +2,17 @@
 
 const NATIVE_APP = "dev.sk2andy.materialbrowser.privacy";
 const PROTOCOL_VERSION = 2;
-const RULE_FILES = {
-  blocked: [
-    "blocked_hosts.txt",
-    "easylist_blocked_hosts.txt",
-    "hagezi_blocked_hosts.txt",
-    "uassets_blocked_hosts.txt",
-  ],
-  blockedPairs: ["uassets_blocked_host_pairs.txt"],
-  allowedPairs: ["easylist_allowed_host_pairs.txt", "uassets_allowed_host_pairs.txt"],
-  familyAllows: ["first_party_family_allowed_host_pairs.txt"],
-  advanced: "uassets_advanced_filters.txt",
-  cosmetics: ["easylist_cosmetic_rules.txt", "uassets_cosmetic_rules.txt"],
-  procedural: "uassets_procedural_cosmetic_rules.txt",
-  candyDefaults: "candy_default_rules.txt",
-};
+const COOKIE_RULE_FILE = "candy_default_rules.txt";
 const policiesByToken = new Map();
+const latestPolicyRevisionByToken = new Map();
 const tokenByTab = new Map();
 const pendingEvents = new Map();
+const contentPolicyTimersByTab = new Map();
+const contentPolicyRetryDelaysMillis = [25, 50, 100, 200, 400, 800, 1200];
 let nativePort = null;
-let bundledRules = null;
+let cookieRules = null;
+let cookieRulesPromise = null;
 let flushTimer = null;
-
-function lines(text) {
-  return text.split(/\r?\n/).map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"));
-}
-
-async function loadLines(fileNames) {
-  const groups = await Promise.all(fileNames.map(async (name) => {
-    const response = await fetch(browser.runtime.getURL(`rules/${name}`));
-    if (!response.ok) throw new Error(`Candy rule asset unavailable: ${name}`);
-    return lines(await response.text());
-  }));
-  return groups.flat();
-}
 
 async function loadText(fileName) {
   const response = await fetch(browser.runtime.getURL(`rules/${fileName}`));
@@ -44,113 +20,27 @@ async function loadText(fileName) {
   return response.text();
 }
 
-function pairIndex(rows) {
-  const result = new Map();
-  for (const row of rows) {
-    const fields = row.toLowerCase().split("\t");
-    if (fields.length !== 2) throw new Error("Invalid Candy pair asset");
-    const values = result.get(fields[0]) || [];
-    values.push(fields[1]);
-    result.set(fields[0], values);
-  }
-  return result;
-}
-
-async function loadBundledRules() {
-  const [
-    blocked,
-    blockedPairs,
-    allowedPairs,
-    familyAllows,
-    advanced,
-    easyListCosmetics,
-    uAssetsCosmetics,
-    procedural,
-    candyDefaults,
-  ] = await Promise.all([
-    loadLines(RULE_FILES.blocked),
-    loadLines(RULE_FILES.blockedPairs),
-    loadLines(RULE_FILES.allowedPairs),
-    loadLines(RULE_FILES.familyAllows),
-    loadText(RULE_FILES.advanced),
-    loadText(RULE_FILES.cosmetics[0]),
-    loadText(RULE_FILES.cosmetics[1]),
-    loadText(RULE_FILES.procedural),
-    loadText(RULE_FILES.candyDefaults),
-  ]);
+async function loadCookieRules() {
+  const candyDefaults = await loadText(COOKIE_RULE_FILE);
   return {
-    blocked: new Set(blocked.map((host) => host.toLowerCase())),
-    blockedPairs: pairIndex(blockedPairs),
-    allowedPairs: pairIndex(allowedPairs),
-    familyAllows: pairIndex(familyAllows),
-    advanced: CandyPrivacyRules.parseAdvanced(advanced),
-    cosmetics: [
-      ...CandyPrivacyRules.parseCosmetic(easyListCosmetics, "candy-easylist-cosmetic:2"),
-      ...CandyPrivacyRules.parseCosmetic(uAssetsCosmetics, "candy-uassets-cosmetic:2"),
-    ],
-    procedural: CandyPrivacyRules.parseProcedural(procedural),
+    cosmetics: [],
+    procedural: [],
     candyDefaults: CandyPrivacyRules.parseCandyDefaults(candyDefaults),
   };
 }
 
-function suffixes(host) {
-  const values = [];
-  for (let candidate = host; candidate;) {
-    values.push(candidate);
-    const dot = candidate.indexOf(".");
-    if (dot < 0) break;
-    candidate = candidate.slice(dot + 1);
+function ensureCookieRules() {
+  if (!cookieRulesPromise) {
+    cookieRulesPromise = loadCookieRules().then((rules) => {
+      cookieRules = rules;
+      return rules;
+    });
   }
-  return values;
+  return cookieRulesPromise;
 }
 
 function hostMatches(host, expected) {
   return CandyPrivacyRules.hostMatches(host, expected);
-}
-
-function sameSite(first, second) {
-  return hostMatches(first, second) || hostMatches(second, first);
-}
-
-function patternMatches(host, pattern) {
-  return CandyPrivacyRules.hostPatternMatches(host, pattern);
-}
-
-function pairMatches(index, requestHost, pageHost, matcher = hostMatches) {
-  for (const requestCandidate of suffixes(requestHost)) {
-    const pages = index.get(requestCandidate);
-    if (pages && pages.some((page) => page === "*" || matcher(pageHost, page))) return true;
-  }
-  return false;
-}
-
-function bundledShouldBlock(requestHost, pageHost) {
-  if (pageHost && sameSite(requestHost, pageHost)) return false;
-  if (pairMatches(bundledRules.allowedPairs, requestHost, pageHost || "")) return false;
-  if (pairMatches(bundledRules.familyAllows, requestHost, pageHost || "", patternMatches)) return false;
-  if (pageHost && pairMatches(bundledRules.blockedPairs, requestHost, pageHost)) return true;
-  return suffixes(requestHost).some((candidate) => bundledRules.blocked.has(candidate));
-}
-
-function candyComparator(left, right) {
-  const leftPairAllow = left.k === "P" && left.a === "A" ? 1 : 0;
-  const rightPairAllow = right.k === "P" && right.a === "A" ? 1 : 0;
-  if (leftPairAllow !== rightPairAllow) return rightPairAllow - leftPairAllow;
-  if ((left.k === "P") !== (right.k === "P")) return left.k === "P" ? -1 : 1;
-  if ((left.f || "").length !== (right.f || "").length) return (right.f || "").length - (left.f || "").length;
-  if ((left.r || "").length !== (right.r || "").length) return (right.r || "").length - (left.r || "").length;
-  if ((left.a === "A") !== (right.a === "A")) return left.a === "A" ? -1 : 1;
-  if (left.id < right.id) return -1;
-  if (left.id > right.id) return 1;
-  return 0;
-}
-
-function candyDecision(policy, requestHost, pageHost) {
-  const matches = policy.rules.filter((rule) => hostMatches(requestHost, rule.r) &&
-    (rule.k !== "P" || (pageHost && hostMatches(pageHost, rule.f))));
-  if (!matches.length) return null;
-  matches.sort(candyComparator);
-  return matches[0];
 }
 
 function hostFromUrl(rawUrl) {
@@ -165,6 +55,34 @@ function hostFromUrl(rawUrl) {
 
 function isPaused(policy, pageHost) {
   return pageHost && policy.pausedHosts.some((host) => hostMatches(pageHost, host));
+}
+
+function contentPolicy(policy) {
+  return {
+    type: "content-policy",
+    ready: Boolean(policy),
+    revision: Number.isSafeInteger(policy?.revision) ? Math.max(0, policy.revision) : 0,
+    topInsetPx: Number.isSafeInteger(policy?.topInsetPx) ? Math.max(0, policy.topInsetPx) : 0,
+    navigationGeneration: Number.isSafeInteger(policy?.navigationGeneration) ?
+      Math.max(0, policy.navigationGeneration) : 0,
+  };
+}
+
+function publishContentPolicy(token, policy) {
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, value]) => value === token);
+  if (!tabEntry) return;
+  browser.tabs.sendMessage(tabEntry[0], contentPolicy(policy)).catch(() => {});
+}
+
+function scheduleContentPolicy(tabId) {
+  const previousTimers = contentPolicyTimersByTab.get(tabId) || [];
+  previousTimers.forEach(clearTimeout);
+  const timers = contentPolicyRetryDelaysMillis.map((delayMillis) => setTimeout(() => {
+    const token = tokenByTab.get(tabId);
+    const currentPolicy = token && policiesByToken.get(token);
+    browser.tabs.sendMessage(tabId, contentPolicy(currentPolicy)).catch(() => {});
+  }, delayMillis));
+  contentPolicyTimersByTab.set(tabId, timers);
 }
 
 function queueEvent(token, revision, event) {
@@ -188,10 +106,13 @@ browser.webRequest.onBeforeRequest.addListener((details) => {
   const token = tokenByTab.get(details.tabId);
   const policy = token && policiesByToken.get(token);
   if (details.type === "main_frame") {
-    if (policy) policy.pageHost = hostFromUrl(details.url);
+    if (policy) {
+      policy.pageHost = hostFromUrl(details.url);
+      scheduleContentPolicy(details.tabId);
+    }
     return {};
   }
-  if (!bundledRules || !policy) return { cancel: true };
+  if (!policy) return { cancel: true };
   const requestHost = hostFromUrl(details.url);
   const pageHost = policy.pageHost;
   if (!requestHost) return {};
@@ -205,46 +126,9 @@ browser.webRequest.onBeforeRequest.addListener((details) => {
     });
   }
   if (isPaused(policy, pageHost)) return {};
-  if (policy.blockAds) {
-    const decision = candyDecision(policy, requestHost, pageHost);
-    if (decision) {
-      queueEvent(token, policy.revision, {
-        requestUrl: details.url,
-        pageUrl: pageHost ? `https://${pageHost}/` : null,
-        ruleId: decision.id,
-        action: decision.a,
-      });
-      return { cancel: decision.a === "B" };
-    }
-  }
+  if (policy.hideConsent && !cookieRules) return { cancel: true };
   if (policy.hideConsent && !policy.cookieBannerRemovalDisabled &&
       (requestHost === "cmp.inmobi.com" || requestHost.endsWith(".cmp.inmobi.com"))) {
-    queueEvent(token, policy.revision, {
-      requestUrl: details.url,
-      pageUrl: pageHost ? `https://${pageHost}/` : null,
-      action: "B",
-      builtIn: true,
-    });
-    return { cancel: true };
-  }
-  if (policy.blockAds) {
-    const advancedDecision = CandyPrivacyRules.advancedDecision(
-      bundledRules.advanced,
-      details.url,
-      pageHost,
-    );
-    if (advancedDecision === "A") return {};
-    if (advancedDecision === "B") {
-      queueEvent(token, policy.revision, {
-        requestUrl: details.url,
-        pageUrl: pageHost ? `https://${pageHost}/` : null,
-        action: "B",
-        builtIn: true,
-      });
-      return { cancel: true };
-    }
-  }
-  if (policy.blockAds && bundledShouldBlock(requestHost, pageHost)) {
     queueEvent(token, policy.revision, {
       requestUrl: details.url,
       pageUrl: pageHost ? `https://${pageHost}/` : null,
@@ -282,26 +166,57 @@ browser.runtime.onMessage.addListener((message, sender) => {
     }
     return undefined;
   }
+  if (message.type === "content-policy-request") {
+    const token = tokenByTab.get(sender.tab.id);
+    const policy = token && policiesByToken.get(token);
+    return Promise.resolve(contentPolicy(policy));
+  }
+  if (
+    message.type === "safe-area-fallback" &&
+    Number.isSafeInteger(message.navigationGeneration)
+  ) {
+    const token = tokenByTab.get(sender.tab.id);
+    const policy = token && policiesByToken.get(token);
+    if (
+      policy &&
+      policy.navigationGeneration === message.navigationGeneration &&
+      nativePort
+    ) {
+      nativePort.postMessage({
+        type: "safe-area-fallback",
+        protocolVersion: PROTOCOL_VERSION,
+        token,
+        revision: policy.revision,
+        navigationGeneration: message.navigationGeneration,
+      });
+    }
+    return undefined;
+  }
   if (message.type === "cosmetics") {
     const token = tokenByTab.get(sender.tab.id);
     const policy = token && policiesByToken.get(token);
     const frameHost = hostFromUrl(sender.url || message.url);
-    if (!bundledRules || !policy || !frameHost) {
+    if (!cookieRules || !policy || !frameHost) {
       return Promise.resolve({ type: "cosmetics", selectors: [], procedural: [] });
     }
     return Promise.resolve({
       type: "cosmetics",
       revision: policy.revision,
-      ...CandyPrivacyRules.cosmeticPayload(bundledRules, policy, frameHost),
+      ...CandyPrivacyRules.cosmeticPayload(cookieRules, policy, frameHost),
     });
   }
   return undefined;
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
+  (contentPolicyTimersByTab.get(tabId) || []).forEach(clearTimeout);
+  contentPolicyTimersByTab.delete(tabId);
   const token = tokenByTab.get(tabId);
   tokenByTab.delete(tabId);
-  if (token) policiesByToken.delete(token);
+  if (token) {
+    policiesByToken.delete(token);
+    latestPolicyRevisionByToken.delete(token);
+  }
 });
 
 function postReaderResult(message, payload) {
@@ -350,16 +265,52 @@ function connectNative() {
   nativePort = browser.runtime.connectNative(NATIVE_APP);
   nativePort.onMessage.addListener((message) => {
     if (!message || message.protocolVersion !== PROTOCOL_VERSION) return;
-    if (message.type === "policy" && typeof message.token === "string") {
-      policiesByToken.set(message.token, message);
-      nativePort.postMessage({
-        type: "policy-ready",
-        protocolVersion: PROTOCOL_VERSION,
-        token: message.token,
-        revision: message.revision,
-      });
+    if (
+      message.type === "policy" &&
+      typeof message.token === "string" &&
+      Number.isSafeInteger(message.revision)
+    ) {
+      const latestRevision = latestPolicyRevisionByToken.get(message.token) || 0;
+      const acknowledgePolicy = () => {
+        nativePort?.postMessage({
+          type: "policy-ready",
+          protocolVersion: PROTOCOL_VERSION,
+          token: message.token,
+          revision: message.revision,
+        });
+      };
+      if (message.revision < latestRevision) {
+        acknowledgePolicy();
+        return;
+      }
+      latestPolicyRevisionByToken.set(message.token, message.revision);
+      const publishPolicy = () => {
+        if (latestPolicyRevisionByToken.get(message.token) !== message.revision) {
+          acknowledgePolicy();
+          return;
+        }
+        policiesByToken.set(message.token, message);
+        publishContentPolicy(message.token, message);
+        acknowledgePolicy();
+      };
+      if (message.hideConsent) {
+        ensureCookieRules().then(publishPolicy).catch((error) => {
+          if (latestPolicyRevisionByToken.get(message.token) !== message.revision) {
+            acknowledgePolicy();
+            return;
+          }
+          nativePort?.postMessage({
+            type: "failed",
+            protocolVersion: PROTOCOL_VERSION,
+            reason: String(error).slice(0, 512),
+          });
+        });
+      } else {
+        publishPolicy();
+      }
     } else if (message.type === "remove" && typeof message.token === "string") {
       policiesByToken.delete(message.token);
+      latestPolicyRevisionByToken.delete(message.token);
       for (const [tabId, token] of tokenByTab) if (token === message.token) tokenByTab.delete(tabId);
     } else if (message.type === "reader-extract" && typeof message.token === "string") {
       extractReader(message);
@@ -371,16 +322,7 @@ function connectNative() {
     }
   });
   nativePort.onDisconnect.addListener(() => { nativePort = null; });
-  loadBundledRules().then((rules) => {
-    bundledRules = rules;
-    nativePort.postMessage({ type: "ready", protocolVersion: PROTOCOL_VERSION });
-  }).catch((error) => {
-    nativePort.postMessage({
-      type: "failed",
-      protocolVersion: PROTOCOL_VERSION,
-      reason: String(error).slice(0, 512),
-    });
-  });
+  nativePort.postMessage({ type: "ready", protocolVersion: PROTOCOL_VERSION });
 }
 
 connectNative();

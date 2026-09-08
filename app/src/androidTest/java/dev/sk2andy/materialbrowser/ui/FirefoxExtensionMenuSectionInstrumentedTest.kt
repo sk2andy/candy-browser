@@ -57,7 +57,7 @@ class FirefoxExtensionMenuSectionInstrumentedTest {
                         actions = listOf(
                             GeckoExtensionActionState(
                                 key = actionKey,
-                                title = "I don't care about cookies",
+                                title = "I still don't care about cookies",
                                 enabled = true,
                                 badgeText = "1",
                                 badgeBackgroundColor = null,

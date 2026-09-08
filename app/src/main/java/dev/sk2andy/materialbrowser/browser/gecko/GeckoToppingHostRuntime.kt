@@ -155,6 +155,7 @@ internal class GeckoViewToppingHostRuntime(
             CandyToppingHostContract.EXTENSION_ID,
             arrayOf(CandyToppingHostContract.OPTIONAL_PERMISSION),
             emptyArray(),
+            emptyArray(),
         ).withHandler(mainHandler).accept(
             { extension ->
                 if (extension?.id != CandyToppingHostContract.EXTENSION_ID) {

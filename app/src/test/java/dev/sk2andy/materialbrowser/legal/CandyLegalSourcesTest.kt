@@ -38,5 +38,25 @@ class CandyLegalSourcesTest {
     fun uassetsDestinationsStayPinnedToBundledRevision() {
         assertTrue(CandyLegalSources.UASSETS_SOURCE_URL.contains(CandyLegalSources.UASSETS_REVISION))
         assertTrue(CandyLegalSources.UASSETS_LICENSE_URL.contains(CandyLegalSources.UASSETS_REVISION))
+        assertTrue(
+            CandyLegalSources.UBLOCK_ORIGIN_SOURCE_URL.contains(
+                CandyLegalSources.UBLOCK_ORIGIN_REVISION,
+            ),
+        )
+        assertTrue(
+            CandyLegalSources.UBLOCK_ORIGIN_LICENSE_URL.contains(
+                CandyLegalSources.UBLOCK_ORIGIN_REVISION,
+            ),
+        )
+        assertTrue(
+            CandyLegalSources.ISTILLDONTCARE_SOURCE_URL.contains(
+                CandyLegalSources.ISTILLDONTCARE_REVISION,
+            ),
+        )
+        assertTrue(
+            CandyLegalSources.ISTILLDONTCARE_LICENSE_URL.contains(
+                CandyLegalSources.ISTILLDONTCARE_REVISION,
+            ),
+        )
     }
 }

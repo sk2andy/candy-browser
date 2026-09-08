@@ -108,6 +108,10 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - name: Install Android SDK platform 37.1
+        shell: bash
+        run: sdkmanager "platforms;android-37.1"
+
       - name: Restore release keystore
         shell: bash
         env:
@@ -191,6 +195,8 @@ jobs:
           python3 scripts/test_compile_uassets_cosmetic.py
           python3 scripts/test_compile_advanced_filters.py
           python3 scripts/test_compile_procedural_cosmetic.py
+          python3 scripts/test_generate_gecko_default_extensions.py
+          python3 scripts/generate_gecko_default_extensions.py audit-remote
           scripts/update_content_filter_hosts.sh
           scripts/update_uassets_filters.sh
           scripts/update_hagezi_hosts.sh

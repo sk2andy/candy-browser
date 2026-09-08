@@ -276,7 +276,7 @@
     <string name="download_notification_description">Téléchargement</string>
     <string name="settings_title">Paramètres</string>
     <string name="settings_appearance_title">Apparence</string>
-    <string name="settings_home_appearance_summary">Couleurs, surfaces et formes</string>
+    <string name="settings_home_appearance_summary">Couleurs, texte web, surfaces et formes</string>
     <string name="settings_appearance_mode">Apparence</string>
     <string name="appearance_mode_system">Système</string>
     <string name="appearance_mode_light">Clair</string>
@@ -284,6 +284,7 @@
     <string name="appearance_mode_amoled">AMOLED</string>
     <string name="settings_force_dark_websites">Forcer le mode sombre sur les sites Web</string>
     <string name="settings_force_dark_websites_summary">Avec une apparence sombre du navigateur, assombrit automatiquement les sites sans thème sombre. Peut causer des problèmes d’affichage.</string>
+    <string name="settings_web_content_font_size">Taille de police des sites web</string>
     <string name="settings_color_palette">Palette de couleurs</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
@@ -398,7 +399,7 @@
     <string name="settings_scroll_bar_subtitle">Apparaît pendant le défilement puis disparaît. Faites-la glisser pour parcourir rapidement les longues pages.</string>
     <string name="scroll_bar_content_description">Barre de défilement de la page</string>
     <string name="settings_video_autoplay_title">Empêcher la lecture automatique des vidéos</string>
-    <string name="settings_video_autoplay_subtitle">Les vidéos ne démarrent que lorsque vous les lancez.</string>
+    <string name="settings_video_autoplay_subtitle">Les vidéos ne démarrent que lorsque vous les lancez. Désactiver cette option peut fortement augmenter l’utilisation du CPU/GPU, la consommation de batterie et la charge de la page.</string>
     <string name="settings_video_autoplay_unsupported">Nécessite une version plus récente du moteur Gecko.</string>
     <string name="settings_default_browser">Navigateur par défaut</string>
     <string name="settings_default_browser_active">Candy Browser est votre navigateur par défaut</string>
