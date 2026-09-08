@@ -8,18 +8,46 @@ import org.junit.Test
 
 class FullscreenVideoRulesTest {
     @Test
-    fun `gecko presentation always uses overlay host`() {
+    fun `prepared auto enter requires the Android 15 transition callback`() {
+        assertFalse(FullscreenVideoRules.supportsPreparedAutoEnter(sdkInt = 34))
+        assertTrue(FullscreenVideoRules.supportsPreparedAutoEnter(sdkInt = 35))
+    }
+
+    @Test
+    fun `only explicit overlay presentation reparents Gecko`() {
         assertTrue(
             FullscreenVideoRules.hostsSourceInOverlay(
                 host = FullscreenVideoHost.Overlay,
-                videoOnlyPresentation = true,
             ),
         )
-        assertTrue(
+        assertFalse(
             FullscreenVideoRules.hostsSourceInOverlay(
-                host = FullscreenVideoHost.Overlay,
-                videoOnlyPresentation = false,
+                host = FullscreenVideoHost.BrowserViewport,
             ),
+        )
+    }
+
+    @Test
+    fun `picture in picture aspect follows media dimensions and Android bounds`() {
+        assertEquals(
+            FullscreenVideoAspectRatio(width = 16, height = 9),
+            FullscreenVideoRules.pictureInPictureAspectRatio(1_920, 1_080),
+        )
+        assertEquals(
+            FullscreenVideoAspectRatio(width = 9, height = 16),
+            FullscreenVideoRules.pictureInPictureAspectRatio(1_080, 1_920),
+        )
+        assertEquals(
+            FullscreenVideoAspectRatio(width = 239, height = 100),
+            FullscreenVideoRules.pictureInPictureAspectRatio(10_000, 1),
+        )
+        assertEquals(
+            FullscreenVideoAspectRatio(width = 100, height = 239),
+            FullscreenVideoRules.pictureInPictureAspectRatio(1, 10_000),
+        )
+        assertEquals(
+            FullscreenVideoAspectRatio(width = 16, height = 9),
+            FullscreenVideoRules.pictureInPictureAspectRatio(0, 0),
         )
     }
 
@@ -84,9 +112,9 @@ class FullscreenVideoRulesTest {
     }
 
     @Test
-    fun `picture in picture source is centered and matches landscape video aspect`() {
+    fun `picture in picture source is top aligned in portrait and matches video aspect`() {
         assertEquals(
-            FullscreenVideoBounds(left = 0, top = 896, right = 1_080, bottom = 1_503),
+            FullscreenVideoBounds(left = 0, top = 0, right = 1_080, bottom = 607),
             FullscreenVideoRules.pictureInPictureSourceBounds(
                 windowBounds = FullscreenVideoBounds(0, 0, 1_080, 2_400),
                 aspectWidth = 16,
@@ -97,6 +125,14 @@ class FullscreenVideoRulesTest {
             FullscreenVideoBounds(left = 0, top = 0, right = 1_920, bottom = 1_080),
             FullscreenVideoRules.pictureInPictureSourceBounds(
                 windowBounds = FullscreenVideoBounds(0, 0, 1_920, 1_080),
+                aspectWidth = 16,
+                aspectHeight = 9,
+            ),
+        )
+        assertEquals(
+            FullscreenVideoBounds(left = 240, top = 0, right = 2_160, bottom = 1_080),
+            FullscreenVideoRules.pictureInPictureSourceBounds(
+                windowBounds = FullscreenVideoBounds(0, 0, 2_400, 1_080),
                 aspectWidth = 16,
                 aspectHeight = 9,
             ),

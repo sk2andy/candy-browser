@@ -110,6 +110,34 @@ class GeckoMediaRulesTest {
     }
 
     @Test
+    fun `fullscreen presentation rejects non video fullscreen content`() {
+        val video = GeckoMediaSessionState(
+            isActive = true,
+            isFullscreen = true,
+            videoWidth = 1_920,
+            videoHeight = 1_080,
+            videoTrackCount = 1,
+        )
+
+        assertTrue(GeckoPictureInPictureRules.isFullscreenVideo(video))
+        assertFalse(GeckoPictureInPictureRules.isFullscreenVideo(video.copy(videoTrackCount = 0)))
+        assertFalse(GeckoPictureInPictureRules.isFullscreenVideo(video.copy(isFullscreen = false)))
+    }
+
+    @Test
+    fun `new media activation starts without stale playback or fullscreen metadata`() {
+        assertEquals(
+            GeckoMediaSessionState(isActive = true),
+            GeckoMediaSessionRules.activatedState(),
+        )
+    }
+
+    @Test
+    fun `media stop clears active fullscreen and playback metadata`() {
+        assertEquals(GeckoMediaSessionState(), GeckoMediaSessionRules.stoppedState())
+    }
+
+    @Test
     fun `picture in picture preserves playback intent after gecko pauses during transition`() {
         assertTrue(
             GeckoPictureInPictureRules.playbackExpectedDuringTransition(

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -299,6 +300,7 @@ internal fun BrowserViewport(
 ) {
     val density = LocalDensity.current
     val hapticView = LocalView.current
+    val pictureInPictureAspectRatio = controller.pictureInPictureAspectRatio
     val dragDirection by remember(dragOffset) {
         derivedStateOf { dragOffset.floatValue.compareTo(0f) }
     }
@@ -343,7 +345,19 @@ internal fun BrowserViewport(
 
     Box(
         modifier = Modifier
-            .fillMaxSize()
+            .then(
+                if (webViewVideoOnlyPresentation) {
+                    Modifier
+                        .fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                        .aspectRatio(
+                            pictureInPictureAspectRatio.width.toFloat() /
+                                pictureInPictureAspectRatio.height,
+                        )
+                } else {
+                    Modifier.fillMaxSize()
+                },
+            )
             .zIndex(if (webViewVideoOnlyPresentation) VIDEO_ONLY_WEB_VIEW_Z_INDEX else 0f)
             .graphicsLayer {
                 if (webViewVideoOnlyPresentation) {

@@ -17,11 +17,36 @@ internal data class FullscreenVideoBounds(
     val bottom: Int,
 )
 
+internal data class FullscreenVideoAspectRatio(
+    val width: Int,
+    val height: Int,
+)
+
 internal object FullscreenVideoRules {
-    fun hostsSourceInOverlay(
-        host: FullscreenVideoHost,
-        videoOnlyPresentation: Boolean,
-    ): Boolean = !videoOnlyPresentation || host == FullscreenVideoHost.Overlay
+    fun supportsPreparedAutoEnter(sdkInt: Int): Boolean = sdkInt >= 35
+
+    fun pictureInPictureAspectRatio(
+        videoWidth: Int,
+        videoHeight: Int,
+    ): FullscreenVideoAspectRatio {
+        if (videoWidth <= 0 || videoHeight <= 0) return DEFAULT_VIDEO_ASPECT_RATIO
+        val ratio = videoWidth.toDouble() / videoHeight
+        if (!ratio.isFinite()) return DEFAULT_VIDEO_ASPECT_RATIO
+        if (ratio > MAX_PICTURE_IN_PICTURE_ASPECT_RATIO) {
+            return FullscreenVideoAspectRatio(width = 239, height = 100)
+        }
+        if (ratio < MIN_PICTURE_IN_PICTURE_ASPECT_RATIO) {
+            return FullscreenVideoAspectRatio(width = 100, height = 239)
+        }
+        val divisor = greatestCommonDivisor(videoWidth, videoHeight)
+        return FullscreenVideoAspectRatio(
+            width = videoWidth / divisor,
+            height = videoHeight / divisor,
+        )
+    }
+
+    fun hostsSourceInOverlay(host: FullscreenVideoHost): Boolean =
+        host == FullscreenVideoHost.Overlay
 
     fun placement(
         sessionTabId: String?,
@@ -66,7 +91,11 @@ internal object FullscreenVideoRules {
                 .coerceAtLeast(1)
         }
         val left = windowBounds.left + (windowWidth - sourceWidth) / 2
-        val top = windowBounds.top + (windowHeight - sourceHeight) / 2
+        val top = if (fitsByWidth) {
+            windowBounds.top
+        } else {
+            windowBounds.top + (windowHeight - sourceHeight) / 2
+        }
         return FullscreenVideoBounds(
             left = left,
             top = top,
@@ -114,4 +143,19 @@ internal object FullscreenVideoRules {
             else -> FullscreenVideoOffset(x = 0f, y = 0f)
         }
     }
+
+    private fun greatestCommonDivisor(first: Int, second: Int): Int {
+        var left = first
+        var right = second
+        while (right != 0) {
+            val remainder = left % right
+            left = right
+            right = remainder
+        }
+        return left.coerceAtLeast(1)
+    }
+
+    private val DEFAULT_VIDEO_ASPECT_RATIO = FullscreenVideoAspectRatio(width = 16, height = 9)
+    private const val MAX_PICTURE_IN_PICTURE_ASPECT_RATIO = 2.39
+    private const val MIN_PICTURE_IN_PICTURE_ASPECT_RATIO = 1.0 / 2.39
 }

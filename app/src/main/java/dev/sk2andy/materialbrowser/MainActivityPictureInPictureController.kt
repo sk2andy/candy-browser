@@ -9,6 +9,7 @@ import android.os.Build
 import android.util.Rational
 import android.view.View
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.FullscreenVideoAspectRatio
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 
@@ -32,7 +33,7 @@ internal class MainActivityPictureInPictureController(
         prepareForTransition()
         val entered = activity.enterPictureInPictureMode(
             buildParams(
-                autoEnterEnabled = true,
+                autoEnterEnabled = false,
                 sourceRectHint = eligibleSourceRect(true),
             ),
         )
@@ -50,7 +51,7 @@ internal class MainActivityPictureInPictureController(
             returnInProgress = false
             cancelReturnLayoutWait()
             if (startedFullscreen) {
-                sourceRectHint = pictureInPictureSourceRect(maximumWindowContentBounds())
+                sourceRectHint = null
             }
         } else {
             returnInProgress = true
@@ -71,7 +72,7 @@ internal class MainActivityPictureInPictureController(
 
     fun onConfigurationChanged() {
         if (activity.isInPictureInPictureMode && startedFullscreen) {
-            sourceRectHint = pictureInPictureSourceRect(maximumWindowContentBounds())
+            sourceRectHint = null
             updateParams()
         }
     }
@@ -84,7 +85,7 @@ internal class MainActivityPictureInPictureController(
         if (fullscreenVideoBounds == bounds) return
         fullscreenVideoBounds = Rect(bounds)
         if (activity.isInPictureInPictureMode && startedFullscreen) {
-            sourceRectHint = pictureInPictureSourceRect(maximumWindowContentBounds())
+            sourceRectHint = null
         }
         updateParams()
     }
@@ -124,9 +125,14 @@ internal class MainActivityPictureInPictureController(
 
     fun updateParams() {
         if (!supportsPictureInPicture()) return
-        val autoEnterEnabled = canEnterPictureInPicture()
-        val nextSourceRectHint = eligibleSourceRect(autoEnterEnabled)
-        val nextState = AppliedPictureInPictureState(autoEnterEnabled, nextSourceRectHint)
+        val pictureInPictureEligible = canEnterPictureInPicture()
+        val autoEnterEnabled = pictureInPictureEligible && supportsPreparedAutoEnter()
+        val nextSourceRectHint = eligibleSourceRect(pictureInPictureEligible)
+        val nextState = AppliedPictureInPictureState(
+            autoEnterEnabled = autoEnterEnabled,
+            sourceRectHint = nextSourceRectHint,
+            aspectRatio = browserController.pictureInPictureAspectRatio,
+        )
         if (appliedState == nextState) return
         appliedState = nextState
         activity.setPictureInPictureParams(
@@ -203,7 +209,11 @@ internal class MainActivityPictureInPictureController(
         autoEnterEnabled: Boolean,
         sourceRectHint: Rect?,
     ): PictureInPictureParams = PictureInPictureParams.Builder()
-        .setAspectRatio(Rational(VIDEO_ASPECT_WIDTH, VIDEO_ASPECT_HEIGHT))
+        .setAspectRatio(
+            browserController.pictureInPictureAspectRatio.let { aspectRatio ->
+                Rational(aspectRatio.width, aspectRatio.height)
+            },
+        )
         .setAutoEnterEnabled(autoEnterEnabled)
         .setSeamlessResizeEnabled(true)
         .setSourceRectHint(sourceRectHint)
@@ -211,7 +221,11 @@ internal class MainActivityPictureInPictureController(
 
     private fun eligibleSourceRect(autoEnterEnabled: Boolean): Rect? =
         currentSourceRect()
-            ?.takeIf { autoEnterEnabled && !it.isEmpty }
+            ?.takeIf {
+                autoEnterEnabled &&
+                    !activity.isInPictureInPictureMode &&
+                    !it.isEmpty
+            }
             ?.let(::Rect)
 
     private fun currentSourceRect(): Rect? {
@@ -228,6 +242,7 @@ internal class MainActivityPictureInPictureController(
     }
 
     private fun pictureInPictureSourceRect(bounds: Rect): Rect? {
+        val aspectRatio = browserController.pictureInPictureAspectRatio
         val sourceBounds = FullscreenVideoRules.pictureInPictureSourceBounds(
             windowBounds = FullscreenVideoBounds(
                 left = bounds.left,
@@ -235,8 +250,8 @@ internal class MainActivityPictureInPictureController(
                 right = bounds.right,
                 bottom = bounds.bottom,
             ),
-            aspectWidth = VIDEO_ASPECT_WIDTH,
-            aspectHeight = VIDEO_ASPECT_HEIGHT,
+            aspectWidth = aspectRatio.width,
+            aspectHeight = aspectRatio.height,
         ) ?: return null
         return Rect(
             sourceBounds.left,
@@ -244,11 +259,6 @@ internal class MainActivityPictureInPictureController(
             sourceBounds.right,
             sourceBounds.bottom,
         )
-    }
-
-    private fun maximumWindowContentBounds(): Rect {
-        val bounds = activity.windowManager.maximumWindowMetrics.bounds
-        return Rect(0, 0, bounds.width(), bounds.height())
     }
 
     private fun isCurrentWindowFullscreen(): Boolean {
@@ -279,9 +289,10 @@ internal class MainActivityPictureInPictureController(
         PackageManager.FEATURE_PICTURE_IN_PICTURE,
     )
 
+    private fun supportsPreparedAutoEnter(): Boolean =
+        FullscreenVideoRules.supportsPreparedAutoEnter(Build.VERSION.SDK_INT)
+
     private companion object {
-        const val VIDEO_ASPECT_WIDTH = 16
-        const val VIDEO_ASPECT_HEIGHT = 9
         const val RETURN_LAYOUT_TOLERANCE_DP = 8
         const val RETURN_LAYOUT_TIMEOUT_MILLIS = 3_000L
     }
@@ -290,4 +301,5 @@ internal class MainActivityPictureInPictureController(
 private data class AppliedPictureInPictureState(
     val autoEnterEnabled: Boolean,
     val sourceRectHint: Rect?,
+    val aspectRatio: FullscreenVideoAspectRatio,
 )

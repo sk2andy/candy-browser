@@ -52,8 +52,7 @@ internal class BrowserMediaSystemSession(
 
     fun publish(state: BrowserMediaState?) {
         if (state == null) {
-            BrowserMediaPlaybackService.stop(appContext)
-            audioForeground = false
+            stopAudioForeground()
             mediaSession.isActive = false
             mediaSession.setPlaybackState(null)
             mediaSession.setMetadata(null)
@@ -117,19 +116,23 @@ internal class BrowserMediaSystemSession(
                 }
             }
         } else {
-            BrowserMediaPlaybackService.stop(appContext)
-            audioForeground = false
+            stopAudioForeground()
             runCatching { notificationManager.notify(NOTIFICATION_ID, notification) }
         }
     }
 
     fun release() {
-        BrowserMediaPlaybackService.stop(appContext)
-        audioForeground = false
+        stopAudioForeground()
         notificationManager.cancel(NOTIFICATION_ID)
         notificationManager.cancel(FOREGROUND_NOTIFICATION_ID)
         mediaSession.isActive = false
         mediaSession.release()
+    }
+
+    private fun stopAudioForeground() {
+        if (!audioForeground) return
+        BrowserMediaPlaybackService.stop(appContext)
+        audioForeground = false
     }
 
     internal companion object {

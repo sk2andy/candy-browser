@@ -50,7 +50,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.mozilla.gecko.GeckoThread
 import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.Autocomplete
 import org.mozilla.geckoview.CandyGeckoViewSafeAreaBridge
@@ -850,6 +849,9 @@ private class GeckoViewBrowserSession(
     private var mediaStateListener: GeckoMediaSessionStateListener? = null
 
     @Volatile
+    private var fullscreenStateListener: GeckoFullscreenStateListener? = null
+
+    @Volatile
     private var scrollListener: BrowserEngineScrollListener? = null
 
     private var boundView: CandyGeckoView? = null
@@ -886,13 +888,6 @@ private class GeckoViewBrowserSession(
     private var privacyBound = false
     private var privacyFailureDescription: String? = null
     private val privacyBinding: GeckoPrivacyBinding
-    private val resumeRuntimeForPictureInPicture = Runnable {
-        if (!closed && pictureInPicturePlaybackExpected) {
-            GeckoThread.onResume()
-            activeMediaSession?.play()
-        }
-    }
-
     init {
         session.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onFirstComposite(session: GeckoSession) {
@@ -905,6 +900,10 @@ private class GeckoViewBrowserSession(
 
             override fun onPaintStatusReset(session: GeckoSession) {
                 contentPresentationGate.onPaintStatusReset()
+            }
+
+            override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
+                fullscreenStateListener?.onStateChanged(fullScreen)
             }
 
             override fun onTitleChange(session: GeckoSession, title: String?) =
@@ -1568,7 +1567,7 @@ private class GeckoViewBrowserSession(
             override fun onActivated(session: GeckoSession, mediaSession: MediaSession) {
                 activeMediaSession = mediaSession
                 mediaSession.muteAudio(audioMuted)
-                updateMediaState { current -> current.copy(isActive = true) }
+                updateMediaState { GeckoMediaSessionRules.activatedState() }
             }
 
             override fun onDeactivated(session: GeckoSession, mediaSession: MediaSession) {
@@ -1581,41 +1580,45 @@ private class GeckoViewBrowserSession(
                 session: GeckoSession,
                 mediaSession: MediaSession,
                 meta: MediaSession.Metadata,
-            ) = updateMediaState { current ->
-                current.copy(title = meta.title, artist = meta.artist)
-            }
-
-            override fun onPlay(session: GeckoSession, mediaSession: MediaSession) =
-                updateMediaState { current -> current.copy(isActive = true, isPlaying = true) }
-
-            override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
-                updateMediaState { current -> current.copy(isPlaying = false) }
-                if (pictureInPicturePlaybackExpected) {
-                    mainHandler.removeCallbacks(resumeRuntimeForPictureInPicture)
-                    mainHandler.postDelayed(
-                        resumeRuntimeForPictureInPicture,
-                        PICTURE_IN_PICTURE_PLAYBACK_RETRY_DELAY_MILLIS,
-                    )
+            ) {
+                if (activeMediaSession !== mediaSession) return
+                updateMediaState { current ->
+                    current.copy(title = meta.title, artist = meta.artist)
                 }
             }
 
-            override fun onStop(session: GeckoSession, mediaSession: MediaSession) =
+            override fun onPlay(session: GeckoSession, mediaSession: MediaSession) {
+                if (activeMediaSession !== mediaSession) return
+                updateMediaState { current -> current.copy(isActive = true, isPlaying = true) }
+            }
+
+            override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
+                if (activeMediaSession !== mediaSession) return
                 updateMediaState { current -> current.copy(isPlaying = false) }
+            }
+
+            override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
+                if (activeMediaSession !== mediaSession) return
+                updateMediaState { GeckoMediaSessionRules.stoppedState() }
+            }
 
             override fun onPositionState(
                 session: GeckoSession,
                 mediaSession: MediaSession,
                 positionState: MediaSession.PositionState,
-            ) = updateMediaState { current ->
-                current.copy(
-                    currentPositionMillis = positionState.position.toBoundedMediaMillis() ?: 0,
-                    durationMillis = positionState.duration.toBoundedMediaMillis(),
-                    playbackRate = positionState.playbackRate
-                        .takeIf(Double::isFinite)
-                        ?.coerceIn(0.1, 16.0)
-                        ?.toFloat()
-                        ?: 1f,
-                )
+            ) {
+                if (activeMediaSession !== mediaSession) return
+                updateMediaState { current ->
+                    current.copy(
+                        currentPositionMillis = positionState.position.toBoundedMediaMillis() ?: 0,
+                        durationMillis = positionState.duration.toBoundedMediaMillis(),
+                        playbackRate = positionState.playbackRate
+                            .takeIf(Double::isFinite)
+                            ?.coerceIn(0.1, 16.0)
+                            ?.toFloat()
+                            ?: 1f,
+                    )
+                }
             }
 
             override fun onFullscreen(
@@ -1623,31 +1626,34 @@ private class GeckoViewBrowserSession(
                 mediaSession: MediaSession,
                 enabled: Boolean,
                 meta: MediaSession.ElementMetadata?,
-            ) = updateMediaState { current ->
-                current.copy(
-                    isFullscreen = enabled,
-                    sourceUrl = meta?.source.takeIf { enabled },
-                    durationMillis = meta?.duration
-                        ?.toBoundedMediaMillis()
-                        ?.takeIf { enabled }
-                        ?: current.durationMillis,
-                    videoWidth = meta?.width
-                        ?.coerceIn(0, Int.MAX_VALUE.toLong())
-                        ?.toInt()
-                        ?.takeIf { enabled }
-                        ?: 0,
-                    videoHeight = meta?.height
-                        ?.coerceIn(0, Int.MAX_VALUE.toLong())
-                        ?.toInt()
-                        ?.takeIf { enabled }
-                        ?: 0,
-                    audioTrackCount = meta?.audioTrackCount?.coerceAtLeast(0)
-                        ?.takeIf { enabled }
-                        ?: 0,
-                    videoTrackCount = meta?.videoTrackCount?.coerceAtLeast(0)
-                        ?.takeIf { enabled }
-                        ?: 0,
-                )
+            ) {
+                if (activeMediaSession !== mediaSession) return
+                updateMediaState { current ->
+                    current.copy(
+                        isFullscreen = enabled,
+                        sourceUrl = meta?.source.takeIf { enabled },
+                        durationMillis = meta?.duration
+                            ?.toBoundedMediaMillis()
+                            ?.takeIf { enabled }
+                            ?: current.durationMillis,
+                        videoWidth = meta?.width
+                            ?.coerceIn(0, Int.MAX_VALUE.toLong())
+                            ?.toInt()
+                            ?.takeIf { enabled }
+                            ?: 0,
+                        videoHeight = meta?.height
+                            ?.coerceIn(0, Int.MAX_VALUE.toLong())
+                            ?.toInt()
+                            ?.takeIf { enabled }
+                            ?: 0,
+                        audioTrackCount = meta?.audioTrackCount?.coerceAtLeast(0)
+                            ?.takeIf { enabled }
+                            ?: 0,
+                        videoTrackCount = meta?.videoTrackCount?.coerceAtLeast(0)
+                            ?.takeIf { enabled }
+                            ?: 0,
+                    )
+                }
             }
         }
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
@@ -2112,20 +2118,9 @@ private class GeckoViewBrowserSession(
 
     @UiThread
     override fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) {
-        if (closed) return
+        if (closed || this.inPictureInPicture == inPictureInPicture) return
         this.inPictureInPicture = inPictureInPicture
-        mainHandler.removeCallbacks(resumeRuntimeForPictureInPicture)
-        if (inPictureInPicture) {
-            session.compositorController.onPipModeChanged(true)
-            // GeckoRuntime follows ProcessLifecycleOwner and pauses after Activity.onPause even
-            // while Android keeps the Activity visible in PiP. Resume Gecko after that callback.
-            mainHandler.postDelayed(
-                resumeRuntimeForPictureInPicture,
-                PICTURE_IN_PICTURE_RUNTIME_RESUME_DELAY_MILLIS,
-            )
-        } else {
-            session.compositorController.onPipModeChanged(false)
-        }
+        session.compositorController.onPipModeChanged(inPictureInPicture)
     }
 
     @UiThread
@@ -2133,10 +2128,14 @@ private class GeckoViewBrowserSession(
         if (closed) return
         pictureInPicturePlaybackExpected = expected
         privacyBinding.setPictureInPicturePlaybackExpected(expected)
-        mainHandler.removeCallbacks(resumeRuntimeForPictureInPicture)
-        if (expected && inPictureInPicture) {
-            mainHandler.post(resumeRuntimeForPictureInPicture)
-        }
+    }
+
+    override fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) {
+        fullscreenStateListener = listener
+    }
+
+    override fun exitFullscreen() {
+        if (!closed) session.exitFullScreen()
     }
 
     @UiThread
@@ -2497,11 +2496,11 @@ private class GeckoViewBrowserSession(
         authPromptListener = null
         webPromptListener = null
         mediaStateListener = null
+        fullscreenStateListener = null
         scrollListener = null
         activeMediaSession = null
         inPictureInPicture = false
         pictureInPicturePlaybackExpected = false
-        mainHandler.removeCallbacks(resumeRuntimeForPictureInPicture)
         pendingInitialUrl = null
         cookieBehavior.remove(cookieBehaviorOwner)
         trackingPermissions.remove(trackingPermissionOwner)
@@ -2612,8 +2611,6 @@ private class GeckoViewBrowserSession(
         const val CHOICE_VALUE_SEPARATOR = "\u001F"
         const val MAX_EXTENSION_URL_LENGTH = 4_096
         const val MAX_MEDIA_TIME_MILLIS = 604_800_000L
-        const val PICTURE_IN_PICTURE_PLAYBACK_RETRY_DELAY_MILLIS = 100L
-        const val PICTURE_IN_PICTURE_RUNTIME_RESUME_DELAY_MILLIS = 500L
         const val TRACKING_PERMISSION_CLEANUP_FAILURE =
             "Gecko tracking permission cleanup failed"
 
@@ -2692,7 +2689,10 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
     }
 
     private fun createEngineView(): CandyGeckoEngineView =
-        CandyGeckoEngineView(context).also(::configureEngineView)
+        CandyGeckoEngineView(context).also { view ->
+            view.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW)
+            configureEngineView(view)
+        }
 
     private fun configureEngineView(view: CandyGeckoEngineView) {
         view.importantForAutofill = importantForAutofill

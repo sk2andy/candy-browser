@@ -212,6 +212,8 @@ class GeckoBrowserEngineAdapterTest {
         )
 
         adapter.notifyPictureInPictureModeChanged(true)
+        adapter.notifyPictureInPictureModeChanged(true)
+        adapter.notifyPictureInPictureModeChanged(false)
         adapter.notifyPictureInPictureModeChanged(false)
         adapter.execute(BrowserEngineCommands.close())
         adapter.notifyPictureInPictureModeChanged(true)
@@ -234,6 +236,27 @@ class GeckoBrowserEngineAdapterTest {
         adapter.setPictureInPicturePlaybackExpected(true)
 
         assertEquals(listOf(true, false), session.pictureInPicturePlaybackStates)
+    }
+
+    @Test
+    fun `fullscreen lifecycle stays behind Gecko session port until close`() {
+        val session = FakeGeckoBrowserSession()
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        val fullscreenStates = mutableListOf<Boolean>()
+
+        adapter.setFullscreenStateListener { fullscreenStates += it }
+        session.emitFullscreen(true)
+        adapter.exitFullscreen()
+        adapter.execute(BrowserEngineCommands.close())
+        session.emitFullscreen(false)
+        adapter.exitFullscreen()
+
+        assertEquals(listOf(true), fullscreenStates)
+        assertEquals(1, session.exitFullscreenCount)
     }
 
     @Test
@@ -528,11 +551,13 @@ private class FakeGeckoBrowserSession(
     val activeStates = mutableListOf<Boolean>()
     val pictureInPictureStates = mutableListOf<Boolean>()
     val pictureInPicturePlaybackStates = mutableListOf<Boolean>()
+    var exitFullscreenCount = 0
     private var listener: GeckoBrowserSessionStateListener? = null
     private var historyListener: GeckoBrowserHistoryStateListener? = null
     private var scrollListener: BrowserEngineScrollListener? = null
     private var contentTargetListener: BrowserContentTargetListener? = null
     private var navigationRequestListener: GeckoNavigationRequestListener? = null
+    private var fullscreenStateListener: GeckoFullscreenStateListener? = null
 
     override fun setStateListener(listener: GeckoBrowserSessionStateListener?) {
         this.listener = listener
@@ -552,6 +577,10 @@ private class FakeGeckoBrowserSession(
     }
 
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) = Unit
+
+    override fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) {
+        fullscreenStateListener = listener
+    }
 
     override fun setScrollListener(listener: BrowserEngineScrollListener?) {
         scrollListener = listener
@@ -581,6 +610,10 @@ private class FakeGeckoBrowserSession(
         pictureInPicturePlaybackStates += expected
     }
 
+    override fun exitFullscreen() {
+        exitFullscreenCount++
+    }
+
     override fun goToHistoryIndex(index: Int) {
         historyIndex = index
     }
@@ -596,6 +629,10 @@ private class FakeGeckoBrowserSession(
 
     override fun setActive(active: Boolean) {
         activeStates += active
+    }
+
+    fun emitFullscreen(fullscreen: Boolean) {
+        fullscreenStateListener?.onStateChanged(fullscreen)
     }
 
     override fun capturePreview(

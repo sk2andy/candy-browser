@@ -155,6 +155,10 @@ internal fun interface GeckoMediaSessionStateListener {
     fun onStateChanged(state: GeckoMediaSessionState)
 }
 
+internal fun interface GeckoFullscreenStateListener {
+    fun onStateChanged(fullscreen: Boolean)
+}
+
 internal enum class GeckoMediaCommand {
     Play,
     Pause,
@@ -207,6 +211,9 @@ internal interface GeckoBrowserSession {
 
     fun setMediaStateListener(listener: GeckoMediaSessionStateListener?)
 
+    /** Reports the page fullscreen lifecycle independently from media metadata updates. */
+    fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
+
     fun setScrollListener(listener: BrowserEngineScrollListener?)
 
     /** Native renderer metrics used by Candy's engine-neutral scrollbar overlay. */
@@ -229,6 +236,9 @@ internal interface GeckoBrowserSession {
 
     /** Keeps page media aligned with the user's PiP play or pause intent. */
     fun setPictureInPicturePlaybackExpected(expected: Boolean)
+
+    /** Requests that Gecko leave DOM fullscreen through its public session API. */
+    fun exitFullscreen() = Unit
 
     /** Reports whether this is Candy's selected tab so WebExtensions receive active-tab events. */
     fun setActive(active: Boolean)

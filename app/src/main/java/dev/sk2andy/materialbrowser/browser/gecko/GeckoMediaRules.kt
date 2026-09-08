@@ -51,6 +51,14 @@ internal object GeckoAutoplayPermissionSyncRules {
 }
 
 internal object GeckoPictureInPictureRules {
+    fun isFullscreenVideo(state: GeckoMediaSessionState?): Boolean = state?.let { media ->
+        media.isActive &&
+            media.isFullscreen &&
+            media.videoTrackCount > 0 &&
+            media.videoWidth > 0 &&
+            media.videoHeight > 0
+    } == true
+
     fun isEligible(
         state: GeckoMediaSessionState?,
         isPrivate: Boolean,
@@ -58,12 +66,8 @@ internal object GeckoPictureInPictureRules {
     ): Boolean = state?.let { media ->
         !isPrivate &&
             isSelectedTab &&
-            media.isActive &&
             media.isPlaying &&
-            media.isFullscreen &&
-            media.videoTrackCount > 0 &&
-            media.videoWidth > 0 &&
-            media.videoHeight > 0
+            isFullscreenVideo(media)
     } == true
 
     fun playbackExpectedDuringTransition(
@@ -76,4 +80,10 @@ internal object GeckoPictureInPictureRules {
     } else {
         mediaIsPlaying
     }
+}
+
+internal object GeckoMediaSessionRules {
+    fun activatedState(): GeckoMediaSessionState = GeckoMediaSessionState(isActive = true)
+
+    fun stoppedState(): GeckoMediaSessionState = GeckoMediaSessionState()
 }

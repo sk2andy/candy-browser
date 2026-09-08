@@ -138,7 +138,7 @@
   safe area is zero. A guarded layout failure reloads the same navigation generation once with
   native margins; the explicit per-site **Force safe area** override also moves every safe edge to
   inner native margins. Fullscreen keeps the renderer edge to edge.
-  Gecko views keep the default SurfaceView backend so page frames go directly to Android's compositor.
+  Gecko views use the TextureView backend so browser blur, clipping and PiP keep one stable renderer.
   The static status-bar overlay remains outside the renderer and keeps system icons legible.
 - Read page-scroll metrics through the engine port. The optional `BrowserScrollBar` observes them
   without replacing the pill-collapse scroll listener and is absent in fullscreen/video-only mode.
@@ -217,42 +217,29 @@ Agent implementation, security and debugging guide:
 
 | Transition | Behavior |
 | --- | --- |
-| HTML media appears or starts | A document-start bridge observes bounded HTML5 `video`/`audio` state in supported HTTP(S) frames; the frame-specific reply proxy is the only command path back to that player |
-| Web page requests fullscreen | `WebChromeClient.onShowCustomView` creates one transient controller-owned custom-view session; the root Compose overlay hosts Chromium's view |
-| Top-level web video requests PiP | A user-activated `requestPictureInPicture()` compatibility bridge validates the exact current regular-tab video, then routes the request through Activity PiP; the page promise and enter/leave events follow confirmed Android mode changes |
-| Embedded web video requests PiP | The same trusted tap first asks Chromium to fullscreen the exact iframe video. Candy accepts the PiP request only while that matching non-private custom-view session remains current, so surrounding page content never enters the system PiP surface |
-| User selects another regular tab | The current eligible video is pinned and its source WebView moves into the draggable in-app mini-player while non-owning WebViews remain paused |
-| App leaves the foreground | The active eligible regular video is pinned before Activity PiP. If Chromium returns its custom view to the page, Candy keeps the same WebView in its existing Android host, raises that host above browser chrome and switches the document to video-only presentation without reparenting the decoder surface. Only the video becomes a full-viewport compositor layer; its ancestor chain is unclipped without creating more full-screen layers. For an embedded player, the trusted document-start bridge also isolates each containing iframe up to the top document. A pre-existing mini-player keeps one stable Android host while its placement changes. While system PiP expects playback, page-driven background pauses are ignored; explicit system pause and stop commands still take effect |
-| System media control is used | The app-owned Android `MediaSession` sends play, pause, stop or seek only through the accepted frame reply proxy |
-| Audible audio continues in background | A `mediaPlayback` foreground service owns the visible media notification while the Activity-owned WebView and session remain alive |
-| PiP expands back into the app | Android expands the shared WebView surface through a centered source rectangle matching the PiP/video aspect ratio instead of targeting the former inline-video rectangle. Presentation CSS and the prior Android host are then restored without pausing; the page-pause guard remains active until the resumed UI has settled |
-| PiP closes or the app stops without entering PiP | Presentation CSS is restored, the owning WebView pauses and normal media gesture policy is restored |
-| Media ends, page navigates, crashes, closes, snoozes or is destroyed | Navigation generation and WebView identity invalidate the endpoint; view, script, notification and session cleanup is idempotent |
+| HTML media appears or starts | Gecko's native `MediaSession.Delegate` publishes playback, position and bounded element metadata for the exact Gecko session |
+| Web page enters or exits fullscreen | `ContentDelegate.onFullScreen` owns the DOM-fullscreen lifecycle; media fullscreen metadata independently identifies the video and its dimensions |
+| User selects another regular tab | The current eligible video may move into the draggable in-app mini-player; this is the only presentation path that reparents GeckoView |
+| App leaves the foreground | The active eligible regular video is pinned in its original browser viewport before Activity PiP. The GeckoView, TextureView backend, GeckoDisplay and GeckoSession are not replaced or reparented |
+| Android confirms PiP mode | The exact owning session receives one `CompositorController.onPipModeChanged` notification; preparation never pre-arms Gecko with an unconfirmed state |
+| System media control is used | The app-owned Android `MediaSession` sends play, pause, stop or seek through Gecko's active native media session |
+| Audible audio continues in background | A `mediaPlayback` foreground service owns the visible media notification while the Activity-owned Gecko session remains alive |
+| PiP expands back into the app | Android expands the unchanged browser-hosted Gecko surface through a centered source rectangle matching Gecko's reported video aspect ratio; normal chrome returns after the expanded layout is ready |
+| Fullscreen closes | Candy requests `GeckoSession.exitFullScreen()` and restores normal chrome without stopping unrelated media |
+| Media ends, page navigates, crashes, closes, snoozes or is destroyed | Gecko session identity invalidates the endpoint; view, notification and session cleanup is idempotent |
 
-- The bridge accepts telemetry only from the WebView and current navigation it was installed for,
-  rejects non-HTTP(S) origins and bounds every identifier, numeric value and payload. Pages cannot
-  select another tab. Web PiP requests require a current user activation and are limited to the
-  exact eligible video in the selected regular tab. Embedded players additionally require their
-  frame's fullscreen Permissions Policy and a matching Chromium custom-view session.
-- Media sessions, frame endpoints, metadata, presentation state and mini-player position are
-  memory-only and never persisted.
-- Repeated lifecycle callbacks for one PiP transition are idempotent: they do not restyle the same
-  document presentation or reattach its decoder surface. PiP source rectangles use Activity-local
-  coordinates even when window metrics carry a display offset.
-- When a site requests a background pause that PiP must suppress, the next play request reconciles
-  the site's player state through native media events without exposing a paused transition frame.
-- Inline PiP presentation repairs site-driven style changes and DOM reparenting while active. If a
-  site replaces its playing video element, the new top-level video inherits the same transient PiP
-  owner and playback intent; bounded command retries cannot override an explicit system pause.
+- Gecko fullscreen, media fullscreen and playback callbacks are independent and may arrive in any
+  order. Candy merges only callbacks from the current native media-session identity; stale ad/player
+  sessions cannot overwrite the active YouTube state.
+- Media metadata, presentation state and mini-player position are memory-only and never persisted.
+- Repeated lifecycle callbacks for one PiP transition are idempotent. They do not switch the GeckoView
+  backend, release its display, reparent its view or resend the same Gecko PiP state.
+- PiP source bounds and Android aspect ratio use Gecko's video dimensions, fall back to 16:9 for
+  invalid metadata and clamp extreme media ratios to Android's supported range.
 - Private media may be detected transiently for local lifecycle correctness, but never becomes an
   in-app mini-player, Android PiP, system media session or notification.
-- System PiP renders only the custom video view or video-isolated source WebView. Onboarding,
+- System PiP renders the video-only Gecko browser viewport. Onboarding,
   splash, update UI and Candy controls stay outside the PiP surface.
-- Explicit subframe PiP uses Chromium's transient fullscreen custom view. Automatic background PiP
-  isolates the selected video and each containing iframe through a dedicated document-start relay.
-  Its credential is separate from native bridge authorization, and each receiver verifies the
-  sending frame relationship. Both paths restore the embedded player when Android PiP exits and
-  never expose the surrounding parent document in the PiP surface.
 - Compatibility is best effort for HTML5 media. DRM restrictions, canvas-only rendering,
   deliberately hostile players and site-specific visibility policies can still prevent control or
   continued playback.
@@ -278,6 +265,6 @@ WebView request state.
 | Gecko password Autofill, Credential Manager and browser-origin manifest contract | `GeckoCredentialsInstrumentedTest` on API 34+ |
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
-| Web media, fullscreen and PiP policy | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest` and `FullscreenVideoOverlayInstrumentedTest` on API 34+ |
+| Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `BrowserIntentFilterInstrumentedTest`, plus `MainActivityExternalBackInstrumentedTest` when lifecycle matters |
 | Distribution and TLS channels | `./gradlew testFullDebugUnitTest testFossDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFossDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
