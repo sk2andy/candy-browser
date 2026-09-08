@@ -1,0 +1,112 @@
+name: Google Cast regression
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-cast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gecko-cast:
+    name: Google Cast contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANDROID_SERIAL: emulator-5554
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Install Android emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager \
+            "emulator" \
+            "platform-tools" \
+            "platforms;android-37.1" \
+            "system-images;android-35;google_apis;x86_64"
+          printf 'no\n' | avdmanager create avd \
+            --force \
+            --name candy_cast_ci \
+            --package "system-images;android-35;google_apis;x86_64" \
+            --device pixel_6
+          sudo chmod 666 /dev/kvm
+
+      - name: Start dedicated emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup emulator \
+            -avd candy_cast_ci \
+            -port 5554 \
+            -no-window \
+            -noaudio \
+            -no-boot-anim \
+            -gpu swiftshader_indirect \
+            > "$RUNNER_TEMP/candy-cast-emulator.log" 2>&1 &
+          adb -s "$ANDROID_SERIAL" wait-for-device
+          timeout 180 bash -c '
+            until [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d "\r")" == "1" ]]; do
+              sleep 2
+            done
+          '
+          adb -s "$ANDROID_SERIAL" shell input keyevent 82
+
+      - name: Run Cast rule regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon \
+            :app:testFullDebugUnitTest \
+            --tests dev.sk2andy.materialbrowser.browser.cast.CastMediaRulesTest \
+            --tests dev.sk2andy.materialbrowser.browser.cast.CastSessionRulesTest
+
+      - name: Run Gecko Cast regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon \
+            :app:connectedFullDebugAndroidTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.gecko.GeckoCastInstrumentedTest
+
+      - name: Run Cast route chooser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon \
+            :app:connectedFullDebugAndroidTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.ui.CastRouteButtonInstrumentedTest
+
+      - name: Run Cast controls regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon \
+            :app:connectedFullDebugAndroidTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.ui.CastControlsInstrumentedTest
+
+      - name: Show emulator log after failure
+        if: failure()
+        shell: bash
+        run: sed -n '1,400p' "$RUNNER_TEMP/candy-cast-emulator.log"
+
+      - name: Stop dedicated emulator
+        if: always()
+        shell: bash
+        run: adb -s "$ANDROID_SERIAL" emu kill || true

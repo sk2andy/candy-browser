@@ -13,11 +13,11 @@ eligibility rules in common code because they are deterministic and SDK-free.
 
 | Stage | Owner | Contract |
 | --- | --- | --- |
-| Media discovery | `WebMediaBridgeScript` | Reports bounded `currentSrc`, selected source MIME type and poster URL with existing media identity |
+| Media discovery | GeckoView `MediaSession.Delegate` | Reports the fullscreen video's direct source URL and native media metadata |
 | Eligibility | `CastMediaRules` | Accepts selected regular-tab video with direct HTTP(S) MP4, WebM, HLS or DASH source |
 | Device selection | `CastRouteButton` | Uses the SDK-owned Cast route chooser |
 | Remote playback | `CastSessionController` | Loads the exact accepted candidate into the Default Media Receiver and publishes remote state |
-| Local handoff | `BrowserController` | Pauses only the still-current matching WebView media endpoint after remote load succeeds |
+| Local handoff | `BrowserController` | Pauses only the still-current matching Gecko media session after remote load succeeds |
 | Browser controls | `CastMiniController` and expanded Compose sheet | Shows title, device, seek, volume, play/pause, device switch and disconnect above browser chrome |
 
 `MainActivity` must remain an `AppCompatActivity` with an AppCompat-based theme: AndroidX
@@ -40,7 +40,7 @@ is an AppCompat dialog. A plain `ComponentActivity` or framework Material theme 
 
 ## Compatibility limits
 
-The Default Media Receiver fetches the media itself. It does not inherit WebView cookies, request
+The Default Media Receiver fetches the media itself. It does not inherit GeckoView cookies, request
 headers or authenticated browser state. Blob/data URLs, Media Source Extensions, unsupported DRM,
 expired signed URLs and sites that conceal the direct stream are not castable. Local playback is
 left untouched when the receiver rejects a load.
@@ -51,10 +51,21 @@ upgrading the Cast SDK; never suppress Kotlin metadata compatibility checks.
 
 ## Verification
 
+Pull requests and pushes to `main` run the Cast rule tests plus `GeckoCastInstrumentedTest`,
+`CastRouteButtonInstrumentedTest` and `CastControlsInstrumentedTest` on a dedicated API 35 emulator
+through `.github/workflows/google-cast.yml`. Run the Gecko regression locally with an explicit API
+34+ emulator serial:
+
+```bash
+ANDROID_SERIAL=<serial> ./gradlew :app:connectedFullDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.gecko.GeckoCastInstrumentedTest
+```
+
 | Change | Minimum check |
 | --- | --- |
-| Candidate or URL/MIME policy | `CastMediaRulesTest` and `WebMediaContractTest` |
-| Bridge source reporting | Focused `WebMediaBridgeInstrumentedTest` on dedicated API 34+ emulator |
+| Candidate or URL/MIME policy | `CastMediaRulesTest` |
+| Gecko source reporting | Focused `GeckoCastInstrumentedTest` on dedicated API 34+ emulator |
+| Google route chooser | Focused `CastRouteButtonInstrumentedTest` on the same dedicated emulator |
 | Compose controls | `CastControlsInstrumentedTest` on the same dedicated emulator |
 | SDK, manifest or resources | `lintFullDebug assembleFullDebug` |
 | Store release | Re-review Google Cast SDK Data Safety disclosure before publishing |
