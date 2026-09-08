@@ -34,10 +34,10 @@ flowchart TD
 - Toppings use one metadata, matching, grant and persistence contract on both platforms. Gecko and
   WebKit may use different isolated script/message mechanisms. Firefox WebExtensions remain an
   additional Android-only capability and are never presented as Toppings.
-- Candy's bundled and user blocking decisions remain the policy source on both platforms. Gecko
-  implements them through Gecko request/content-script adapters; WebKit compiles the supported
-  network subset to `WKContentRuleList` and applies Candy-owned cosmetic scripts. Platform-native
-  tracking protection may add protection but may not replace Candy rule semantics.
+- Blocking is intentionally engine-owned. Gecko uses its provisioned Mozilla-signed uBlock Origin
+  extension for ads and trackers and keeps only Candy's 4.9 KB curated cookie-consent defaults as a
+  fallback. WebKit compiles Candy's full supported network subset to `WKContentRuleList` and applies
+  Candy-owned cosmetic scripts.
 - A feature is not complete when its action is hidden, disabled, backed by a placeholder, or routed
   to the legacy Android WebView.
 
@@ -64,7 +64,7 @@ flowchart TD
 
 Android's Firefox-only row includes Candy-rendered action entry points, guarded popup sessions,
 options in normal Candy tabs, supported GeckoView tab/download delegates and engine-owned extension
-APIs. Exact GeckoView 140 coverage and exclusions live in the
+APIs. Exact GeckoView 155 coverage and exclusions live in the
 [`platform-engines.md` capability matrix](platform-engines.md#firefox-webextension-capability-matrix-geckoview-140).
 This additive row does not authorize a second browser window, platform-specific address bar or a
 claim of arbitrary Firefox Desktop extension compatibility.

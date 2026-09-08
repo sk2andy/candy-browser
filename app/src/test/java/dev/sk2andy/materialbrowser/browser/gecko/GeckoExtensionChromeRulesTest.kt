@@ -272,7 +272,7 @@ class GeckoExtensionChromeRulesTest {
         val windows = GeckoExtensionChromeRules.capabilityMatrix.single { it.api == "windows API" }
 
         assertEquals(GeckoExtensionCapabilitySupport.Unsupported, windows.support)
-        assertTrue(windows.evidence.contains("No GeckoView 140"))
+        assertTrue(windows.evidence.contains("No GeckoView 155"))
     }
 
     @Test
@@ -294,7 +294,7 @@ class GeckoExtensionChromeRulesTest {
             it.api == "tabs.update muted/pinned"
         }
         assertEquals(GeckoExtensionCapabilitySupport.Unsupported, schemaUnsupported.support)
-        assertTrue(schemaUnsupported.evidence.contains("GeckoView 140"))
+        assertTrue(schemaUnsupported.evidence.contains("GeckoView 155"))
     }
 
     private fun action(

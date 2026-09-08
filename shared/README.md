@@ -13,7 +13,8 @@ same module that is exported to iOS. It targets Android, iOS devices, and Apple-
 | `iosApp` | Thin SwiftUI system presenter, `WKWebView`, blocking and `WKUserScript` adapters |
 
 `commonMain` deliberately contains no Android, WebKit, SwiftUI, storage, or native image types.
-Compose Multiplatform 1.8.2 keeps the existing compileSdk 35 / AGP 8.7 Android toolchain viable.
+Compose Multiplatform 1.8.2 remains on the existing KMP Android plugin while GeckoView 155 requires
+compileSdk 37.1 / AGP 9.4. Built-in Kotlin stays disabled as a temporary AGP 9 migration bridge.
 `BrowserViewportSnapshot` and `BrowserViewportActionSink` are the strangler seam: Kotlin owns the
 browser chrome state/actions and physically shared production overview, Reader, Trails and Settings.
 Android renders the common chrome/menu composables; iOS projects only that same chrome/menu state into

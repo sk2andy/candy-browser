@@ -112,20 +112,139 @@ test("Reddit consent policy exposes only the observed dialog selector", () => {
   assert.deepEqual(Array.from(payload.selectors), ["#data-protection-consent-dialog"]);
 });
 
-test("all generated Gecko rule assets parse before the privacy host becomes ready", () => {
+test("Candy cookie defaults parse before the Gecko privacy host becomes ready", () => {
   const readAsset = (name) => fs.readFileSync(
     new URL(`../app/src/main/assets/${name}`, import.meta.url),
     "utf8",
   );
-  assert.equal(rules.parseAdvanced(readAsset("uassets_advanced_filters.txt")).length, 747);
-  assert.ok(rules.parseCosmetic(
-    readAsset("easylist_cosmetic_rules.txt"),
-    "candy-easylist-cosmetic:2",
-  ).length > 30_000);
-  assert.ok(rules.parseCosmetic(
-    readAsset("uassets_cosmetic_rules.txt"),
-    "candy-uassets-cosmetic:2",
-  ).length > 10_000);
-  assert.equal(rules.parseProcedural(readAsset("uassets_procedural_cosmetic_rules.txt")).length, 232);
   assert.equal(rules.parseCandyDefaults(readAsset("candy_default_rules.txt")).length, 49);
+});
+
+test("safe-area policy push has a bounded content-side race fallback", () => {
+  const bridge = fs.readFileSync(
+    new URL("../app/src/main/assets/candy_privacy/content_top_inset_bridge.js", import.meta.url),
+    "utf8",
+  );
+  const background = fs.readFileSync(
+    new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(background, /contentPolicyRetryDelaysMillis/);
+  assert.match(background, /scheduleContentPolicy\(details\.tabId\)/);
+  assert.match(background, /const currentPolicy = token && policiesByToken\.get\(token\)/);
+  assert.match(background, /latestPolicyRevisionByToken/);
+  assert.match(background, /message\.revision < latestRevision/);
+  assert.match(bridge, /policyRetryDelaysMillis/);
+  assert.match(bridge, /if \(policyReady\) return/);
+  assert.match(bridge, /policyRetryIndex >= policyRetryDelaysMillis\.length/);
+  assert.equal((bridge.match(/policyRetryIndex = 0;/g) || []).length, 1);
+  assert.match(background, /ready: Boolean\(policy\)/);
+  assert.match(background, /revision: Number\.isSafeInteger\(policy\?\.revision\)/);
+  assert.match(bridge, /revision < state\.revision/);
+  assert.doesNotMatch(bridge, /console\.(?:log|warn|error)/);
+});
+
+test("privacy host uses required MV2 web origins for document-start scripts", () => {
+  const manifest = JSON.parse(fs.readFileSync(
+    new URL("../app/src/main/assets/candy_privacy/manifest.json", import.meta.url),
+    "utf8",
+  ));
+
+  assert.equal(manifest.manifest_version, 2);
+  assert.ok(manifest.permissions.includes("<all_urls>"));
+  assert.equal(manifest.host_permissions, undefined);
+  assert.equal(manifest.content_scripts[0].all_frames, false);
+  assert.deepEqual(
+    manifest.content_scripts[0].js,
+    ["content_top_inset_bridge.js", "content_top_inset.js"],
+  );
+  assert.equal(manifest.content_scripts[1].all_frames, true);
+});
+
+test("newer privacy policy wins while older cookie rules are still loading", async () => {
+  let resolveCookieAsset;
+  let nativeMessageListener;
+  const runtimeMessageListeners = [];
+  const postedNativeMessages = [];
+  const backgroundContext = vm.createContext({
+    URL,
+    Map,
+    Set,
+    Array,
+    Promise,
+    Number,
+    String,
+    Boolean,
+    setTimeout,
+    clearTimeout,
+    CandyPrivacyRules: {
+      parseCandyDefaults: () => [],
+      hostMatches: () => false,
+      cosmeticPayload: () => ({ selectors: [], procedural: [] }),
+    },
+    fetch: () => new Promise((resolve) => { resolveCookieAsset = resolve; }),
+    browser: {
+      runtime: {
+        getURL: (path) => path,
+        connectNative: () => ({
+          postMessage: (message) => postedNativeMessages.push(message),
+          onMessage: { addListener: (listener) => { nativeMessageListener = listener; } },
+          onDisconnect: { addListener: () => {} },
+        }),
+        onMessage: { addListener: (listener) => runtimeMessageListeners.push(listener) },
+      },
+      tabs: {
+        sendMessage: () => Promise.resolve(),
+        onRemoved: { addListener: () => {} },
+      },
+      webRequest: { onBeforeRequest: { addListener: () => {} } },
+    },
+  });
+  vm.runInContext(
+    fs.readFileSync(
+      new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+      "utf8",
+    ),
+    backgroundContext,
+  );
+
+  nativeMessageListener({
+    type: "policy",
+    protocolVersion: 2,
+    token: "tab-token",
+    revision: 1,
+    hideConsent: true,
+  });
+  nativeMessageListener({
+    type: "policy",
+    protocolVersion: 2,
+    token: "tab-token",
+    revision: 2,
+    hideConsent: false,
+  });
+  resolveCookieAsset({ ok: true, text: () => Promise.resolve("") });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  const sendRuntimeMessage = async (message, sender) => {
+    for (const listener of runtimeMessageListeners) {
+      const result = listener(message, sender);
+      if (result !== undefined) return result;
+    }
+    return undefined;
+  };
+  await sendRuntimeMessage(
+    { type: "bind", token: "tab-token" },
+    { tab: { id: 7 } },
+  );
+  const policy = await sendRuntimeMessage(
+    { type: "content-policy-request" },
+    { tab: { id: 7 } },
+  );
+
+  assert.equal(policy.revision, 2);
+  assert.equal(
+    postedNativeMessages.filter((message) => message.type === "policy-ready").at(-1).revision,
+    1,
+  );
 });

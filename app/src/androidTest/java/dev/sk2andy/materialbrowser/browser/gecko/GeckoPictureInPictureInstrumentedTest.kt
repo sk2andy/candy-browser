@@ -3,7 +3,6 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import android.content.res.Configuration
 import android.os.SystemClock
-import android.view.SurfaceView
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +17,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -89,30 +87,30 @@ class GeckoPictureInPictureInstrumentedTest {
                 val state = activity.browserControllerForTesting().fullscreenVideoState
                 assertNotNull(state)
                 assertEquals(FullscreenVideoSource.GeckoView, state?.source)
-                val surfaceEngineView = requireNotNull(
+                val transitionEngineView = requireNotNull(
                     (stableGeckoHost as ViewGroup).singleChild(),
                 )
                 assertSame(
                     stableGeckoHost,
                     activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                 )
-                assertNotSame(initialTextureEngineView, surfaceEngineView)
-                assertNotNull(surfaceEngineView.findDescendant(SurfaceView::class.java))
+                assertSame(initialTextureEngineView, transitionEngineView)
+                assertNotNull(transitionEngineView.findDescendant(TextureView::class.java))
                 activity.browserControllerForTesting().onStop(
                     isInPictureInPictureMode = false,
                 )
             }
             awaitCondition {
-                var surfaceReady = false
+                var rendererReady = false
                 scenario.onActivity { activity ->
                     val host = activity.browserControllerForTesting()
                         .selectedGeckoViewForTesting() as? ViewGroup
-                    val surface = host?.singleChild()?.findDescendant(SurfaceView::class.java)
-                    surfaceReady = surface?.let { view ->
+                    val renderer = host?.singleChild()?.findDescendant(TextureView::class.java)
+                    rendererReady = renderer?.let { view ->
                         view.isAttachedToWindow && view.width > 0 && view.height > 0
                     } == true
                 }
-                surfaceReady
+                rendererReady
             }
             // A loaded emulator can deliver the platform mode callback after the former 2 s guard.
             SystemClock.sleep(2_500L)
@@ -135,7 +133,7 @@ class GeckoPictureInPictureInstrumentedTest {
                     stableGeckoHost,
                     activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                 )
-                assertNotSame(initialTextureEngineView, restoredEngineView)
+                assertSame(initialTextureEngineView, restoredEngineView)
                 assertNotNull(restoredEngineView.findDescendant(TextureView::class.java))
                 activity.browserControllerForTesting().exitFullscreenVideo()
             }

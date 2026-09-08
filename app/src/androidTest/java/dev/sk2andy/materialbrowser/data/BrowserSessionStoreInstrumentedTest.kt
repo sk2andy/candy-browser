@@ -391,6 +391,7 @@ class BrowserSessionStoreInstrumentedTest {
         val settings = AppearanceSettings(
             appearanceMode = BrowserAppearanceMode.Amoled,
             forceDarkWebsites = true,
+            webContentFontSizePercent = 155,
             colorPalette = BrowserColorPalette.Candy,
             surfaceStyle = BrowserSurfaceStyle.Frosted,
             shapeStyle = BrowserShapeStyle.Angular,
@@ -408,6 +409,7 @@ class BrowserSessionStoreInstrumentedTest {
         preferences.edit()
             .putString("appearance_mode", "unknown")
             .putString("force_dark_websites", "invalid")
+            .putInt("web_content_font_size_percent", 123)
             .putString("color_palette", "candy")
             .putString("surface_style", "unknown")
             .putString("shape_style", "extra_rounded")
@@ -419,6 +421,7 @@ class BrowserSessionStoreInstrumentedTest {
         assertEquals(
             AppearanceSettings(
                 appearanceMode = BrowserAppearanceMode.System,
+                webContentFontSizePercent = 125,
                 colorPalette = BrowserColorPalette.Candy,
                 surfaceStyle = BrowserSurfaceStyle.Clear,
                 shapeStyle = BrowserShapeStyle.ExtraRounded,
@@ -921,15 +924,15 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
-    fun videoAutoplayBlockingDefaultsOffAndRoundTrips() {
+    fun videoAutoplayBlockingDefaultsOnAndRoundTrips() {
         val store = BrowserSessionStore(context)
-        assertFalse(store.loadVideoAutoplayBlocked())
-
-        store.saveVideoAutoplayBlocked(true)
         assertTrue(store.loadVideoAutoplayBlocked())
 
         store.saveVideoAutoplayBlocked(false)
         assertFalse(store.loadVideoAutoplayBlocked())
+
+        store.saveVideoAutoplayBlocked(true)
+        assertTrue(store.loadVideoAutoplayBlocked())
     }
 
     @Test

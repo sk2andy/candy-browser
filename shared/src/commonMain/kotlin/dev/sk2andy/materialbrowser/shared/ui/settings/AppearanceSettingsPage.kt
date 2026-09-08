@@ -11,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,6 +34,7 @@ data class AppearanceSettingsStrings(
     val appearanceModeNames: Map<BrowserAppearanceMode, String>,
     val forceDarkWebsites: String,
     val forceDarkWebsitesSummary: String,
+    val webContentFontSize: String,
     val colorPalette: String,
     val colorPaletteNames: Map<BrowserColorPalette, String>,
     val surfaceStyle: String,
@@ -48,6 +50,7 @@ data class AppearanceSettingsStrings(
 object SharedAppearanceSettingsTestTags {
     const val APPEARANCE_MODE = "appearance_settings_mode"
     const val FORCE_DARK_WEBSITES = "appearance_settings_force_dark_websites"
+    const val WEB_CONTENT_FONT_SIZE = "appearance_settings_web_content_font_size"
     const val COLOR_PALETTE = "appearance_settings_palette"
     const val SURFACE_STYLE = "appearance_settings_surface"
     const val SHAPE_STYLE = "appearance_settings_shape"
@@ -70,6 +73,9 @@ fun AppearanceSettingsPage(
     var paletteMenuExpanded by remember { mutableStateOf(false) }
     var surfaceMenuExpanded by remember { mutableStateOf(false) }
     var shapeMenuExpanded by remember { mutableStateOf(false) }
+    var pendingWebContentFontSize by remember(settings.webContentFontSizePercent) {
+        mutableFloatStateOf(settings.webContentFontSizePercent.toFloat())
+    }
 
     SettingsPage(
         title = strings.title,
@@ -112,6 +118,28 @@ fun AppearanceSettingsPage(
                 onSettingsChanged(settings.copy(forceDarkWebsites = value))
             },
             modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.FORCE_DARK_WEBSITES),
+        )
+        SettingsPageSpacer()
+        AppearanceSlider(
+            title = strings.webContentFontSize,
+            value = pendingWebContentFontSize,
+            valueRange = AppearanceSettings.MIN_WEB_CONTENT_FONT_SIZE_PERCENT.toFloat()..
+                AppearanceSettings.MAX_WEB_CONTENT_FONT_SIZE_PERCENT.toFloat(),
+            steps = (
+                AppearanceSettings.MAX_WEB_CONTENT_FONT_SIZE_PERCENT -
+                    AppearanceSettings.MIN_WEB_CONTENT_FONT_SIZE_PERCENT
+                ) / AppearanceSettings.WEB_CONTENT_FONT_SIZE_STEP_PERCENT - 1,
+            enabled = enabled,
+            containerColor = containerColor,
+            onValueChange = { value -> pendingWebContentFontSize = value },
+            onValueChangeFinished = {
+                val updated = settings.copy(
+                    webContentFontSizePercent = pendingWebContentFontSize.roundToInt(),
+                ).normalized()
+                pendingWebContentFontSize = updated.webContentFontSizePercent.toFloat()
+                if (updated != settings) onSettingsChanged(updated)
+            },
+            testTag = SharedAppearanceSettingsTestTags.WEB_CONTENT_FONT_SIZE,
         )
         SettingsPageSpacer()
         Box {
@@ -258,6 +286,7 @@ private fun AppearanceSlider(
     enabled: Boolean,
     containerColor: Color,
     onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
     testTag: String,
 ) {
     Surface(
@@ -281,6 +310,7 @@ private fun AppearanceSlider(
             Slider(
                 value = value,
                 onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
                 enabled = enabled,
                 modifier = Modifier.testTag(testTag),
                 valueRange = valueRange,

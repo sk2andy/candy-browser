@@ -46,19 +46,36 @@ call-site cutover are not complete.
   Firefox extension `tabs`, `webNavigation`, CSS injection and script injection scoped to the
   same tab that Candy's shared chrome presents.
 - GeckoView `ScrollDelegate` events feed the pure,
-  tab-scoped address-pill rule. Only the selected tab's current renderer may update chrome;
-  document top expands immediately, direction changes reset travel, and each tab retains its own
+  tab-scoped address-pill rule through a latest-value dispatcher capped at 15 browser-chrome updates
+  per second. Only the selected tab's current renderer may update chrome;
+  document-generation tags discard a callback queued before navigation, document top expands
+  immediately, direction changes reset travel, and each tab retains its own
   compact state while background, replaced and closed sessions are ignored.
   API 34+ regression fixtures verify a real GeckoSession and the production controller-listener
   seam, including page scroll, Link Peek and tab/session replacement guards.
-- Android Gecko views fill the edge-to-edge window. Gecko owns native display-cutout safe-area
-  values, Candy applies bottom system-navigation obstruction through `setVerticalClipping`, and
-  Compose chrome consumes matching system-bar insets. The per-site **Force safe area** compatibility
-  override alone converts all safe edges to native view margins. Candy selects GeckoView's
-  TextureView backend so existing BlurTarget-based chrome and tab animations include live page
-  pixels.
+- Android keeps its root window and Gecko surface edge to edge. Candy's document-start privacy bridge
+  inserts one scrollable top inset and offsets obstructing fixed/sticky page controls; its bounded
+  policy retry closes the cold-navigation race before the Gecko session binding exists. Gecko receives
+  the bottom CSS `safe-area-inset-*`. A page's `viewport-fit=cover` declaration cannot disable Candy's
+  scrollable top inset because Candy intentionally owns that edge and sets Gecko's top CSS safe area
+  to zero. If a page defeats the guarded layout, the navigation-bound
+  fallback reloads that same URL once with every safe edge assigned to inner native margins. The
+  per-site **Force safe area** override
+  does the same explicitly. Fullscreen remains truly edge to edge, while Compose safe-drawing hosts
+  clear duplicate renderer insets. Candy keeps GeckoView's default SurfaceView backend so page frames
+  go directly to Android's compositor instead of being copied through a TextureView.
+- The status-bar treatment is a small static native sibling above the Gecko content container. It is
+  limited to the status-bar height plus an 8dp fade tail and never uses a live blur. Clear chrome does
+  not create a full-screen `BlurTarget`; frosted chrome may still wrap the page in one solely as the
+  explicit backdrop source for browser chrome.
 - Android builds launch the normal `MainActivity`, `BrowserScreen`, address bar,
   gestures, menus and tab overview. `BrowserController` binds a `GeckoSession` renderer to each tab.
+  Renderer ownership is recorded before attaching its Android view because `addView` may synchronously
+  re-enter Compose. Attach, release and host-transfer transitions are serialized: same-host re-entry
+  reuses the recorded view, while a competing host retries on the next UI turn instead of asking one
+  `GeckoSession` to create a second bound `GeckoView`. A renderer owned by the fullscreen/PiP
+  presentation survives normal-host disposal and is never duplicated into a concurrently composed
+  host.
   Android WebView construction, clients, script bridges, profile effects and the AndroidX WebKit
   dependency have been removed; the view-host revision is engine-neutral.
 - Gecko tab cards use `GeckoView.capturePixels()` and feed the bounded bitmap through Candy's
@@ -66,8 +83,12 @@ call-site cutover are not complete.
   preview map continues to back hero, grid and list cards; private snapshots are never stored.
 - Gecko link and image long-presses enter Candy through `ContentDelegate.onContextMenu`, then cross
   the session adapter as a normalized engine-neutral content target. The controller accepts only
-  the selected current session at the unchanged navigation generation. Link Peek, Reader, find and
-  printing all use that Gecko session instead of a second renderer.
+  the selected current session at the unchanged navigation generation while the Activity is started
+  and resumed. Window-focus loss, session deactivation and renderer detachment terminate an active
+  Gecko touch stream with exactly one `ACTION_CANCEL`; this prevents Android's Home gesture from
+  leaving Gecko's long-press timer alive in the background. Normal taps, selection, context menus
+  and scroll streams remain owned by Gecko. Link Peek, Reader, find and printing all use that Gecko
+  session instead of a second renderer.
 - Reader Studio extraction crosses the selected Gecko session through Candy's internal, session-bound
   WebExtension content-script bridge. Returned JSON still passes the shared Reader extraction bounds
   and stale tab, URL and session guards before reaching UI state.
@@ -77,11 +98,12 @@ call-site cutover are not complete.
   HTTP(S) URL into a regular tab. Preview history, desktop mode and find-in-page stay on that session,
   while external-app handoffs require the same bounded navigation grant as normal browsing.
 - Gecko media uses GeckoView's native autoplay-permission and media-session delegates. The global
-  autoplay toggle is pushed to all live and new sessions; fullscreen-video state and commands stay
+  autoplay blocker defaults on unless the user stored another choice, and is pushed to all live and
+  new sessions; fullscreen-video state and commands stay
   bound to the exact selected session. Domain mute is applied to the current and every future native
   Gecko `MediaSession`; tab activity is not abused as an audio control. Existing audible and inaudible site permissions are updated
   through `StorageController` in their exact URI/context/private scope, read back, and only then
-  reloaded. Private sessions never publish Android PiP or system media. GeckoView 140 still has an
+  reloaded. Private sessions never publish Android PiP or system media. GeckoView 155 still has an
   upstream race for synchronous audible `play()` before the asynchronous permission response; do not
   replace the native contract with injected JavaScript as a workaround.
 - Gecko downloads, uploads, site permissions, HTTP authentication and web prompts cross focused,
@@ -99,11 +121,11 @@ call-site cutover are not complete.
   MediaStore Downloads row, commits only a complete file and deletes partial rows on failure, cancel
   or owner-session close. No cookie value crosses the engine boundary. External-link previews retain
   the stricter one-shot APK navigation grant.
-  GeckoView 140 does not expose a session-context ID on `GeckoWebExecutor`: extension requests retain
+  GeckoView 155 does not expose a session-context ID on `GeckoWebExecutor`: extension requests retain
   the authentication headers Gecko supplied, but Candy cannot promise that a newly built context-menu
   GET will select a particular profile cookie jar. Candy neither exports cookies nor uses private APIs
   to pretend otherwise.
-- GeckoView 140 prompt policy is explicit. Candy presents alert, confirm, text, before-unload, repost,
+- GeckoView 155 prompt policy is explicit. Candy presents alert, confirm, text, before-unload, repost,
   file and host-auth prompts. Explicit image/video capture uses a scoped MediaStore URI and honors
   Gecko's front (`USER`) versus rear (`ENVIRONMENT`) camera hint; cancellation, navigation, tab changes
   and lifecycle loss delete the pending row. Regular HTTPS login save/select uses Android Credential Manager without
@@ -116,10 +138,10 @@ call-site cutover are not complete.
   not a safe Android key-selection contract, so Candy never auto-selects or confirms a certificate;
   no prompt silently falls through a nullable Gecko delegate default.
 - Main-frame navigation keeps Gecko's current/new target. User-activated `target=_blank` HTTP(S)
-  loads enter Candy's managed popup and popunder policy in the opener's exact profile/private context.
-  GeckoView's unopened `NavigationDelegate.onNewSession` result is adopted into that Candy tab before
-  Gecko opens it; rejecting the Candy policy returns no child session.
-  Blocked popups retain the existing explicit-open offer and transient persistence boundaries. Normal Gecko tabs and
+  loads enter a Candy-managed tab in the opener's exact profile/private context, while uBlock Origin
+  owns filter-list popup and popunder blocking. GeckoView's unopened
+  `NavigationDelegate.onNewSession` result is adopted into that Candy tab before Gecko opens it.
+  The explicit per-site **Always block pop-ups** override remains Candy-owned. Normal Gecko tabs and
   external previews apply the same bounded external-app grant rules; unsafe/internal schemes,
   subframes and passive app redirects remain blocked.
 - Gecko is the only Android product renderer. `GeckoOnlyBrowserEngineArchitectureTest` requires the
@@ -133,9 +155,12 @@ call-site cutover are not complete.
   profile's sessions and uses `StorageController.clearDataForSessionContext(profileId)`; Gecko's
   context API reports dispatch only, with no completion callback. Profile moves invalidate old
   native snapshots so history from a different storage context is never restored.
+- Android forwards renderer safe-area changes only for actual inset, attachment, session or size
+  lifecycle events. Status-bar decoration stays in a static native overlay above GeckoView,
+  outside the renderer and global-layout invalidation paths.
 - Gecko Safe Browsing remains enabled. Candy's global third-party-cookie setting changes Gecko's
   runtime cookie behavior for both normal and private sessions. It uses `ACCEPT_FIRST_PARTY` while
-  blocking is enabled. Because GeckoView 140 exposes no site-scoped override for that hard cookie
+  blocking is enabled. Because GeckoView 155 exposes no site-scoped override for that hard cookie
   policy, a confirmed SSO, CAPTCHA, or paused-site exception temporarily switches the shared runtime
   to `ACCEPT_ALL` only while the matching session is selected and its current host still matches the
   exception. Normal and private cookie modes are coordinated separately. Candy restores
@@ -143,20 +168,48 @@ call-site cutover are not complete.
   inactive, loses the exception, or closes. Same-mode sibling sessions share Gecko's runtime setting
   and therefore see the temporary runtime setting too. Candy marks them inactive with Gecko's
   session lifecycle, but GeckoView does not document inactivity as a complete network suspension.
-- Extension installation accepts only direct HTTPS URLs and delegates XPI parsing and Mozilla
+- Manual extension installation accepts only direct HTTPS URLs and delegates XPI parsing and Mozilla
   signature validation to GeckoView. The user must explicitly approve requested permissions;
   dismissal and lifecycle failure deny access.
+- Android's Gecko runtime provisions two normal, deinstallable defaults through
+  `WebExtensionController.install(..., INSTALLATION_METHOD_ONBOARDING)`. uBlock Origin `1.74.0`
+  ships as the original Mozilla-signed AMO XPI, so a clean profile gets it without network access.
+  `I still don't care about cookies` `1.1.9` ships the same way from its original Mozilla-signed AMO
+  XPI. Both extensions therefore install on the first offline start. Their corresponding sources
+  and licenses are pinned to Git commits `6dd2d95e50d134a477a4e183343c0b26e9147123` and
+  `e763f24f79c5803774d28730649aef9aae3998ca`.
+- Default permission approval exists only while Candy installs the exact catalog ID and version.
+  Gecko still validates Mozilla's signature; bundled bytes must also match their pinned SHA-256.
+  Private-browsing access is always denied. Default installation never uses `installBuiltIn` or
+  grants GeckoView-only native-messaging privileges to third-party code.
+- Provisioning deduplicates by stable extension ID and never replaces, downgrades, reenables, or
+  changes private access on an existing install. A durable global marker records successful seeding.
+  Only an explicit user uninstall creates a removal tombstone, which Candy persists before asking
+  Gecko to uninstall. A provisioned-but-missing ID is retried because Gecko can report installation
+  before its profile checkpoint reaches durable storage; an explicitly removed default still does
+  not return on subsequent starts.
+  This state contains only catalog IDs and no tab, URL, profile, or private-session data.
+- uBlock Origin exclusively owns Gecko ad/tracker request and cosmetic filtering. Candy's native
+  `ContentBlocker`, Candy Rules and popup/popunder filter lists remain WebKit-only. Gecko's internal
+  host packages only the 4.9 KB Candy Cookie Defaults fallback alongside session-scoped Reader, PiP
+  and compatibility-observation duties; it does not package or parse Candy ad-filter assets.
 - Listing, enabling, disabling, updating, private-browsing opt-in and uninstalling use
   `WebExtensionController`. Built-in extensions cannot be mutated from Candy's manager.
 - User-extension inventory and installation wait for the serialized Candy Topping and Privacy hosts
   to finish their own built-in registration. This prevents the internal-host startup writes from
-  racing a profile extension install; a failed internal-host initialization fails extension
-  management instead of exposing a partially initialized Gecko registry.
+  racing default provisioning or a profile extension install. Default provisioning then completes
+  before user inventory/mutations. A failed internal-host initialization fails extension management
+  instead of exposing a partially initialized Gecko registry.
+- The existing manager's **Update** action calls GeckoView's signed AddonManager update path. Neither
+  default manifest declares a custom `update_url`, so Gecko uses Mozilla's AMO update service by ID;
+  new permissions still require the normal visible prompt. The pinned APK XPI is an initial seed,
+  not a downgrade or forced update source.
 - Installing, enabling, disabling, updating or uninstalling an extension reloads the selected
   non-blank Gecko page so navigation-driven scripts and styles cannot miss an already open tab.
   Changing only private-browsing access does not reload a regular page.
-- Settings presents the reusable extension manager as an overlay in the normal `MainActivity` and
-  Candy chrome. It does not launch a second browser Activity or create a parallel address bar.
+- The main browser menu and Settings both open the reusable extension manager as an overlay in the
+  normal `MainActivity` and Candy chrome. The main-menu entry is present only for Gecko. It does not
+  launch a second browser Activity or create a parallel address bar.
 - Extension management is rejected from private management contexts. Private access is a separate,
   explicit switch for an extension installed from a regular context.
 - Firefox browser/page actions are translated to bounded `GeckoExtensionActionState` values and
@@ -174,7 +227,7 @@ call-site cutover are not complete.
 - `tabs.create`, `tabs.update` and `tabs.remove` cross Candy's tab model through GeckoView's
   `TabDelegate` and per-session `SessionTabDelegate`. New tabs inherit the source profile/private
   boundary. Candy accepts active, pinned, nonnegative/clamped index and HTTP(S)/same-extension URL
-  fields. Candy has a memory-only per-tab mute host path, but GeckoView 140 rejects the Firefox
+  fields. Candy has a memory-only per-tab mute host path, but GeckoView 155 rejects the Firefox
   `tabs.update.muted` and `pinned` fields in its extension schema before `SessionTabDelegate`, so
   extensions cannot reach it on this engine version. Container, discarded, reader,
   highlighted and auto-discard fields fail closed: Candy has no equivalent container, multi-select
@@ -184,29 +237,29 @@ call-site cutover are not complete.
   progress/completion/interruption through Gecko's public `DownloadInitData`. This delegate does not
   expose page cookies or private session data.
 
-### Firefox WebExtension capability matrix (GeckoView 140)
+### Firefox WebExtension capability matrix (GeckoView 155)
 
 This table is a tested embedder contract, not a claim that arbitrary Firefox extensions are
 compatible. APIs outside GeckoView's public surface remain unsupported even when Firefox Desktop
 implements them.
 
-| Extension surface | GeckoView 140 owner/API | Candy support | Evidence / boundary |
+| Extension surface | GeckoView 155 owner/API | Candy support | Evidence / boundary |
 | --- | --- | --- | --- |
 | `browserAction` / `action`, `pageAction` | `WebExtension.ActionDelegate` | Yes | Default and per-session action state; conditional section in Candy's tab **More** menu; bounded title/badge |
 | Popup | `ActionDelegate.onOpenPopup` / `onTogglePopup` | Yes | Dedicated guarded `GeckoSession`; Candy modal; owner-switch cleanup |
 | Options page | `WebExtension.TabDelegate.onOpenOptionsPage` | Yes | Exact installed `moz-extension` origin; normal Candy tab and chrome |
 | `tabs.create` | `WebExtension.TabDelegate` | Supported subset | Active/background, pinned and nonnegative/clamped index; same profile/private context; container/discarded/reader fields rejected |
-| `tabs.update`, `tabs.remove` | `WebExtension.SessionTabDelegate` | Supported subset | Active/update URL and close; current generation required; muted/pinned are rejected by GeckoView 140's Firefox schema before Candy, highlighted/autoDiscardable are rejected by Candy |
+| `tabs.update`, `tabs.remove` | `WebExtension.SessionTabDelegate` | Supported subset | Active/update URL and close; current generation required; muted/pinned are rejected by GeckoView 155's Firefox schema before Candy, highlighted/autoDiscardable are rejected by Candy |
 | `tabs` query/events | Gecko extension engine + `setTabActive` | Yes | Selected Candy session is Gecko's active tab |
 | `webNavigation` | Gecko extension engine | Yes | Deterministic fixture observes public event namespace across real navigation |
 | MV2 `tabs.executeScript` / `insertCSS` | Gecko extension engine | Yes | Fixture verifies page script and CSS application; MV3 availability remains manifest/API dependent |
 | `storage.local` | Gecko extension engine/profile | Yes | Persists in Gecko extension storage; private availability still needs explicit extension opt-in |
 | `runtime` extension messaging | Gecko extension engine | Yes | Background/content request-response fixture; native messaging only for privileged built-ins |
 | `downloads.download` | `WebExtension.DownloadDelegate` + `GeckoWebExecutor` | Yes | Original method/header/body/cache/flags; MediaStore stream; progress, completion, failure and owner cancellation |
-| Install/update/optional permission prompts | `WebExtensionController.PromptDelegate` | Yes | Explicit Candy prompt; dismissal, overlapping prompt or lifecycle loss denies |
+| Install/update/optional permission prompts | `WebExtensionController.PromptDelegate` | Yes | Explicit Candy prompt includes requested API, origin and data-collection permissions; technical/interaction data is granted only after that explicit acceptance, while automatic defaults never opt into it; dismissal, overlap or lifecycle loss denies |
 | Enable/disable/update/uninstall/private access | `WebExtensionController` | Yes | Built-ins protected; inventory refresh and selected-page reload where needed |
-| `windows` creation/update/removal | No GeckoView 140 public window delegate | No | Candy never synthesizes a second browser window or address bar |
-| Arbitrary desktop-only/experimental APIs | No stable GeckoView 140 embedder contract | No claim | Failures remain extension/API-specific |
+| `windows` creation/update/removal | No GeckoView 155 public window delegate | No | Candy never synthesizes a second browser window or address bar |
+| Arbitrary desktop-only/experimental APIs | No stable GeckoView 155 embedder contract | No claim | Failures remain extension/API-specific |
 
 - The local full-debug fixture at `app/src/fullDebug/assets/candy_extension_fixture/` covers action,
   popup, options, `tabs` create/update/remove, active-tab query, `webNavigation`, script/CSS,
@@ -214,7 +267,7 @@ implements them.
   `GeckoExtensionChromeInstrumentedTest` runs that fixture on a real API 34+ Gecko session.
 - `GeckoExtensionRuntimeInstrumentedTest` installs a full-debug-only built-in WebExtension fixture,
   verifies that the normal extension inventory reports it, and exercises its content script across
-  Google- and Reddit-shaped local navigation. It is not packaged in release variants. GeckoView 140
+  Google- and Reddit-shaped local navigation. It is not packaged in release variants. GeckoView 155
   treats built-ins as private-capable even after a false private-permission update, so private denial
   is instead asserted by the separate Candy Topping host test; user XPIs retain the explicit private
   opt-in and Mozilla-signature-checked install path.
@@ -225,7 +278,7 @@ implements them.
 - `GeckoExtensionPersistencePhaseOneInstrumentedTest` installs Mozilla-signed Save Screenshot from
   AMO in a regular management context, verifies `temporary=false`, zero disabled flags, explicit
   private denial and both Gecko profile/startup-registry checkpoints, then persists only its ID for
-  the second phase. GeckoView 140 acknowledges installation before its compressed startup registry
+  the second phase. GeckoView 155 acknowledges installation before its compressed startup registry
   is durably updated, so the phase deliberately keeps the same app process alive until that real
   checkpoint remains stable; terminating instrumentation immediately after the install callback can
   create a test-only orphan XPI. After an explicit app force-stop and cold `MainActivity` start,
@@ -233,15 +286,16 @@ implements them.
   same enabled non-built-in ID without calling install or downloading an XPI. Do not use Android Test
   Orchestrator, `pm clear`, APK reinstall or test cleanup between these two phases.
 - Candy's bundled MV3 Topping host is separate from user-installed Firefox extensions. It uses
-  GeckoView 140 `browser.userScripts` registrations for the supported local JS/CSS subset, remains
+  GeckoView 155 `browser.userScripts` registrations for the supported local JS/CSS subset, remains
   disabled in private browsing, and is hidden from the Firefox extension manager. Regular first
   navigation waits for its bounded initialization gate so cold-start `document-start` scripts are
   not missed.
-- GeckoView `140.0.20250707120347` is pinned because it supports this repository's Android 35 / AGP
-  8.7 build. Upgrading GeckoView is a coordinated toolchain change, not a floating dependency bump.
+- GeckoView `155.0.20260903215306` is pinned with Android SDK 37.1, AGP 9.4.0 and Gradle 9.6.0.
+  `minSdk` remains 33 and `targetSdk` remains 35. Gecko upgrades stay coordinated toolchain changes,
+  not floating dependency bumps.
 - Browser commands clear Gecko data through a typed runtime seam. **Clear cache & reload** uses only
   `StorageController.ClearFlags.ALL_CACHES`; **Clear cookies & reload** uses only `COOKIES` and is
-  deliberately labeled as affecting all Candy browser profiles because GeckoView 140 exposes no
+  deliberately labeled as affecting all Candy browser profiles because GeckoView 155 exposes no
   cookie-only per-session-context clear. A command succeeds only after Gecko's asynchronous clear
   result completes. Reload is skipped and reported as rejected if the tab, URL, navigation generation
   or engine session changed while that operation was pending.

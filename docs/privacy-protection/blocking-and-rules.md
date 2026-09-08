@@ -11,7 +11,8 @@
 | Bundled cosmetic lists | `EasyListCosmeticRules`, `BundledCandyRules` | Resolve scoped and bounded generic standard selectors with exceptions |
 | Consent handling | `ConsentBlockerScript` + curated request rules | Hide consent UI, stop known modal CMP runtimes and apply bounded declarative site rules |
 | User/import/subscription rules | `CandyRule*`, `CandyRuleRepository` | Validate, normalize, persist and compile per-profile matchers |
-| Runtime interception | `BrowserController` | Combine site settings, bundled lists and Candy Rule decisions for the active renderer |
+| WebKit runtime interception | WebKit browser controller | Combine site settings, bundled lists and Candy Rule decisions for the active WebKit renderer |
+| Gecko runtime interception | uBlock Origin + Candy Cookie Defaults | Mozilla-signed default extension owns ad filtering; Candy keeps only its small curated consent fallback |
 
 Scoped cosmetic document-start rules run in every frame whose origin matches the registered page or
 user-rule origin. Generic cosmetics use a Candy-owned token scanner in the top document and its
@@ -50,9 +51,8 @@ it directly follows `#ad_banner`. They add no request matching or DOM scanning. 
 examples, banner documentation, and unrelated alternate-content elements remain visible.
 
 Candy's host-scoped consent defaults remove Reddit's current data-protection consent dialog and its
-temporary body scroll lock. This native fallback applies in Gecko even when an installed third-party
-consent extension ships an outdated Reddit rule or cannot inject CSS through the legacy
-`tabs.insertCSS` API.
+temporary body scroll lock on WebKit. Gecko delegates consent handling to its installed Firefox
+extension and does not run Candy consent selectors or request rules in parallel.
 
 Network host matching combines Candy's curated hosts, the complete supported EasyList/EasyPrivacy
 template graph, uAssets, and a deduplicated HaGeZi Pro delta. Sorted byte indexes keep the larger
@@ -60,34 +60,31 @@ bundles off the per-request allocation path. Curated owner-family exceptions may
 service only on a PSL-validated family such as `google.*`; lookalike suffixes do not match. User
 Candy allow rules and site pause still take precedence over bundled blocking.
 
-### GeckoView host filtering
+### GeckoView extension-owned filtering
 
-Android Gecko sessions install the private bundled `candy-privacy-host` extension before any
-external navigation. Its synchronous `webRequest.onBeforeRequest` listener mirrors all bundled host,
-host-pair, allow-pair and first-party-family assets, advanced request URL rules, the curated consent
-request rule, and the active profile's Candy host rules. A document-start content script applies
-host-scoped EasyList/uAssets selectors, Candy defaults, active profile Candy cosmetic rules, and the
-bounded procedural subset. BrowserController republishes the complete per-tab policy when Candy
-rules, protection settings, private rules, or site pause change. A policy revision is acknowledged
-before a dependent navigation or reload continues.
+Android Gecko sessions provision Mozilla-signed uBlock Origin as their ad and tracker blocker.
+Candy does not send bundled ad lists, custom ad rules, popup or popunder filter lists to Gecko and
+does not initialize the native `ContentBlocker` snapshot in the Gecko controller. The private
+`candy-privacy-host` packages and parses only the 4.9 KB `candy_default_rules.txt` consent defaults;
+EasyList, HaGeZi, uAssets and generated ad-cosmetic assets stay out of the Gecko extension. The host
+also retains session binding, Reader extraction, PiP playback continuity and narrowly scoped
+SSO/CAPTCHA compatibility observation.
 
-Candy allow rules are authoritative, so Gecko's own tracking-protection classifier is disabled for
-these sessions. Gecko Safe Browsing remains enabled. The global third-party-cookie switch changes
+Gecko Safe Browsing remains enabled. The global third-party-cookie switch changes
 the process runtime between `ACCEPT_FIRST_PARTY` and `ACCEPT_ALL` for normal and private sessions.
 The host also observes only the recognized SSO and CAPTCHA request hosts, including requests that
 arrive before a just-published policy update; native blocking state, HTTPS host/path, current-page,
 policy-revision direction, and public-suffix validation drives the existing consent flow.
-GeckoView 140 has no site-scoped override for hard `ACCEPT_FIRST_PARTY` rejection. After consent,
+GeckoView 155 has no site-scoped override for hard `ACCEPT_FIRST_PARTY` rejection. After consent,
 Candy therefore switches the shared runtime to `ACCEPT_ALL` only while the matching page is the
 selected session. Normal and private modes remain separate. Candy restores `ACCEPT_FIRST_PARTY`
 before cross-host main-frame navigation and on deactivation, revocation, or close. Inactive
 same-mode sibling sessions share the runtime. Candy marks them inactive through Gecko's session
 lifecycle during that bounded compatibility window, though GeckoView does not specify that as a
 complete network suspension.
-Block and allow decisions are returned to native code in bounded batches for the existing hit counts
-and Privacy X-Ray pipeline. The built-in host is hidden from the user extension manager and is
-explicitly enabled in private browsing; ordinary installed Firefox extensions retain their separate
-permission policy.
+Compatibility observations are returned to native code in bounded batches. The built-in host is
+hidden from the user extension manager and is explicitly enabled in private browsing; ordinary
+installed Firefox extensions retain their separate permission policy.
 
 The first external load is fail-closed until the extension assets, private permission, policy, and
 session binding are all acknowledged. Initialization, policy, and bootstrap binding each have a
@@ -102,17 +99,8 @@ extension-page actor before the native response is delivered. Policy revisions m
 in-flight bootstrap, but an authenticated older revision can only bind the same live generation; the
 external-load gate still waits for both that session binding and the latest policy acknowledgement.
 
-The Gecko host deliberately excludes generic, unscoped cosmetic selectors: only host-scoped rules
-run in page content, and sensitive-host exclusions plus upstream exceptions remain authoritative.
-Popup/popunder rules, the `window.open` defuser, generic token-scanned cosmetics, and consent DOM
-handling still need separate Gecko adapters before the Gecko path has the complete WebView
-protection surface.
-
-Candy accepts a deliberately narrow procedural subset: terminal literal `:has-text(...)` and
-`:remove()` rules. Runtime scans at most 128 matches per selector, uses an 8 ms batch budget, stops
-after 20 runs or 5 seconds, and never evaluates upstream JavaScript or regular expressions. Exact
-zero-argument `+js(nowoif)` rules use a Candy-owned synchronous `window.open` defuser in
-matching documents. Upstream scriptlet code and arguments are never copied or evaluated.
+WebKit retains Candy's existing bounded cosmetic, procedural, popup, popunder, and consent handling.
+Those rules do not execute in Gecko page content.
 
 Bundled network, URL, popup, and procedural assets start parsing as soon as the first
 `ContentBlocker` is created. The immutable snapshot is application-scoped, survives Activity

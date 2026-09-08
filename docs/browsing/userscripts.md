@@ -7,7 +7,7 @@ imports and installs each script as a main-frame `WKUserScript` in a named `WKCo
 supports Mozilla-signed Firefox WebExtensions. See [`platform-engines.md`](platform-engines.md) for
 the engine boundary; WebExtensions and Toppings intentionally remain different capability models.
 Firefox WebExtension action, popup, options, tab and download conformance is tracked in the
-[GeckoView 140 capability matrix](platform-engines.md#firefox-webextension-capability-matrix-geckoview-140);
+[GeckoView 155 capability matrix](platform-engines.md#firefox-webextension-capability-matrix-geckoview-155);
 none of those privileged delegates are exposed to Toppings.
 
 ## Ownership
@@ -77,21 +77,21 @@ none of those privileged delegates are exposed to Toppings.
 
 ## Lifecycle and boundaries
 
-- GeckoView 140 installs or updates the fixed `candy-topping-host@sk2andy.dev` built-in extension,
+- GeckoView 155 installs or updates the fixed `candy-topping-host@sk2andy.dev` built-in extension,
   grants its optional `userScripts` permission and reconciles enabled persisted Toppings through a
   revisioned native-messaging port. The first regular navigation waits for a successful registration
   acknowledgement or a bounded initialization failure, preserving `document-start` on cold start.
 - Gecko registrations use a dedicated `USER_SCRIPT` world, `allFrames=false`, Candy's exact
-  `@match`/`@include`/`@exclude` scopes and `document-start`/`document-end` timing. GeckoView 140 has
+  `@match`/`@include`/`@exclude` scopes and `document-start`/`document-end` timing. GeckoView 155 has
   no CSS member on `RegisteredUserScript`; CSS in this slice is supported through the local
   `GM_addStyle`/`GM.addStyle` bootstrap. `GM_info`/`GM.info` is also local.
-- GeckoView 140 user-script worlds expose `runtime.sendMessage` and `runtime.connect`, but not
+- GeckoView 155 user-script worlds expose `runtime.sendMessage` and `runtime.connect`, but not
   `runtime.onMessage`. Value mutations use the former; menu callbacks use a world-validated port
   accepted through the host's `runtime.onUserScriptConnect`. The bridge binds Gecko's active tab to
   Candy's tab ID only when the host-provided active Candy ID and `sender.tab.active` agree.
   Value-only reconciliation changes the content-addressed registration ID but deliberately retains
   the world ID, so the current document can continue mutating values and invoking menu callbacks.
-- GeckoView 140 can keep a built-in extension marked private-capable even after requesting the opposite.
+- GeckoView 155 can keep a built-in extension marked private-capable even after requesting the opposite.
   Therefore every registered script performs a fail-closed `private-check` over the dedicated
   user-script messaging channel before user source runs. The host handles only that bounded message,
   never appears in the Firefox extension manager and cannot be mutated through that manager.
@@ -100,7 +100,7 @@ none of those privileged delegates are exposed to Toppings.
   WebView recreation and controller destruction.
 - Native allowed-origin rules provide the first origin boundary; the isolated-world guard then
   checks the complete URL, exclusions and top-frame identity before executing source.
-- Android Gecko catalog changes are guaranteed after the next app/runtime start. GeckoView 140 does
+- Android Gecko catalog changes are guaranteed after the next app/runtime start. GeckoView 155 does
   not reliably expose a changed dynamic registration to an already-created session, even after the
   extension API acknowledges it; rebuilding live sessions without losing history remains a parity
   gap. On the Android WebView compatibility path, reloading applies the changed script immediately.
@@ -141,4 +141,4 @@ none of those privileged delegates are exposed to Toppings.
 | GM world isolation and private-registration boundary | `UserScriptRuntimeInstrumentedTest` |
 | Shared iOS metadata/grants/dependency and URL policy | `shared:ToppingRulesTest` |
 | iOS compiler and WebKit contract | `swiftc -typecheck` over `iosApp/CandyIos/*.swift`; `CandyIos` simulator build/smoke |
-| GeckoView 140 host readiness, world validation, resolved `@require`/`@resource`, values, active-tab binding, menu callback, `GM_openInTab`, exclude and private rejection | `CandyToppingHostInstrumentedTest` on the dedicated API 34+ emulator |
+| GeckoView 155 host readiness, world validation, resolved `@require`/`@resource`, values, active-tab binding, menu callback, `GM_openInTab`, exclude and private rejection | `CandyToppingHostInstrumentedTest` on the dedicated API 34+ emulator |

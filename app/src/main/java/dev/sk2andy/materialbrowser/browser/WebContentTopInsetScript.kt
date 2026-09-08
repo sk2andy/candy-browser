@@ -6,7 +6,6 @@ internal object WebContentTopInsetScript {
     val installScript: String =
         """
             (() => {
-              if (globalThis.top !== globalThis) return;
               const styleId = 'candy-browser-content-top-inset';
               const ownedSelector = `style#${'$'}{styleId}[data-candy-browser-owned="true"]`;
               const property = '--candy-browser-content-top-inset';
@@ -24,45 +23,11 @@ internal object WebContentTopInsetScript {
               const obstructionSampleStep = 12;
               const maxDeferredLayoutChecks = 8;
               const delayedInteractionCheckMs = 350;
+              const stabilizationCheckDelaysMs = [250, 1000, 2500, 5000];
               let deferredLayoutChecks = 0;
               let deferredLayoutCheckTimer = 0;
-              let nativeFallbackRequested = false;
-              const isSeparator = (character) =>
-                character === ' ' || character === '\t' || character === '\n' ||
-                character === '\r' || character === '=' || character === ',' ||
-                character === '\0';
-              const viewportFitsCover = () => {
-                let viewportFit = 'auto';
-                document.querySelectorAll('meta[name]').forEach((meta) => {
-                  if ((meta.getAttribute('name') || '').toLowerCase() !== 'viewport') return;
-                  if (!meta.hasAttribute('content')) return;
-                  const buffer = (meta.getAttribute('content') || '').toLowerCase();
-                  let currentViewportFit = 'auto';
-                  for (let index = 0; index < buffer.length;) {
-                    while (index < buffer.length && isSeparator(buffer[index])) index++;
-                    const keyStart = index;
-                    while (index < buffer.length && !isSeparator(buffer[index])) index++;
-                    const key = buffer.substring(keyStart, index);
-                    while (index < buffer.length && buffer[index] !== '=' && buffer[index] !== ',') {
-                      index++;
-                    }
-                    while (index < buffer.length && isSeparator(buffer[index])) {
-                      if (buffer[index] === ',') break;
-                      index++;
-                    }
-                    const valueStart = index;
-                    while (index < buffer.length && !isSeparator(buffer[index])) index++;
-                    if (key === 'viewport-fit') {
-                      currentViewportFit = buffer.substring(valueStart, index);
-                    }
-                  }
-                  viewportFit = currentViewportFit;
-                });
-                return viewportFit === 'cover';
-              };
-              const containsMeta = (node) =>
-                node instanceof Element &&
-                (node.tagName === 'META' || Boolean(node.querySelector('meta')));
+              let nativeFallbackRequestKey = null;
+              let localOffsetCollisionDetected = false;
               const clearOwnedOffsets = () => {
                 document.querySelectorAll(offsetSelector).forEach((element) => {
                   element.removeAttribute(offsetAttribute);
@@ -80,15 +45,32 @@ internal object WebContentTopInsetScript {
                 });
               };
               const requestNativeFallback = () => {
-                if (nativeFallbackRequested) return;
-                nativeFallbackRequested = true;
-                clearOwnedOffsets();
-                document.documentElement &&
-                  clearOwnedFlowTarget(document.documentElement);
                 const generation = Number(
                   globalThis.$bridgeName?.navigationGeneration?.(),
                 ) || 0;
+                const revision = Number(
+                  globalThis.$bridgeName?.policyRevision?.(),
+                ) || 0;
+                const requestKey = `${'$'}{generation}:${'$'}{revision}`;
+                if (nativeFallbackRequestKey === requestKey) return;
+                nativeFallbackRequestKey = requestKey;
+                clearOwnedOffsets();
+                const root = document.documentElement;
+                if (root) {
+                  clearOwnedFlowTarget(root);
+                  document.querySelector(ownedSelector)?.remove();
+                  root.style.removeProperty(property);
+                }
                 globalThis.$bridgeName?.fallbackToNative?.(generation);
+              };
+              const nativeFallbackRequestedForCurrentPolicy = () => {
+                const generation = Number(
+                  globalThis.$bridgeName?.navigationGeneration?.(),
+                ) || 0;
+                const revision = Number(
+                  globalThis.$bridgeName?.policyRevision?.(),
+                ) || 0;
+                return nativeFallbackRequestKey === `${'$'}{generation}:${'$'}{revision}`;
               };
               const sampleAxis = (limit) => {
                 const points = [];
@@ -187,6 +169,91 @@ internal object WebContentTopInsetScript {
                     (plan.panelMaxHeight === null || rect.bottom <= globalThis.innerHeight + 0.5);
                 });
               };
+              const findPositionedPeer = (element, root) => {
+                for (let current = element; current && current !== root; current = current.parentElement) {
+                  const position = getComputedStyle(current).position;
+                  if (
+                    position === 'absolute' ||
+                    position === 'fixed' ||
+                    position === 'sticky'
+                  ) {
+                    return current;
+                  }
+                }
+                return null;
+              };
+              const findCompactViewportWidePeer = (element, root, excluded) => {
+                for (let current = element; current && current !== root; current = current.parentElement) {
+                  if (
+                    current === excluded ||
+                    excluded.contains(current) ||
+                    current.contains(excluded)
+                  ) {
+                    continue;
+                  }
+                  const style = getComputedStyle(current);
+                  const rect = current.getBoundingClientRect();
+                  if (
+                    style.display !== 'none' &&
+                    style.visibility !== 'hidden' &&
+                    style.visibility !== 'collapse' &&
+                    rect.width >= globalThis.innerWidth * 0.8 &&
+                    rect.height > 1 &&
+                    rect.height < globalThis.innerHeight * 0.5
+                  ) {
+                    return current;
+                  }
+                }
+                return null;
+              };
+              const hasPositionedPeerCollision = (plans, root, projected) => {
+                const xCoordinates = [
+                  1,
+                  Math.max(1, globalThis.innerWidth / 2),
+                  Math.max(1, globalThis.innerWidth - 1),
+                ];
+                return plans.some((plan) => {
+                  const currentRect = plan.element.getBoundingClientRect();
+                  const projectionOffset = projected ? plan.offset : 0;
+                  const rect = {
+                    left: currentRect.left,
+                    right: currentRect.right,
+                    top: currentRect.top + projectionOffset,
+                    bottom: currentRect.bottom + projectionOffset,
+                  };
+                  const yCoordinates = [
+                    Math.max(1, rect.top + 1),
+                    Math.max(1, (rect.top + rect.bottom) / 2),
+                    Math.max(1, rect.bottom - 1),
+                  ].filter((value) => value < globalThis.innerHeight);
+                  return xCoordinates.some((x) => yCoordinates.some((y) =>
+                    Array.from(document.elementsFromPoint(x, y)).some((element) => {
+                      if (
+                        element === plan.element ||
+                        plan.element.contains(element) ||
+                        element.contains(plan.element)
+                      ) {
+                        return false;
+                      }
+                      const peer = findPositionedPeer(element, root) ||
+                        findCompactViewportWidePeer(element, root, plan.element);
+                      if (!peer || peer === plan.element) return false;
+                      const peerStyle = getComputedStyle(peer);
+                      if (
+                        peerStyle.display === 'none' ||
+                        peerStyle.visibility === 'hidden' ||
+                        peerStyle.visibility === 'collapse'
+                      ) {
+                        return false;
+                      }
+                      const peerRect = peer.getBoundingClientRect();
+                      return peerRect.width >= globalThis.innerWidth * 0.8 &&
+                        rect.right > peerRect.left && rect.left < peerRect.right &&
+                        rect.bottom > peerRect.top + 0.5 && rect.top < peerRect.bottom - 0.5;
+                    })
+                  ));
+                });
+              };
               const refreshOwnedOffsets = (cssPixels) => {
                 const plans = [];
                 for (const element of document.querySelectorAll(offsetSelector)) {
@@ -270,9 +337,14 @@ internal object WebContentTopInsetScript {
                     .filter((element) => !isBackdrop(element, backdropPeers))
                     .map((element) => planLocalOffset(element, cssPixels));
                   if (plans.length === 0) return true;
-                  if (!plans.every(Boolean) || !applyLocalOffsetPlans(plans, cssPixels)) {
+                  if (!plans.every(Boolean)) {
                     return false;
                   }
+                  if (hasPositionedPeerCollision(plans, root, true)) {
+                    localOffsetCollisionDetected = true;
+                    return false;
+                  }
+                  if (!applyLocalOffsetPlans(plans, cssPixels)) return false;
                 }
                 return false;
               };
@@ -328,7 +400,7 @@ internal object WebContentTopInsetScript {
               const scheduleDeferredLayoutCheck = () => {
                 if (
                   document.readyState === 'loading' ||
-                  nativeFallbackRequested ||
+                  nativeFallbackRequestedForCurrentPolicy() ||
                   deferredLayoutCheckTimer ||
                   deferredLayoutChecks >= maxDeferredLayoutChecks
                 ) {
@@ -356,9 +428,7 @@ internal object WebContentTopInsetScript {
                 const root = document.documentElement;
                 if (!root) return;
                 const physicalPixels =
-                  globalThis.$bridgeName?.viewportCoverAllowed?.() === true && viewportFitsCover()
-                  ? 0
-                  : Number(globalThis.$bridgeName?.topInsetPx?.()) || 0;
+                  Number(globalThis.$bridgeName?.topInsetPx?.()) || 0;
                 if (physicalPixels <= 0) {
                   clearOwnedOffsets();
                   clearOwnedFlowTarget(root);
@@ -440,6 +510,7 @@ internal object WebContentTopInsetScript {
                   return;
                 }
                 if (document.readyState !== 'loading') {
+                  localOffsetCollisionDetected = false;
                   const body = document.body;
                   const isAtDocumentTop = globalThis.scrollY <= 0;
                   let topInsetProtected = protectTopInset(
@@ -450,7 +521,7 @@ internal object WebContentTopInsetScript {
                     !isAtDocumentTop,
                   );
                   if (
-                    !topInsetProtected && isAtDocumentTop &&
+                    !topInsetProtected && !localOffsetCollisionDetected && isAtDocumentTop &&
                     installTargetedFlowInset(root, body, style, cssPixels)
                   ) {
                     topInsetProtected =
@@ -468,6 +539,7 @@ internal object WebContentTopInsetScript {
                 const previousState = globalThis[stateKey];
                 previousState?.observer?.disconnect();
                 globalThis.clearTimeout(previousState?.interactionLayoutCheckTimer);
+                previousState?.stabilizationCheckTimers?.forEach(globalThis.clearTimeout);
                 previousState?.interactionEvents?.forEach((eventName) => {
                   document.removeEventListener(
                     eventName,
@@ -476,18 +548,11 @@ internal object WebContentTopInsetScript {
                   );
                 });
                 const observer = new MutationObserver((records) => {
-                  const viewportMayHaveChanged = records.some((record) =>
-                    (record.type === 'attributes' && record.target.tagName === 'META') ||
-                    Array.from(record.addedNodes || []).some(containsMeta) ||
-                    Array.from(record.removedNodes || []).some(containsMeta));
-                  if (viewportMayHaveChanged) reconcile();
-                  else if (records.some((record) => record.addedNodes?.length > 0)) {
+                  if (records.some((record) => record.addedNodes?.length > 0)) {
                     scheduleDeferredLayoutCheck();
                   }
                 });
                 observer.observe(root, {
-                  attributes: true,
-                  attributeFilter: ['name', 'content'],
                   childList: true,
                   subtree: true,
                 });
@@ -510,6 +575,11 @@ internal object WebContentTopInsetScript {
                   interactionEvents,
                   interactionLayoutCheckTimer: 0,
                   interactionListener: scheduleInteractionLayoutCheck,
+                  stabilizationCheckTimers: stabilizationCheckDelaysMs.map((delayMs) =>
+                    globalThis.setTimeout(() => {
+                      deferredLayoutChecks = 0;
+                      reconcile();
+                    }, delayMs)),
                 };
                 reconcile();
                 if (document.readyState === 'loading') {
@@ -517,8 +587,17 @@ internal object WebContentTopInsetScript {
                   globalThis.addEventListener('load', reconcile, { once: true });
                 }
               };
-              if (document.documentElement) start();
-              else document.addEventListener('readystatechange', start, { once: true });
+              globalThis.__candyReconcileContentTopInset = reconcile;
+              if (document.documentElement) {
+                start();
+              } else {
+                const documentElementObserver = new MutationObserver(() => {
+                  if (!document.documentElement) return;
+                  documentElementObserver.disconnect();
+                  start();
+                });
+                documentElementObserver.observe(document, { childList: true });
+              }
             })();
         """.trimIndent()
 }

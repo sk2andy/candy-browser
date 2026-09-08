@@ -2,9 +2,12 @@ import java.util.Properties
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.TaskAction
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -49,6 +52,34 @@ abstract class GenerateLauncherShortcutResources : DefaultTask() {
 """.trimIndent(),
             Charsets.UTF_8,
         )
+    }
+}
+
+abstract class GenerateGeckoContentTopInsetScript : DefaultTask() {
+    @get:InputFile
+    abstract val sourceFile: RegularFileProperty
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @TaskAction
+    fun generate() {
+        val source = sourceFile.get().asFile.readText(Charsets.UTF_8)
+        val template = source
+            .substringAfter("        \"\"\"\n", missingDelimiterValue = "")
+            .substringBefore("\n        \"\"\".trimIndent()", missingDelimiterValue = "")
+        check(template.isNotEmpty()) { "WebContentTopInsetScript template was not found." }
+        val escapedDollar = "${'$'}" + "{'${'$'}'}"
+        val script = template
+            .trimIndent()
+            .replace(escapedDollar, "${'$'}")
+            .replace("${'$'}bridgeName", "CandyContentTopInset")
+        check(escapedDollar !in script) {
+            "WebContentTopInsetScript contains unresolved Kotlin dollar escapes."
+        }
+        val destination = outputFile.get().asFile
+        destination.parentFile.mkdirs()
+        destination.writeText(script + "\n", Charsets.UTF_8)
     }
 }
 
@@ -128,7 +159,8 @@ val localReleaseAppLabel =
 
 android {
     namespace = "dev.sk2andy.materialbrowser"
-    compileSdk = 35
+    compileSdk = 37
+    compileSdkMinor = 1
 
     defaultConfig {
         applicationId = "dev.sk2andy.materialbrowser"
@@ -222,9 +254,15 @@ android {
     }
 
     sourceSets {
-        getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/candySyncIcons/assets"))
-        getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/releaseNotes/assets"))
-        getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/geckoPrivacy/assets"))
+        getByName("main").assets.srcDir(
+            layout.buildDirectory.dir("generated/candySyncIcons/assets").get().asFile,
+        )
+        getByName("main").assets.srcDir(
+            layout.buildDirectory.dir("generated/releaseNotes/assets").get().asFile,
+        )
+        getByName("main").assets.srcDir(
+            layout.buildDirectory.dir("generated/geckoPrivacy/assets").get().asFile,
+        )
         getByName("userCaDebug").res.srcDir("src/userCa/res")
         getByName("userCaRelease").res.srcDir("src/userCa/res")
     }
@@ -275,28 +313,50 @@ val generateCandySyncDeviceIconAsset by tasks.registering(Copy::class) {
 }
 
 val generateGeckoPrivacyRuleAssets by tasks.registering(Sync::class) {
-    val ruleAssets = listOf(
-        "blocked_hosts.txt",
-        "easylist_blocked_hosts.txt",
-        "hagezi_blocked_hosts.txt",
-        "uassets_blocked_hosts.txt",
-        "uassets_blocked_host_pairs.txt",
-        "easylist_allowed_host_pairs.txt",
-        "uassets_allowed_host_pairs.txt",
-        "first_party_family_allowed_host_pairs.txt",
-        "uassets_advanced_filters.txt",
-        "easylist_cosmetic_rules.txt",
-        "uassets_cosmetic_rules.txt",
-        "uassets_procedural_cosmetic_rules.txt",
-        "candy_default_rules.txt",
-    )
+    val ruleAssets = listOf("candy_default_rules.txt")
     from(ruleAssets.map { fileName -> layout.projectDirectory.file("src/main/assets/$fileName") })
     into(layout.buildDirectory.dir("generated/geckoPrivacy/assets/candy_privacy/rules"))
     duplicatesStrategy = DuplicatesStrategy.FAIL
 }
 
+val generateGeckoContentTopInsetScript by tasks.registering(
+    GenerateGeckoContentTopInsetScript::class,
+) {
+    sourceFile.set(
+        layout.projectDirectory.file(
+            "src/main/java/dev/sk2andy/materialbrowser/browser/WebContentTopInsetScript.kt",
+        ),
+    )
+    outputFile.set(
+        layout.buildDirectory.file(
+            "generated/geckoPrivacy/assets/candy_privacy/content_top_inset.js",
+        ),
+    )
+}
+
+val verifyGeckoDefaultExtensionAssets by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Verifies pinned Gecko default-extension identities and XPI integrity."
+    workingDir(rootProject.projectDir)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/generate_gecko_default_extensions.py"),
+        "verify",
+    )
+    inputs.file(
+        layout.projectDirectory.file("src/main/assets/gecko_default_extensions/catalog.json"),
+    )
+    inputs.files(
+        fileTree(layout.projectDirectory.dir("src/main/assets/gecko_default_extensions")) {
+            include("*.xpi")
+        },
+    )
+}
+
 tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn(generateGeckoPrivacyRuleAssets)
+    dependsOn(generateGeckoContentTopInsetScript)
+    dependsOn(verifyGeckoDefaultExtensionAssets)
 }
 
 val validateReleaseNotes by tasks.registering {
@@ -469,7 +529,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.lambdapioneer.argon2kt:argon2kt:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
-    implementation("org.mozilla.geckoview:geckoview:140.0.20250707120347")
+    implementation("org.mozilla.geckoview:geckoview:155.0.20260903215306")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material-icons-core")

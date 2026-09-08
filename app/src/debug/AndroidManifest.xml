@@ -5,5 +5,9 @@
             android:name="dev.sk2andy.materialbrowser.browser.gecko.GeckoScrollTestActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name="dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnResultTestActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
     </application>
 </manifest>

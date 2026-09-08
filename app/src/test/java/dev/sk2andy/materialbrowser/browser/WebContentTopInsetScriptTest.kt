@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -18,16 +19,24 @@ class WebContentTopInsetScriptTest {
 
     @Test
     fun `script only changes the main frame after the root exists`() {
-        assertTrue(WebContentTopInsetScript.installScript.contains("globalThis.top !== globalThis"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("readystatechange"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("documentElementObserver"))
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "documentElementObserver.observe(document, { childList: true })",
+            ),
+        )
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "globalThis.__candyReconcileContentTopInset = reconcile",
+            ),
+        )
     }
 
     @Test
-    fun `script removes the spacer for viewport cover`() {
-        assertTrue(WebContentTopInsetScript.installScript.contains("viewportCoverAllowed"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("viewportFitsCover"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("viewportFit === 'cover'"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("MutationObserver"))
+    fun `viewport cover cannot disable the Candy owned top inset`() {
+        assertTrue(WebContentTopInsetScript.installScript.contains("topInsetPx"))
+        assertFalse(WebContentTopInsetScript.installScript.contains("viewportFitsCover"))
+        assertFalse(WebContentTopInsetScript.installScript.contains("viewport-fit"))
     }
 
     @Test
@@ -41,6 +50,8 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("getComputedStyle"))
         assertTrue(WebContentTopInsetScript.installScript.contains("fallbackToNative"))
         assertTrue(WebContentTopInsetScript.installScript.contains("navigationGeneration"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("policyRevision"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("nativeFallbackRequestKey"))
     }
 
     @Test
@@ -50,10 +61,14 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("trailingPoint"))
         assertTrue(WebContentTopInsetScript.installScript.contains("planLocalOffset"))
         assertTrue(WebContentTopInsetScript.installScript.contains("translate: 0 var"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("absoluteCandidate"))
         assertTrue(WebContentTopInsetScript.installScript.contains("position === 'fixed'"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("absoluteCandidate"))
         assertTrue(WebContentTopInsetScript.installScript.contains("panelMaxHeight"))
         assertTrue(WebContentTopInsetScript.installScript.contains("isBackdrop"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("hasPositionedPeerCollision"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("findCompactViewportWidePeer"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("elementsFromPoint"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("localOffsetCollisionDetected"))
         assertTrue(WebContentTopInsetScript.installScript.contains("scheduleInteractionLayoutCheck"))
         assertTrue(WebContentTopInsetScript.installScript.contains("delayedInteractionCheckMs"))
         assertTrue(WebContentTopInsetScript.installScript.contains("interactionEvents"))
@@ -72,6 +87,7 @@ class WebContentTopInsetScriptTest {
     fun `late root layout changes get bounded deferred checks`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("scheduleDeferredLayoutCheck"))
         assertTrue(WebContentTopInsetScript.installScript.contains("maxDeferredLayoutChecks"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("stabilizationCheckDelaysMs"))
         assertTrue(WebContentTopInsetScript.installScript.contains("readyState === 'loading'"))
         assertTrue(WebContentTopInsetScript.installScript.contains("addedNodes"))
         assertTrue(WebContentTopInsetScript.installScript.contains("addEventListener('load'"))

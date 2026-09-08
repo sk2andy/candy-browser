@@ -59,6 +59,7 @@ class BrowserMainMenuInstrumentedTest {
         val desktopViewChanges = AtomicInteger()
         val zoomChanges = AtomicInteger()
         val safeAreaChanges = AtomicInteger()
+        val firefoxExtensionActions = AtomicInteger()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         var setMenuExpanded: (Boolean) -> Unit = {}
         composeRule.mainClock.autoAdvance = false
@@ -169,6 +170,7 @@ class BrowserMainMenuInstrumentedTest {
                             onDuplicateTab = duplicateActions::incrementAndGet,
                             onDockAddressBar = dockActions::incrementAndGet,
                             onHistory = {},
+                            onOpenFirefoxExtensions = firefoxExtensionActions::incrementAndGet,
                             onSettings = {},
                         )
                     }
@@ -228,11 +230,12 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasText(context.getString(R.string.snoozed_tabs_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_dock_address_bar))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_history))) and
+                hasAnyDescendant(hasText(context.getString(R.string.gecko_extensions_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_settings))),
         ).assertExists()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.BrowserGroup)
             .onChildren()
-            .assertCountEquals(4)
+            .assertCountEquals(5)
 
         val menuHeight = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
             .fetchSemanticsNode().boundsInRoot.height
@@ -313,6 +316,12 @@ class BrowserMainMenuInstrumentedTest {
             .assertIsDisplayed()
             .fetchSemanticsNode().boundsInRoot.top
         assertTrue(historyTop < settingsTop)
+        val firefoxExtensionsTop = composeRule
+            .onNodeWithTag(BrowserMainMenuTestTags.FirefoxExtensions)
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot.top
+        assertTrue(historyTop < firefoxExtensionsTop)
+        assertTrue(firefoxExtensionsTop < settingsTop)
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings).assertIsDisplayed()
         composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DockAddressBar)
@@ -341,6 +350,7 @@ class BrowserMainMenuInstrumentedTest {
 
         assertEquals(2, dismissals.get())
         assertEquals(1, duplicateActions.get())
+        assertEquals(0, firefoxExtensionActions.get())
     }
 
     @Test

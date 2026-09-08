@@ -32,7 +32,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
-import dev.sk2andy.materialbrowser.blocking.AdvancedFilterAction
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.BundledSitePrivacyDefaults
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
@@ -53,7 +52,6 @@ import dev.sk2andy.materialbrowser.blocking.CandyRulePreview
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidation
 import dev.sk2andy.materialbrowser.blocking.CandyRuleValidator
 import dev.sk2andy.materialbrowser.blocking.CandySubscriptionRules
-import dev.sk2andy.materialbrowser.blocking.ContentBlocker
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestSanitizer
 import dev.sk2andy.materialbrowser.blocking.PrivacyPolicyRules
 import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
@@ -131,10 +129,12 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoPictureInPictureRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicyRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoSessionStateRestoreDecision
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoSessionStateSnapshotRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoToppingHostState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoToppingInteractionDelegate
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsetHost
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsetRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsets
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
@@ -338,6 +338,11 @@ private data class GeckoViewBinding(
     val view: View,
 )
 
+private data class NativeSafeAreaFallbackReload(
+    val navigationGeneration: Int,
+    val url: String?,
+)
+
 private data class GeckoLinkPeekBinding(
     val sourceTabId: String,
     val contentRevision: Long,
@@ -490,7 +495,7 @@ class BrowserController(
         private set
     var pendingDownloadChoice by mutableStateOf<PendingDownloadChoice?>(null)
         private set
-    var isWebContentEdgeToEdgeEnabled by mutableStateOf(false)
+    var isWebContentEdgeToEdgeEnabled by mutableStateOf(true)
         private set
     private var isScrollAwareTopInsetEnabled = true
     var isDefaultBrowser by mutableStateOf(false)
@@ -599,9 +604,6 @@ class BrowserController(
     }
 
     @VisibleForTesting
-    fun isBundledBlockingReadyForTesting(): Boolean = blockingStartGate.isReady
-
-    @VisibleForTesting
     val pendingPopupCountForTesting: Int
         get() = pendingPopupNavigations.size
 
@@ -653,6 +655,10 @@ class BrowserController(
 
     private val geckoEngineSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
     private val geckoViewBindings = mutableMapOf<FrameLayout, GeckoViewBinding>()
+    private val geckoViewMutationHosts = mutableSetOf<FrameLayout>()
+    private val geckoViewSessionsBeingReleased = mutableSetOf<AndroidBrowserEngineSessionPort>()
+    private val pendingGeckoViewAttachRetries = mutableMapOf<FrameLayout, Any>()
+    private var isGeckoViewBindingMutationInProgress = false
     private val geckoEngineSessionFactory by lazy(LazyThreadSafetyMode.NONE) {
         GeckoBrowserEngineSessionFactory(activity.applicationContext)
     }
@@ -661,6 +667,7 @@ class BrowserController(
     private var residentSessionTrimScheduled = false
     private var fullscreenVideoSourceRevision = 0
     private var geckoMediaPresentation: GeckoMediaPresentation? = null
+    private var fullscreenVideoInsideSafeDrawingHost = false
     private var pictureInPictureTransitionPending = false
     private var pictureInPictureTransitionGeneration = 0
     private var pictureInPicturePlaybackRetryGeneration = 0
@@ -673,8 +680,9 @@ class BrowserController(
     private var nextGeckoLinkPeekId = 0L
     private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
     private var nextExternalLinkPreviewSessionId = 0L
-    private val edgeToEdgePages = mutableMapOf<String, Boolean>()
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private val nativeSafeAreaFallbackTabs = mutableSetOf<String>()
+    private val nativeSafeAreaFallbackReloads = mutableMapOf<String, NativeSafeAreaFallbackReload>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
     private val externalNavigationGrants = mutableMapOf<String, ExternalNavigationGrant>()
     private val pendingInitialExternalNavigationGrants =
@@ -822,10 +830,6 @@ class BrowserController(
     private val userScriptRepository = UserScriptRepository.get(activity)
     private val userScriptCommandsByTab = mutableStateMapOf<String, List<UserScriptMenuCommand>>()
     private val toppingCatalogRepository = ToppingCatalogRepository.get(activity)
-    private val contentBlocker = ContentBlocker(activity)
-    private val blockingStartGate = BlockingStartGate<Unit>()
-    private var isBundledBlockingPrepared = false
-    private val suppressedInitialBlankTabIds = mutableSetOf<String>()
     private val bundledSitePrivacyDefaults = BundledSitePrivacyDefaults.load(activity)
     private val downloadManager = BrowserDownloadManager(activity)
     private val externalDownloadManager = ExternalDownloadManager(activity)
@@ -1735,6 +1739,11 @@ class BrowserController(
         isVideoAutoplayBlocked =
             isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
         appearanceSettings = store.loadAppearanceSettings()
+        if (usesGeckoEngine) {
+            geckoEngineSessionFactory.setWebContentFontSizeFactor(
+                appearanceSettings.webContentFontSizePercent / 100f,
+            )
+        }
         downloadSettings = store.loadDownloadSettings()
         refreshExternalDownloadManagers()
         store.clearLegacyWebContentEdgeToEdgePreference()
@@ -1866,22 +1875,6 @@ class BrowserController(
         restorePersistedPreviews()
         restorePersistedFavicons()
         restorePersistedCandyTrails()
-        contentBlocker.onBundledBlockingReady {
-            mainHandler.post {
-                if (destroyed) return@post
-                isBundledBlockingPrepared = true
-                completeBlockingStartupIfReady()
-            }
-        }
-        mainHandler.post {
-            contentBlocker.prepareConsentScript()
-            contentBlocker.prepareCosmeticRules()
-            contentBlocker.onCosmeticRulesReady {
-                mainHandler.post {
-
-                }
-            }
-        }
         SnoozeRuntimeRegistry.register(snoozeRestoreCallback)
         snoozeScheduler.schedule(snoozedTabs, nowMillis)
         syncObservation = syncRepository.observe { state ->
@@ -1889,11 +1882,6 @@ class BrowserController(
                 if (!destroyed) applySyncRepositoryState(state)
             }
         }
-    }
-
-    private fun completeBlockingStartupIfReady() {
-        if (!isBundledBlockingPrepared || blockingStartGate.isReady) return
-        blockingStartGate.markReady()
     }
 
     fun attachSelectedBrowserEngineView(
@@ -1908,6 +1896,50 @@ class BrowserController(
     }
 
     private fun attachSelectedGeckoView(
+        container: FrameLayout,
+        onContentPresented: ((String) -> Unit)?,
+    ): View? {
+        val selectedSessionIsBeingReleased =
+            geckoEngineSessions[selectedTabId] in geckoViewSessionsBeingReleased
+        if (isGeckoViewBindingMutationInProgress || selectedSessionIsBeingReleased) {
+            if (
+                !isGeckoViewBindingMutationInProgress ||
+                container !in geckoViewMutationHosts
+            ) {
+                scheduleGeckoViewAttachRetry(container, onContentPresented)
+            }
+            val binding = geckoViewBindings[container]
+            return binding?.view?.takeIf { view ->
+                binding.tabId == selectedTabId && view.parent === container
+            }
+        }
+        isGeckoViewBindingMutationInProgress = true
+        geckoViewMutationHosts += container
+        return try {
+            attachSelectedGeckoViewOnce(container, onContentPresented)
+        } finally {
+            geckoViewMutationHosts.clear()
+            isGeckoViewBindingMutationInProgress = false
+        }
+    }
+
+    private fun scheduleGeckoViewAttachRetry(
+        container: FrameLayout,
+        onContentPresented: ((String) -> Unit)?,
+    ) {
+        if (pendingGeckoViewAttachRetries.containsKey(container)) return
+        val retryToken = Any()
+        pendingGeckoViewAttachRetries[container] = retryToken
+        container.post {
+            if (pendingGeckoViewAttachRetries[container] !== retryToken) return@post
+            pendingGeckoViewAttachRetries.remove(container)
+            if (!destroyed && container.isAttachedToWindow) {
+                attachSelectedGeckoView(container, onContentPresented)
+            }
+        }
+    }
+
+    private fun attachSelectedGeckoViewOnce(
         container: FrameLayout,
         onContentPresented: ((String) -> Unit)?,
     ): View? {
@@ -1940,19 +1972,13 @@ class BrowserController(
         }
         if (current?.tabId == selectedTabId && current.view.parent == null) {
             container.removeAllViews()
-            container.addView(
-                current.view,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                ),
-            )
+            attachGeckoViewBinding(container, current)
             dispatchCurrentWindowInsets(current.view, current.tabId)
             awaitContent(current)
             return current.view
         }
         current?.let { binding ->
-            binding.session.releaseView(binding.view)
+            releaseGeckoView(binding.session, binding.view)
             geckoViewBindings.remove(container)
         }
         container.removeAllViews()
@@ -1967,8 +1993,43 @@ class BrowserController(
         if (transferable != null) {
             val sourceContainer = transferable.key
             val binding = transferable.value
+            geckoViewMutationHosts += sourceContainer
             (binding.view.parent as? ViewGroup)?.removeView(binding.view)
             geckoViewBindings.remove(sourceContainer)
+            attachGeckoViewBinding(container, binding)
+            dispatchCurrentWindowInsets(binding.view, binding.tabId)
+            awaitContent(binding)
+            return binding.view
+        }
+        val mediaPresentationOwnsRenderer = geckoMediaPresentation?.let { presentation ->
+            presentation.tabId == tabId &&
+                presentation.session === engineSession &&
+                geckoViewBindings.values.any { binding ->
+                    binding.tabId == tabId &&
+                        binding.session === engineSession &&
+                        binding.view === presentation.view
+                }
+        } == true
+        if (mediaPresentationOwnsRenderer) return null
+        val view = engineSession.createView(container.context)
+        val binding = GeckoViewBinding(
+            tabId = tabId,
+            session = engineSession,
+            view = view,
+        )
+        attachGeckoViewBinding(container, binding)
+        dispatchCurrentWindowInsets(view, tabId)
+        awaitContent(binding)
+        return view
+    }
+
+    /** Registers ownership before addView can synchronously re-enter Compose's AndroidView update. */
+    private fun attachGeckoViewBinding(
+        container: FrameLayout,
+        binding: GeckoViewBinding,
+    ) {
+        geckoViewBindings[container] = binding
+        try {
             container.addView(
                 binding.view,
                 FrameLayout.LayoutParams(
@@ -1976,28 +2037,25 @@ class BrowserController(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                 ),
             )
-            geckoViewBindings[container] = binding
-            dispatchCurrentWindowInsets(binding.view, binding.tabId)
-            awaitContent(binding)
-            return binding.view
+        } catch (failure: RuntimeException) {
+            if (geckoViewBindings[container] === binding) {
+                geckoViewBindings.remove(container)
+                releaseGeckoView(binding.session, binding.view)
+            }
+            throw failure
         }
-        val view = engineSession.createView(container.context)
-        container.addView(
-            view,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            ),
-        )
-        val binding = GeckoViewBinding(
-            tabId = tabId,
-            session = engineSession,
-            view = view,
-        )
-        geckoViewBindings[container] = binding
-        dispatchCurrentWindowInsets(view, tabId)
-        awaitContent(binding)
-        return view
+    }
+
+    private fun releaseGeckoView(
+        session: AndroidBrowserEngineSessionPort,
+        view: View,
+    ) {
+        geckoViewSessionsBeingReleased += session
+        try {
+            session.releaseView(view)
+        } finally {
+            geckoViewSessionsBeingReleased -= session
+        }
     }
 
     fun onWindowInsetsChanged(insets: WindowInsetsCompat) {
@@ -2013,6 +2071,12 @@ class BrowserController(
         // Compose owns the root inset listener. AndroidView children do not receive that
         // callback, so forward every change to the active engine views.
         dispatchWindowInsetsToAttachedEngineViews(insets)
+        if (
+            previousInsets?.getInsets(SAFE_AREA_INSET_TYPES)?.top !=
+            insets.getInsets(SAFE_AREA_INSET_TYPES).top
+        ) {
+            refreshGeckoContentTopInsetPolicies()
+        }
     }
 
     fun setBrowserChromeOwnsIme(ownsIme: Boolean) {
@@ -2023,19 +2087,50 @@ class BrowserController(
     }
 
     private fun dispatchWindowInsetsToAttachedEngineViews(insets: WindowInsetsCompat) {
-
         geckoViewBindings.values.forEach { binding ->
             if (binding.view.isAttachedToWindow) {
                 applyGeckoWindowInsets(binding.view, binding.tabId, insets)
             }
         }
+        geckoLinkPeekBindings.values.forEach { binding ->
+            if (binding.view.isAttachedToWindow) {
+                applyGeckoWindowInsets(
+                    view = binding.view,
+                    tabId = null,
+                    insets = insets,
+                    isInsideSafeDrawingHost = true,
+                )
+            }
+        }
+        externalLinkPreviewRuntime?.binding?.view
+            ?.takeIf(View::isAttachedToWindow)
+            ?.let { view -> applyGeckoWindowInsets(view, tabId = null, insets) }
     }
 
     fun detachBrowserEngineView(container: FrameLayout) {
-        geckoViewBindings.remove(container)?.let { binding ->
-            binding.session.releaseView(binding.view)
+        pendingGeckoViewAttachRetries.remove(container)
+        if (isGeckoViewBindingMutationInProgress) {
+            if (container !in geckoViewMutationHosts) {
+                mainHandler.post { if (!destroyed) detachBrowserEngineView(container) }
+            }
+            return
         }
-        container.removeAllViews()
+        isGeckoViewBindingMutationInProgress = true
+        geckoViewMutationHosts += container
+        try {
+            val binding = geckoViewBindings[container]
+            if (binding?.view === geckoMediaPresentation?.view) {
+                container.removeAllViews()
+                return
+            }
+            geckoViewBindings.remove(container)?.let { detached ->
+                releaseGeckoView(detached.session, detached.view)
+            }
+            container.removeAllViews()
+        } finally {
+            geckoViewMutationHosts.clear()
+            isGeckoViewBindingMutationInProgress = false
+        }
     }
 
     internal fun fullscreenVideoPlacement(
@@ -2047,7 +2142,10 @@ class BrowserController(
         videoOnlyPresentation = videoOnlyPresentation,
     )
 
-    internal fun attachFullscreenVideoView(container: FrameLayout) {
+    internal fun attachFullscreenVideoView(
+        container: FrameLayout,
+        isInsideSafeDrawingHost: Boolean = false,
+    ) {
         val presentation = geckoMediaPresentation ?: return
         if (
             geckoEngineSessions[presentation.tabId] !== presentation.session ||
@@ -2060,8 +2158,16 @@ class BrowserController(
             clearGeckoMediaPresentation()
             return
         }
+        fullscreenVideoInsideSafeDrawingHost = isInsideSafeDrawingHost
         val videoView = presentation.view
-        if (videoView.parent === container && container.childCount == 1) return
+        if (videoView.parent === container && container.childCount == 1) {
+            dispatchCurrentWindowInsets(
+                view = videoView,
+                tabId = presentation.tabId,
+                isInsideSafeDrawingHost = isInsideSafeDrawingHost,
+            )
+            return
+        }
         (videoView.parent as? ViewGroup)?.removeView(videoView)
         container.removeAllViews()
         container.addView(
@@ -2070,6 +2176,11 @@ class BrowserController(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
+        )
+        dispatchCurrentWindowInsets(
+            view = videoView,
+            tabId = presentation.tabId,
+            isInsideSafeDrawingHost = isInsideSafeDrawingHost,
         )
     }
 
@@ -2081,6 +2192,7 @@ class BrowserController(
         if (presentationIsPrivate() != false) return
         geckoMediaPresentation?.let { presentation ->
             presentation.minimizedByUser = true
+            fullscreenVideoInsideSafeDrawingHost = true
         }
         publishFullscreenVideoState()
     }
@@ -2089,6 +2201,7 @@ class BrowserController(
         val tabId = presentationTabId() ?: return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return clearGeckoMediaPresentation()
         geckoMediaPresentation?.minimizedByUser = false
+        fullscreenVideoInsideSafeDrawingHost = false
         if (tab.profileId != activeProfileId && !selectProfile(tab.profileId)) return
         selectTab(tab.id)
         publishFullscreenVideoState()
@@ -2121,6 +2234,7 @@ class BrowserController(
         } ?: return
         val current = geckoMediaPresentation
         if (current == null) {
+            fullscreenVideoInsideSafeDrawingHost = false
             geckoMediaPresentation = GeckoMediaPresentation(
                 tabId = tab.id,
                 session = session,
@@ -2156,6 +2270,7 @@ class BrowserController(
         if (pictureInPictureCompositorSession === presentation.session) {
             notifyGeckoPictureInPictureModeChanged(false)
         }
+        fullscreenVideoInsideSafeDrawingHost = false
         geckoMediaPresentation = null
         publishFullscreenVideoState()
     }
@@ -2182,20 +2297,31 @@ class BrowserController(
             notifyGeckoPictureInPictureModeChanged(true)
             resumePictureInPicturePlayback()
         } else {
-            notifyGeckoPictureInPictureModeChanged(false)
+            val returnsToPresentation = pictureInPictureOwnerTabId != null
+            notifyGeckoPictureInPictureModeChanged(
+                inPictureInPicture = false,
+                preservePlaybackExpectation = returnsToPresentation,
+            )
             pictureInPictureTransitionGeneration++
             pictureInPicturePlaybackRetryGeneration++
-            pictureInPictureTransitionPending = false
-            pictureInPictureOwnerTabId = null
-            pictureInPicturePlaybackExpected = false
+            pictureInPictureTransitionPending = returnsToPresentation
+            if (!returnsToPresentation) {
+                pictureInPictureOwnerTabId = null
+                pictureInPicturePlaybackExpected = false
+            }
         }
         scheduleResidentSessionTrim()
     }
 
-    private fun notifyGeckoPictureInPictureModeChanged(inPictureInPicture: Boolean) {
+    private fun notifyGeckoPictureInPictureModeChanged(
+        inPictureInPicture: Boolean,
+        preservePlaybackExpectation: Boolean = false,
+    ) {
         if (!inPictureInPicture) {
             pictureInPictureCompositorSession?.let { session ->
-                session.setPictureInPicturePlaybackExpected(false)
+                if (!preservePlaybackExpectation) {
+                    session.setPictureInPicturePlaybackExpected(false)
+                }
                 session.notifyPictureInPictureModeChanged(false)
             }
             pictureInPictureCompositorSession = null
@@ -2253,7 +2379,22 @@ class BrowserController(
     }
 
     fun completePictureInPictureReturn() {
-        if (isInPictureInPicture || pictureInPictureTransitionPending) return
+        if (isInPictureInPicture || !pictureInPictureTransitionPending) return
+        val presentation = currentPictureInPicturePresentation()
+        if (pictureInPicturePlaybackExpected) {
+            presentation?.session?.executeMediaCommand(GeckoMediaCommand.Play)
+        }
+        presentation?.session?.setPictureInPicturePlaybackExpected(false)
+        pictureInPicturePlaybackRetryGeneration++
+        pictureInPictureTransitionPending = false
+        pictureInPictureOwnerTabId = null
+        pictureInPicturePlaybackExpected = false
+        if (
+            presentation != null &&
+            geckoMediaStates[presentation.tabId]?.isFullscreen != true
+        ) {
+            clearGeckoMediaPresentation()
+        }
         scheduleResidentSessionTrim()
     }
 
@@ -2275,7 +2416,7 @@ class BrowserController(
 
     fun releaseLinkPeekPreviewView(view: View) {
         geckoLinkPeekBindings.remove(view)?.let { binding ->
-            binding.session.releaseView(binding.view)
+            releaseGeckoView(binding.session, binding.view)
             binding.session.execute(BrowserEngineCommands.close())
             return
         }
@@ -2353,6 +2494,7 @@ class BrowserController(
             committedUrl = url,
         )
         geckoLinkPeekBindings[view] = binding
+        dispatchCurrentWindowInsets(view, tabId = null, isInsideSafeDrawingHost = true)
         session.execute(BrowserEngineCommands.load(url))
         return view
     }
@@ -2511,6 +2653,7 @@ class BrowserController(
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
+        dispatchCurrentWindowInsets(view, tabId = null)
         startExternalLinkPreviewIfReady(runtime)
         if (isActivityResumed) {
             runtime.geckoBinding.session.setActive(true)
@@ -2712,6 +2855,7 @@ class BrowserController(
             session = session,
         ) ?: return
         val state = externalLinkPreviewState ?: return
+        val wasSafeAreaForced = isExternalLinkPreviewSafeAreaForced(runtime.binding.view)
         val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(event.address)
         if (event.type == BrowserEngineEventType.NavigationStarted &&
             findInPageSession?.geckoSession === session
@@ -2770,6 +2914,9 @@ class BrowserController(
                 isContentReady = false,
                 canGoBack = false,
             )
+        }
+        if (wasSafeAreaForced != isExternalLinkPreviewSafeAreaForced(runtime.binding.view)) {
+            dispatchCurrentWindowInsets(runtime.binding.view, tabId = null)
         }
     }
 
@@ -2952,7 +3099,7 @@ class BrowserController(
         runtime?.geckoBinding?.let { binding ->
             (binding.view.parent as? ViewGroup)?.removeView(binding.view)
             binding.session.setActive(false)
-            binding.session.releaseView(binding.view)
+            releaseGeckoView(binding.session, binding.view)
             binding.session.execute(BrowserEngineCommands.close())
         }
         if (resumeSelectedTab && isActivityResumed) {
@@ -2960,18 +3107,38 @@ class BrowserController(
         }
     }
 
-    private fun dispatchCurrentWindowInsets(view: View, tabId: String) {
+    private fun dispatchCurrentWindowInsets(
+        view: View,
+        tabId: String?,
+        isInsideSafeDrawingHost: Boolean = false,
+    ) {
         // A newly bound GeckoView can attach after the root traversal owned by Compose.
         view.doOnAttach { attachedView ->
-            val insets = ViewCompat.getRootWindowInsets(attachedView) ?: lastWindowInsets
-            if (insets != null) applyGeckoWindowInsets(attachedView, tabId, insets)
+            fun applyCurrentInsets() {
+                val insets = ViewCompat.getRootWindowInsets(attachedView) ?: lastWindowInsets
+                if (insets != null) {
+                    applyGeckoWindowInsets(
+                        view = attachedView,
+                        tabId = tabId,
+                        insets = insets,
+                        isInsideSafeDrawingHost = isInsideSafeDrawingHost,
+                    )
+                }
+            }
+            applyCurrentInsets()
+            if (!isInsideSafeDrawingHost) {
+                attachedView.post {
+                    if (attachedView.isAttachedToWindow) applyCurrentInsets()
+                }
+            }
         }
     }
 
     private fun applyGeckoWindowInsets(
         view: View,
-        tabId: String,
+        tabId: String?,
         insets: WindowInsetsCompat,
+        isInsideSafeDrawingHost: Boolean = false,
     ) {
         val effectiveInsets = if (browserChromeOwnsIme) {
             WindowInsetsCompat.Builder(insets)
@@ -2982,31 +3149,36 @@ class BrowserController(
             insets
         }
         val safeArea = effectiveInsets.getInsets(SAFE_AREA_INSET_TYPES)
+        val isFullscreenContent = tabId != null && fullscreenVideoState?.tabId == tabId
+        val forceNativeSafeArea = if (tabId != null) {
+            isSafeAreaForced(tabId) || tabId in nativeSafeAreaFallbackTabs
+        } else {
+            isExternalLinkPreviewSafeAreaForced(view)
+        }
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea.toGeckoViewInsets(),
-            forceNativeSafeArea = isSafeAreaForced(tabId),
+            forceNativeSafeArea = forceNativeSafeArea,
+            useScrollableTopInset = tabId != null &&
+                isScrollAwareTopInsetEnabled &&
+                !forceNativeSafeArea,
+            isFullscreenContent = isFullscreenContent,
+            isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
+                (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
         )
         (view.layoutParams as? FrameLayout.LayoutParams)?.let { layoutParams ->
-            val margins = layout.margins
             if (
-                layoutParams.leftMargin != margins.left ||
-                layoutParams.topMargin != margins.top ||
-                layoutParams.rightMargin != margins.right ||
-                layoutParams.bottomMargin != margins.bottom
+                layoutParams.leftMargin != 0 ||
+                layoutParams.topMargin != 0 ||
+                layoutParams.rightMargin != 0 ||
+                layoutParams.bottomMargin != 0
             ) {
-                layoutParams.setMargins(
-                    margins.left,
-                    margins.top,
-                    margins.right,
-                    margins.bottom,
-                )
+                layoutParams.setMargins(0, 0, 0, 0)
                 view.layoutParams = layoutParams
             }
         }
-        // Gecko owns display-cutout safe-area propagation. This compositor offset keeps fixed
-        // bottom content above gesture/three-button navigation while its background still paints
-        // behind the transparent system bar.
-        (view as? GeckoView)?.setVerticalClipping(layout.bottomContentClippingPx)
+        // The outer host always fills the edge-to-edge window. Its inner GeckoView either receives
+        // GeckoView 155's current root safe area or native margins for Candy's explicit override.
+        (view as? GeckoViewInsetHost)?.updateInsets(layout, effectiveInsets)
     }
 
     private fun Insets.toGeckoViewInsets(): GeckoViewInsets = GeckoViewInsets(
@@ -3026,8 +3198,7 @@ class BrowserController(
 
     private fun drawsEdgeToEdge(tabId: String): Boolean =
         !isSafeAreaForced(tabId) &&
-            isWebContentEdgeToEdgeEnabled &&
-            edgeToEdgePages[tabId] == true
+            isWebContentEdgeToEdgeEnabled
 
     fun submitAddress(
         input: String,
@@ -3274,7 +3445,6 @@ class BrowserController(
                 )
             }
             setBlankTabIncognito(false)
-            cancelPendingBlockingStart(selectedTabId)
             clearExternalNavigationAuthorization(selectedTabId)
             closeGeckoEngineSession(selectedTabId)
 
@@ -6048,8 +6218,16 @@ class BrowserController(
     fun updateAppearanceSettings(settings: AppearanceSettings) {
         val normalized = settings.normalized()
         if (appearanceSettings == normalized) return
+        val fontSizeChanged =
+            appearanceSettings.webContentFontSizePercent != normalized.webContentFontSizePercent
         appearanceSettings = normalized
         store.saveAppearanceSettings(normalized)
+        if (fontSizeChanged && usesGeckoEngine) {
+            geckoEngineSessionFactory.setWebContentFontSizeFactor(
+                normalized.webContentFontSizePercent / 100f,
+            )
+            geckoEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.reload())
+        }
     }
 
     fun configureSync(settings: SyncConnectionSettings): Boolean =
@@ -6119,6 +6297,7 @@ class BrowserController(
         isWebContentEdgeToEdgeEnabled = enabled
         isScrollAwareTopInsetEnabled = enabled
         lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
+        refreshGeckoContentTopInsetPolicies()
     }
 
     fun prepareTabOverview(onReady: () -> Unit = {}) {
@@ -6149,13 +6328,17 @@ class BrowserController(
     }
 
     fun updateBlockerSettings(settings: BlockerSettings) {
-        val cookieConsentSettingChanged = workerSettings.hideCookieConsent != settings.hideCookieConsent
-        val requestFilterSettingChanged =
-            workerSettings.blockAdsAndTrackers != settings.blockAdsAndTrackers
+        val thirdPartyCookieSettingChanged =
+            workerSettings.blockThirdPartyCookies != settings.blockThirdPartyCookies
+        val cookieConsentSettingChanged =
+            workerSettings.hideCookieConsent != settings.hideCookieConsent
         blockerSettings = settings
         workerSettings = settings
         store.saveBlockerSettings(settings)
-        geckoEngineSessionFactory.setBlockThirdPartyCookies(settings.blockThirdPartyCookies)
+        if (!thirdPartyCookieSettingChanged && !cookieConsentSettingChanged) return
+        if (thirdPartyCookieSettingChanged) {
+            geckoEngineSessionFactory.setBlockThirdPartyCookies(settings.blockThirdPartyCookies)
+        }
         geckoEngineSessions.forEach { (tabId, session) ->
             updateProtectionRequestContext(tabId, pageUrls[tabId])
             geckoPrivacyPolicyFor(tabId)?.let { policy ->
@@ -6619,6 +6802,7 @@ class BrowserController(
     }
 
     fun onPause() {
+        contentActions.dismiss()
         if (externalLinkPreviewState == null) {
             captureVisiblePreview(selectedTabId, acceptAfterDeparture = true)
         }
@@ -6676,7 +6860,7 @@ class BrowserController(
         applyCandyTrailRedactions(store.loadPendingCandyTrailRedactions())
         candyTrailRepository.processPendingRedactions()
         isActivityResumed = true
-        if (!isInPictureInPicture) {
+        if (!isInPictureInPicture && !pictureInPictureTransitionPending) {
             cancelPictureInPictureTransition()
         }
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
@@ -6805,7 +6989,6 @@ class BrowserController(
         federatedLoginOfferKeys.clear()
         captchaCompatibilityOffer = null
         captchaCompatibilityOfferKeys.clear()
-        cancelAllPendingBlockingStarts()
         cancelPendingPermissionAccess()
         pendingGeckoAndroidPermissionRequest?.request?.response?.complete(false)
         pendingGeckoAndroidPermissionRequest = null
@@ -6843,8 +7026,9 @@ class BrowserController(
         residentSessionAccessOrder.clear()
         castMediaCandidate = null
         pendingConsentCssUrls.clear()
-        edgeToEdgePages.clear()
         navigationGenerations.clear()
+        nativeSafeAreaFallbackTabs.clear()
+        nativeSafeAreaFallbackReloads.clear()
         committedRecallPages.clear()
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
@@ -6959,14 +7143,33 @@ class BrowserController(
         tabId: String,
         session: AndroidBrowserEngineSessionPort,
     ) {
+        browserChromeScrollStates.putIfAbsent(
+            tabId,
+            BrowserChromeScrollState(
+                previousScrollYPx = session.scrollMetrics()?.offsetPx?.coerceAtLeast(0) ?: 0,
+            ),
+        )
+        val rateDispatcher = BrowserEngineScrollRateDispatcher(
+            schedule = { delayMillis, dispatch ->
+                mainHandler.postDelayed(dispatch, delayMillis)
+            },
+            nowMillis = SystemClock::uptimeMillis,
+        ) { event ->
+            val eventGeneration = event.navigationGeneration
+            onBrowserEngineScroll(
+                tabId = tabId,
+                rendererIsCurrent = geckoEngineSessions[tabId] === session &&
+                    eventGeneration != null &&
+                    eventGeneration == navigationGenerations.getOrDefault(tabId, 0),
+                event = event,
+            )
+        }
         session.setScrollListener { event ->
-            mainHandler.post {
-                onBrowserEngineScroll(
-                    tabId = tabId,
-                    rendererIsCurrent = geckoEngineSessions[tabId] === session,
-                    event = event,
-                )
-            }
+            rateDispatcher.onScrollChanged(
+                event.copy(
+                    navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
+                ),
+            )
         }
     }
 
@@ -7080,9 +7283,6 @@ class BrowserController(
         val openerUrl = pageUrls[openerTabId] ?: opener.url
         val sitePaused = isSiteProtectionPaused(openerTabId, openerUrl)
         if (isAlwaysBlockPopupsEnabled(opener, openerUrl)) return false
-        if (workerSettings.blockAdsAndTrackers && !sitePaused &&
-            contentBlocker.shouldBlockPopupWithoutTarget(openerUrl)
-        ) return false
         val popupTabId = createBackgroundTab(
             initialUrl = targetUrl,
             openerTabId = openerTabId,
@@ -7108,22 +7308,6 @@ class BrowserController(
             hadUserGesture = true,
         )
         pendingPopupNavigations[popupTabId] = pending
-        if (workerSettings.blockAdsAndTrackers && !sitePaused) {
-            val popunder = PendingPopunderNavigation(
-                openerTabId = openerTabId,
-                popupTabId = popupTabId,
-                originalOpenerUrl = openerUrl,
-                createdAtMillis = SystemClock.elapsedRealtime(),
-                sitePaused = false,
-            )
-            pendingPopunderNavigations[openerTabId] = popunder
-            mainHandler.postDelayed({
-                if (pendingPopunderNavigations[openerTabId] === popunder) {
-                    pendingPopunderNavigations.remove(openerTabId)
-                    scheduleResidentSessionTrim()
-                }
-            }, PopunderNavigationRules.WINDOW_MILLIS)
-        }
         geckoEngineSessionFor(popupTabId)
         mainHandler.postDelayed({
             if (pendingPopupNavigations[popupTabId] === pending) {
@@ -7424,6 +7608,8 @@ class BrowserController(
     ) {
         if (
             destroyed ||
+            !isActivityStarted ||
+            !isActivityResumed ||
             selectedTabId != tabId ||
             geckoEngineSessions[tabId] !== session ||
             navigationGenerations[tabId] != navigationGeneration
@@ -7530,6 +7716,7 @@ class BrowserController(
         if (isPrivate) clearGeckoMediaPresentation()
         else {
             presentation.minimizedByUser = true
+            fullscreenVideoInsideSafeDrawingHost = true
             publishFullscreenVideoState()
         }
     }
@@ -7554,36 +7741,80 @@ class BrowserController(
             ?: protectionRequestContextFor(tab, pageUrl).also { created ->
                 protectionRequestContexts[tabId] = created
             }
-        return geckoPrivacyPolicyFor(tab = tab, pageUrl = pageUrl, context = context)
+        return geckoPrivacyPolicyFor(
+            tab = tab,
+            pageUrl = pageUrl,
+            context = context,
+            topInsetPx = geckoContentTopInsetPx(tabId),
+            navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
+        )
     }
 
     private fun geckoPrivacyPolicyFor(
         tab: BrowserTab,
         pageUrl: String,
         context: ProtectionRequestContext,
+        topInsetPx: Int = 0,
+        navigationGeneration: Int = 0,
     ): GeckoPrivacyPolicy {
         val siteProtectionPaused = isSiteProtectionPaused(tab.id, context, pageUrl)
         val federatedLoginCompatibilityEnabled =
             isFederatedLoginCompatibilityEnabled(tab, pageUrl)
         val captchaCompatibilityEnabled = isCaptchaCompatibilityEnabled(tab, pageUrl)
-        return GeckoPrivacyPolicy(
+        return GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
             pageHost = PrivacyRequestSanitizer.webHost(pageUrl),
-            blockAdsAndTrackers = workerSettings.blockAdsAndTrackers,
-            hideCookieConsent = workerSettings.hideCookieConsent,
-            cookieBannerRemovalDisabled = context.cookieBannerRemovalDisabled,
             pausedHosts = siteExceptionHostsForTab(tab.id),
-            candyRules = matcherFor(tab.isIncognito).rules.filter { rule ->
-                rule.profileId == null || rule.profileId == tab.profileId
-            },
+            hideCookieConsent = workerSettings.hideCookieConsent && !siteProtectionPaused,
+            cookieBannerRemovalDisabled = context.cookieBannerRemovalDisabled,
             blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
             allowThirdPartyCookiesForSite =
                 siteProtectionPaused ||
                     federatedLoginCompatibilityEnabled ||
                     captchaCompatibilityEnabled,
+            topInsetPx = topInsetPx,
+            navigationGeneration = navigationGeneration,
         )
     }
 
+    private fun geckoContentTopInsetPx(tabId: String): Int {
+        if (
+            !isScrollAwareTopInsetEnabled ||
+            isSafeAreaForced(tabId) ||
+            tabId in nativeSafeAreaFallbackTabs ||
+            fullscreenVideoState?.tabId == tabId
+        ) {
+            return 0
+        }
+        return lastWindowInsets
+            ?.getInsets(SAFE_AREA_INSET_TYPES)
+            ?.top
+            ?.coerceAtLeast(0)
+            ?: 0
+    }
+
+    private fun refreshGeckoContentTopInsetPolicies() {
+        geckoEngineSessions.forEach { (tabId, session) ->
+            geckoPrivacyPolicyFor(tabId)?.let { policy ->
+                session.updatePrivacyPolicy(policy)
+            }
+        }
+    }
+
     private fun onGeckoPrivacyEvent(tabId: String, event: GeckoPrivacyEvent) {
+        event.safeAreaFallbackNavigationGeneration?.let { navigationGeneration ->
+            if (
+                navigationGenerations.getOrDefault(tabId, 0) == navigationGeneration &&
+                nativeSafeAreaFallbackTabs.add(tabId)
+            ) {
+                lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
+                nativeSafeAreaFallbackReloads[tabId] = NativeSafeAreaFallbackReload(
+                    navigationGeneration = navigationGeneration + 1,
+                    url = pageUrls[tabId],
+                )
+                geckoEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
+            }
+            return
+        }
         val context = protectionRequestContexts[tabId] ?: return
         if (event.isCompatibilityObservation) {
             val observedPageHost = event.pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: return
@@ -7630,11 +7861,18 @@ class BrowserController(
         }
         when (event.type) {
             BrowserEngineEventType.NavigationStarted -> {
+                val nextNavigationGeneration =
+                    navigationGenerations.getOrDefault(event.tabId, 0) + 1
+                val pendingFallbackReload = nativeSafeAreaFallbackReloads.remove(event.tabId)
+                val preservesNativeSafeAreaFallback = pendingFallbackReload != null &&
+                    pendingFallbackReload.navigationGeneration == nextNavigationGeneration &&
+                    pendingFallbackReload.url == event.address
+                val hadNativeSafeAreaFallback = !preservesNativeSafeAreaFallback &&
+                    nativeSafeAreaFallbackTabs.remove(event.tabId)
                 clearPermissionActivity(event.tabId)
                 if (contentActions.sourceTabId == event.tabId) contentActions.dismiss()
                 resetBrowserChromeScroll(event.tabId)
-                navigationGenerations[event.tabId] =
-                    navigationGenerations.getOrDefault(event.tabId, 0) + 1
+                navigationGenerations[event.tabId] = nextNavigationGeneration
                 event.address?.let { address -> pageUrls[event.tabId] = address }
                 refreshDomainMuteForTab(event.tabId)
                 updateProtectionRequestContext(event.tabId, event.address)
@@ -7643,6 +7881,9 @@ class BrowserController(
                         policy = policy,
                         reloadOnCookiePermissionChange = true,
                     )
+                }
+                if (hadNativeSafeAreaFallback) {
+                    lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
                 }
                 updateTab(event.tabId) { tab ->
                     tab.copy(
@@ -7731,11 +7972,12 @@ class BrowserController(
                     clearGeckoMediaPresentation()
                 }
                 geckoMediaStates.remove(event.tabId)
-                geckoViewBindings.entries.removeAll { (_, binding) ->
-                    if (binding.tabId != event.tabId) return@removeAll false
-                    binding.session.releaseView(binding.view)
+                val crashedBindings = geckoViewBindings.entries
+                    .filter { (_, binding) -> binding.tabId == event.tabId }
+                crashedBindings.forEach { (host, _) -> geckoViewBindings.remove(host) }
+                crashedBindings.forEach { (_, binding) ->
+                    releaseGeckoView(binding.session, binding.view)
                     (binding.view.parent as? ViewGroup)?.removeView(binding.view)
-                    true
                 }
                 geckoEngineSessions.remove(event.tabId)
                 updateTab(event.tabId) { tab ->
@@ -7828,11 +8070,12 @@ class BrowserController(
         cancelPendingGeckoPreviewCapture(tabId)
         if (geckoMediaPresentation?.tabId == tabId) clearGeckoMediaPresentation()
         geckoMediaStates.remove(tabId)
-        geckoViewBindings.entries.removeAll { (_, binding) ->
-            if (binding.tabId != tabId) return@removeAll false
-            binding.session.releaseView(binding.view)
+        val closingBindings = geckoViewBindings.entries
+            .filter { (_, binding) -> binding.tabId == tabId }
+        closingBindings.forEach { (host, _) -> geckoViewBindings.remove(host) }
+        closingBindings.forEach { (_, binding) ->
+            releaseGeckoView(binding.session, binding.view)
             (binding.view.parent as? ViewGroup)?.removeView(binding.view)
-            true
         }
         geckoEngineSessions.remove(tabId)?.let { session ->
             persistGeckoSessionState(tabId, session)
@@ -7975,9 +8218,6 @@ class BrowserController(
             submitAddress(transition.targetUrl)
         }
     }
-
-    private fun isPendingInitialBlank(tabId: String, url: String): Boolean =
-        url == BLANK_URL && tabId in suppressedInitialBlankTabIds
 
     private fun openUserScriptTab(request: UserScriptOpenTabRequest) {
         val sourceTab = tabs.firstOrNull { tab -> tab.id == request.tabId } ?: return
@@ -8395,27 +8635,8 @@ class BrowserController(
         val decision = PopupNavigationRules.decide(
             pending = pending,
             targetUrl = targetUrl,
-            blockerEnabled = workerSettings.blockAdsAndTrackers,
-            filterDecision = { popupUrl, openerUrl ->
-                if (isFederatedLoginCompatibilityEnabled(pending.openerTabId, openerUrl) &&
-                    FederatedLoginRules.isProviderNavigation(popupUrl)
-                ) return@decide PopupFilterDecision.Allow
-                val candyDecision = matcherFor(pending.isIncognito).decideHosts(
-                    requestHost = CandyHostCanonicalizer.webHost(popupUrl),
-                    pageHost = CandyHostCanonicalizer.webHost(openerUrl),
-                    profileId = pending.profileId,
-                    isForMainFrame = false,
-                )
-                when (candyDecision?.action) {
-                    CandyDecisionAction.Block -> PopupFilterDecision.Block
-                    CandyDecisionAction.Allow -> PopupFilterDecision.Allow
-                    null -> when (contentBlocker.decidePopup(popupUrl, openerUrl)) {
-                        AdvancedFilterAction.Block -> PopupFilterDecision.Block
-                        AdvancedFilterAction.Allow -> PopupFilterDecision.Allow
-                        null -> PopupFilterDecision.NoMatch
-                    }
-                }
-            },
+            blockerEnabled = false,
+            filterDecision = { _, _ -> PopupFilterDecision.NoMatch },
         )
         if (decision == PopupNavigationDecision.KeepPending) return decision
         if (decision != PopupNavigationDecision.AllowSameSite) {
@@ -8522,14 +8743,8 @@ class BrowserController(
         val decision = PopunderNavigationRules.decide(
             pending = candidate,
             nowMillis = SystemClock.elapsedRealtime(),
-            blockerEnabled = workerSettings.blockAdsAndTrackers,
-            filterDecision = { openerTargetUrl, childUrl ->
-                when (contentBlocker.decidePopunder(openerTargetUrl, childUrl)) {
-                    AdvancedFilterAction.Block -> PopupFilterDecision.Block
-                    AdvancedFilterAction.Allow -> PopupFilterDecision.Allow
-                    null -> PopupFilterDecision.NoMatch
-                }
-            },
+            blockerEnabled = false,
+            filterDecision = { _, _ -> PopupFilterDecision.NoMatch },
         )
         if (decision == PopunderNavigationDecision.KeepPending) {
             pendingPopunderNavigations[candidate.openerTabId] = candidate
@@ -9614,12 +9829,6 @@ class BrowserController(
 
     private fun onFilterRulesChanged(persist: Boolean) {
         rebuildCandyMatcher()
-        geckoEngineSessions.forEach { (tabId, session) ->
-            geckoPrivacyPolicyFor(tabId)?.let { policy ->
-                session.updatePrivacyPolicy(policy)
-            }
-        }
-
         if (persist) savePersistentFilterRules()
     }
 
@@ -9755,8 +9964,9 @@ class BrowserController(
         clearPermissionActivity(tabId)
         clearPrivacyDataForTab(tabId)
         residentSessionAccessOrder.remove(tabId)
-        edgeToEdgePages.remove(tabId)
         navigationGenerations.remove(tabId)
+        nativeSafeAreaFallbackTabs.remove(tabId)
+        nativeSafeAreaFallbackReloads.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
         pageUrls.remove(tabId)
         extensionTabMuteOverrides.remove(tabId)
@@ -9774,7 +9984,6 @@ class BrowserController(
         if (blockedPopupOffer?.popupTabId == tabId) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
         if (captchaCompatibilityOffer?.tabId == tabId) captchaCompatibilityOffer = null
-        cancelPendingBlockingStart(tabId)
         pendingCandyTrailRestoreIds.remove(tabId)
         suppressedCandyTrailTabIds.remove(tabId)
         candyTrails.remove(tabId)
@@ -9792,8 +10001,9 @@ class BrowserController(
 
         clearPrivacyDataForTab(tab.id)
         residentSessionAccessOrder.remove(tab.id)
-        edgeToEdgePages.remove(tab.id)
         navigationGenerations.remove(tab.id)
+        nativeSafeAreaFallbackTabs.remove(tab.id)
+        nativeSafeAreaFallbackReloads.remove(tab.id)
         pageUrls.remove(tab.id)
         bottomBarCompactStates.remove(tab.id)
         browserChromeScrollStates.remove(tab.id)
@@ -9809,7 +10019,6 @@ class BrowserController(
         if (blockedPopupOffer?.popupTabId == tab.id) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tab.id) federatedLoginOffer = null
         if (captchaCompatibilityOffer?.tabId == tab.id) captchaCompatibilityOffer = null
-        cancelPendingBlockingStart(tab.id)
         pendingCandyTrailRestoreIds.remove(tab.id)
         suppressedCandyTrailTabIds.remove(tab.id)
         previews.remove(tab.id)
@@ -10183,21 +10392,23 @@ class BrowserController(
         return isSafeAreaForced(tab, host)
     }
 
+    private fun isExternalLinkPreviewSafeAreaForced(view: View): Boolean {
+        val runtime = externalLinkPreviewRuntime
+            ?.takeIf { it.binding.view === view }
+            ?: return false
+        val pageUrl = externalLinkPreviewState
+            ?.takeIf { it.sessionId == runtime.sessionId }
+            ?.currentUrl
+            ?: runtime.policyTab.url
+        val host = PrivacyRequestSanitizer.webHost(pageUrl) ?: return false
+        return isSafeAreaForced(runtime.policyTab, host)
+    }
+
     private fun isCookieBannerRemovalEnabled(tabId: String, pageUrl: String?): Boolean {
         if (!workerSettings.hideCookieConsent || isSiteProtectionPaused(tabId, pageUrl)) return false
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         val host = PrivacyRequestSanitizer.webHost(pageUrl ?: tab.url) ?: return false
         return !isCookieBannerRemovalDisabled(tab, host)
-    }
-
-    private fun cancelPendingBlockingStart(tabId: String) {
-        blockingStartGate.cancel(tabId)
-        suppressedInitialBlankTabIds.remove(tabId)
-    }
-
-    private fun cancelAllPendingBlockingStarts() {
-        blockingStartGate.cancelAll()
-        suppressedInitialBlankTabIds.clear()
     }
 
     private fun reloadTabWithProtection(tabId: String) {

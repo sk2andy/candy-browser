@@ -307,7 +307,7 @@ private fun GeckoExtensionPermissionDialog(
     var allowPrivate by remember(request.extensionId) { mutableStateOf(false) }
     val noAdditionalPermissions = stringResource(R.string.gecko_extension_no_permissions)
     val requestedAccess = remember(request, noAdditionalPermissions) {
-        (request.permissions + request.origins)
+        (request.permissions + request.origins + request.dataCollectionPermissions)
             .distinct()
             .joinToString("\n") { value -> "• $value" }
             .ifBlank { noAdditionalPermissions }

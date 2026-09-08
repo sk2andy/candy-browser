@@ -10,6 +10,31 @@ import org.junit.Test
 
 class CandyPrivacyHostContractTest {
     @Test
+    fun `extension owned ad filtering keeps only Candy cookie defaults`() {
+        val policy = GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
+            pageHost = "news.example",
+            pausedHosts = setOf("paused.example"),
+            hideCookieConsent = true,
+            cookieBannerRemovalDisabled = false,
+            blockThirdPartyCookies = true,
+            allowThirdPartyCookiesForSite = false,
+            topInsetPx = 96,
+            navigationGeneration = 4,
+        )
+
+        assertFalse(policy.blockAdsAndTrackers)
+        assertTrue(policy.hideCookieConsent)
+        assertFalse(policy.cookieBannerRemovalDisabled)
+        assertTrue(policy.candyRules.isEmpty())
+        assertEquals("news.example", policy.pageHost)
+        assertEquals(setOf("paused.example"), policy.pausedHosts)
+        assertTrue(policy.blockThirdPartyCookies)
+        assertFalse(policy.allowThirdPartyCookiesForSite)
+        assertEquals(96, policy.topInsetPx)
+        assertEquals(4, policy.navigationGeneration)
+    }
+
+    @Test
     fun `only exact internal bootstrap navigation is trusted`() {
         val baseUrl = "moz-extension://trusted-origin/"
         val token = "session-token"
@@ -135,6 +160,9 @@ class CandyPrivacyHostContractTest {
         assertTrue(message.getBoolean("blockAds"))
         assertTrue(message.getBoolean("hideConsent"))
         assertFalse(message.getBoolean("cookieBannerRemovalDisabled"))
+        assertEquals(0, message.getInt("topInsetPx"))
+        assertFalse(message.has("viewportCoverAllowed"))
+        assertEquals(0, message.getInt("navigationGeneration"))
         assertEquals(
             listOf(
                 "accounts.google.com",

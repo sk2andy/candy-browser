@@ -47,7 +47,7 @@ internal class GeckoViewPrivacyHostRuntime(
     private var extension: WebExtension? = null
     private var port: WebExtension.Port? = null
     private var extensionRulesReady = false
-    private var privatePermissionReady = false
+    private var hostPermissionsReady = false
     private var initializationComplete = false
     private var failureDescription: String? = null
     private var nextReaderRequestId = 0L
@@ -216,7 +216,7 @@ internal class GeckoViewPrivacyHostRuntime(
         installed.setMessageDelegate(GlobalMessageDelegate(), CandyPrivacyHostContract.NATIVE_APP)
         controller.setAllowedInPrivateBrowsing(installed, true).withHandler(mainHandler).accept(
             {
-                privatePermissionReady = true
+                hostPermissionsReady = true
                 releaseIfReady()
             },
             { error -> fail(error ?: IllegalStateException("Privacy private policy failed")) },
@@ -278,6 +278,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 completeBindingIfReady(binding)
             }
             "events" -> acceptEvents(value)
+            "safe-area-fallback" -> acceptSafeAreaFallback(value)
             "reader-result" -> acceptReaderResult(value)
             "failed" -> fail(IllegalStateException(value.optString("reason", "Privacy host failed")))
         }
@@ -370,13 +371,36 @@ internal class GeckoViewPrivacyHostRuntime(
         }
     }
 
+    private fun acceptSafeAreaFallback(value: JSONObject) {
+        val binding = bindings[value.optString("token")] ?: return
+        if (binding.handshake.publishedRevision != value.optLong("revision", -1)) return
+        val navigationGeneration = value.optInt("navigationGeneration", -1)
+        if (
+            navigationGeneration < 0 ||
+            navigationGeneration != binding.policy.navigationGeneration
+        ) {
+            return
+        }
+        binding.sink.onEvent(
+            GeckoPrivacyEvent(
+                requestUrl = "",
+                pageUrl = binding.policy.pageHost?.let { host -> "https://$host/" },
+                ruleId = null,
+                wasBlocked = false,
+                isBuiltIn = false,
+                isCompatibilityObservation = false,
+                safeAreaFallbackNavigationGeneration = navigationGeneration,
+            ),
+        )
+    }
+
     private fun runWhenReady(binding: Binding, action: () -> Unit) {
         if (bindings[binding.token] !== binding) return
         failureDescription?.let { description ->
             binding.failed?.invoke(description)
             return
         }
-        if (extensionRulesReady && privatePermissionReady) {
+        if (extensionRulesReady && hostPermissionsReady) {
             action()
         } else {
             pendingUntilReady += {
@@ -434,7 +458,7 @@ internal class GeckoViewPrivacyHostRuntime(
     }
 
     private fun releaseIfReady() {
-        if (!extensionRulesReady || !privatePermissionReady || failureDescription != null) return
+        if (!extensionRulesReady || !hostPermissionsReady || failureDescription != null) return
         initializationComplete = true
         mainHandler.removeCallbacks(initializationTimeout)
         val actions = pendingUntilReady.toList()

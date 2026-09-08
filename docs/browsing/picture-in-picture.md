@@ -29,19 +29,27 @@ two seconds of the compositor transition, and keeps the transition alive for fiv
 emulators cannot tear down the renderer prematurely. User-initiated Play/Pause commands remain
 authoritative and cancel pending retries.
 
-Candy normally uses Gecko's texture backend so blur, clipping and tab motion keep working. Candy's
-outer browser-content host keeps the same identity throughout the transition. During Android PiP
-only, that host releases the GeckoSession from its texture-backed inner GeckoView and immediately
-attaches it to a freshly initialized surface-backed GeckoView; on return it creates a fresh
-texture-backed GeckoView the same way. A runtime backend mutation can leave Gecko's new SurfaceView
-without a compositor buffer, so it must not be used for this transition. The outer host,
-GeckoSession and tab identity never change.
+Candy keeps the same surface-backed GeckoView, GeckoSession and outer browser-content host throughout
+fullscreen entry, Android PiP and return. Releasing and reattaching the session during the system
+gesture can make the page leave DOM fullscreen, reflow YouTube chrome into the PiP window and pause
+the media. Gecko's `CompositorController.onPipModeChanged` is the only compositor transition signal;
+do not replace or mutate the GeckoView backend while fullscreen media owns presentation.
+
+The Gecko host reserves Android's mandatory/system gesture insets before dispatching touch to web
+content. A Home or Back gesture therefore cannot reach a page long enough to activate a site's
+long-press behavior, and Gecko context-menu callbacks are accepted only while the original pointer
+remains a focused, stationary, non-PiP long-press candidate. Activity pause also dismisses any
+already-visible content action.
 
 The Home gesture requests PiP synchronously from `onUserLeaveHint`; Android auto-enter remains a
 fallback. This puts Gecko into PiP before the Activity background lifecycle can make a page such as
 YouTube pause its fullscreen media.
 
-GeckoView 140 does not expose element geometry for ordinary inline video through its native media
+On PiP exit, playback intent and owning-session identity remain armed until the Activity has regained
+its full layout. Gecko pauses reported during that bounded return are retried. The return completion
+then clears the PiP expectation without changing a user-requested pause.
+
+GeckoView 155 does not expose element geometry for ordinary inline video through its native media
 session API. Automatic background PiP and the in-app mini-player therefore remain limited to Gecko
 video that has entered fullscreen. Do not infer inline-video eligibility from page-level state.
 
@@ -78,9 +86,8 @@ Preserve these invariants:
   deactivation, crash, close or session replacement.
 - Android PiP requires a current selected regular tab, an active playing fullscreen Gecko video,
   non-zero dimensions and a video track.
-- Keep the same session and outer content-host identity for PiP. A fresh inner GeckoView may be
-  created solely to initialize the required compositor backend; never create another session or
-  select another tab.
+- Keep the same session, outer content host and inner surface-backed GeckoView identity for PiP;
+  never replace the renderer, create another session or select another tab during transition.
 - Keep Gecko media state and presentation ownership memory-only.
 
 ## Lifecycle states
@@ -130,6 +137,7 @@ smoke tests because their player hosts and markup can change independently of Ca
 | PiP window is white | Verify the exact owning Gecko session received `CompositorController.onPipModeChanged(true)`, the PiP SurfaceView owns a non-zero compositor buffer, and the transition timeout did not close the session |
 | Player stays fullscreen after return | Inspect same-session host reattachment and return-layout completion |
 | Notification survives media end | Inspect inactive Gecko media state and BrowserMedia system-session publication |
+| App crashes after rapid Play/Pause | Foreground playback service must promote itself in `onCreate` before validating or stopping a queued start |
 
 Useful device checks, always with the session's explicit emulator serial:
 

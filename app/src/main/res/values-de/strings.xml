@@ -276,7 +276,7 @@
     <string name="download_notification_description">Download</string>
     <string name="settings_title">Einstellungen</string>
     <string name="settings_appearance_title">Darstellung</string>
-    <string name="settings_home_appearance_summary">Farben, Oberflächen und Form</string>
+    <string name="settings_home_appearance_summary">Farben, Website-Schrift, Oberflächen und Form</string>
     <string name="settings_appearance_mode">Erscheinungsbild</string>
     <string name="appearance_mode_system">System</string>
     <string name="appearance_mode_light">Hell</string>
@@ -284,6 +284,7 @@
     <string name="appearance_mode_amoled">AMOLED</string>
     <string name="settings_force_dark_websites">Dunkelmodus auf Websites erzwingen</string>
     <string name="settings_force_dark_websites_summary">Bei dunkler Browserdarstellung werden Websites ohne eigenes dunkles Design automatisch abgedunkelt. Kann zu Darstellungsfehlern führen.</string>
+    <string name="settings_web_content_font_size">Schriftgröße auf Websites</string>
     <string name="settings_color_palette">Farbwelt</string>
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
@@ -395,7 +396,7 @@
     <string name="settings_scroll_bar_subtitle">Erscheint beim Scrollen und blendet sich danach aus. Ziehen, um lange Seiten direkt zu durchlaufen.</string>
     <string name="scroll_bar_content_description">Scrollleiste der Seite</string>
     <string name="settings_video_autoplay_title">Automatische Videowiedergabe verhindern</string>
-    <string name="settings_video_autoplay_subtitle">Videos starten nur, wenn du sie selbst abspielst.</string>
+    <string name="settings_video_autoplay_subtitle">Videos starten nur, wenn du sie selbst abspielst. Das Ausschalten kann CPU-/GPU-Last, Akkuverbrauch und Seitenlast deutlich erhöhen.</string>
     <string name="settings_video_autoplay_unsupported">Erfordert eine neuere Gecko-Engine-Version.</string>
     <string name="settings_default_browser">Standardbrowser</string>
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>

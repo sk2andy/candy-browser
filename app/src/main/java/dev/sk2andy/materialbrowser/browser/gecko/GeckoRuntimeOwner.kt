@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
+import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 
 /** Process-owned browser engine handle without exposing the underlying GeckoRuntime. */
@@ -44,6 +45,15 @@ internal interface GeckoRuntimeHandle {
     @UiThread
     fun setBlockThirdPartyCookies(blocked: Boolean)
 
+    @UiThread
+    fun setWebContentFontSizeFactor(factor: Float)
+
+    @UiThread
+    fun bindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate)
+
+    @UiThread
+    fun unbindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate)
+
     fun clearAllData(onComplete: (Boolean) -> Unit = {}) {
         clearBrowsingData(GeckoBrowsingData.All, onComplete)
     }
@@ -73,6 +83,19 @@ internal object GeckoRuntimeOwner {
 
     fun getOrCreate(context: Context): GeckoRuntimeHandle = getOrCreate {
         GeckoViewRuntimeHandle.create(context.applicationContext)
+    }
+
+    @UiThread
+    fun bindWebAuthnActivityDelegate(
+        context: Context,
+        delegate: GeckoRuntime.ActivityDelegate,
+    ) {
+        getOrCreate(context).bindWebAuthnActivityDelegate(delegate)
+    }
+
+    @UiThread
+    fun unbindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) {
+        runtime?.unbindWebAuthnActivityDelegate(delegate)
     }
 
     @VisibleForTesting

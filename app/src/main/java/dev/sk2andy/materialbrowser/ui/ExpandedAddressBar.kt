@@ -173,6 +173,7 @@ internal fun ExpandedBottomBarContent(
     snoozedTabCount: Int,
     onSnoozedTabs: () -> Unit,
     onHistory: () -> Unit,
+    onOpenFirefoxExtensions: (() -> Unit)?,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     permissionActivityVisible: Boolean,
@@ -543,6 +544,7 @@ internal fun ExpandedBottomBarContent(
                                 onDockAddressBar = onDock,
                                 onParkAddressBarRight = onParkRight,
                                 onHistory = onHistory,
+                                onOpenFirefoxExtensions = onOpenFirefoxExtensions,
                                 onSettings = onSettings,
                             )
                         }

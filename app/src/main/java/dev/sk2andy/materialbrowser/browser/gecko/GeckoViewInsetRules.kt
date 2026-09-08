@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import androidx.core.view.WindowInsetsCompat
+
 internal data class GeckoViewInsets(
     val left: Int,
     val top: Int,
@@ -13,23 +15,63 @@ internal data class GeckoViewInsets(
 
 internal data class GeckoViewInsetLayout(
     val margins: GeckoViewInsets,
-    val bottomContentClippingPx: Int,
+    val rendererSafeAreaOverride: GeckoViewInsets?,
 )
 
-/** Lets Gecko paint edge to edge while preserving an explicit native safe-area escape hatch. */
+/** Assigns every safe-area edge to either Candy's native host or Gecko, never both. */
 internal object GeckoViewInsetRules {
     fun resolve(
         safeArea: GeckoViewInsets,
         forceNativeSafeArea: Boolean,
-    ): GeckoViewInsetLayout = if (forceNativeSafeArea) {
-        GeckoViewInsetLayout(
-            margins = safeArea,
-            bottomContentClippingPx = 0,
-        )
-    } else {
+        isFullscreenContent: Boolean,
+        isInsideSafeDrawingHost: Boolean,
+        useScrollableTopInset: Boolean = false,
+    ): GeckoViewInsetLayout = if (isInsideSafeDrawingHost) {
         GeckoViewInsetLayout(
             margins = GeckoViewInsets.Zero,
-            bottomContentClippingPx = safeArea.bottom.coerceAtLeast(0),
+            rendererSafeAreaOverride = GeckoViewInsets.Zero,
         )
+    } else if (isFullscreenContent) {
+        GeckoViewInsetLayout(
+            margins = GeckoViewInsets.Zero,
+            rendererSafeAreaOverride = null,
+        )
+    } else {
+        val normalizedSafeArea = safeArea.coerceAtLeastZero()
+        if (forceNativeSafeArea) {
+            GeckoViewInsetLayout(
+                margins = normalizedSafeArea,
+                rendererSafeAreaOverride = GeckoViewInsets.Zero,
+            )
+        } else {
+            GeckoViewInsetLayout(
+                margins = GeckoViewInsets(
+                    left = normalizedSafeArea.left,
+                    top = if (useScrollableTopInset) 0 else normalizedSafeArea.top,
+                    right = normalizedSafeArea.right,
+                    bottom = 0,
+                ),
+                rendererSafeAreaOverride = GeckoViewInsets(
+                    left = 0,
+                    top = 0,
+                    right = 0,
+                    bottom = normalizedSafeArea.bottom,
+                ),
+            )
+        }
     }
 }
+
+internal interface GeckoViewInsetHost {
+    fun updateInsets(
+        layout: GeckoViewInsetLayout,
+        windowInsets: WindowInsetsCompat,
+    )
+}
+
+private fun GeckoViewInsets.coerceAtLeastZero(): GeckoViewInsets = GeckoViewInsets(
+    left = left.coerceAtLeast(0),
+    top = top.coerceAtLeast(0),
+    right = right.coerceAtLeast(0),
+    bottom = bottom.coerceAtLeast(0),
+)

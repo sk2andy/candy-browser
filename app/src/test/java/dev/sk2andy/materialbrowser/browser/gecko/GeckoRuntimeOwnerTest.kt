@@ -7,6 +7,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
+import org.mozilla.geckoview.GeckoRuntime
 
 class GeckoRuntimeOwnerTest {
     @Before
@@ -45,10 +46,21 @@ class GeckoRuntimeOwnerTest {
         assertFalse(runtime.thirdPartyCookiesBlocked)
     }
 
+    @Test
+    fun `session factory forwards global website font size factor`() {
+        val runtime = FakeRuntimeHandle()
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+
+        factory.setWebContentFontSizeFactor(1.55f)
+
+        assertEquals(1.55f, runtime.recordedWebContentFontSizeFactor, 0f)
+    }
+
     private class FakeRuntimeHandle : GeckoRuntimeHandle {
         override val extensions = FakeExtensionRuntime()
         override val toppings = FakeToppingHostRuntime()
         var thirdPartyCookiesBlocked = true
+        var recordedWebContentFontSizeFactor = 1f
 
         override fun createSession(
             profileId: String,
@@ -66,6 +78,14 @@ class GeckoRuntimeOwnerTest {
         override fun setBlockThirdPartyCookies(blocked: Boolean) {
             thirdPartyCookiesBlocked = blocked
         }
+
+        override fun setWebContentFontSizeFactor(factor: Float) {
+            recordedWebContentFontSizeFactor = factor
+        }
+
+        override fun bindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) = Unit
+
+        override fun unbindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) = Unit
     }
 
     private class FakeToppingHostRuntime : GeckoToppingHostRuntime {

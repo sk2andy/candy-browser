@@ -3,7 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
-import android.view.TextureView
+import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.graphics.Insets
@@ -53,7 +53,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
     }
 
     @Test
-    fun selectedGeckoViewPaintsThroughSystemBarsAndUsesBlurCompatibleBackend() {
+    fun selectedGeckoViewProtectsFixedHeadersAndUsesDirectSurfaceBackend() {
         ActivityScenario.launch<MainActivity>(
             Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
         ).use { scenario ->
@@ -74,14 +74,52 @@ class GeckoEdgeToEdgeInstrumentedTest {
                         .build(),
                 )
 
-                val margins = view.layoutParams as ViewGroup.MarginLayoutParams
-                assertEquals(0, margins.leftMargin)
-                assertEquals(0, margins.topMargin)
-                assertEquals(0, margins.rightMargin)
-                assertEquals(0, margins.bottomMargin)
+                assertMargins(view, left = 0, top = 0, right = 0, bottom = 0)
+                assertMargins(
+                    view.engineView(),
+                    left = 0,
+                    top = 0,
+                    right = 0,
+                    bottom = 0,
+                )
                 assertTrue(
-                    "GeckoView must use TextureView so Candy blur can sample page pixels",
-                    view.hasTextureView(),
+                    "GeckoView must use SurfaceView to avoid copying every page frame",
+                    view.hasSurfaceView(),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun forcedSafeAreaUsesInnerNativeMarginsWithoutShrinkingOuterHost() {
+        ActivityScenario.launch<MainActivity>(
+            Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
+        ).use { scenario ->
+            awaitViewReady(scenario)
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                val view = requireNotNull(controller.selectedGeckoViewForTesting())
+                assertTrue(controller.setForceSafeArea(controller.selectedTabId, true))
+                controller.onWindowInsetsChanged(
+                    WindowInsetsCompat.Builder()
+                        .setInsets(
+                            WindowInsetsCompat.Type.statusBars(),
+                            Insets.of(0, STATUS_BAR_INSET_PX, 0, 0),
+                        )
+                        .setInsets(
+                            WindowInsetsCompat.Type.navigationBars(),
+                            Insets.of(0, 0, 0, NAVIGATION_BAR_INSET_PX),
+                        )
+                        .build(),
+                )
+
+                assertMargins(view, left = 0, top = 0, right = 0, bottom = 0)
+                assertMargins(
+                    view.engineView(),
+                    left = 0,
+                    top = STATUS_BAR_INSET_PX,
+                    right = 0,
+                    bottom = NAVIGATION_BAR_INSET_PX,
                 )
             }
         }
@@ -99,18 +137,34 @@ class GeckoEdgeToEdgeInstrumentedTest {
                         view.isAttachedToWindow &&
                             view.width > 0 &&
                             view.height > 0 &&
-                            view.hasTextureView()
+                            view.hasSurfaceView()
                     } == true
             }
             if (ready) return
             SystemClock.sleep(POLL_MILLIS)
         }
-        assertTrue("Gecko TextureView did not become ready", false)
+        assertTrue("Gecko SurfaceView did not become ready", false)
     }
 
-    private fun View.hasTextureView(): Boolean =
-        this is TextureView ||
-            (this is ViewGroup && (0 until childCount).any { getChildAt(it).hasTextureView() })
+    private fun View.hasSurfaceView(): Boolean =
+        this is SurfaceView ||
+            (this is ViewGroup && (0 until childCount).any { getChildAt(it).hasSurfaceView() })
+
+    private fun View.engineView(): View = (this as ViewGroup).getChildAt(0)
+
+    private fun assertMargins(
+        view: View,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+    ) {
+        val margins = view.layoutParams as ViewGroup.MarginLayoutParams
+        assertEquals(left, margins.leftMargin)
+        assertEquals(top, margins.topMargin)
+        assertEquals(right, margins.rightMargin)
+        assertEquals(bottom, margins.bottomMargin)
+    }
 
     private companion object {
         const val TEST_ACTIVITY_ACTION = "dev.sk2andy.materialbrowser.test.GECKO_EDGE_TO_EDGE"

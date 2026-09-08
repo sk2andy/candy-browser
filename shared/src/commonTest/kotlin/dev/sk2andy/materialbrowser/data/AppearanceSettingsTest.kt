@@ -12,6 +12,7 @@ class AppearanceSettingsTest {
 
         assertEquals(BrowserAppearanceMode.System, settings.appearanceMode)
         assertFalse(settings.forceDarkWebsites)
+        assertEquals(100, settings.webContentFontSizePercent)
         assertEquals(BrowserColorPalette.Dynamic, settings.colorPalette)
         assertEquals(BrowserSurfaceStyle.Clear, settings.surfaceStyle)
         assertEquals(BrowserShapeStyle.Rounded, settings.shapeStyle)
@@ -68,6 +69,28 @@ class AppearanceSettingsTest {
                 frostedAddressBarTransparencyPercent = -1,
                 frostedBlurPercent = -1,
             ).normalized(),
+        )
+    }
+
+    @Test
+    fun `website font size normalizes to supported five percent steps`() {
+        assertEquals(
+            50,
+            AppearanceSettings(webContentFontSizePercent = -1)
+                .normalized()
+                .webContentFontSizePercent,
+        )
+        assertEquals(
+            125,
+            AppearanceSettings(webContentFontSizePercent = 123)
+                .normalized()
+                .webContentFontSizePercent,
+        )
+        assertEquals(
+            200,
+            AppearanceSettings(webContentFontSizePercent = 201)
+                .normalized()
+                .webContentFontSizePercent,
         )
     }
 }

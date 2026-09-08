@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -124,6 +125,9 @@ data class BrowserMainMenuStyle(
     val rowMinHeight: Dp = 44.dp,
     val rowHorizontalPadding: Dp = 16.dp,
     val rowVerticalPadding: Dp = 6.dp,
+    val toolbarLabelFontSize: TextUnit = TextUnit.Unspecified,
+    val rowLabelFontSize: TextUnit = TextUnit.Unspecified,
+    val rowSupportingTextFontSize: TextUnit = TextUnit.Unspecified,
     val toggleTrackColor: Color? = null,
 )
 
@@ -571,6 +575,7 @@ private fun BrowserMainMenuToolbarRow(
                 selected = item.checked == true,
                 accessibilityLabel = resources.accessibilityLabel(item),
                 minHeight = effects.style.toolbarMinHeight,
+                verticalLabelFontSize = effects.style.toolbarLabelFontSize,
                 containerColor = effects.containerColor(
                     if (item.checked == true) {
                         MaterialTheme.colorScheme.primaryContainer
@@ -654,6 +659,7 @@ private fun BrowserMainMenuItemGroup(
                         minHeight = effects.style.rowMinHeight,
                         horizontalPadding = effects.style.rowHorizontalPadding,
                         verticalPadding = effects.style.rowVerticalPadding,
+                        labelFontSize = effects.style.rowLabelFontSize,
                         checkedTrackColor = effects.style.toggleTrackColor,
                     )
                 }
@@ -670,6 +676,8 @@ private fun BrowserMainMenuItemGroup(
                         minHeight = effects.style.rowMinHeight,
                         horizontalPadding = effects.style.rowHorizontalPadding,
                         verticalPadding = effects.style.rowVerticalPadding,
+                        labelFontSize = effects.style.rowLabelFontSize,
+                        supportingTextFontSize = effects.style.rowSupportingTextFontSize,
                         checkedTrackColor = effects.style.toggleTrackColor,
                     )
                 }
@@ -700,6 +708,8 @@ private fun BrowserMainMenuItemGroup(
                         minHeight = effects.style.rowMinHeight,
                         horizontalPadding = effects.style.rowHorizontalPadding,
                         verticalPadding = effects.style.rowVerticalPadding,
+                        labelFontSize = effects.style.rowLabelFontSize,
+                        supportingTextFontSize = effects.style.rowSupportingTextFontSize,
                     )
                 }
             }
@@ -710,6 +720,7 @@ private fun BrowserMainMenuItemGroup(
 private fun BrowserFeatureMenuItem.hasTrailingIcon(): Boolean = action in setOf(
     BrowserFeatureMenuAction.OpenSnoozedTabs,
     BrowserFeatureMenuAction.OpenHistory,
+    BrowserFeatureMenuAction.OpenFirefoxExtensions,
     BrowserFeatureMenuAction.OpenSettings,
 )
 
@@ -735,6 +746,8 @@ private fun BrowserFeatureMenuItem.testTagModifier(): Modifier = when (action) {
     BrowserFeatureMenuAction.DockAddressBar -> Modifier.testTag(BrowserMainMenuTestTags.DockAddressBar)
     BrowserFeatureMenuAction.OpenSnoozedTabs -> Modifier.testTag(BrowserMainMenuTestTags.SnoozedTabs)
     BrowserFeatureMenuAction.OpenHistory -> Modifier.testTag(BrowserMainMenuTestTags.History)
+    BrowserFeatureMenuAction.OpenFirefoxExtensions ->
+        Modifier.testTag(BrowserMainMenuTestTags.FirefoxExtensions)
     BrowserFeatureMenuAction.OpenSettings -> Modifier.testTag(BrowserMainMenuTestTags.Settings)
     BrowserFeatureMenuAction.InvokeToppingCommand ->
         Modifier.testTag(BrowserMainMenuTestTags.userScriptCommand(toppingCommandId.orEmpty()))
@@ -752,6 +765,7 @@ object BrowserMainMenuTestTags {
     const val ToppingsGroup = "browser_main_menu_toppings_group"
     const val BrowserGroup = "browser_main_menu_browser_group"
     const val History = "browser_main_menu_history"
+    const val FirefoxExtensions = "browser_main_menu_firefox_extensions"
     const val Settings = "browser_main_menu_settings"
     const val Snooze = "browser_main_menu_snooze"
     const val SnoozedTabs = "browser_main_menu_snoozed_tabs"

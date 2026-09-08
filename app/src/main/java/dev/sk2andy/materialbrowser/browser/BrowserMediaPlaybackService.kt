@@ -17,6 +17,16 @@ class BrowserMediaPlaybackService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        ensureBrowserMediaNotificationChannel(this)
+        startForeground(
+            BrowserMediaSystemSession.FOREGROUND_NOTIFICATION_ID,
+            buildBrowserMediaStartingNotification(this),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+        )
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (AppDataTransferLock.isActive(this)) {
             stopPlayback()
@@ -33,7 +43,6 @@ class BrowserMediaPlaybackService : Service() {
             return START_NOT_STICKY
         }
         sessionToken = token
-        ensureBrowserMediaNotificationChannel(this)
         val contentIntent = PendingIntent.getActivity(
             this,
             BrowserMediaSystemSession.FOREGROUND_NOTIFICATION_ID,

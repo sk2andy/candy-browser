@@ -140,7 +140,7 @@ fun SiteCapsuleBrowserScreen(
         CapsuleBrowserEngineHost(
             controller = controller,
             statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
-            showStatusBarFrostedGlass = !webViewVideoOnlyPresentation,
+            showStatusBarOverlay = !webViewVideoOnlyPresentation,
         )
         tab.error?.takeIf {
             !webViewVideoOnlyPresentation && capsule.chromeMode.showsControls
@@ -181,29 +181,28 @@ fun SiteCapsuleBrowserScreen(
 private fun CapsuleBrowserEngineHost(
     controller: BrowserController,
     statusBarTint: Int,
-    showStatusBarFrostedGlass: Boolean,
+    showStatusBarOverlay: Boolean,
 ) {
     val density = LocalDensity.current
-    val statusBarGeometry = StatusBarFrostedGlassRules.geometry(
+    val statusBarGeometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
         density = density.density,
     )
     val selectedTabId = controller.selectedTabId
     val engineViewRevision = controller.engineViewRevision
     AndroidView(
-        factory = { context -> StatusBarFrostedGlassHost(context) },
+        factory = { context -> StatusBarStaticOverlayHost(context) },
         update = { host ->
             host.tag = selectedTabId to engineViewRevision
-            host.updateFrostedGlass(
+            host.updateOverlay(
                 geometry = statusBarGeometry,
                 tint = statusBarTint,
-                visible = showStatusBarFrostedGlass,
+                visible = showStatusBarOverlay,
             )
-            controller.attachSelectedBrowserEngineView(host.blurTarget)
+            controller.attachSelectedBrowserEngineView(host.contentContainer)
         },
         onRelease = { host ->
-            controller.detachBrowserEngineView(host.blurTarget)
-            host.release()
+            controller.detachBrowserEngineView(host.contentContainer)
         },
         modifier = Modifier
             .fillMaxSize()

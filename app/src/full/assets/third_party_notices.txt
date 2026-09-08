@@ -38,6 +38,22 @@ complete GPL-3.0 license are provided in uassets.LICENSE.txt.
 HaGeZi Pro network-filter attribution, pinned source and revision, modification notice, and the
 complete GPL-3.0 license are provided in hagezi.LICENSE.txt.
 
+Gecko default extensions
+------------------------
+
+The original Mozilla-signed uBlock Origin 1.74.0 XPI is redistributed unmodified under
+GPL-3.0-only. SHA-256: 175756d74468c9ba45863f7fc333d3be670f82d5b066314e915814dd547d1652
+Corresponding source is pinned to commit 6dd2d95e50d134a477a4e183343c0b26e9147123:
+https://github.com/gorhill/uBlock/tree/6dd2d95e50d134a477a4e183343c0b26e9147123
+The complete GPL-3.0 text is present inside the unmodified XPI and in uassets.LICENSE.txt; the full
+redistribution record is in gecko_default_extensions.NOTICE.txt.
+
+The original Mozilla-signed "I still don't care about cookies" 1.1.9 XPI is redistributed
+unmodified under GPL-3.0-only. SHA-256:
+42922f61cfc53e2103e492ddbe5736caf503d9dad4a88690efc4c64dac10d5c7
+Corresponding source is pinned to commit e763f24f79c5803774d28730649aef9aae3998ca. The complete
+source and redistribution record is in gecko_default_extensions.NOTICE.txt.
+
 
                                  Apache License
                            Version 2.0, January 2004

@@ -143,16 +143,16 @@ internal object GeckoExtensionChromeRules {
         GeckoExtensionCapability("options", GeckoExtensionCapabilitySupport.CandyDelegate, "TabDelegate.onOpenOptionsPage"),
         GeckoExtensionCapability("tabs.create", GeckoExtensionCapabilitySupport.CandyDelegate, "Active/background, pinned and bounded index through TabDelegate"),
         GeckoExtensionCapability("tabs.update/remove", GeckoExtensionCapabilitySupport.CandyDelegate, "Active, URL and close through SessionTabDelegate"),
-        GeckoExtensionCapability("tabs.create container/discarded/reader", GeckoExtensionCapabilitySupport.Unsupported, "Candy has no matching GeckoView 140 host state"),
+        GeckoExtensionCapability("tabs.create container/discarded/reader", GeckoExtensionCapabilitySupport.Unsupported, "Candy has no matching GeckoView 155 host state"),
         GeckoExtensionCapability("tabs.update highlighted/autoDiscardable", GeckoExtensionCapabilitySupport.Unsupported, "Candy has no multi-selection or auto-discard tab model"),
-        GeckoExtensionCapability("tabs.update muted/pinned", GeckoExtensionCapabilitySupport.Unsupported, "GeckoView 140 rejects these fields in the Firefox extension schema before SessionTabDelegate"),
+        GeckoExtensionCapability("tabs.update muted/pinned", GeckoExtensionCapabilitySupport.Unsupported, "GeckoView 155 rejects these fields in the Firefox extension schema before SessionTabDelegate"),
         GeckoExtensionCapability("tabs query/events", GeckoExtensionCapabilitySupport.GeckoOwned, "setTabActive + Gecko session delegates"),
         GeckoExtensionCapability("webNavigation", GeckoExtensionCapabilitySupport.GeckoOwned, "Gecko extension engine"),
         GeckoExtensionCapability("scripting/executeScript + CSS", GeckoExtensionCapabilitySupport.GeckoOwned, "Gecko extension engine"),
         GeckoExtensionCapability("storage", GeckoExtensionCapabilitySupport.GeckoOwned, "Gecko extension engine/profile"),
         GeckoExtensionCapability("runtime messaging", GeckoExtensionCapabilitySupport.GeckoOwned, "Gecko extension engine"),
         GeckoExtensionCapability("downloads", GeckoExtensionCapabilitySupport.CandyDelegate, "WebExtension.DownloadDelegate"),
-        GeckoExtensionCapability("windows API", GeckoExtensionCapabilitySupport.Unsupported, "No GeckoView 140 public window delegate"),
+        GeckoExtensionCapability("windows API", GeckoExtensionCapabilitySupport.Unsupported, "No GeckoView 155 public window delegate"),
     )
 
     private fun extensionRejection(

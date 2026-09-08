@@ -16,6 +16,7 @@ import dev.sk2andy.materialbrowser.shared.ui.settings.AppearanceSettingsPage as 
 internal object AppearanceSettingsTestTags {
     const val AppearanceMode = "appearance_settings_mode"
     const val ForceDarkWebsites = "appearance_settings_force_dark_websites"
+    const val WebContentFontSize = "appearance_settings_web_content_font_size"
     const val ColorPalette = "appearance_settings_palette"
     const val SurfaceStyle = "appearance_settings_surface"
     const val ShapeStyle = "appearance_settings_shape"
@@ -42,6 +43,7 @@ internal fun AppearanceSettingsPage(
             forceDarkWebsitesSummary = stringResource(
                 R.string.settings_force_dark_websites_summary,
             ),
+            webContentFontSize = stringResource(R.string.settings_web_content_font_size),
             colorPalette = stringResource(R.string.settings_color_palette),
             colorPaletteNames = BrowserColorPalette.entries.associateWith { it.displayName() },
             surfaceStyle = stringResource(R.string.settings_surface_style),

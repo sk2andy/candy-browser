@@ -103,11 +103,19 @@
   configured registrable domains, preserve unrelated directives such as `viewport-fit`, and restore
   page defaults through the required reload when desktop view is disabled.
 - Keep private always-block-popup domains memory-only; persist regular domains per profile only.
-- Keep `CREDENTIAL_MANAGER_SET_ORIGIN` declared for GeckoView's origin-bound WebAuthn and Candy's
-  password Credential Manager bridge. GeckoView 140 uses Android's framework Credential Manager for
-  passkeys on API 34+ when `android.software.credentials` exists. Regular HTTPS Gecko views expose
+- Keep `CREDENTIAL_MANAGER_QUERY_CANDIDATE_CREDENTIALS` and `CREDENTIAL_MANAGER_SET_ORIGIN`
+  declared for GeckoView's passkey lookup, origin-bound WebAuthn, and Candy's password Credential
+  Manager bridge. GeckoView 155 uses Android's framework Credential Manager for passkeys on API 34+
+  when `android.software.credentials` exists. Regular HTTPS Gecko views expose
   native virtual Autofill nodes; private views do not. Login save/select and FedCM callbacks carry a
   tab, profile, session, origin and navigation identity and deny stale, private or cross-origin work.
+  `MainActivity` binds Gecko's process-owned `GeckoRuntime.ActivityDelegate` to a lifecycle-scoped
+  Activity Result launcher so WebAuthn can open its passkey provider and return the result; destroying
+  that Activity removes only its own delegate and rejects an unfinished request. GeckoView 155's
+  related-origin WebAuthn prompt remains on its default-deny path until Candy has a separately
+  validated user-consent contract for cross-origin credential relationships.
+  GeckoView 155 includes Mozilla's duplicate Credential Manager callback guard from bug 2008413;
+  Candy still keeps each result bound to the exact Activity delegate and request generation.
   Candy stores no credential database and logs no credential values. Ship AndroidX Credential Manager
   in both distributions and its Google Password Manager fallback only in Full. Providers must
   separately trust Candy's package and release signing certificate in their privileged-browser
@@ -122,17 +130,23 @@
   traversal. Never replay a committed navigation or convert POST to GET. Reload matching open tabs
   only when the user explicitly changes the domain preference.
 - Keep the engine view's measured frame stable while pages scroll. `GeckoViewInsetRules` keeps the
-  normal Gecko renderer edge to edge, while Gecko's native cutout integration owns CSS safe-area
-  values and `setVerticalClipping` keeps fixed bottom content above system navigation. Compose
-  chrome consumes the same system-bar insets. The explicit per-site **Force safe area** override
-  converts all safe edges to native margins; refreshing that override redispatches current insets.
-  Gecko views use the TextureView backend so Candy's shared backdrop blur and tab motion can sample
-  and transform rendered pixels. The status-bar overlay keeps system icons legible.
+  Gecko surface behind the status bar while the document-start privacy bridge adds one scrollable top
+  inset and offsets fixed/sticky controls. A bounded policy retry handles content scripts that start
+  before the Gecko session binding, rejects stale policy revisions and reads the current policy from
+  every delayed retry. Gecko receives the remaining bottom CSS safe area. `viewport-fit=cover`
+  cannot disable Candy's scrollable top inset because Candy owns that edge while Gecko's top CSS
+  safe area is zero. A guarded layout failure reloads the same navigation generation once with
+  native margins; the explicit per-site **Force safe area** override also moves every safe edge to
+  inner native margins. Fullscreen keeps the renderer edge to edge.
+  Gecko views keep the default SurfaceView backend so page frames go directly to Android's compositor.
+  The static status-bar overlay remains outside the renderer and keeps system icons legible.
 - Read page-scroll metrics through the engine port. The optional `BrowserScrollBar` observes them
   without replacing the pill-collapse scroll listener and is absent in fullscreen/video-only mode.
 - Keep page touch streams and native fling physics in GeckoView. Compose parents must not cancel
   an active page gesture while arbitrating AndroidView input. No Chromium-specific reverse-fling
-  workaround runs in the Gecko renderer.
+  workaround runs in the Gecko renderer. Android window-focus loss, engine deactivation and view
+  detachment are terminal boundaries: if the platform omitted a final touch event, Candy sends one
+  synthetic `ACTION_CANCEL` to Gecko before rejecting background content-menu callbacks.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
 
 ## TLS trust channels
@@ -169,7 +183,7 @@
 
 - Compatibility overrides match the exact current host. Regular tabs persist them per profile;
   private tabs keep them in memory for that tab only.
-- GeckoView 140 exposes `ACCEPT_FIRST_PARTY` only as a runtime-wide hard policy and provides no
+- GeckoView 155 exposes `ACCEPT_FIRST_PARTY` only as a runtime-wide hard policy and provides no
   public site-scoped override for it. Candy therefore keeps that strict mode by default, then uses
   `ACCEPT_ALL` only while a selected session has a confirmed, exact-current-host SSO, CAPTCHA, or
   paused-site exception. Normal and private modes are coordinated separately. The coordinator

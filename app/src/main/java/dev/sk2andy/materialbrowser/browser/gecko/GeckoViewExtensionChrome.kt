@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.UiThread
 import java.util.IdentityHashMap
 import org.mozilla.geckoview.AllowOrDeny
@@ -79,6 +81,7 @@ internal class GeckoViewExtensionChrome(
     private val sessions = IdentityHashMap<GeckoSession, BoundSession>()
     private val defaultActions = mutableMapOf<GeckoExtensionActionKey, RawAction>()
     private val sessionActions = mutableMapOf<GeckoExtensionActionKey, RawAction>()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var popupGeneration = 0L
     private var activePopup: PopupBinding? = null
     private var closed = false
@@ -337,88 +340,107 @@ internal class GeckoViewExtensionChrome(
     }
 
     private fun downloadDelegate(extension: WebExtension) = object : WebExtension.DownloadDelegate {
-        @UiThread
         override fun onDownload(
             source: WebExtension,
             request: WebExtension.DownloadRequest,
         ): GeckoResult<WebExtension.DownloadInitData>? {
-            val snapshot = extensionSnapshot(extension.id) ?: return null
-            val owner = host.currentSessionIdentity()
-            if (!snapshot.enabled || owner?.isPrivate == true && !snapshot.allowedInPrivateBrowsing) {
-                return null
-            }
-            val validOwner = owner ?: return null
-            val ownerSession = sessions.values.firstOrNull { binding ->
-                binding.identity == validOwner && host.isCurrentSession(binding.identity)
-            }?.session ?: return null
             val result = GeckoResult<WebExtension.DownloadInitData>()
-            var active: Pair<WebExtension.Download, GeckoExtensionDownloadInfo>? = null
-            var cancellation: GeckoDownloadCancellation? = null
-            cancellation = downloadTransfers.start(
-                transfer = GeckoDownloadTransferRequest(
-                    owner = GeckoDownloadOwner(validOwner.profileId, validOwner.isPrivate, ownerSession),
-                    request = request.request,
-                    fetchFlags = request.downloadFlags,
-                    suggestedFileName = request.filename,
-                    allowHttpErrors = request.allowHttpErrors,
-                ),
-                listener = object : GeckoDownloadTransferListener {
-                    @UiThread
-                    override fun onStarted(start: GeckoDownloadTransferStart) {
-                        val download = controller.createDownload(start.id) ?: run {
-                            result.completeExceptionally(
-                                IllegalStateException("Gecko rejected Candy download identity"),
-                            )
-                            cancellation?.cancel()
-                            return
-                        }
-                        val info = GeckoExtensionDownloadInfo(start)
-                        active = download to info
-                        result.complete(WebExtension.DownloadInitData(download, info))
-                    }
-
-                    @UiThread
-                    override fun onProgress(bytesReceived: Long, totalBytes: Long) {
-                        active?.let { (download, info) ->
-                            info.bytesReceived = bytesReceived
-                            download.update(info)
-                        }
-                    }
-
-                    @UiThread
-                    override fun onComplete(bytesReceived: Long) {
-                        active?.let { (download, info) ->
-                            info.bytesReceived = bytesReceived
-                            info.endTimeMillis = System.currentTimeMillis()
-                            info.downloadState = WebExtension.Download.STATE_COMPLETE
-                            download.update(info)
-                        }
-                    }
-
-                    @UiThread
-                    override fun onFailed(reason: GeckoDownloadFailure) {
-                        val current = active
-                        if (current == null) {
-                            result.completeExceptionally(IllegalStateException("Gecko download failed: $reason"))
-                        } else {
-                            val (download, info) = current
-                            info.endTimeMillis = System.currentTimeMillis()
-                            info.downloadState = WebExtension.Download.STATE_INTERRUPTED
-                            info.interruptReason = reason.toInterruptReason()
-                            download.update(info)
-                        }
-                    }
-                },
-            ) ?: return result
-            val activeCancellation = cancellation
-            result.setCancellationDelegate(object : GeckoResult.CancellationDelegate {
-                override fun cancel(): GeckoResult<Boolean> {
-                    activeCancellation.cancel()
-                    return GeckoResult.fromValue(true)
-                }
-            })
+            mainHandler.post { startDownload(extension, request, result) }
             return result
         }
+    }
+
+    @UiThread
+    private fun startDownload(
+        extension: WebExtension,
+        request: WebExtension.DownloadRequest,
+        result: GeckoResult<WebExtension.DownloadInitData>,
+    ) {
+        val snapshot = extensionSnapshot(extension.id)
+            ?: return result.completeExceptionally(
+                IllegalStateException("Gecko extension is no longer installed"),
+            )
+        val owner = host.currentSessionIdentity()
+        if (!snapshot.enabled || owner?.isPrivate == true && !snapshot.allowedInPrivateBrowsing) {
+            return result.completeExceptionally(
+                IllegalStateException("Gecko extension download is not allowed"),
+            )
+        }
+        val validOwner = owner ?: return result.completeExceptionally(
+            IllegalStateException("Gecko extension download has no active owner"),
+        )
+        val ownerSession = sessions.values.firstOrNull { binding ->
+            binding.identity == validOwner && host.isCurrentSession(binding.identity)
+        }?.session ?: return result.completeExceptionally(
+            IllegalStateException("Gecko extension download owner is stale"),
+        )
+        var active: Pair<WebExtension.Download, GeckoExtensionDownloadInfo>? = null
+        var cancellation: GeckoDownloadCancellation? = null
+        cancellation = downloadTransfers.start(
+            transfer = GeckoDownloadTransferRequest(
+                owner = GeckoDownloadOwner(validOwner.profileId, validOwner.isPrivate, ownerSession),
+                request = request.request,
+                fetchFlags = request.downloadFlags,
+                suggestedFileName = request.filename,
+                allowHttpErrors = request.allowHttpErrors,
+            ),
+            listener = object : GeckoDownloadTransferListener {
+                @UiThread
+                override fun onStarted(start: GeckoDownloadTransferStart) {
+                    val download = controller.createDownload(start.id) ?: run {
+                        result.completeExceptionally(
+                            IllegalStateException("Gecko rejected Candy download identity"),
+                        )
+                        cancellation?.cancel()
+                        return
+                    }
+                    val info = GeckoExtensionDownloadInfo(start)
+                    active = download to info
+                    result.complete(WebExtension.DownloadInitData(download, info))
+                }
+
+                @UiThread
+                override fun onProgress(bytesReceived: Long, totalBytes: Long) {
+                    active?.let { (download, info) ->
+                        info.bytesReceived = bytesReceived
+                        download.update(info)
+                    }
+                }
+
+                @UiThread
+                override fun onComplete(bytesReceived: Long) {
+                    active?.let { (download, info) ->
+                        info.bytesReceived = bytesReceived
+                        info.endTimeMillis = System.currentTimeMillis()
+                        info.downloadState = WebExtension.Download.STATE_COMPLETE
+                        download.update(info)
+                    }
+                }
+
+                @UiThread
+                override fun onFailed(reason: GeckoDownloadFailure) {
+                    val current = active
+                    if (current == null) {
+                        result.completeExceptionally(
+                            IllegalStateException("Gecko download failed: $reason"),
+                        )
+                    } else {
+                        val (download, info) = current
+                        info.endTimeMillis = System.currentTimeMillis()
+                        info.downloadState = WebExtension.Download.STATE_INTERRUPTED
+                        info.interruptReason = reason.toInterruptReason()
+                        download.update(info)
+                    }
+                }
+            },
+        ) ?: return
+        val activeCancellation = cancellation
+        result.setCancellationDelegate(object : GeckoResult.CancellationDelegate {
+            override fun cancel(): GeckoResult<Boolean> {
+                activeCancellation.cancel()
+                return GeckoResult.fromValue(true)
+            }
+        })
     }
 
     private fun updateAction(

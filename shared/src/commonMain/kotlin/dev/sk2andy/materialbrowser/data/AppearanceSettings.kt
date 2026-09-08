@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 data class AppearanceSettings(
     val appearanceMode: BrowserAppearanceMode = BrowserAppearanceMode.System,
     val forceDarkWebsites: Boolean = false,
+    val webContentFontSizePercent: Int = DEFAULT_WEB_CONTENT_FONT_SIZE_PERCENT,
     val colorPalette: BrowserColorPalette = BrowserColorPalette.Dynamic,
     val surfaceStyle: BrowserSurfaceStyle = BrowserSurfaceStyle.Clear,
     val shapeStyle: BrowserShapeStyle = BrowserShapeStyle.Rounded,
@@ -20,6 +21,18 @@ data class AppearanceSettings(
     }
 
     fun normalized(): AppearanceSettings = copy(
+        webContentFontSizePercent = webContentFontSizePercent
+            .coerceIn(
+                MIN_WEB_CONTENT_FONT_SIZE_PERCENT,
+                MAX_WEB_CONTENT_FONT_SIZE_PERCENT,
+            )
+            .let { value ->
+                val offset = value - MIN_WEB_CONTENT_FONT_SIZE_PERCENT
+                MIN_WEB_CONTENT_FONT_SIZE_PERCENT +
+                    (offset + WEB_CONTENT_FONT_SIZE_STEP_PERCENT / 2) /
+                    WEB_CONTENT_FONT_SIZE_STEP_PERCENT *
+                    WEB_CONTENT_FONT_SIZE_STEP_PERCENT
+            },
         frostedTransparencyPercent = frostedTransparencyPercent.coerceIn(
             MIN_FROSTED_TRANSPARENCY_PERCENT,
             MAX_FROSTED_TRANSPARENCY_PERCENT,
@@ -35,6 +48,10 @@ data class AppearanceSettings(
     )
 
     companion object {
+        const val DEFAULT_WEB_CONTENT_FONT_SIZE_PERCENT = 100
+        const val MIN_WEB_CONTENT_FONT_SIZE_PERCENT = 50
+        const val MAX_WEB_CONTENT_FONT_SIZE_PERCENT = 200
+        const val WEB_CONTENT_FONT_SIZE_STEP_PERCENT = 5
         const val DEFAULT_FROSTED_TRANSPARENCY_PERCENT = 40
         const val DEFAULT_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT = 40
         const val MIN_FROSTED_TRANSPARENCY_PERCENT = 0
