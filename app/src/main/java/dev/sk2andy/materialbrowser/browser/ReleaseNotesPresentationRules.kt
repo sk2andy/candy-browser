@@ -5,13 +5,15 @@ internal object ReleaseNotesPresentationRules {
         isNewLaunch: Boolean,
         isLauncherLaunch: Boolean,
         isAppUpdate: Boolean,
+        isInitialOnboardingRequired: Boolean,
         contentAvailable: Boolean,
         currentVersionCode: Long,
-        lastPresentedVersionCode: Long?,
+        lastHandledVersionCode: Long?,
     ): Boolean = isNewLaunch &&
         isLauncherLaunch &&
         isAppUpdate &&
+        !isInitialOnboardingRequired &&
         contentAvailable &&
         currentVersionCode > 0L &&
-        (lastPresentedVersionCode == null || currentVersionCode > lastPresentedVersionCode)
+        (lastHandledVersionCode == null || currentVersionCode > lastHandledVersionCode)
 }

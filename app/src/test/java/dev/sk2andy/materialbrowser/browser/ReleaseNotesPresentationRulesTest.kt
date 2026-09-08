@@ -12,9 +12,10 @@ class ReleaseNotesPresentationRulesTest {
                 isNewLaunch = true,
                 isLauncherLaunch = true,
                 isAppUpdate = true,
+                isInitialOnboardingRequired = false,
                 contentAvailable = true,
                 currentVersionCode = 32_000L,
-                lastPresentedVersionCode = null,
+                lastHandledVersionCode = null,
             ),
         )
         assertFalse(
@@ -22,9 +23,10 @@ class ReleaseNotesPresentationRulesTest {
                 isNewLaunch = true,
                 isLauncherLaunch = true,
                 isAppUpdate = true,
+                isInitialOnboardingRequired = false,
                 contentAvailable = true,
                 currentVersionCode = 32_000L,
-                lastPresentedVersionCode = 32_000L,
+                lastHandledVersionCode = 32_000L,
             ),
         )
     }
@@ -35,6 +37,7 @@ class ReleaseNotesPresentationRulesTest {
 
         listOf(
             baseline.copy(isAppUpdate = false),
+            baseline.copy(isInitialOnboardingRequired = true),
             baseline.copy(isLauncherLaunch = false),
             baseline.copy(isNewLaunch = false),
             baseline.copy(contentAvailable = false),
@@ -49,7 +52,7 @@ class ReleaseNotesPresentationRulesTest {
         assertFalse(
             ReleaseNotesRequest(
                 currentVersionCode = 31_000L,
-                lastPresentedVersionCode = 32_000L,
+                lastHandledVersionCode = 32_000L,
             ).shouldPresent(),
         )
     }
@@ -59,16 +62,18 @@ private data class ReleaseNotesRequest(
     val isNewLaunch: Boolean = true,
     val isLauncherLaunch: Boolean = true,
     val isAppUpdate: Boolean = true,
+    val isInitialOnboardingRequired: Boolean = false,
     val contentAvailable: Boolean = true,
     val currentVersionCode: Long = 32_000L,
-    val lastPresentedVersionCode: Long? = null,
+    val lastHandledVersionCode: Long? = null,
 ) {
     fun shouldPresent(): Boolean = ReleaseNotesPresentationRules.shouldPresent(
         isNewLaunch = isNewLaunch,
         isLauncherLaunch = isLauncherLaunch,
         isAppUpdate = isAppUpdate,
+        isInitialOnboardingRequired = isInitialOnboardingRequired,
         contentAvailable = contentAvailable,
         currentVersionCode = currentVersionCode,
-        lastPresentedVersionCode = lastPresentedVersionCode,
+        lastHandledVersionCode = lastHandledVersionCode,
     )
 }

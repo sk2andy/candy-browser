@@ -107,6 +107,7 @@ class MainActivity : AppCompatActivity() {
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
     private var onboardingVisible by mutableStateOf(false)
+    private var initialOnboardingRequired = false
     private var releaseNotesVisible by mutableStateOf(false)
     private var externalLaunchTabId by mutableStateOf<String?>(null)
     private var appDataExportWarningVisible by mutableStateOf(false)
@@ -209,7 +210,9 @@ class MainActivity : AppCompatActivity() {
         val hasIncomingBrowserRequest = IncomingBrowserIntent.from(intent) != null
         val isColdExternalLinkLaunch = isColdStart && hasIncomingBrowserRequest
         val onboardingStore = GestureOnboardingStore(this)
+        val hadCompletedOnboarding = onboardingStore.hasCompletedAnyVersion()
         val onboardingRequired = onboardingStore.shouldShow()
+        initialOnboardingRequired = onboardingRequired && !hadCompletedOnboarding
         onboardingVisible = onboardingRequired
         releaseNotesStore = ReleaseNotesStore(this)
         if (
@@ -221,6 +224,7 @@ class MainActivity : AppCompatActivity() {
         val releaseNotesRequired = shouldPresentReleaseNotes(
             isNewLaunch = savedInstanceState == null,
             intentAction = intent.action,
+            isInitialOnboardingRequired = initialOnboardingRequired,
         )
         releaseNotesVisible = savedInstanceState
             ?.getBoolean(STATE_RELEASE_NOTES_VISIBLE)
@@ -383,7 +387,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(showReleaseNotes) {
                     if (showReleaseNotes) {
-                        releaseNotesStore.markPresented(BuildConfig.VERSION_CODE.toLong())
+                        releaseNotesStore.markHandled(BuildConfig.VERSION_CODE.toLong())
                     }
                 }
                 LaunchedEffect(
@@ -494,6 +498,13 @@ class MainActivity : AppCompatActivity() {
                         GestureOnboardingScreen(
                             onCompleted = {
                                 onboardingStore.markCompleted()
+                                if (initialOnboardingRequired) {
+                                    releaseNotesStore.markHandled(
+                                        BuildConfig.VERSION_CODE.toLong(),
+                                    )
+                                    releaseNotesVisible = false
+                                }
+                                initialOnboardingRequired = false
                                 onboardingVisible = false
                             },
                         )
@@ -570,6 +581,7 @@ class MainActivity : AppCompatActivity() {
             shouldPresentReleaseNotes(
                 isNewLaunch = true,
                 intentAction = intent.action,
+                isInitialOnboardingRequired = initialOnboardingRequired,
             )
         ) {
             releaseNotesVisible = true
@@ -995,6 +1007,11 @@ class MainActivity : AppCompatActivity() {
         applyBrowserSystemUi()
     }
 
+    @VisibleForTesting
+    internal fun setReleaseNotesVisible(visible: Boolean) {
+        releaseNotesVisible = visible
+    }
+
     private fun onFullscreenVideoBoundsChanged(bounds: Rect) {
         pictureInPictureController.onFullscreenVideoBoundsChanged(bounds)
     }
@@ -1025,6 +1042,7 @@ class MainActivity : AppCompatActivity() {
     private fun shouldPresentReleaseNotes(
         isNewLaunch: Boolean,
         intentAction: String?,
+        isInitialOnboardingRequired: Boolean,
     ): Boolean {
         if (!isNewLaunch || intentAction != Intent.ACTION_MAIN || releaseNotesContent == null) {
             return false
@@ -1033,9 +1051,10 @@ class MainActivity : AppCompatActivity() {
             isNewLaunch = true,
             isLauncherLaunch = true,
             isAppUpdate = isUpdatedInstallation(),
+            isInitialOnboardingRequired = isInitialOnboardingRequired,
             contentAvailable = true,
             currentVersionCode = BuildConfig.VERSION_CODE.toLong(),
-            lastPresentedVersionCode = releaseNotesStore.lastPresentedVersionCode(),
+            lastHandledVersionCode = releaseNotesStore.lastHandledVersionCode(),
         )
     }
 

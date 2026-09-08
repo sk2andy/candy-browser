@@ -10,6 +10,9 @@ class GestureOnboardingStore(context: Context) {
     fun isCompleted(): Boolean =
         preferences.getInt(KEY_COMPLETED_VERSION, 0) >= CURRENT_VERSION
 
+    internal fun hasCompletedAnyVersion(): Boolean =
+        preferences.getInt(KEY_COMPLETED_VERSION, 0) > 0
+
     fun markCompleted() {
         preferences.edit().putInt(KEY_COMPLETED_VERSION, CURRENT_VERSION).apply()
     }

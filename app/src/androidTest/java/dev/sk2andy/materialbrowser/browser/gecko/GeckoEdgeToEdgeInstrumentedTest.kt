@@ -38,7 +38,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
         preferences.edit().clear().commit()
         GestureOnboardingStore(context).markCompleted()
         store.saveStartupAnimationEnabled(false)
-        ReleaseNotesStore(context).markPresented(BuildConfig.VERSION_CODE.toLong())
+        ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
         val tab = BrowserTab(
             id = "gecko-edge-to-edge-fixture",
             lastAccessedAt = System.currentTimeMillis(),
