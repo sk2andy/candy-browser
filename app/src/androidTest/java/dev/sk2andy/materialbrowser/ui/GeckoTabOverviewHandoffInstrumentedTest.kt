@@ -61,7 +61,7 @@ class GeckoTabOverviewHandoffInstrumentedTest {
         AndroidSyncCacheStore(context).clear()
         GestureOnboardingStore(context).markCompleted()
         BrowserSessionStore(context).saveStartupAnimationEnabled(false)
-        ReleaseNotesStore(context).markPresented(BuildConfig.VERSION_CODE.toLong())
+        ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
     }
 
     @After

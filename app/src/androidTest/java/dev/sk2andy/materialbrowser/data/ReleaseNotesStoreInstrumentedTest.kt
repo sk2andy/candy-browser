@@ -29,24 +29,24 @@ class ReleaseNotesStoreInstrumentedTest {
     }
 
     @Test
-    fun presentedVersionPersistsAndNeverMovesBackwards() {
+    fun handledVersionPersistsAndNeverMovesBackwards() {
         val store = ReleaseNotesStore(context)
-        assertNull(store.lastPresentedVersionCode())
+        assertNull(store.lastHandledVersionCode())
 
-        assertTrue(store.markPresented(32_000L))
-        assertEquals(32_000L, ReleaseNotesStore(context).lastPresentedVersionCode())
+        assertTrue(store.markHandled(32_000L))
+        assertEquals(32_000L, ReleaseNotesStore(context).lastHandledVersionCode())
 
-        assertTrue(store.markPresented(31_000L))
-        assertEquals(32_000L, ReleaseNotesStore(context).lastPresentedVersionCode())
+        assertTrue(store.markHandled(31_000L))
+        assertEquals(32_000L, ReleaseNotesStore(context).lastHandledVersionCode())
     }
 
     @Test
-    fun corruptPresentedVersionIsTreatedAsUnseenAndReplaced() {
+    fun corruptHandledVersionIsTreatedAsUnseenAndReplaced() {
         preferences.edit().putString("last_presented_version_code", "corrupt").commit()
         val store = ReleaseNotesStore(context)
 
-        assertNull(store.lastPresentedVersionCode())
-        assertTrue(store.markPresented(32_000L))
-        assertEquals(32_000L, store.lastPresentedVersionCode())
+        assertNull(store.lastHandledVersionCode())
+        assertTrue(store.markHandled(32_000L))
+        assertEquals(32_000L, store.lastHandledVersionCode())
     }
 }

@@ -37,11 +37,14 @@ class GestureOnboardingStoreInstrumentedTest {
 
     @Test
     fun completionPersistsAcrossStoreInstances() {
-        assertTrue(GestureOnboardingStore(context).shouldShow())
+        val store = GestureOnboardingStore(context)
+        assertFalse(store.hasCompletedAnyVersion())
+        assertTrue(store.shouldShow())
 
-        GestureOnboardingStore(context).markCompleted()
+        store.markCompleted()
 
         assertTrue(GestureOnboardingStore(context).isCompleted())
+        assertTrue(GestureOnboardingStore(context).hasCompletedAnyVersion())
         assertFalse(GestureOnboardingStore(context).shouldShow())
     }
 
@@ -76,6 +79,7 @@ class GestureOnboardingStoreInstrumentedTest {
 
         val store = GestureOnboardingStore(context)
 
+        assertTrue(store.hasCompletedAnyVersion())
         assertTrue(store.shouldShow())
         assertFalse(store.isCompleted())
     }

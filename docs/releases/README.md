@@ -12,8 +12,8 @@ GitHub Release body. This keeps the product presentation and the public release 
 | GitHub Actions | The `changelog` workflow input is required and must match the versioned path |
 | Android package | Markdown and referenced screenshots are bundled as offline assets |
 | Presentation | Shown once on the first regular launcher start after an app update |
-| Fresh install | Uses the normal onboarding and does not show historical release notes |
-| Persistence | Highest presented Android `versionCode`, stored in dedicated preferences |
+| Fresh install | Uses only the normal onboarding; bundled notes are not queued afterward |
+| Persistence | Highest presented or onboarding-covered Android `versionCode`, stored in dedicated preferences |
 
 The build fails when notes are missing, empty, too large, named for another version, or reference an
 unsupported screenshot. Screenshots must be tag-pinned GitHub raw URLs that map to reviewed local
