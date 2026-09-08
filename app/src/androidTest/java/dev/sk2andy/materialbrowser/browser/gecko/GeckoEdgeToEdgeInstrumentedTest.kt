@@ -75,6 +75,8 @@ class GeckoEdgeToEdgeInstrumentedTest {
                 )
 
                 assertMargins(view, left = 0, top = 0, right = 0, bottom = 0)
+                assertWindowTop(view, expectedTop = 0)
+                assertScreenTop(view, expectedTop = 0)
                 assertMargins(
                     view.engineView(),
                     left = 0,
@@ -82,6 +84,10 @@ class GeckoEdgeToEdgeInstrumentedTest {
                     right = 0,
                     bottom = 0,
                 )
+                assertWindowTop(view.engineView(), expectedTop = 0)
+                assertScreenTop(view.engineView(), expectedTop = 0)
+                assertWindowTop(requireNotNull(view.findSurfaceView()), expectedTop = 0)
+                assertScreenTop(requireNotNull(view.findSurfaceView()), expectedTop = 0)
                 assertTrue(
                     "GeckoView must use SurfaceView to avoid copying every page frame",
                     view.hasSurfaceView(),
@@ -114,6 +120,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
                 )
 
                 assertMargins(view, left = 0, top = 0, right = 0, bottom = 0)
+                assertWindowTop(view, expectedTop = 0)
                 assertMargins(
                     view.engineView(),
                     left = 0,
@@ -147,8 +154,15 @@ class GeckoEdgeToEdgeInstrumentedTest {
     }
 
     private fun View.hasSurfaceView(): Boolean =
-        this is SurfaceView ||
-            (this is ViewGroup && (0 until childCount).any { getChildAt(it).hasSurfaceView() })
+        findSurfaceView() != null
+
+    private fun View.findSurfaceView(): SurfaceView? = when (this) {
+        is SurfaceView -> this
+        is ViewGroup -> (0 until childCount).firstNotNullOfOrNull { index ->
+            getChildAt(index).findSurfaceView()
+        }
+        else -> null
+    }
 
     private fun View.engineView(): View = (this as ViewGroup).getChildAt(0)
 
@@ -164,6 +178,18 @@ class GeckoEdgeToEdgeInstrumentedTest {
         assertEquals(top, margins.topMargin)
         assertEquals(right, margins.rightMargin)
         assertEquals(bottom, margins.bottomMargin)
+    }
+
+    private fun assertWindowTop(view: View, expectedTop: Int) {
+        val location = IntArray(2)
+        view.getLocationInWindow(location)
+        assertEquals(expectedTop, location[1])
+    }
+
+    private fun assertScreenTop(view: View, expectedTop: Int) {
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        assertEquals(expectedTop, location[1])
     }
 
     private companion object {

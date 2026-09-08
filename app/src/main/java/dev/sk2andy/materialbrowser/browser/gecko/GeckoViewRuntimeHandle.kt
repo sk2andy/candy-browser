@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.graphics.Region
 import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
@@ -2691,7 +2692,6 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 
     private fun createEngineView(): CandyGeckoEngineView =
         CandyGeckoEngineView(context).also { view ->
-            view.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW)
             configureEngineView(view)
         }
 
@@ -2813,6 +2813,12 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
     override fun onDetachedFromWindow() {
         cancelActiveTouch()
         super.onDetachedFromWindow()
+    }
+
+    override fun gatherTransparentRegion(region: Region?): Boolean {
+        val gathered = super.gatherTransparentRegion(region)
+        if (rendererSafeAreaOverride != null) dispatchRendererSafeAreaOverride()
+        return gathered
     }
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {

@@ -9,6 +9,7 @@ internal object WebContentTopInsetScript {
               const styleId = 'candy-browser-content-top-inset';
               const ownedSelector = `style#${'$'}{styleId}[data-candy-browser-owned="true"]`;
               const property = '--candy-browser-content-top-inset';
+              const backgroundProperty = '--candy-browser-content-top-background';
               const offsetAttribute = 'data-candy-browser-top-inset-offset';
               const offsetSelector = `[${'$'}{offsetAttribute}="true"]`;
               const offsetProperty = '--candy-browser-owned-top-inset-offset';
@@ -60,6 +61,7 @@ internal object WebContentTopInsetScript {
                   clearOwnedFlowTarget(root);
                   document.querySelector(ownedSelector)?.remove();
                   root.style.removeProperty(property);
+                  root.style.removeProperty(backgroundProperty);
                 }
                 globalThis.$bridgeName?.fallbackToNative?.(generation);
               };
@@ -83,12 +85,28 @@ internal object WebContentTopInsetScript {
                 }
                 return points;
               };
+              const isVisiblePositionedElement = (element) => {
+                const style = getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
+                return style.display !== 'none' &&
+                  style.visibility !== 'hidden' &&
+                  style.visibility !== 'collapse' &&
+                  Number.parseFloat(style.opacity) > 0.01 &&
+                  rect.width > 1 && rect.height > 1;
+              };
               const findPositionedCandidate = (element, root, fixedOnly) => {
                 let absoluteCandidate = null;
                 for (let current = element; current && current !== root; current = current.parentElement) {
                   const position = getComputedStyle(current).position;
-                  if (position === 'fixed') return current;
-                  if (!fixedOnly && position === 'absolute' && !absoluteCandidate) {
+                  if (position === 'fixed' && isVisiblePositionedElement(current)) {
+                    return current;
+                  }
+                  if (
+                    !fixedOnly &&
+                    position === 'absolute' &&
+                    !absoluteCandidate &&
+                    isVisiblePositionedElement(current)
+                  ) {
                     absoluteCandidate = current;
                   }
                 }
@@ -169,13 +187,49 @@ internal object WebContentTopInsetScript {
                     (plan.panelMaxHeight === null || rect.bottom <= globalThis.innerHeight + 0.5);
                 });
               };
-              const findPositionedPeer = (element, root) => {
+              const interactivePeerSelector = [
+                'a[href]',
+                'button',
+                'input',
+                'select',
+                'textarea',
+                'summary',
+                '[role="button"]',
+                '[role="link"]',
+                '[tabindex]',
+                '[contenteditable="true"]',
+              ].join(',');
+              const isInteractivePositionedPeer = (element, style) =>
+                element.matches(interactivePeerSelector) ||
+                element.querySelector(interactivePeerSelector) !== null ||
+                element.hasAttribute('onclick') ||
+                style.cursor === 'pointer';
+              const findPositionedPeer = (
+                element,
+                root,
+                excluded,
+                includeNonInteractiveAbsolute,
+              ) => {
                 for (let current = element; current && current !== root; current = current.parentElement) {
-                  const position = getComputedStyle(current).position;
+                  const style = getComputedStyle(current);
+                  const position = style.position;
                   if (
-                    position === 'absolute' ||
-                    position === 'fixed' ||
-                    position === 'sticky'
+                    position === 'absolute' &&
+                    !includeNonInteractiveAbsolute &&
+                    !isInteractivePositionedPeer(current, style)
+                  ) {
+                    continue;
+                  }
+                  if (
+                    current !== excluded &&
+                    !excluded.contains(current) &&
+                    !current.contains(excluded) &&
+                    (
+                      position === 'absolute' ||
+                      position === 'fixed' ||
+                      position === 'sticky'
+                    ) &&
+                    isVisiblePositionedElement(current)
                   ) {
                     return current;
                   }
@@ -197,6 +251,7 @@ internal object WebContentTopInsetScript {
                     style.display !== 'none' &&
                     style.visibility !== 'hidden' &&
                     style.visibility !== 'collapse' &&
+                    Number.parseFloat(style.opacity) > 0.01 &&
                     rect.width >= globalThis.innerWidth * 0.8 &&
                     rect.height > 1 &&
                     rect.height < globalThis.innerHeight * 0.5
@@ -235,19 +290,35 @@ internal object WebContentTopInsetScript {
                       ) {
                         return false;
                       }
-                      const peer = findPositionedPeer(element, root) ||
-                        findCompactViewportWidePeer(element, root, plan.element);
-                      if (!peer || peer === plan.element) return false;
+                      const peer = findPositionedPeer(
+                        element,
+                        root,
+                        plan.element,
+                        plan.position === 'absolute',
+                      ) ||
+                        (plan.position === 'absolute'
+                          ? findCompactViewportWidePeer(element, root, plan.element)
+                          : null);
+                      if (
+                        !peer ||
+                        peer === plan.element ||
+                        plan.element.contains(peer) ||
+                        peer.contains(plan.element)
+                      ) {
+                        return false;
+                      }
                       const peerStyle = getComputedStyle(peer);
                       if (
                         peerStyle.display === 'none' ||
                         peerStyle.visibility === 'hidden' ||
-                        peerStyle.visibility === 'collapse'
+                        peerStyle.visibility === 'collapse' ||
+                        Number.parseFloat(peerStyle.opacity) <= 0.01
                       ) {
                         return false;
                       }
                       const peerRect = peer.getBoundingClientRect();
-                      return peerRect.width >= globalThis.innerWidth * 0.8 &&
+                      const peerIsInteractive = isInteractivePositionedPeer(peer, peerStyle);
+                      return (peerIsInteractive || peerRect.width >= globalThis.innerWidth * 0.8) &&
                         rect.right > peerRect.left && rect.left < peerRect.right &&
                         rect.bottom > peerRect.top + 0.5 && rect.top < peerRect.bottom - 0.5;
                     })
@@ -262,6 +333,7 @@ internal object WebContentTopInsetScript {
                     style.display === 'none' ||
                     style.visibility === 'hidden' ||
                     style.visibility === 'collapse' ||
+                    Number.parseFloat(style.opacity) <= 0.01 ||
                     (style.position !== 'absolute' && style.position !== 'fixed')
                   ) {
                     element.removeAttribute(offsetAttribute);
@@ -337,9 +409,7 @@ internal object WebContentTopInsetScript {
                     .filter((element) => !isBackdrop(element, backdropPeers))
                     .map((element) => planLocalOffset(element, cssPixels));
                   if (plans.length === 0) return true;
-                  if (!plans.every(Boolean)) {
-                    return false;
-                  }
+                  if (!plans.every(Boolean)) return false;
                   if (hasPositionedPeerCollision(plans, root, true)) {
                     localOffsetCollisionDetected = true;
                     return false;
@@ -424,6 +494,74 @@ internal object WebContentTopInsetScript {
                   scheduleDeferredLayoutCheck();
                 }, delayedInteractionCheckMs);
               };
+              const isTransparentColor = (color) =>
+                !color || color === 'transparent' ||
+                (color.startsWith('rgba(') &&
+                  Number.parseFloat(color.slice(color.lastIndexOf(',') + 1)) === 0);
+              const paintedBackground = (style) => {
+                const image = style.backgroundImage;
+                if (image && image !== 'none' && !image.includes('url(')) {
+                  return style.background;
+                }
+                if (!isTransparentColor(style.backgroundColor)) {
+                  return style.backgroundColor;
+                }
+                return null;
+              };
+              const canvasBackground = (root) => {
+                const bodyBackground = document.body
+                  ? paintedBackground(getComputedStyle(document.body))
+                  : null;
+                if (bodyBackground) return bodyBackground;
+                return paintedBackground(getComputedStyle(root)) || 'transparent';
+              };
+              const activeThemeColor = () => {
+                const candidates = document.querySelectorAll('meta[name="theme-color"]');
+                for (const candidate of candidates) {
+                  const media = candidate.getAttribute('media');
+                  const color = candidate.getAttribute('content')?.trim();
+                  if (
+                    color &&
+                    (!media || globalThis.matchMedia?.(media).matches) &&
+                    globalThis.CSS?.supports?.('color', color)
+                  ) {
+                    return color;
+                  }
+                }
+                return null;
+              };
+              const topContentBackground = (root, cssPixels) => {
+                const viewportWidth = globalThis.innerWidth;
+                const viewportHeight = globalThis.innerHeight;
+                if (viewportWidth <= 0 || viewportHeight <= 1) {
+                  return activeThemeColor() || canvasBackground(root);
+                }
+                const sampleY = Math.min(
+                  viewportHeight - 1,
+                  Math.max(1, cssPixels + 1),
+                );
+                const sampleX = [
+                  Math.max(1, viewportWidth / 2),
+                  1,
+                  Math.max(1, viewportWidth - 1),
+                ];
+                for (const x of sampleX) {
+                  const visited = new Set();
+                  for (const hit of document.elementsFromPoint(x, sampleY)) {
+                    for (
+                      let element = hit;
+                      element && !visited.has(element);
+                      element = element.parentElement
+                    ) {
+                      visited.add(element);
+                      const background = paintedBackground(getComputedStyle(element));
+                      if (background) return background;
+                      if (element === root) break;
+                    }
+                  }
+                }
+                return activeThemeColor() || canvasBackground(root);
+              };
               const reconcile = () => {
                 const root = document.documentElement;
                 if (!root) return;
@@ -434,6 +572,7 @@ internal object WebContentTopInsetScript {
                   clearOwnedFlowTarget(root);
                   document.querySelector(ownedSelector)?.remove();
                   root.style.removeProperty(property);
+                  root.style.removeProperty(backgroundProperty);
                   return;
                 }
                 let style = document.querySelector(ownedSelector);
@@ -447,8 +586,9 @@ internal object WebContentTopInsetScript {
                       display: block !important;
                       height: var(${'$'}{property}, 0px) !important;
                       min-height: var(${'$'}{property}, 0px) !important;
+                      background: var(${'$'}{backgroundProperty}, transparent) !important;
                       pointer-events: none !important;
-                      visibility: hidden !important;
+                      visibility: visible !important;
                     }
                     html[${'$'}{flowRootAttribute}="true"]::before {
                       height: 0 !important;
@@ -477,6 +617,13 @@ internal object WebContentTopInsetScript {
                   root.style.getPropertyPriority(property) !== 'important'
                 ) {
                   root.style.setProperty(property, propertyValue, 'important');
+                }
+                const topBackground = topContentBackground(root, cssPixels);
+                if (
+                  root.style.getPropertyValue(backgroundProperty) !== topBackground ||
+                  root.style.getPropertyPriority(backgroundProperty) !== 'important'
+                ) {
+                  root.style.setProperty(backgroundProperty, topBackground, 'important');
                 }
                 let activeFlowTarget = document.querySelector(flowTargetSelector);
                 if (
