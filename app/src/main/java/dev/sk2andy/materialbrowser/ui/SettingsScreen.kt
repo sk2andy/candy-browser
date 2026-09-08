@@ -7,6 +7,7 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.SearchEngine
@@ -32,6 +33,7 @@ import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 @Composable
 internal fun SettingsScreen(
     destination: SettingsDestination,
+    browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     appearanceSettings: AppearanceSettings,
     downloadSettings: BrowserDownloadSettings,
     externalDownloadManagers: List<ExternalDownloadManagerApp>,
@@ -75,6 +77,7 @@ internal fun SettingsScreen(
     syncState: SyncRepositoryState,
     syncIconCatalog: SyncDeviceIconCatalog,
     onDestinationChanged: (SettingsDestination) -> Unit,
+    onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onAppearanceSettingsChanged: (AppearanceSettings) -> Unit,
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
@@ -251,6 +254,7 @@ internal fun SettingsScreen(
                 )
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
+                    browserEngineKind = browserEngineKind,
                     pageTranslationProvider = pageTranslationProvider,
                     isExternalLinkPreviewEnabled = isExternalLinkPreviewEnabled,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
@@ -260,6 +264,7 @@ internal fun SettingsScreen(
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
                     isDefaultBrowser = isDefaultBrowser,
+                    onBrowserEngineKindChanged = onBrowserEngineKindChanged,
                     onExternalLinkPreviewEnabledChanged =
                         onExternalLinkPreviewEnabledChanged,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,

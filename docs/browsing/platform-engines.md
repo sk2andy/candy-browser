@@ -8,8 +8,11 @@ flowchart TD
     K[shared Kotlin contracts] --> C[shared production Compose UI]
     C --> A[Android state, resources and effects adapter]
     C --> I[iOS state, images and effects adapter]
-    A --> G[GeckoView sessions]
+    A --> E{User-selected engine}
+    E --> G[GeckoView sessions]
+    E --> V[Android System WebView sessions]
     G --> X[Signed Firefox WebExtensions]
+    V --> U[Validated Toppings and Candy privacy rules]
     I --> W[WKWebView sessions]
     W --> T[Validated WKUserScript Toppings]
 ```
@@ -21,8 +24,8 @@ flowchart TD
 | Address resolution | `CandySharedFacade` and `BrowserUrlResolver` | Consumed by the Gecko browser | Consumed by `BrowserViewModel` |
 | Browser chrome behavior | Tabs, session commands/events, menu and gesture decisions; production main menu, Hero pager, Grid/List overview, overview bottom chrome, address-load rainbow and morph math | Calls the shared production composables with Android resources, images, haptics and blur effects | Calls the same composables from `CandyBrowserApp` with WebKit state and UIKit preview adapters |
 | Settings core | Destination/router/home, common controls, Search provider catalog and URL routing, Appearance page, Tabs overview/dismiss controls, Browser translation-provider control and Toppings management | Supplies localized resources, chrome colors and persisted state | Uses the same pages; persists only stable search-provider settings before shared routing emits the generic WebKit load command; Toppings CRUD is bound to the validated WebKit runtime, unavailable backend settings are disabled |
-| Web engine | No engine type crosses the boundary | `BrowserController` owns an engine port per tab; Gecko stays behind the adapter | `BrowserViewModel` owns a WebKit adapter per tab |
-| Customization | `Topping` metadata and injection plans | Firefox WebExtensions through GeckoView | Main-frame `WKUserScript` in a named content world |
+| Web engine | No engine type crosses the boundary | `BrowserController` owns an engine port per tab; Settings selects GeckoView or Android System WebView for the next process | `BrowserViewModel` owns a WebKit adapter per tab |
+| Customization | `Topping` metadata and injection plans | GeckoView supplies Firefox WebExtensions plus Toppings; System WebView supplies Toppings and Candy privacy rules | Main-frame `WKUserScript` in a named content world |
 | Visual language | Shared production menu/overview structure and semantic actions | Existing Candy Material theme, metrics, effects and resource resolution | Apple-style semantic colors, typography, compact metrics and native glass supplied through platform style/effect seams; no separate SwiftUI browser, menu or tab renderer |
 
 The executable iOS target started as a vertical slice. Menu and tab-overview parity now comes from moving
@@ -37,6 +40,28 @@ overview entry/exit motion; favicon and incognito artwork adapters; menu actions
 snooze or other feature implementations do not exist on iOS yet; and native find/reader sheets. The
 production Tab Actions menu source is present in `commonMain`, but iOS action-state wiring and platform
 call-site cutover are not complete.
+
+## Android engine selection
+
+- Existing and new installs default to GeckoView. The Browser settings page can switch the whole
+  Android app to System WebView; Candy checkpoints tab URLs, commits the choice and restarts into a
+  fresh process so the inactive runtime does not remain in RAM.
+- Tabs, bookmarks, history, profiles and Candy settings remain shared. Cookies, logins, native
+  back-forward lists and engine-owned session state intentionally stay separate.
+- `AndroidBrowserEngineFactory` is the process-level seam. Concrete implementations live under
+  `browser/gecko` and `browser/systemwebview`; a process creates sessions from exactly one factory.
+- System WebView keeps Toppings, Candy filtering/cookie defaults, autoplay blocking, safe-area
+  handling, navigation, downloads, uploads, prompts, profile isolation where AndroidX WebKit
+  supports it, previews, Reader extraction, find, printing, media/fullscreen reporting and
+  engine-local back-forward state. Firefox WebExtensions and their uBO filtering exist only in
+  GeckoView mode.
+- System WebView uses profile-scoped cookie managers for page loads, downloads and data deletion.
+  Private profiles disable credential/autofill integration, use one process-local AndroidX WebKit
+  profile and are removed on clean shutdown or before the next System-WebView process starts.
+- Both Android engines prevent video autoplay by default. Turning that policy off is an explicit
+  user choice because autoplay can increase page CPU/GPU work and battery use.
+- WKWebView remains the fixed iOS adapter, making the product's three adapters GeckoView, Android
+  System WebView and WKWebView while only Android presents an engine selector.
 
 ## Android Gecko and extension invariants
 
@@ -76,8 +101,8 @@ call-site cutover are not complete.
   `GeckoSession` to create a second bound `GeckoView`. A renderer owned by the fullscreen/PiP
   presentation survives normal-host disposal and is never duplicated into a concurrently composed
   host.
-  Android WebView construction, clients, script bridges, profile effects and the AndroidX WebKit
-  dependency have been removed; the view-host revision is engine-neutral.
+  The view-host revision and controller session map are engine-neutral. Android WebView construction,
+  clients, script bridges and profile effects stay inside the System WebView adapter.
 - Gecko tab cards use `GeckoView.capturePixels()` and feed the bounded bitmap through Candy's
   existing preview quality, navigation-generation, private-tab and persistence gates. The same
   preview map continues to back hero, grid and list cards; private snapshots are never stored.
@@ -144,9 +169,8 @@ call-site cutover are not complete.
   The explicit per-site **Always block pop-ups** override remains Candy-owned. Normal Gecko tabs and
   external previews apply the same bounded external-app grant rules; unsafe/internal schemes,
   subframes and passive app redirects remain blocked.
-- Gecko is the only Android product renderer. `GeckoOnlyBrowserEngineArchitectureTest` requires the
-  engine flag in every distribution, zero Android/AndroidX WebKit imports in production Kotlin and
-  no AndroidX WebKit dependency. No legacy renderer factory or fallback remains.
+- `AndroidBrowserEngineArchitectureTest` requires both runtime dependencies, rejects a compile-time
+  engine flag and keeps Android WebView imports at the System WebView/userscript adapter edges.
 - The existing tab residency limit now applies to Gecko sessions. Eviction persists eligible native
   session state, closes the renderer and retains the tab/preview/trail. Selection, media/PiP,
   permission/file/auth flows, preview capture and managed popup transitions protect their sessions.

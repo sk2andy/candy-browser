@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
@@ -28,6 +29,43 @@ class BrowserSettingsScreenInstrumentedTest {
     @get:Rule
     val composeRule = createComposeRule()
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test
+    fun browserEngineChoiceUpdatesSettingAndExplanation() {
+        var engine by mutableStateOf(AndroidBrowserEngineKind.GeckoView)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    browserEngineKind = engine,
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = true,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onBrowserEngineKindChanged = { engine = it },
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.BrowserEngine).performClick()
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_browser_engine_system),
+        ).performClick()
+
+        assertEquals(AndroidBrowserEngineKind.SystemWebView, engine)
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_browser_engine_system_summary),
+        ).assertIsDisplayed()
+    }
 
     @Test
     fun scrollBarSwitchUpdatesSetting() {

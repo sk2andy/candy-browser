@@ -5,38 +5,31 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Compile-time migration gate: Candy's Android product path is Gecko-only. */
-class GeckoOnlyBrowserEngineArchitectureTest {
+/** Compile-time gate for Candy's selectable Android browser engines. */
+class AndroidBrowserEngineArchitectureTest {
     @Test
-    fun `all Android distributions keep Gecko enabled`() {
+    fun `build includes Gecko and AndroidX WebKit without a compile time engine flag`() {
         val buildScript = source("app/build.gradle.kts")
 
-        assertTrue(
-            buildScript.contains(
-                "buildConfigField(\"boolean\", \"USE_GECKO_ENGINE\", \"true\")",
-            ),
-        )
-        assertFalse(buildScript.contains("\"USE_GECKO_ENGINE\", \"false\""))
+        assertTrue(buildScript.contains("org.mozilla.geckoview:geckoview"))
+        assertTrue(buildScript.contains("androidx.webkit:webkit"))
+        assertFalse(buildScript.contains("USE_GECKO_ENGINE"))
     }
 
     @Test
-    fun `production Kotlin has no Android WebView imports`() {
+    fun `system WebView implementation stays inside its adapter package`() {
         val webViewImport = Regex("(?m)^import (?:android|androidx)\\.webkit\\.")
-
-        val imports = productionKotlinFiles()
+        val importsOutsideAdapter = productionKotlinFiles()
             .filter { file -> webViewImport.containsMatchIn(file.readText()) }
+            .filterNot { file ->
+                file.invariantSeparatorsPath.contains("/browser/systemwebview/") ||
+                    file.invariantSeparatorsPath.contains("/browser/userscript/")
+            }
             .map { file -> file.relativeTo(repositoryRoot).invariantSeparatorsPath }
             .sorted()
             .toList()
 
-        assertTrue("Legacy WebView imports remain: $imports", imports.isEmpty())
-    }
-
-    @Test
-    fun `Android build has no AndroidX WebKit dependency`() {
-        val buildScript = source("app/build.gradle.kts")
-
-        assertFalse(buildScript.contains("androidx.webkit:webkit"))
+        assertTrue("WebView imports escaped adapter edges: $importsOutsideAdapter", importsOutsideAdapter.isEmpty())
     }
 
     @Test

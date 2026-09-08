@@ -6,6 +6,7 @@ import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
@@ -902,6 +903,14 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, blocked).apply()
     }
 
+    fun loadAndroidBrowserEngineKind(): AndroidBrowserEngineKind =
+        AndroidBrowserEngineKind.fromStableId(
+            preferences.getString(KEY_ANDROID_BROWSER_ENGINE, null),
+        )
+
+    fun saveAndroidBrowserEngineKind(kind: AndroidBrowserEngineKind): Boolean =
+        preferences.edit().putString(KEY_ANDROID_BROWSER_ENGINE, kind.stableId).commit()
+
     fun loadAppearanceSettings(): AppearanceSettings {
         val frostedTransparencyPercent = loadBoundedInt(
             key = KEY_FROSTED_TRANSPARENCY_PERCENT,
@@ -1112,6 +1121,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_OPEN_HOME_ON_STARTUP_ENABLED = "open_home_on_startup_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
+        const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
         const val KEY_FORCE_DARK_WEBSITES = "force_dark_websites"
         const val KEY_WEB_CONTENT_FONT_SIZE_PERCENT = "web_content_font_size_percent"

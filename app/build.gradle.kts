@@ -172,7 +172,6 @@ android {
         manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config"
         buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
         buildConfigField("boolean", "FOSS_DISTRIBUTION", "false")
-        buildConfigField("boolean", "USE_GECKO_ENGINE", "true")
         buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
         buildConfigField("String", "RELEASE_NOTES_VERSION", "\"${candyVersionName.get()}\"")
 
@@ -524,6 +523,7 @@ dependencies {
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.webkit:webkit:1.16.0")
     implementation("com.google.guava:guava:33.2.1-android")
     implementation("com.github.Dimezis:BlurView:version-3.2.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

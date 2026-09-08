@@ -99,6 +99,9 @@ internal object GeckoRuntimeOwner {
     }
 
     @VisibleForTesting
+    fun hasRuntimeForTesting(): Boolean = runtime != null
+
+    @VisibleForTesting
     fun resetForTesting() {
         synchronized(lock) {
             runtime = null

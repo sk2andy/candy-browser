@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettingsStrings
@@ -30,10 +31,12 @@ internal object BrowserSettingsTestTags {
     const val ScrollBar = "browser_settings_scroll_bar"
     const val TranslationProvider = "browser_settings_translation_provider"
     const val ExternalLinkPreview = "browser_settings_external_link_preview"
+    const val BrowserEngine = "browser_settings_engine"
 }
 
 @Composable
 internal fun BrowserSettingsPage(
+    browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     pageTranslationProvider: PageTranslationProvider,
     isExternalLinkPreviewEnabled: Boolean = false,
     isFullImmersiveModeEnabled: Boolean,
@@ -43,6 +46,7 @@ internal fun BrowserSettingsPage(
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
     isDefaultBrowser: Boolean,
+    onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
@@ -53,10 +57,55 @@ internal fun BrowserSettingsPage(
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
 ) {
+    var engineMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
     ) {
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_browser_engine_title),
+                value = browserEngineKind.displayName(),
+                expanded = engineMenuExpanded,
+                onClick = { engineMenuExpanded = true },
+                modifier = Modifier.testTag(BrowserSettingsTestTags.BrowserEngine),
+            )
+            SettingsDropdown(
+                expanded = engineMenuExpanded,
+                onDismissRequest = { engineMenuExpanded = false },
+            ) {
+                AndroidBrowserEngineKind.entries.forEach { kind ->
+                    SettingsDropdownItem(
+                        label = kind.displayName(),
+                        selected = kind == browserEngineKind,
+                        onClick = {
+                            engineMenuExpanded = false
+                            if (kind != browserEngineKind) onBrowserEngineKindChanged(kind)
+                        },
+                    )
+                }
+            }
+        }
+        Text(
+            text = stringResource(
+                when (browserEngineKind) {
+                    AndroidBrowserEngineKind.GeckoView ->
+                        R.string.settings_browser_engine_gecko_summary
+                    AndroidBrowserEngineKind.SystemWebView ->
+                        R.string.settings_browser_engine_system_summary
+                },
+            ),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(R.string.settings_browser_engine_restart_warning),
+            modifier = Modifier.padding(start = 18.dp, top = 4.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_startup_animation_title),
             subtitle = stringResource(R.string.settings_startup_animation_subtitle),
@@ -162,4 +211,12 @@ internal fun BrowserSettingsPage(
             }
         }
     }
+}
+
+@Composable
+private fun AndroidBrowserEngineKind.displayName(): String = when (this) {
+    AndroidBrowserEngineKind.GeckoView ->
+        stringResource(R.string.settings_browser_engine_gecko)
+    AndroidBrowserEngineKind.SystemWebView ->
+        stringResource(R.string.settings_browser_engine_system)
 }

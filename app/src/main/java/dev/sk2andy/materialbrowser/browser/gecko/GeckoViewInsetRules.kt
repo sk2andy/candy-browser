@@ -16,6 +16,7 @@ internal data class GeckoViewInsets(
 internal data class GeckoViewInsetLayout(
     val margins: GeckoViewInsets,
     val rendererSafeAreaOverride: GeckoViewInsets?,
+    val scrollableTopInsetPx: Int,
 )
 
 /** Assigns every safe-area edge to either Candy's native host or Gecko, never both. */
@@ -30,11 +31,13 @@ internal object GeckoViewInsetRules {
         GeckoViewInsetLayout(
             margins = GeckoViewInsets.Zero,
             rendererSafeAreaOverride = GeckoViewInsets.Zero,
+            scrollableTopInsetPx = 0,
         )
     } else if (isFullscreenContent) {
         GeckoViewInsetLayout(
             margins = GeckoViewInsets.Zero,
             rendererSafeAreaOverride = null,
+            scrollableTopInsetPx = 0,
         )
     } else {
         val normalizedSafeArea = safeArea.coerceAtLeastZero()
@@ -42,6 +45,7 @@ internal object GeckoViewInsetRules {
             GeckoViewInsetLayout(
                 margins = normalizedSafeArea,
                 rendererSafeAreaOverride = GeckoViewInsets.Zero,
+                scrollableTopInsetPx = 0,
             )
         } else {
             GeckoViewInsetLayout(
@@ -57,6 +61,7 @@ internal object GeckoViewInsetRules {
                     right = 0,
                     bottom = normalizedSafeArea.bottom,
                 ),
+                scrollableTopInsetPx = if (useScrollableTopInset) normalizedSafeArea.top else 0,
             )
         }
     }

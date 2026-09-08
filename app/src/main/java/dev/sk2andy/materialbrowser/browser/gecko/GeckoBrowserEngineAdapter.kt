@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Bundle
 import android.view.View
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
@@ -11,6 +12,9 @@ import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
@@ -53,6 +57,10 @@ internal interface BrowserEngineViewPort {
     fun sessionStateSnapshot(): String? = null
 
     fun restoreSessionState(encodedState: String): Boolean = false
+
+    fun platformViewStateSnapshot(): Bundle? = null
+
+    fun restorePlatformViewState(state: Bundle, expectedUrl: String): Boolean = false
 
     fun loadExtensionUrl(url: String): Boolean = false
 }
@@ -136,7 +144,10 @@ internal fun interface BrowserEngineEventSink {
 /** Creates Gecko-backed ports without exposing GeckoRuntime or GeckoSession to browser chrome. */
 internal class GeckoBrowserEngineSessionFactory(
     private val runtime: GeckoRuntimeHandle,
-) {
+) : AndroidBrowserEngineFactory {
+    override val kind = AndroidBrowserEngineKind.GeckoView
+
+    override val capabilities = AndroidBrowserEngineCapabilities.GeckoView
     private val extensionSessionGenerations = mutableMapOf<String, Long>()
     private val extensionSessionIdentities = mutableMapOf<String, GeckoExtensionSessionIdentity>()
     private val preparedSessions = mutableMapOf<String, GeckoSession>()
@@ -144,43 +155,43 @@ internal class GeckoBrowserEngineSessionFactory(
     constructor(context: Context) : this(GeckoRuntimeOwner.getOrCreate(context.applicationContext))
 
     @UiThread
-    fun reconcileToppings(scripts: List<UserScript>) {
+    override fun reconcileToppings(scripts: List<UserScript>) {
         runtime.toppings.reconcile(scripts)
     }
 
-    fun setToppingHostStateListener(listener: (GeckoToppingHostState) -> Unit) {
+    override fun setToppingHostStateListener(listener: (GeckoToppingHostState) -> Unit) {
         runtime.toppings.setStateListener(listener)
     }
 
-    fun setToppingInteractionDelegate(delegate: GeckoToppingInteractionDelegate) {
+    override fun setToppingInteractionDelegate(delegate: GeckoToppingInteractionDelegate) {
         runtime.toppings.setInteractionDelegate(delegate)
     }
 
-    fun invokeToppingMenuCommand(command: UserScriptMenuCommand) {
+    override fun invokeToppingMenuCommand(command: UserScriptMenuCommand) {
         runtime.toppings.invokeMenuCommand(command)
     }
 
-    fun clearToppingValues(scriptId: String) {
+    override fun clearToppingValues(scriptId: String) {
         runtime.toppings.clearValues(scriptId)
     }
 
-    fun clearBrowsingData(
+    override fun clearBrowsingData(
         data: GeckoBrowsingData,
-        onComplete: (Boolean) -> Unit = {},
+        onComplete: (Boolean) -> Unit,
     ) = runtime.clearBrowsingData(data, onComplete)
 
-    fun clearAllData(onComplete: (Boolean) -> Unit = {}) = runtime.clearAllData(onComplete)
+    override fun clearAllData(onComplete: (Boolean) -> Unit) = runtime.clearAllData(onComplete)
 
-    fun requestProfileDataDeletion(profileId: String): Boolean =
+    override fun requestProfileDataDeletion(profileId: String): Boolean =
         runtime.requestProfileDataDeletion(profileId)
 
     @UiThread
-    fun setBlockThirdPartyCookies(blocked: Boolean) {
+    override fun setBlockThirdPartyCookies(blocked: Boolean) {
         runtime.setBlockThirdPartyCookies(blocked)
     }
 
     @UiThread
-    fun setWebContentFontSizeFactor(factor: Float) {
+    override fun setWebContentFontSizeFactor(factor: Float) {
         runtime.setWebContentFontSizeFactor(factor)
     }
 
@@ -225,15 +236,14 @@ internal class GeckoBrowserEngineSessionFactory(
     }
 
     @UiThread
-    fun create(
+    override fun create(
         tabId: String,
         profileId: String,
-        isolationEnabled: Boolean = false,
+        isolationEnabled: Boolean,
         isPrivate: Boolean,
-        privacyPolicy: GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled,
-        privacyEventSink: GeckoPrivacyEventSink = GeckoPrivacyEventSink { },
-        trailHistoryEventSink: GeckoCandyTrailHistoryEventSink =
-            GeckoCandyTrailHistoryEventSink { _, _ -> },
+        privacyPolicy: GeckoPrivacyPolicy,
+        privacyEventSink: GeckoPrivacyEventSink,
+        trailHistoryEventSink: GeckoCandyTrailHistoryEventSink,
         eventSink: BrowserEngineEventSink,
     ): AndroidBrowserEngineSessionPort {
         require(tabId.isNotBlank()) { "A Gecko engine session needs a tab ID" }

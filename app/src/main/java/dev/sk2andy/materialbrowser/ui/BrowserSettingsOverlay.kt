@@ -140,6 +140,7 @@ internal fun BrowserSettingsOverlay(
         },
     ) {
         SettingsScreen(
+            browserEngineKind = controller.browserEngineKind,
                 destination = destination,
             appearanceSettings = controller.appearanceSettings,
             downloadSettings = controller.downloadSettings,
@@ -201,6 +202,7 @@ internal fun BrowserSettingsOverlay(
             syncState = controller.syncState,
             syncIconCatalog = controller.syncIconCatalog,
             onDestinationChanged = onDestinationChanged,
+            onBrowserEngineKindChanged = controller::updateBrowserEngineKind,
             onAppearanceSettingsChanged = controller::updateAppearanceSettings,
             onDownloadSettingsChanged = controller::updateDownloadSettings,
             onBlockerSettingsChanged = controller::updateBlockerSettings,
