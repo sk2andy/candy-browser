@@ -8,7 +8,13 @@ import kotlin.math.abs
 internal data class BrowserEngineScrollEvent(
     val scrollYPx: Int,
     val navigationGeneration: Int? = null,
+    val source: BrowserEngineScrollEventSource = BrowserEngineScrollEventSource.Renderer,
 )
+
+internal enum class BrowserEngineScrollEventSource {
+    DocumentMetrics,
+    Renderer,
+}
 
 internal fun interface BrowserEngineScrollListener {
     fun onScrollChanged(event: BrowserEngineScrollEvent)
@@ -66,7 +72,7 @@ internal class BrowserEngineScrollRateDispatcher(
     }
 }
 
-/** Routes one renderer scroll stream to independently bounded chrome and scrollbar consumers. */
+/** Routes engine scroll sources to independently bounded chrome and scrollbar consumers. */
 internal class BrowserEngineScrollDispatchers(
     schedule: (delayMillis: Long, dispatch: () -> Unit) -> Unit,
     nowMillis: () -> Long,
@@ -90,7 +96,9 @@ internal class BrowserEngineScrollDispatchers(
         event: BrowserEngineScrollEvent,
         scrollBarEnabled: Boolean,
     ) {
-        chrome.onScrollChanged(event)
+        if (event.source == BrowserEngineScrollEventSource.Renderer) {
+            chrome.onScrollChanged(event)
+        }
         if (scrollBarEnabled) scrollBar.onScrollChanged(event)
     }
 

@@ -23,10 +23,12 @@ internal object WebContentTopInsetScript {
               const stateKey = '__candyBrowserContentTopInset';
               const obstructionSampleStep = 12;
               const maxDeferredLayoutChecks = 8;
-              const delayedInteractionCheckMs = 350;
+              const layoutQuietPeriodMs = 400;
+              const requiredConsecutiveLayoutFailures = 3;
               const stabilizationCheckDelaysMs = [250, 1000, 2500, 5000];
               let deferredLayoutChecks = 0;
               let deferredLayoutCheckTimer = 0;
+              let consecutiveLayoutFailures = 0;
               let nativeFallbackRequestKey = null;
               let localOffsetCollisionDetected = false;
               const clearOwnedOffsets = () => {
@@ -46,6 +48,12 @@ internal object WebContentTopInsetScript {
                 });
               };
               const requestNativeFallback = () => {
+                if (document.readyState === 'loading') return;
+                consecutiveLayoutFailures++;
+                if (consecutiveLayoutFailures < requiredConsecutiveLayoutFailures) {
+                  scheduleDeferredLayoutCheck(false);
+                  return;
+                }
                 const generation = Number(
                   globalThis.$bridgeName?.navigationGeneration?.(),
                 ) || 0;
@@ -478,32 +486,27 @@ internal object WebContentTopInsetScript {
                 target.setAttribute(flowTargetAttribute, 'true');
                 return target.getBoundingClientRect().top >= cssPixels - 0.5;
               };
-              const scheduleDeferredLayoutCheck = () => {
+              const scheduleDeferredLayoutCheck = (resetFailures = true) => {
                 if (
                   document.readyState === 'loading' ||
                   nativeFallbackRequestedForCurrentPolicy() ||
-                  deferredLayoutCheckTimer ||
                   deferredLayoutChecks >= maxDeferredLayoutChecks
                 ) {
                   return;
+                }
+                if (resetFailures) consecutiveLayoutFailures = 0;
+                if (deferredLayoutCheckTimer) {
+                  globalThis.clearTimeout(deferredLayoutCheckTimer);
                 }
                 deferredLayoutCheckTimer = globalThis.setTimeout(() => {
                   deferredLayoutCheckTimer = 0;
                   deferredLayoutChecks++;
                   reconcile();
-                }, 50);
+                }, layoutQuietPeriodMs);
               };
               const scheduleInteractionLayoutCheck = () => {
                 deferredLayoutChecks = 0;
-                scheduleDeferredLayoutCheck();
-                const state = globalThis[stateKey];
-                if (!state) return;
-                globalThis.clearTimeout(state.interactionLayoutCheckTimer);
-                state.interactionLayoutCheckTimer = globalThis.setTimeout(() => {
-                  state.interactionLayoutCheckTimer = 0;
-                  deferredLayoutChecks = 0;
-                  scheduleDeferredLayoutCheck();
-                }, delayedInteractionCheckMs);
+                scheduleDeferredLayoutCheck(true);
               };
               const isTransparentColor = (color) =>
                 !color || color === 'transparent' ||
@@ -579,6 +582,7 @@ internal object WebContentTopInsetScript {
                 const physicalPixels =
                   Number(globalThis.$bridgeName?.topInsetPx?.()) || 0;
                 if (physicalPixels <= 0) {
+                  consecutiveLayoutFailures = 0;
                   clearOwnedOffsets();
                   clearOwnedFlowTarget(root);
                   document.querySelector(ownedSelector)?.remove();
@@ -688,33 +692,40 @@ internal object WebContentTopInsetScript {
                   }
                   if (!topInsetProtected) {
                     requestNativeFallback();
+                    return;
                   }
                 }
+                consecutiveLayoutFailures = 0;
               };
               const start = () => {
                 const root = document.documentElement;
                 if (!root) return;
                 const previousState = globalThis[stateKey];
-                previousState?.observer?.disconnect();
-                globalThis.clearTimeout(previousState?.interactionLayoutCheckTimer);
-                previousState?.stabilizationCheckTimers?.forEach(globalThis.clearTimeout);
-                previousState?.interactionEvents?.forEach((eventName) => {
-                  document.removeEventListener(
-                    eventName,
-                    previousState.interactionListener,
-                    true,
-                  );
-                });
-                if (previousState?.windowScrollListener) {
-                  globalThis.removeEventListener(
-                    'scroll',
-                    previousState.windowScrollListener,
-                    true,
-                  );
+                if (typeof previousState?.dispose === 'function') {
+                  previousState.dispose();
+                } else {
+                  previousState?.observer?.disconnect();
+                  globalThis.clearTimeout(previousState?.interactionLayoutCheckTimer);
+                  previousState?.stabilizationCheckTimers?.forEach(globalThis.clearTimeout);
+                  previousState?.interactionEvents?.forEach((eventName) => {
+                    document.removeEventListener(
+                      eventName,
+                      previousState.interactionListener,
+                      true,
+                    );
+                  });
+                  if (previousState?.windowScrollListener) {
+                    globalThis.removeEventListener(
+                      'scroll',
+                      previousState.windowScrollListener,
+                      true,
+                    );
+                  }
                 }
                 const observer = new MutationObserver((records) => {
                   if (records.some((record) => record.addedNodes?.length > 0)) {
-                    scheduleDeferredLayoutCheck();
+                    deferredLayoutChecks = 0;
+                    scheduleDeferredLayoutCheck(true);
                   }
                 });
                 observer.observe(root, {
@@ -740,22 +751,59 @@ internal object WebContentTopInsetScript {
                   scheduleInteractionLayoutCheck,
                   true,
                 );
-                globalThis[stateKey] = {
+                const domContentLoadedListener = () => scheduleDeferredLayoutCheck(true);
+                const windowLoadListener = () => scheduleDeferredLayoutCheck(true);
+                const runtimeState = {
                   observer,
                   interactionEvents,
-                  interactionLayoutCheckTimer: 0,
                   interactionListener: scheduleInteractionLayoutCheck,
                   windowScrollListener: scheduleInteractionLayoutCheck,
-                  stabilizationCheckTimers: stabilizationCheckDelaysMs.map((delayMs) =>
+                  domContentLoadedListener,
+                  windowLoadListener,
+                  stabilizationCheckTimers: [],
+                  dispose: null,
+                };
+                runtimeState.dispose = () => {
+                  observer.disconnect();
+                  globalThis.clearTimeout(deferredLayoutCheckTimer);
+                  deferredLayoutCheckTimer = 0;
+                  runtimeState.stabilizationCheckTimers.forEach(globalThis.clearTimeout);
+                  interactionEvents.forEach((eventName) => {
+                    document.removeEventListener(
+                      eventName,
+                      scheduleInteractionLayoutCheck,
+                      true,
+                    );
+                  });
+                  globalThis.removeEventListener(
+                    'scroll',
+                    scheduleInteractionLayoutCheck,
+                    true,
+                  );
+                  document.removeEventListener(
+                    'DOMContentLoaded',
+                    domContentLoadedListener,
+                  );
+                  globalThis.removeEventListener('load', windowLoadListener);
+                };
+                runtimeState.stabilizationCheckTimers = stabilizationCheckDelaysMs.map((delayMs) =>
                     globalThis.setTimeout(() => {
                       deferredLayoutChecks = 0;
-                      reconcile();
-                    }, delayMs)),
-                };
+                      scheduleDeferredLayoutCheck(false);
+                    }, delayMs));
+                globalThis[stateKey] = runtimeState;
                 reconcile();
                 if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', reconcile, { once: true });
-                  globalThis.addEventListener('load', reconcile, { once: true });
+                  document.addEventListener(
+                    'DOMContentLoaded',
+                    domContentLoadedListener,
+                    { once: true },
+                  );
+                  globalThis.addEventListener(
+                    'load',
+                    windowLoadListener,
+                    { once: true },
+                  );
                 }
               };
               globalThis.__candyReconcileContentTopInset = reconcile;

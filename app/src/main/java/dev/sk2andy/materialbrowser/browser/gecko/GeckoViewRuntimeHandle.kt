@@ -31,6 +31,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptResponse
 import dev.sk2andy.materialbrowser.browser.BrowserWebPromptKind
 import dev.sk2andy.materialbrowser.browser.BrowserWebPromptChoice
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEvent
+import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEventSource
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetKind
@@ -1697,7 +1698,12 @@ private class GeckoViewBrowserSession(
             policy = initialPrivacyPolicy,
             sink = privacyEventSink,
             onScrollMetrics = { metrics ->
-                scrollListener?.onScrollChanged(BrowserEngineScrollEvent(metrics.offsetPx))
+                scrollListener?.onScrollChanged(
+                    BrowserEngineScrollEvent(
+                        scrollYPx = metrics.offsetPx,
+                        source = BrowserEngineScrollEventSource.DocumentMetrics,
+                    ),
+                )
             },
             onBound = {
                 privacyBound = true

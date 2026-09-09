@@ -141,16 +141,20 @@
   before the Gecko session binding, rejects stale policy revisions and reads the current policy from
   every delayed retry. Gecko receives the remaining bottom CSS safe area. `viewport-fit=cover`
   cannot disable Candy's scrollable top inset because Candy owns that edge while Gecko's top CSS
-  safe area is zero. A guarded layout failure reloads the same navigation generation once with
-  native margins; the explicit per-site **Force safe area** override also moves every safe edge to
-  inner native margins. Fullscreen keeps the renderer edge to edge.
+  safe area is zero. Layout checks never request fallback while the document is loading. Late DOM
+  changes and interactions restart a 400-ms quiet window; three consecutive failures are required.
+  A confirmed failure removes Candy-owned document offsets, switches the current renderer live to
+  native margins and republishes a zero-top-inset policy without reloading the page. The explicit
+  per-site **Force safe area** override also moves every safe edge to inner native margins. Fullscreen
+  keeps the renderer edge to edge.
   GeckoView keeps its default SurfaceView backend so frames reach Android's compositor directly.
   PiP, clipping and tab motion preserve the same browser host, GeckoView, surface, display and
   session; browser blur is a sibling chrome effect and does not require a TextureView copy. The
   static status-bar overlay remains outside the renderer and keeps system icons legible.
 - Read page-scroll metrics through the engine port. The optional `BrowserScrollBar` observes them
   at up to 60 Hz without replacing the 15 Hz pill-collapse scroll path and is absent in
-  fullscreen/video-only mode.
+  fullscreen/video-only mode. Gecko's device-pixel-scaled document metrics update only the scrollbar;
+  they never enter the renderer-coordinate pill-collapse direction reducer.
 - Keep page touch streams and native fling physics in GeckoView. Compose parents must not cancel
   an active page gesture while arbitrating AndroidView input. No Chromium-specific reverse-fling
   workaround runs in the Gecko renderer. Android window-focus loss, engine deactivation and view
