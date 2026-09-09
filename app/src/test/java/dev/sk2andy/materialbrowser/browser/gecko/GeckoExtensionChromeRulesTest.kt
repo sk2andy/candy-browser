@@ -265,6 +265,18 @@ class GeckoExtensionChromeRulesTest {
                 optionsPageUrl = "https://example.com/options.html",
             ),
         )
+        assertEquals(
+            GeckoExtensionOptionsTarget(
+                extensionId = EXTENSION_ID,
+                title = "Fixture",
+                url = "moz-extension://fixture-uuid/options.html",
+            ),
+            GeckoExtensionChromeRules.optionsPageTarget(
+                extension().copy(
+                    optionsPageUrl = "moz-extension://fixture-uuid/options.html",
+                ),
+            ),
+        )
     }
 
     @Test

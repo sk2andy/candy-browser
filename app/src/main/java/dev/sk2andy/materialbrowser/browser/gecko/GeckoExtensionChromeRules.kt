@@ -138,7 +138,11 @@ internal object GeckoExtensionChromeRules {
             baseUrl = extension.baseUrl,
             optionsPageUrl = extension.optionsPageUrl,
         ) ?: return null
-        return GeckoExtensionOptionsTarget(extensionId = extension.id, url = url)
+        return GeckoExtensionOptionsTarget(
+            extensionId = extension.id,
+            title = extension.name ?: extension.id,
+            url = url,
+        )
     }
 
     fun effectiveAudioMuted(

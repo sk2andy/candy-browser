@@ -355,6 +355,35 @@ private data class NativeSafeAreaFallbackReload(
     val url: String?,
 )
 
+private data class FirefoxExtensionOptionsTabChrome(
+    val title: String,
+    val scheme: String,
+    val host: String,
+    val port: Int,
+) {
+    fun owns(url: String): Boolean {
+        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
+        return uri.scheme?.lowercase() == scheme &&
+            uri.host?.lowercase() == host &&
+            uri.port == port
+    }
+
+    companion object {
+        fun create(title: String, url: String): FirefoxExtensionOptionsTabChrome? {
+            val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return null
+            val scheme = uri.scheme?.lowercase() ?: return null
+            val host = uri.host?.lowercase()?.takeIf(String::isNotBlank) ?: return null
+            if (scheme != "moz-extension") return null
+            return FirefoxExtensionOptionsTabChrome(
+                title = title,
+                scheme = scheme,
+                host = host,
+                port = uri.port,
+            )
+        }
+    }
+}
+
 private data class GeckoLinkPeekBinding(
     val sourceTabId: String,
     val contentRevision: Long,
@@ -417,6 +446,10 @@ class BrowserController(
     internal val busyToppingIds = mutableStateListOf<String>()
     val contentActions = WebContentActionState()
     internal val firefoxExtensionActions = mutableStateListOf<GeckoExtensionActionState>()
+    internal val selectedFirefoxExtensionOptionsTitle: String?
+        get() = firefoxExtensionOptionsTabs[selectedTabId]
+            ?.takeIf { chrome -> chrome.owns(selectedTab.url) }
+            ?.title
     internal var firefoxExtensionPopupView by mutableStateOf<View?>(null)
         private set
     private var firefoxExtensionPopupIdentity: GeckoExtensionPopupIdentity? = null
@@ -778,7 +811,8 @@ class BrowserController(
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val nativeSafeAreaFallbackTabs = mutableSetOf<String>()
     private val nativeSafeAreaFallbackReloads = mutableMapOf<String, NativeSafeAreaFallbackReload>()
-    private val firefoxExtensionOptionsTabIds = mutableSetOf<String>()
+    private val firefoxExtensionOptionsTabs =
+        mutableMapOf<String, FirefoxExtensionOptionsTabChrome>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
     private val externalNavigationGrants = mutableMapOf<String, ExternalNavigationGrant>()
     private val pendingInitialExternalNavigationGrants =
@@ -1745,10 +1779,11 @@ class BrowserController(
 
                     override fun openOptionsPage(
                         extensionId: String,
+                        title: String,
                         owner: GeckoExtensionSessionIdentity,
                         url: String,
                         openInTab: Boolean,
-                    ): String? = openFirefoxExtensionOptionsPage(owner, url)
+                    ): String? = openFirefoxExtensionOptionsPage(owner, title, url)
 
                     override fun onActionsChanged(actions: List<GeckoExtensionActionState>) {
                         firefoxExtensionActions.clear()
@@ -3296,7 +3331,13 @@ class BrowserController(
         } else {
             insets
         }
-        val safeArea = effectiveInsets.getInsets(SAFE_AREA_INSET_TYPES)
+        val safeArea = effectiveInsets.getInsets(SAFE_AREA_INSET_TYPES).toGeckoViewInsets().let {
+            if (tabId != null && isActiveFirefoxExtensionOptionsPage(tabId)) {
+                it.copy(top = 0)
+            } else {
+                it
+            }
+        }
         val isFullscreenContent = tabId != null && fullscreenVideoState?.tabId == tabId
         val forceNativeSafeArea = if (tabId != null) {
             usesNativeSafeArea(tabId)
@@ -3304,7 +3345,7 @@ class BrowserController(
             isExternalLinkPreviewSafeAreaForced(view)
         }
         val layout = GeckoViewInsetRules.resolve(
-            safeArea = safeArea.toGeckoViewInsets(),
+            safeArea = safeArea,
             forceNativeSafeArea = forceNativeSafeArea,
             useScrollableTopInset = tabId != null &&
                 isScrollAwareTopInsetEnabled &&
@@ -5282,6 +5323,7 @@ class BrowserController(
         return createFirefoxExtensionOptionsTab(
             openerTabId = ownerTab.id,
             isPrivate = false,
+            title = target.title,
             url = target.url,
         ) != null
     }
@@ -5299,6 +5341,7 @@ class BrowserController(
 
     private fun openFirefoxExtensionOptionsPage(
         owner: GeckoExtensionSessionIdentity,
+        title: String,
         url: String,
     ): String? {
         if (
@@ -5310,6 +5353,7 @@ class BrowserController(
         return createFirefoxExtensionOptionsTab(
             openerTabId = owner.tabId,
             isPrivate = owner.isPrivate,
+            title = title,
             url = url,
         )
     }
@@ -5317,8 +5361,10 @@ class BrowserController(
     private fun createFirefoxExtensionOptionsTab(
         openerTabId: String,
         isPrivate: Boolean,
+        title: String,
         url: String,
     ): String? {
+        val chrome = FirefoxExtensionOptionsTabChrome.create(title, url) ?: return null
         val tabId = createBackgroundTab(
             initialUrl = BLANK_URL,
             isIncognito = isPrivate,
@@ -5326,7 +5372,7 @@ class BrowserController(
             transientPopup = true,
         ) ?: return null
         transientPopupTabIds.remove(tabId)
-        firefoxExtensionOptionsTabIds += tabId
+        firefoxExtensionOptionsTabs[tabId] = chrome
         if (!browserEngineSessionFor(tabId).loadExtensionUrl(url)) {
             closeTab(tabId)
             return null
@@ -6018,7 +6064,7 @@ class BrowserController(
     }
 
     fun goBack() {
-        if (selectedTabId in firefoxExtensionOptionsTabIds) {
+        if (isActiveFirefoxExtensionOptionsPage(selectedTabId)) {
             closeTab(selectedTabId)
             return
         }
@@ -7291,7 +7337,7 @@ class BrowserController(
         navigationGenerations.clear()
         nativeSafeAreaFallbackTabs.clear()
         nativeSafeAreaFallbackReloads.clear()
-        firefoxExtensionOptionsTabIds.clear()
+        firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
@@ -8169,7 +8215,13 @@ class BrowserController(
     private fun usesNativeSafeArea(tabId: String): Boolean =
         isSafeAreaForced(tabId) ||
             tabId in nativeSafeAreaFallbackTabs ||
-            tabId in firefoxExtensionOptionsTabIds
+            isActiveFirefoxExtensionOptionsPage(tabId)
+
+    private fun isActiveFirefoxExtensionOptionsPage(tabId: String): Boolean {
+        val chrome = firefoxExtensionOptionsTabs[tabId] ?: return false
+        val url = tabs.firstOrNull { tab -> tab.id == tabId }?.url ?: return false
+        return chrome.owns(url)
+    }
 
     private fun refreshGeckoContentTopInsetPolicies() {
         browserEngineSessions.forEach { (tabId, session) ->
@@ -9884,7 +9936,7 @@ class BrowserController(
     private fun isSessionEphemeralTab(tabId: String): Boolean =
         tabId in transientPopupTabIds ||
             tabId in federatedLoginPopupTabIds ||
-            tabId in firefoxExtensionOptionsTabIds
+            tabId in firefoxExtensionOptionsTabs
 
     private fun activeFederatedLoginFlowTabIds(): Set<String> = buildSet {
         federatedLoginPopupTabIds.forEach { popupTabId ->
@@ -10382,7 +10434,7 @@ class BrowserController(
         navigationGenerations.remove(tabId)
         nativeSafeAreaFallbackTabs.remove(tabId)
         nativeSafeAreaFallbackReloads.remove(tabId)
-        firefoxExtensionOptionsTabIds.remove(tabId)
+        firefoxExtensionOptionsTabs.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
         pageUrls.remove(tabId)
         extensionTabMuteOverrides.remove(tabId)

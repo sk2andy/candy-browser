@@ -247,10 +247,13 @@ call-site cutover are not complete.
 - Settings opens the reusable extension manager as an overlay in the normal `MainActivity` and
   Candy chrome. Dismissing that overlay returns to Settings instead of exposing the browser tab.
   The main browser menu opens a regular-only list of installed extensions; selecting an enabled
-  extension opens its own options page in a normal Candy tab. That session-only tab uses native
-  safe-area margins instead of edge-to-edge document insets, and Back closes it directly before
-  returning to its opener; its initial `about:blank` entry is never exposed. The entry is present
-  only for Gecko and is absent in private browsing.
+  extension opens its own options page in a session-only Candy tab. That tab replaces the address
+  bar with a top app bar containing Back and the extension name. Extension content starts below
+  that bar and uses native side and bottom safe-area margins instead of edge-to-edge document
+  insets. Back closes the tab directly before returning to its opener; its initial `about:blank`
+  entry is never exposed. If the tab leaves the extension's exact `moz-extension://` origin, Candy
+  immediately restores the normal address chrome and browser-history Back behavior. The entry is
+  present only for Gecko and is absent in private browsing.
 - Extension management and inventory loading are rejected from private management contexts.
   Private access is a separate, explicit switch for an extension installed from a regular context.
   Menu-driven options clicks re-read Gecko's installed inventory instead of trusting the displayed

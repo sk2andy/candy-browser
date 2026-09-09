@@ -39,6 +39,7 @@ internal interface GeckoExtensionChromeHost {
 
     fun openOptionsPage(
         extensionId: String,
+        title: String,
         owner: GeckoExtensionSessionIdentity,
         url: String,
         openInTab: Boolean,
@@ -284,6 +285,7 @@ internal class GeckoViewExtensionChrome(
             ) ?: return
             host.openOptionsPage(
                 extensionId = source.id,
+                title = snapshot.name ?: source.id,
                 owner = owner,
                 url = url,
                 openInTab = snapshot.opensOptionsPageInTab,

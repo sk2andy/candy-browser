@@ -93,6 +93,7 @@ class GeckoExtensionManagerCoordinatorTest {
         assertEquals(
             GeckoExtensionOptionsTarget(
                 extensionId = installed.id,
+                title = "Addon",
                 url = "moz-extension://installed-origin/settings.html",
             ),
             openedTarget,

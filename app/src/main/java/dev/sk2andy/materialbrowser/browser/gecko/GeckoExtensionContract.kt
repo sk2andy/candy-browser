@@ -24,6 +24,7 @@ internal data class GeckoExtensionSnapshot(
 
 internal data class GeckoExtensionOptionsTarget(
     val extensionId: String,
+    val title: String,
     val url: String,
 )
 

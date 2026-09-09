@@ -275,6 +275,7 @@ class GeckoExtensionChromeInstrumentedTest {
 
         override fun openOptionsPage(
             extensionId: String,
+            title: String,
             owner: GeckoExtensionSessionIdentity,
             url: String,
             openInTab: Boolean,
