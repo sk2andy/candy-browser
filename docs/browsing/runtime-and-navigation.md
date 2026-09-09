@@ -19,7 +19,7 @@
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. An incoming `ACTION_VIEW` app link first gets one direct non-browser-default handoff attempt; shared URLs stay in Candy. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
-| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Offer tapped HTTP(S) app links and their bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
+| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep a tapped same-site HTTP(S) redirector in the engine so its server redirect can resolve; offer a cross-site target and the remaining bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank engine page |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → transient Gecko session | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
@@ -77,7 +77,9 @@
   through the existing preview or regular-tab web fallback. Shared `ACTION_SEND` URLs stay in Candy.
 - Offer user-tapped HTTP(S) links to Android only when a direct non-browser default handler can
   receive them. Requiring both a default and a non-browser handler prevents browser/chooser loops;
-  unavailable or ambiguous app links continue in the current engine session.
+  unavailable or ambiguous app links continue in the current engine session. A same-registrable-site
+  redirector such as a search result's intermediate URL also stays in that session; its bounded
+  user-navigation grant remains available to the cross-site server redirect that follows.
 - Carry user intent across script-driven handoffs with a short-lived, tab- and engine-session-bound grant
   after a tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff,
   ends on page completion or error, and is consumed by the first accepted external launch attempt.
@@ -110,8 +112,12 @@
   native virtual Autofill nodes; private views do not. Login save/select and FedCM callbacks carry a
   tab, profile, session, origin and navigation identity and deny stale, private or cross-origin work.
   `MainActivity` binds Gecko's process-owned `GeckoRuntime.ActivityDelegate` to a lifecycle-scoped
-  Activity Result launcher so WebAuthn can open its passkey provider and return the result; destroying
-  that Activity removes only its own delegate and rejects an unfinished request. GeckoView 155's
+  Activity Result launcher so WebAuthn can open its passkey provider and return the result. A successful
+  provider result may carry no `Intent` payload; Candy buffers it until the same Activity has resumed
+  and the initiating tab, engine session and navigation generation are still current. While the provider
+  owns the foreground, immediate background-retention policy protects that initiating tab. Destroying
+  the Activity removes only its own delegate and rejects an unfinished request. Private tabs receive
+  the same lifecycle protection without persisting credential or tab state. GeckoView 155's
   related-origin WebAuthn prompt remains on its default-deny path until Candy has a separately
   validated user-consent contract for cross-origin credential relationships.
   GeckoView 155 includes Mozilla's duplicate Credential Manager callback guard from bug 2008413;
@@ -138,10 +144,13 @@
   safe area is zero. A guarded layout failure reloads the same navigation generation once with
   native margins; the explicit per-site **Force safe area** override also moves every safe edge to
   inner native margins. Fullscreen keeps the renderer edge to edge.
-  Gecko views use the TextureView backend so browser blur, clipping and PiP keep one stable renderer.
-  The static status-bar overlay remains outside the renderer and keeps system icons legible.
+  GeckoView keeps its default SurfaceView backend so frames reach Android's compositor directly.
+  PiP, clipping and tab motion preserve the same browser host, GeckoView, surface, display and
+  session; browser blur is a sibling chrome effect and does not require a TextureView copy. The
+  static status-bar overlay remains outside the renderer and keeps system icons legible.
 - Read page-scroll metrics through the engine port. The optional `BrowserScrollBar` observes them
-  without replacing the pill-collapse scroll listener and is absent in fullscreen/video-only mode.
+  at up to 60 Hz without replacing the 15 Hz pill-collapse scroll path and is absent in
+  fullscreen/video-only mode.
 - Keep page touch streams and native fling physics in GeckoView. Compose parents must not cancel
   an active page gesture while arbitrating AndroidView input. No Chromium-specific reverse-fling
   workaround runs in the Gecko renderer. Android window-focus loss, engine deactivation and view
@@ -220,7 +229,7 @@ Agent implementation, security and debugging guide:
 | HTML media appears or starts | Gecko's native `MediaSession.Delegate` publishes playback, position and bounded element metadata for the exact Gecko session |
 | Web page enters or exits fullscreen | `ContentDelegate.onFullScreen` owns the DOM-fullscreen lifecycle; media fullscreen metadata independently identifies the video and its dimensions |
 | User selects another regular tab | The current eligible video may move into the draggable in-app mini-player; this is the only presentation path that reparents GeckoView |
-| App leaves the foreground | The active eligible regular video is pinned in its original browser viewport before Activity PiP. The GeckoView, TextureView backend, GeckoDisplay and GeckoSession are not replaced or reparented |
+| App leaves the foreground | The active eligible regular video is pinned in its original browser viewport before Activity PiP. The GeckoView, SurfaceView backend, GeckoDisplay and GeckoSession are not replaced or reparented |
 | Android confirms PiP mode | The exact owning session receives one `CompositorController.onPipModeChanged` notification; preparation never pre-arms Gecko with an unconfirmed state |
 | System media control is used | The app-owned Android `MediaSession` sends play, pause, stop or seek through Gecko's active native media session |
 | Audible audio continues in background | A `mediaPlayback` foreground service owns the visible media notification while the Activity-owned Gecko session remains alive |
@@ -265,6 +274,8 @@ WebView request state.
 | Gecko password Autofill, Credential Manager and browser-origin manifest contract | `GeckoCredentialsInstrumentedTest` on API 34+ |
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
+| Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |
+| Renderer edge-to-edge bounds and scrolling controls | `SystemWebViewEdgeToEdgeInstrumentedTest`, `GeckoEdgeToEdgeInstrumentedTest`, and the regular/private document-start inset cases in `CandyPrivacyHostInstrumentedTest` on API 34+ |
 | Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `BrowserIntentFilterInstrumentedTest`, plus `MainActivityExternalBackInstrumentedTest` when lifecycle matters |
 | Distribution and TLS channels | `./gradlew testFullDebugUnitTest testFossDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFossDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |

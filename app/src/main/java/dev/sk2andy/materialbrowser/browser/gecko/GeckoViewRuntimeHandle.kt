@@ -1696,6 +1696,9 @@ private class GeckoViewBrowserSession(
             session = session,
             policy = initialPrivacyPolicy,
             sink = privacyEventSink,
+            onScrollMetrics = { metrics ->
+                scrollListener?.onScrollChanged(BrowserEngineScrollEvent(metrics.offsetPx))
+            },
             onBound = {
                 privacyBound = true
                 loadPendingUrlIfReady()
@@ -2188,7 +2191,7 @@ private class GeckoViewBrowserSession(
 
     @UiThread
     override fun scrollMetrics(): BrowserEngineScrollMetrics? =
-        boundView?.engineScrollMetrics()
+        privacyBinding.scrollMetrics()
 
     @UiThread
     override fun scrollToVerticalOffset(offsetPx: Int) {
@@ -2679,8 +2682,6 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         )
     }
 
-    fun engineScrollMetrics(): BrowserEngineScrollMetrics = engineView.engineScrollMetrics()
-
     override fun updateInsets(
         layout: GeckoViewInsetLayout,
         windowInsets: WindowInsetsCompat,
@@ -2827,12 +2828,6 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
     }
 
     fun captureContentPixels(): GeckoResult<Bitmap> = capturePixels()
-
-    fun engineScrollMetrics(): BrowserEngineScrollMetrics = BrowserEngineScrollMetrics(
-        offsetPx = computeVerticalScrollOffset().coerceAtLeast(0),
-        extentPx = computeVerticalScrollExtent().coerceAtLeast(0),
-        rangePx = computeVerticalScrollRange().coerceAtLeast(0),
-    )
 
     private fun dispatchRendererSafeAreaOverride() {
         val insets = rendererSafeAreaOverride ?: ViewCompat.getRootWindowInsets(this)

@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
@@ -26,7 +27,7 @@ class GeckoExtensionManagerCoordinatorTest {
     }
 
     @Test
-    fun `private tab exposes snapshot but blocks global mutations`() = runBlocking {
+    fun `private tab neither loads inventory nor allows global mutations`() = runBlocking {
         val runtime = FakeExtensionRuntime(
             installed = linkedMapOf("addon@example.com" to extension()),
         )
@@ -35,11 +36,183 @@ class GeckoExtensionManagerCoordinatorTest {
             GeckoExtensionManagementContext(profileId = "private", isPrivate = true),
         )?.join()
 
-        val job = coordinator.setEnabled(coordinator.state.snapshot.extensions.single(), true)
+        val job = coordinator.setEnabled(extension(), true)
 
         assertNull(job)
         assertFalse(coordinator.state.canManage)
+        assertTrue(coordinator.state.snapshot.extensions.isEmpty())
+        assertEquals(0, runtime.listInstalledCount)
         assertEquals(0, runtime.enableCount)
+    }
+
+    @Test
+    fun `regular inventory finishing after private open stays hidden`() = runBlocking {
+        val listInstalledGate = CompletableDeferred<Unit>()
+        val runtime = FakeExtensionRuntime(
+            installed = linkedMapOf("addon@example.com" to extension()),
+            listInstalledGate = listInstalledGate,
+        )
+        val coordinator = coordinator(runtime)
+        val regularLoad = requireNotNull(coordinator.open(regularContext))
+        yield()
+
+        coordinator.open(
+            GeckoExtensionManagementContext(profileId = "private", isPrivate = true),
+        )
+        listInstalledGate.complete(Unit)
+        regularLoad.join()
+
+        assertTrue(coordinator.state.managementContext.isPrivate)
+        assertTrue(coordinator.state.snapshot.extensions.isEmpty())
+    }
+
+    @Test
+    fun `options picker opens exact installed moz extension origin`() = runBlocking {
+        val installed = extension(
+            enabled = true,
+            baseUrl = "moz-extension://installed-origin/",
+            optionsPageUrl = "moz-extension://installed-origin/options/../settings.html",
+        )
+        val runtime = FakeExtensionRuntime(linkedMapOf(installed.id to installed))
+        var openedTarget: GeckoExtensionOptionsTarget? = null
+        val coordinator = GeckoExtensionManagerCoordinator(
+            runtime = runtime,
+            scope = this,
+            onOpenOptionsPage = { target ->
+                openedTarget = target
+                true
+            },
+        )
+        coordinator.open(
+            regularContext,
+            GeckoExtensionManagerPresentation.Options,
+        )?.join()
+
+        requireNotNull(coordinator.openOptionsPage(installed.id)).join()
+
+        assertEquals(
+            GeckoExtensionOptionsTarget(
+                extensionId = installed.id,
+                url = "moz-extension://installed-origin/settings.html",
+            ),
+            openedTarget,
+        )
+        assertEquals(2, runtime.listInstalledCount)
+    }
+
+    @Test
+    fun `options picker rejects foreign origin stale id and private context`() = runBlocking {
+        val installed = extension(
+            enabled = true,
+            baseUrl = "moz-extension://installed-origin/",
+            optionsPageUrl = "moz-extension://foreign-origin/settings.html",
+        )
+        val runtime = FakeExtensionRuntime(linkedMapOf(installed.id to installed))
+        var openCount = 0
+        val coordinator = GeckoExtensionManagerCoordinator(
+            runtime = runtime,
+            scope = this,
+            onOpenOptionsPage = {
+                openCount++
+                true
+            },
+        )
+        coordinator.open(
+            regularContext,
+            GeckoExtensionManagerPresentation.Options,
+        )?.join()
+
+        requireNotNull(coordinator.openOptionsPage(installed.id)).join()
+        requireNotNull(coordinator.openOptionsPage("missing@example.com")).join()
+        coordinator.open(
+            GeckoExtensionManagementContext(profileId = "private", isPrivate = true),
+            GeckoExtensionManagerPresentation.Options,
+        )
+        assertNull(coordinator.openOptionsPage(installed.id))
+        assertEquals(0, openCount)
+    }
+
+    @Test
+    fun `options picker rejects extension disabled after list opened`() = runBlocking {
+        val installed = extension(
+            enabled = true,
+            baseUrl = "moz-extension://installed-origin/",
+            optionsPageUrl = "moz-extension://installed-origin/options.html",
+        )
+        val runtime = FakeExtensionRuntime(linkedMapOf(installed.id to installed))
+        var openCount = 0
+        val coordinator = GeckoExtensionManagerCoordinator(
+            runtime = runtime,
+            scope = this,
+            onOpenOptionsPage = {
+                openCount++
+                true
+            },
+        )
+        coordinator.open(regularContext, GeckoExtensionManagerPresentation.Options)?.join()
+        runtime.replaceInstalled(installed.copy(enabled = false))
+
+        requireNotNull(coordinator.openOptionsPage(installed.id)).join()
+
+        assertEquals(0, openCount)
+        assertFalse(requireNotNull(coordinator.state.snapshot.extension(installed.id)).enabled)
+    }
+
+    @Test
+    fun `options picker rejects extension uninstalled after list opened`() = runBlocking {
+        val installed = extension(
+            enabled = true,
+            baseUrl = "moz-extension://installed-origin/",
+            optionsPageUrl = "moz-extension://installed-origin/options.html",
+        )
+        val runtime = FakeExtensionRuntime(linkedMapOf(installed.id to installed))
+        var openCount = 0
+        val coordinator = GeckoExtensionManagerCoordinator(
+            runtime = runtime,
+            scope = this,
+            onOpenOptionsPage = {
+                openCount++
+                true
+            },
+        )
+        coordinator.open(regularContext, GeckoExtensionManagerPresentation.Options)?.join()
+        runtime.removeInstalled(installed.id)
+
+        requireNotNull(coordinator.openOptionsPage(installed.id)).join()
+
+        assertEquals(0, openCount)
+        assertTrue(coordinator.state.snapshot.extensions.isEmpty())
+    }
+
+    @Test
+    fun `options picker uses current origin after installed origin changes`() = runBlocking {
+        val installed = extension(
+            enabled = true,
+            baseUrl = "moz-extension://old-origin/",
+            optionsPageUrl = "moz-extension://old-origin/options.html",
+        )
+        val runtime = FakeExtensionRuntime(linkedMapOf(installed.id to installed))
+        var openedTarget: GeckoExtensionOptionsTarget? = null
+        val coordinator = GeckoExtensionManagerCoordinator(
+            runtime = runtime,
+            scope = this,
+            onOpenOptionsPage = { target ->
+                openedTarget = target
+                true
+            },
+        )
+        coordinator.open(regularContext, GeckoExtensionManagerPresentation.Options)?.join()
+        runtime.replaceInstalled(
+            installed.copy(
+                baseUrl = "moz-extension://current-origin/",
+                optionsPageUrl = "moz-extension://current-origin/options.html",
+            ),
+        )
+
+        requireNotNull(coordinator.openOptionsPage(installed.id)).join()
+
+        assertEquals("moz-extension://current-origin/options.html", openedTarget?.url)
+        assertEquals(installed.id, openedTarget?.extensionId)
     }
 
     @Test
@@ -149,27 +322,39 @@ class GeckoExtensionManagerCoordinatorTest {
     private fun CoroutineScope.coordinator(runtime: GeckoExtensionRuntime) =
         GeckoExtensionManagerCoordinator(runtime = runtime, scope = this)
 
-    private fun extension() = GeckoExtension(
+    private fun extension(
+        enabled: Boolean = false,
+        baseUrl: String? = null,
+        optionsPageUrl: String? = null,
+    ) = GeckoExtension(
         id = "addon@example.com",
         name = "Addon",
         version = "1.0",
-        enabled = false,
+        enabled = enabled,
         allowedInPrivateBrowsing = false,
         isBuiltIn = false,
+        baseUrl = baseUrl,
+        optionsPageUrl = optionsPageUrl,
     )
 
     private class FakeExtensionRuntime(
         private val installed: LinkedHashMap<String, GeckoExtension> = linkedMapOf(),
+        private val listInstalledGate: CompletableDeferred<Unit>? = null,
     ) : GeckoExtensionRuntime {
         private lateinit var prompt: GeckoExtensionPermissionPrompt
         var enableCount = 0
+        var listInstalledCount = 0
         var lastPermissionDecision: GeckoExtensionPermissionDecision? = null
 
         override fun setPermissionPrompt(prompt: GeckoExtensionPermissionPrompt) {
             this.prompt = prompt
         }
 
-        override suspend fun listInstalled(): List<GeckoExtension> = installed.values.toList()
+        override suspend fun listInstalled(): List<GeckoExtension> {
+            listInstalledCount++
+            listInstalledGate?.await()
+            return installed.values.toList()
+        }
 
         override suspend fun installSignedXpi(
             uri: String,
@@ -212,6 +397,14 @@ class GeckoExtensionManagerCoordinatorTest {
         ).also { installed[extensionId] = it }
 
         override suspend fun uninstall(extensionId: String) {
+            installed.remove(extensionId)
+        }
+
+        fun replaceInstalled(extension: GeckoExtension) {
+            installed[extension.id] = extension
+        }
+
+        fun removeInstalled(extensionId: String) {
             installed.remove(extensionId)
         }
 

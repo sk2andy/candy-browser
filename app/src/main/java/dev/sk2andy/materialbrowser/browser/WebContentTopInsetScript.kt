@@ -98,7 +98,10 @@ internal object WebContentTopInsetScript {
                 let absoluteCandidate = null;
                 for (let current = element; current && current !== root; current = current.parentElement) {
                   const position = getComputedStyle(current).position;
-                  if (position === 'fixed' && isVisiblePositionedElement(current)) {
+                  if (
+                    (position === 'fixed' || position === 'sticky') &&
+                    isVisiblePositionedElement(current)
+                  ) {
                     return current;
                   }
                   if (
@@ -128,7 +131,11 @@ internal object WebContentTopInsetScript {
                 const style = getComputedStyle(element);
                 const isOwned = element.getAttribute(offsetAttribute) === 'true';
                 if (
-                  (style.position !== 'absolute' && style.position !== 'fixed') ||
+                  (
+                    style.position !== 'absolute' &&
+                    style.position !== 'fixed' &&
+                    style.position !== 'sticky'
+                  ) ||
                   (!isOwned && style.translate !== 'none') ||
                   hasActiveTranslateMotion(style)
                 ) {
@@ -144,7 +151,7 @@ internal object WebContentTopInsetScript {
                   ? Number.parseFloat(element.style.getPropertyValue(offsetProperty)) || 0
                   : 0;
                 const unshiftedTop = rect.top - previousOffset +
-                  (style.position === 'fixed' ? 0 : globalThis.scrollY);
+                  (style.position === 'absolute' ? globalThis.scrollY : 0);
                 const offset = Math.max(0, cssPixels - unshiftedTop);
                 const isFixedPanel = style.position === 'fixed' && isViewportTall;
                 const computedHeight = Number.parseFloat(style.height);
@@ -334,7 +341,11 @@ internal object WebContentTopInsetScript {
                     style.visibility === 'hidden' ||
                     style.visibility === 'collapse' ||
                     Number.parseFloat(style.opacity) <= 0.01 ||
-                    (style.position !== 'absolute' && style.position !== 'fixed')
+                    (
+                      style.position !== 'absolute' &&
+                      style.position !== 'fixed' &&
+                      style.position !== 'sticky'
+                    )
                   ) {
                     element.removeAttribute(offsetAttribute);
                     element.removeAttribute(panelAttribute);
@@ -694,6 +705,13 @@ internal object WebContentTopInsetScript {
                     true,
                   );
                 });
+                if (previousState?.windowScrollListener) {
+                  globalThis.removeEventListener(
+                    'scroll',
+                    previousState.windowScrollListener,
+                    true,
+                  );
+                }
                 const observer = new MutationObserver((records) => {
                   if (records.some((record) => record.addedNodes?.length > 0)) {
                     scheduleDeferredLayoutCheck();
@@ -717,11 +735,17 @@ internal object WebContentTopInsetScript {
                     true,
                   );
                 });
+                globalThis.addEventListener(
+                  'scroll',
+                  scheduleInteractionLayoutCheck,
+                  true,
+                );
                 globalThis[stateKey] = {
                   observer,
                   interactionEvents,
                   interactionLayoutCheckTimer: 0,
                   interactionListener: scheduleInteractionLayoutCheck,
+                  windowScrollListener: scheduleInteractionLayoutCheck,
                   stabilizationCheckTimers: stabilizationCheckDelaysMs.map((delayMs) =>
                     globalThis.setTimeout(() => {
                       deferredLayoutChecks = 0;

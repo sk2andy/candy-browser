@@ -18,8 +18,12 @@ internal fun interface BrowserEngineScrollListener {
 internal class BrowserEngineScrollRateDispatcher(
     private val schedule: (delayMillis: Long, dispatch: () -> Unit) -> Unit,
     private val nowMillis: () -> Long,
+    maximumDispatchesPerSecond: Long = DEFAULT_MAXIMUM_DISPATCHES_PER_SECOND,
     private val dispatch: (BrowserEngineScrollEvent) -> Unit,
 ) : BrowserEngineScrollListener {
+    private val minimumDispatchIntervalMillis = minimumDispatchIntervalMillis(
+        maximumDispatchesPerSecond,
+    )
     private val latestEvent = AtomicReference<BrowserEngineScrollEvent?>()
     private val dispatchScheduled = AtomicBoolean(false)
     private val lastDispatchMillis = AtomicLong(NO_DISPATCH_MILLIS)
@@ -36,7 +40,7 @@ internal class BrowserEngineScrollRateDispatcher(
         val delayMillis = if (previousDispatch == NO_DISPATCH_MILLIS) {
             0L
         } else {
-            (previousDispatch + MIN_DISPATCH_INTERVAL_MILLIS - now).coerceAtLeast(0L)
+            (previousDispatch + minimumDispatchIntervalMillis - now).coerceAtLeast(0L)
         }
         schedule(delayMillis) {
             val event = latestEvent.getAndSet(null)
@@ -50,10 +54,49 @@ internal class BrowserEngineScrollRateDispatcher(
     }
 
     private companion object {
-        const val MAX_DISPATCHES_PER_SECOND = 15L
-        const val MIN_DISPATCH_INTERVAL_MILLIS =
-            (1_000L + MAX_DISPATCHES_PER_SECOND - 1L) / MAX_DISPATCHES_PER_SECOND
+        const val DEFAULT_MAXIMUM_DISPATCHES_PER_SECOND = 15L
+        const val MILLIS_PER_SECOND = 1_000L
         const val NO_DISPATCH_MILLIS = Long.MIN_VALUE
+
+        fun minimumDispatchIntervalMillis(maximumDispatchesPerSecond: Long): Long {
+            require(maximumDispatchesPerSecond > 0L)
+            return MILLIS_PER_SECOND / maximumDispatchesPerSecond +
+                if (MILLIS_PER_SECOND % maximumDispatchesPerSecond == 0L) 0L else 1L
+        }
+    }
+}
+
+/** Routes one renderer scroll stream to independently bounded chrome and scrollbar consumers. */
+internal class BrowserEngineScrollDispatchers(
+    schedule: (delayMillis: Long, dispatch: () -> Unit) -> Unit,
+    nowMillis: () -> Long,
+    dispatchChrome: (BrowserEngineScrollEvent) -> Unit,
+    dispatchScrollBar: (BrowserEngineScrollEvent) -> Unit,
+) {
+    private val chrome = BrowserEngineScrollRateDispatcher(
+        schedule = schedule,
+        nowMillis = nowMillis,
+        maximumDispatchesPerSecond = CHROME_MAXIMUM_DISPATCHES_PER_SECOND,
+        dispatch = dispatchChrome,
+    )
+    private val scrollBar = BrowserEngineScrollRateDispatcher(
+        schedule = schedule,
+        nowMillis = nowMillis,
+        maximumDispatchesPerSecond = SCROLL_BAR_MAXIMUM_DISPATCHES_PER_SECOND,
+        dispatch = dispatchScrollBar,
+    )
+
+    fun onScrollChanged(
+        event: BrowserEngineScrollEvent,
+        scrollBarEnabled: Boolean,
+    ) {
+        chrome.onScrollChanged(event)
+        if (scrollBarEnabled) scrollBar.onScrollChanged(event)
+    }
+
+    private companion object {
+        const val CHROME_MAXIMUM_DISPATCHES_PER_SECOND = 15L
+        const val SCROLL_BAR_MAXIMUM_DISPATCHES_PER_SECOND = 60L
     }
 }
 

@@ -943,7 +943,9 @@
     <string name="gecko_extension_action_failed">Die Firefox-Erweiterungsaktion ist fehlgeschlagen.</string>
     <string name="gecko_extension_private_management_disabled">Erweiterungen können nicht geändert werden, solange ein privater Tab ausgewählt ist.</string>
     <string name="gecko_extensions_manager_summary">Mozilla-signierte XPI-Pakete für den Gecko-Browser</string>
+    <string name="gecko_extensions_options_summary">Öffne die eigene Optionsseite einer installierten Erweiterung</string>
     <string name="gecko_extensions_empty">Noch keine Firefox-Erweiterung installiert.</string>
+    <string name="gecko_extension_no_options">Keine Optionsseite verfügbar</string>
     <string name="gecko_extension_install">Erweiterung installieren</string>
     <string name="gecko_extension_install_hint">Füge die HTTPS-Adresse eines von Mozilla signierten XPI-Pakets ein.</string>
     <string name="gecko_extension_install_confirm">Prüfen und installieren</string>

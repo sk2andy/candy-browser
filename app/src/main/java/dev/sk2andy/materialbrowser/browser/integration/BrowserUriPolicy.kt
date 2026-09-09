@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.integration
 
+import dev.sk2andy.materialbrowser.browser.SiteDomainRules
 import java.net.IDN
 import java.net.URI
 
@@ -67,10 +68,13 @@ object ExternalNavigationPolicy {
         hasGesture: Boolean,
         isRedirect: Boolean,
         hasUserNavigationGrant: Boolean = false,
+        currentPageUrl: String? = null,
+        targetUrl: String? = null,
     ): Boolean {
         if (!isForMainFrame) return false
         val normalizedScheme = scheme?.lowercase()?.takeIf(String::isNotBlank) ?: return false
         if (normalizedScheme == "http" || normalizedScheme == "https") {
+            if (isSameSiteWebNavigation(currentPageUrl, targetUrl)) return false
             return hasGesture || (isRedirect && hasUserNavigationGrant)
         }
         if (
@@ -80,6 +84,12 @@ object ExternalNavigationPolicy {
             return false
         }
         return hasGesture || hasUserNavigationGrant
+    }
+
+    private fun isSameSiteWebNavigation(currentPageUrl: String?, targetUrl: String?): Boolean {
+        val currentSite = SiteDomainRules.domainForUrl(currentPageUrl) ?: return false
+        val targetSite = SiteDomainRules.domainForUrl(targetUrl) ?: return false
+        return currentSite == targetSite
     }
 }
 

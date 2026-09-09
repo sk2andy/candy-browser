@@ -5,8 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -54,6 +52,7 @@ import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.sync.SyncStatus
 
 private val SYNC_ACCENT_HUES = listOf(0, 36, 72, 108, 144, 180, 216, 252, 288, 312)
+private const val SYNC_ACCENT_COLORS_PER_ROW = 5
 
 internal object SyncSettingsTestTags {
     const val Endpoint = "sync_settings_endpoint"
@@ -404,7 +403,6 @@ internal fun SyncSettingsPage(
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 private fun SyncAccentColorPicker(
     selectedHue: Int,
     onHueSelected: (Int) -> Unit,
@@ -420,36 +418,39 @@ private fun SyncAccentColorPicker(
         modifier = Modifier.padding(start = 18.dp, top = 16.dp, bottom = 4.dp),
         style = MaterialTheme.typography.bodyMedium,
     )
-    FlowRow(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .testTag(SyncSettingsTestTags.AccentColors),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        hues.forEachIndexed { index, hue ->
-            val selected = hue == selectedHue
-            val color = Color.hsv(hue.toFloat(), 0.42f, 0.86f)
-            val optionDescription = stringResource(
-                R.string.sync_accent_color_option,
-                index + 1,
-            )
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .selectable(
-                        selected = selected,
-                        role = Role.RadioButton,
-                        onClick = { onHueSelected(hue) },
+        hues.chunked(SYNC_ACCENT_COLORS_PER_ROW).forEachIndexed { rowIndex, rowHues ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowHues.forEachIndexed { columnIndex, hue ->
+                    val selected = hue == selectedHue
+                    val color = Color.hsv(hue.toFloat(), 0.42f, 0.86f)
+                    val optionDescription = stringResource(
+                        R.string.sync_accent_color_option,
+                        rowIndex * SYNC_ACCENT_COLORS_PER_ROW + columnIndex + 1,
                     )
-                    .semantics { contentDescription = optionDescription }
-                    .testTag(SyncSettingsTestTags.accentColor(hue)),
-                contentAlignment = Alignment.Center,
-            ) {
-                SyncAccentColorSwatch(
-                    color = color,
-                    selected = selected,
-                )
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .selectable(
+                                selected = selected,
+                                role = Role.RadioButton,
+                                onClick = { onHueSelected(hue) },
+                            )
+                            .semantics { contentDescription = optionDescription }
+                            .testTag(SyncSettingsTestTags.accentColor(hue)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        SyncAccentColorSwatch(
+                            color = color,
+                            selected = selected,
+                        )
+                    }
+                }
             }
         }
     }

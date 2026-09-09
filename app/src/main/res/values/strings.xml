@@ -967,7 +967,9 @@
     <string name="gecko_extension_action_failed">The Firefox extension action failed.</string>
     <string name="gecko_extension_private_management_disabled">Extension changes are unavailable while a private tab is selected.</string>
     <string name="gecko_extensions_manager_summary">Mozilla-signed XPI packages for the Gecko browser</string>
+    <string name="gecko_extensions_options_summary">Open an installed extension’s own options page</string>
     <string name="gecko_extensions_empty">No Firefox extension installed yet.</string>
+    <string name="gecko_extension_no_options">No options page available</string>
     <string name="gecko_extension_install">Install extension</string>
     <string name="gecko_extension_install_hint">Paste the HTTPS address of a Mozilla-signed XPI package.</string>
     <string name="gecko_extension_install_confirm">Verify and install</string>

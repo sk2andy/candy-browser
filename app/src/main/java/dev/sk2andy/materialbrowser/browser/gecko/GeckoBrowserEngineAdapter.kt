@@ -77,6 +77,8 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setScrollListener(listener: BrowserEngineScrollListener?)
 
+    fun setNativeVerticalScrollBarEnabled(enabled: Boolean) = Unit
+
     fun setContentTargetListener(listener: BrowserContentTargetListener?)
 
     /** Delivers an engine-originated content target through the normal callback chain. */

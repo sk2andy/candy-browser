@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
+import dev.sk2andy.materialbrowser.browser.BrowserActivityResultIdentity
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
@@ -50,6 +51,7 @@ import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinator
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerPresentation
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnActivityDelegate
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineProcessRestart
@@ -116,6 +118,7 @@ class MainActivity : AppCompatActivity() {
     private var firefoxExtensionManager: GeckoExtensionManagerCoordinator? = null
     private var appDataImportLoading = false
     private var appDataTransferActive = false
+    private var geckoWebAuthnActivityIdentity: BrowserActivityResultIdentity? = null
     private var activityDestroyed = false
     private var appliedNightConfiguration = Configuration.UI_MODE_NIGHT_UNDEFINED
     private val webPermissionLauncher = registerForActivityResult(
@@ -232,9 +235,25 @@ class MainActivity : AppCompatActivity() {
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
         val browserEngineKind = BrowserSessionStore(this).loadAndroidBrowserEngineKind()
         if (browserEngineKind == AndroidBrowserEngineKind.GeckoView) {
-            geckoWebAuthnActivityDelegate = GeckoWebAuthnActivityDelegate { pendingIntent ->
-                geckoWebAuthnLauncher.launch(IntentSenderRequest.Builder(pendingIntent).build())
-            }
+            geckoWebAuthnActivityDelegate = GeckoWebAuthnActivityDelegate(
+                launch = { pendingIntent ->
+                    geckoWebAuthnLauncher.launch(IntentSenderRequest.Builder(pendingIntent).build())
+                },
+                onPendingChanged = { pending ->
+                    geckoWebAuthnActivityIdentity = if (
+                        pending && ::browserController.isInitialized
+                    ) {
+                        browserController.selectedActivityResultIdentity()
+                    } else {
+                        null
+                    }
+                },
+                isPendingRequestCurrent = {
+                    ::browserController.isInitialized &&
+                        geckoWebAuthnActivityIdentity
+                            ?.let(browserController::isActivityResultIdentityCurrent) == true
+                },
+            )
             GeckoRuntimeOwner.bindWebAuthnActivityDelegate(
                 context = applicationContext,
                 delegate = geckoWebAuthnActivityDelegate,
@@ -461,8 +480,24 @@ class MainActivity : AppCompatActivity() {
                                 arrayOf("application/zip", "application/octet-stream"),
                             )
                         },
-                        onOpenFirefoxExtensions = if (browserController.usesGeckoEngine) {
-                            ::openFirefoxExtensions
+                        onOpenFirefoxExtensions = if (
+                            browserController.usesGeckoEngine &&
+                            !browserController.selectedTab.isIncognito
+                        ) {
+                            {
+                                openFirefoxExtensions(
+                                    GeckoExtensionManagerPresentation.Options,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                        onManageFirefoxExtensions = if (browserController.usesGeckoEngine) {
+                            {
+                                openFirefoxExtensions(
+                                    GeckoExtensionManagerPresentation.Management,
+                                )
+                            }
                         } else {
                             null
                         },
@@ -478,6 +513,11 @@ class MainActivity : AppCompatActivity() {
                                 onSetPrivate = manager::setAllowedInPrivateBrowsing,
                                 onUpdate = manager::update,
                                 onUninstall = manager::uninstall,
+                                onOpenOptionsPage = { extension ->
+                                    manager.openOptionsPage(extension.id) {
+                                        firefoxExtensionsVisible = false
+                                    }
+                                },
                                 onPermissionDecision = manager::completePermissionRequest,
                                 onDismiss = {
                                     manager.dismiss()
@@ -631,6 +671,9 @@ class MainActivity : AppCompatActivity() {
             super.onPause()
             return
         }
+        if (::geckoWebAuthnActivityDelegate.isInitialized) {
+            geckoWebAuthnActivityDelegate.onHostPaused()
+        }
         browserController.onPause()
         super.onPause()
     }
@@ -658,7 +701,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         if (::browserController.isInitialized && !appDataTransferActive) {
-            browserController.onStop(isInPictureInPictureMode)
+            browserController.onStop(
+                isInPictureInPictureMode = isInPictureInPictureMode,
+                protectedTabIds = setOfNotNull(geckoWebAuthnActivityIdentity?.tabId),
+            )
         }
         super.onStop()
     }
@@ -708,6 +754,9 @@ class MainActivity : AppCompatActivity() {
             pictureInPictureController.reconcileStateOnResume()
         }
         if (::browserController.isInitialized) browserController.onResume()
+        if (::geckoWebAuthnActivityDelegate.isInitialized) {
+            geckoWebAuthnActivityDelegate.onHostResumed()
+        }
         updatePictureInPictureParams()
     }
 
@@ -730,19 +779,21 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun openFirefoxExtensions() {
+    private fun openFirefoxExtensions(presentation: GeckoExtensionManagerPresentation) {
         if (!::browserController.isInitialized) return
         val selectedTab = browserController.selectedTab
         val manager = firefoxExtensionManager ?: GeckoExtensionManagerCoordinator.create(
             context = applicationContext,
             scope = lifecycleScope,
             onPageRuntimeChanged = browserController::reloadSelectedPageAfterExtensionChange,
+            onOpenOptionsPage = browserController::openSelectedFirefoxExtensionOptionsPage,
         ).also { created -> firefoxExtensionManager = created }
         manager.open(
             GeckoExtensionManagementContext(
                 profileId = selectedTab.profileId,
                 isPrivate = selectedTab.isIncognito,
             ),
+            presentation = presentation,
         )
         firefoxExtensionsVisible = true
     }

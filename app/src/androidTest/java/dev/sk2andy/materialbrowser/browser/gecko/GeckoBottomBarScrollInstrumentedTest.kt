@@ -1,21 +1,39 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.view.View
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.down
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.moveBy
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.up
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserChromeScrollRules
 import dev.sk2andy.materialbrowser.browser.BrowserChromeScrollState
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEvent
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
+import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
+import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncCacheStore
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncVaultStore
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
@@ -32,6 +50,7 @@ import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.geckoview.GeckoRuntime
@@ -42,8 +61,12 @@ import org.mozilla.geckoview.ScreenLength
 
 @RunWith(AndroidJUnit4::class)
 class GeckoBottomBarScrollInstrumentedTest {
+    @get:Rule
+    val composeRule = createEmptyComposeRule()
+
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
+    private val store by lazy { BrowserSessionStore(context) }
     private val preferences by lazy {
         context.getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
     }
@@ -52,7 +75,11 @@ class GeckoBottomBarScrollInstrumentedTest {
     fun setUp() {
         clearState()
         GestureOnboardingStore(context).markCompleted()
-        BrowserSessionStore(context).saveStartupAnimationEnabled(false)
+        store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView)
+        store.saveStartupAnimationEnabled(false)
+        store.saveOpenHomeOnStartupEnabled(false)
+        store.saveExternalLinkPreviewEnabled(false)
+        ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
     }
 
     @After
@@ -65,6 +92,131 @@ class GeckoBottomBarScrollInstrumentedTest {
         }
         assertControllerTabIsolation()
     }
+
+    @Test
+    fun realGeckoScrollbarPortReadsAndMovesLongDocument() {
+        LongPageFixtureServer().use { server ->
+            prepareVisibleLongPage(server.url)
+            ActivityScenario.launch<MainActivity>(mainActivityIntent()).use { scenario ->
+                awaitController(scenario) { controller ->
+                    val view = controller.selectedGeckoViewForTesting()
+                    view?.let { candidate ->
+                        candidate.isAttachedToWindow && candidate.width > 0 && candidate.height > 0
+                    } == true &&
+                        (controller.selectedBrowserEngineScrollMetrics()
+                            ?.let { metrics -> metrics.scrollRangePx > 0 } ?: false)
+                }
+
+                var targetOffsetPx = 0
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    val metrics = requireNotNull(controller.selectedBrowserEngineScrollMetrics())
+                    targetOffsetPx = metrics.scrollRangePx / 2
+                    assertTrue(targetOffsetPx > 0)
+                    assertTrue(controller.scrollSelectedBrowserEngineToVerticalOffset(targetOffsetPx))
+                }
+                awaitController(scenario) { controller ->
+                    controller.selectedBrowserEngineScrollMetrics()
+                        ?.offsetPx
+                        ?.let { offsetPx -> offsetPx >= targetOffsetPx / 2 }
+                        ?: false
+                }
+            }
+        }
+    }
+
+    @Test
+    fun mainActivityScrollbarThumbDragMovesRealGeckoDocumentAndKeepsSemantics() {
+        LongPageFixtureServer().use { server ->
+            prepareVisibleLongPage(server.url)
+            ActivityScenario.launch<MainActivity>(mainActivityIntent()).use { scenario ->
+                awaitController(scenario) { controller ->
+                    val view = controller.selectedGeckoViewForTesting()
+                    controller.selectedTab.title == READY_TITLE &&
+                        view?.let { candidate ->
+                            candidate.isAttachedToWindow &&
+                                candidate.width > 0 &&
+                                candidate.height > 0
+                        } == true &&
+                        (controller.selectedBrowserEngineScrollMetrics()
+                            ?.let { metrics -> metrics.scrollRangePx > MINIMUM_SCROLL_RANGE_PX }
+                            ?: false)
+                }
+
+                val description = context.getString(R.string.scroll_bar_content_description)
+                composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+                    composeRule.onAllNodesWithContentDescription(description)
+                        .fetchSemanticsNodes().isNotEmpty()
+                }
+                val scrollBar = composeRule.onNodeWithContentDescription(description)
+                    .assertIsDisplayed()
+
+                scrollBar.performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
+                    assertTrue(setProgress(SEMANTICS_REVEAL_FRACTION))
+                }
+                awaitController(scenario) { controller ->
+                    controller.selectedBrowserEngineScrollMetrics()
+                        ?.offsetPx
+                        ?.let { offsetPx -> offsetPx > 0 }
+                        ?: false
+                }
+                scrollBar.performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
+                    assertTrue(setProgress(0f))
+                }
+                awaitController(scenario) { controller ->
+                    controller.selectedBrowserEngineScrollMetrics()
+                        ?.offsetPx
+                        ?.let { offsetPx -> offsetPx <= TOP_OFFSET_TOLERANCE_PX }
+                        ?: false
+                }
+
+                val initialOffsetPx = scenario.selectedScrollOffsetPx()
+                scrollBar.performTouchInput {
+                    down(center)
+                    moveBy(Offset(x = 0f, y = THUMB_DRAG_DISTANCE_PX))
+                    up()
+                }
+                awaitController(scenario) { controller ->
+                    controller.selectedBrowserEngineScrollMetrics()
+                        ?.offsetPx
+                        ?.let { offsetPx -> offsetPx > initialOffsetPx + MINIMUM_DRAG_SCROLL_PX }
+                        ?: false
+                }
+
+                val semantics = scrollBar.assertIsDisplayed().fetchSemanticsNode().config
+                val progress = semantics[SemanticsProperties.ProgressBarRangeInfo]
+                assertTrue("Scrollbar progress did not advance", progress.current > 0f)
+                assertTrue(
+                    "Scrollbar progress action disappeared after drag",
+                    semantics.contains(SemanticsActions.SetProgress),
+                )
+            }
+        }
+    }
+
+    private fun ActivityScenario<MainActivity>.selectedScrollOffsetPx(): Int {
+        var offsetPx = -1
+        onActivity { activity ->
+            offsetPx = requireNotNull(
+                activity.browserControllerForTesting().selectedBrowserEngineScrollMetrics(),
+            ).offsetPx
+        }
+        return offsetPx
+    }
+
+    private fun prepareVisibleLongPage(url: String) {
+        store.saveScrollBarEnabled(true)
+        val tab = BrowserTab(
+            id = VISIBLE_LONG_PAGE_TAB_ID,
+            lastAccessedAt = System.currentTimeMillis(),
+            url = url,
+        )
+        assertTrue(store.saveTabsImmediately(listOf(tab), tab.id))
+    }
+
+    private fun mainActivityIntent(): Intent = Intent(context, MainActivity::class.java)
+        .setAction(TEST_ACTIVITY_ACTION)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
 
     private fun assertRealGeckoScrollDelegate(server: LongPageFixtureServer) {
         val pageStopped = CountDownLatch(1)
@@ -246,6 +398,10 @@ class GeckoBottomBarScrollInstrumentedTest {
 
     private fun clearState() {
         preferences.edit().clear().commit()
+        context.getSharedPreferences(ReleaseNotesStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
         context.getSharedPreferences("candy_sync_settings", Context.MODE_PRIVATE)
             .edit()
             .clear()
@@ -365,11 +521,19 @@ class GeckoBottomBarScrollInstrumentedTest {
             """
             <!doctype html>
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>Candy scroll fixture</title>
+            <title>$READY_TITLE</title>
             <style>html,body{margin:0}main{height:6000px;background:linear-gradient(#f06,#09f)}</style>
             <main>Scrollable Candy Gecko fixture</main>
             """.trimIndent()
         const val TIMEOUT_MILLIS = 20_000L
         const val POLL_MILLIS = 50L
+        const val READY_TITLE = "Candy scroll fixture"
+        const val MINIMUM_SCROLL_RANGE_PX = 1_000
+        const val TOP_OFFSET_TOLERANCE_PX = 4
+        const val MINIMUM_DRAG_SCROLL_PX = 100
+        const val SEMANTICS_REVEAL_FRACTION = 0.1f
+        const val THUMB_DRAG_DISTANCE_PX = 160f
+        const val VISIBLE_LONG_PAGE_TAB_ID = "gecko-scrollbar-visible-long-page"
+        const val TEST_ACTIVITY_ACTION = "dev.sk2andy.materialbrowser.test.GECKO_SCROLLBAR"
     }
 }

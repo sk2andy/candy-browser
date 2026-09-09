@@ -399,6 +399,18 @@ internal fun BrowserViewport(
             )
         }
 
+        if (
+            controller.isScrollBarEnabled &&
+            !webViewVideoOnlyPresentation &&
+            !tabOverviewVisible &&
+            selectedTab.url != BLANK_URL
+        ) {
+            BrowserScrollBarOverlay(
+                controller = controller,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        }
+
         AnimatedVisibility(
             visible = selectedTab.url == BLANK_URL,
             enter = fadeIn(),
@@ -456,6 +468,20 @@ internal fun BrowserViewport(
             bottomBarTopPx = bottomBarTopPx,
         )
     }
+}
+
+@Composable
+private fun BrowserScrollBarOverlay(
+    controller: BrowserController,
+    modifier: Modifier = Modifier,
+) {
+    val scrollBarRefreshNonce = controller.scrollBarRefreshNonce
+    BrowserScrollBar(
+        metrics = controller.selectedBrowserEngineScrollMetrics(),
+        revealNonce = scrollBarRefreshNonce,
+        onScrollToVerticalOffset = controller::scrollSelectedBrowserEngineToVerticalOffset,
+        modifier = modifier,
+    )
 }
 
 @Composable

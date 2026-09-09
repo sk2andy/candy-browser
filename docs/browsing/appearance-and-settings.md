@@ -11,7 +11,7 @@
 | Settings routing | Shared destination model, transition, home, controls and core pages; platform resources, icons, effects and persisted state stay adapters | `shared/src/commonMain/.../SettingsDestination.kt`, `shared/src/commonMain/.../ui/settings`, Android `ui/SettingsScreen.kt` adapters |
 | Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
-| Page scroll bar | Persisted opt-in, WebView scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, `BrowserWebView`, `ui/WebViewScrollBar` |
+| Page scroll bar | Persisted opt-in, engine-neutral scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, browser-engine session ports, `ui/BrowserScrollBar` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
 | Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
 | App data archive | SAF launch and confirmation stay in the activity and Protection page; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `ui/ProtectionSettingsPage.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
@@ -125,6 +125,9 @@ Frosted exposes three persisted controls while selected:
   and canvas contrast in light, dark and forced-dark configurations.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
 - Each top-level settings destination has a distinct leading icon on the settings home page.
+- Full-screen platform overlays launched from Settings preserve the Settings destination below
+  them. They own predictive-back handling, so a system edge gesture dismisses only the overlay and
+  returns to Settings instead of reaching the underlying browser/settings back target.
 - Candy Recall is an explicit opt-in under Protection & data. Its summary states that readable text
   from regular pages is stored locally for search and private tabs are never included. Turning it
   off clears stored Recall text; ordinary History remains governed by its own settings.
@@ -140,8 +143,11 @@ Frosted exposes three persisted controls while selected:
   and the fixed `+` at slot three show no drop marker. Duplicate, excess or unknown persisted actions
   normalize to positions without silently filling user-cleared slots.
 - The Browser setting for the draggable page scroll bar is global and defaults off. When enabled,
-  native WebView scroll bars are replaced by a touch-sized thumb that appears during scrolling,
-  supports direct dragging, and fades after interaction.
+  Gecko and System WebView expose native scroll metrics through the same engine port. A touch-sized
+  overlay thumb appears during scrolling, maps direct dragging back to the owning engine, and fades
+  after interaction. System WebView suppresses its built-in indicator while the overlay owns this
+  affordance. Scrollbar position refreshes are capped at 60 Hz while unrelated browser-chrome scroll
+  reactions remain capped at 15 Hz. The overlay stays outside fullscreen and video-only presentation.
 - Page translation provider is global and persists across regular and private browsing. Translation
   itself remains an explicit page action; no source URL or translated content is stored separately.
 - **Prevent automatic video playback** defaults on and is applied to every existing and newly

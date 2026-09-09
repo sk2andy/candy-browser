@@ -9,5 +9,21 @@
             android:name="dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnResultTestActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name="dev.sk2andy.materialbrowser.browser.gecko.GeckoRedirectTrapActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="google.candy.localhost"
+                    android:pathPrefix="/redirect"
+                    android:scheme="http" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
+import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.CaptchaCompatibilityRules
 import dev.sk2andy.materialbrowser.browser.FederatedLoginRules
 import org.json.JSONArray
@@ -64,6 +65,7 @@ internal data class GeckoPrivacyPolicy(
     val compatibilityRequestHosts: Set<String> = DEFAULT_COMPATIBILITY_REQUEST_HOSTS,
     val topInsetPx: Int = 0,
     val navigationGeneration: Int = 0,
+    val scrollMetricsEnabled: Boolean = false,
 ) {
     companion object {
         val Disabled = GeckoPrivacyPolicy(
@@ -90,6 +92,7 @@ internal object GeckoPrivacyPolicyRules {
         allowThirdPartyCookiesForSite: Boolean,
         topInsetPx: Int = 0,
         navigationGeneration: Int = 0,
+        scrollMetricsEnabled: Boolean = false,
     ): GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
         pageHost = pageHost,
         pausedHosts = pausedHosts,
@@ -99,6 +102,7 @@ internal object GeckoPrivacyPolicyRules {
         allowThirdPartyCookiesForSite = allowThirdPartyCookiesForSite,
         topInsetPx = topInsetPx.coerceAtLeast(0),
         navigationGeneration = navigationGeneration.coerceAtLeast(0),
+        scrollMetricsEnabled = scrollMetricsEnabled,
     )
 }
 
@@ -127,6 +131,7 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("cookieBannerRemovalDisabled", cookieBannerRemovalDisabled)
     .put("topInsetPx", topInsetPx)
     .put("navigationGeneration", navigationGeneration)
+    .put("scrollMetricsEnabled", scrollMetricsEnabled)
     .put(
         "compatibilityRequestHosts",
         JSONArray(compatibilityRequestHosts.sorted()),
@@ -185,3 +190,25 @@ internal fun pictureInPicturePlaybackMessage(
     .put("token", token)
     .put("revision", revision)
     .put("expected", expected)
+
+internal fun geckoScrollMetricsFromMessage(
+    message: JSONObject,
+    currentRevision: Long,
+): BrowserEngineScrollMetrics? {
+    if (message.optLong("revision", -1) != currentRevision) return null
+    val offsetPx = message.optLong("offsetPx", -1)
+    val extentPx = message.optLong("extentPx", -1)
+    val rangePx = message.optLong("rangePx", -1)
+    if (
+        offsetPx !in 0..Int.MAX_VALUE.toLong() ||
+        extentPx !in 1..Int.MAX_VALUE.toLong() ||
+        rangePx !in extentPx..Int.MAX_VALUE.toLong()
+    ) {
+        return null
+    }
+    return BrowserEngineScrollMetrics(
+        offsetPx = offsetPx.coerceAtMost(rangePx - extentPx).toInt(),
+        extentPx = extentPx.toInt(),
+        rangePx = rangePx.toInt(),
+    )
+}

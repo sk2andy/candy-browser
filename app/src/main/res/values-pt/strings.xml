@@ -948,7 +948,9 @@
     <string name="gecko_extension_action_failed">A ação da extensão do Firefox falhou.</string>
     <string name="gecko_extension_private_management_disabled">As extensões não podem ser alteradas enquanto estiver selecionado um separador privado.</string>
     <string name="gecko_extensions_manager_summary">Pacotes XPI assinados pela Mozilla para o navegador Gecko</string>
+    <string name="gecko_extensions_options_summary">Abrir a página de opções da própria extensão instalada</string>
     <string name="gecko_extensions_empty">Ainda não está instalada nenhuma extensão do Firefox.</string>
+    <string name="gecko_extension_no_options">Nenhuma página de opções disponível</string>
     <string name="gecko_extension_install">Instalar extensão</string>
     <string name="gecko_extension_install_hint">Cole o endereço HTTPS de um pacote XPI assinado pela Mozilla.</string>
     <string name="gecko_extension_install_confirm">Verificar e instalar</string>

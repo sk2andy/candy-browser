@@ -65,6 +65,7 @@ function contentPolicy(policy) {
     topInsetPx: Number.isSafeInteger(policy?.topInsetPx) ? Math.max(0, policy.topInsetPx) : 0,
     navigationGeneration: Number.isSafeInteger(policy?.navigationGeneration) ?
       Math.max(0, policy.navigationGeneration) : 0,
+    scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
   };
 }
 
@@ -188,6 +189,27 @@ browser.runtime.onMessage.addListener((message, sender) => {
         token,
         revision: policy.revision,
         navigationGeneration: message.navigationGeneration,
+      });
+    }
+    return undefined;
+  }
+  if (message.type === "scroll-metrics") {
+    const token = tokenByTab.get(sender.tab.id);
+    const policy = token && policiesByToken.get(token);
+    if (
+      policy?.scrollMetricsEnabled === true &&
+      Number.isSafeInteger(message.revision) &&
+      message.revision === policy.revision &&
+      nativePort
+    ) {
+      nativePort.postMessage({
+        type: "scroll-metrics",
+        protocolVersion: PROTOCOL_VERSION,
+        token,
+        revision: policy.revision,
+        offsetPx: message.offsetPx,
+        extentPx: message.extentPx,
+        rangePx: message.rangePx,
       });
     }
     return undefined;

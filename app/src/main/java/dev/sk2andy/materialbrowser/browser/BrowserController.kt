@@ -117,6 +117,7 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionChromeHost
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionChromeRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionCreateTabRequest
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionOptionsTarget
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionPopupIdentity
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionSessionIdentity
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionUpdateTabRequest
@@ -343,6 +344,12 @@ private data class GeckoViewBinding(
     val view: View,
 )
 
+internal data class BrowserActivityResultIdentity(
+    val tabId: String,
+    val session: AndroidBrowserEngineSessionPort,
+    val navigationGeneration: Int,
+)
+
 private data class NativeSafeAreaFallbackReload(
     val navigationGeneration: Int,
     val url: String?,
@@ -495,6 +502,8 @@ class BrowserController(
     var isOpenHomeOnStartupEnabled by mutableStateOf(false)
         private set
     var isScrollBarEnabled by mutableStateOf(false)
+        private set
+    internal var scrollBarRefreshNonce by mutableIntStateOf(0)
         private set
     var isVideoAutoplayBlocked by mutableStateOf(false)
         private set
@@ -662,6 +671,20 @@ class BrowserController(
     @VisibleForTesting
     fun selectedTabForTesting(): BrowserTab = selectedTab
 
+    internal fun selectedActivityResultIdentity(): BrowserActivityResultIdentity? {
+        val tabId = selectedTabId
+        val session = browserEngineSessions[tabId] ?: return null
+        val navigationGeneration = navigationGenerations[tabId] ?: return null
+        return BrowserActivityResultIdentity(tabId, session, navigationGeneration)
+    }
+
+    internal fun isActivityResultIdentityCurrent(
+        identity: BrowserActivityResultIdentity,
+    ): Boolean = !destroyed &&
+        selectedTabId == identity.tabId &&
+        browserEngineSessions[identity.tabId] === identity.session &&
+        navigationGenerations[identity.tabId] == identity.navigationGeneration
+
     @VisibleForTesting
     fun residentTabIdsForTesting(): Set<String> = browserEngineSessions.keys.toSet()
 
@@ -692,6 +715,20 @@ class BrowserController(
     @VisibleForTesting
     internal fun dispatchGeckoEngineEventForTesting(event: BrowserEngineEvent) {
         onGeckoEngineEvent(event)
+    }
+
+    /** Routes a main-frame Gecko request through the production navigation callback. */
+    @VisibleForTesting
+    internal fun dispatchSelectedGeckoNavigationRequestForTesting(
+        request: GeckoMainFrameNavigationRequest,
+    ): GeckoNavigationRequestDecision {
+        check(usesGeckoEngine)
+        val tabId = selectedTabId
+        return onGeckoNavigationRequest(
+            tabId = tabId,
+            session = browserEngineSessionFor(tabId),
+            request = request,
+        )
     }
 
     @VisibleForTesting
@@ -741,6 +778,7 @@ class BrowserController(
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val nativeSafeAreaFallbackTabs = mutableSetOf<String>()
     private val nativeSafeAreaFallbackReloads = mutableMapOf<String, NativeSafeAreaFallbackReload>()
+    private val firefoxExtensionOptionsTabIds = mutableSetOf<String>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
     private val externalNavigationGrants = mutableMapOf<String, ExternalNavigationGrant>()
     private val pendingInitialExternalNavigationGrants =
@@ -1710,20 +1748,7 @@ class BrowserController(
                         owner: GeckoExtensionSessionIdentity,
                         url: String,
                         openInTab: Boolean,
-                    ): String? {
-                        if (!isCurrentSession(owner)) return null
-                        val existingTabIds = tabs.mapTo(hashSetOf(), BrowserTab::id)
-                        val tabId = this@BrowserController.createTab(
-                            isIncognito = owner.isPrivate,
-                            openerTabId = owner.tabId,
-                        )
-                        if (tabId in existingTabIds) return null
-                        if (!this@BrowserController.browserEngineSessionFor(tabId).loadExtensionUrl(url)) {
-                            this@BrowserController.closeTab(tabId)
-                            return null
-                        }
-                        return tabId
-                    }
+                    ): String? = openFirefoxExtensionOptionsPage(owner, url)
 
                     override fun onActionsChanged(actions: List<GeckoExtensionActionState>) {
                         firefoxExtensionActions.clear()
@@ -3094,6 +3119,9 @@ class BrowserController(
                     hasGesture = request.hasUserGesture,
                     isRedirect = request.isRedirect,
                     hasUserNavigationGrant = hasUserNavigationGrant,
+                    currentPageUrl = externalLinkPreviewState?.currentUrl
+                        ?: runtime.policyTab.url,
+                    targetUrl = safeHttpUrl,
                 ) && externalApps.openWebUrlExternally(safeHttpUrl) ==
                 ExternalLaunchResult.Launched
             ) {
@@ -3271,7 +3299,7 @@ class BrowserController(
         val safeArea = effectiveInsets.getInsets(SAFE_AREA_INSET_TYPES)
         val isFullscreenContent = tabId != null && fullscreenVideoState?.tabId == tabId
         val forceNativeSafeArea = if (tabId != null) {
-            isSafeAreaForced(tabId) || tabId in nativeSafeAreaFallbackTabs
+            usesNativeSafeArea(tabId)
         } else {
             isExternalLinkPreviewSafeAreaForced(view)
         }
@@ -5246,6 +5274,18 @@ class BrowserController(
     internal fun clickFirefoxExtensionAction(key: GeckoExtensionActionKey): Boolean =
         usesGeckoEngine && geckoEngineSessionFactory.clickExtensionAction(key)
 
+    internal fun openSelectedFirefoxExtensionOptionsPage(
+        target: GeckoExtensionOptionsTarget,
+    ): Boolean {
+        if (!usesGeckoEngine) return false
+        val ownerTab = selectedTab.takeUnless(BrowserTab::isIncognito) ?: return false
+        return createFirefoxExtensionOptionsTab(
+            openerTabId = ownerTab.id,
+            isPrivate = false,
+            url = target.url,
+        ) != null
+    }
+
     internal fun dismissFirefoxExtensionPopup() {
         if (usesGeckoEngine) geckoEngineSessionFactory.dismissExtensionPopup()
         releaseFirefoxExtensionPopupView()
@@ -5255,6 +5295,44 @@ class BrowserController(
         (firefoxExtensionPopupView as? GeckoView)?.releaseSession()
         firefoxExtensionPopupView = null
         firefoxExtensionPopupIdentity = null
+    }
+
+    private fun openFirefoxExtensionOptionsPage(
+        owner: GeckoExtensionSessionIdentity,
+        url: String,
+    ): String? {
+        if (
+            browserEngineSessions[owner.tabId] == null ||
+            geckoEngineSessionFactory.extensionSessionIdentity(owner.tabId) != owner
+        ) {
+            return null
+        }
+        return createFirefoxExtensionOptionsTab(
+            openerTabId = owner.tabId,
+            isPrivate = owner.isPrivate,
+            url = url,
+        )
+    }
+
+    private fun createFirefoxExtensionOptionsTab(
+        openerTabId: String,
+        isPrivate: Boolean,
+        url: String,
+    ): String? {
+        val tabId = createBackgroundTab(
+            initialUrl = BLANK_URL,
+            isIncognito = isPrivate,
+            openerTabId = openerTabId,
+            transientPopup = true,
+        ) ?: return null
+        transientPopupTabIds.remove(tabId)
+        firefoxExtensionOptionsTabIds += tabId
+        if (!browserEngineSessionFor(tabId).loadExtensionUrl(url)) {
+            closeTab(tabId)
+            return null
+        }
+        selectTab(tabId)
+        return tabId
     }
 
     fun printPage(tabId: String) {
@@ -5940,6 +6018,10 @@ class BrowserController(
     }
 
     fun goBack() {
+        if (selectedTabId in firefoxExtensionOptionsTabIds) {
+            closeTab(selectedTabId)
+            return
+        }
         if (!selectedTab.canGoBack) return
         val session = browserEngineSessions[selectedTabId] ?: return
         val capsule = activeCapsuleForTab(selectedTabId)
@@ -6328,6 +6410,19 @@ class BrowserController(
         if (isScrollBarEnabled == enabled) return
         isScrollBarEnabled = enabled
         store.saveScrollBarEnabled(enabled)
+        browserEngineSessions.values.forEach { session ->
+            session.setNativeVerticalScrollBarEnabled(!enabled)
+        }
+        if (usesGeckoEngine) refreshGeckoContentTopInsetPolicies()
+    }
+
+    internal fun selectedBrowserEngineScrollMetrics(): BrowserEngineScrollMetrics? =
+        browserEngineSessions[selectedTabId]?.scrollMetrics()
+
+    internal fun scrollSelectedBrowserEngineToVerticalOffset(offsetPx: Int): Boolean {
+        val session = browserEngineSessions[selectedTabId] ?: return false
+        session.scrollToVerticalOffset(offsetPx.coerceAtLeast(0))
+        return true
     }
 
     fun updateVideoAutoplayBlocked(blocked: Boolean) {
@@ -7045,7 +7140,10 @@ class BrowserController(
         mainHandler.post(syncRefreshRunnable)
     }
 
-    fun onStop(isInPictureInPictureMode: Boolean = false) {
+    fun onStop(
+        isInPictureInPictureMode: Boolean = false,
+        protectedTabIds: Set<String> = emptySet(),
+    ) {
         val wasActivityStarted = isActivityStarted
         val shouldCloseTabsWhenHidden = wasActivityStarted && !activity.isChangingConfigurations
         isActivityStarted = false
@@ -7068,7 +7166,9 @@ class BrowserController(
                         !destroyed
                     ) {
                         stopPictureInPictureMedia()
-                        if (shouldCloseTabsWhenHidden) closeTabsOnBackground()
+                        if (shouldCloseTabsWhenHidden) {
+                            closeTabsOnBackground(protectedTabIds = protectedTabIds)
+                        }
                     }
                 },
                 PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS,
@@ -7078,7 +7178,7 @@ class BrowserController(
             shouldCloseTabsWhenHidden &&
             !keepsPictureInPictureMedia
         ) {
-            closeTabsOnBackground()
+            closeTabsOnBackground(protectedTabIds = protectedTabIds)
         }
         if (pendingPermissionAccess?.awaitingRuntime != true) cancelPendingPermissionAccess()
         pendingGeckoAndroidPermissionRequest?.request?.response?.complete(false)
@@ -7191,6 +7291,7 @@ class BrowserController(
         navigationGenerations.clear()
         nativeSafeAreaFallbackTabs.clear()
         nativeSafeAreaFallbackReloads.clear()
+        firefoxExtensionOptionsTabIds.clear()
         committedRecallPages.clear()
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
@@ -7233,6 +7334,7 @@ class BrowserController(
             ).also { session ->
                 session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
                 session.setAudioMuted(isTabAudioMuted(tab, tab.url))
+                session.setNativeVerticalScrollBarEnabled(!isScrollBarEnabled)
                 connectBrowserEngineScrollListener(tab.id, session)
                 session.setMediaStateListener(
                     GeckoMediaSessionStateListener { state ->
@@ -7337,26 +7439,38 @@ class BrowserController(
                 previousScrollYPx = session.scrollMetrics()?.offsetPx?.coerceAtLeast(0) ?: 0,
             ),
         )
-        val rateDispatcher = BrowserEngineScrollRateDispatcher(
+        val scrollDispatchers = BrowserEngineScrollDispatchers(
             schedule = { delayMillis, dispatch ->
                 mainHandler.postDelayed(dispatch, delayMillis)
             },
             nowMillis = SystemClock::uptimeMillis,
-        ) { event ->
-            val eventGeneration = event.navigationGeneration
-            onBrowserEngineScroll(
-                tabId = tabId,
-                rendererIsCurrent = browserEngineSessions[tabId] === session &&
-                    eventGeneration != null &&
-                    eventGeneration == navigationGenerations.getOrDefault(tabId, 0),
-                event = event,
-            )
-        }
+            dispatchChrome = { event ->
+                val eventGeneration = event.navigationGeneration
+                onBrowserEngineScroll(
+                    tabId = tabId,
+                    rendererIsCurrent = browserEngineSessions[tabId] === session &&
+                        eventGeneration != null &&
+                        eventGeneration == navigationGenerations.getOrDefault(tabId, 0),
+                    event = event,
+                )
+            },
+            dispatchScrollBar = { event ->
+                val eventGeneration = event.navigationGeneration
+                onBrowserEngineScrollBarRefresh(
+                    tabId = tabId,
+                    rendererIsCurrent = browserEngineSessions[tabId] === session &&
+                        eventGeneration != null &&
+                        eventGeneration == navigationGenerations.getOrDefault(tabId, 0),
+                )
+            },
+        )
         session.setScrollListener { event ->
-            rateDispatcher.onScrollChanged(
-                event.copy(
-                    navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
-                ),
+            val currentEvent = event.copy(
+                navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
+            )
+            scrollDispatchers.onScrollChanged(
+                event = currentEvent,
+                scrollBarEnabled = isScrollBarEnabled,
             )
         }
     }
@@ -7411,6 +7525,9 @@ class BrowserController(
                 hasGesture = request.hasUserGesture,
                 isRedirect = request.isRedirect,
                 hasUserNavigationGrant = hasGrant,
+                currentPageUrl = pageUrls[tabId]
+                    ?: tabs.firstOrNull { tab -> tab.id == tabId }?.url,
+                targetUrl = safeHttpUrl,
             )
         ) {
             val result = if (safeHttpUrl != null) {
@@ -8019,6 +8136,7 @@ class BrowserController(
                     captchaCompatibilityEnabled,
             topInsetPx = topInsetPx,
             navigationGeneration = navigationGeneration,
+            scrollMetricsEnabled = isScrollBarEnabled,
         )
         return if (usesGeckoEngine) {
             policy
@@ -8036,8 +8154,7 @@ class BrowserController(
     private fun geckoContentTopInsetPx(tabId: String): Int {
         if (
             !isScrollAwareTopInsetEnabled ||
-            isSafeAreaForced(tabId) ||
-            tabId in nativeSafeAreaFallbackTabs ||
+            usesNativeSafeArea(tabId) ||
             fullscreenVideoState?.tabId == tabId
         ) {
             return 0
@@ -8048,6 +8165,11 @@ class BrowserController(
             ?.coerceAtLeast(0)
             ?: 0
     }
+
+    private fun usesNativeSafeArea(tabId: String): Boolean =
+        isSafeAreaForced(tabId) ||
+            tabId in nativeSafeAreaFallbackTabs ||
+            tabId in firefoxExtensionOptionsTabIds
 
     private fun refreshGeckoContentTopInsetPolicies() {
         browserEngineSessions.forEach { (tabId, session) ->
@@ -8403,9 +8525,27 @@ class BrowserController(
         }
     }
 
+    private fun onBrowserEngineScrollBarRefresh(
+        tabId: String,
+        rendererIsCurrent: Boolean,
+    ) {
+        if (!isScrollBarEnabled) return
+        if (
+            !BrowserChromeScrollRules.accepts(
+                eventTabId = tabId,
+                selectedTabId = selectedTabId,
+                tabExists = activeTabs.any { tab -> tab.id == tabId },
+                rendererIsCurrent = rendererIsCurrent,
+                destroyed = destroyed,
+            )
+        ) return
+        scrollBarRefreshNonce++
+    }
+
     private fun resetBrowserChromeScroll(tabId: String) {
         browserChromeScrollStates.remove(tabId)
         bottomBarCompactStates[tabId] = false
+        if (tabId == selectedTabId) scrollBarRefreshNonce++
     }
 
     private fun markResidentSessionAccess(tabId: String) {
@@ -9742,7 +9882,9 @@ class BrowserController(
         }
 
     private fun isSessionEphemeralTab(tabId: String): Boolean =
-        tabId in transientPopupTabIds || tabId in federatedLoginPopupTabIds
+        tabId in transientPopupTabIds ||
+            tabId in federatedLoginPopupTabIds ||
+            tabId in firefoxExtensionOptionsTabIds
 
     private fun activeFederatedLoginFlowTabIds(): Set<String> = buildSet {
         federatedLoginPopupTabIds.forEach { popupTabId ->
@@ -10163,11 +10305,12 @@ class BrowserController(
 
     private fun closeTabsOnBackground(
         nowMillis: Long = System.currentTimeMillis(),
+        protectedTabIds: Set<String> = emptySet(),
     ): Boolean {
         val closeIds = TabRetentionRules.tabIdsToCloseOnBackground(
             tabs = tabs,
             lifetime = inactiveTabLifetime,
-        ) - activeFederatedLoginFlowTabIds()
+        ) - activeFederatedLoginFlowTabIds() - protectedTabIds
         return removeTabs(
             tabIds = closeIds,
             nowMillis = nowMillis,
@@ -10239,6 +10382,7 @@ class BrowserController(
         navigationGenerations.remove(tabId)
         nativeSafeAreaFallbackTabs.remove(tabId)
         nativeSafeAreaFallbackReloads.remove(tabId)
+        firefoxExtensionOptionsTabIds.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
         pageUrls.remove(tabId)
         extensionTabMuteOverrides.remove(tabId)

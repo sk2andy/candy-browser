@@ -76,6 +76,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
 
                 assertMargins(view, left = 0, top = 0, right = 0, bottom = 0)
                 assertWindowTop(view, expectedTop = 0)
+                assertWindowBottom(view, expectedBottom = activity.window.decorView.height)
                 assertScreenTop(view, expectedTop = 0)
                 assertMargins(
                     view.engineView(),
@@ -85,9 +86,15 @@ class GeckoEdgeToEdgeInstrumentedTest {
                     bottom = 0,
                 )
                 assertWindowTop(view.engineView(), expectedTop = 0)
+                assertWindowBottom(
+                    view.engineView(),
+                    expectedBottom = activity.window.decorView.height,
+                )
                 assertScreenTop(view.engineView(), expectedTop = 0)
-                assertWindowTop(requireNotNull(view.findSurfaceView()), expectedTop = 0)
-                assertScreenTop(requireNotNull(view.findSurfaceView()), expectedTop = 0)
+                val surfaceView = requireNotNull(view.findSurfaceView())
+                assertWindowTop(surfaceView, expectedTop = 0)
+                assertWindowBottom(surfaceView, expectedBottom = activity.window.decorView.height)
+                assertScreenTop(surfaceView, expectedTop = 0)
                 assertTrue(
                     "GeckoView must use SurfaceView to avoid copying every page frame",
                     view.hasSurfaceView(),
@@ -184,6 +191,12 @@ class GeckoEdgeToEdgeInstrumentedTest {
         val location = IntArray(2)
         view.getLocationInWindow(location)
         assertEquals(expectedTop, location[1])
+    }
+
+    private fun assertWindowBottom(view: View, expectedBottom: Int) {
+        val location = IntArray(2)
+        view.getLocationInWindow(location)
+        assertEquals(expectedBottom, location[1] + view.height)
     }
 
     private fun assertScreenTop(view: View, expectedTop: Int) {

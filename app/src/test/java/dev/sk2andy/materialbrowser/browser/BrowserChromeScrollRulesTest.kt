@@ -66,6 +66,94 @@ class BrowserChromeScrollRulesTest {
     }
 
     @Test
+    fun `60 hertz rate dispatcher waits 17 milliseconds before following update`() {
+        var nowMillis = 1_000L
+        val scheduledDispatches = ArrayDeque<Pair<Long, () -> Unit>>()
+        lateinit var dispatcher: BrowserEngineScrollRateDispatcher
+        dispatcher = BrowserEngineScrollRateDispatcher(
+            schedule = { delayMillis, dispatch ->
+                scheduledDispatches.addLast(delayMillis to dispatch)
+            },
+            nowMillis = { nowMillis },
+            maximumDispatchesPerSecond = 60L,
+        ) { event ->
+            if (event.scrollYPx == 10) {
+                dispatcher.onScrollChanged(BrowserEngineScrollEvent(scrollYPx = 40))
+            }
+        }
+
+        dispatcher.onScrollChanged(BrowserEngineScrollEvent(scrollYPx = 10))
+        scheduledDispatches.removeFirst().second.invoke()
+        val following = scheduledDispatches.removeFirst()
+
+        assertEquals(17L, following.first)
+        nowMillis += following.first
+        following.second.invoke()
+        assertTrue(scheduledDispatches.isEmpty())
+    }
+
+    @Test
+    fun `scroll dispatchers keep chrome at 15 hertz and scrollbar at 60 hertz`() {
+        var nowMillis = 1_000L
+        val scheduledDispatches = ArrayDeque<Pair<Long, () -> Unit>>()
+        val chromeEvents = mutableListOf<BrowserEngineScrollEvent>()
+        val scrollBarEvents = mutableListOf<BrowserEngineScrollEvent>()
+        val dispatchers = BrowserEngineScrollDispatchers(
+            schedule = { delayMillis, dispatch ->
+                scheduledDispatches.addLast(delayMillis to dispatch)
+            },
+            nowMillis = { nowMillis },
+            dispatchChrome = chromeEvents::add,
+            dispatchScrollBar = scrollBarEvents::add,
+        )
+
+        dispatchers.onScrollChanged(
+            event = BrowserEngineScrollEvent(scrollYPx = 10),
+            scrollBarEnabled = true,
+        )
+        assertEquals(listOf(0L, 0L), scheduledDispatches.map { it.first })
+        repeat(2) { scheduledDispatches.removeFirst().second.invoke() }
+
+        dispatchers.onScrollChanged(
+            event = BrowserEngineScrollEvent(scrollYPx = 40),
+            scrollBarEnabled = true,
+        )
+        assertEquals(listOf(17L, 67L), scheduledDispatches.map { it.first }.sorted())
+
+        val chromeFollowing = scheduledDispatches.removeFirst()
+        val scrollBarFollowing = scheduledDispatches.removeFirst()
+        assertEquals(67L, chromeFollowing.first)
+        assertEquals(17L, scrollBarFollowing.first)
+        nowMillis += 17L
+        scrollBarFollowing.second.invoke()
+        nowMillis += 50L
+        chromeFollowing.second.invoke()
+        assertEquals(listOf(10, 40), chromeEvents.map { it.scrollYPx })
+        assertEquals(listOf(10, 40), scrollBarEvents.map { it.scrollYPx })
+    }
+
+    @Test
+    fun `disabled scrollbar keeps only chrome dispatcher active`() {
+        val scheduledDispatches = ArrayDeque<Pair<Long, () -> Unit>>()
+        val dispatchers = BrowserEngineScrollDispatchers(
+            schedule = { delayMillis, dispatch ->
+                scheduledDispatches.addLast(delayMillis to dispatch)
+            },
+            nowMillis = { 1_000L },
+            dispatchChrome = {},
+            dispatchScrollBar = {},
+        )
+
+        dispatchers.onScrollChanged(
+            event = BrowserEngineScrollEvent(scrollYPx = 10),
+            scrollBarEnabled = false,
+        )
+
+        assertEquals(1, scheduledDispatches.size)
+        assertEquals(0L, scheduledDispatches.single().first)
+    }
+
+    @Test
     fun `downward distance collapses only after collapse threshold`() {
         var state = BrowserChromeScrollState()
 
