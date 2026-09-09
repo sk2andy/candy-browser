@@ -188,6 +188,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
                     )
                 }
                 awaitSelectedTabTitle(scenario, GOOGLE_LIKE_RETURNED_SAFE_TITLE)
+                awaitSelectedTabTitle(scenario, GOOGLE_LIKE_SEARCH_SAFE_TITLE)
                 SystemClock.sleep(FALLBACK_REGRESSION_WINDOW_MILLIS)
 
                 scenario.onActivity { activity ->
@@ -210,7 +211,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
                         expectedBottom = activity.window.decorView.height,
                     )
                     assertEquals(
-                        GOOGLE_LIKE_RETURNED_SAFE_TITLE,
+                        GOOGLE_LIKE_SEARCH_SAFE_TITLE,
                         activity.browserControllerForTesting().selectedTabForTesting().title,
                     )
                 }
@@ -245,6 +246,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
         expectedTitle: String,
     ) {
         val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
+        var lastTitle = ""
         while (SystemClock.elapsedRealtime() < deadline) {
             instrumentation.waitForIdleSync()
             var title = ""
@@ -252,9 +254,13 @@ class GeckoEdgeToEdgeInstrumentedTest {
                 title = activity.browserControllerForTesting().selectedTabForTesting().title
             }
             if (title == expectedTitle) return
+            lastTitle = title
             SystemClock.sleep(POLL_MILLIS)
         }
-        assertTrue("Selected Gecko tab did not reach title $expectedTitle", false)
+        assertTrue(
+            "Selected Gecko tab did not reach title $expectedTitle; last title was $lastTitle",
+            false,
+        )
     }
 
     private class EdgeToEdgeFixtureServer : AutoCloseable {
@@ -312,16 +318,31 @@ class GeckoEdgeToEdgeInstrumentedTest {
                 z-index: 1; background: white;
               }
               #sign-in { position: absolute; top: 8px; right: 8px; }
+              #search-header {
+                position: fixed; top: 0; left: 0; width: 100%; height: 64px;
+                z-index: 10000; background: white;
+              }
               main { padding-top: 160px; height: 3000px; }
             </style></head><body>
             <div id="drawer-backdrop"></div>
             <div id="drawer-shell"><div role="button" style="height:120px">Drawer</div></div>
             <div id="navd"><div><div id="menu" role="button">Menu</div></div></div>
             <header id="header"><button id="sign-in">Sign in</button></header>
-            <main>Scrollable content</main>
+            <main><input id="query" aria-label="Search" hidden>Scrollable content</main>
+            <form id="search-header" hidden>
+              <button type="button">Add</button><input value="Vimeo sample video">
+              <button type="button">Close</button>
+            </form>
             <script>
               let sawScroll = false;
               let initialSafe = false;
+              let searchActivationScheduled = false;
+              let searchDeadline = 0;
+              let searchResultLocked = false;
+              document.querySelector('#query').addEventListener('input', () => {
+                document.querySelector('#search-header').hidden = false;
+                searchDeadline = performance.now() + $IMMEDIATE_LAYOUT_TIMEOUT_MILLIS;
+              });
               const inspect = () => {
                 const expectedInset = $STATUS_BAR_INSET_PX / devicePixelRatio;
                 const menuTop = document.querySelector('#menu').getBoundingClientRect().top;
@@ -338,8 +359,35 @@ class GeckoEdgeToEdgeInstrumentedTest {
                   sawScroll = true;
                   document.title = '$GOOGLE_LIKE_SCROLLED_TITLE';
                 }
-                if (safe && sawScroll && scrollY <= 0) {
+                if (safe && sawScroll && scrollY <= 0 && !searchActivationScheduled) {
                   document.title = '$GOOGLE_LIKE_RETURNED_SAFE_TITLE';
+                  searchActivationScheduled = true;
+                  setTimeout(() => {
+                    document.querySelector('#query').dispatchEvent(
+                      new InputEvent('input', {
+                        bubbles: true,
+                        inputType: 'insertText',
+                        data: 'v'
+                      })
+                    );
+                  }, 500);
+                }
+                if (searchDeadline > 0 && !searchResultLocked) {
+                  const searchHeaderTop = document.querySelector('#search-header')
+                    .getBoundingClientRect().top;
+                  if (searchHeaderTop >= expectedInset - 0.5) {
+                    searchResultLocked = true;
+                    document.title = '$GOOGLE_LIKE_SEARCH_SAFE_TITLE';
+                  } else if (performance.now() >= searchDeadline) {
+                    searchResultLocked = true;
+                    const searchHeader = document.querySelector('#search-header');
+                    document.title = '$GOOGLE_LIKE_SEARCH_UNSAFE_TITLE:' +
+                      searchHeaderTop + ':' +
+                      searchHeader.getAttribute('data-candy-browser-top-inset-offset') + ':' +
+                      searchHeader.style.getPropertyValue(
+                        '--candy-browser-owned-top-inset-offset'
+                      );
+                  }
                 }
               };
               addEventListener('scroll', inspect, { passive: true });
@@ -408,6 +456,9 @@ class GeckoEdgeToEdgeInstrumentedTest {
         const val GOOGLE_LIKE_SAFE_TITLE = "Google-like edge-to-edge safe"
         const val GOOGLE_LIKE_SCROLLED_TITLE = "Google-like edge-to-edge scrolled"
         const val GOOGLE_LIKE_RETURNED_SAFE_TITLE = "Google-like edge-to-edge returned safe"
+        const val GOOGLE_LIKE_SEARCH_SAFE_TITLE = "Google-like search header safe"
+        const val GOOGLE_LIKE_SEARCH_UNSAFE_TITLE = "Google-like search header unsafe"
+        const val IMMEDIATE_LAYOUT_TIMEOUT_MILLIS = 250L
         const val TIMEOUT_MILLIS = 15_000L
         const val POLL_MILLIS = 50L
     }

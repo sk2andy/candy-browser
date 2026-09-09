@@ -148,6 +148,63 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
     }
 
     @Test
+    fun inputActivatedSearchHeaderClearsStatusBarWithoutNativeFallback() {
+        ActivityScenario.launch<MainActivity>(
+            Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
+        ).use { scenario ->
+            val webView = awaitViewReady(scenario)
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().onWindowInsetsChanged(
+                    WindowInsetsCompat.Builder()
+                        .setInsets(
+                            WindowInsetsCompat.Type.statusBars(),
+                            Insets.of(0, STATUS_BAR_INSET_PX, 0, 0),
+                        )
+                        .setInsets(
+                            WindowInsetsCompat.Type.navigationBars(),
+                            Insets.of(0, 0, 0, NAVIGATION_BAR_INSET_PX),
+                        )
+                        .build(),
+                )
+            }
+            awaitJavaScript({ "System WebView did not apply initial top inset" }) {
+                evaluateNumber(scenario, "rootSpacerHeight") >=
+                    STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio") -
+                    CSS_TOLERANCE
+            }
+            val documentToken = evaluateString(scenario, "globalThis.__candyDocumentToken")
+
+            evaluateNumber(scenario, "activateSearchHeader")
+            val expectedTop =
+                STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio")
+            val deadline = SystemClock.elapsedRealtime() + IMMEDIATE_LAYOUT_TIMEOUT_MILLIS
+            var headerTop = Double.NEGATIVE_INFINITY
+            while (SystemClock.elapsedRealtime() < deadline) {
+                headerTop = evaluateNumber(scenario, "searchHeaderTop")
+                if (headerTop >= expectedTop - CSS_TOLERANCE) break
+                SystemClock.sleep(FRAME_SETTLE_MILLIS)
+            }
+            assertTrue(
+                "Input-activated search header remained in the status bar: " +
+                    "top=$headerTop expected=$expectedTop",
+                headerTop >= expectedTop - CSS_TOLERANCE,
+            )
+            SystemClock.sleep(FALLBACK_REGRESSION_WINDOW_MILLIS)
+
+            assertEquals(
+                "Search-header repair reloaded the current document",
+                documentToken,
+                evaluateString(scenario, "globalThis.__candyDocumentToken"),
+            )
+            scenario.onActivity { activity ->
+                assertEquals(0, (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin)
+                assertWindowTop(webView, expectedTop = 0)
+                assertWindowBottom(webView, activity.window.decorView.height)
+            }
+        }
+    }
+
+    @Test
     fun developerSafeAreaSettingsReachOpenDocumentWithoutReload() {
         ActivityScenario.launch<MainActivity>(
             Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
@@ -330,6 +387,8 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
         const val NAVIGATION_BAR_INSET_PX = 48
         const val COMPACT_CONTROL_PADDING_CSS_PIXELS = 8.0
         const val CSS_TOLERANCE = 1.0
+        const val IMMEDIATE_LAYOUT_TIMEOUT_MILLIS = 250L
+        const val FRAME_SETTLE_MILLIS = 16L
         const val FALLBACK_REGRESSION_WINDOW_MILLIS = 1_600L
         const val TIMEOUT_MILLIS = 15_000L
         const val POLL_MILLIS = 50L
@@ -351,6 +410,10 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                 z-index:1; background:white;
               }
               #sign-in { position:absolute; top:8px; right:8px; }
+              #search-header {
+                position:fixed; top:0; left:0; width:100%; height:64px;
+                z-index:10000; background:white;
+              }
               #lead { height:200px; }
               #sticky { position:sticky; top:0; height:24px; background:blue; }
               main { height:4000px; }
@@ -359,13 +422,24 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
               <div id="drawer-shell"><div role="button" style="height:120px">Drawer</div></div>
               <div id="navd"><div><div id="menu" role="button">Menu</div></div></div>
               <header id="header"><button id="sign-in">Sign in</button></header>
+              <input id="query" aria-label="Search" hidden>
+              <form id="search-header" hidden>
+                <button type="button">Add</button><input value="Vimeo sample video">
+                <button type="button">Close</button>
+              </form>
               <div id="lead"></div><nav id="sticky"></nav><main></main>
               <script>
                 globalThis.__candyDocumentToken =
                   String(performance.timeOrigin) + ':' + Math.random().toString(36);
+                document.querySelector('#query').addEventListener('input', () => {
+                  document.querySelector('#search-header').hidden = false;
+                });
                 globalThis.__candyEdgeToEdge = {
                   get devicePixelRatio() { return globalThis.devicePixelRatio; },
                   get menuTop() { return document.querySelector('#menu').getBoundingClientRect().top; },
+                  get searchHeaderTop() {
+                    return document.querySelector('#search-header').getBoundingClientRect().top;
+                  },
                   get stickyTop() { return document.querySelector('#sticky').getBoundingClientRect().top; },
                   get rootSpacerHeight() {
                     return Number.parseFloat(
@@ -373,6 +447,16 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                     ) || 0;
                   },
                   get scrollY() { return globalThis.scrollY; },
+                  get activateSearchHeader() {
+                    document.querySelector('#query').dispatchEvent(
+                      new InputEvent('input', {
+                        bubbles: true,
+                        inputType: 'insertText',
+                        data: 'v'
+                      })
+                    );
+                    return 0;
+                  },
                   get scrollPage() { globalThis.scrollTo(0, 600); return 0; },
                   get scrollTop() { globalThis.scrollTo(0, 0); return 0; }
                 };
