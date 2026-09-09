@@ -984,4 +984,20 @@
     <string name="gecko_reload">Reload</string>
     <string name="action_allow">Allow</string>
     <string name="action_deny">Deny</string>
+    <string name="developer_options_title">Developer options</string>
+    <string name="developer_options_summary">Internal browser and layout tuning</string>
+    <string name="developer_options_unlock_action">Unlock developer options</string>
+    <string name="developer_options_unlocked">Developer options unlocked</string>
+    <string name="developer_options_safe_area_section">Safe area fallback</string>
+    <string name="developer_options_safe_area_summary">Tune how Candy confirms that a website cannot safely use the scrollable top inset.</string>
+    <string name="developer_options_layout_quiet_period">Layout quiet period</string>
+    <string name="developer_options_layout_quiet_period_summary">Wait after the last page layout change before each confirmation check.</string>
+    <string name="developer_options_required_failures">Required failed checks</string>
+    <string name="developer_options_required_failures_summary">Consecutive failed checks required before switching live to native safe-area insets.</string>
+    <string name="developer_options_reset">Reset to defaults</string>
+    <string name="developer_options_milliseconds_value">%1$d ms</string>
+    <plurals name="developer_options_failed_checks_value">
+        <item quantity="one">%1$d failed check</item>
+        <item quantity="other">%1$d failed checks</item>
+    </plurals>
 </resources>

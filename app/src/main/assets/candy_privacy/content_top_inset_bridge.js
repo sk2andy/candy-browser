@@ -6,6 +6,8 @@ const state = {
   navigationGeneration: 0,
   revision: 0,
   scrollMetricsEnabled: false,
+  safeAreaLayoutQuietPeriodMillis: 400,
+  safeAreaRequiredFailureCount: 3,
 };
 let policyReady = false;
 let policyRetryIndex = 0;
@@ -65,13 +67,25 @@ function applyPolicy(policy) {
   policyReady = true;
   if (policyRetryTimer) clearTimeout(policyRetryTimer);
   policyRetryTimer = 0;
+  const safeAreaLayoutQuietPeriodMillis =
+    Number.isSafeInteger(policy.safeAreaLayoutQuietPeriodMillis) ?
+      Math.min(800, Math.max(100, policy.safeAreaLayoutQuietPeriodMillis)) : 400;
+  const safeAreaRequiredFailureCount =
+    Number.isSafeInteger(policy.safeAreaRequiredFailureCount) ?
+      Math.min(5, Math.max(2, policy.safeAreaRequiredFailureCount)) : 3;
+  const safeAreaSettingsChanged =
+    state.safeAreaLayoutQuietPeriodMillis !== safeAreaLayoutQuietPeriodMillis ||
+    state.safeAreaRequiredFailureCount !== safeAreaRequiredFailureCount;
   state.revision = revision;
   state.topInsetPx = Number.isSafeInteger(policy.topInsetPx) ?
     Math.max(0, policy.topInsetPx) : 0;
   state.navigationGeneration = Number.isSafeInteger(policy.navigationGeneration) ?
     Math.max(0, policy.navigationGeneration) : 0;
   state.scrollMetricsEnabled = policy.scrollMetricsEnabled === true;
-  globalThis.__candyReconcileContentTopInset?.();
+  state.safeAreaLayoutQuietPeriodMillis = safeAreaLayoutQuietPeriodMillis;
+  state.safeAreaRequiredFailureCount = safeAreaRequiredFailureCount;
+  if (safeAreaSettingsChanged) globalThis.__candyReconfigureContentTopInset?.();
+  else globalThis.__candyReconcileContentTopInset?.();
   scheduleScrollMetrics();
 }
 
@@ -79,11 +93,17 @@ globalThis.CandyContentTopInset = Object.freeze({
   topInsetPx: () => state.topInsetPx,
   navigationGeneration: () => state.navigationGeneration,
   policyRevision: () => state.revision,
-  fallbackToNative: (navigationGeneration) => {
-    if (navigationGeneration !== state.navigationGeneration) return;
+  safeAreaLayoutQuietPeriodMillis: () => state.safeAreaLayoutQuietPeriodMillis,
+  safeAreaRequiredFailureCount: () => state.safeAreaRequiredFailureCount,
+  fallbackToNative: (navigationGeneration, revision) => {
+    if (
+      navigationGeneration !== state.navigationGeneration ||
+      revision !== state.revision
+    ) return;
     browser.runtime.sendMessage({
       type: "safe-area-fallback",
       navigationGeneration,
+      revision,
     }).catch(() => {});
   },
 });

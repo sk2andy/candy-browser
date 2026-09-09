@@ -142,6 +142,13 @@ test("safe-area policy push has a bounded content-side race fallback", () => {
   assert.match(background, /ready: Boolean\(policy\)/);
   assert.match(background, /revision: Number\.isSafeInteger\(policy\?\.revision\)/);
   assert.match(bridge, /revision < state\.revision/);
+  assert.match(background, /safeAreaLayoutQuietPeriodMillis/);
+  assert.match(background, /safeAreaRequiredFailureCount/);
+  assert.match(bridge, /safeAreaLayoutQuietPeriodMillis/);
+  assert.match(bridge, /safeAreaRequiredFailureCount/);
+  assert.match(bridge, /revision !== state\.revision/);
+  assert.match(bridge, /revision,/);
+  assert.match(background, /policy\.revision === message\.revision/);
   assert.doesNotMatch(bridge, /console\.(?:log|warn|error)/);
 });
 
@@ -214,6 +221,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     protocolVersion: 2,
     token: "tab-token",
     revision: 1,
+    navigationGeneration: 0,
     hideConsent: true,
   });
   nativeMessageListener({
@@ -221,7 +229,10 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     protocolVersion: 2,
     token: "tab-token",
     revision: 2,
+    navigationGeneration: 0,
     hideConsent: false,
+    safeAreaLayoutQuietPeriodMillis: 5000,
+    safeAreaRequiredFailureCount: 0,
   });
   resolveCookieAsset({ ok: true, text: () => Promise.resolve("") });
   await new Promise((resolve) => setImmediate(resolve));
@@ -243,6 +254,27 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   );
 
   assert.equal(policy.revision, 2);
+  assert.equal(policy.safeAreaLayoutQuietPeriodMillis, 800);
+  assert.equal(policy.safeAreaRequiredFailureCount, 2);
+  const fallbackCount = postedNativeMessages.filter(
+    (message) => message.type === "safe-area-fallback",
+  ).length;
+  await sendRuntimeMessage(
+    { type: "safe-area-fallback", navigationGeneration: 0, revision: 1 },
+    { tab: { id: 7 } },
+  );
+  assert.equal(
+    postedNativeMessages.filter((message) => message.type === "safe-area-fallback").length,
+    fallbackCount,
+  );
+  await sendRuntimeMessage(
+    { type: "safe-area-fallback", navigationGeneration: 0, revision: 2 },
+    { tab: { id: 7 } },
+  );
+  assert.equal(
+    postedNativeMessages.filter((message) => message.type === "safe-area-fallback").at(-1).revision,
+    2,
+  );
   assert.equal(
     postedNativeMessages.filter((message) => message.type === "policy-ready").at(-1).revision,
     1,

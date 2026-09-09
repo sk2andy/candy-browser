@@ -974,4 +974,20 @@
     <string name="web_prompt_resend">Renvoyer</string>
     <string name="action_allow">Autoriser</string>
     <string name="action_deny">Refuser</string>
+    <string name="developer_options_title">Options pour les développeurs</string>
+    <string name="developer_options_summary">Réglages internes du navigateur et de la mise en page</string>
+    <string name="developer_options_unlock_action">Déverrouiller les options pour les développeurs</string>
+    <string name="developer_options_unlocked">Options pour les développeurs déverrouillées</string>
+    <string name="developer_options_safe_area_section">Repli de la zone sûre</string>
+    <string name="developer_options_safe_area_summary">Règle la manière dont Candy confirme qu’un site ne peut pas utiliser la marge supérieure défilante.</string>
+    <string name="developer_options_layout_quiet_period">Stabilité de la mise en page</string>
+    <string name="developer_options_layout_quiet_period_summary">Attente après la dernière modification de mise en page avant chaque vérification.</string>
+    <string name="developer_options_required_failures">Échecs requis</string>
+    <string name="developer_options_required_failures_summary">Échecs consécutifs requis avant le passage aux marges natives de zone sûre.</string>
+    <string name="developer_options_reset">Rétablir les valeurs par défaut</string>
+    <string name="developer_options_milliseconds_value">%1$d ms</string>
+    <plurals name="developer_options_failed_checks_value">
+        <item quantity="one">%1$d vérification échouée</item>
+        <item quantity="other">%1$d vérifications échouées</item>
+    </plurals>
 </resources>

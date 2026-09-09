@@ -6,6 +6,7 @@ import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.CaptchaCompatibilityRules
 import dev.sk2andy.materialbrowser.browser.FederatedLoginRules
+import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -66,6 +67,10 @@ internal data class GeckoPrivacyPolicy(
     val topInsetPx: Int = 0,
     val navigationGeneration: Int = 0,
     val scrollMetricsEnabled: Boolean = false,
+    val safeAreaLayoutQuietPeriodMillis: Int =
+        DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+    val safeAreaRequiredFailureCount: Int =
+        DeveloperSettings.DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT,
 ) {
     companion object {
         val Disabled = GeckoPrivacyPolicy(
@@ -93,17 +98,30 @@ internal object GeckoPrivacyPolicyRules {
         topInsetPx: Int = 0,
         navigationGeneration: Int = 0,
         scrollMetricsEnabled: Boolean = false,
-    ): GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
-        pageHost = pageHost,
-        pausedHosts = pausedHosts,
-        hideCookieConsent = hideCookieConsent,
-        cookieBannerRemovalDisabled = cookieBannerRemovalDisabled,
-        blockThirdPartyCookies = blockThirdPartyCookies,
-        allowThirdPartyCookiesForSite = allowThirdPartyCookiesForSite,
-        topInsetPx = topInsetPx.coerceAtLeast(0),
-        navigationGeneration = navigationGeneration.coerceAtLeast(0),
-        scrollMetricsEnabled = scrollMetricsEnabled,
-    )
+        safeAreaLayoutQuietPeriodMillis: Int =
+            DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+        safeAreaRequiredFailureCount: Int =
+            DeveloperSettings.DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT,
+    ): GeckoPrivacyPolicy {
+        val developerSettings = DeveloperSettings(
+            safeAreaLayoutQuietPeriodMillis = safeAreaLayoutQuietPeriodMillis,
+            safeAreaRequiredFailureCount = safeAreaRequiredFailureCount,
+        ).normalized()
+        return GeckoPrivacyPolicy.Disabled.copy(
+            pageHost = pageHost,
+            pausedHosts = pausedHosts,
+            hideCookieConsent = hideCookieConsent,
+            cookieBannerRemovalDisabled = cookieBannerRemovalDisabled,
+            blockThirdPartyCookies = blockThirdPartyCookies,
+            allowThirdPartyCookiesForSite = allowThirdPartyCookiesForSite,
+            topInsetPx = topInsetPx.coerceAtLeast(0),
+            navigationGeneration = navigationGeneration.coerceAtLeast(0),
+            scrollMetricsEnabled = scrollMetricsEnabled,
+            safeAreaLayoutQuietPeriodMillis =
+                developerSettings.safeAreaLayoutQuietPeriodMillis,
+            safeAreaRequiredFailureCount = developerSettings.safeAreaRequiredFailureCount,
+        )
+    }
 }
 
 internal data class GeckoPrivacyEvent(
@@ -132,6 +150,8 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("topInsetPx", topInsetPx)
     .put("navigationGeneration", navigationGeneration)
     .put("scrollMetricsEnabled", scrollMetricsEnabled)
+    .put("safeAreaLayoutQuietPeriodMillis", safeAreaLayoutQuietPeriodMillis)
+    .put("safeAreaRequiredFailureCount", safeAreaRequiredFailureCount)
     .put(
         "compatibilityRequestHosts",
         JSONArray(compatibilityRequestHosts.sorted()),

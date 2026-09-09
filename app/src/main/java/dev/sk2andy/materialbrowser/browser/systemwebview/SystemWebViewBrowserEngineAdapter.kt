@@ -1256,6 +1256,8 @@ private class SystemWebViewBrowserEngineSession(
             topInsetEnabled = privacyPolicy.topInsetPx > 0,
             navigationGeneration = privacyPolicy.navigationGeneration,
             policyRevision = policyRevision,
+            safeAreaLayoutQuietPeriodMillis = privacyPolicy.safeAreaLayoutQuietPeriodMillis,
+            safeAreaRequiredFailureCount = privacyPolicy.safeAreaRequiredFailureCount,
         )
     }
 
@@ -1429,9 +1431,17 @@ private class SystemWebViewBrowserEngineSession(
         }
     }.getOrNull()
 
-    private fun onSafeAreaFallback(navigationGeneration: Int) {
+    private fun onSafeAreaFallback(
+        navigationGeneration: Int,
+        revision: Long,
+    ) {
         val policy = privacyPolicy
-        if (navigationGeneration != policy.navigationGeneration) return
+        if (
+            navigationGeneration != policy.navigationGeneration ||
+            revision != policyRevision
+        ) {
+            return
+        }
         privacyEventSink.onEvent(
             GeckoPrivacyEvent(
                 requestUrl = webView.url.orEmpty(),
@@ -1552,13 +1562,15 @@ private class SystemWebViewBrowserEngineSession(
 
 private class SystemWebViewHost(
     context: Context,
-    private val onFallback: (Int) -> Unit,
+    private val onFallback: (Int, Long) -> Unit,
 ) : WebView(context), GeckoViewInsetHost {
     private var topInsetPx = 0
     private var layoutTopInsetPx = 0
     private var navigationGeneration = 0
     private var policyRevision = 0L
     private var topInsetEnabled = false
+    private var safeAreaLayoutQuietPeriodMillis = 400
+    private var safeAreaRequiredFailureCount = 3
     private var documentStartAvailable = false
     private var currentLayout = GeckoViewInsetLayout(
         margins = GeckoViewInsets.Zero,
@@ -1582,7 +1594,16 @@ private class SystemWebViewHost(
                 fun policyRevision(): Long = policyRevision
 
                 @android.webkit.JavascriptInterface
-                fun fallbackToNative(generation: Int) = post { onFallback(generation) }
+                fun safeAreaLayoutQuietPeriodMillis(): Int = safeAreaLayoutQuietPeriodMillis
+
+                @android.webkit.JavascriptInterface
+                fun safeAreaRequiredFailureCount(): Int = safeAreaRequiredFailureCount
+
+                @android.webkit.JavascriptInterface
+                fun fallbackToNative(
+                    generation: Int,
+                    revision: Long,
+                ) = post { onFallback(generation, revision) }
             },
             WebContentTopInsetScript.bridgeName,
         )
@@ -1600,15 +1621,24 @@ private class SystemWebViewHost(
         topInsetEnabled: Boolean,
         navigationGeneration: Int,
         policyRevision: Long,
+        safeAreaLayoutQuietPeriodMillis: Int,
+        safeAreaRequiredFailureCount: Int,
     ) {
         val wasEnabled = this.topInsetEnabled
+        val settingsChanged =
+            this.safeAreaLayoutQuietPeriodMillis != safeAreaLayoutQuietPeriodMillis ||
+                this.safeAreaRequiredFailureCount != safeAreaRequiredFailureCount
         this.topInsetEnabled = topInsetEnabled
         this.navigationGeneration = navigationGeneration
+        this.safeAreaLayoutQuietPeriodMillis = safeAreaLayoutQuietPeriodMillis
+        this.safeAreaRequiredFailureCount = safeAreaRequiredFailureCount
         this.policyRevision = policyRevision
         val previousTopInset = topInsetPx
         applyCurrentLayout()
         if (wasEnabled != topInsetEnabled || previousTopInset != topInsetPx) {
             evaluateJavascript(WebContentTopInsetScript.installScript, null)
+        } else if (settingsChanged) {
+            evaluateJavascript("globalThis.__candyReconfigureContentTopInset?.();", null)
         }
     }
 

@@ -14,5 +14,6 @@ enum class SettingsDestination {
     SiteCapsules,
     Sync,
     ProtectionAndData,
+    DeveloperOptions,
     AboutLegal,
 }

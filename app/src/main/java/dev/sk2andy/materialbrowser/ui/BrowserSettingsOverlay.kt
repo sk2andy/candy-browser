@@ -175,6 +175,8 @@ internal fun BrowserSettingsOverlay(
             isScrollBarEnabled = controller.isScrollBarEnabled,
             isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
             isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
+            developerSettings = controller.developerSettings,
+            isDeveloperOptionsUnlocked = controller.isDeveloperOptionsUnlocked,
             blockedCount = selectedTab.blockedCount,
             isDefaultBrowser = controller.isDefaultBrowser,
             isUserScriptSupported = controller.isUserScriptSupported,
@@ -238,6 +240,16 @@ internal fun BrowserSettingsOverlay(
                 controller::updateOpenHomeOnStartupEnabled,
             onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
             onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
+            onDeveloperSettingsChanged = controller::updateDeveloperSettings,
+            onUnlockDeveloperOptions = {
+                if (controller.unlockDeveloperOptions()) {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.developer_options_unlocked),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            },
             onOpenDefaultBrowserSettings = controller::openDefaultBrowserSettings,
             onPrivacyXRay = onOpenPrivacyXRay,
             onPermissionRadar = onOpenPermissionRadar,

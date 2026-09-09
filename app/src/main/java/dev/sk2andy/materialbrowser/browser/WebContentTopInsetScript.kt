@@ -23,14 +23,54 @@ internal object WebContentTopInsetScript {
               const stateKey = '__candyBrowserContentTopInset';
               const obstructionSampleStep = 12;
               const maxDeferredLayoutChecks = 8;
-              const layoutQuietPeriodMs = 400;
-              const requiredConsecutiveLayoutFailures = 3;
+              const defaultLayoutQuietPeriodMs = 400;
+              const minimumLayoutQuietPeriodMs = 100;
+              const maximumLayoutQuietPeriodMs = 800;
+              const defaultRequiredConsecutiveLayoutFailures = 3;
+              const minimumRequiredConsecutiveLayoutFailures = 2;
+              const maximumRequiredConsecutiveLayoutFailures = 5;
+              const compactControlTopPaddingCssPixels = 8;
               const stabilizationCheckDelaysMs = [250, 1000, 2500, 5000];
               let deferredLayoutChecks = 0;
               let deferredLayoutCheckTimer = 0;
               let consecutiveLayoutFailures = 0;
+              let activePolicyKey = null;
               let nativeFallbackRequestKey = null;
               let localOffsetCollisionDetected = false;
+              const currentPolicyKey = () => {
+                const generation = Number(
+                  globalThis.$bridgeName?.navigationGeneration?.(),
+                ) || 0;
+                const revision = Number(
+                  globalThis.$bridgeName?.policyRevision?.(),
+                ) || 0;
+                return `${'$'}{generation}:${'$'}{revision}`;
+              };
+              const resetFailuresForPolicy = (policyKey, force = false) => {
+                if (!force && activePolicyKey === policyKey) return;
+                activePolicyKey = policyKey;
+                deferredLayoutChecks = 0;
+                consecutiveLayoutFailures = 0;
+              };
+              const layoutQuietPeriodMs = () => {
+                const value = Number(
+                  globalThis.$bridgeName?.safeAreaLayoutQuietPeriodMillis?.(),
+                );
+                return Number.isSafeInteger(value)
+                  ? Math.min(maximumLayoutQuietPeriodMs, Math.max(minimumLayoutQuietPeriodMs, value))
+                  : defaultLayoutQuietPeriodMs;
+              };
+              const requiredConsecutiveLayoutFailures = () => {
+                const value = Number(
+                  globalThis.$bridgeName?.safeAreaRequiredFailureCount?.(),
+                );
+                return Number.isSafeInteger(value)
+                  ? Math.min(
+                    maximumRequiredConsecutiveLayoutFailures,
+                    Math.max(minimumRequiredConsecutiveLayoutFailures, value),
+                  )
+                  : defaultRequiredConsecutiveLayoutFailures;
+              };
               const clearOwnedOffsets = () => {
                 document.querySelectorAll(offsetSelector).forEach((element) => {
                   element.removeAttribute(offsetAttribute);
@@ -49,20 +89,23 @@ internal object WebContentTopInsetScript {
               };
               const requestNativeFallback = () => {
                 if (document.readyState === 'loading') return;
+                const policyKey = currentPolicyKey();
+                resetFailuresForPolicy(policyKey);
+                const requiredFailureCount = requiredConsecutiveLayoutFailures();
                 consecutiveLayoutFailures++;
-                if (consecutiveLayoutFailures < requiredConsecutiveLayoutFailures) {
+                if (consecutiveLayoutFailures < requiredFailureCount) {
                   scheduleDeferredLayoutCheck(false);
                   return;
                 }
-                const generation = Number(
-                  globalThis.$bridgeName?.navigationGeneration?.(),
-                ) || 0;
-                const revision = Number(
-                  globalThis.$bridgeName?.policyRevision?.(),
-                ) || 0;
-                const requestKey = `${'$'}{generation}:${'$'}{revision}`;
-                if (nativeFallbackRequestKey === requestKey) return;
-                nativeFallbackRequestKey = requestKey;
+                const confirmedPolicyKey = currentPolicyKey();
+                if (confirmedPolicyKey !== policyKey) {
+                  resetFailuresForPolicy(confirmedPolicyKey, true);
+                  scheduleDeferredLayoutCheck(false);
+                  return;
+                }
+                if (nativeFallbackRequestKey === policyKey) return;
+                nativeFallbackRequestKey = policyKey;
+                const [generation, revision] = policyKey.split(':').map(Number);
                 clearOwnedOffsets();
                 const root = document.documentElement;
                 if (root) {
@@ -71,16 +114,10 @@ internal object WebContentTopInsetScript {
                   root.style.removeProperty(property);
                   root.style.removeProperty(backgroundProperty);
                 }
-                globalThis.$bridgeName?.fallbackToNative?.(generation);
+                globalThis.$bridgeName?.fallbackToNative?.(generation, revision);
               };
               const nativeFallbackRequestedForCurrentPolicy = () => {
-                const generation = Number(
-                  globalThis.$bridgeName?.navigationGeneration?.(),
-                ) || 0;
-                const revision = Number(
-                  globalThis.$bridgeName?.policyRevision?.(),
-                ) || 0;
-                return nativeFallbackRequestKey === `${'$'}{generation}:${'$'}{revision}`;
+                return nativeFallbackRequestKey === currentPolicyKey();
               };
               const sampleAxis = (limit) => {
                 const points = [];
@@ -160,7 +197,16 @@ internal object WebContentTopInsetScript {
                   : 0;
                 const unshiftedTop = rect.top - previousOffset +
                   (style.position === 'absolute' ? globalThis.scrollY : 0);
-                const offset = Math.max(0, cssPixels - unshiftedTop);
+                const isCompactInteractive =
+                  !isViewportWide &&
+                  !isViewportTall &&
+                  isInteractivePositionedPeer(element, style);
+                const minimumTop = cssPixels + (
+                  isCompactInteractive
+                    ? compactControlTopPaddingCssPixels
+                    : 0
+                );
+                const offset = Math.max(0, minimumTop - unshiftedTop);
                 const isFixedPanel = style.position === 'fixed' && isViewportTall;
                 const computedHeight = Number.parseFloat(style.height);
                 const boxExtras = Number.isFinite(computedHeight)
@@ -169,13 +215,15 @@ internal object WebContentTopInsetScript {
                 return {
                   element,
                   position: style.position,
+                  isCompactInteractive,
+                  minimumTop,
                   offset,
                   panelMaxHeight: isFixedPanel
                     ? Math.max(0, rect.height + previousOffset - offset - boxExtras)
                     : null,
                 };
               };
-              const applyLocalOffsetPlans = (plans, cssPixels) => {
+              const applyLocalOffsetPlans = (plans) => {
                 for (const plan of plans) {
                   plan.element.style.setProperty(
                     offsetProperty,
@@ -198,7 +246,7 @@ internal object WebContentTopInsetScript {
                 return plans.every((plan) => {
                   if (plan.position === 'absolute' && globalThis.scrollY > 0) return true;
                   const rect = plan.element.getBoundingClientRect();
-                  return rect.top >= cssPixels - 0.5 &&
+                  return rect.top >= plan.minimumTop - 0.5 &&
                     (plan.panelMaxHeight === null || rect.bottom <= globalThis.innerHeight + 0.5);
                 });
               };
@@ -219,6 +267,24 @@ internal object WebContentTopInsetScript {
                 element.querySelector(interactivePeerSelector) !== null ||
                 element.hasAttribute('onclick') ||
                 style.cursor === 'pointer';
+              const isInteractiveAtPoint = (element, boundary) => {
+                for (
+                  let current = element;
+                  current && boundary.contains(current);
+                  current = current.parentElement
+                ) {
+                  const style = getComputedStyle(current);
+                  if (
+                    current.matches(interactivePeerSelector) ||
+                    current.hasAttribute('onclick') ||
+                    style.cursor === 'pointer'
+                  ) {
+                    return true;
+                  }
+                  if (current === boundary) return false;
+                }
+                return false;
+              };
               const findPositionedPeer = (
                 element,
                 root,
@@ -277,11 +343,6 @@ internal object WebContentTopInsetScript {
                 return null;
               };
               const hasPositionedPeerCollision = (plans, root, projected) => {
-                const xCoordinates = [
-                  1,
-                  Math.max(1, globalThis.innerWidth / 2),
-                  Math.max(1, globalThis.innerWidth - 1),
-                ];
                 return plans.some((plan) => {
                   const currentRect = plan.element.getBoundingClientRect();
                   const projectionOffset = projected ? plan.offset : 0;
@@ -291,6 +352,11 @@ internal object WebContentTopInsetScript {
                     top: currentRect.top + projectionOffset,
                     bottom: currentRect.bottom + projectionOffset,
                   };
+                  const xCoordinates = [
+                    Math.max(1, rect.left + 1),
+                    Math.max(1, (rect.left + rect.right) / 2),
+                    Math.min(globalThis.innerWidth - 1, rect.right - 1),
+                  ].filter((value) => value >= 0 && value < globalThis.innerWidth);
                   const yCoordinates = [
                     Math.max(1, rect.top + 1),
                     Math.max(1, (rect.top + rect.bottom) / 2),
@@ -332,8 +398,13 @@ internal object WebContentTopInsetScript {
                         return false;
                       }
                       const peerRect = peer.getBoundingClientRect();
-                      const peerIsInteractive = isInteractivePositionedPeer(peer, peerStyle);
-                      return (peerIsInteractive || peerRect.width >= globalThis.innerWidth * 0.8) &&
+                      const peerIsInteractive = isInteractiveAtPoint(element, peer);
+                      const peerIsViewportWide =
+                        peerRect.width >= globalThis.innerWidth * 0.8;
+                      return (
+                        peerIsInteractive && !peerIsViewportWide ||
+                        !plan.isCompactInteractive && peerIsViewportWide
+                      ) &&
                         rect.right > peerRect.left && rect.left < peerRect.right &&
                         rect.bottom > peerRect.top + 0.5 && rect.top < peerRect.bottom - 0.5;
                     })
@@ -364,7 +435,7 @@ internal object WebContentTopInsetScript {
                   plans.push(planLocalOffset(element, cssPixels));
                 }
                 return plans.every(Boolean) &&
-                  applyLocalOffsetPlans(plans, cssPixels);
+                  applyLocalOffsetPlans(plans);
               };
               const isBackdrop = (element, candidates) => {
                 const style = getComputedStyle(element);
@@ -406,34 +477,38 @@ internal object WebContentTopInsetScript {
                   element.matches?.(flowTargetSelector) || element.tagName === 'HEAD';
                 for (let pass = 0; pass < 3; pass++) {
                   const candidates = new Set();
+                  const plannedCandidates = new Map();
                   for (const y of sampleAxis(cssPixels)) {
                     for (const x of sampleAxis(globalThis.innerWidth)) {
-                      const element = document.elementFromPoint(x, y);
-                      if (ignored(element)) continue;
-                      const candidate = findPositionedCandidate(element, root, fixedOnly);
-                      if (!candidate) {
-                        if (fixedOnly) continue;
-                        return false;
+                      for (const element of document.elementsFromPoint(x, y)) {
+                        if (ignored(element)) continue;
+                        const candidate = findPositionedCandidate(element, root, fixedOnly);
+                        if (!candidate) {
+                          if (fixedOnly) continue;
+                          return false;
+                        }
+                        candidates.add(candidate);
+                        const plan = planLocalOffset(candidate, cssPixels);
+                        if (!plan) continue;
+                        plannedCandidates.set(candidate, plan);
+                        break;
                       }
-                      candidates.add(candidate);
                     }
                   }
-                  if (candidates.size === 0) return true;
+                  if (plannedCandidates.size === 0) return true;
                   const candidateList = Array.from(candidates);
                   const backdropPeers = Array.from(new Set([
                     ...candidateList,
                     ...document.querySelectorAll(`[${'$'}{panelAttribute}="true"]`),
                   ]));
-                  const plans = candidateList
-                    .filter((element) => !isBackdrop(element, backdropPeers))
-                    .map((element) => planLocalOffset(element, cssPixels));
+                  const plans = Array.from(plannedCandidates.values())
+                    .filter((plan) => !isBackdrop(plan.element, backdropPeers));
                   if (plans.length === 0) return true;
-                  if (!plans.every(Boolean)) return false;
                   if (hasPositionedPeerCollision(plans, root, true)) {
                     localOffsetCollisionDetected = true;
                     return false;
                   }
-                  if (!applyLocalOffsetPlans(plans, cssPixels)) return false;
+                  if (!applyLocalOffsetPlans(plans)) return false;
                 }
                 return false;
               };
@@ -502,11 +577,19 @@ internal object WebContentTopInsetScript {
                   deferredLayoutCheckTimer = 0;
                   deferredLayoutChecks++;
                   reconcile();
-                }, layoutQuietPeriodMs);
+                }, layoutQuietPeriodMs());
               };
               const scheduleInteractionLayoutCheck = () => {
                 deferredLayoutChecks = 0;
                 scheduleDeferredLayoutCheck(true);
+              };
+              const reconfigure = () => {
+                if (deferredLayoutCheckTimer) {
+                  globalThis.clearTimeout(deferredLayoutCheckTimer);
+                  deferredLayoutCheckTimer = 0;
+                }
+                resetFailuresForPolicy(currentPolicyKey(), true);
+                reconcile();
               };
               const isTransparentColor = (color) =>
                 !color || color === 'transparent' ||
@@ -807,6 +890,7 @@ internal object WebContentTopInsetScript {
                 }
               };
               globalThis.__candyReconcileContentTopInset = reconcile;
+              globalThis.__candyReconfigureContentTopInset = reconfigure;
               if (document.documentElement) {
                 start();
               } else {

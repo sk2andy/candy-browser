@@ -87,13 +87,25 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("peer.contains(plan.element)"))
         assertTrue(WebContentTopInsetScript.installScript.contains("interactivePeerSelector"))
         assertTrue(WebContentTopInsetScript.installScript.contains("isInteractivePositionedPeer"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("peerIsInteractive ||"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("isInteractiveAtPoint"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("isCompactInteractive"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("plannedCandidates"))
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "compactControlTopPaddingCssPixels = 8",
+            ),
+        )
+        assertTrue(WebContentTopInsetScript.installScript.contains("minimumTop"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("plan.minimumTop"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("peerIsViewportWide"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.cursor === 'pointer'"))
         assertTrue(WebContentTopInsetScript.installScript.contains("findCompactViewportWidePeer"))
         assertTrue(WebContentTopInsetScript.installScript.contains("elementsFromPoint"))
         assertTrue(WebContentTopInsetScript.installScript.contains("localOffsetCollisionDetected"))
         assertTrue(WebContentTopInsetScript.installScript.contains("scheduleInteractionLayoutCheck"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("layoutQuietPeriodMs = 400"))
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains("defaultLayoutQuietPeriodMs = 400"),
+        )
         assertTrue(WebContentTopInsetScript.installScript.contains("interactionEvents"))
     }
 
@@ -133,12 +145,22 @@ class WebContentTopInsetScriptTest {
         )
         assertTrue(
             WebContentTopInsetScript.installScript.contains(
-                "requiredConsecutiveLayoutFailures = 3",
+                "defaultRequiredConsecutiveLayoutFailures = 3",
             ),
         )
         assertTrue(
             WebContentTopInsetScript.installScript.contains(
-                "consecutiveLayoutFailures < requiredConsecutiveLayoutFailures",
+                "consecutiveLayoutFailures < requiredFailureCount",
+            ),
+        )
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "safeAreaLayoutQuietPeriodMillis",
+            ),
+        )
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "safeAreaRequiredFailureCount",
             ),
         )
         assertTrue(
@@ -163,6 +185,45 @@ class WebContentTopInsetScriptTest {
         assertTrue(
             WebContentTopInsetScript.installScript.contains(
                 "runtimeState.stabilizationCheckTimers.forEach(globalThis.clearTimeout)",
+            ),
+        )
+    }
+
+    @Test
+    fun `runtime reconfiguration resets pending failure confirmation`() {
+        val reconfigure = WebContentTopInsetScript.installScript
+            .substringAfter("const reconfigure = () =>")
+            .substringBefore("const isTransparentColor")
+
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "globalThis.__candyReconfigureContentTopInset = reconfigure",
+            ),
+        )
+        assertTrue(reconfigure.contains("globalThis.clearTimeout(deferredLayoutCheckTimer)"))
+        assertTrue(reconfigure.contains("resetFailuresForPolicy(currentPolicyKey(), true)"))
+        assertTrue(reconfigure.contains("reconcile()"))
+    }
+
+    @Test
+    fun `policy revisions reset failures before they count toward fallback`() {
+        val fallbackRequest = WebContentTopInsetScript.installScript
+            .substringAfter("const requestNativeFallback = () =>")
+            .substringBefore("const nativeFallbackRequestedForCurrentPolicy")
+
+        assertTrue(fallbackRequest.contains("resetFailuresForPolicy(policyKey)"))
+        assertTrue(
+            fallbackRequest.indexOf("resetFailuresForPolicy(policyKey)") <
+                fallbackRequest.indexOf("consecutiveLayoutFailures++"),
+        )
+        assertTrue(fallbackRequest.contains("confirmedPolicyKey !== policyKey"))
+        assertTrue(fallbackRequest.contains("resetFailuresForPolicy(confirmedPolicyKey, true)"))
+        assertTrue(fallbackRequest.contains("fallbackToNative?.(generation, revision)"))
+        assertTrue(fallbackRequest.contains("nativeFallbackRequestKey = policyKey"))
+        assertTrue(fallbackRequest.contains("policyKey.split(':').map(Number)"))
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "resetFailuresForPolicy(currentPolicyKey(), true)",
             ),
         )
     }

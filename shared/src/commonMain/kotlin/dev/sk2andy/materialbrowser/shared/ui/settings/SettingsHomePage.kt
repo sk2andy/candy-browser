@@ -16,6 +16,7 @@ enum class SettingsHomeIcon {
     FirefoxExtensions,
     SiteCapsules,
     ProtectionAndData,
+    DeveloperOptions,
     AboutLegal,
 }
 
@@ -41,6 +42,9 @@ enum class SettingsHomeLabel {
     SiteCapsulesSummary,
     ProtectionAndDataTitle,
     ProtectionAndDataSummary,
+    DeveloperOptionsTitle,
+    DeveloperOptionsSummary,
+    UnlockDeveloperOptions,
     AboutLegalTitle,
     AboutLegalSummary,
 }
@@ -59,7 +63,10 @@ data class SettingsHomeItem(
 )
 
 object SettingsHomeRules {
-    fun items(hasFirefoxExtensions: Boolean): List<SettingsHomeItem> = buildList {
+    fun items(
+        hasFirefoxExtensions: Boolean,
+        hasDeveloperOptions: Boolean = false,
+    ): List<SettingsHomeItem> = buildList {
         add(item(SettingsDestination.Search, SettingsHomeIcon.Search, SettingsHomeLabel.SearchTitle, SettingsHomeLabel.SearchSummary))
         add(item(SettingsDestination.Sync, SettingsHomeIcon.Sync, SettingsHomeLabel.SyncTitle, SettingsHomeLabel.SyncSummary))
         add(item(SettingsDestination.TabsAndGestures, SettingsHomeIcon.TabsAndGestures, SettingsHomeLabel.TabsAndGesturesTitle, SettingsHomeLabel.TabsAndGesturesSummary))
@@ -80,6 +87,9 @@ object SettingsHomeRules {
         }
         add(item(SettingsDestination.SiteCapsules, SettingsHomeIcon.SiteCapsules, SettingsHomeLabel.SiteCapsulesTitle, SettingsHomeLabel.SiteCapsulesSummary))
         add(item(SettingsDestination.ProtectionAndData, SettingsHomeIcon.ProtectionAndData, SettingsHomeLabel.ProtectionAndDataTitle, SettingsHomeLabel.ProtectionAndDataSummary))
+        if (hasDeveloperOptions) {
+            add(item(SettingsDestination.DeveloperOptions, SettingsHomeIcon.DeveloperOptions, SettingsHomeLabel.DeveloperOptionsTitle, SettingsHomeLabel.DeveloperOptionsSummary))
+        }
         add(item(SettingsDestination.AboutLegal, SettingsHomeIcon.AboutLegal, SettingsHomeLabel.AboutLegalTitle, SettingsHomeLabel.AboutLegalSummary))
     }
 
@@ -105,6 +115,8 @@ fun SettingsHomePage(
     onDestinationChanged: (SettingsDestination) -> Unit,
     onDismiss: () -> Unit,
     onOpenFirefoxExtensions: (() -> Unit)? = null,
+    developerOptionsUnlocked: Boolean = false,
+    onUnlockDeveloperOptions: (() -> Unit)? = null,
     isDestinationEnabled: (SettingsDestination) -> Boolean = { true },
 ) {
     SettingsPage(
@@ -114,6 +126,7 @@ fun SettingsHomePage(
     ) {
         val items = SettingsHomeRules.items(
             hasFirefoxExtensions = onOpenFirefoxExtensions != null,
+            hasDeveloperOptions = developerOptionsUnlocked,
         )
         items.forEachIndexed { index, item ->
             val summary = item.summary
@@ -129,6 +142,15 @@ fun SettingsHomePage(
                 icon = { modifier, tint -> icon(item.icon, modifier, tint) },
                 enabled = item.isFirefoxExtensionsAction ||
                     destination?.let(isDestinationEnabled) == true,
+                onLongClickLabel = resources.text(SettingsHomeLabel.UnlockDeveloperOptions)
+                    .takeIf {
+                        destination == SettingsDestination.AboutLegal &&
+                            !developerOptionsUnlocked &&
+                            onUnlockDeveloperOptions != null
+                    },
+                onLongClick = onUnlockDeveloperOptions.takeIf {
+                    destination == SettingsDestination.AboutLegal && !developerOptionsUnlocked
+                },
                 onClick = {
                     if (item.isFirefoxExtensionsAction) {
                         onOpenFirefoxExtensions?.invoke()

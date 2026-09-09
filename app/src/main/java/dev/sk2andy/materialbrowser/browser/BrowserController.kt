@@ -193,6 +193,7 @@ import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
+import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -540,6 +541,10 @@ class BrowserController(
     var appearanceSettings by mutableStateOf(AppearanceSettings())
         private set
     var downloadSettings by mutableStateOf(BrowserDownloadSettings())
+        private set
+    var developerSettings by mutableStateOf(DeveloperSettings())
+        private set
+    var isDeveloperOptionsUnlocked by mutableStateOf(false)
         private set
     var pendingDownloadChoice by mutableStateOf<PendingDownloadChoice?>(null)
         private set
@@ -1855,6 +1860,8 @@ class BrowserController(
         isStartupAnimationEnabled = store.loadStartupAnimationEnabled()
         isOpenHomeOnStartupEnabled = store.loadOpenHomeOnStartupEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
+        isDeveloperOptionsUnlocked = store.loadDeveloperOptionsUnlocked()
+        developerSettings = store.loadDeveloperSettings()
         isProfileIsolationSupportedState = usesGeckoEngine ||
             SystemWebViewBrowserEngineFactory.supportsMultiProfile()
         isVideoAutoplayBlocked =
@@ -6462,6 +6469,25 @@ class BrowserController(
         if (usesGeckoEngine) refreshGeckoContentTopInsetPolicies()
     }
 
+    fun unlockDeveloperOptions(): Boolean {
+        if (isDeveloperOptionsUnlocked) return false
+        isDeveloperOptionsUnlocked = true
+        store.saveDeveloperOptionsUnlocked(true)
+        return true
+    }
+
+    fun updateDeveloperSettings(settings: DeveloperSettings) {
+        val normalized = settings.normalized()
+        if (developerSettings == normalized) return
+        developerSettings = normalized
+        store.saveDeveloperSettings(normalized)
+        if (nativeSafeAreaFallbackTabs.isNotEmpty()) {
+            nativeSafeAreaFallbackTabs.clear()
+            lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
+        }
+        refreshGeckoContentTopInsetPolicies()
+    }
+
     internal fun selectedBrowserEngineScrollMetrics(): BrowserEngineScrollMetrics? =
         browserEngineSessions[selectedTabId]?.scrollMetrics()
 
@@ -8182,6 +8208,9 @@ class BrowserController(
             topInsetPx = topInsetPx,
             navigationGeneration = navigationGeneration,
             scrollMetricsEnabled = isScrollBarEnabled,
+            safeAreaLayoutQuietPeriodMillis =
+                developerSettings.safeAreaLayoutQuietPeriodMillis,
+            safeAreaRequiredFailureCount = developerSettings.safeAreaRequiredFailureCount,
         )
         return if (usesGeckoEngine) {
             policy

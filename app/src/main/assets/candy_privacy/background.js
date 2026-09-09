@@ -66,6 +66,12 @@ function contentPolicy(policy) {
     navigationGeneration: Number.isSafeInteger(policy?.navigationGeneration) ?
       Math.max(0, policy.navigationGeneration) : 0,
     scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
+    safeAreaLayoutQuietPeriodMillis:
+      Number.isSafeInteger(policy?.safeAreaLayoutQuietPeriodMillis) ?
+        Math.min(800, Math.max(100, policy.safeAreaLayoutQuietPeriodMillis)) : 400,
+    safeAreaRequiredFailureCount:
+      Number.isSafeInteger(policy?.safeAreaRequiredFailureCount) ?
+        Math.min(5, Math.max(2, policy.safeAreaRequiredFailureCount)) : 3,
   };
 }
 
@@ -174,20 +180,22 @@ browser.runtime.onMessage.addListener((message, sender) => {
   }
   if (
     message.type === "safe-area-fallback" &&
-    Number.isSafeInteger(message.navigationGeneration)
+    Number.isSafeInteger(message.navigationGeneration) &&
+    Number.isSafeInteger(message.revision)
   ) {
     const token = tokenByTab.get(sender.tab.id);
     const policy = token && policiesByToken.get(token);
     if (
       policy &&
       policy.navigationGeneration === message.navigationGeneration &&
+      policy.revision === message.revision &&
       nativePort
     ) {
       nativePort.postMessage({
         type: "safe-area-fallback",
         protocolVersion: PROTOCOL_VERSION,
         token,
-        revision: policy.revision,
+        revision: message.revision,
         navigationGeneration: message.navigationGeneration,
       });
     }

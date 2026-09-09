@@ -896,6 +896,42 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_SCROLL_BAR_ENABLED, enabled).apply()
     }
 
+    fun loadDeveloperOptionsUnlocked(): Boolean =
+        preferences.getBoolean(KEY_DEVELOPER_OPTIONS_UNLOCKED, false)
+
+    fun saveDeveloperOptionsUnlocked(unlocked: Boolean) {
+        preferences.edit().putBoolean(KEY_DEVELOPER_OPTIONS_UNLOCKED, unlocked).apply()
+    }
+
+    fun loadDeveloperSettings(): DeveloperSettings = DeveloperSettings(
+        safeAreaLayoutQuietPeriodMillis = loadBoundedInt(
+            key = KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+            defaultValue = DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+            range = DeveloperSettings.MIN_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS..
+                DeveloperSettings.MAX_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+        ),
+        safeAreaRequiredFailureCount = loadBoundedInt(
+            key = KEY_DEVELOPER_SAFE_AREA_REQUIRED_FAILURE_COUNT,
+            defaultValue = DeveloperSettings.DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT,
+            range = DeveloperSettings.MIN_SAFE_AREA_REQUIRED_FAILURE_COUNT..
+                DeveloperSettings.MAX_SAFE_AREA_REQUIRED_FAILURE_COUNT,
+        ),
+    ).normalized()
+
+    fun saveDeveloperSettings(settings: DeveloperSettings) {
+        val normalized = settings.normalized()
+        preferences.edit()
+            .putInt(
+                KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+                normalized.safeAreaLayoutQuietPeriodMillis,
+            )
+            .putInt(
+                KEY_DEVELOPER_SAFE_AREA_REQUIRED_FAILURE_COUNT,
+                normalized.safeAreaRequiredFailureCount,
+            )
+            .apply()
+    }
+
     fun loadVideoAutoplayBlocked(): Boolean =
         preferences.getBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, true)
 
@@ -1120,6 +1156,11 @@ class BrowserSessionStore internal constructor(
         const val KEY_STARTUP_ANIMATION_ENABLED = "startup_animation_enabled"
         const val KEY_OPEN_HOME_ON_STARTUP_ENABLED = "open_home_on_startup_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
+        const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
+        const val KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS =
+            "developer_safe_area_layout_quiet_period_millis"
+        const val KEY_DEVELOPER_SAFE_AREA_REQUIRED_FAILURE_COUNT =
+            "developer_safe_area_required_failure_count"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
