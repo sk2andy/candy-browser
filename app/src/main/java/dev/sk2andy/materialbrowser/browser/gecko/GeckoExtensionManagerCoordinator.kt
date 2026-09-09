@@ -15,10 +15,17 @@ internal enum class GeckoExtensionManagerMessage {
     ActionFailed,
 }
 
+internal enum class GeckoExtensionManagerPresentation {
+    Management,
+    Options,
+}
+
 internal data class GeckoExtensionManagerState(
     val snapshot: GeckoExtensionSnapshot = GeckoExtensionSnapshot(emptyList()),
     val managementContext: GeckoExtensionManagementContext =
         GeckoExtensionManagementContext(profileId = DEFAULT_PROFILE_ID, isPrivate = false),
+    val presentation: GeckoExtensionManagerPresentation =
+        GeckoExtensionManagerPresentation.Management,
     val busy: Boolean = false,
     val message: GeckoExtensionManagerMessage? = null,
     val permissionRequest: GeckoExtensionPermissionRequest? = null,
@@ -41,32 +48,86 @@ internal class GeckoExtensionManagerCoordinator(
     runtime: GeckoExtensionRuntime,
     private val scope: CoroutineScope,
     private val onPageRuntimeChanged: () -> Unit = {},
+    private val onOpenOptionsPage: (GeckoExtensionOptionsTarget) -> Boolean = { false },
 ) {
     private val repository = GeckoExtensionRepository(runtime, ::requestPermission)
     private val extensionRuntime = runtime
     private var permissionDecision: CompletableDeferred<GeckoExtensionPermissionDecision>? = null
     private var visible = false
+    private var stateGeneration = 0L
 
     var state by mutableStateOf(GeckoExtensionManagerState())
         private set
 
-    fun open(context: GeckoExtensionManagementContext): Job? {
+    fun open(
+        context: GeckoExtensionManagementContext,
+        presentation: GeckoExtensionManagerPresentation =
+            GeckoExtensionManagerPresentation.Management,
+    ): Job? {
         visible = false
+        stateGeneration++
         denyPendingPermission()
         visible = true
         state = state.copy(
+            snapshot = GeckoExtensionSnapshot(emptyList()),
             managementContext = context,
+            presentation = presentation,
+            busy = false,
             message = null,
             permissionRequest = null,
         )
+        if (context.isPrivate) return null
         return refresh()
     }
 
-    fun refresh(): Job? {
-        if (state.busy) return null
+    fun openOptionsPage(
+        extensionId: String,
+        onOpened: () -> Unit = {},
+    ): Job? {
+        if (
+            !visible ||
+            !state.canManage ||
+            state.presentation != GeckoExtensionManagerPresentation.Options
+        ) {
+            return null
+        }
+        val generation = stateGeneration
         state = state.copy(busy = true, message = null)
         return scope.launch {
-            state = when (val result = repository.refresh()) {
+            when (val result = repository.refresh()) {
+                is GeckoExtensionReadResult.Failed -> {
+                    if (!isCurrentRegularState(generation)) return@launch
+                    state = state.copy(
+                        busy = false,
+                        message = GeckoExtensionManagerMessage.ActionFailed,
+                    )
+                }
+                is GeckoExtensionReadResult.Loaded -> {
+                    if (!isCurrentRegularState(generation)) return@launch
+                    state = state.copy(snapshot = result.snapshot, busy = false)
+                    val target = result.snapshot.extension(extensionId)
+                        ?.let(GeckoExtensionChromeRules::optionsPageTarget)
+                    if (target == null) {
+                        state = state.copy(message = GeckoExtensionManagerMessage.ActionRejected)
+                    } else if (onOpenOptionsPage(target)) {
+                        dismiss()
+                        onOpened()
+                    } else {
+                        state = state.copy(message = GeckoExtensionManagerMessage.ActionFailed)
+                    }
+                }
+            }
+        }
+    }
+
+    fun refresh(): Job? {
+        if (!visible || !state.canManage) return null
+        val generation = stateGeneration
+        state = state.copy(busy = true, message = null)
+        return scope.launch {
+            val result = repository.refresh()
+            if (!isCurrentRegularState(generation)) return@launch
+            state = when (result) {
                 is GeckoExtensionReadResult.Loaded -> state.copy(
                     snapshot = result.snapshot,
                     busy = false,
@@ -119,8 +180,9 @@ internal class GeckoExtensionManagerCoordinator(
 
     fun dismiss() {
         visible = false
+        stateGeneration++
         denyPendingPermission()
-        state = state.copy(permissionRequest = null)
+        state = state.copy(busy = false, permissionRequest = null)
     }
 
     fun close() {
@@ -133,10 +195,13 @@ internal class GeckoExtensionManagerCoordinator(
         reloadSelectedPage: Boolean = true,
         mutation: suspend () -> GeckoExtensionMutationResult,
     ): Job? {
-        if (!state.canManage) return null
+        if (!visible || !state.canManage) return null
+        val generation = stateGeneration
         state = state.copy(busy = true, message = null)
         return scope.launch {
-            state = when (val result = mutation()) {
+            val result = mutation()
+            if (!isCurrentRegularState(generation)) return@launch
+            state = when (result) {
                 is GeckoExtensionMutationResult.Applied -> {
                     if (reloadSelectedPage) onPageRuntimeChanged()
                     state.copy(
@@ -159,6 +224,9 @@ internal class GeckoExtensionManagerCoordinator(
             }
         }
     }
+
+    private fun isCurrentRegularState(generation: Long): Boolean =
+        visible && stateGeneration == generation && !state.managementContext.isPrivate
 
     private suspend fun requestPermission(
         request: GeckoExtensionPermissionRequest,
@@ -189,11 +257,13 @@ internal class GeckoExtensionManagerCoordinator(
             context: Context,
             scope: CoroutineScope,
             onPageRuntimeChanged: () -> Unit = {},
+            onOpenOptionsPage: (GeckoExtensionOptionsTarget) -> Boolean = { false },
         ): GeckoExtensionManagerCoordinator =
             GeckoExtensionManagerCoordinator(
                 runtime = GeckoRuntimeOwner.getOrCreate(context.applicationContext).extensions,
                 scope = scope,
                 onPageRuntimeChanged = onPageRuntimeChanged,
+                onOpenOptionsPage = onOpenOptionsPage,
             )
     }
 }

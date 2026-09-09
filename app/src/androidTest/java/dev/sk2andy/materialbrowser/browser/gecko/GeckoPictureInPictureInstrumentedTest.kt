@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.SystemClock
 import android.view.MotionEvent
-import android.view.TextureView
+import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import androidx.test.core.app.ActivityScenario
@@ -51,7 +51,7 @@ class GeckoPictureInPictureInstrumentedTest {
     @Test
     fun selectedRegularFullscreenGeckoVideoSurvivesPictureInPictureLifecycle() {
         lateinit var stableGeckoHost: View
-        lateinit var initialTextureEngineView: View
+        lateinit var initialEngineView: View
         lateinit var initialBrowserContainer: ViewGroup
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
@@ -72,12 +72,12 @@ class GeckoPictureInPictureInstrumentedTest {
                 stableGeckoHost = requireNotNull(
                     activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                 )
-                initialTextureEngineView = requireNotNull(
+                initialEngineView = requireNotNull(
                     (stableGeckoHost as ViewGroup).singleChild(),
                 )
                 initialBrowserContainer = requireNotNull(stableGeckoHost.parent as? ViewGroup)
                 assertNotNull(
-                    initialTextureEngineView.findDescendant(TextureView::class.java),
+                    initialEngineView.findDescendant(SurfaceView::class.java),
                 )
                 activity.browserControllerForTesting().reportSelectedGeckoMediaStateForTesting(
                     eligibleMediaState(),
@@ -106,23 +106,23 @@ class GeckoPictureInPictureInstrumentedTest {
                     activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                 )
                 assertSame(initialBrowserContainer, parentOf(stableGeckoHost))
-                assertSame(initialTextureEngineView, unchangedEngineView)
-                assertNotNull(unchangedEngineView.findDescendant(TextureView::class.java))
+                assertSame(initialEngineView, unchangedEngineView)
+                assertNotNull(unchangedEngineView.findDescendant(SurfaceView::class.java))
                 activity.browserControllerForTesting().onStop(
                     isInPictureInPictureMode = false,
                 )
             }
             awaitCondition {
-                var textureReady = false
+                var surfaceReady = false
                 scenario.onActivity { activity ->
                     val host = activity.browserControllerForTesting()
                         .selectedGeckoViewForTesting() as? ViewGroup
-                    val texture = host?.singleChild()?.findDescendant(TextureView::class.java)
-                    textureReady = texture?.let { view ->
+                    val surface = host?.singleChild()?.findDescendant(SurfaceView::class.java)
+                    surfaceReady = surface?.let { view ->
                         view.isAttachedToWindow && view.width > 0 && view.height > 0
                     } == true
                 }
-                textureReady
+                surfaceReady
             }
             scenario.onActivity { activity ->
                 assertNotNull(activity.browserControllerForTesting().fullscreenVideoState)
@@ -158,8 +158,8 @@ class GeckoPictureInPictureInstrumentedTest {
                     activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                 )
                 assertSame(initialBrowserContainer, parentOf(stableGeckoHost))
-                assertSame(initialTextureEngineView, restoredEngineView)
-                assertNotNull(restoredEngineView.findDescendant(TextureView::class.java))
+                assertSame(initialEngineView, restoredEngineView)
+                assertNotNull(restoredEngineView.findDescendant(SurfaceView::class.java))
                 assertNull(activity.browserControllerForTesting().fullscreenVideoState)
             }
         }
@@ -204,7 +204,7 @@ class GeckoPictureInPictureInstrumentedTest {
                 assertSame(stableBrowserContainer, parentOf(stableGeckoHost))
                 assertSame(stableEngineView, (stableGeckoHost as ViewGroup).singleChild())
                 assertTrue(stableGeckoHost.isAttachedToWindow)
-                assertNotNull(stableEngineView.findDescendant(TextureView::class.java))
+                assertNotNull(stableEngineView.findDescendant(SurfaceView::class.java))
             }
         }
     }
@@ -459,7 +459,7 @@ class GeckoPictureInPictureInstrumentedTest {
                     assertSame(stableGeckoHost, controller.selectedGeckoViewForTesting())
                     assertSame(stableBrowserContainer, parentOf(stableGeckoHost))
                     assertSame(stableEngineView, (stableGeckoHost as ViewGroup).singleChild())
-                    assertNotNull(stableEngineView.findDescendant(TextureView::class.java))
+                    assertNotNull(stableEngineView.findDescendant(SurfaceView::class.java))
                     controller.exitFullscreenVideo()
                 }
                 awaitCondition {

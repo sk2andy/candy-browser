@@ -89,6 +89,11 @@ call-site cutover are not complete.
   does the same explicitly. Fullscreen remains truly edge to edge, while Compose safe-drawing hosts
   clear duplicate renderer insets. Candy keeps GeckoView's default SurfaceView backend so page frames
   go directly to Android's compositor instead of being copied through a TextureView.
+- The optional draggable scrollbar reads bounded document metrics from Candy's authenticated,
+  top-frame Gecko content bridge; GeckoView's Android view scrollbar metrics describe only the
+  compositor host and are not a document-height API. The same overlay writes absolute offsets through
+  the selected engine-session port on Gecko and System WebView. It never replaces Gecko's existing
+  pill-collapse `ScrollDelegate` ownership.
 - The status-bar treatment is a small static native sibling above the Gecko content container. It is
   limited to the status-bar height plus an 8dp fade tail and never uses a live blur. Clear chrome does
   not create a full-screen `BlurTarget`; frosted chrome may still wrap the page in one solely as the
@@ -137,6 +142,11 @@ call-site cutover are not complete.
   lifecycle exit or session replacement denies the pending request. File results accept only bounded
   readable `content://` URIs. Private permission decisions remain memory-only, and authentication
   credentials are neither stored nor logged.
+- Gecko WebAuthn launches Android's passkey provider through the resumed `MainActivity`. Candy accepts
+  `RESULT_OK` even when the provider returns no `Intent`, but completes Gecko's pending result only
+  after the host resumes with the initiating tab, Gecko session and navigation generation unchanged.
+  The source tab is exempt from immediate background eviction for that round trip; a stale or destroyed
+  host rejects the result, and private mode gains no new persistence path.
 - In-page attachment/blob downloads consume GeckoView's one-shot `WebResponse` body directly; Candy
   never closes it and re-fetches the URL through Android DownloadManager. This preserves POST bodies,
   authentication, redirects and private-session context. Context-menu and WebExtension downloads keep
@@ -169,6 +179,9 @@ call-site cutover are not complete.
   The explicit per-site **Always block pop-ups** override remains Candy-owned. Normal Gecko tabs and
   external previews apply the same bounded external-app grant rules; unsafe/internal schemes,
   subframes and passive app redirects remain blocked.
+  A user-tapped same-registrable-site redirector remains in Gecko rather than being mistaken for an
+  external app link. Its short-lived navigation grant follows the real HTTP redirect, so only the
+  resolved cross-site target is considered for a verified non-browser handoff.
 - `AndroidBrowserEngineArchitectureTest` requires both runtime dependencies, rejects a compile-time
   engine flag and keeps Android WebView imports at the System WebView/userscript adapter edges.
 - The existing tab residency limit now applies to Gecko sessions. Eviction persists eligible native
@@ -231,11 +244,19 @@ call-site cutover are not complete.
 - Installing, enabling, disabling, updating or uninstalling an extension reloads the selected
   non-blank Gecko page so navigation-driven scripts and styles cannot miss an already open tab.
   Changing only private-browsing access does not reload a regular page.
-- The main browser menu and Settings both open the reusable extension manager as an overlay in the
-  normal `MainActivity` and Candy chrome. The main-menu entry is present only for Gecko. It does not
-  launch a second browser Activity or create a parallel address bar.
-- Extension management is rejected from private management contexts. Private access is a separate,
-  explicit switch for an extension installed from a regular context.
+- Settings opens the reusable extension manager as an overlay in the normal `MainActivity` and
+  Candy chrome. Dismissing that overlay returns to Settings instead of exposing the browser tab.
+  The main browser menu opens a regular-only list of installed extensions; selecting an enabled
+  extension opens its own options page in a normal Candy tab. That session-only tab uses native
+  safe-area margins instead of edge-to-edge document insets, and Back closes it directly before
+  returning to its opener; its initial `about:blank` entry is never exposed. The entry is present
+  only for Gecko and is absent in private browsing.
+- Extension management and inventory loading are rejected from private management contexts.
+  Private access is a separate, explicit switch for an extension installed from a regular context.
+  Menu-driven options clicks re-read Gecko's installed inventory instead of trusting the displayed
+  snapshot. The selected ID must still be installed and enabled, and its options URL must match that
+  current extension's exact `moz-extension://` origin. The validated ID and URL stay paired through
+  the browser-engine boundary.
 - Firefox browser/page actions are translated to bounded `GeckoExtensionActionState` values and
   rendered as their own section in the tab overview's shared **More** menu. The section, including
   its heading, is absent when the selected tab has no visible extension actions. Session overrides

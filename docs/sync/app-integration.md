@@ -153,6 +153,10 @@ The Sync settings page requests:
 - this device's encrypted display name, icon, and palette-picked accent color;
 - the E2EE passphrase and confirmation.
 
+The device-accent palette uses a fixed, runtime-compatible row layout. Opening Sync from the real
+browser Settings route must render the complete page without depending on experimental Compose
+flow-layout ABI.
+
 The server password and E2EE passphrase must differ. Neither input is saved. The passphrase never
 leaves the device, is immutable for the workspace, cannot be changed or recovered in either protocol
 version, and is needed to enroll future devices. Losing it can make the workspace unrecoverable. Each secret field has an explicit
@@ -214,6 +218,8 @@ revision baseline to prevent divergent successors.
 Android security instrumentation requires a dedicated API 34+ emulator with an explicit
 `ANDROID_SERIAL`. The repository suite covers known-answer crypto, tampering, wrong passphrases,
 strict parsing, Keystore restart behavior, offline retry, lost-response idempotency, and CAS replay.
+The MainActivity settings-flow suite also enters Sync through the real browser menu and verifies the
+page renders on-device.
 Controller instrumentation covers Gecko `Open`/`Navigate`, SPA history changes, first-load hydration
 without echo, rapid superseding remote navigation, and remote navigation of an already resident
 Gecko session.

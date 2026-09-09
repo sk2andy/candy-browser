@@ -5,8 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -51,6 +49,7 @@ import dev.sk2andy.materialbrowser.sync.SyncProfile
 import dev.sk2andy.materialbrowser.sync.SyncStatus
 
 private val SYNC_ACCENT_HUES = listOf(0, 36, 72, 108, 144, 180, 216, 252, 288, 312)
+private const val SYNC_ACCENT_COLORS_PER_ROW = 5
 
 data class SyncLocalProfileOption(
     val id: String,
@@ -392,7 +391,6 @@ private fun SyncChoiceRow(
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 private fun SyncAccentColorPicker(
     selectedHue: Int,
     onHueSelected: (Int) -> Unit,
@@ -401,30 +399,33 @@ private fun SyncAccentColorPicker(
         SYNC_ACCENT_HUES.dropLast(1) + selectedHue.coerceIn(0, 359)
     }
     Text("Akzentfarbe", modifier = Modifier.padding(start = 18.dp, top = 16.dp, bottom = 4.dp))
-    FlowRow(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        hues.forEach { hue ->
-            val selected = hue == selectedHue
-            Box(
-                modifier = Modifier.size(48.dp).selectable(
-                    selected = selected,
-                    role = Role.RadioButton,
-                    onClick = { onHueSelected(hue) },
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Surface(
-                    modifier = Modifier.size(34.dp).border(
-                        width = if (selected) 3.dp else 1.dp,
-                        color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant,
-                        shape = CircleShape,
-                    ),
-                    shape = CircleShape,
-                    color = Color.hsv(hue.toFloat(), 0.42f, 0.86f),
-                ) {}
+        hues.chunked(SYNC_ACCENT_COLORS_PER_ROW).forEach { rowHues ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowHues.forEach { hue ->
+                    val selected = hue == selectedHue
+                    Box(
+                        modifier = Modifier.size(48.dp).selectable(
+                            selected = selected,
+                            role = Role.RadioButton,
+                            onClick = { onHueSelected(hue) },
+                        ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(34.dp).border(
+                                width = if (selected) 3.dp else 1.dp,
+                                color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant,
+                                shape = CircleShape,
+                            ),
+                            shape = CircleShape,
+                            color = Color.hsv(hue.toFloat(), 0.42f, 0.86f),
+                        ) {}
+                    }
+                }
             }
         }
     }

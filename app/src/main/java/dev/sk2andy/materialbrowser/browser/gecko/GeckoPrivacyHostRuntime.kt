@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import java.util.UUID
 import org.json.JSONObject
 import org.mozilla.geckoview.GeckoResult
@@ -14,6 +15,8 @@ internal interface GeckoPrivacyBinding {
     fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit = {})
 
     fun extractPageForReader(onResult: (String?) -> Unit)
+
+    fun scrollMetrics(): BrowserEngineScrollMetrics?
 
     fun setPictureInPicturePlaybackExpected(expected: Boolean)
 
@@ -39,6 +42,8 @@ internal class GeckoViewPrivacyHostRuntime(
         var readerResult: ((String?) -> Unit)? = null,
         var readerTimeout: Runnable? = null,
         var pictureInPicturePlaybackExpected: Boolean = false,
+        var scrollMetrics: BrowserEngineScrollMetrics? = null,
+        val onScrollMetrics: (BrowserEngineScrollMetrics) -> Unit,
     )
 
     private val bindings = linkedMapOf<String, Binding>()
@@ -90,6 +95,7 @@ internal class GeckoViewPrivacyHostRuntime(
         session: GeckoSession,
         policy: GeckoPrivacyPolicy,
         sink: GeckoPrivacyEventSink,
+        onScrollMetrics: (BrowserEngineScrollMetrics) -> Unit,
         onBound: () -> Unit,
         onFailure: (String) -> Unit,
     ): GeckoPrivacyBinding {
@@ -98,6 +104,7 @@ internal class GeckoViewPrivacyHostRuntime(
             token = token,
             session = session,
             sink = sink,
+            onScrollMetrics = onScrollMetrics,
             bound = onBound,
             failed = onFailure,
         )
@@ -136,6 +143,8 @@ internal class GeckoViewPrivacyHostRuntime(
                     requestReaderExtraction(binding, onResult)
                 }
             }
+
+            override fun scrollMetrics(): BrowserEngineScrollMetrics? = binding.scrollMetrics
 
             override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
                 binding.pictureInPicturePlaybackExpected = expected
@@ -231,6 +240,7 @@ internal class GeckoViewPrivacyHostRuntime(
         if (bindings[binding.token] !== binding) return
         val readerResult = clearReaderRequest(binding)
         binding.policy = policy
+        binding.scrollMetrics = null
         binding.handshake = GeckoPrivacyBindingHandshakeRules.publish(binding.handshake)
         onReady?.let(binding.policyReadyCallbacks::add)
         refreshTimeout(binding)
@@ -279,6 +289,7 @@ internal class GeckoViewPrivacyHostRuntime(
             }
             "events" -> acceptEvents(value)
             "safe-area-fallback" -> acceptSafeAreaFallback(value)
+            "scroll-metrics" -> acceptScrollMetrics(value)
             "reader-result" -> acceptReaderResult(value)
             "failed" -> fail(IllegalStateException(value.optString("reason", "Privacy host failed")))
         }
@@ -392,6 +403,16 @@ internal class GeckoViewPrivacyHostRuntime(
                 safeAreaFallbackNavigationGeneration = navigationGeneration,
             ),
         )
+    }
+
+    private fun acceptScrollMetrics(value: JSONObject) {
+        val binding = bindings[value.optString("token")] ?: return
+        val metrics = geckoScrollMetricsFromMessage(
+            message = value,
+            currentRevision = binding.handshake.publishedRevision,
+        ) ?: return
+        binding.scrollMetrics = metrics
+        binding.onScrollMetrics(metrics)
     }
 
     private fun runWhenReady(binding: Binding, action: () -> Unit) {
@@ -574,6 +595,8 @@ private fun closedBinding(): GeckoPrivacyBinding = object : GeckoPrivacyBinding 
     override fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit) = Unit
 
     override fun extractPageForReader(onResult: (String?) -> Unit) = onResult(null)
+
+    override fun scrollMetrics(): BrowserEngineScrollMetrics? = null
 
     override fun setPictureInPicturePlaybackExpected(expected: Boolean) = Unit
 

@@ -22,6 +22,11 @@ internal data class GeckoExtensionSnapshot(
     fun extension(id: String): GeckoExtension? = extensions.firstOrNull { it.id == id }
 }
 
+internal data class GeckoExtensionOptionsTarget(
+    val extensionId: String,
+    val url: String,
+)
+
 internal enum class GeckoExtensionPermissionRequestKind {
     Install,
     Update,

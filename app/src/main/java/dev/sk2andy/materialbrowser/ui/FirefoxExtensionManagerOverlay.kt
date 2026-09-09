@@ -2,7 +2,8 @@
 
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,14 +50,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtension
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionChromeRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerMessage
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerPresentation
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionPermissionRequest
+import kotlinx.coroutines.flow.collect
 
 internal object FirefoxExtensionManagerTestTags {
     const val Overlay = "firefox_extension_manager"
     const val InstallUrl = "gecko_extension_install_url"
     const val PermissionPrompt = "gecko_extension_permission_prompt"
+
+    fun optionsPage(extensionId: String): String = "gecko_extension_options:$extensionId"
 }
 
 @Composable
@@ -67,11 +73,15 @@ internal fun FirefoxExtensionManagerOverlay(
     onSetPrivate: (GeckoExtension, Boolean) -> Unit,
     onUpdate: (GeckoExtension) -> Unit,
     onUninstall: (GeckoExtension) -> Unit,
+    onOpenOptionsPage: (GeckoExtension) -> Unit,
     onPermissionDecision: (Boolean, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var installDialogVisible by remember { mutableStateOf(false) }
-    BackHandler(onBack = onDismiss)
+    PredictiveBackHandler(enabled = true) { events ->
+        events.collect { }
+        onDismiss()
+    }
     Surface(
         modifier = Modifier
             .fillMaxSize()
@@ -86,6 +96,7 @@ internal fun FirefoxExtensionManagerOverlay(
         ) {
             ExtensionManagerHeader(
                 canManage = state.canManage,
+                presentation = state.presentation,
                 onInstall = { installDialogVisible = true },
                 onDismiss = onDismiss,
             )
@@ -121,6 +132,8 @@ internal fun FirefoxExtensionManagerOverlay(
                         GeckoExtensionRow(
                             extension = extension,
                             canManage = state.canManage,
+                            presentation = state.presentation,
+                            onOpenOptionsPage = { onOpenOptionsPage(extension) },
                             onSetEnabled = { onSetEnabled(extension, it) },
                             onSetPrivate = { onSetPrivate(extension, it) },
                             onUpdate = { onUpdate(extension) },
@@ -153,6 +166,7 @@ internal fun FirefoxExtensionManagerOverlay(
 @Composable
 private fun ExtensionManagerHeader(
     canManage: Boolean,
+    presentation: GeckoExtensionManagerPresentation,
     onInstall: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -175,16 +189,24 @@ private fun ExtensionManagerHeader(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                stringResource(R.string.gecko_extensions_manager_summary),
+                stringResource(
+                    if (presentation == GeckoExtensionManagerPresentation.Options) {
+                        R.string.gecko_extensions_options_summary
+                    } else {
+                        R.string.gecko_extensions_manager_summary
+                    },
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        IconButton(onClick = onInstall, enabled = canManage) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = stringResource(R.string.gecko_extension_install),
-            )
+        if (presentation == GeckoExtensionManagerPresentation.Management) {
+            IconButton(onClick = onInstall, enabled = canManage) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = stringResource(R.string.gecko_extension_install),
+                )
+            }
         }
     }
 }
@@ -203,11 +225,21 @@ private fun ExtensionManagerMessage(messageRes: Int) {
 private fun GeckoExtensionRow(
     extension: GeckoExtension,
     canManage: Boolean,
+    presentation: GeckoExtensionManagerPresentation,
+    onOpenOptionsPage: () -> Unit,
     onSetEnabled: (Boolean) -> Unit,
     onSetPrivate: (Boolean) -> Unit,
     onUpdate: () -> Unit,
     onUninstall: () -> Unit,
 ) {
+    if (presentation == GeckoExtensionManagerPresentation.Options) {
+        GeckoExtensionOptionsRow(
+            extension = extension,
+            enabled = canManage,
+            onOpenOptionsPage = onOpenOptionsPage,
+        )
+        return
+    }
     val controlsEnabled = canManage && !extension.isBuiltIn
     Column(
         modifier = Modifier
@@ -261,6 +293,43 @@ private fun GeckoExtensionRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun GeckoExtensionOptionsRow(
+    extension: GeckoExtension,
+    enabled: Boolean,
+    onOpenOptionsPage: () -> Unit,
+) {
+    val optionsAvailable = enabled &&
+        GeckoExtensionChromeRules.optionsPageTarget(extension) != null
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = optionsAvailable, onClick = onOpenOptionsPage)
+            .padding(horizontal = 4.dp, vertical = 16.dp)
+            .testTag(FirefoxExtensionManagerTestTags.optionsPage(extension.id)),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            extension.name ?: extension.id,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            if (optionsAvailable) {
+                listOfNotNull(extension.version, extension.id).joinToString(" · ")
+            } else {
+                stringResource(R.string.gecko_extension_no_options)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

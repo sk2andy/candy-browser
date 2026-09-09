@@ -166,6 +166,45 @@ class BrowserUriPolicyTest {
     }
 
     @Test
+    fun `same site redirect links stay in Gecko until server redirect resolves`() {
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+                currentPageUrl = "https://www.google.com/search?q=github",
+                targetUrl = "https://www.google.com/url?q=https%3A%2F%2Fgithub.com",
+            ),
+        )
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+                hasUserNavigationGrant = true,
+                currentPageUrl = "https://www.google.com/url?q=https%3A%2F%2Fgithub.com",
+                targetUrl = "https://github.com/",
+            ),
+        )
+    }
+
+    @Test
+    fun `same registrable site subdomain links stay in Gecko`() {
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+                currentPageUrl = "https://www.google.com/search?q=github",
+                targetUrl = "https://accounts.google.com/continue",
+            ),
+        )
+    }
+
+    @Test
     fun `external navigation grant expires at deterministic boundary`() {
         assertTrue(
             ExternalNavigationPolicy.isUserNavigationGrantActive(

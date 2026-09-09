@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -20,6 +21,7 @@ class CandyPrivacyHostContractTest {
             allowThirdPartyCookiesForSite = false,
             topInsetPx = 96,
             navigationGeneration = 4,
+            scrollMetricsEnabled = true,
         )
 
         assertFalse(policy.blockAdsAndTrackers)
@@ -32,6 +34,7 @@ class CandyPrivacyHostContractTest {
         assertFalse(policy.allowThirdPartyCookiesForSite)
         assertEquals(96, policy.topInsetPx)
         assertEquals(4, policy.navigationGeneration)
+        assertTrue(policy.scrollMetricsEnabled)
     }
 
     @Test
@@ -163,6 +166,7 @@ class CandyPrivacyHostContractTest {
         assertEquals(0, message.getInt("topInsetPx"))
         assertFalse(message.has("viewportCoverAllowed"))
         assertEquals(0, message.getInt("navigationGeneration"))
+        assertFalse(message.getBoolean("scrollMetricsEnabled"))
         assertEquals(
             listOf(
                 "accounts.google.com",
@@ -225,6 +229,42 @@ class CandyPrivacyHostContractTest {
         assertEquals("session-token", message.getString("token"))
         assertEquals(7, message.getLong("revision"))
         assertTrue(message.getBoolean("expected"))
+    }
+
+    @Test
+    fun `scroll metrics accept current bounded document geometry`() {
+        val metrics = geckoScrollMetricsFromMessage(
+            message = JSONObject()
+                .put("revision", 7)
+                .put("offsetPx", 900)
+                .put("extentPx", 1_000)
+                .put("rangePx", 4_000),
+            currentRevision = 7,
+        )
+
+        requireNotNull(metrics)
+        assertEquals(900, metrics.offsetPx)
+        assertEquals(1_000, metrics.extentPx)
+        assertEquals(4_000, metrics.rangePx)
+    }
+
+    @Test
+    fun `scroll metrics reject stale invalid and unbounded messages`() {
+        fun message(revision: Long = 7, offset: Long = 0, extent: Long = 1, range: Long = 1) =
+            JSONObject()
+                .put("revision", revision)
+                .put("offsetPx", offset)
+                .put("extentPx", extent)
+                .put("rangePx", range)
+
+        assertEquals(null, geckoScrollMetricsFromMessage(message(revision = 6), 7))
+        assertEquals(null, geckoScrollMetricsFromMessage(message(offset = -1), 7))
+        assertEquals(null, geckoScrollMetricsFromMessage(message(extent = 0), 7))
+        assertEquals(null, geckoScrollMetricsFromMessage(message(extent = 2, range = 1), 7))
+        assertEquals(
+            null,
+            geckoScrollMetricsFromMessage(message(range = Int.MAX_VALUE.toLong() + 1), 7),
+        )
     }
 
     private fun rule(

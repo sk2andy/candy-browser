@@ -446,6 +446,10 @@ private class SystemWebViewBrowserEngineSession(
         scrollListener = listener
     }
 
+    override fun setNativeVerticalScrollBarEnabled(enabled: Boolean) {
+        webView.isVerticalScrollBarEnabled = enabled
+    }
+
     override fun setContentTargetListener(
         listener: dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener?,
     ) {

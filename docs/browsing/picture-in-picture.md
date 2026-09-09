@@ -42,9 +42,11 @@ two seconds of the transition, and keeps the transition alive for five seconds s
 cannot tear down the renderer prematurely. User-initiated Play/Pause commands remain authoritative
 and cancel pending retries.
 
-Candy uses Gecko's texture backend so blur, clipping and tab motion keep working. The browser host,
-outer Candy Gecko host, inner GeckoView, TextureView backend, GeckoDisplay, GeckoSession and tab
-identity all remain unchanged from fullscreen preparation through PiP entry, rotation and return.
+Candy keeps GeckoView's default SurfaceView backend so frames reach Android's compositor directly.
+The browser host, outer Candy Gecko host, inner GeckoView, SurfaceView backend, GeckoDisplay,
+GeckoSession and tab identity all remain unchanged from fullscreen preparation through PiP entry,
+rotation and return. Blur remains a sibling chrome effect; clipping and tab motion operate on the
+stable browser host instead of requiring a texture copy.
 Releasing or reattaching the session can make the page leave DOM fullscreen, reflow YouTube chrome
 into the PiP window and pause the media. Gecko's `CompositorController.onPipModeChanged` is the only
 compositor transition signal. Do not switch backends or remove/add the GeckoView during transition.
@@ -146,7 +148,7 @@ compatibility smoke tests because their player hosts and markup can change indep
 | Symptom | Inspect first |
 | --- | --- |
 | PiP unavailable | Gecko `MediaSession` must report selected, regular, active, playing fullscreen video with dimensions and track |
-| Wrong view in PiP | Verify selected session, browser host, GeckoView, TextureView and display stay unchanged |
+| Wrong view in PiP | Verify selected session, browser host, GeckoView, SurfaceView and display stay unchanged |
 | Video pauses during transition | Inspect Gecko media-session playback state and Android PiP mode callback ordering |
 | PiP shows a logo or stale page frame | Verify no backend switch or view reparent occurred and that the confirmed mode callback reached the exact owning session |
 | Player stays fullscreen after return | Inspect same-session host reattachment and return-layout completion |

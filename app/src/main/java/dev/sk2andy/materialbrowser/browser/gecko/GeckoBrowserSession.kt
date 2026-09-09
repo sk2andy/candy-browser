@@ -216,7 +216,7 @@ internal interface GeckoBrowserSession {
 
     fun setScrollListener(listener: BrowserEngineScrollListener?)
 
-    /** Native renderer metrics used by Candy's engine-neutral scrollbar overlay. */
+    /** Bounded document metrics used by Candy's engine-neutral scrollbar overlay. */
     fun scrollMetrics(): BrowserEngineScrollMetrics? = null
 
     /** Scrolls the Gecko document without synthesizing touch events. */

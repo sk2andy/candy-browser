@@ -209,6 +209,7 @@ class CandyPrivacyHostInstrumentedTest {
     private fun assertDocumentStartInset(isPrivate: Boolean) {
         val server = FixtureServer()
         val safeTitle = CountDownLatch(1)
+        val scrolledSafeTitle = CountDownLatch(1)
         val fallback = AtomicReference<GeckoPrivacyEvent>()
         val finalState = AtomicReference<GeckoBrowserSessionState>()
         lateinit var session: GeckoBrowserSession
@@ -233,6 +234,7 @@ class CandyPrivacyHostInstrumentedTest {
                 session.setStateListener { state ->
                     finalState.set(state)
                     if (state.title == SAFE_AREA_TITLE) safeTitle.countDown()
+                    if (state.title == SCROLLED_SAFE_AREA_TITLE) scrolledSafeTitle.countDown()
                 }
                 session.setActive(true)
                 assertTrue(session.loadUrl(server.safeAreaPageUrl()))
@@ -243,6 +245,12 @@ class CandyPrivacyHostInstrumentedTest {
                     "Fixed header never reached the document inset; " +
                         "state=${finalState.get()}, fallback=${fallback.get()}",
                     safeTitle.await(45, TimeUnit.SECONDS),
+                )
+                scenario.onActivity { session.scrollToVerticalOffset(SCROLL_OFFSET_PX) }
+                assertTrue(
+                    "Sticky header entered the status bar after scrolling; " +
+                        "state=${finalState.get()}, fallback=${fallback.get()}",
+                    scrolledSafeTitle.await(20, TimeUnit.SECONDS),
                 )
             } finally {
                 scenario.onActivity {
@@ -396,7 +404,11 @@ class CandyPrivacyHostInstrumentedTest {
             <style>
               html, body { margin: 0; min-height: 200vh; }
               #header { position: fixed; inset: 0 0 auto; height: 24px; background: red; }
-            </style></head><body><header id="header">Header</header><script>
+              #lead { height: 200px; }
+              #sticky { position: sticky; top: 0; height: 24px; background: blue; }
+              #content { height: 4000px; }
+            </style></head><body><header id="header">Header</header>
+            <div id="lead"></div><nav id="sticky">Sticky</nav><main id="content"></main><script>
               const timer = setInterval(() => {
                 const expected = $SAFE_AREA_INSET_PX / devicePixelRatio;
                 const top = document.querySelector('#header').getBoundingClientRect().top;
@@ -408,6 +420,17 @@ class CandyPrivacyHostInstrumentedTest {
                   document.title = '$SAFE_AREA_TITLE';
                 }
               }, 25);
+              addEventListener('scroll', () => {
+                const expected = $SAFE_AREA_INSET_PX / devicePixelRatio;
+                document.querySelector('#header').style.display = 'none';
+                const stickyTop = document.querySelector('#sticky').getBoundingClientRect().top;
+                if (
+                  scrollY > 100 &&
+                  Math.abs(stickyTop - expected) <= 0.5
+                ) {
+                  document.title = '$SCROLLED_SAFE_AREA_TITLE';
+                }
+              }, { passive: true });
               setTimeout(() => {
                 clearInterval(timer);
                 const root = document.documentElement;
@@ -435,6 +458,8 @@ class CandyPrivacyHostInstrumentedTest {
         const val COOKIE_BLOCKED_TITLE = "Third-party cookie blocked"
         const val COOKIE_ALLOWED_TITLE = "Third-party cookie allowed"
         const val SAFE_AREA_INSET_PX = 96
+        const val SCROLL_OFFSET_PX = 600
         const val SAFE_AREA_TITLE = "Candy safe area applied"
+        const val SCROLLED_SAFE_AREA_TITLE = "Candy sticky safe area applied"
     }
 }

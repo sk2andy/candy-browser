@@ -167,6 +167,7 @@ internal fun BrowserScreen(
     onExportAppData: () -> Unit = {},
     onImportAppData: () -> Unit = {},
     onOpenFirefoxExtensions: (() -> Unit)? = null,
+    onManageFirefoxExtensions: (() -> Unit)? = onOpenFirefoxExtensions,
     openAddressEditorOnLaunch: Boolean = false,
     launcherAddressEditorRequestId: Int = 0,
 ) {
@@ -1496,12 +1497,7 @@ internal fun BrowserScreen(
                 settingsVisible = false
                 controller.openUrl(url, inNewTab = true)
             },
-            onOpenFirefoxExtensions = onOpenFirefoxExtensions?.let { openExtensions ->
-                {
-                    settingsVisible = false
-                    openExtensions()
-                }
-            },
+            onOpenFirefoxExtensions = onManageFirefoxExtensions,
             onDismiss = { settingsVisible = false },
         )
 

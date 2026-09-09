@@ -132,6 +132,15 @@ internal object GeckoExtensionChromeRules {
         return options.normalize().toASCIIString()
     }
 
+    fun optionsPageTarget(extension: GeckoExtension): GeckoExtensionOptionsTarget? {
+        if (!extension.enabled) return null
+        val url = normalizeOptionsPageUrl(
+            baseUrl = extension.baseUrl,
+            optionsPageUrl = extension.optionsPageUrl,
+        ) ?: return null
+        return GeckoExtensionOptionsTarget(extensionId = extension.id, url = url)
+    }
+
     fun effectiveAudioMuted(
         domainMuted: Boolean,
         extensionOverride: Boolean?,

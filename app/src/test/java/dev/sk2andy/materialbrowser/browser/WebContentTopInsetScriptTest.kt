@@ -98,6 +98,13 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
+    fun `sticky controls are rechecked and offset while the page scrolls`() {
+        assertTrue(WebContentTopInsetScript.installScript.contains("position === 'sticky'"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("'scroll'"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("style.position !== 'sticky'"))
+    }
+
+    @Test
     fun `incompatible root layout gets a targeted flow spacer before native fallback`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("innerWidth * 0.8"))
         assertTrue(WebContentTopInsetScript.installScript.contains("installTargetedFlowInset"))
