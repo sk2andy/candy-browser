@@ -101,7 +101,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
     }
 
     @Test
-    fun extensionOptionsUseNativeSafeAreaAndSystemBackReturnsToOpener() {
+    fun extensionOptionsUseDedicatedChromeAndSystemBackReturnsToOpener() {
         val fixtureOriginHost = ensureBuiltInExtensionFixture()
         var originalTabId = ""
         var originalTabCount = 0
@@ -140,6 +140,13 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
             }
             optionsReady
         }
+        composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.OptionsTopBar)
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(FIXTURE_EXTENSION_NAME).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(context.getString(R.string.action_back))
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(context.getString(R.string.cd_more_options))
+            .assertDoesNotExist()
         composeRule.activityRule.scenario.onActivity { activity ->
             val controller = activity.browserControllerForTesting()
             val optionsUri = Uri.parse(controller.selectedTab.url)
@@ -165,7 +172,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
                 .getChildAt(0)
             val margins = engineView.layoutParams as ViewGroup.MarginLayoutParams
             assertEquals(LEFT_INSET_PX, margins.leftMargin)
-            assertEquals(TOP_INSET_PX, margins.topMargin)
+            assertEquals(0, margins.topMargin)
             assertEquals(RIGHT_INSET_PX, margins.rightMargin)
             assertEquals(BOTTOM_INSET_PX, margins.bottomMargin)
         }
@@ -187,6 +194,53 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
             assertEquals(originalTabId, controller.selectedTabId)
             assertEquals(originalTabCount, controller.tabs.size)
             assertEquals(ORIGINAL_PAGE_URL, controller.selectedTab.url)
+        }
+    }
+
+    @Test
+    fun externalNavigationFromExtensionOptionsRestoresNormalBrowserChrome() {
+        ensureBuiltInExtensionFixture()
+        openBrowserMenu()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.FirefoxExtensions)
+            .performScrollTo()
+            .performClick()
+        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+            composeRule.onAllNodesWithTag(
+                FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
+            ).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag(
+            FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
+        ).assertIsDisplayed().performClick()
+        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+            composeRule.onAllNodesWithTag(FirefoxExtensionChromeTestTags.OptionsTopBar)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        var optionsTabId = ""
+        composeRule.activityRule.scenario.onActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            optionsTabId = controller.selectedTabId
+            controller.submitAddress(EXTERNAL_PAGE_URL)
+        }
+        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+            var externalPageSelected = false
+            composeRule.activityRule.scenario.onActivity { activity ->
+                externalPageSelected =
+                    activity.browserControllerForTesting().selectedTab.url == EXTERNAL_PAGE_URL
+            }
+            externalPageSelected
+        }
+        composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.OptionsTopBar)
+            .assertDoesNotExist()
+        composeRule.onNodeWithContentDescription(context.getString(R.string.cd_more_options))
+            .assertIsDisplayed()
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            activity.onBackPressedDispatcher.onBackPressed()
+            assertEquals(optionsTabId, controller.selectedTabId)
+            controller.closeTab(optionsTabId)
         }
     }
 
@@ -267,7 +321,9 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
 
     private companion object {
         const val FIXTURE_EXTENSION_ID = "candy-firefox-fixture@sk2andy.dev"
+        const val FIXTURE_EXTENSION_NAME = "Candy Firefox Conformance Fixture"
         const val ORIGINAL_PAGE_URL = "https://example.invalid/original-page"
+        const val EXTERNAL_PAGE_URL = "https://example.invalid/from-extension-options"
         const val LEFT_INSET_PX = 8
         const val TOP_INSET_PX = 96
         const val RIGHT_INSET_PX = 12

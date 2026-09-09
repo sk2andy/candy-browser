@@ -21,6 +21,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -1097,6 +1098,9 @@ internal fun BrowserScreen(
     }
 
     BrowserImeOwnershipEffect(controller, addressEditorVisible)
+    val firefoxExtensionOptionsTitle = controller.selectedFirefoxExtensionOptionsTitle
+    val showFirefoxExtensionOptionsChrome =
+        firefoxExtensionOptionsTitle != null && !webViewVideoOnlyPresentation
     val showInteractiveBlankStart = addressEditorVisible &&
         selectedTab.url == BLANK_URL &&
         addressValue.text.isEmpty() &&
@@ -1129,39 +1133,51 @@ internal fun BrowserScreen(
                 ),
         )
         CompositionLocalProvider(LocalProfileWallpaper provides profileWallpaperRuntime) {
-            BrowserViewport(
-                controller = controller,
-                webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
-                selectedTab = selectedTab,
-                dragOffset = browserDragOffset,
-                travelDistance = tabSwitchTravelPx,
-                rootHeightPx = browserHeightPx,
-                bottomBarTopPx = bottomBarTopPx,
-                handoff = tabHandoff,
-                handoffAlpha = tabHandoffAlpha.value,
-                liveFrameTabId = liveFrameTabId,
-                tabOverviewVisible = tabOverviewVisible,
-                onLiveFrame = reportLiveFrame,
-                onSearch = if (showInteractiveBlankStart) {
-                    { addressEditorVisible = false }
-                } else {
-                    openAddressEditor
-                },
-                onFavorite = { url ->
-                    addressEditorVisible = false
-                    controller.submitAddress(url)
-                },
-                blankTabModeProgress = blankTabModeProgress,
-                blankTabModeRevealOrigin = blankTabModeRevealOrigin,
-                onRetry = controller::retryFailedPage,
-                onBlurTargetAttached = { target -> browserContentBlurTarget = target },
-                onBlurTargetReleased = { target ->
-                    if (browserContentBlurTarget === target) browserContentBlurTarget = null
-                },
-            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (showFirefoxExtensionOptionsChrome) {
+                    FirefoxExtensionOptionsTopBar(
+                        title = requireNotNull(firefoxExtensionOptionsTitle),
+                        onBack = controller::goBack,
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    BrowserViewport(
+                        controller = controller,
+                        webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
+                        selectedTab = selectedTab,
+                        dragOffset = browserDragOffset,
+                        travelDistance = tabSwitchTravelPx,
+                        rootHeightPx = browserHeightPx,
+                        bottomBarTopPx = bottomBarTopPx,
+                        handoff = tabHandoff,
+                        handoffAlpha = tabHandoffAlpha.value,
+                        liveFrameTabId = liveFrameTabId,
+                        tabOverviewVisible = tabOverviewVisible,
+                        onLiveFrame = reportLiveFrame,
+                        onSearch = if (showInteractiveBlankStart) {
+                            { addressEditorVisible = false }
+                        } else {
+                            openAddressEditor
+                        },
+                        onFavorite = { url ->
+                            addressEditorVisible = false
+                            controller.submitAddress(url)
+                        },
+                        blankTabModeProgress = blankTabModeProgress,
+                        blankTabModeRevealOrigin = blankTabModeRevealOrigin,
+                        onRetry = controller::retryFailedPage,
+                        onBlurTargetAttached = { target -> browserContentBlurTarget = target },
+                        onBlurTargetReleased = { target ->
+                            if (browserContentBlurTarget === target) browserContentBlurTarget = null
+                        },
+                    )
+                }
+            }
         }
 
-        controller.findInPageState?.let { findState ->
+        controller.findInPageState
+            ?.takeIf { firefoxExtensionOptionsTitle == null }
+            ?.let { findState ->
             val matchPosition = FindInPageRules.displayPosition(findState)
             FindInPageBar(
                 query = findState.query,
@@ -1195,7 +1211,8 @@ internal fun BrowserScreen(
             )
         }
 
-        BrowserAddressChrome(
+        if (firefoxExtensionOptionsTitle == null) {
+            BrowserAddressChrome(
             controller = controller,
             selectedTab = selectedTab,
             addressEditorVisible = addressEditorVisible,
@@ -1296,7 +1313,8 @@ internal fun BrowserScreen(
             onAddSiteCapsule = {
                 openSiteCapsuleEditor(existing = null, sourceTab = selectedTab)
             },
-        )
+            )
+        }
 
         readerStudioSession?.let { session ->
             ReaderStudioScreen(

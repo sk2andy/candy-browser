@@ -391,7 +391,9 @@ internal fun BrowserViewport(
                 visible = webViewVideoOnlyPresentation ||
                     !tabOverviewVisible ||
                     selectedTab.isIncognito,
-                showStatusBarOverlay = !webViewVideoOnlyPresentation && !tabOverviewVisible,
+                showStatusBarOverlay = !webViewVideoOnlyPresentation &&
+                    !tabOverviewVisible &&
+                    controller.selectedFirefoxExtensionOptionsTitle == null,
                 statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
