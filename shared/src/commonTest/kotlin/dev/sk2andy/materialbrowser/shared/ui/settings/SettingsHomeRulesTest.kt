@@ -40,6 +40,24 @@ class SettingsHomeRulesTest {
     }
 
     @Test
+    fun developerOptionsAppearOnlyAfterUnlock() {
+        assertFalse(
+            SettingsHomeRules.items(hasFirefoxExtensions = false)
+                .any { it.destination == SettingsDestination.DeveloperOptions },
+        )
+        val unlocked = SettingsHomeRules.items(
+            hasFirefoxExtensions = false,
+            hasDeveloperOptions = true,
+        )
+
+        assertEquals(
+            SettingsDestination.DeveloperOptions,
+            unlocked[unlocked.lastIndex - 1].destination,
+        )
+        assertEquals(SettingsDestination.AboutLegal, unlocked.last().destination)
+    }
+
+    @Test
     fun iosSharedSettingsExposeImplementedDestinations() {
         assertTrue(CandySettingsRouteRules.isEnabled(SettingsDestination.Userscripts))
         assertTrue(CandySettingsRouteRules.isEnabled(SettingsDestination.Appearance))

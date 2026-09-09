@@ -969,4 +969,20 @@
     <string name="web_prompt_resend">Erneut senden</string>
     <string name="action_allow">Erlauben</string>
     <string name="action_deny">Ablehnen</string>
+    <string name="developer_options_title">Entwickleroptionen</string>
+    <string name="developer_options_summary">Interne Browser- und Layoutparameter</string>
+    <string name="developer_options_unlock_action">Entwickleroptionen freischalten</string>
+    <string name="developer_options_unlocked">Entwickleroptionen freigeschaltet</string>
+    <string name="developer_options_safe_area_section">Safe-Area-Fallback</string>
+    <string name="developer_options_safe_area_summary">Legt fest, wie Candy bestätigt, dass eine Website den scrollbaren oberen Abstand nicht sicher verwenden kann.</string>
+    <string name="developer_options_layout_quiet_period">Layout-Ruhe</string>
+    <string name="developer_options_layout_quiet_period_summary">Wartezeit nach der letzten Layout-Änderung vor jeder Bestätigungsprüfung.</string>
+    <string name="developer_options_required_failures">Erforderliche Fehlprüfungen</string>
+    <string name="developer_options_required_failures_summary">Aufeinanderfolgende Fehler vor dem Live-Wechsel auf native Safe-Area-Abstände.</string>
+    <string name="developer_options_reset">Standardwerte wiederherstellen</string>
+    <string name="developer_options_milliseconds_value">%1$d ms</string>
+    <plurals name="developer_options_failed_checks_value">
+        <item quantity="one">%1$d fehlgeschlagene Prüfung</item>
+        <item quantity="other">%1$d fehlgeschlagene Prüfungen</item>
+    </plurals>
 </resources>

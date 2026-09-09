@@ -12,6 +12,7 @@
 | Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
 | Page scroll bar | Persisted opt-in, engine-neutral scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, browser-engine session ports, `ui/BrowserScrollBar` |
+| Developer options | Persisted hidden unlock plus bounded safe-area fallback tuning | `DeveloperSettings`, `BrowserSessionStore`, `BrowserController`, `ui/DeveloperOptionsSettingsPage` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
 | Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
 | App data archive | SAF launch and confirmation stay in the activity and Protection page; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `ui/ProtectionSettingsPage.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
@@ -34,6 +35,8 @@
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Yandex Translate on Android; Google Translate on iOS |
 | Prevent automatic video playback | Off, on | Off |
+| Developer safe-area layout quiet | 100–800 ms in 50-ms steps | 400 ms |
+| Developer safe-area failed checks | 2–5 | 3 |
 
 ## Cross-platform settings migration
 
@@ -125,6 +128,9 @@ Frosted exposes three persisted controls while selected:
   and canvas contrast in light, dark and forced-dark configurations.
 - Shape tokens affect browser chrome and controls; geometry owned by gesture or transition rules stays unchanged.
 - Each top-level settings destination has a distinct leading icon on the settings home page.
+- Developer options stay hidden until **About & legal** is long-pressed once. The global unlock
+  persists across restarts. Its safe-area controls are bounded before persistence, apply live to
+  Gecko and System WebView without reloading, and reset any pending fallback confirmation chain.
 - Full-screen platform overlays launched from Settings preserve the Settings destination below
   them. They own predictive-back handling, so a system edge gesture dismisses only the overlay and
   returns to Settings instead of reaching the underlying browser/settings back target.

@@ -228,6 +228,8 @@ class CandyPrivacyHostInstrumentedTest {
                     pageHost = COOKIE_PAGE_HOST,
                     topInsetPx = SAFE_AREA_INSET_PX,
                     navigationGeneration = DYNAMIC_NAVIGATION_GENERATION,
+                    safeAreaLayoutQuietPeriodMillis = DYNAMIC_LAYOUT_QUIET_PERIOD_MILLIS,
+                    safeAreaRequiredFailureCount = DYNAMIC_REQUIRED_FAILURE_COUNT,
                 ),
                 privacyEventSink = GeckoPrivacyEventSink { event ->
                     if (event.safeAreaFallbackNavigationGeneration != null) {
@@ -263,7 +265,98 @@ class CandyPrivacyHostInstrumentedTest {
             )
             assertTrue(
                 "Fallback did not wait for layout quiet and repeated failures",
-                fallbackAt.get() - layoutChangedAt.get() >= MINIMUM_FALLBACK_CONFIRMATION_MILLIS,
+                fallbackAt.get() - layoutChangedAt.get() >=
+                    MINIMUM_FALLBACK_CONFIRMATION_MILLIS,
+            )
+        } finally {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.releaseView(view)
+                session.setActive(false)
+                session.close()
+            }
+            server.close()
+        }
+    }
+
+    @Test
+    fun developerSettingsReachRunningGeckoDocumentWithoutReload() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val documentReady = CountDownLatch(1)
+        val policyReady = CountDownLatch(1)
+        val layoutBlocked = CountDownLatch(1)
+        val fallbackReceived = CountDownLatch(1)
+        val initialTitle = AtomicReference<String>()
+        val blockedTitle = AtomicReference<String>()
+        val layoutBlockedAt = AtomicLong()
+        val fallbackAt = AtomicLong()
+        val initialPolicy = GeckoPrivacyPolicy.Disabled.copy(
+            pageHost = COOKIE_PAGE_HOST,
+            topInsetPx = SAFE_AREA_INSET_PX,
+            navigationGeneration = DEVELOPER_NAVIGATION_GENERATION,
+            safeAreaLayoutQuietPeriodMillis = 100,
+            safeAreaRequiredFailureCount = 2,
+        )
+        lateinit var session: GeckoBrowserSession
+        lateinit var view: View
+
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            session = GeckoRuntimeOwner.getOrCreate(context).createSession(
+                profileId = "privacy-live-developer-safe-area",
+                isPrivate = false,
+                privacyPolicy = initialPolicy,
+                privacyEventSink = GeckoPrivacyEventSink { event ->
+                    if (event.safeAreaFallbackNavigationGeneration != null) {
+                        fallbackAt.set(SystemClock.elapsedRealtime())
+                        fallbackReceived.countDown()
+                    }
+                },
+            )
+            view = session.createView(context)
+            session.setStateListener { state ->
+                val title = state.title.orEmpty()
+                when {
+                    title.startsWith(DEVELOPER_READY_TITLE_PREFIX) -> {
+                        initialTitle.compareAndSet(null, title)
+                        documentReady.countDown()
+                    }
+                    title.startsWith(DEVELOPER_BLOCKED_TITLE_PREFIX) -> {
+                        blockedTitle.set(title)
+                        layoutBlockedAt.compareAndSet(0, SystemClock.elapsedRealtime())
+                        layoutBlocked.countDown()
+                    }
+                }
+            }
+            session.setActive(true)
+            assertTrue(session.loadUrl(server.developerSafeAreaPageUrl()))
+        }
+
+        try {
+            assertTrue("Developer fixture did not load", documentReady.await(20, TimeUnit.SECONDS))
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.updatePrivacyPolicy(
+                    initialPolicy.copy(
+                        safeAreaLayoutQuietPeriodMillis = 800,
+                        safeAreaRequiredFailureCount = 5,
+                    ),
+                    onReady = policyReady::countDown,
+                )
+            }
+            assertTrue("Developer policy was not acknowledged", policyReady.await(20, TimeUnit.SECONDS))
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                assertTrue(session.loadUrl("${server.developerSafeAreaPageUrl()}#trigger"))
+            }
+            assertTrue("Developer fixture did not block the inset", layoutBlocked.await(20, TimeUnit.SECONDS))
+            assertTrue("Updated fallback policy was not applied", fallbackReceived.await(20, TimeUnit.SECONDS))
+            assertEquals(
+                "Updating developer settings reloaded the Gecko document",
+                initialTitle.get().substringAfter(':'),
+                blockedTitle.get().substringAfter(':'),
+            )
+            assertTrue(
+                "Gecko kept the old fallback confirmation settings",
+                fallbackAt.get() - layoutBlockedAt.get() >=
+                    MINIMUM_DEVELOPER_FALLBACK_CONFIRMATION_MILLIS,
             )
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
@@ -375,6 +468,7 @@ class CandyPrivacyHostInstrumentedTest {
 
     private class FixtureServer : AutoCloseable {
         private val socket = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
+        private val developerDocumentCount = AtomicInteger()
         val scriptUrl = "http://$TRACKER_HOST:${socket.localPort}/probe.js"
         private val thread = Thread({ serve() }, "gecko-privacy-fixture").apply {
             isDaemon = true
@@ -389,6 +483,9 @@ class CandyPrivacyHostInstrumentedTest {
 
         fun dynamicSafeAreaPageUrl() =
             "http://$COOKIE_PAGE_HOST:${socket.localPort}/dynamic-safe-area"
+
+        fun developerSafeAreaPageUrl() =
+            "http://$COOKIE_PAGE_HOST:${socket.localPort}/developer-safe-area"
 
         private fun serve() {
             while (!socket.isClosed) {
@@ -410,6 +507,8 @@ class CandyPrivacyHostInstrumentedTest {
                             isScript -> "document.title='$ALLOWED_TITLE';"
                             isCookieFrame -> cookieFrame()
                             requestLine.contains(" /cookie-page ") -> cookiePage()
+                            requestLine.contains(" /developer-safe-area") ->
+                                developerSafeAreaPage(developerDocumentCount.incrementAndGet())
                             requestLine.contains(" /dynamic-safe-area ") -> dynamicSafeAreaPage()
                             requestLine.contains(" /safe-area ") -> safeAreaPage()
                             else -> page(host)
@@ -539,6 +638,27 @@ class CandyPrivacyHostInstrumentedTest {
             </script></body></html>
         """.trimIndent()
 
+        private fun developerSafeAreaPage(documentId: Int): String = """
+            <!doctype html>
+            <html><head><title>$DEVELOPER_READY_TITLE_PREFIX:$documentId</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>html, body { margin: 0; min-height: 200vh; }</style>
+            </head><body><main>Developer safe-area fixture</main><script>
+              let triggered = false;
+              const trigger = () => {
+                if (triggered || location.hash !== '#trigger') return;
+                triggered = true;
+                const blocker = document.createElement('style');
+                blocker.textContent =
+                  'html:root::before { height: 0 !important; min-height: 0 !important; }';
+                document.head.appendChild(blocker);
+                document.title = '$DEVELOPER_BLOCKED_TITLE_PREFIX:$documentId';
+              };
+              addEventListener('hashchange', trigger);
+              trigger();
+            </script></body></html>
+        """.trimIndent()
+
         override fun close() {
             socket.close()
             thread.join(2_000)
@@ -560,6 +680,12 @@ class CandyPrivacyHostInstrumentedTest {
         const val SCROLLED_SAFE_AREA_TITLE = "Candy sticky safe area applied"
         const val DYNAMIC_LAYOUT_CHANGED_TITLE = "Dynamic safe area blocked"
         const val DYNAMIC_NAVIGATION_GENERATION = 7
-        const val MINIMUM_FALLBACK_CONFIRMATION_MILLIS = 750L
+        const val DYNAMIC_LAYOUT_QUIET_PERIOD_MILLIS = 100
+        const val DYNAMIC_REQUIRED_FAILURE_COUNT = 2
+        const val MINIMUM_FALLBACK_CONFIRMATION_MILLIS = 150L
+        const val DEVELOPER_NAVIGATION_GENERATION = 8
+        const val DEVELOPER_READY_TITLE_PREFIX = "Developer safe area ready"
+        const val DEVELOPER_BLOCKED_TITLE_PREFIX = "Developer safe area blocked"
+        const val MINIMUM_DEVELOPER_FALLBACK_CONFIRMATION_MILLIS = 2_800L
     }
 }

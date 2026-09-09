@@ -974,4 +974,20 @@
     <string name="web_prompt_resend">Enviar novamente</string>
     <string name="action_allow">Permitir</string>
     <string name="action_deny">Recusar</string>
+    <string name="developer_options_title">Opções do programador</string>
+    <string name="developer_options_summary">Ajustes internos do navegador e do esquema</string>
+    <string name="developer_options_unlock_action">Desbloquear opções do programador</string>
+    <string name="developer_options_unlocked">Opções do programador desbloqueadas</string>
+    <string name="developer_options_safe_area_section">Alternativa de área segura</string>
+    <string name="developer_options_safe_area_summary">Ajusta como o Candy confirma que um site não pode usar a margem superior deslocável em segurança.</string>
+    <string name="developer_options_layout_quiet_period">Estabilidade do esquema</string>
+    <string name="developer_options_layout_quiet_period_summary">Espera após a última alteração do esquema antes de cada verificação.</string>
+    <string name="developer_options_required_failures">Verificações falhadas necessárias</string>
+    <string name="developer_options_required_failures_summary">Falhas consecutivas necessárias antes de mudar para margens nativas de área segura.</string>
+    <string name="developer_options_reset">Repor predefinições</string>
+    <string name="developer_options_milliseconds_value">%1$d ms</string>
+    <plurals name="developer_options_failed_checks_value">
+        <item quantity="one">%1$d verificação falhada</item>
+        <item quantity="other">%1$d verificações falhadas</item>
+    </plurals>
 </resources>

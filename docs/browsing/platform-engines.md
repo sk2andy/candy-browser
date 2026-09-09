@@ -79,13 +79,20 @@ call-site cutover are not complete.
   API 34+ regression fixtures verify a real GeckoSession and the production controller-listener
   seam, including page scroll, Link Peek and tab/session replacement guards.
 - Android keeps its root window and Gecko surface edge to edge. Candy's document-start privacy bridge
-  inserts one scrollable top inset and offsets obstructing fixed/sticky page controls; its bounded
+  inserts one scrollable top inset and offsets obstructing fixed/sticky page controls. Compact
+  interactive controls keep an extra 8-CSS-pixel gap below that inset without moving viewport-wide
+  headers or decorative elements. Candidate discovery scans the full hit-test stack and skips
+  unmovable fullscreen shells, allowing nested absolute controls such as Google's mobile menu to be
+  protected. Collision checks stay inside the projected control bounds and ignore viewport-wide
+  peers for compact controls, so distant or hidden actions inside a wide shell cannot trigger native
+  fallback; the bounded
   policy retry closes the cold-navigation race before the Gecko session binding exists. Gecko receives
   the bottom CSS `safe-area-inset-*`. A page's `viewport-fit=cover` declaration cannot disable Candy's
   scrollable top inset because Candy intentionally owns that edge and sets Gecko's top CSS safe area
   to zero. If a page defeats the guarded layout, the navigation-bound
-  fallback waits for 400 ms of layout quiet and three consecutive failures, then switches that
-  renderer live to inner native margins and clears Candy's document inset without reloading. The
+  fallback waits for 400 ms of layout quiet and three consecutive failures by default, then switches
+  that renderer live to inner native margins and clears Candy's document inset without reloading.
+  Hidden developer options can tune those bounded values live for both Android engines. The
   per-site **Force safe area** override
   does the same explicitly. Fullscreen remains truly edge to edge, while Compose safe-drawing hosts
   clear duplicate renderer insets. Candy keeps GeckoView's default SurfaceView backend so page frames

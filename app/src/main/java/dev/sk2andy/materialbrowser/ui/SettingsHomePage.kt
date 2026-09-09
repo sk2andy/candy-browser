@@ -5,6 +5,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -30,6 +31,8 @@ internal fun SettingsHomePage(
     onDestinationChanged: (SettingsDestination) -> Unit,
     onDismiss: () -> Unit,
     onOpenFirefoxExtensions: (() -> Unit)? = null,
+    developerOptionsUnlocked: Boolean = false,
+    onUnlockDeveloperOptions: (() -> Unit)? = null,
 ) {
     SharedSettingsHomePage(
         downloadSummary = downloadSummary,
@@ -47,6 +50,8 @@ internal fun SettingsHomePage(
         onDestinationChanged = onDestinationChanged,
         onDismiss = onDismiss,
         onOpenFirefoxExtensions = onOpenFirefoxExtensions,
+        developerOptionsUnlocked = developerOptionsUnlocked,
+        onUnlockDeveloperOptions = onUnlockDeveloperOptions,
     )
 }
 
@@ -78,6 +83,10 @@ private object AndroidSettingsHomeResources : SettingsHomeResources {
                 R.string.settings_protection_data_title
             SettingsHomeLabel.ProtectionAndDataSummary ->
                 R.string.settings_home_protection_summary
+            SettingsHomeLabel.DeveloperOptionsTitle -> R.string.developer_options_title
+            SettingsHomeLabel.DeveloperOptionsSummary -> R.string.developer_options_summary
+            SettingsHomeLabel.UnlockDeveloperOptions ->
+                R.string.developer_options_unlock_action
             SettingsHomeLabel.AboutLegalTitle -> R.string.settings_section_about_legal
             SettingsHomeLabel.AboutLegalSummary -> R.string.settings_home_about_summary
         },
@@ -102,6 +111,7 @@ private fun AndroidSettingsHomeIcon(
         -> ImageVector.vectorResource(R.drawable.ic_symbol_extension)
         SettingsHomeIcon.SiteCapsules -> Icons.Default.Favorite
         SettingsHomeIcon.ProtectionAndData -> Icons.Default.Lock
+        SettingsHomeIcon.DeveloperOptions -> Icons.Default.Build
         SettingsHomeIcon.AboutLegal -> Icons.Default.Info
     }
     Icon(

@@ -20,6 +20,7 @@ import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
+import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.LinkPeekAction
 import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
@@ -67,6 +68,8 @@ internal fun SettingsScreen(
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
+    developerSettings: DeveloperSettings = DeveloperSettings(),
+    isDeveloperOptionsUnlocked: Boolean = false,
     trustsUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
@@ -106,6 +109,8 @@ internal fun SettingsScreen(
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
+    onDeveloperSettingsChanged: (DeveloperSettings) -> Unit = {},
+    onUnlockDeveloperOptions: () -> Unit = {},
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
@@ -140,6 +145,8 @@ internal fun SettingsScreen(
                     onDestinationChanged = onDestinationChanged,
                     onDismiss = onDismiss,
                     onOpenFirefoxExtensions = onOpenFirefoxExtensions,
+                    developerOptionsUnlocked = isDeveloperOptionsUnlocked,
+                    onUnlockDeveloperOptions = onUnlockDeveloperOptions,
                 )
 
                 SettingsDestination.Search -> SearchSettingsPage(
@@ -335,6 +342,12 @@ internal fun SettingsScreen(
                     onExportAppData = onExportAppData,
                     onImportAppData = onImportAppData,
                     onClearData = onClearData,
+                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                )
+
+                SettingsDestination.DeveloperOptions -> DeveloperOptionsSettingsPage(
+                    settings = developerSettings,
+                    onSettingsChanged = onDeveloperSettingsChanged,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 

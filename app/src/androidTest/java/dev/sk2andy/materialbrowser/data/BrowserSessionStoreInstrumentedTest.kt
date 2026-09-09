@@ -406,6 +406,63 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun developerOptionsDefaultLockedAndSettingsRoundTripSafely() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadDeveloperOptionsUnlocked())
+        assertEquals(DeveloperSettings(), store.loadDeveloperSettings())
+
+        store.saveDeveloperOptionsUnlocked(true)
+        store.saveDeveloperSettings(
+            DeveloperSettings(
+                safeAreaLayoutQuietPeriodMillis = 250,
+                safeAreaRequiredFailureCount = 4,
+            ),
+        )
+
+        assertTrue(store.loadDeveloperOptionsUnlocked())
+        assertEquals(
+            DeveloperSettings(
+                safeAreaLayoutQuietPeriodMillis = 250,
+                safeAreaRequiredFailureCount = 4,
+            ),
+            store.loadDeveloperSettings(),
+        )
+    }
+
+    @Test
+    fun corruptDeveloperSettingsFallBackAndRemainBoundedPerField() {
+        preferences.edit()
+            .putString("developer_safe_area_layout_quiet_period_millis", "invalid")
+            .putInt("developer_safe_area_required_failure_count", 0)
+            .commit()
+
+        assertEquals(
+            DeveloperSettings(
+                safeAreaLayoutQuietPeriodMillis = 400,
+                safeAreaRequiredFailureCount = 2,
+            ),
+            BrowserSessionStore(context).loadDeveloperSettings(),
+        )
+    }
+
+    @Test
+    fun developerLayoutQuietPeriodIsRestoredOnItsStepGrid() {
+        preferences.edit()
+            .putInt("developer_safe_area_layout_quiet_period_millis", 123)
+            .putInt("developer_safe_area_required_failure_count", 4)
+            .commit()
+
+        assertEquals(
+            DeveloperSettings(
+                safeAreaLayoutQuietPeriodMillis = 100,
+                safeAreaRequiredFailureCount = 4,
+            ),
+            BrowserSessionStore(context).loadDeveloperSettings(),
+        )
+    }
+
+    @Test
     fun corruptAppearanceSettingsFallBackPerField() {
         preferences.edit()
             .putString("appearance_mode", "unknown")

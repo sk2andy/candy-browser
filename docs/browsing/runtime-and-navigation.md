@@ -139,10 +139,14 @@
   Gecko surface behind the status bar while the document-start privacy bridge adds one scrollable top
   inset and offsets fixed/sticky controls. A bounded policy retry handles content scripts that start
   before the Gecko session binding, rejects stale policy revisions and reads the current policy from
-  every delayed retry. Gecko receives the remaining bottom CSS safe area. `viewport-fit=cover`
+  every delayed retry. Compact interactive positioned controls keep an additional 8-CSS-pixel gap
+  below the top inset; viewport-wide headers and decorative elements stay aligned to the inset.
+  Gecko receives the remaining bottom CSS safe area. `viewport-fit=cover`
   cannot disable Candy's scrollable top inset because Candy owns that edge while Gecko's top CSS
   safe area is zero. Layout checks never request fallback while the document is loading. Late DOM
-  changes and interactions restart a 400-ms quiet window; three consecutive failures are required.
+  changes and interactions restart a 400-ms quiet window by default; three consecutive failures are
+  required. Unlocked developer options can tune the global quiet window from 100–800 ms and the
+  confirmation count from 2–5; changes reset pending checks and apply live to both Android engines.
   A confirmed failure removes Candy-owned document offsets, switches the current renderer live to
   native margins and republishes a zero-top-inset policy without reloading the page. The explicit
   per-site **Force safe area** override also moves every safe edge to inner native margins. Fullscreen

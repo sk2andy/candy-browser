@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -65,6 +66,9 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
         SettingsHomeLabel.ProtectionAndDataTitle -> "Schutz & Daten"
         SettingsHomeLabel.ProtectionAndDataSummary ->
             "Tracking-Schutz, Cookies, Berechtigungen und Browserdaten"
+        SettingsHomeLabel.DeveloperOptionsTitle -> "Entwickleroptionen"
+        SettingsHomeLabel.DeveloperOptionsSummary -> "Interne Browser- und Layoutparameter"
+        SettingsHomeLabel.UnlockDeveloperOptions -> "Entwickleroptionen freischalten"
         SettingsHomeLabel.AboutLegalTitle -> "Über Candy & Rechtliches"
         SettingsHomeLabel.AboutLegalSummary -> "Version, Impressum, Lizenzen und Quellen"
     }
@@ -88,6 +92,7 @@ internal fun CandySettingsHomeIcon(
         -> Icons.Filled.Extension
         SettingsHomeIcon.SiteCapsules -> Icons.Filled.Favorite
         SettingsHomeIcon.ProtectionAndData -> Icons.Filled.Lock
+        SettingsHomeIcon.DeveloperOptions -> Icons.Filled.Build
         SettingsHomeIcon.AboutLegal -> Icons.Filled.Info
     }
     Icon(

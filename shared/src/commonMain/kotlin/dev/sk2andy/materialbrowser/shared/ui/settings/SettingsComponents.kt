@@ -2,7 +2,9 @@ package dev.sk2andy.materialbrowser.shared.ui.settings
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -36,8 +38,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -80,6 +84,7 @@ fun SettingsPage(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsLink(
     title: String,
@@ -87,13 +92,22 @@ fun SettingsLink(
     containerColor: Color,
     icon: @Composable (Modifier, Color) -> Unit,
     enabled: Boolean = true,
+    onLongClickLabel: String? = null,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     Surface(
-        onClick = onClick,
-        enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .combinedClickable(
+                enabled = enabled,
+                onClickLabel = null,
+                role = Role.Button,
+                onLongClickLabel = onLongClickLabel,
+                onLongClick = onLongClick,
+                onClick = onClick,
+            )
             .graphicsLayer { alpha = if (enabled) 1f else 0.38f },
         shape = MaterialTheme.shapes.large,
         color = containerColor,

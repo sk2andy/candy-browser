@@ -24,6 +24,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
+import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -306,6 +307,26 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 ),
             )
             assertEquals(1, session.privacyPolicies.size)
+
+            session.privacyPolicies.clear()
+            browserController.updateDeveloperSettings(
+                DeveloperSettings(
+                    safeAreaLayoutQuietPeriodMillis = 250,
+                    safeAreaRequiredFailureCount = 4,
+                ),
+            )
+            assertEquals(
+                emptyList<BrowserEngineCommandType>(),
+                session.commands.map(BrowserEngineCommand::type),
+            )
+            assertEquals(1, session.privacyPolicies.size)
+            assertEquals(96, session.privacyPolicies.single().topInsetPx)
+            assertEquals(
+                250,
+                session.privacyPolicies.single().safeAreaLayoutQuietPeriodMillis,
+            )
+            assertEquals(4, session.privacyPolicies.single().safeAreaRequiredFailureCount)
+            session.privacyPolicies.clear()
 
             browserController.dispatchGeckoEngineEventForTesting(
                 BrowserEngineEvent(

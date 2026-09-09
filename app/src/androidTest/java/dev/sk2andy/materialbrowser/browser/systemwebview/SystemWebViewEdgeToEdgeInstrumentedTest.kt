@@ -16,6 +16,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
+import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
 import java.io.Closeable
 import java.net.InetAddress
@@ -95,12 +96,13 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
             var edgeState = "not sampled"
             awaitJavaScript({ "System WebView did not apply scrollable top inset: $edgeState" }) {
                 val expectedCssPx = STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio")
-                val fixedTop = evaluateNumber(scenario, "fixedTop")
+                val menuTop = evaluateNumber(scenario, "menuTop")
                 val spacer = evaluateNumber(scenario, "rootSpacerHeight")
-                edgeState = "expected=$expectedCssPx fixed=$fixedTop spacer=$spacer"
-                fixedTop >= expectedCssPx - CSS_TOLERANCE &&
+                edgeState = "expected=$expectedCssPx menu=$menuTop spacer=$spacer"
+                menuTop >= expectedCssPx + COMPACT_CONTROL_PADDING_CSS_PIXELS - CSS_TOLERANCE &&
                     spacer >= expectedCssPx - CSS_TOLERANCE
             }
+            val documentToken = evaluateString(scenario, "globalThis.__candyDocumentToken")
             evaluateNumber(scenario, "scrollPage")
             awaitJavaScript({ "Sticky control entered status bar after scroll: $edgeState" }) {
                 val expectedCssPx = STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio")
@@ -110,6 +112,79 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                 scrollY > 300.0 &&
                     stickyTop >= expectedCssPx - CSS_TOLERANCE
             }
+            evaluateNumber(scenario, "scrollTop")
+            awaitJavaScript({ "Compact menu entered status bar after returning: $edgeState" }) {
+                val expectedCssPx = STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio")
+                val scrollY = evaluateNumber(scenario, "scrollY")
+                val menuTop = evaluateNumber(scenario, "menuTop")
+                edgeState = "expected=$expectedCssPx scroll=$scrollY menu=$menuTop"
+                scrollY <= CSS_TOLERANCE &&
+                    menuTop >=
+                    expectedCssPx + COMPACT_CONTROL_PADDING_CSS_PIXELS - CSS_TOLERANCE
+            }
+            SystemClock.sleep(FALLBACK_REGRESSION_WINDOW_MILLIS)
+
+            assertEquals(
+                "Scrolling reloaded the current document",
+                documentToken,
+                evaluateString(scenario, "globalThis.__candyDocumentToken"),
+            )
+            scenario.onActivity { activity ->
+                val view = requireNotNull(
+                    activity.browserControllerForTesting().selectedBrowserEngineViewForTesting(),
+                )
+                val currentWebView = requireNotNull(view.findSystemWebView())
+                assertWindowTop(view, expectedTop = 0)
+                assertWindowTop(currentWebView, expectedTop = 0)
+                assertWindowBottom(view, activity.window.decorView.height)
+                assertWindowBottom(currentWebView, activity.window.decorView.height)
+                assertEquals(0, (view.layoutParams as ViewGroup.MarginLayoutParams).topMargin)
+                assertEquals(
+                    0,
+                    (currentWebView.layoutParams as ViewGroup.MarginLayoutParams).topMargin,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun developerSafeAreaSettingsReachOpenDocumentWithoutReload() {
+        ActivityScenario.launch<MainActivity>(
+            Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
+        ).use { scenario ->
+            awaitViewReady(scenario)
+            val documentToken = evaluateString(scenario, "globalThis.__candyDocumentToken")
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting().updateDeveloperSettings(
+                    DeveloperSettings(
+                        safeAreaLayoutQuietPeriodMillis = 250,
+                        safeAreaRequiredFailureCount = 4,
+                    ),
+                )
+            }
+
+            assertEquals(
+                250.0,
+                evaluateRawNumber(
+                    scenario,
+                    "globalThis.CandyContentTopInset.safeAreaLayoutQuietPeriodMillis()",
+                ),
+                0.0,
+            )
+            assertEquals(
+                4.0,
+                evaluateRawNumber(
+                    scenario,
+                    "globalThis.CandyContentTopInset.safeAreaRequiredFailureCount()",
+                ),
+                0.0,
+            )
+            assertEquals(READY_TITLE, evaluateString(scenario, "document.title"))
+            assertEquals(
+                "Developer settings reloaded the current document",
+                documentToken,
+                evaluateString(scenario, "globalThis.__candyDocumentToken"),
+            )
         }
     }
 
@@ -160,7 +235,22 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
     private fun evaluateNumber(
         scenario: ActivityScenario<MainActivity>,
         expression: String,
-    ): Double {
+    ): Double = evaluateRawNumber(scenario, "globalThis.__candyEdgeToEdge.$expression")
+
+    private fun evaluateRawNumber(
+        scenario: ActivityScenario<MainActivity>,
+        expression: String,
+    ): Double = evaluate(scenario, expression).toDouble()
+
+    private fun evaluateString(
+        scenario: ActivityScenario<MainActivity>,
+        expression: String,
+    ): String = evaluate(scenario, expression).removeSurrounding("\"")
+
+    private fun evaluate(
+        scenario: ActivityScenario<MainActivity>,
+        expression: String,
+    ): String {
         val result = AtomicReference<String>()
         val completed = CountDownLatch(1)
         scenario.onActivity { activity ->
@@ -169,13 +259,13 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                     .selectedBrowserEngineViewForTesting()
                     ?.findSystemWebView(),
             )
-            webView.evaluateJavascript("globalThis.__candyEdgeToEdge.$expression") { value ->
+            webView.evaluateJavascript(expression) { value ->
                 result.set(value)
                 completed.countDown()
             }
         }
         assertTrue("JavaScript result timed out for $expression", completed.await(5, TimeUnit.SECONDS))
-        return requireNotNull(result.get()).toDouble()
+        return requireNotNull(result.get())
     }
 
     private fun awaitJavaScript(
@@ -238,7 +328,9 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
         const val READY_TITLE = "Candy System WebView edge ready"
         const val STATUS_BAR_INSET_PX = 96
         const val NAVIGATION_BAR_INSET_PX = 48
+        const val COMPACT_CONTROL_PADDING_CSS_PIXELS = 8.0
         const val CSS_TOLERANCE = 1.0
+        const val FALLBACK_REGRESSION_WINDOW_MILLIS = 1_600L
         const val TIMEOUT_MILLIS = 15_000L
         const val POLL_MILLIS = 50L
         val HTML =
@@ -248,16 +340,32 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
             <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
             <style>
               html,body { margin:0; }
-              #fixed { position:fixed; inset:0 0 auto; height:24px; background:red; }
+              #drawer-shell, #drawer-backdrop {
+                position:fixed; inset:0; z-index:9998;
+              }
+              #drawer-shell { background:transparent; }
+              #drawer-backdrop { background:rgba(0,0,0,.6); z-index:9997; }
+              #navd { position:absolute; top:0; left:0; width:60px; height:64px; }
+              #header {
+                position:fixed; top:40px; left:0; width:100%; height:80px;
+                z-index:1; background:white;
+              }
+              #sign-in { position:absolute; top:8px; right:8px; }
               #lead { height:200px; }
               #sticky { position:sticky; top:0; height:24px; background:blue; }
               main { height:4000px; }
             </style></head><body>
-              <header id="fixed"></header><div id="lead"></div><nav id="sticky"></nav><main></main>
+              <div id="drawer-backdrop"></div>
+              <div id="drawer-shell"><div role="button" style="height:120px">Drawer</div></div>
+              <div id="navd"><div><div id="menu" role="button">Menu</div></div></div>
+              <header id="header"><button id="sign-in">Sign in</button></header>
+              <div id="lead"></div><nav id="sticky"></nav><main></main>
               <script>
+                globalThis.__candyDocumentToken =
+                  String(performance.timeOrigin) + ':' + Math.random().toString(36);
                 globalThis.__candyEdgeToEdge = {
                   get devicePixelRatio() { return globalThis.devicePixelRatio; },
-                  get fixedTop() { return document.querySelector('#fixed').getBoundingClientRect().top; },
+                  get menuTop() { return document.querySelector('#menu').getBoundingClientRect().top; },
                   get stickyTop() { return document.querySelector('#sticky').getBoundingClientRect().top; },
                   get rootSpacerHeight() {
                     return Number.parseFloat(
@@ -265,11 +373,12 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                     ) || 0;
                   },
                   get scrollY() { return globalThis.scrollY; },
-                  get scrollPage() { globalThis.scrollTo(0, 600); return 0; }
+                  get scrollPage() { globalThis.scrollTo(0, 600); return 0; },
+                  get scrollTop() { globalThis.scrollTo(0, 0); return 0; }
                 };
                 addEventListener('scroll', () => {
-                  document.querySelector('#fixed').style.display = 'none';
-                }, { once: true });
+                  document.querySelector('#header').style.display = scrollY > 100 ? 'none' : 'block';
+                }, { passive: true });
               </script>
             </body></html>
             """.trimIndent()

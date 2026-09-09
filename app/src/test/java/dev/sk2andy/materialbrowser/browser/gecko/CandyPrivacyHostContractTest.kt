@@ -22,6 +22,8 @@ class CandyPrivacyHostContractTest {
             topInsetPx = 96,
             navigationGeneration = 4,
             scrollMetricsEnabled = true,
+            safeAreaLayoutQuietPeriodMillis = 250,
+            safeAreaRequiredFailureCount = 4,
         )
 
         assertFalse(policy.blockAdsAndTrackers)
@@ -35,6 +37,23 @@ class CandyPrivacyHostContractTest {
         assertEquals(96, policy.topInsetPx)
         assertEquals(4, policy.navigationGeneration)
         assertTrue(policy.scrollMetricsEnabled)
+        assertEquals(250, policy.safeAreaLayoutQuietPeriodMillis)
+        assertEquals(4, policy.safeAreaRequiredFailureCount)
+    }
+
+    @Test
+    fun `safe area quiet period stays on the developer settings grid`() {
+        val policy = GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
+            pageHost = null,
+            pausedHosts = emptySet(),
+            hideCookieConsent = false,
+            cookieBannerRemovalDisabled = false,
+            blockThirdPartyCookies = true,
+            allowThirdPartyCookiesForSite = false,
+            safeAreaLayoutQuietPeriodMillis = 126,
+        )
+
+        assertEquals(150, policy.safeAreaLayoutQuietPeriodMillis)
     }
 
     @Test
@@ -167,6 +186,8 @@ class CandyPrivacyHostContractTest {
         assertFalse(message.has("viewportCoverAllowed"))
         assertEquals(0, message.getInt("navigationGeneration"))
         assertFalse(message.getBoolean("scrollMetricsEnabled"))
+        assertEquals(400, message.getInt("safeAreaLayoutQuietPeriodMillis"))
+        assertEquals(3, message.getInt("safeAreaRequiredFailureCount"))
         assertEquals(
             listOf(
                 "accounts.google.com",
