@@ -33,6 +33,7 @@ internal object WebContentTopInsetScript {
               const stabilizationCheckDelaysMs = [250, 1000, 2500, 5000];
               let deferredLayoutChecks = 0;
               let deferredLayoutCheckTimer = 0;
+              let immediateLayoutCheckFrame = 0;
               let consecutiveLayoutFailures = 0;
               let activePolicyKey = null;
               let nativeFallbackRequestKey = null;
@@ -342,6 +343,22 @@ internal object WebContentTopInsetScript {
                 }
                 return null;
               };
+              const isPeerBehindPlan = (planElement, peer, planRect, peerRect) => {
+                const overlapLeft = Math.max(planRect.left, peerRect.left);
+                const overlapRight = Math.min(planRect.right, peerRect.right);
+                const overlapTop = Math.max(planRect.top, peerRect.top);
+                const overlapBottom = Math.min(planRect.bottom, peerRect.bottom);
+                if (overlapRight <= overlapLeft || overlapBottom <= overlapTop) return false;
+                const stack = Array.from(document.elementsFromPoint(
+                  (overlapLeft + overlapRight) / 2,
+                  (overlapTop + overlapBottom) / 2,
+                ));
+                const planIndex = stack.findIndex((element) =>
+                  element === planElement || planElement.contains(element));
+                const peerIndex = stack.findIndex((element) =>
+                  element === peer || peer.contains(element));
+                return planIndex >= 0 && peerIndex > planIndex;
+              };
               const hasPositionedPeerCollision = (plans, root, projected) => {
                 return plans.some((plan) => {
                   const currentRect = plan.element.getBoundingClientRect();
@@ -398,6 +415,9 @@ internal object WebContentTopInsetScript {
                         return false;
                       }
                       const peerRect = peer.getBoundingClientRect();
+                      if (isPeerBehindPlan(plan.element, peer, currentRect, peerRect)) {
+                        return false;
+                      }
                       const peerIsInteractive = isInteractiveAtPoint(element, peer);
                       const peerIsViewportWide =
                         peerRect.width >= globalThis.innerWidth * 0.8;
@@ -579,8 +599,26 @@ internal object WebContentTopInsetScript {
                   reconcile();
                 }, layoutQuietPeriodMs());
               };
+              const scheduleImmediateLayoutCheck = () => {
+                if (nativeFallbackRequestedForCurrentPolicy()) return;
+                if (immediateLayoutCheckFrame) {
+                  globalThis.cancelAnimationFrame(immediateLayoutCheckFrame);
+                }
+                immediateLayoutCheckFrame = globalThis.requestAnimationFrame(() => {
+                  reconcile(false);
+                  immediateLayoutCheckFrame = globalThis.requestAnimationFrame(() => {
+                    immediateLayoutCheckFrame = 0;
+                    reconcile(false);
+                  });
+                });
+              };
               const scheduleInteractionLayoutCheck = () => {
                 deferredLayoutChecks = 0;
+                scheduleDeferredLayoutCheck(true);
+              };
+              const scheduleImmediateInteractionLayoutCheck = () => {
+                deferredLayoutChecks = 0;
+                scheduleImmediateLayoutCheck();
                 scheduleDeferredLayoutCheck(true);
               };
               const reconfigure = () => {
@@ -659,7 +697,7 @@ internal object WebContentTopInsetScript {
                 }
                 return activeThemeColor() || canvasBackground(root);
               };
-              const reconcile = () => {
+              const reconcile = (allowNativeFallback = true) => {
                 const root = document.documentElement;
                 if (!root) return;
                 const physicalPixels =
@@ -747,11 +785,11 @@ internal object WebContentTopInsetScript {
                   !Number.isFinite(appliedPixels) || !Number.isFinite(expectedPixels) ||
                   Math.abs(appliedPixels - expectedPixels) > 0.5
                 ) {
-                  requestNativeFallback();
+                  if (allowNativeFallback) requestNativeFallback();
                   return;
                 }
                 if (!refreshOwnedOffsets(cssPixels)) {
-                  requestNativeFallback();
+                  if (allowNativeFallback) requestNativeFallback();
                   return;
                 }
                 if (document.readyState !== 'loading') {
@@ -774,7 +812,7 @@ internal object WebContentTopInsetScript {
                       protectTopInset(root, body, style, cssPixels, false);
                   }
                   if (!topInsetProtected) {
-                    requestNativeFallback();
+                    if (allowNativeFallback) requestNativeFallback();
                     return;
                   }
                 }
@@ -822,10 +860,18 @@ internal object WebContentTopInsetScript {
                   'keydown',
                   'pointerup',
                 ];
+                const immediateInteractionEvents = ['compositionend', 'input'];
                 interactionEvents.forEach((eventName) => {
                   document.addEventListener(
                     eventName,
                     scheduleInteractionLayoutCheck,
+                    true,
+                  );
+                });
+                immediateInteractionEvents.forEach((eventName) => {
+                  document.addEventListener(
+                    eventName,
+                    scheduleImmediateInteractionLayoutCheck,
                     true,
                   );
                 });
@@ -840,6 +886,8 @@ internal object WebContentTopInsetScript {
                   observer,
                   interactionEvents,
                   interactionListener: scheduleInteractionLayoutCheck,
+                  immediateInteractionEvents,
+                  immediateInteractionListener: scheduleImmediateInteractionLayoutCheck,
                   windowScrollListener: scheduleInteractionLayoutCheck,
                   domContentLoadedListener,
                   windowLoadListener,
@@ -850,11 +898,20 @@ internal object WebContentTopInsetScript {
                   observer.disconnect();
                   globalThis.clearTimeout(deferredLayoutCheckTimer);
                   deferredLayoutCheckTimer = 0;
+                  globalThis.cancelAnimationFrame(immediateLayoutCheckFrame);
+                  immediateLayoutCheckFrame = 0;
                   runtimeState.stabilizationCheckTimers.forEach(globalThis.clearTimeout);
                   interactionEvents.forEach((eventName) => {
                     document.removeEventListener(
                       eventName,
                       scheduleInteractionLayoutCheck,
+                      true,
+                    );
+                  });
+                  immediateInteractionEvents.forEach((eventName) => {
+                    document.removeEventListener(
+                      eventName,
+                      scheduleImmediateInteractionLayoutCheck,
                       true,
                     );
                   });

@@ -83,15 +83,18 @@ call-site cutover are not complete.
   interactive controls keep an extra 8-CSS-pixel gap below that inset without moving viewport-wide
   headers or decorative elements. Candidate discovery scans the full hit-test stack and skips
   unmovable fullscreen shells, allowing nested absolute controls such as Google's mobile menu to be
-  protected. Collision checks stay inside the projected control bounds and ignore viewport-wide
-  peers for compact controls, so distant or hidden actions inside a wide shell cannot trigger native
-  fallback; the bounded
+  protected. Collision checks stay inside the projected control bounds, ignore viewport-wide peers
+  for compact controls, and ignore lower-stacked peers behind a moved control. This prevents distant,
+  hidden, or visually covered actions from triggering native fallback; the bounded
   policy retry closes the cold-navigation race before the Gecko session binding exists. Gecko receives
   the bottom CSS `safe-area-inset-*`. A page's `viewport-fit=cover` declaration cannot disable Candy's
   scrollable top inset because Candy intentionally owns that edge and sets Gecko's top CSS safe area
   to zero. If a page defeats the guarded layout, the navigation-bound
   fallback waits for 400 ms of layout quiet and three consecutive failures by default, then switches
   that renderer live to inner native margins and clears Candy's document inset without reloading.
+  Search-input and IME composition changes run a fallback-free repair during the next two animation
+  frames, so newly displayed search headers clear the status bar while typing instead of waiting for
+  the fallback quiet period.
   Hidden developer options can tune those bounded values live for both Android engines. The
   per-site **Force safe area** override
   does the same explicitly. Fullscreen remains truly edge to edge, while Compose safe-drawing hosts

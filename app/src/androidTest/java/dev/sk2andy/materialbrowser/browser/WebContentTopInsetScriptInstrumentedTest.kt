@@ -215,6 +215,87 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
+    fun searchHeaderActivatedByInputClearsStatusBarBeforeLayoutQuietPeriod() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(
+                fallbackReceived = fallbackReceived,
+                layoutQuietPeriodMillis = SEARCH_LAYOUT_QUIET_PERIOD_MILLIS,
+                requiredFailureCount = 3,
+            ),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 200vh; }
+                  #query { margin-top: 120px; }
+                  #drawer-shell, #drawer-backdrop {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 9998;
+                  }
+                  #drawer-shell { background: transparent; }
+                  #drawer-backdrop { background: rgba(0, 0, 0, 0.6); z-index: 9997; }
+                  #search-header {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 64px;
+                    background: white;
+                    z-index: 10000;
+                  }
+                </style></head><body>
+                <input id="query" aria-label="Search">
+                <div id="drawer-backdrop"></div>
+                <div id="drawer-shell">
+                  <div role="button" style="height:120px">Hidden drawer action</div>
+                </div>
+                <form id="search-header" hidden>
+                  <button type="button">Add</button>
+                  <input value="Vimeo sample video">
+                  <button type="button">Close</button>
+                </form>
+                <main>Suggestions</main>
+                <script>
+                  document.querySelector('#query').addEventListener('input', () => {
+                    document.querySelector('#search-header').hidden = false;
+                  });
+                </script>
+                </body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+        val devicePixelRatio = evaluate(view, "devicePixelRatio").toDouble()
+        val expectedTop = TOP_INSET_PX / devicePixelRatio
+
+        evaluate(
+            view,
+            "document.querySelector('#query').dispatchEvent(" +
+                "new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'v' }));",
+        )
+        val deadline = SystemClock.elapsedRealtime() + IMMEDIATE_LAYOUT_TIMEOUT_MILLIS
+        var headerTop = Double.NEGATIVE_INFINITY
+        while (SystemClock.elapsedRealtime() < deadline) {
+            headerTop = evaluate(
+                view,
+                "document.querySelector('#search-header').getBoundingClientRect().top",
+            ).toDouble()
+            if (headerTop >= expectedTop - CSS_PIXEL_TOLERANCE) break
+            SystemClock.sleep(FRAME_SETTLE_MILLIS)
+        }
+
+        assertTrue(
+            "Input-activated search header remained in the status bar before layout quiet: " +
+                "top=$headerTop expected=$expectedTop",
+            headerTop >= expectedTop - CSS_PIXEL_TOLERANCE,
+        )
+        assertFalse(
+            "Immediate search-header reconciliation requested native fallback",
+            fallbackReceived.await(IMMEDIATE_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+    }
+
+    @Test
     fun viewportWideInteractiveHeaderKeepsExactStatusInset() {
         val view = loadPage(
             bridge = TopInsetBridge(CountDownLatch(1)),
@@ -360,6 +441,10 @@ class WebContentTopInsetScriptInstrumentedTest {
         const val COMPACT_CONTROL_PADDING_CSS_PIXELS = 8.0
         const val CSS_PIXEL_TOLERANCE = 0.5
         const val NO_FALLBACK_WINDOW_MILLIS = 350L
+        const val SEARCH_LAYOUT_QUIET_PERIOD_MILLIS = 800
+        const val IMMEDIATE_LAYOUT_TIMEOUT_MILLIS = 250L
+        const val IMMEDIATE_FALLBACK_WINDOW_MILLIS = 100L
+        const val FRAME_SETTLE_MILLIS = 16L
         const val VIEWPORT_WIDTH_PX = 1_080
         const val VIEWPORT_HEIGHT_PX = 1_920
         const val STALE_TIMER_WINDOW_MILLIS = 600L

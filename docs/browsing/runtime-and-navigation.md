@@ -143,9 +143,12 @@
   below the top inset; viewport-wide headers and decorative elements stay aligned to the inset.
   Gecko receives the remaining bottom CSS safe area. `viewport-fit=cover`
   cannot disable Candy's scrollable top inset because Candy owns that edge while Gecko's top CSS
-  safe area is zero. Layout checks never request fallback while the document is loading. Late DOM
-  changes and interactions restart a 400-ms quiet window by default; three consecutive failures are
-  required. Unlocked developer options can tune the global quiet window from 100–800 ms and the
+  safe area is zero. Layout checks never request fallback while the document is loading. Input and
+  IME composition changes repair newly displayed search headers during the next two animation frames
+  without counting fallback failures. Lower-stacked peers behind the repaired control do not count as
+  collisions. Late DOM changes and interactions restart a 400-ms quiet window by default; three
+  consecutive failures are required. Unlocked developer options can tune the global quiet window from
+  100–800 ms and the
   confirmation count from 2–5; changes reset pending checks and apply live to both Android engines.
   A confirmed failure removes Candy-owned document offsets, switches the current renderer live to
   native margins and republishes a zero-top-inset policy without reloading the page. The explicit
