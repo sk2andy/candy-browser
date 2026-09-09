@@ -350,11 +350,6 @@ internal data class BrowserActivityResultIdentity(
     val navigationGeneration: Int,
 )
 
-private data class NativeSafeAreaFallbackReload(
-    val navigationGeneration: Int,
-    val url: String?,
-)
-
 private data class FirefoxExtensionOptionsTabChrome(
     val title: String,
     val scheme: String,
@@ -750,6 +745,12 @@ class BrowserController(
         onGeckoEngineEvent(event)
     }
 
+    @VisibleForTesting
+    internal fun dispatchSelectedGeckoPrivacyEventForTesting(event: GeckoPrivacyEvent) {
+        check(usesGeckoEngine)
+        onGeckoPrivacyEvent(selectedTabId, event)
+    }
+
     /** Routes a main-frame Gecko request through the production navigation callback. */
     @VisibleForTesting
     internal fun dispatchSelectedGeckoNavigationRequestForTesting(
@@ -810,7 +811,6 @@ class BrowserController(
     private var nextExternalLinkPreviewSessionId = 0L
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val nativeSafeAreaFallbackTabs = mutableSetOf<String>()
-    private val nativeSafeAreaFallbackReloads = mutableMapOf<String, NativeSafeAreaFallbackReload>()
     private val firefoxExtensionOptionsTabs =
         mutableMapOf<String, FirefoxExtensionOptionsTabChrome>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
@@ -7336,7 +7336,6 @@ class BrowserController(
         pendingConsentCssUrls.clear()
         navigationGenerations.clear()
         nativeSafeAreaFallbackTabs.clear()
-        nativeSafeAreaFallbackReloads.clear()
         firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
         externalNavigationGrants.clear()
@@ -8238,11 +8237,9 @@ class BrowserController(
                 nativeSafeAreaFallbackTabs.add(tabId)
             ) {
                 lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
-                nativeSafeAreaFallbackReloads[tabId] = NativeSafeAreaFallbackReload(
-                    navigationGeneration = navigationGeneration + 1,
-                    url = pageUrls[tabId],
-                )
-                browserEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
+                geckoPrivacyPolicyFor(tabId)?.let { policy ->
+                    browserEngineSessions[tabId]?.updatePrivacyPolicy(policy)
+                }
             }
             return
         }
@@ -8294,12 +8291,7 @@ class BrowserController(
             BrowserEngineEventType.NavigationStarted -> {
                 val nextNavigationGeneration =
                     navigationGenerations.getOrDefault(event.tabId, 0) + 1
-                val pendingFallbackReload = nativeSafeAreaFallbackReloads.remove(event.tabId)
-                val preservesNativeSafeAreaFallback = pendingFallbackReload != null &&
-                    pendingFallbackReload.navigationGeneration == nextNavigationGeneration &&
-                    pendingFallbackReload.url == event.address
-                val hadNativeSafeAreaFallback = !preservesNativeSafeAreaFallback &&
-                    nativeSafeAreaFallbackTabs.remove(event.tabId)
+                val hadNativeSafeAreaFallback = nativeSafeAreaFallbackTabs.remove(event.tabId)
                 clearPermissionActivity(event.tabId)
                 if (contentActions.sourceTabId == event.tabId) contentActions.dismiss()
                 resetBrowserChromeScroll(event.tabId)
@@ -10433,7 +10425,6 @@ class BrowserController(
         residentSessionAccessOrder.remove(tabId)
         navigationGenerations.remove(tabId)
         nativeSafeAreaFallbackTabs.remove(tabId)
-        nativeSafeAreaFallbackReloads.remove(tabId)
         firefoxExtensionOptionsTabs.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
         pageUrls.remove(tabId)
@@ -10471,7 +10462,6 @@ class BrowserController(
         residentSessionAccessOrder.remove(tab.id)
         navigationGenerations.remove(tab.id)
         nativeSafeAreaFallbackTabs.remove(tab.id)
-        nativeSafeAreaFallbackReloads.remove(tab.id)
         pageUrls.remove(tab.id)
         bottomBarCompactStates.remove(tab.id)
         browserChromeScrollStates.remove(tab.id)

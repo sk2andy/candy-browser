@@ -154,6 +154,33 @@ class BrowserChromeScrollRulesTest {
     }
 
     @Test
+    fun `document metrics update scrollbar without changing chrome position`() {
+        val scheduledDispatches = ArrayDeque<Pair<Long, () -> Unit>>()
+        val chromeEvents = mutableListOf<BrowserEngineScrollEvent>()
+        val scrollBarEvents = mutableListOf<BrowserEngineScrollEvent>()
+        val dispatchers = BrowserEngineScrollDispatchers(
+            schedule = { delayMillis, dispatch ->
+                scheduledDispatches.addLast(delayMillis to dispatch)
+            },
+            nowMillis = { 1_000L },
+            dispatchChrome = chromeEvents::add,
+            dispatchScrollBar = scrollBarEvents::add,
+        )
+        val rendererEvent = BrowserEngineScrollEvent(scrollYPx = 100)
+        val documentMetricsEvent = BrowserEngineScrollEvent(
+            scrollYPx = 300,
+            source = BrowserEngineScrollEventSource.DocumentMetrics,
+        )
+
+        dispatchers.onScrollChanged(rendererEvent, scrollBarEnabled = true)
+        dispatchers.onScrollChanged(documentMetricsEvent, scrollBarEnabled = true)
+        repeat(2) { scheduledDispatches.removeFirst().second.invoke() }
+
+        assertEquals(listOf(rendererEvent), chromeEvents)
+        assertEquals(listOf(documentMetricsEvent), scrollBarEvents)
+    }
+
+    @Test
     fun `downward distance collapses only after collapse threshold`() {
         var state = BrowserChromeScrollState()
 

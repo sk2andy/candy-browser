@@ -93,7 +93,7 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("elementsFromPoint"))
         assertTrue(WebContentTopInsetScript.installScript.contains("localOffsetCollisionDetected"))
         assertTrue(WebContentTopInsetScript.installScript.contains("scheduleInteractionLayoutCheck"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("delayedInteractionCheckMs"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("layoutQuietPeriodMs = 400"))
         assertTrue(WebContentTopInsetScript.installScript.contains("interactionEvents"))
     }
 
@@ -120,7 +120,50 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("stabilizationCheckDelaysMs"))
         assertTrue(WebContentTopInsetScript.installScript.contains("readyState === 'loading'"))
         assertTrue(WebContentTopInsetScript.installScript.contains("addedNodes"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("addEventListener('load'"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("'load',"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.display === 'none'"))
+    }
+
+    @Test
+    fun `native fallback waits for layout stability and repeated failures`() {
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "if (document.readyState === 'loading') return",
+            ),
+        )
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "requiredConsecutiveLayoutFailures = 3",
+            ),
+        )
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "consecutiveLayoutFailures < requiredConsecutiveLayoutFailures",
+            ),
+        )
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "scheduleDeferredLayoutCheck(true)",
+            ),
+        )
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "scheduleDeferredLayoutCheck(false)",
+            ),
+        )
+    }
+
+    @Test
+    fun `reinjection disposes every pending layout check and listener`() {
+        assertTrue(WebContentTopInsetScript.installScript.contains("previousState.dispose()"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("runtimeState.dispose = () =>"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("deferredLayoutCheckTimer = 0"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("domContentLoadedListener"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("windowLoadListener"))
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "runtimeState.stabilizationCheckTimers.forEach(globalThis.clearTimeout)",
+            ),
+        )
     }
 }

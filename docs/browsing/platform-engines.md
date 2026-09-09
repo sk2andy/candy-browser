@@ -84,7 +84,8 @@ call-site cutover are not complete.
   the bottom CSS `safe-area-inset-*`. A page's `viewport-fit=cover` declaration cannot disable Candy's
   scrollable top inset because Candy intentionally owns that edge and sets Gecko's top CSS safe area
   to zero. If a page defeats the guarded layout, the navigation-bound
-  fallback reloads that same URL once with every safe edge assigned to inner native margins. The
+  fallback waits for 400 ms of layout quiet and three consecutive failures, then switches that
+  renderer live to inner native margins and clears Candy's document inset without reloading. The
   per-site **Force safe area** override
   does the same explicitly. Fullscreen remains truly edge to edge, while Compose safe-drawing hosts
   clear duplicate renderer insets. Candy keeps GeckoView's default SurfaceView backend so page frames

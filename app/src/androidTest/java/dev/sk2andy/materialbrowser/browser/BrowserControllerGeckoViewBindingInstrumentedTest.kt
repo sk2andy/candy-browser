@@ -6,6 +6,8 @@ import android.view.View
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.core.graphics.Insets
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
@@ -16,8 +18,12 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaCommand
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionStateListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNavigationRequestListener
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -237,6 +243,99 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun safeAreaFallbackUpdatesPolicyWithoutReloadingCurrentNavigation() {
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(
+                tabId = tabId,
+                onFirstAttach = {},
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(
+                        WindowInsetsCompat.Type.statusBars(),
+                        Insets.of(0, 96, 0, 0),
+                    )
+                    .build(),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://www.google.com/search?q=test",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            session.commands.clear()
+            session.privacyPolicies.clear()
+
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://www.google.com/",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    safeAreaFallbackNavigationGeneration = 1,
+                ),
+            )
+
+            assertEquals(
+                emptyList<BrowserEngineCommandType>(),
+                session.commands.map(BrowserEngineCommand::type),
+            )
+            assertEquals(1, session.privacyPolicies.size)
+            assertEquals(0, session.privacyPolicies.single().topInsetPx)
+
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://www.google.com/",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    safeAreaFallbackNavigationGeneration = 1,
+                ),
+            )
+            assertEquals(1, session.privacyPolicies.size)
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://www.google.com/search?q=next",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(96, session.privacyPolicies.last().topInsetPx)
+            session.privacyPolicies.clear()
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://www.google.com/",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    safeAreaFallbackNavigationGeneration = 1,
+                ),
+            )
+            assertEquals(emptyList<GeckoPrivacyPolicy>(), session.privacyPolicies)
+        }
+    }
+
+    @Test
     fun synchronousReleaseReentryDoesNotDiscardReplacementBinding() {
         composeRule.runOnIdle {
             val activity = composeRule.activity
@@ -320,6 +419,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         private val onFirstRelease: (() -> Unit)? = null,
         private val presentContentImmediately: Boolean = false,
     ) : AndroidBrowserEngineSessionPort {
+        val commands = mutableListOf<BrowserEngineCommand>()
+        val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
         var createCount = 0
             private set
         var createdView: View? = null
@@ -355,7 +456,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             onFirstRelease?.invoke()
         }
 
-        override fun execute(command: BrowserEngineCommand) = Unit
+        override fun execute(command: BrowserEngineCommand) {
+            commands += command
+        }
 
         override fun awaitContentPresented(listener: () -> Unit) {
             if (presentContentImmediately) listener()
@@ -408,6 +511,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             policy: GeckoPrivacyPolicy,
             reloadOnCookiePermissionChange: Boolean,
             onReady: () -> Unit,
-        ) = onReady()
+        ) {
+            privacyPolicies += policy
+            onReady()
+        }
     }
 }

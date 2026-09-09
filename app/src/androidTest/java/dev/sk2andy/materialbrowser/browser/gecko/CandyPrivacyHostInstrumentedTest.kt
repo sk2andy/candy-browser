@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
+import android.os.SystemClock
 import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -12,6 +13,7 @@ import java.net.SocketException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -206,6 +208,73 @@ class CandyPrivacyHostInstrumentedTest {
         assertDocumentStartInset(isPrivate = true)
     }
 
+    @Test
+    fun dynamicLayoutNeedsQuietRepeatedFailuresBeforeNativeFallback() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val layoutChanged = CountDownLatch(1)
+        val fallbackReceived = CountDownLatch(1)
+        val layoutChangedAt = AtomicLong()
+        val fallbackAt = AtomicLong()
+        val fallback = AtomicReference<GeckoPrivacyEvent>()
+        lateinit var session: GeckoBrowserSession
+        lateinit var view: View
+
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            session = GeckoRuntimeOwner.getOrCreate(context).createSession(
+                profileId = "privacy-dynamic-safe-area",
+                isPrivate = false,
+                privacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
+                    pageHost = COOKIE_PAGE_HOST,
+                    topInsetPx = SAFE_AREA_INSET_PX,
+                    navigationGeneration = DYNAMIC_NAVIGATION_GENERATION,
+                ),
+                privacyEventSink = GeckoPrivacyEventSink { event ->
+                    if (event.safeAreaFallbackNavigationGeneration != null) {
+                        fallback.set(event)
+                        fallbackAt.set(SystemClock.elapsedRealtime())
+                        fallbackReceived.countDown()
+                    }
+                },
+            )
+            view = session.createView(context)
+            session.setStateListener { state ->
+                if (state.title == DYNAMIC_LAYOUT_CHANGED_TITLE) {
+                    layoutChangedAt.compareAndSet(0, SystemClock.elapsedRealtime())
+                    layoutChanged.countDown()
+                }
+            }
+            session.setActive(true)
+            assertTrue(session.loadUrl(server.dynamicSafeAreaPageUrl()))
+        }
+
+        try {
+            assertTrue(
+                "Dynamic fixture never changed layout",
+                layoutChanged.await(20, TimeUnit.SECONDS),
+            )
+            assertTrue(
+                "Native fallback was not reported",
+                fallbackReceived.await(20, TimeUnit.SECONDS),
+            )
+            assertEquals(
+                DYNAMIC_NAVIGATION_GENERATION,
+                fallback.get().safeAreaFallbackNavigationGeneration,
+            )
+            assertTrue(
+                "Fallback did not wait for layout quiet and repeated failures",
+                fallbackAt.get() - layoutChangedAt.get() >= MINIMUM_FALLBACK_CONFIRMATION_MILLIS,
+            )
+        } finally {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.releaseView(view)
+                session.setActive(false)
+                session.close()
+            }
+            server.close()
+        }
+    }
+
     private fun assertDocumentStartInset(isPrivate: Boolean) {
         val server = FixtureServer()
         val safeTitle = CountDownLatch(1)
@@ -318,6 +387,9 @@ class CandyPrivacyHostInstrumentedTest {
 
         fun safeAreaPageUrl() = "http://$COOKIE_PAGE_HOST:${socket.localPort}/safe-area"
 
+        fun dynamicSafeAreaPageUrl() =
+            "http://$COOKIE_PAGE_HOST:${socket.localPort}/dynamic-safe-area"
+
         private fun serve() {
             while (!socket.isClosed) {
                 try {
@@ -338,6 +410,7 @@ class CandyPrivacyHostInstrumentedTest {
                             isScript -> "document.title='$ALLOWED_TITLE';"
                             isCookieFrame -> cookieFrame()
                             requestLine.contains(" /cookie-page ") -> cookiePage()
+                            requestLine.contains(" /dynamic-safe-area ") -> dynamicSafeAreaPage()
                             requestLine.contains(" /safe-area ") -> safeAreaPage()
                             else -> page(host)
                         }.toByteArray()
@@ -442,6 +515,30 @@ class CandyPrivacyHostInstrumentedTest {
             </script></body></html>
         """.trimIndent()
 
+        private fun dynamicSafeAreaPage(): String = """
+            <!doctype html>
+            <html><head><title>Preparing dynamic layout</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            </head><body><main id="content">Content</main><script>
+              addEventListener('load', () => {
+                const blocker = document.createElement('style');
+                blocker.textContent =
+                  'html:root::before { height: 0 !important; min-height: 0 !important; }';
+                document.head.appendChild(blocker);
+                let mutations = 0;
+                const timer = setInterval(() => {
+                  const item = document.createElement('div');
+                  item.textContent = 'Dynamic item ' + mutations;
+                  document.querySelector('#content').appendChild(item);
+                  mutations++;
+                  if (mutations !== 10) return;
+                  clearInterval(timer);
+                  document.title = '$DYNAMIC_LAYOUT_CHANGED_TITLE';
+                }, 100);
+              });
+            </script></body></html>
+        """.trimIndent()
+
         override fun close() {
             socket.close()
             thread.join(2_000)
@@ -461,5 +558,8 @@ class CandyPrivacyHostInstrumentedTest {
         const val SCROLL_OFFSET_PX = 600
         const val SAFE_AREA_TITLE = "Candy safe area applied"
         const val SCROLLED_SAFE_AREA_TITLE = "Candy sticky safe area applied"
+        const val DYNAMIC_LAYOUT_CHANGED_TITLE = "Dynamic safe area blocked"
+        const val DYNAMIC_NAVIGATION_GENERATION = 7
+        const val MINIMUM_FALLBACK_CONFIRMATION_MILLIS = 750L
     }
 }
