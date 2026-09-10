@@ -55,30 +55,53 @@ class CandyCircuitRulesTest {
     }
 
     @Test
-    fun `one clockwise turn at row two column two closes four tile loop`() {
+    fun `one clockwise turn closes loop refills its tiles and awards moves`() {
         val next = CandyCircuitRules.rotate(CandyCircuitGameState(), tileIndex = 5)
 
-        assertEquals(11, next.movesRemaining)
+        assertEquals(13, next.movesRemaining)
         assertEquals(400, next.score)
         assertEquals(400, next.bestScore)
         assertEquals(1, next.combo)
         assertEquals(400, next.lastPointsGained)
+        assertEquals(2, next.lastMovesGained)
         assertEquals(4, next.lastClosedTileCount)
         assertEquals(setOf(0, 1, 4, 5), next.lastClosedTileIndices)
-        assertEquals(setOf(0, 1, 4, 5), CandyCircuitRules.closedComponents(next.tiles).single().tileIndices)
+        assertEquals(
+            listOf(
+                CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 2),
+                CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 3),
+                CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 1),
+                CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 3),
+            ),
+            listOf(next.tiles[0], next.tiles[1], next.tiles[4], next.tiles[5]),
+        )
+        assertTrue(CandyCircuitRules.closedComponents(next.tiles).isEmpty())
     }
 
     @Test
-    fun `closing branch network on next move applies combo multiplier`() {
-        val firstLoopClosed = CandyCircuitRules.rotate(CandyCircuitGameState(), tileIndex = 5)
-        val bothClosed = CandyCircuitRules.rotate(firstLoopClosed, tileIndex = 14)
+    fun `visibly closed two by two loop is detected before refill`() {
+        val closedBoard = loopReadyBoard().toMutableList().apply {
+            this[5] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 3)
+        }
 
-        assertEquals(10, bothClosed.movesRemaining)
-        assertEquals(1_600, bothClosed.score)
-        assertEquals(2, bothClosed.combo)
-        assertEquals(1_200, bothClosed.lastPointsGained)
-        assertEquals(6, bothClosed.lastClosedTileCount)
-        assertEquals(2, CandyCircuitRules.closedComponents(bothClosed.tiles).size)
+        val components = CandyCircuitRules.closedComponents(closedBoard)
+
+        assertEquals(1, components.size)
+        assertEquals(setOf(0, 1, 4, 5), components.single().tileIndices)
+    }
+
+    @Test
+    fun `each scored component gives two moves after rotation cost`() {
+        val state = CandyCircuitGameState(
+            tiles = loopReadyBoard(),
+            movesRemaining = 1,
+        )
+
+        val next = CandyCircuitRules.rotate(state, tileIndex = 5)
+
+        assertEquals(2, CandyCircuitRules.MOVES_PER_CLOSED_COMPONENT)
+        assertEquals(2, next.movesRemaining)
+        assertFalse(next.isGameOver)
     }
 
     @Test
@@ -89,22 +112,28 @@ class CandyCircuitRulesTest {
         assertEquals(400, next.score)
         assertEquals(0, next.combo)
         assertEquals(0, next.lastPointsGained)
+        assertEquals(0, next.lastMovesGained)
         assertEquals(0, next.lastClosedTileCount)
     }
 
     @Test
-    fun `same component fingerprint scores only once per round`() {
-        val closed = CandyCircuitRules.rotate(CandyCircuitGameState(), tileIndex = 5)
-        val opened = CandyCircuitRules.rotate(closed, tileIndex = 5)
-        val rotatedAgain = CandyCircuitRules.rotate(opened, tileIndex = 5)
-        val rotatedThirdTime = CandyCircuitRules.rotate(rotatedAgain, tileIndex = 5)
-        val reclosed = CandyCircuitRules.rotate(rotatedThirdTime, tileIndex = 5)
+    fun `same loop fingerprint cannot score twice after its refill`() {
+        val readyBoard = loopReadyBoard()
+        val closedBoard = readyBoard.toMutableList().apply {
+            this[5] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 3)
+        }
+        val fingerprint = CandyCircuitRules.closedComponents(closedBoard).single().fingerprint
+        val state = CandyCircuitGameState(
+            tiles = readyBoard,
+            scoredFingerprints = setOf(fingerprint),
+        )
+        val reclosed = CandyCircuitRules.rotate(state, tileIndex = 5)
 
-        assertEquals(400, reclosed.score)
+        assertEquals(0, reclosed.score)
         assertEquals(0, reclosed.combo)
         assertEquals(0, reclosed.lastPointsGained)
         assertEquals(1, reclosed.scoredFingerprints.size)
-        assertEquals(setOf(0, 1, 4, 5), CandyCircuitRules.closedComponents(reclosed.tiles).single().tileIndices)
+        assertTrue(CandyCircuitRules.closedComponents(reclosed.tiles).isEmpty())
     }
 
     @Test
@@ -147,9 +176,9 @@ class CandyCircuitRulesTest {
 
     @Test
     fun `twelfth move ends round`() {
-        var state = CandyCircuitGameState()
+        var state = CandyCircuitGameState(tiles = emptyBoard())
         repeat(12) {
-            state = CandyCircuitRules.rotate(state, tileIndex = 0)
+            state = CandyCircuitRules.rotate(state, tileIndex = 15)
         }
 
         assertEquals(0, state.movesRemaining)
@@ -194,6 +223,13 @@ class CandyCircuitRulesTest {
 
     private fun emptyBoard(): List<CandyCircuitTile> = List(16) {
         CandyCircuitTile(CandyCircuitTileShape.Straight, rotation = 0)
+    }
+
+    private fun loopReadyBoard(): List<CandyCircuitTile> = emptyBoard().toMutableList().apply {
+        this[0] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 1)
+        this[1] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 2)
+        this[4] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 0)
+        this[5] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 2)
     }
 
     private companion object {

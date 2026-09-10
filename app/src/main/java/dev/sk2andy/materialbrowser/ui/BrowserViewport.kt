@@ -353,13 +353,6 @@ internal fun BrowserViewport(
         pageErrorFeedback = observation.state
         if (observation.shouldReload) onRetry()
     }
-    val gameState = pageErrorFeedback as? PageErrorFeedbackState.Offline
-    BackHandler(enabled = gameState?.gameStarted == true) {
-        if (gameState?.isOnlineReady != true) {
-            pageErrorFeedback = PageErrorFeedbackRules.stopGame(pageErrorFeedback)
-        }
-    }
-
     adjacentTab?.let { tab ->
         TabSwitchPreview(
             tab = tab,
@@ -477,12 +470,6 @@ internal fun BrowserViewport(
                     pageErrorFeedback = transition.state
                     onRetry()
                     if (transition.emitConfirmHaptic) hapticView.performConfirmHaptic()
-                },
-                onStartGame = {
-                    pageErrorFeedback = PageErrorFeedbackRules.startGame(pageErrorFeedback)
-                },
-                onStopGame = {
-                    pageErrorFeedback = PageErrorFeedbackRules.stopGame(pageErrorFeedback)
                 },
                 onGameChange = { game ->
                     val offline = pageErrorFeedback as? PageErrorFeedbackState.Offline

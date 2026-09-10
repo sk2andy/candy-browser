@@ -531,13 +531,13 @@
     <string name="download_manager_chooser_title">Descargar con</string>
     <string name="error_download_invalid_address">Dirección de descarga no válida</string>
     <string name="error_download_start_failed">No se pudo iniciar la descarga</string>
-    <string name="error_page_unreachable">No se puede acceder a la página</string>
+    <string name="error_page_unreachable">Sitio web no encontrado</string>
     <string name="action_retry">Reintentar</string>
     <string name="action_retrying">Reintentando…</string>
     <string name="page_error_not_found_title">Alguien se comió esta página</string>
     <string name="page_error_not_found_body">Esta dirección ya no lleva a ninguna página.</string>
     <string name="page_error_missing_destination_artwork">Destino no encontrado</string>
-    <string name="page_error_unreachable_body">Comprueba la dirección o intenta cargar la página de nuevo.</string>
+    <string name="page_error_unreachable_body">No encontramos ningún sitio web en esta dirección. Comprueba que esté bien escrita.</string>
     <string name="page_error_reload">Cargar de nuevo</string>
     <string name="page_error_offline_badge">Sin conexión</string>
     <string name="page_error_offline_title">No hay conexión</string>
@@ -552,7 +552,7 @@
     <string name="page_error_game_best_label">RÉCORD</string>
     <string name="page_error_game_moves_label">QUEDAN</string>
     <string name="page_error_game_moves_unit">MOV.</string>
-    <string name="page_error_game_loop_closed">+%1$s puntos · Combo ×%2$d</string>
+    <string name="page_error_game_loop_closed">+%1$s puntos · +%2$d mov. · Combo ×%3$d</string>
     <string name="page_error_game_keep_turning">Aún no hay circuito — sigue girando</string>
     <string name="page_error_game_ready">Cierra tu primer circuito de caramelo</string>
     <string name="page_error_game_round_complete">Ronda terminada · %1$s puntos</string>

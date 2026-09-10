@@ -4,10 +4,15 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,12 +34,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -44,6 +55,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -59,17 +72,33 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.ui.theme.CandyPink
+import dev.sk2andy.materialbrowser.ui.theme.CandyPinkSoft
+import dev.sk2andy.materialbrowser.ui.theme.CandyPurple
+import dev.sk2andy.materialbrowser.ui.theme.CandyPurpleSoft
 import java.text.NumberFormat
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+
+private data class CandyCircuitResolution(
+    val id: Int,
+    val rotatedIndex: Int,
+    val outgoingTiles: List<CandyCircuitTile>,
+    val incomingTiles: List<CandyCircuitTile>,
+    val closedIndices: Set<Int>,
+)
 
 @Composable
 internal fun CandyCircuitGame(
     isOnlineReady: Boolean,
     game: CandyCircuitGameState,
     onReload: () -> Unit,
-    onStop: () -> Unit,
     onGameChange: (CandyCircuitGameState) -> Unit,
 ) {
     val hapticView = LocalView.current
+    var resolution by remember { mutableStateOf<CandyCircuitResolution?>(null) }
+    var resolutionSequence by remember { mutableIntStateOf(0) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -94,8 +123,8 @@ internal fun CandyCircuitGame(
                     TextStyle(
                         brush = Brush.horizontalGradient(
                             listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.tertiary,
+                                CandyPink,
+                                CandyPurple,
                             ),
                         ),
                     ),
@@ -108,20 +137,39 @@ internal fun CandyCircuitGame(
             Spacer(Modifier.height(14.dp))
             CandyCircuitBoard(
                 game = game,
+                resolution = resolution,
                 onRotate = { tileIndex ->
+                    if (resolution != null) return@CandyCircuitBoard
                     val next = CandyCircuitRules.rotate(game, tileIndex)
                     if (next === game) return@CandyCircuitBoard
                     if (next.lastPointsGained > 0) {
                         hapticView.performConfirmHaptic()
+                        val outgoingTiles = game.tiles.toMutableList().apply {
+                            this[tileIndex] = this[tileIndex].copy(
+                                rotation = this[tileIndex].rotation + 1,
+                            )
+                        }
+                        resolutionSequence += 1
+                        resolution = CandyCircuitResolution(
+                            id = resolutionSequence,
+                            rotatedIndex = tileIndex,
+                            outgoingTiles = outgoingTiles,
+                            incomingTiles = next.tiles,
+                            closedIndices = next.lastClosedTileIndices,
+                        )
                     } else {
                         hapticView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     }
                     onGameChange(next)
                 },
+                onResolutionFinished = { finishedId ->
+                    if (resolution?.id == finishedId) resolution = null
+                },
             )
             Spacer(Modifier.height(14.dp))
             CircuitResult(game = game, onRestart = {
                 hapticView.performConfirmHaptic()
+                resolution = null
                 onGameChange(CandyCircuitRules.restart(game))
             })
             Spacer(Modifier.height(10.dp))
@@ -133,13 +181,7 @@ internal fun CandyCircuitGame(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            if (!isOnlineReady) {
-                TextButton(onClick = onStop) {
-                    Text(stringResource(R.string.page_error_stop_game))
-                }
-            } else {
-                Spacer(Modifier.height(12.dp))
-            }
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
@@ -156,49 +198,48 @@ private fun ConnectionHeader(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        AnimatedContent(
-            targetState = isOnlineReady,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            label = "connection status",
-        ) { online ->
-            if (online) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(PageErrorFeedbackTestTags.OnlineBanner)
-                        .semantics { liveRegion = LiveRegionMode.Polite },
-                    shape = RoundedCornerShape(22.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.page_error_back_online),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                text = stringResource(R.string.page_error_back_online_body),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            )
-                        }
-                        Button(
-                            onClick = onReload,
-                            modifier = Modifier.testTag(PageErrorFeedbackTestTags.Retry),
-                            shape = CircleShape,
-                        ) {
-                            Text(stringResource(R.string.page_error_load_page))
-                        }
-                    }
+        if (isOnlineReady) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CandyPurpleSoft, RoundedCornerShape(28.dp))
+                    .padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)
+                    .testTag(PageErrorFeedbackTestTags.OnlineBanner)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ConnectivityGlyph(
+                    isOnline = true,
+                    color = CandyPurple,
+                    modifier = Modifier.size(38.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.page_error_back_online),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = stringResource(R.string.page_error_back_online_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-            } else {
-                OfflinePill()
+                Button(
+                    onClick = onReload,
+                    modifier = Modifier.testTag(PageErrorFeedbackTestTags.Retry),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Black,
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Text(stringResource(R.string.page_error_load_page))
+                }
             }
+        } else {
+            OfflinePill()
         }
     }
 }
@@ -214,6 +255,8 @@ private fun CircuitMetrics(game: CandyCircuitGameState) {
         CircuitMetric(
             label = stringResource(R.string.page_error_game_score_label),
             value = formattedScore(game.score),
+            tint = CandyPink,
+            background = CandyPinkSoft,
             modifier = Modifier
                 .weight(1f)
                 .testTag(PageErrorFeedbackTestTags.Score),
@@ -221,38 +264,22 @@ private fun CircuitMetrics(game: CandyCircuitGameState) {
         CircuitMetric(
             label = stringResource(R.string.page_error_game_best_label),
             value = formattedScore(game.bestScore),
+            tint = CandyPurple,
+            background = CandyPurpleSoft,
             modifier = Modifier
                 .weight(1f)
                 .testTag(PageErrorFeedbackTestTags.BestScore),
         )
-        Surface(
+        CircuitMetric(
+            label = stringResource(R.string.page_error_game_moves_label),
+            value = game.movesRemaining.toString(),
+            unit = stringResource(R.string.page_error_game_moves_unit),
+            tint = CandyPurple,
+            background = CandyPurpleSoft,
             modifier = Modifier
-                .weight(0.9f)
-                .testTag(PageErrorFeedbackTestTags.Moves)
-                .semantics(mergeDescendants = true) {},
-            shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = stringResource(R.string.page_error_game_moves_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(
-                    text = game.movesRemaining.toString(),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                )
-                Text(
-                    text = stringResource(R.string.page_error_game_moves_unit),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
+                .weight(1f)
+                .testTag(PageErrorFeedbackTestTags.Moves),
+        )
     }
 }
 
@@ -260,39 +287,90 @@ private fun CircuitMetrics(game: CandyCircuitGameState) {
 private fun CircuitMetric(
     label: String,
     value: String,
+    tint: Color,
+    background: Color,
     modifier: Modifier = Modifier,
+    unit: String = "",
 ) {
-    Column(
+    Surface(
         modifier = modifier
-            .padding(vertical = 8.dp)
+            .height(92.dp)
             .semantics(mergeDescendants = true) {},
-        horizontalAlignment = Alignment.CenterHorizontally,
+        shape = RoundedCornerShape(18.dp),
+        color = background,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Black,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = tint,
+                fontWeight = FontWeight.Bold,
+            )
+            AnimatedContent(
+                targetState = value,
+                transitionSpec = {
+                    (slideInVertically(
+                        animationSpec = tween(durationMillis = 280),
+                        initialOffsetY = { height -> height / 2 },
+                    ) + fadeIn(animationSpec = tween(durationMillis = 180))) togetherWith
+                        (slideOutVertically(
+                            animationSpec = tween(durationMillis = 220),
+                            targetOffsetY = { height -> -height / 2 },
+                        ) + fadeOut(animationSpec = tween(durationMillis = 140)))
+                },
+                label = "circuit metric value",
+            ) { animatedValue ->
+                Text(
+                    text = animatedValue,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+            Text(
+                text = unit.ifEmpty { " " },
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
     }
 }
 
 @Composable
 private fun CandyCircuitBoard(
     game: CandyCircuitGameState,
+    resolution: CandyCircuitResolution?,
     onRotate: (Int) -> Unit,
+    onResolutionFinished: (Int) -> Unit,
 ) {
-    val closedIndices = CandyCircuitRules.closedComponents(game.tiles)
-        .flatMapTo(mutableSetOf()) { it.tileIndices }
+    val resolutionProgress = remember(resolution?.id) {
+        Animatable(if (resolution == null) 1f else 0f)
+    }
+    LaunchedEffect(resolution?.id) {
+        val activeResolution = resolution ?: return@LaunchedEffect
+        resolutionProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = CandyCircuitMotionRules.RESOLUTION_DURATION_MILLIS,
+                easing = LinearEasing,
+            ),
+        )
+        onResolutionFinished(activeResolution.id)
+    }
+    val closedIndices = resolution?.closedIndices.orEmpty()
+    val orderedClosedIndices = closedIndices.sorted()
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .widthIn(max = 420.dp),
+            .widthIn(max = 420.dp)
+            .then(
+                if (resolution == null) Modifier
+                else Modifier.testTag(PageErrorFeedbackTestTags.Celebration),
+            ),
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         repeat(CandyCircuitRules.ROW_COUNT) { row ->
@@ -307,8 +385,19 @@ private fun CandyCircuitBoard(
                         tileIndex = index,
                         row = row,
                         column = column,
-                        isClosed = index in closedIndices,
-                        enabled = !game.isGameOver,
+                        outgoingTile = resolution
+                            ?.takeIf { index in closedIndices }
+                            ?.outgoingTiles
+                            ?.get(index),
+                        incomingTile = resolution
+                            ?.takeIf { index in closedIndices }
+                            ?.incomingTiles
+                            ?.get(index),
+                        resolutionProgress = resolutionProgress.value,
+                        resolutionOrder = orderedClosedIndices.indexOf(index).coerceAtLeast(0),
+                        resolutionCount = orderedClosedIndices.size,
+                        isRotatedTile = resolution?.rotatedIndex == index,
+                        enabled = !game.isGameOver && resolution == null,
                         onRotate = { onRotate(index) },
                         modifier = Modifier.weight(1f),
                     )
@@ -324,25 +413,27 @@ private fun CandyCircuitTile(
     tileIndex: Int,
     row: Int,
     column: Int,
-    isClosed: Boolean,
+    outgoingTile: CandyCircuitTile?,
+    incomingTile: CandyCircuitTile?,
+    resolutionProgress: Float,
+    resolutionOrder: Int,
+    resolutionCount: Int,
+    isRotatedTile: Boolean,
     enabled: Boolean,
     onRotate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val connections = CandyCircuitRules.connections(tile)
-    val animatedBackground = animateColorAsState(
-        targetValue = if (isClosed) {
-            MaterialTheme.colorScheme.tertiaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        label = "circuit tile background",
-    )
-    val rotation = animateFloatAsState(
-        targetValue = tile.rotation * 90f,
-        label = "circuit tile rotation",
-    )
-    val shapeName = circuitShapeName(tile.shape)
+    val semanticTile = if (
+        outgoingTile != null &&
+        incomingTile != null &&
+        CandyCircuitMotionRules.outgoingAlpha(resolutionProgress) > 0.5f
+    ) {
+        outgoingTile
+    } else {
+        tile
+    }
+    val connections = CandyCircuitRules.connections(semanticTile)
+    val shapeName = circuitShapeName(semanticTile.shape)
     val directionNames = mapOf(
         CandyCircuitDirection.North to stringResource(R.string.page_error_game_direction_north),
         CandyCircuitDirection.East to stringResource(R.string.page_error_game_direction_east),
@@ -361,44 +452,164 @@ private fun CandyCircuitTile(
         connectionNames,
     )
     val clickLabel = stringResource(R.string.page_error_game_rotate_tile)
-    Surface(
+    Box(
         modifier = modifier
-            .aspectRatio(1f),
-        shape = RoundedCornerShape(18.dp),
-        color = animatedBackground.value,
-        tonalElevation = if (isClosed) 6.dp else 3.dp,
-        shadowElevation = if (isClosed) 7.dp else 2.dp,
+            .aspectRatio(1f)
+            .testTag(PageErrorFeedbackTestTags.TilePrefix + tileIndex)
+            .clickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClickLabel = clickLabel,
+                onClick = onRotate,
+            )
+            .then(if (!enabled) Modifier.semantics { disabled() } else Modifier)
+            .semantics(mergeDescendants = true) {
+                this.contentDescription = description
+            },
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag(PageErrorFeedbackTestTags.TilePrefix + tileIndex)
-                .clickable(
-                    enabled = enabled,
-                    role = Role.Button,
-                    onClickLabel = clickLabel,
-                    onClick = onRotate,
-                )
-                .then(if (!enabled) Modifier.semantics { disabled() } else Modifier)
-                .semantics(mergeDescendants = true) {
-                    this.contentDescription = description
-                }
-                .padding(7.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            CandyCircuitRibbon(
-                shape = tile.shape,
-                rotation = rotation.value,
-                color = if (tileIndex % 3 == 1) {
-                    MaterialTheme.colorScheme.tertiary
-                } else {
-                    MaterialTheme.colorScheme.primary
+        if (outgoingTile == null || incomingTile == null) {
+            val animatedBackground by animateColorAsState(
+                targetValue = circuitTileBackground(tileIndex),
+                label = "circuit tile background",
+            )
+            val rotation by animateFloatAsState(
+                targetValue = tile.rotation * 90f,
+                animationSpec = tween(durationMillis = 220),
+                label = "circuit tile rotation",
+            )
+            CircuitTileFace(
+                tile = tile,
+                tileIndex = tileIndex,
+                rotation = rotation,
+                background = animatedBackground,
+            )
+        } else {
+            val closingRotation = CandyCircuitMotionRules.closingRotationProgress(resolutionProgress)
+            val outgoingRotation = if (isRotatedTile) {
+                (outgoingTile.rotation - 1) * 90f + closingRotation * 90f
+            } else {
+                outgoingTile.rotation * 90f
+            }
+            val outgoingAlpha = CandyCircuitMotionRules.outgoingAlpha(resolutionProgress)
+            val outgoingScale = CandyCircuitMotionRules.outgoingScale(resolutionProgress)
+            val glowAlpha = CandyCircuitMotionRules.glowAlpha(resolutionProgress)
+            val incomingProgress = CandyCircuitMotionRules.incomingProgress(
+                progress = resolutionProgress,
+                order = resolutionOrder,
+                count = resolutionCount,
+            )
+            val incomingScale = CandyCircuitMotionRules.incomingScale(incomingProgress)
+            val incomingOffset = CandyCircuitMotionRules.incomingOffsetFraction(incomingProgress)
+            CircuitTileFace(
+                tile = outgoingTile,
+                tileIndex = tileIndex,
+                rotation = outgoingRotation,
+                background = lerp(
+                    circuitTileBackground(tileIndex),
+                    CandyPink.copy(alpha = 0.42f),
+                    glowAlpha,
+                ),
+                emphasized = true,
+                modifier = Modifier.graphicsLayer {
+                    alpha = outgoingAlpha
+                    scaleX = outgoingScale
+                    scaleY = outgoingScale
+                    rotationZ = CandyCircuitMotionRules.particleProgress(resolutionProgress) *
+                        if (tileIndex % 2 == 0) -9f else 9f
                 },
+            )
+            CircuitTileFace(
+                tile = incomingTile,
+                tileIndex = tileIndex,
+                rotation = incomingTile.rotation * 90f,
+                background = circuitTileBackground(tileIndex),
+                modifier = Modifier.graphicsLayer {
+                    alpha = incomingProgress
+                    scaleX = incomingScale
+                    scaleY = incomingScale
+                    translationY = size.height * incomingOffset
+                    rotationZ = (1f - incomingProgress) * if (tileIndex % 2 == 0) 7f else -7f
+                },
+            )
+            CandyCircuitParticles(
+                progress = CandyCircuitMotionRules.particleProgress(resolutionProgress),
+                tileIndex = tileIndex,
                 modifier = Modifier.fillMaxSize(),
             )
         }
     }
 }
+
+@Composable
+private fun CircuitTileFace(
+    tile: CandyCircuitTile,
+    tileIndex: Int,
+    rotation: Float,
+    background: Color,
+    modifier: Modifier = Modifier,
+    emphasized: Boolean = false,
+) {
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        shape = RoundedCornerShape(18.dp),
+        color = background,
+        tonalElevation = if (emphasized) 7.dp else 3.dp,
+        shadowElevation = if (emphasized) 9.dp else 2.dp,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(7.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            CandyCircuitRibbon(
+                shape = tile.shape,
+                rotation = rotation,
+                color = circuitTileColor(tileIndex),
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CandyCircuitParticles(
+    progress: Float,
+    tileIndex: Int,
+    modifier: Modifier = Modifier,
+) {
+    if (progress <= 0f || progress >= 1f) return
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val alpha = sin(progress * PI).toFloat().coerceIn(0f, 1f)
+        repeat(PARTICLE_COUNT) { particle ->
+            val angle = (particle.toFloat() / PARTICLE_COUNT * 2f * PI).toFloat() +
+                tileIndex * PARTICLE_ANGLE_OFFSET
+            val distance = size.minDimension * (0.12f + progress * 0.48f)
+            val radius = size.minDimension * (0.035f - progress * 0.017f)
+            drawCircle(
+                color = if ((particle + tileIndex) % 2 == 0) CandyPink else CandyPurple,
+                radius = radius.coerceAtLeast(1f),
+                center = Offset(
+                    x = center.x + cos(angle) * distance,
+                    y = center.y + sin(angle) * distance,
+                ),
+                alpha = alpha,
+            )
+        }
+    }
+}
+
+private fun circuitTileBackground(tileIndex: Int): Color =
+    if (tileIndex % 2 == 0) CandyPink.copy(alpha = 0.08f)
+    else CandyPurple.copy(alpha = 0.10f)
+
+private fun circuitTileColor(tileIndex: Int): Color =
+    if (tileIndex % 3 == 1) CandyPurple else CandyPink
+
+private const val PARTICLE_COUNT = 10
+private const val PARTICLE_ANGLE_OFFSET = 0.37f
 
 @Composable
 private fun CandyCircuitRibbon(
@@ -474,6 +685,7 @@ private fun CircuitResult(
         game.lastPointsGained > 0 -> stringResource(
             R.string.page_error_game_loop_closed,
             formattedScore(game.lastPointsGained),
+            game.lastMovesGained,
             game.combo,
         )
         game.lastRotatedIndex != null -> stringResource(R.string.page_error_game_keep_turning)
@@ -496,7 +708,7 @@ private fun CircuitResult(
                 FontWeight.Medium
             },
             color = if (game.lastPointsGained > 0) {
-                MaterialTheme.colorScheme.primary
+                CandyPink
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
@@ -534,7 +746,7 @@ private fun CircuitRecordProgress(game: CandyCircuitGameState) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(7.dp),
-            color = MaterialTheme.colorScheme.primary,
+            color = CandyPink,
             trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             strokeCap = StrokeCap.Round,
         )
