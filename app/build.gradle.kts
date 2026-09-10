@@ -189,6 +189,7 @@ android {
             applicationIdSuffix = ".foss"
             manifestPlaceholders["appLabel"] = "Candy FOSS"
             buildConfigField("boolean", "FOSS_DISTRIBUTION", "true")
+            proguardFile("proguard-foss-rules.pro")
         }
     }
 
