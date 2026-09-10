@@ -343,6 +343,13 @@
     <string name="settings_download_manager_ask">Toujours demander</string>
     <string name="settings_download_manager_external_unavailable">L’application sélectionnée est indisponible</string>
     <string name="settings_download_no_external_managers">Aucun gestionnaire de téléchargements externe compatible n’est installé.</string>
+    <string name="settings_download_folder_title">Dossier de téléchargement</string>
+    <string name="settings_download_folder_default">Téléchargements</string>
+    <string name="settings_download_folder_path">Téléchargements/%1$s</string>
+    <string name="settings_download_folder_summary">Choisissez un sous-dossier de Téléchargements pour le gestionnaire intégré de Candy.</string>
+    <string name="settings_download_folder_input">Sous-dossier</string>
+    <string name="settings_download_folder_reset">Utiliser le dossier Téléchargements</string>
+    <string name="settings_download_folder_invalid">Utilisez un nom de dossier relatif sans segments . ou ...</string>
     <string name="settings_download_one_dm_session_title">Partager les données de session avec 1DM</string>
     <string name="settings_download_one_dm_session_summary">Partage les cookies, l’agent utilisateur et le référent avec 1DM pour permettre les téléchargements connectés. L’application peut les utiliser pour accéder à votre session. Les données de session ne sont jamais partagées en navigation privée.</string>
     <string name="settings_section_tabs">Onglets</string>

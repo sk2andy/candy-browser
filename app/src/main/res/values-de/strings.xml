@@ -343,6 +343,13 @@
     <string name="settings_download_manager_ask">Jedes Mal fragen</string>
     <string name="settings_download_manager_external_unavailable">Ausgewählte App nicht verfügbar</string>
     <string name="settings_download_no_external_managers">Kein kompatibler externer Download-Manager installiert.</string>
+    <string name="settings_download_folder_title">Download-Ordner</string>
+    <string name="settings_download_folder_default">Downloads</string>
+    <string name="settings_download_folder_path">Downloads/%1$s</string>
+    <string name="settings_download_folder_summary">Wähle für den Candy-eigenen Downloader einen Unterordner in Downloads.</string>
+    <string name="settings_download_folder_input">Unterordner</string>
+    <string name="settings_download_folder_reset">Downloads-Ordner verwenden</string>
+    <string name="settings_download_folder_invalid">Relativen Ordnernamen ohne .- oder ..-Segmente verwenden.</string>
     <string name="settings_download_one_dm_session_title">Sitzungsdaten mit 1DM teilen</string>
     <string name="settings_download_one_dm_session_summary">Teilt Cookies, User-Agent und Referrer mit 1DM, damit angemeldete Downloads funktionieren. Die App kann damit auf deine Sitzung zugreifen. Im privaten Modus werden Sitzungsdaten nie geteilt.</string>
     <string name="settings_section_tabs">Tabs</string>

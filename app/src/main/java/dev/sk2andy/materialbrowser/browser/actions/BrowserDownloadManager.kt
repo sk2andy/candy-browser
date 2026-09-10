@@ -7,9 +7,12 @@ import android.os.Environment
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
+import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.DownloadDirectoryRules
 
 class BrowserDownloadManager(context: Context) {
     private val applicationContext = context.applicationContext
+    private val settingsStore = BrowserSessionStore(applicationContext)
 
     fun enqueue(request: BrowserDownloadRequest): DownloadActionResult {
         val safeRequest = BrowserDownloadRequestFactory.create(
@@ -34,7 +37,13 @@ class BrowserDownloadManager(context: Context) {
                 .setAllowedOverMetered(true)
                 .setAllowedOverRoaming(false)
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, safeRequest.fileName)
+                .setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    DownloadDirectoryRules.downloadManagerFilePath(
+                        settingsStore.loadDownloadSettings().downloadSubdirectory,
+                        safeRequest.fileName,
+                    ),
+                )
             safeRequest.userAgent?.let { platformRequest.addRequestHeader("User-Agent", it) }
             safeRequest.cookies?.let { platformRequest.addRequestHeader("Cookie", it) }
             safeRequest.referrer?.let { platformRequest.addRequestHeader("Referer", it) }

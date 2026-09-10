@@ -12,7 +12,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
@@ -20,6 +19,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
+import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.DownloadDirectoryRules
 import dev.sk2andy.materialbrowser.data.DownloadRuntimeRegistry
 import dev.sk2andy.materialbrowser.data.SafeDownloadValues
 import java.io.Closeable
@@ -94,12 +95,18 @@ internal interface GeckoDownloadStreamEntry : Closeable {
 /** Scoped-storage writer. Incomplete and cancelled transfers never become visible downloads. */
 internal class MediaStoreDownloadStreamSink(context: Context) : GeckoDownloadStreamSink {
     private val resolver = context.applicationContext.contentResolver
+    private val settingsStore = BrowserSessionStore(context.applicationContext)
 
     override fun open(fileName: String, mimeType: String): GeckoDownloadStreamEntry {
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, fileName)
             put(MediaStore.Downloads.MIME_TYPE, mimeType)
-            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            put(
+                MediaStore.Downloads.RELATIVE_PATH,
+                DownloadDirectoryRules.mediaStoreRelativePath(
+                    settingsStore.loadDownloadSettings().downloadSubdirectory,
+                ),
+            )
             put(MediaStore.Downloads.IS_PENDING, 1)
         }
         val uri = checkNotNull(

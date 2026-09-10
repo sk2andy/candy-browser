@@ -377,6 +377,7 @@ class BrowserSessionStoreInstrumentedTest {
             managerMode = DownloadManagerMode.External,
             externalManagerId = "view|idm.internet.download.manager|idm.internet.download.manager.Downloader",
             shareSessionDataWithOneDm = true,
+            downloadSubdirectory = "Candy/Documents",
         )
         store.saveDownloadSettings(settings)
 

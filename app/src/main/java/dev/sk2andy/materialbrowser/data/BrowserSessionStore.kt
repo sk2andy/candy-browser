@@ -1043,6 +1043,7 @@ class BrowserSessionStore internal constructor(
             KEY_SHARE_SESSION_DATA_WITH_ONE_DM,
             false,
         ),
+        downloadSubdirectory = preferences.getString(KEY_DOWNLOAD_SUBDIRECTORY, null),
     ).normalized()
 
     fun saveDownloadSettings(settings: BrowserDownloadSettings) {
@@ -1060,6 +1061,13 @@ class BrowserSessionStore internal constructor(
                 KEY_SHARE_SESSION_DATA_WITH_ONE_DM,
                 normalized.shareSessionDataWithOneDm,
             )
+            .apply {
+                if (normalized.downloadSubdirectory == null) {
+                    remove(KEY_DOWNLOAD_SUBDIRECTORY)
+                } else {
+                    putString(KEY_DOWNLOAD_SUBDIRECTORY, normalized.downloadSubdirectory)
+                }
+            }
             .apply()
     }
 
@@ -1198,6 +1206,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_FROSTED_BLUR_PERCENT = "frosted_blur_percent"
         const val KEY_DOWNLOAD_MANAGER_MODE = "download_manager_mode"
         const val KEY_EXTERNAL_DOWNLOAD_MANAGER_ID = "external_download_manager_id"
+        const val KEY_DOWNLOAD_SUBDIRECTORY = "download_subdirectory"
         const val KEY_SHARE_SESSION_DATA_WITH_ONE_DM = "share_session_data_with_one_dm"
         const val KEY_WEB_CONTENT_EDGE_TO_EDGE = "web_content_edge_to_edge"
         const val DEFAULT_DISMISS_RESISTANCE_START_PERCENT = 40
