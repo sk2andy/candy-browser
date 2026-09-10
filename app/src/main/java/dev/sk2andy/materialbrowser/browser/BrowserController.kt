@@ -14,6 +14,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.MediaStore
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -102,6 +104,7 @@ import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPromptRules
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
+import dev.sk2andy.materialbrowser.browser.gecko.CandyGeckoView
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowserEngineSessionFactory
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoProfileStorageRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowsingData
@@ -2035,6 +2038,49 @@ class BrowserController(
         }
         return attachSelectedGeckoView(container, onContentPresented)
     }
+
+    internal fun requestSelectedBrowserEngineFocus(): Boolean {
+        if (browserChromeOwnsIme) return false
+        val selectedView = selectedAttachedBrowserEngineView() ?: return false
+        if (selectedView.hasFocus()) return false
+        return if (selectedView is CandyGeckoView) {
+            selectedView.requestEngineFocus()
+        } else {
+            selectedView.requestFocus()
+        }
+    }
+
+    internal fun dispatchGenericMotionEventToSelectedBrowserEngine(
+        event: MotionEvent,
+    ): Boolean {
+        val selectedView = selectedAttachedBrowserEngineView() ?: return false
+        return if (selectedView is CandyGeckoView) {
+            selectedView.dispatchEngineGenericMotionEvent(event)
+        } else {
+            selectedView.dispatchGenericMotionEvent(event)
+        }
+    }
+
+    internal fun replayFirstKeyStrokeToSelectedBrowserEngine(event: KeyEvent): Boolean {
+        val selectedView = selectedAttachedBrowserEngineView() ?: return false
+        val downEvent = KeyEvent(event)
+        val upEvent = KeyEvent.changeAction(event, KeyEvent.ACTION_UP)
+        selectedView.postOnAnimation {
+            if (selectedView is CandyGeckoView) {
+                selectedView.dispatchEngineKeyEvent(downEvent)
+                selectedView.dispatchEngineKeyEvent(upEvent)
+            } else {
+                selectedView.dispatchKeyEvent(downEvent)
+                selectedView.dispatchKeyEvent(upEvent)
+            }
+        }
+        return true
+    }
+
+    private fun selectedAttachedBrowserEngineView(): View? = geckoViewBindings.values
+        .firstOrNull { binding -> binding.tabId == selectedTabId }
+        ?.view
+        ?.takeIf(View::isAttachedToWindow)
 
     private fun attachSelectedGeckoView(
         container: FrameLayout,
@@ -5449,6 +5495,17 @@ class BrowserController(
         persist()
     }
 
+    fun selectAdjacentTab(forward: Boolean): Boolean {
+        val activeTabIds = activeTabs.map(BrowserTab::id)
+        val targetTabId = BrowserHardwareInputRules.adjacentTabId(
+            tabIds = activeTabIds,
+            selectedTabId = selectedTabId,
+            forward = forward,
+        ) ?: return false
+        selectTab(targetTabId)
+        return selectedTabId == targetTabId
+    }
+
     fun openSnoozedWakeTab(tabId: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId && !it.isIncognito } ?: return false
         if (tab.profileId != activeProfileId && !selectProfile(tab.profileId)) return false
@@ -6534,6 +6591,12 @@ class BrowserController(
     internal fun scrollSelectedBrowserEngineToVerticalOffset(offsetPx: Int): Boolean {
         val session = browserEngineSessions[selectedTabId] ?: return false
         session.scrollToVerticalOffset(offsetPx.coerceAtLeast(0))
+        return true
+    }
+
+    internal fun scrollSelectedBrowserEngineByVerticalOffset(deltaPx: Int): Boolean {
+        val session = browserEngineSessions[selectedTabId] ?: return false
+        session.scrollByVerticalOffset(deltaPx)
         return true
     }
 

@@ -83,6 +83,39 @@ editor closes.
 | Share/download/assistant/external app | [`browser/integration/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/integration/), [`browser/actions/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/actions/), [`GeckoDownloadTransfer.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/gecko/GeckoDownloadTransfer.kt) | Construct bounded requests. Gecko context downloads stay in their profile/private request context and stream to MediaStore without exporting cookies; other Android actions use their focused adapters. |
 | Page translation | [`page-translation.md`](page-translation.md), [`PageTranslation.kt`](../../shared/src/commonMain/kotlin/dev/sk2andy/materialbrowser/browser/PageTranslation.kt) | Validate and encode the current HTTP(S) URL with shared rules, then navigate the selected Android or iOS engine tab to one provider URL |
 
+## Android keyboard and mouse input
+
+`MainActivity` resolves global browser chords before the focused Compose or engine view receives
+them. `BrowserHardwareInputRules` owns deterministic matching and cyclic active-profile tab
+selection. Unmatched keys, primary/secondary clicks, hover, wheel/trackpad scrolling and webpage
+text-editing commands continue through normal Compose and WebView/GeckoView dispatch.
+
+Before an unmatched physical key reaches the window, Candy gives the selected attached engine view
+focus when browser chrome does not own the IME. If that focus changes, the first key stroke is replayed
+to the engine after the focus handoff, so the first letter is not lost. The address editor and
+find-in-page bar retain IME ownership. Pointer-classified wheels keep normal Android hit-test dispatch.
+For OEM and desktop-Android adapters that report a vertical wheel without the pointer source class,
+Candy normalizes the report into a mouse-wheel event for the active engine. If an engine rejects that
+event, its relative-scroll port remains the fallback.
+
+| Input | Browser action |
+| --- | --- |
+| `Ctrl/Meta+L` | Leave a Site Capsule or external-link preview when necessary, then focus the address editor |
+| `Ctrl/Meta+T` | Create and select a tab in the current regular/private mode, then focus the address editor |
+| `Ctrl/Meta+W` | Close the selected deletable tab |
+| `Ctrl/Meta+R`, `F5` | Reload the selected non-blank page |
+| `Ctrl/Meta+F` | Open find-in-page for the regular browser or external-link preview |
+| `Ctrl/Meta+Tab`, `Ctrl/Meta+Shift+Tab` | Select the next/previous active-profile tab with wrap-around |
+| `Alt+Left`, `Alt+Right` | Traverse page history when that direction is available |
+| Mouse Back, Mouse Forward | Traverse page history once whether Android reports `ACTION_BUTTON_PRESS` or a mouse-sourced Back/Forward key; matching dual reports are deduplicated |
+| Right-click on page link/image | Open the same normalized content action as long-press; Gecko context menus and System WebView context clicks share the contract |
+
+Recognized key-down events, repeats and their matching key-up are consumed as one shortcut. The
+matcher rejects extra modifiers, so reserved text commands such as copy/paste/undo remain owned by
+the focused field or webpage. App-owned onboarding, release notes, transfer and extension-manager
+surfaces temporarily disable browser shortcut interception. Android's system keyboard-shortcut help
+lists the primary Ctrl chords.
+
 ## UI source ownership
 
 | Surface | Owner |

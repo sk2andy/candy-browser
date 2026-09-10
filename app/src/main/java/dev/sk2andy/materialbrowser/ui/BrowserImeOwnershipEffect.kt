@@ -8,10 +8,10 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 @Composable
 internal fun BrowserImeOwnershipEffect(
     controller: BrowserController,
-    addressEditorVisible: Boolean,
+    ownsIme: Boolean,
 ) {
     SideEffect {
-        controller.setBrowserChromeOwnsIme(addressEditorVisible)
+        controller.setBrowserChromeOwnsIme(ownsIme)
     }
     DisposableEffect(controller) {
         onDispose { controller.setBrowserChromeOwnsIme(false) }

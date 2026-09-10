@@ -11,8 +11,13 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Process
+import android.view.InputDevice
 import android.view.KeyEvent
+import android.view.KeyboardShortcutGroup
+import android.view.KeyboardShortcutInfo
+import android.view.Menu
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.widget.Toast
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,7 +46,13 @@ import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
 import dev.sk2andy.materialbrowser.browser.BrowserActivityResultIdentity
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputAction
+import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputRules
+import dev.sk2andy.materialbrowser.browser.BrowserHardwareKey
+import dev.sk2andy.materialbrowser.browser.BrowserHardwareKeyStroke
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
+import dev.sk2andy.materialbrowser.browser.BrowserMouseButton
+import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
@@ -109,6 +120,7 @@ class MainActivity : AppCompatActivity() {
     private var isTabOverviewPortraitLocked = false
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
+    private var hardwareTabChangeRequestId by mutableIntStateOf(0)
     private var onboardingVisible by mutableStateOf(false)
     private var initialOnboardingRequired = false
     private var releaseNotesVisible by mutableStateOf(false)
@@ -119,6 +131,10 @@ class MainActivity : AppCompatActivity() {
     private var firefoxExtensionManager: GeckoExtensionManagerCoordinator? = null
     private var appDataImportLoading = false
     private var appDataTransferActive = false
+    private val consumedHardwareShortcutKeys = mutableSetOf<Int>()
+    private val replayedHardwareInputKeys = mutableSetOf<Int>()
+    private val consumedMouseNavigationButtons = mutableSetOf<MouseNavigationButtonToken>()
+    private var lastMouseNavigationFingerprint: MouseNavigationFingerprint? = null
     private var geckoWebAuthnActivityIdentity: BrowserActivityResultIdentity? = null
     private var activityDestroyed = false
     private var appliedNightConfiguration = Configuration.UI_MODE_NIGHT_UNDEFINED
@@ -522,6 +538,7 @@ class MainActivity : AppCompatActivity() {
                         },
                         openAddressEditorOnLaunch = startupPresentation.openAddressEditor,
                         launcherAddressEditorRequestId = launcherAddressEditorRequestId,
+                        hardwareTabChangeRequestId = hardwareTabChangeRequestId,
                     )
                     if (firefoxExtensionsVisible) {
                         firefoxExtensionManager?.let { manager ->
@@ -671,8 +688,195 @@ class MainActivity : AppCompatActivity() {
         return handled
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        if (appDataTransferActive) true else super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (appDataTransferActive) return true
+        if (event.action == KeyEvent.ACTION_UP && replayedHardwareInputKeys.remove(event.keyCode)) {
+            return true
+        }
+        if (
+            event.action == KeyEvent.ACTION_DOWN &&
+            event.repeatCount > 0 &&
+            event.keyCode in replayedHardwareInputKeys
+        ) {
+            return true
+        }
+        if (event.action == KeyEvent.ACTION_UP && consumedHardwareShortcutKeys.remove(event.keyCode)) {
+            return true
+        }
+        if (
+            event.action == KeyEvent.ACTION_DOWN &&
+            event.repeatCount > 0 &&
+            event.keyCode in consumedHardwareShortcutKeys
+        ) {
+            return true
+        }
+        val mouseNavigationAction = event
+            .takeIf { keyEvent ->
+                keyEvent.action == KeyEvent.ACTION_DOWN &&
+                    keyEvent.repeatCount == 0 &&
+                    keyEvent.isFromSource(InputDevice.SOURCE_MOUSE)
+            }
+            ?.toBrowserMouseNavigationAction()
+        if (mouseNavigationAction != null && isBrowserHardwareInputAvailable()) {
+            consumedHardwareShortcutKeys += event.keyCode
+            performMouseNavigationOnce(
+                action = mouseNavigationAction,
+                deviceId = event.deviceId,
+                eventTime = event.eventTime,
+            )
+            return true
+        }
+        val action = event
+            .takeIf { keyEvent -> keyEvent.action == KeyEvent.ACTION_DOWN }
+            ?.toBrowserHardwareKeyStroke()
+            ?.let(BrowserHardwareInputRules::keyboardAction)
+        if (action != null && isBrowserHardwareInputAvailable()) {
+            consumedHardwareShortcutKeys += event.keyCode
+            performBrowserHardwareInput(action)
+            return true
+        }
+        if (
+            event.action == KeyEvent.ACTION_DOWN &&
+            event.isFromSource(InputDevice.SOURCE_KEYBOARD) &&
+            currentFocus?.onCheckIsTextEditor() != true
+        ) {
+            if (requestBrowserEngineFocusForHardwareInput()) {
+                if (browserController.replayFirstKeyStrokeToSelectedBrowserEngine(event)) {
+                    replayedHardwareInputKeys += event.keyCode
+                    return true
+                }
+                return super.dispatchKeyEvent(event)
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (appDataTransferActive) return true
+        if (event.actionMasked == MotionEvent.ACTION_BUTTON_RELEASE) {
+            val releasedButton = event.toBrowserMouseButton()
+            val removed = if (releasedButton == BrowserMouseButton.Other) {
+                consumedMouseNavigationButtons.removeAll { token ->
+                    token.deviceId == event.deviceId
+                }
+            } else {
+                consumedMouseNavigationButtons.remove(
+                    MouseNavigationButtonToken(event.deviceId, releasedButton),
+                )
+            }
+            if (removed) return true
+        }
+        val action = event
+            .takeIf { motionEvent ->
+                motionEvent.actionMasked == MotionEvent.ACTION_BUTTON_PRESS &&
+                    motionEvent.isFromSource(InputDevice.SOURCE_CLASS_POINTER)
+            }
+            ?.toBrowserMouseButton()
+            ?.let(BrowserHardwareInputRules::mouseAction)
+        if (action != null && isBrowserHardwareInputAvailable()) {
+            consumedMouseNavigationButtons += MouseNavigationButtonToken(
+                deviceId = event.deviceId,
+                button = event.toBrowserMouseButton(),
+            )
+            performMouseNavigationOnce(
+                action = action,
+                deviceId = event.deviceId,
+                eventTime = event.eventTime,
+            )
+            return true
+        }
+        if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
+            event.unclassifiedVerticalScroll()?.let { scrollUnits ->
+                if (isBrowserHardwareInputAvailable()) {
+                    requestBrowserEngineFocusForHardwareInput()
+                    val mouseWheelEvent = event.asMouseWheelEvent(scrollUnits)
+                    try {
+                        if (
+                            browserController.dispatchGenericMotionEventToSelectedBrowserEngine(
+                                mouseWheelEvent,
+                            )
+                        ) {
+                            return true
+                        }
+                    } finally {
+                        mouseWheelEvent.recycle()
+                    }
+                    val deltaPx = (-scrollUnits *
+                        ViewConfiguration.get(this).scaledVerticalScrollFactor).toInt()
+                    if (
+                        deltaPx != 0 &&
+                        browserController.scrollSelectedBrowserEngineByVerticalOffset(deltaPx)
+                    ) {
+                        return true
+                    }
+                }
+            }
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    override fun onProvideKeyboardShortcuts(
+        data: MutableList<KeyboardShortcutGroup>,
+        menu: Menu?,
+        deviceId: Int,
+    ) {
+        super.onProvideKeyboardShortcuts(data, menu, deviceId)
+        data += KeyboardShortcutGroup(
+            getString(R.string.app_name),
+            listOf(
+                KeyboardShortcutInfo(
+                    getString(R.string.cd_open_search),
+                    'L',
+                    KeyEvent.META_CTRL_ON,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.cd_new_tab),
+                    'T',
+                    KeyEvent.META_CTRL_ON,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.cd_close_tab),
+                    'W',
+                    KeyEvent.META_CTRL_ON,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.action_reload),
+                    'R',
+                    KeyEvent.META_CTRL_ON,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.action_reload),
+                    KeyEvent.KEYCODE_F5,
+                    0,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.action_find_in_page),
+                    'F',
+                    KeyEvent.META_CTRL_ON,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.action_switch_to_tab),
+                    KeyEvent.KEYCODE_TAB,
+                    KeyEvent.META_CTRL_ON,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.action_switch_to_tab),
+                    KeyEvent.KEYCODE_TAB,
+                    KeyEvent.META_CTRL_ON or KeyEvent.META_SHIFT_ON,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.action_back),
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.META_ALT_ON,
+                ),
+                KeyboardShortcutInfo(
+                    getString(R.string.action_forward),
+                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                    KeyEvent.META_ALT_ON,
+                ),
+            ),
+        )
+    }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
@@ -1051,6 +1255,114 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun performBrowserHardwareInput(action: BrowserHardwareInputAction): Boolean {
+        val externalPreview = browserController.externalLinkPreviewState
+        return when (action) {
+            BrowserHardwareInputAction.FocusAddress -> {
+                if (externalPreview != null) browserController.dismissExternalLinkPreview()
+                if (browserController.activeSiteCapsule != null) browserController.leaveSiteCapsule()
+                launcherAddressEditorRequestId++
+                true
+            }
+            BrowserHardwareInputAction.NewTab -> {
+                if (externalPreview != null) browserController.dismissExternalLinkPreview()
+                val previousTabId = browserController.selectedTabId
+                browserController.createTab()
+                if (browserController.selectedTabId != previousTabId) {
+                    launcherAddressEditorRequestId++
+                }
+                true
+            }
+            BrowserHardwareInputAction.CloseTab -> {
+                if (externalPreview != null) {
+                    false
+                } else {
+                    val previousTabId = browserController.selectedTabId
+                    browserController.closeTab(browserController.selectedTabId)
+                    if (browserController.selectedTabId != previousTabId) {
+                        hardwareTabChangeRequestId++
+                    }
+                    true
+                }
+            }
+            BrowserHardwareInputAction.Reload -> {
+                if (externalPreview != null) {
+                    false
+                } else {
+                    if (browserController.selectedTab.url != BLANK_URL) {
+                        browserController.reload()
+                    }
+                    true
+                }
+            }
+            BrowserHardwareInputAction.FindInPage -> when {
+                externalPreview != null -> browserController.openExternalLinkPreviewFindInPage(
+                    externalPreview.sessionId,
+                )
+                browserController.activeSiteCapsule != null -> false
+                else -> browserController.openFindInPage()
+            }
+            BrowserHardwareInputAction.PreviousTab -> {
+                val changed = externalPreview == null &&
+                    browserController.selectAdjacentTab(forward = false)
+                if (changed) hardwareTabChangeRequestId++
+                changed
+            }
+            BrowserHardwareInputAction.NextTab -> {
+                val changed = externalPreview == null &&
+                    browserController.selectAdjacentTab(forward = true)
+                if (changed) hardwareTabChangeRequestId++
+                changed
+            }
+            BrowserHardwareInputAction.GoBack -> when {
+                externalPreview != null -> browserController.goBackInExternalLinkPreview(
+                    externalPreview.sessionId,
+                )
+                browserController.selectedTab.canGoBack -> {
+                    browserController.goBack()
+                    true
+                }
+                else -> false
+            }
+            BrowserHardwareInputAction.GoForward -> {
+                if (externalPreview == null && browserController.selectedTab.canGoForward) {
+                    browserController.goForward()
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
+    private fun performMouseNavigationOnce(
+        action: BrowserHardwareInputAction,
+        deviceId: Int,
+        eventTime: Long,
+    ) {
+        val previous = lastMouseNavigationFingerprint
+        val duplicate = previous?.action == action &&
+            previous.deviceId == deviceId &&
+            eventTime - previous.eventTime in 0..MOUSE_NAVIGATION_DUPLICATE_WINDOW_MILLIS
+        lastMouseNavigationFingerprint = MouseNavigationFingerprint(
+            action = action,
+            deviceId = deviceId,
+            eventTime = eventTime,
+        )
+        if (!duplicate) performBrowserHardwareInput(action)
+    }
+
+    private fun isBrowserHardwareInputAvailable(): Boolean =
+        ::browserController.isInitialized &&
+            !onboardingVisible &&
+            !releaseNotesVisible &&
+            !firefoxExtensionsVisible &&
+            !appDataExportWarningVisible &&
+            pendingAppDataImport == null
+
+    private fun requestBrowserEngineFocusForHardwareInput(): Boolean =
+        isBrowserHardwareInputAvailable() && browserController.requestSelectedBrowserEngineFocus()
+
     @VisibleForTesting
     fun browserControllerForTesting(): BrowserController = browserController
 
@@ -1190,5 +1502,90 @@ class MainActivity : AppCompatActivity() {
             "external_link_preview_app_handoff_expiration"
         const val STATE_EXTERNAL_LAUNCH_TAB_ID = "external_launch_tab_id"
         const val STATE_RELEASE_NOTES_VISIBLE = "release_notes_visible"
+        const val MOUSE_NAVIGATION_DUPLICATE_WINDOW_MILLIS = 16L
     }
+}
+
+private data class MouseNavigationFingerprint(
+    val action: BrowserHardwareInputAction,
+    val deviceId: Int,
+    val eventTime: Long,
+)
+
+private data class MouseNavigationButtonToken(
+    val deviceId: Int,
+    val button: BrowserMouseButton,
+)
+
+private fun KeyEvent.toBrowserHardwareKeyStroke(): BrowserHardwareKeyStroke =
+    BrowserHardwareKeyStroke(
+        key = when (keyCode) {
+            KeyEvent.KEYCODE_L -> BrowserHardwareKey.L
+            KeyEvent.KEYCODE_T -> BrowserHardwareKey.T
+            KeyEvent.KEYCODE_W -> BrowserHardwareKey.W
+            KeyEvent.KEYCODE_R -> BrowserHardwareKey.R
+            KeyEvent.KEYCODE_F -> BrowserHardwareKey.F
+            KeyEvent.KEYCODE_TAB -> BrowserHardwareKey.Tab
+            KeyEvent.KEYCODE_DPAD_LEFT -> BrowserHardwareKey.Left
+            KeyEvent.KEYCODE_DPAD_RIGHT -> BrowserHardwareKey.Right
+            KeyEvent.KEYCODE_F5 -> BrowserHardwareKey.F5
+            else -> BrowserHardwareKey.Other
+        },
+        ctrlPressed = isCtrlPressed,
+        metaPressed = isMetaPressed,
+        altPressed = isAltPressed,
+        shiftPressed = isShiftPressed,
+        repeatCount = repeatCount,
+    )
+
+private fun MotionEvent.toBrowserMouseButton(): BrowserMouseButton = when {
+    actionButton == MotionEvent.BUTTON_BACK ||
+        buttonState and MotionEvent.BUTTON_BACK != 0 -> BrowserMouseButton.Back
+    actionButton == MotionEvent.BUTTON_FORWARD ||
+        buttonState and MotionEvent.BUTTON_FORWARD != 0 -> BrowserMouseButton.Forward
+    else -> BrowserMouseButton.Other
+}
+
+private fun MotionEvent.unclassifiedVerticalScroll(): Float? {
+    if (isFromSource(InputDevice.SOURCE_CLASS_POINTER)) return null
+    val verticalScroll = getAxisValue(MotionEvent.AXIS_VSCROLL).takeIf { value -> value != 0f }
+        ?: getAxisValue(MotionEvent.AXIS_SCROLL)
+    return verticalScroll.takeIf { value -> value != 0f }
+}
+
+private fun MotionEvent.asMouseWheelEvent(verticalScroll: Float): MotionEvent {
+    val pointerProperties = Array(pointerCount) { pointerIndex ->
+        MotionEvent.PointerProperties().also { properties ->
+            getPointerProperties(pointerIndex, properties)
+            properties.toolType = MotionEvent.TOOL_TYPE_MOUSE
+        }
+    }
+    val pointerCoordinates = Array(pointerCount) { pointerIndex ->
+        MotionEvent.PointerCoords().also { coordinates ->
+            getPointerCoords(pointerIndex, coordinates)
+            coordinates.setAxisValue(MotionEvent.AXIS_VSCROLL, verticalScroll)
+        }
+    }
+    return MotionEvent.obtain(
+        downTime,
+        eventTime,
+        MotionEvent.ACTION_SCROLL,
+        pointerCount,
+        pointerProperties,
+        pointerCoordinates,
+        metaState,
+        buttonState,
+        xPrecision,
+        yPrecision,
+        deviceId,
+        edgeFlags,
+        InputDevice.SOURCE_MOUSE,
+        flags,
+    )
+}
+
+private fun KeyEvent.toBrowserMouseNavigationAction(): BrowserHardwareInputAction? = when (keyCode) {
+    KeyEvent.KEYCODE_BACK -> BrowserHardwareInputAction.GoBack
+    KeyEvent.KEYCODE_FORWARD -> BrowserHardwareInputAction.GoForward
+    else -> null
 }

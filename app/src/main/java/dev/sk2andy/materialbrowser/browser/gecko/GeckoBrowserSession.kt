@@ -223,6 +223,9 @@ internal interface GeckoBrowserSession {
     /** Scrolls the Gecko document without synthesizing touch events. */
     fun scrollToVerticalOffset(offsetPx: Int) = Unit
 
+    /** Scrolls the Gecko document by a relative hardware-input delta. */
+    fun scrollByVerticalOffset(deltaPx: Int) = Unit
+
     fun setVideoAutoplayBlocked(blocked: Boolean)
 
     /** Mutes current and future Gecko media sessions without changing tab activity. */
