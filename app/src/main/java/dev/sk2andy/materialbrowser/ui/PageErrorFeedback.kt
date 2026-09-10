@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -47,6 +48,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.ui.theme.CandyPink
+import dev.sk2andy.materialbrowser.ui.theme.CandyInk
+import dev.sk2andy.materialbrowser.ui.theme.CandyPinkSoft
+import dev.sk2andy.materialbrowser.ui.theme.CandyPurple
 
 internal sealed interface PageErrorFeedbackState {
     data object Hidden : PageErrorFeedbackState
@@ -58,7 +63,6 @@ internal sealed interface PageErrorFeedbackState {
     data object Retrying : PageErrorFeedbackState
 
     data class Offline(
-        val gameStarted: Boolean = false,
         val isOnlineReady: Boolean = false,
         val game: CandyCircuitGameState = CandyCircuitGameState(),
     ) : PageErrorFeedbackState
@@ -92,37 +96,18 @@ internal object PageErrorFeedbackRules {
             val offline = current as? PageErrorFeedbackState.Offline
             PageErrorObservation(
                 state = PageErrorFeedbackState.Offline(
-                    gameStarted = offline?.gameStarted == true,
                     game = offline?.game ?: CandyCircuitGameState(),
                     isOnlineReady = false,
                 ),
             )
         }
-        isOnline && current is PageErrorFeedbackState.Offline && current.gameStarted ->
+        isOnline && current is PageErrorFeedbackState.Offline ->
             PageErrorObservation(state = current.copy(isOnlineReady = true))
-        isOnline && current is PageErrorFeedbackState.Offline -> PageErrorObservation(
-            state = PageErrorFeedbackState.Retrying,
-            shouldReload = true,
-        )
         httpStatusCode == HTTP_NOT_FOUND_STATUS && !isLoading ->
             PageErrorObservation(PageErrorFeedbackState.NotFound)
         error != null -> PageErrorObservation(PageErrorFeedbackState.Error(error))
         else -> PageErrorObservation(PageErrorFeedbackState.Hidden)
     }
-
-    fun startGame(current: PageErrorFeedbackState): PageErrorFeedbackState =
-        if (current is PageErrorFeedbackState.Offline) {
-            current.copy(gameStarted = true)
-        } else {
-            current
-        }
-
-    fun stopGame(current: PageErrorFeedbackState): PageErrorFeedbackState =
-        if (current is PageErrorFeedbackState.Offline) {
-            current.copy(gameStarted = false)
-        } else {
-            current
-        }
 
     fun requestRetry(current: PageErrorFeedbackState): PageErrorRetryTransition = when (current) {
         PageErrorFeedbackState.NotFound,
@@ -153,14 +138,13 @@ internal object PageErrorFeedbackTestTags {
     const val Page = "page_error_page"
     const val Retry = "page_error_retry"
     const val RetryProgress = "page_error_retry_progress"
-    const val OfflinePrompt = "page_error_offline_prompt"
-    const val StartGame = "page_error_start_game"
     const val Game = "page_error_candy_game"
     const val OnlineBanner = "page_error_online_banner"
     const val Score = "page_error_game_score"
     const val BestScore = "page_error_game_best_score"
     const val Moves = "page_error_game_moves"
     const val Combo = "page_error_game_combo"
+    const val Celebration = "page_error_game_celebration"
     const val Restart = "page_error_game_restart"
     const val TilePrefix = "page_error_game_tile_"
 }
@@ -169,8 +153,6 @@ internal object PageErrorFeedbackTestTags {
 internal fun PageErrorFeedback(
     state: PageErrorFeedbackState,
     onRetry: () -> Unit,
-    onStartGame: () -> Unit,
-    onStopGame: () -> Unit,
     onGameChange: (CandyCircuitGameState) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -199,8 +181,6 @@ internal fun PageErrorFeedback(
                     is PageErrorFeedbackState.Offline -> OfflinePage(
                         state = current,
                         onRetry = onRetry,
-                        onStartGame = onStartGame,
-                        onStopGame = onStopGame,
                         onGameChange = onGameChange,
                     )
                     PageErrorFeedbackState.Retrying -> RetryingPage()
@@ -214,19 +194,33 @@ internal fun PageErrorFeedback(
 @Composable
 private fun pageErrorBackground(): Brush = Brush.verticalGradient(
     colorStops = arrayOf(
-        0f to MaterialTheme.colorScheme.surface,
-        0.56f to MaterialTheme.colorScheme.surface,
-        1f to MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f),
+        0f to CandyPink.copy(alpha = 0.10f),
+        0.38f to MaterialTheme.colorScheme.surface,
+        0.72f to CandyPurple.copy(alpha = 0.08f),
+        1f to CandyPink.copy(alpha = 0.18f),
     ),
 )
 
 @Composable
 private fun NotFoundPage(onRetry: () -> Unit) {
+    MissingPage(
+        title = stringResource(R.string.page_error_not_found_title),
+        body = stringResource(R.string.page_error_not_found_body),
+        onRetry = onRetry,
+    )
+}
+
+@Composable
+private fun MissingPage(
+    title: String,
+    body: String,
+    onRetry: () -> Unit,
+) {
     ProblemPageLayout {
         MissingDestinationArtwork()
         Spacer(Modifier.height(30.dp))
         Text(
-            text = stringResource(R.string.page_error_not_found_title),
+            text = title,
             modifier = Modifier.semantics { heading() },
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
@@ -234,7 +228,7 @@ private fun NotFoundPage(onRetry: () -> Unit) {
         )
         Spacer(Modifier.height(10.dp))
         Text(
-            text = stringResource(R.string.page_error_not_found_body),
+            text = body,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -347,93 +341,25 @@ private fun MissingDestinationArtwork() {
 
 @Composable
 private fun UnreachablePage(onRetry: () -> Unit) {
-    ProblemPageLayout {
-        CandyStatusArtwork(label = "!")
-        Spacer(Modifier.height(28.dp))
-        Text(
-            text = stringResource(R.string.error_page_unreachable),
-            modifier = Modifier.semantics { heading() },
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(10.dp))
-        Text(
-            text = stringResource(R.string.page_error_unreachable_body),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = onRetry,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(PageErrorFeedbackTestTags.Retry),
-        ) {
-            Text(stringResource(R.string.action_retry))
-        }
-    }
+    MissingPage(
+        title = stringResource(R.string.error_page_unreachable),
+        body = stringResource(R.string.page_error_unreachable_body),
+        onRetry = onRetry,
+    )
 }
 
 @Composable
 private fun OfflinePage(
     state: PageErrorFeedbackState.Offline,
     onRetry: () -> Unit,
-    onStartGame: () -> Unit,
-    onStopGame: () -> Unit,
     onGameChange: (CandyCircuitGameState) -> Unit,
 ) {
-    if (state.gameStarted) {
-        CandyCircuitGame(
-            isOnlineReady = state.isOnlineReady,
-            game = state.game,
-            onReload = onRetry,
-            onStop = onStopGame,
-            onGameChange = onGameChange,
-        )
-    } else {
-        ProblemPageLayout(
-            modifier = Modifier.testTag(PageErrorFeedbackTestTags.OfflinePrompt),
-        ) {
-            OfflinePill()
-            Spacer(Modifier.height(24.dp))
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground_art),
-                contentDescription = null,
-                modifier = Modifier.size(116.dp),
-            )
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = stringResource(R.string.page_error_offline_title),
-                modifier = Modifier.semantics { heading() },
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(R.string.page_error_offline_body),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = onStartGame,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .testTag(PageErrorFeedbackTestTags.StartGame),
-                shape = CircleShape,
-            ) {
-                Text(
-                    text = stringResource(R.string.page_error_play_candy_circuit),
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
-    }
+    CandyCircuitGame(
+        isOnlineReady = state.isOnlineReady,
+        game = state.game,
+        onReload = onRetry,
+        onGameChange = onGameChange,
+    )
 }
 
 @Composable
@@ -441,22 +367,66 @@ internal fun OfflinePill(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f),
+        color = CandyPinkSoft,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 22.dp, vertical = 13.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(MaterialTheme.colorScheme.error, CircleShape),
+            ConnectivityGlyph(
+                isOnline = false,
+                color = CandyInk,
+                modifier = Modifier.size(24.dp),
             )
             Text(
                 text = stringResource(R.string.page_error_offline_badge),
                 style = MaterialTheme.typography.labelLarge,
+                color = CandyInk,
                 fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun ConnectivityGlyph(
+    isOnline: Boolean,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        val stroke = size.minDimension * 0.12f
+        val centerX = size.width / 2f
+        listOf(0.08f to 0.84f, 0.24f to 0.52f).forEach { (inset, diameter) ->
+            drawArc(
+                color = color,
+                startAngle = 210f,
+                sweepAngle = 120f,
+                useCenter = false,
+                topLeft = Offset(size.width * inset, size.height * inset),
+                size = androidx.compose.ui.geometry.Size(
+                    width = size.width * diameter,
+                    height = size.height * diameter,
+                ),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = stroke,
+                    cap = StrokeCap.Round,
+                ),
+            )
+        }
+        drawCircle(
+            color = color,
+            radius = stroke * 0.72f,
+            center = Offset(centerX, size.height * 0.78f),
+        )
+        if (!isOnline) {
+            drawLine(
+                color = color,
+                start = Offset(size.width * 0.12f, size.height * 0.10f),
+                end = Offset(size.width * 0.88f, size.height * 0.90f),
+                strokeWidth = stroke * 1.15f,
+                cap = StrokeCap.Round,
             )
         }
     }

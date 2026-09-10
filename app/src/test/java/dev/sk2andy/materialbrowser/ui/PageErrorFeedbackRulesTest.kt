@@ -48,7 +48,7 @@ class PageErrorFeedbackRulesTest {
     }
 
     @Test
-    fun `connection return automatically reloads when game never started`() {
+    fun `connection return preserves automatic game and exposes ready state`() {
         val observation = PageErrorFeedbackRules.observe(
             current = PageErrorFeedbackState.Offline(),
             error = "Network unavailable",
@@ -57,14 +57,13 @@ class PageErrorFeedbackRulesTest {
             isOnline = true,
         )
 
-        assertEquals(PageErrorFeedbackState.Retrying, observation.state)
-        assertTrue(observation.shouldReload)
+        assertEquals(PageErrorFeedbackState.Offline(isOnlineReady = true), observation.state)
+        assertFalse(observation.shouldReload)
     }
 
     @Test
     fun `cleared transport error does not imply reconnect while network remains offline`() {
         val current = PageErrorFeedbackState.Offline(
-            gameStarted = true,
             isOnlineReady = true,
         )
 
@@ -83,7 +82,7 @@ class PageErrorFeedbackRulesTest {
     @Test
     fun `connection return preserves running game and exposes ready state`() {
         val observation = PageErrorFeedbackRules.observe(
-            current = PageErrorFeedbackState.Offline(gameStarted = true),
+            current = PageErrorFeedbackState.Offline(),
             error = "Network unavailable",
             httpStatusCode = null,
             isLoading = false,
@@ -91,7 +90,7 @@ class PageErrorFeedbackRulesTest {
         )
 
         assertEquals(
-            PageErrorFeedbackState.Offline(gameStarted = true, isOnlineReady = true),
+            PageErrorFeedbackState.Offline(isOnlineReady = true),
             observation.state,
         )
         assertFalse(observation.shouldReload)
@@ -101,7 +100,6 @@ class PageErrorFeedbackRulesTest {
     fun `network loss removes ready banner without resetting game`() {
         val observation = PageErrorFeedbackRules.observe(
             current = PageErrorFeedbackState.Offline(
-                gameStarted = true,
                 isOnlineReady = true,
                 game = CandyCircuitGameState(
                     movesRemaining = 10,
@@ -118,7 +116,6 @@ class PageErrorFeedbackRulesTest {
 
         assertEquals(
             PageErrorFeedbackState.Offline(
-                gameStarted = true,
                 game = CandyCircuitGameState(
                     movesRemaining = 10,
                     score = 400,
@@ -133,7 +130,7 @@ class PageErrorFeedbackRulesTest {
     @Test
     fun `online game retry requests one explicit reload`() {
         val first = PageErrorFeedbackRules.requestRetry(
-            PageErrorFeedbackState.Offline(gameStarted = true, isOnlineReady = true),
+            PageErrorFeedbackState.Offline(isOnlineReady = true),
         )
         val duplicate = PageErrorFeedbackRules.requestRetry(first.state)
 
@@ -147,7 +144,7 @@ class PageErrorFeedbackRulesTest {
     fun `online then offline keeps complete Candy Circuit state`() {
         val game = CandyCircuitRules.rotate(CandyCircuitGameState(), tileIndex = 5)
         val online = PageErrorFeedbackRules.observe(
-            current = PageErrorFeedbackState.Offline(gameStarted = true, game = game),
+            current = PageErrorFeedbackState.Offline(game = game),
             error = "Network unavailable",
             httpStatusCode = null,
             isLoading = false,
@@ -162,7 +159,7 @@ class PageErrorFeedbackRulesTest {
         ).state
 
         assertEquals(
-            PageErrorFeedbackState.Offline(gameStarted = true, game = game),
+            PageErrorFeedbackState.Offline(game = game),
             offlineAgain,
         )
     }

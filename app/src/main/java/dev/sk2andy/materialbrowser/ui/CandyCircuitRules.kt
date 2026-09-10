@@ -39,6 +39,7 @@ internal data class CandyCircuitGameState(
     val scoredFingerprints: Set<String> = emptySet(),
     val lastRotatedIndex: Int? = null,
     val lastPointsGained: Int = 0,
+    val lastMovesGained: Int = 0,
     val lastClosedTileIndices: Set<Int> = emptySet(),
     val hasNewBest: Boolean = false,
 ) {
@@ -53,6 +54,7 @@ internal object CandyCircuitRules {
     const val ROW_COUNT = 4
     const val COLUMN_COUNT = 4
     const val STARTING_MOVES = 12
+    const val MOVES_PER_CLOSED_COMPONENT = 2
 
     fun initialState(bestScore: Int = 0): CandyCircuitGameState =
         CandyCircuitGameState(bestScore = bestScore.coerceAtLeast(0))
@@ -110,23 +112,30 @@ internal object CandyCircuitRules {
         val rotatedTiles = state.tiles.toMutableList().apply {
             this[tileIndex] = rotatedTile
         }
-        val newComponents = closedComponents(rotatedTiles).filterNot { component ->
+        val closedComponents = closedComponents(rotatedTiles)
+        val newComponents = closedComponents.filterNot { component ->
             component.fingerprint in state.scoredFingerprints
         }
         val nextCombo = if (newComponents.isEmpty()) 0 else state.combo + 1
         val pointsGained = newComponents.sumOf { component -> component.tileIndices.size * POINTS_PER_TILE } *
             nextCombo
         val nextScore = state.score + pointsGained
+        val movesGained = newComponents.size * MOVES_PER_CLOSED_COMPONENT
+        val refilledTiles = refillClosedComponents(
+            tiles = rotatedTiles,
+            components = closedComponents,
+        )
 
         return state.copy(
-            tiles = rotatedTiles,
-            movesRemaining = state.movesRemaining - 1,
+            tiles = refilledTiles,
+            movesRemaining = state.movesRemaining - 1 + movesGained,
             score = nextScore,
             bestScore = maxOf(state.bestScore, nextScore),
             combo = nextCombo,
             scoredFingerprints = state.scoredFingerprints + newComponents.map { it.fingerprint },
             lastRotatedIndex = tileIndex,
             lastPointsGained = pointsGained,
+            lastMovesGained = movesGained,
             lastClosedTileIndices = newComponents.flatMapTo(linkedSetOf()) { it.tileIndices },
             hasNewBest = nextScore > state.bestScore,
         )
@@ -166,6 +175,22 @@ internal object CandyCircuitRules {
                     ),
                 )
             }
+        }
+    }
+
+    /**
+     * A scored loop is removed in the same reducer step that awards it. Refill tiles are fixed by
+     * board index, so a round is reproducible and the board cannot continue with that closed loop.
+     */
+    private fun refillClosedComponents(
+        tiles: List<CandyCircuitTile>,
+        components: List<CandyCircuitClosedComponent>,
+    ): List<CandyCircuitTile> {
+        if (components.isEmpty()) return tiles
+
+        val replacementIndices = components.flatMapTo(linkedSetOf()) { it.tileIndices }
+        return tiles.mapIndexed { index, tile ->
+            if (index in replacementIndices) REFILL_TILES[index] else tile
         }
     }
 
@@ -246,4 +271,23 @@ internal object CandyCircuitRules {
     private const val DIRECTION_COUNT = 4
     private const val MINIMUM_CLOSED_TILE_COUNT = 4
     private const val POINTS_PER_TILE = 100
+
+    private val REFILL_TILES = listOf(
+        curve(rotation = 2),
+        curve(rotation = 3),
+        straight(rotation = 0),
+        curve(rotation = 3),
+        curve(rotation = 1),
+        curve(rotation = 3),
+        straight(rotation = 1),
+        straight(rotation = 1),
+        curve(rotation = 2),
+        branch(rotation = 3),
+        curve(rotation = 3),
+        straight(rotation = 1),
+        curve(rotation = 1),
+        branch(rotation = 1),
+        curve(rotation = 3),
+        curve(rotation = 0),
+    )
 }

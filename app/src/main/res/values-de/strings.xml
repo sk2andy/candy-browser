@@ -526,13 +526,13 @@
     <string name="download_manager_chooser_title">Herunterladen mit</string>
     <string name="error_download_invalid_address">Download-Adresse ist ungültig</string>
     <string name="error_download_start_failed">Download konnte nicht gestartet werden</string>
-    <string name="error_page_unreachable">Seite nicht erreichbar</string>
+    <string name="error_page_unreachable">Website nicht gefunden</string>
     <string name="action_retry">Erneut versuchen</string>
     <string name="action_retrying">Neuer Versuch…</string>
     <string name="page_error_not_found_title">Diese Seite ist weggenascht</string>
     <string name="page_error_not_found_body">Die Adresse führt zu keiner Seite mehr.</string>
     <string name="page_error_missing_destination_artwork">Ziel nicht gefunden</string>
-    <string name="page_error_unreachable_body">Prüfe die Adresse oder versuche, die Seite erneut zu laden.</string>
+    <string name="page_error_unreachable_body">Unter dieser Adresse konnten wir keine Website finden. Prüfe, ob sie richtig geschrieben ist.</string>
     <string name="page_error_reload">Noch einmal laden</string>
     <string name="page_error_offline_badge">Offline</string>
     <string name="page_error_offline_title">Keine Verbindung</string>
@@ -547,7 +547,7 @@
     <string name="page_error_game_best_label">BESTE</string>
     <string name="page_error_game_moves_label">NOCH</string>
     <string name="page_error_game_moves_unit">ZÜGE</string>
-    <string name="page_error_game_loop_closed">+%1$s Punkte · ×%2$d Combo</string>
+    <string name="page_error_game_loop_closed">+%1$s Punkte · +%2$d Züge · ×%3$d Combo</string>
     <string name="page_error_game_keep_turning">Noch keine Schleife — weiterdrehen</string>
     <string name="page_error_game_ready">Schließe deine erste Candy-Schleife</string>
     <string name="page_error_game_round_complete">Runde beendet · %1$s Punkte</string>

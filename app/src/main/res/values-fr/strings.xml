@@ -531,13 +531,13 @@
     <string name="download_manager_chooser_title">Télécharger avec</string>
     <string name="error_download_invalid_address">Adresse de téléchargement non valide</string>
     <string name="error_download_start_failed">Impossible de démarrer le téléchargement</string>
-    <string name="error_page_unreachable">Page inaccessible</string>
+    <string name="error_page_unreachable">Site web introuvable</string>
     <string name="action_retry">Réessayer</string>
     <string name="action_retrying">Nouvelle tentative…</string>
     <string name="page_error_not_found_title">Cette page a été grignotée</string>
     <string name="page_error_not_found_body">Cette adresse ne mène plus à aucune page.</string>
     <string name="page_error_missing_destination_artwork">Destination introuvable</string>
-    <string name="page_error_unreachable_body">Vérifiez l’adresse ou essayez de recharger la page.</string>
+    <string name="page_error_unreachable_body">Aucun site web n’a été trouvé à cette adresse. Vérifiez qu’elle est correcte.</string>
     <string name="page_error_reload">Charger à nouveau</string>
     <string name="page_error_offline_badge">Hors ligne</string>
     <string name="page_error_offline_title">Aucune connexion</string>
@@ -552,7 +552,7 @@
     <string name="page_error_game_best_label">RECORD</string>
     <string name="page_error_game_moves_label">RESTE</string>
     <string name="page_error_game_moves_unit">COUPS</string>
-    <string name="page_error_game_loop_closed">+%1$s points · Combo ×%2$d</string>
+    <string name="page_error_game_loop_closed">+%1$s points · +%2$d coups · Combo ×%3$d</string>
     <string name="page_error_game_keep_turning">Pas encore de circuit — continuez</string>
     <string name="page_error_game_ready">Fermez votre premier circuit sucré</string>
     <string name="page_error_game_round_complete">Manche terminée · %1$s points</string>

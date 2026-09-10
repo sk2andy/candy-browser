@@ -16,6 +16,7 @@
 
 | Input | Path | Boundary |
 | --- | --- | --- |
+| External keyboard or mouse | `MainActivity` → `BrowserHardwareInputRules` → controller | Consume documented browser chords and auxiliary Back/Forward buttons; hand unmatched hardware keys to the selected engine unless browser chrome owns the IME; keep pointer wheels on normal Android dispatch and normalize only non-pointer vertical wheel reports before using the engine's relative-scroll fallback |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. An incoming `ACTION_VIEW` app link first gets one direct non-browser-default handoff attempt; shared URLs stay in Candy. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
@@ -111,9 +112,13 @@
   Offline Candy Circuit board, score, combo, moves and best score remain UI-local and memory-only.
   The deterministic 4×4 rotation puzzle gives a round twelve moves; a circuit scores only when at least
   four connected tiles have reciprocal edge connections without a dangling endpoint, and a circuit
-  fingerprint scores at most once per round. If connectivity returns during the game, keep game state and expose a
-  polite **Back online** banner whose button performs the only reload; without a started game, reconnect
-  performs one automatic reload.
+  fingerprint scores at most once per round. Scoring replaces every participating tile with its fixed,
+  non-closed refill tile and grants two moves per scored component, so a round continues without a
+  retained closed loop. The UI resolves a scored turn as one input-locked sequence: rotate the closing
+  tile, pulse and dissolve the closed circuit, then fly the deterministic refill tiles in with a stable
+  stagger; score and move semantics update from the reducer result without waiting for motion. Open the
+  puzzle immediately with no intermediate play prompt. If connectivity
+  returns, keep game state and expose a polite **Back online** banner whose button performs the only reload.
 - Treat a main-frame HTTP 404 as a committed response, not a failed navigation. System WebView reports it
   from `onReceivedHttpError`; Gecko's authenticated internal Privacy WebExtension reports the main-frame
   response status because GeckoView's session delegate exposes transport errors but not HTTP response

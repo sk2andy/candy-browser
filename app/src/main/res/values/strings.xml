@@ -549,13 +549,13 @@
     <string name="download_manager_chooser_title">Download with</string>
     <string name="error_download_invalid_address">Invalid download address</string>
     <string name="error_download_start_failed">Download could not be started</string>
-    <string name="error_page_unreachable">Page can’t be reached</string>
+    <string name="error_page_unreachable">Website not found</string>
     <string name="action_retry">Try again</string>
     <string name="action_retrying">Trying again…</string>
     <string name="page_error_not_found_title">This page was snacked away</string>
     <string name="page_error_not_found_body">This address no longer leads to a page.</string>
     <string name="page_error_missing_destination_artwork">Destination not found</string>
-    <string name="page_error_unreachable_body">Check the address or try loading the page again.</string>
+    <string name="page_error_unreachable_body">We couldn’t find a website at this address. Check that it’s spelled correctly.</string>
     <string name="page_error_reload">Load again</string>
     <string name="page_error_offline_badge">Offline</string>
     <string name="page_error_offline_title">No connection</string>
@@ -570,7 +570,7 @@
     <string name="page_error_game_best_label">BEST</string>
     <string name="page_error_game_moves_label">LEFT</string>
     <string name="page_error_game_moves_unit">MOVES</string>
-    <string name="page_error_game_loop_closed">+%1$s points · ×%2$d combo</string>
+    <string name="page_error_game_loop_closed">+%1$s points · +%2$d moves · ×%3$d combo</string>
     <string name="page_error_game_keep_turning">No loop yet — keep turning</string>
     <string name="page_error_game_ready">Close your first candy loop</string>
     <string name="page_error_game_round_complete">Round complete · %1$s points</string>

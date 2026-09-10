@@ -531,13 +531,13 @@
     <string name="download_manager_chooser_title">Transferir com</string>
     <string name="error_download_invalid_address">Endereço de transferência inválido</string>
     <string name="error_download_start_failed">Não foi possível iniciar a transferência</string>
-    <string name="error_page_unreachable">Não é possível aceder à página</string>
+    <string name="error_page_unreachable">Site não encontrado</string>
     <string name="action_retry">Tentar novamente</string>
     <string name="action_retrying">A tentar novamente…</string>
     <string name="page_error_not_found_title">Esta página foi petiscada</string>
     <string name="page_error_not_found_body">Este endereço já não leva a nenhuma página.</string>
     <string name="page_error_missing_destination_artwork">Destino não encontrado</string>
-    <string name="page_error_unreachable_body">Verifique o endereço ou tente carregar a página novamente.</string>
+    <string name="page_error_unreachable_body">Não encontrámos um site neste endereço. Verifique se está escrito corretamente.</string>
     <string name="page_error_reload">Carregar novamente</string>
     <string name="page_error_offline_badge">Offline</string>
     <string name="page_error_offline_title">Sem ligação</string>
@@ -552,7 +552,7 @@
     <string name="page_error_game_best_label">RECORDE</string>
     <string name="page_error_game_moves_label">RESTAM</string>
     <string name="page_error_game_moves_unit">JOGADAS</string>
-    <string name="page_error_game_loop_closed">+%1$s pontos · Combo ×%2$d</string>
+    <string name="page_error_game_loop_closed">+%1$s pontos · +%2$d jogadas · Combo ×%3$d</string>
     <string name="page_error_game_keep_turning">Ainda sem circuito — continue a rodar</string>
     <string name="page_error_game_ready">Feche o seu primeiro circuito doce</string>
     <string name="page_error_game_round_complete">Ronda concluída · %1$s pontos</string>
