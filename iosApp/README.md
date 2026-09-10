@@ -7,7 +7,7 @@ Browser-neutral URL/navigation, engine commands/events, tab intents and chrome g
 Android and iOS. Apple owns lifecycle, one `WKWebView` per tab, native image/effect adapters and mandatory
 system presenters. `CandyComposeHost` mounts the shared `ComposeUIViewController` and overlays the native
 address/menu chrome, Find,
-Share and error presentation; Reader and Candy Trails render through the same shared Compose surfaces as
+Share, Favorites and error presentation; Reader and Candy Trails render through the same shared Compose surfaces as
 Android. The iOS address bar and menu are deliberately native presentation duplicates because Liquid
 Glass is central to the product; their state, item ordering, enabled/checked values and actions still come
 from Kotlin. The host does not duplicate overview, Settings, Reader or Trail screens.
@@ -49,7 +49,7 @@ remain memory-only. Missing or unknown stored values safely fall back to Hero.
 | Artwork adapters | Native favicon and incognito artwork are not connected; fallback vectors remain visible |
 | Tab Actions | Production menu and action-state call site are shared; unsupported backend actions remain disabled |
 | Settings destinations | `OpenSettings` opens shared production home/routing plus Appearance, Tabs & Gestures, Browser and Toppings pages; Toppings list/add/edit/toggle/delete call the native validated runtime, while controls without iOS backend state stay visibly disabled |
-| Feature actions | History, snooze and other Android-only feature implementations must be added before their menu actions can be enabled on iOS |
+| Feature actions | Favorites opens a native searchable session library with per-row removal and timed undo; history, snooze and other Android-only feature implementations must be added before their menu actions can be enabled on iOS |
 | Native sheets | Find remains Apple-native; Reader uses the shared Candy Reader surface, with iOS speech currently unavailable |
 
 These are orchestration, adapter and feature-implementation gaps, not permission to create parallel tab,
@@ -101,6 +101,7 @@ switches provide Apple-oriented presentation while Android keeps Candy's Materia
 | iOS feature action | Native implementation |
 | --- | --- |
 | Favorite / pin | In-memory URL favorite and per-tab pin state; dynamic label plus badges in every overview mode; pin disables/hides close until unpinned |
+| Favorites library | Native searchable list of every in-memory favorite; selection navigates the current tab and closes the library, while row deletion offers a five-second undo banner |
 | Find in page | Liquid-Glass search bar backed by `WKWebView.find` with previous/next/wrap; callbacks are bound to source tab and WebKit session |
 | Reader | JavaScript-bounded `article`/`main`/body extraction, accepted only for the initiating tab/session/URL/request, mapped into the shared Candy Reader model and renderer |
 | Candy Trail | WebKit back/forward history is reconciled through shared Trail rules and rendered by the shared Candy Trail graph; state is session-memory-only on iOS |
@@ -206,9 +207,15 @@ xcrun swiftc \
   iosApp/Tests/LiquidGlassPresentationRulesTests.swift \
   -o /tmp/candy-ios-liquid-glass-tests
 /tmp/candy-ios-liquid-glass-tests
+
+xcrun swiftc \
+  iosApp/CandyIos/BrowserFavoritesRules.swift \
+  iosApp/Tests/BrowserFavoritesRulesTests.swift \
+  -o /tmp/candy-ios-favorites-rules-tests
+/tmp/candy-ios-favorites-rules-tests
 ```
 
-The six platform-edge executables above are the current iOS standalone test
+The seven platform-edge executables above are the current iOS standalone test
 gate. Run them all from the repository root with:
 
 ```bash
@@ -219,4 +226,5 @@ xcrun swiftc iosApp/CandyIos/BrowserPageExtractionRules.swift iosApp/Tests/Brows
 xcrun swiftc iosApp/CandyIos/ToppingValueRules.swift iosApp/Tests/ToppingValueRulesTests.swift -o /tmp/candy-ios-topping-value-tests && /tmp/candy-ios-topping-value-tests
 xcrun swiftc iosApp/CandyIos/BrowserTranslationProviderPreference.swift iosApp/Tests/BrowserTranslationProviderPreferenceTests.swift -o /tmp/candy-ios-translation-provider-tests && /tmp/candy-ios-translation-provider-tests
 xcrun swiftc iosApp/CandyIos/LiquidGlassPresentationRules.swift iosApp/Tests/LiquidGlassPresentationRulesTests.swift -o /tmp/candy-ios-liquid-glass-tests && /tmp/candy-ios-liquid-glass-tests
+xcrun swiftc iosApp/CandyIos/BrowserFavoritesRules.swift iosApp/Tests/BrowserFavoritesRulesTests.swift -o /tmp/candy-ios-favorites-rules-tests && /tmp/candy-ios-favorites-rules-tests
 ```

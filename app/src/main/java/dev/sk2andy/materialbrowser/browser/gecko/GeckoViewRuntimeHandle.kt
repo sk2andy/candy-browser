@@ -964,13 +964,9 @@ private class GeckoViewBrowserSession(
                 )
             }
 
-            override fun onCrash(session: GeckoSession) = updateState { current ->
-                current.copy(
-                    isLoading = false,
-                    lastNavigationSucceeded = false,
-                    crashed = true,
-                )
-            }
+            override fun onCrash(session: GeckoSession) = onContentProcessTerminated()
+
+            override fun onKill(session: GeckoSession) = onContentProcessTerminated()
         }
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onLoadRequest(
@@ -1673,6 +1669,7 @@ private class GeckoViewBrowserSession(
                         progress = 0,
                         lastNavigationSucceeded = null,
                         failureDescription = null,
+                        httpStatusCode = null,
                     )
                 }
             }
@@ -1704,6 +1701,13 @@ private class GeckoViewBrowserSession(
                         source = BrowserEngineScrollEventSource.DocumentMetrics,
                     ),
                 )
+            },
+            onMainFrameResponse = { response ->
+                val responseUrl = BrowserUriPolicy.normalizeHttpUrl(response.url)
+                val pageUrl = currentPageUrl?.let(BrowserUriPolicy::normalizeHttpUrl)
+                if (responseUrl != null && responseUrl == pageUrl) {
+                    updateState { current -> current.copy(httpStatusCode = response.statusCode) }
+                }
             },
             onBound = {
                 privacyBound = true
@@ -2574,6 +2578,14 @@ private class GeckoViewBrowserSession(
     ) {
         state = transform(state)
         listener?.onStateChanged(state)
+    }
+
+    private fun onContentProcessTerminated() = updateState { current ->
+        current.copy(
+            isLoading = false,
+            lastNavigationSucceeded = false,
+            crashed = true,
+        )
     }
 
     private fun preparePreviewBitmap(

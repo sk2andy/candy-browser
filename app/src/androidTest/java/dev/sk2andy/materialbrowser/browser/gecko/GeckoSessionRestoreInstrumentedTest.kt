@@ -3,10 +3,13 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import android.os.SystemClock
 import android.view.View
+import android.view.ViewGroup
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.util.UUID
@@ -15,6 +18,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mozilla.geckoview.GeckoView
 
 @RunWith(AndroidJUnit4::class)
 class GeckoSessionRestoreInstrumentedTest {
@@ -89,6 +93,32 @@ class GeckoSessionRestoreInstrumentedTest {
         }
     }
 
+    @Test
+    fun killedContentProcessPublishesRecoveryEventAndDetachesDeadSession() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val events = mutableListOf<BrowserEngineEvent>()
+        lateinit var engineSession: AndroidBrowserEngineSessionPort
+        lateinit var geckoView: GeckoView
+
+        instrumentation.runOnMainSync {
+            engineSession = GeckoBrowserEngineSessionFactory(context).create(
+                tabId = REGULAR_TAB_ID,
+                profileId = "kill-${UUID.randomUUID()}",
+                isPrivate = false,
+                eventSink = events::add,
+            )
+            geckoView = engineSession.createView(context).findGeckoView()
+            val nativeSession = requireNotNull(geckoView.session)
+
+            requireNotNull(nativeSession.contentDelegate).onKill(nativeSession)
+            engineSession.execute(BrowserEngineCommands.reload())
+        }
+
+        assertEquals(listOf(BrowserEngineEventType.Crashed), events.map(BrowserEngineEvent::type))
+        assertEquals("Gecko content process terminated", events.single().failureDescription)
+        assertEquals(null, geckoView.session)
+    }
+
     private fun session(
         context: Context,
         tabId: String,
@@ -105,6 +135,15 @@ class GeckoSessionRestoreInstrumentedTest {
         session: AndroidBrowserEngineSessionPort,
         command: dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand,
     ) = instrumentation.runOnMainSync { session.execute(command) }
+
+    private fun View.findGeckoView(): GeckoView {
+        if (this is GeckoView) return this
+        if (this !is ViewGroup) error("GeckoView descendant is missing")
+        for (index in 0 until childCount) {
+            runCatching { getChildAt(index).findGeckoView() }.getOrNull()?.let { return it }
+        }
+        error("GeckoView descendant is missing")
+    }
 
     private fun await(predicate: () -> Boolean): Boolean {
         val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS

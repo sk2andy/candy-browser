@@ -367,6 +367,7 @@ private class SystemWebViewBrowserEngineSession(
     private var cosmeticsReadyCallbackRegistered = false
     private var lastFindQuery: String? = null
     private var lastLoadFailed = false
+    private var lastMainFrameHttpResponse: Pair<String, Int>? = null
     @Volatile
     private var currentPageUrl: String? = initialPrivacyPolicy.pageHost
     private val defaultUserAgent: String
@@ -922,6 +923,7 @@ private class SystemWebViewBrowserEngineSession(
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
             lastLoadFailed = false
+            lastMainFrameHttpResponse = null
             currentPageUrl = url
             toppingRuntime.clearMenuCommands(webView)
             latestMediaState = GeckoMediaSessionState()
@@ -938,6 +940,9 @@ private class SystemWebViewBrowserEngineSession(
             currentPageUrl = url
             applyDocumentCosmetics(url)
             publishHistoryState(view)
+            val httpStatusCode = lastMainFrameHttpResponse
+                ?.takeIf { (responseUrl) -> responseUrl == url }
+                ?.second
             publish(
                 if (lastLoadFailed) {
                     BrowserEngineEventType.NavigationFailed
@@ -947,6 +952,7 @@ private class SystemWebViewBrowserEngineSession(
                 address = url,
                 isLoading = false,
                 failureDescription = "System WebView navigation failed".takeIf { lastLoadFailed },
+                httpStatusCode = httpStatusCode,
             )
         }
 
@@ -956,6 +962,16 @@ private class SystemWebViewBrowserEngineSession(
             error: android.webkit.WebResourceError,
         ) {
             if (request.isForMainFrame) lastLoadFailed = true
+        }
+
+        override fun onReceivedHttpError(
+            view: WebView,
+            request: WebResourceRequest,
+            errorResponse: WebResourceResponse,
+        ) {
+            if (request.isForMainFrame) {
+                lastMainFrameHttpResponse = request.url.toString() to errorResponse.statusCode
+            }
         }
 
         override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
@@ -1543,6 +1559,7 @@ private class SystemWebViewBrowserEngineSession(
         title: String? = webView.title,
         isLoading: Boolean? = null,
         failureDescription: String? = null,
+        httpStatusCode: Int? = null,
     ) {
         eventSink.onEngineEvent(
             BrowserEngineEvent(
@@ -1554,6 +1571,7 @@ private class SystemWebViewBrowserEngineSession(
                 canGoForward = webView.canGoForward(),
                 failureDescription = failureDescription,
                 isLoading = isLoading,
+                httpStatusCode = httpStatusCode,
             ),
         )
     }

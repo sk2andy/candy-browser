@@ -5,10 +5,11 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -26,87 +27,131 @@ class PageErrorFeedbackInstrumentedTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun retryClickImmediatelyShowsAccessibleProgressAndDisablesAction() {
-        val retries = AtomicInteger()
-        val state = mutableStateOf<PageErrorFeedbackState>(
-            PageErrorFeedbackState.Error("Connection refused"),
-        )
+    fun notFoundPageOffersReloadWithoutTechnicalErrorText() {
+        val reloads = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PageErrorFeedback(
+                    state = PageErrorFeedbackState.NotFound,
+                    onRetry = reloads::incrementAndGet,
+                    onStartGame = {},
+                    onStopGame = {},
+                    onGameChange = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("This page was snacked away").assertExists()
+        composeRule.onNodeWithContentDescription("Destination not found").assertExists()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry).performClick()
+
+        assertEquals(1, reloads.get())
+    }
+
+    @Test
+    fun offlinePromptStartsAccessibleCandyCircuitGame() {
+        val state = mutableStateOf<PageErrorFeedbackState>(PageErrorFeedbackState.Offline())
         composeRule.setContent {
             MaterialBrowserTheme {
                 PageErrorFeedback(
                     state = state.value,
-                    onRetry = {
-                        state.value = PageErrorFeedbackState.Retrying("Connection refused")
-                        retries.incrementAndGet()
+                    onRetry = {},
+                    onStartGame = {
+                        state.value = PageErrorFeedbackRules.startGame(state.value)
+                    },
+                    onStopGame = {
+                        state.value = PageErrorFeedbackRules.stopGame(state.value)
+                    },
+                    onGameChange = { game ->
+                        val offline = state.value as PageErrorFeedbackState.Offline
+                        state.value = offline.copy(game = game)
                     },
                 )
             }
         }
 
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Card)
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.OfflinePrompt).assertExists()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.StartGame).performClick()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Game).assertExists()
+        composeRule.onNodeWithText("Candy Circuit").assertExists()
+        composeRule.onNodeWithText("12").assertExists()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.TilePrefix + 5).performClick()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Score).assertTextContains("400")
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Moves).assertTextContains("11")
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.TilePrefix + 5)
+            .assertContentDescriptionContains("Row 2, column 2", substring = true)
+    }
+
+    @Test
+    fun reconnectBannerKeepsGameAndLoadsOnlyAfterButtonClick() {
+        val reloads = AtomicInteger()
+        val state = mutableStateOf<PageErrorFeedbackState>(
+            PageErrorFeedbackState.Offline(gameStarted = true),
+        )
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PageErrorFeedback(
+                    state = state.value,
+                    onRetry = reloads::incrementAndGet,
+                    onStartGame = {},
+                    onStopGame = {},
+                    onGameChange = { game ->
+                        val offline = state.value as PageErrorFeedbackState.Offline
+                        state.value = offline.copy(game = game)
+                    },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.OnlineBanner).assertDoesNotExist()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.TilePrefix + 5).performClick()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Score).assertTextContains("400")
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Moves).assertTextContains("11")
+        composeRule.runOnIdle {
+            val offline = state.value as PageErrorFeedbackState.Offline
+            state.value = offline.copy(isOnlineReady = true)
+        }
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Game).assertExists()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Score).assertTextContains("400")
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Moves).assertTextContains("11")
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.OnlineBanner)
             .assert(
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.LiveRegion,
-                    LiveRegionMode.Assertive,
+                    LiveRegionMode.Polite,
                 ),
             )
-        composeRule.onNodeWithText("Connection refused").assertExists()
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry)
-            .assertHasClickAction()
-            .assertIsEnabled()
-            .performClick()
+        assertEquals(0, reloads.get())
 
-        assertEquals(1, retries.get())
-        composeRule.onNodeWithText("Connection refused").assertExists()
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Card)
-            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.StateDescription))
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry).assertIsNotEnabled()
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.RetryProgress).assertExists()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry).performClick()
+        assertEquals(1, reloads.get())
     }
 
     @Test
-    fun retryProgressPreservesMessageAndDisablesDuplicateAction() {
-        val retries = AtomicInteger()
-        composeRule.setContent {
-            MaterialBrowserTheme {
-                PageErrorFeedback(
-                    state = PageErrorFeedbackState.Retrying("Connection refused"),
-                    onRetry = retries::incrementAndGet,
-                )
-            }
-        }
-
-        composeRule.onNodeWithText("Connection refused").assertExists()
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry).assertIsNotEnabled()
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.RetryProgress).assertExists()
-
-        assertEquals(0, retries.get())
-    }
-
-    @Test
-    fun successfulFinishWithoutObservableLoadingFrameDismissesRetryFeedback() {
+    fun finishedRoundDisablesTilesAndOffersRestart() {
         val state = mutableStateOf<PageErrorFeedbackState>(
-            PageErrorFeedbackState.Error("Connection refused"),
+            PageErrorFeedbackState.Offline(
+                gameStarted = true,
+                game = CandyCircuitGameState(movesRemaining = 0, bestScore = 1_600),
+            ),
         )
         composeRule.setContent {
             MaterialBrowserTheme {
                 PageErrorFeedback(
                     state = state.value,
-                    onRetry = {
-                        state.value = PageErrorFeedbackRules.requestRetry(state.value).state
-                        state.value = PageErrorFeedbackRules.observe(
-                            current = state.value,
-                            error = null,
-                            isLoading = false,
-                        )
+                    onRetry = {},
+                    onStartGame = {},
+                    onStopGame = {},
+                    onGameChange = { game ->
+                        val offline = state.value as PageErrorFeedbackState.Offline
+                        state.value = offline.copy(game = game)
                     },
                 )
             }
         }
 
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry).performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Card).assertDoesNotExist()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.TilePrefix + 5).assertIsNotEnabled()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Restart).performClick()
+        composeRule.onNodeWithText("12").assertExists()
     }
 }

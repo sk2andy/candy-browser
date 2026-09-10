@@ -106,6 +106,8 @@ internal fun BoxScope.BrowserAddressChrome(
     toggleFavoriteWithFeedback: (String) -> Unit,
     onBlankTabModeRevealOriginChanged: (Offset) -> Unit,
     onSnoozedTabs: () -> Unit,
+    onOpenFavorites: () -> Unit,
+    onOpenDownloads: () -> Unit,
     onOpenHistory: () -> Unit,
     onOpenFirefoxExtensions: (() -> Unit)?,
     onSettings: () -> Unit,
@@ -409,6 +411,14 @@ internal fun BoxScope.BrowserAddressChrome(
         onSnoozedTabs = {
             onAddressEditorDismiss()
             onSnoozedTabs()
+        },
+        onFavorites = {
+            onAddressEditorDismiss()
+            onOpenFavorites()
+        },
+        onDownloads = {
+            onAddressEditorDismiss()
+            onOpenDownloads()
         },
         onHistory = {
             onAddressEditorDismiss()

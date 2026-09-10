@@ -111,6 +111,9 @@ call-site cutover are not complete.
   explicit backdrop source for browser chrome.
 - Android builds launch the normal `MainActivity`, `BrowserScreen`, address bar,
   gestures, menus and tab overview. `BrowserController` binds a `GeckoSession` renderer to each tab.
+  Gecko content-process crashes and Android low-memory kills are both terminal session events. Candy
+  removes the unusable session and its view, then lets the selected tab recreate its renderer from
+  the latest eligible native session state or persisted URL instead of leaving a white loading surface.
   Renderer ownership is recorded before attaching its Android view because `addView` may synchronously
   re-enter Compose. Attach, release and host-transfer transitions are serialized: same-host re-entry
   reuses the recorded view, while a competing host retries on the next UI turn instead of asking one
@@ -133,6 +136,12 @@ call-site cutover are not complete.
 - Reader Studio extraction crosses the selected Gecko session through Candy's internal, session-bound
   WebExtension content-script bridge. Returned JSON still passes the shared Reader extraction bounds
   and stale tab, URL and session guards before reaching UI state.
+- GeckoView does not expose successful main-frame HTTP response codes through its session navigation
+  delegate. Candy's authenticated internal Privacy WebExtension therefore forwards bounded
+  `webRequest.onHeadersReceived` status messages for the bound main frame. Each response retains the
+  request-time policy revision and navigation generation; the native host accepts only the current values
+  and exact normalized page URL. HTTP 404 remains a committed navigation and
+  drives the native Candy not-found surface; subresource responses never cross this path.
 - External `ACTION_VIEW` previews use a transient Gecko session outside the normal tab/session maps.
   A session-id and generation guard rejects late navigation, find and lifecycle callbacks; the
   selected local profile supplies the Gecko context, and promotion reloads only the final normalized

@@ -16,6 +16,7 @@ data class BrowserTab(
     val blockedCount: Int = 0,
     val error: String? = null,
     val syncCandyId: String? = null,
+    val httpStatusCode: Int? = null,
 )
 
 val BrowserTab.isSynced: Boolean
@@ -34,7 +35,8 @@ val BrowserTab.isFreshBlankTab: Boolean
         !canGoBack &&
         !canGoForward &&
         blockedCount == 0 &&
-        error == null
+        error == null &&
+        httpStatusCode == null
 
 const val BLANK_URL = "about:blank"
 const val MAX_TABS = 50

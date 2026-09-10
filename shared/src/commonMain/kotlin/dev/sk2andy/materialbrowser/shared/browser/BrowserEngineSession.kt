@@ -68,6 +68,7 @@ data class BrowserEngineEvent(
     val canGoForward: Boolean,
     val failureDescription: String?,
     val isLoading: Boolean? = null,
+    val httpStatusCode: Int? = null,
 )
 
 class BrowserSessionController(

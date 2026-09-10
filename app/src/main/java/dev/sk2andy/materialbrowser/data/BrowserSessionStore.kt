@@ -383,14 +383,27 @@ class BrowserSessionStore internal constructor(
     }
 
     @Synchronized
-    fun saveFavorites(favorites: List<FavoriteEntry>) {
-        saveArray(KEY_FAVORITES, favorites) { entry ->
+    fun saveFavorites(favorites: List<FavoriteEntry>) = saveArray(
+        key = KEY_FAVORITES,
+        values = favorites,
+    ) { entry ->
+        JSONObject()
+            .put("url", entry.url)
+            .put("title", entry.title)
+            .put("addedAt", entry.addedAt)
+    }
+
+    @Synchronized
+    internal fun saveFavoritesCommitted(favorites: List<FavoriteEntry>): Boolean =
+        saveArrayCommitted(
+            key = KEY_FAVORITES,
+            values = favorites,
+        ) { entry ->
             JSONObject()
                 .put("url", entry.url)
                 .put("title", entry.title)
                 .put("addedAt", entry.addedAt)
         }
-    }
 
     fun loadBlockerSettings(): BlockerSettings = BlockerSettings(
         blockAdsAndTrackers = preferences.getBoolean(KEY_BLOCK_ADS, true),
@@ -1069,6 +1082,16 @@ class BrowserSessionStore internal constructor(
         values.forEach { array.put(write(it)) }
         preferences.edit().putString(key, array.toString()).apply()
     }
+
+    private fun <T> saveArrayCommitted(
+        key: String,
+        values: List<T>,
+        write: (T) -> JSONObject,
+    ): Boolean = runCatching {
+        val array = JSONArray()
+        values.forEach { array.put(write(it)) }
+        preferences.edit().putString(key, array.toString()).commit()
+    }.getOrDefault(false)
 
     private fun JSONArray?.stringValues(): List<String> = buildList {
         val source = this@stringValues ?: return@buildList

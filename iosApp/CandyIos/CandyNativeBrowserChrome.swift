@@ -60,6 +60,7 @@ struct CandyNativeBrowserChrome: View {
     private var isVisible: Bool {
         !browser.isTabOverviewVisible &&
             !browser.isSettingsVisible &&
+            !browser.isFavoritesVisible &&
             browser.readerSnapshot == nil &&
             browser.candyTrailTabId == nil
     }
@@ -618,6 +619,7 @@ struct CandyNativeBrowserChrome: View {
         if action == .summarize { return "Zusammenfassen" }
         if action == .snoozetab { return "Tab schlummern" }
         if action == .dockaddressbar { return "Adressleiste andocken" }
+        if action == .openfavorites { return "Favoriten" }
         if action == .openhistory { return "Verlauf" }
         if action == .opensnoozedtabs { return "Schlummernde Tabs" }
         if action == .opensettings { return "Einstellungen" }
@@ -654,6 +656,7 @@ struct CandyNativeBrowserChrome: View {
         if action == .summarize { return "text.alignleft" }
         if action == .snoozetab { return "moon.zzz" }
         if action == .dockaddressbar { return "dock.rectangle" }
+        if action == .openfavorites { return "star.square" }
         if action == .openhistory { return "clock.arrow.circlepath" }
         if action == .opensnoozedtabs { return "tray.full" }
         if action == .opensettings { return "gearshape" }

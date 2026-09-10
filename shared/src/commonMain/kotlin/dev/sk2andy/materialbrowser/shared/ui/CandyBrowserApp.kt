@@ -95,6 +95,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MenuBook
@@ -1769,6 +1770,8 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.ToggleDomainMute -> Icons.Filled.VolumeOff
         BrowserFeatureMenuAction.OpenCandyTrail -> Icons.Filled.Route
         BrowserFeatureMenuAction.AddSiteCapsule -> Icons.Filled.AddToHomeScreen
+        BrowserFeatureMenuAction.OpenFavorites -> Icons.Filled.Star
+        BrowserFeatureMenuAction.OpenDownloads -> Icons.Filled.Download
         BrowserFeatureMenuAction.OpenHistory -> Icons.Filled.History
         BrowserFeatureMenuAction.OpenSettings -> Icons.Filled.Settings
         BrowserFeatureMenuAction.Summarize -> Icons.Filled.AutoAwesome
@@ -1831,6 +1834,8 @@ private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: wh
     BrowserFeatureMenuLabelKey.SnoozeTab -> "Tab schlummern"
     BrowserFeatureMenuLabelKey.DockAddressBar -> "Adressleiste andocken"
     BrowserFeatureMenuLabelKey.SnoozedTabs -> "Schlummernde Tabs"
+    BrowserFeatureMenuLabelKey.Favorites -> "Favoriten"
+    BrowserFeatureMenuLabelKey.Downloads -> "Downloads"
     BrowserFeatureMenuLabelKey.History -> "Verlauf"
     BrowserFeatureMenuLabelKey.Settings -> "Einstellungen"
     BrowserFeatureMenuLabelKey.FirefoxExtensions -> "Firefox-Erweiterungen"

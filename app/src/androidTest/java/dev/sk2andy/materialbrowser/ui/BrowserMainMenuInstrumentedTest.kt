@@ -229,13 +229,15 @@ class BrowserMainMenuInstrumentedTest {
             hasTestTag(BrowserMainMenuTestTags.BrowserGroup) and
                 hasAnyDescendant(hasText(context.getString(R.string.snoozed_tabs_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_dock_address_bar))) and
+                hasAnyDescendant(hasText(context.getString(R.string.favorites_title))) and
+                hasAnyDescendant(hasText(context.getString(R.string.downloads_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_history))) and
                 hasAnyDescendant(hasText(context.getString(R.string.gecko_extensions_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_settings))),
         ).assertExists()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.BrowserGroup)
             .onChildren()
-            .assertCountEquals(5)
+            .assertCountEquals(7)
 
         val menuHeight = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
             .fetchSemanticsNode().boundsInRoot.height
@@ -309,12 +311,20 @@ class BrowserMainMenuInstrumentedTest {
             composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
                 .performTouchInput { swipeUp() }
         }
+        val favoritesTop = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Favorites)
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot.top
+        val downloadsTop = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Downloads)
+            .assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot.top
         val historyTop = composeRule.onNodeWithTag(BrowserMainMenuTestTags.History)
             .assertIsDisplayed()
             .fetchSemanticsNode().boundsInRoot.top
         val settingsTop = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings)
             .assertIsDisplayed()
             .fetchSemanticsNode().boundsInRoot.top
+        assertTrue(favoritesTop < downloadsTop)
+        assertTrue(downloadsTop < historyTop)
         assertTrue(historyTop < settingsTop)
         val firefoxExtensionsTop = composeRule
             .onNodeWithTag(BrowserMainMenuTestTags.FirefoxExtensions)
@@ -357,6 +367,8 @@ class BrowserMainMenuInstrumentedTest {
     fun disablesReaderForUnsupportedPage() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val invocations = AtomicInteger()
+        val favoriteInvocations = AtomicInteger()
+        var setMenuExpanded: (Boolean) -> Unit = {}
         val command = UserScriptMenuCommand(
             tabId = "tab",
             scriptId = "script",
@@ -366,10 +378,12 @@ class BrowserMainMenuInstrumentedTest {
         )
         composeRule.setContent {
             MaterialBrowserTheme {
+                var expanded by remember { mutableStateOf(true) }
+                setMenuExpanded = { expanded = it }
                 BrowserMainMenu(
-                    expanded = true,
+                    expanded = expanded,
                     backdropSource = null,
-                    onDismissRequest = {},
+                    onDismissRequest = { expanded = false },
                     pageSubtitle = "New tab",
                     canGoBack = false,
                     canGoForward = false,
@@ -424,6 +438,7 @@ class BrowserMainMenuInstrumentedTest {
                         if (selected == command) invocations.incrementAndGet()
                     },
                     onDockAddressBar = {},
+                    onFavorites = favoriteInvocations::incrementAndGet,
                     onHistory = {},
                     onSettings = {},
                 )
@@ -451,5 +466,10 @@ class BrowserMainMenuInstrumentedTest {
             .performScrollTo()
             .performClick()
         assertEquals(1, invocations.get())
+        composeRule.runOnIdle { setMenuExpanded(true) }
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Favorites)
+            .performScrollTo()
+            .performClick()
+        assertEquals(1, favoriteInvocations.get())
     }
 }

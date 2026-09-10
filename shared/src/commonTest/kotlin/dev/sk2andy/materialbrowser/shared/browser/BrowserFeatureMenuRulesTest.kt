@@ -54,6 +54,8 @@ class BrowserFeatureMenuRulesTest {
                 BrowserFeatureMenuAction.SnoozeTab,
                 BrowserFeatureMenuAction.DockAddressBar,
                 BrowserFeatureMenuAction.OpenSnoozedTabs,
+                BrowserFeatureMenuAction.OpenFavorites,
+                BrowserFeatureMenuAction.OpenDownloads,
                 BrowserFeatureMenuAction.OpenHistory,
                 BrowserFeatureMenuAction.OpenSettings,
             ),

@@ -23,6 +23,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.Closeable
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -137,6 +140,29 @@ class SystemWebViewBrowserEngineInstrumentedTest {
         }
     }
 
+    @Test
+    fun mainFrame404IsCommittedWithNotFoundStatus() {
+        NotFoundServer().use { server ->
+            lateinit var browserController: BrowserController
+            composeRule.runOnIdle {
+                browserController = createControllerWithView().first
+                controller = browserController
+                browserController.submitAddress(server.url)
+            }
+
+            composeRule.waitUntil(timeoutMillis = 10_000L) {
+                browserController.selectedTab.httpStatusCode == 404
+            }
+
+            composeRule.runOnIdle {
+                assertEquals(server.url, browserController.selectedTab.url)
+                assertEquals("Missing", browserController.selectedTab.title)
+                assertEquals(null, browserController.selectedTab.error)
+                assertFalse(browserController.selectedTab.isLoading)
+            }
+        }
+    }
+
     private fun createControllerWithView(): Pair<BrowserController, WebView> {
         val activity = composeRule.activity
         val browserController = BrowserController(activity)
@@ -164,6 +190,49 @@ class SystemWebViewBrowserEngineInstrumentedTest {
             getChildAt(index).findWebView()
         }
         else -> null
+    }
+
+    private class NotFoundServer : Closeable {
+        private val server = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
+        private val thread = Thread(::serve, "system-webview-404-fixture").apply {
+            isDaemon = true
+            start()
+        }
+        val url = "http://127.0.0.1:${server.localPort}/missing"
+
+        private fun serve() {
+            while (!server.isClosed) {
+                val socket = runCatching { server.accept() }.getOrNull() ?: return
+                socket.use { connection ->
+                    runCatching {
+                        connection.getInputStream().bufferedReader().apply {
+                            readLine()
+                            while (!readLine().isNullOrEmpty()) {
+                                // Drain request headers before deterministic response.
+                            }
+                        }
+                        val body = "<html><head><title>Missing</title></head><body>404</body></html>"
+                            .toByteArray()
+                        connection.getOutputStream().buffered().use { output ->
+                            output.write(
+                                "HTTP/1.1 404 Not Found\r\nContent-Type: text/html; charset=utf-8\r\n"
+                                    .toByteArray(),
+                            )
+                            output.write(
+                                "Content-Length: ${body.size}\r\nConnection: close\r\n\r\n"
+                                    .toByteArray(),
+                            )
+                            output.write(body)
+                        }
+                    }
+                }
+            }
+        }
+
+        override fun close() {
+            server.close()
+            thread.join(1_000L)
+        }
     }
 
     private companion object {

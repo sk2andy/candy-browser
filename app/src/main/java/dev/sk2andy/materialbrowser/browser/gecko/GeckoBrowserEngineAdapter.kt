@@ -668,7 +668,7 @@ internal class GeckoBrowserEngineSessionAdapter(
     private companion object {
         const val INVALID_ADDRESS_FAILURE = "Address rejected by browser URI policy"
         const val LOAD_FAILURE = "Gecko navigation failed"
-        const val CRASH_FAILURE = "Gecko content process crashed"
+        const val CRASH_FAILURE = "Gecko content process terminated"
     }
 }
 
@@ -678,7 +678,8 @@ private fun GeckoBrowserSessionState.hasSharedStateChangeFrom(
     url != previous.url ||
         title != previous.title ||
         canGoBack != previous.canGoBack ||
-        canGoForward != previous.canGoForward
+        canGoForward != previous.canGoForward ||
+        httpStatusCode != previous.httpStatusCode
 
 private fun GeckoBrowserSessionState.toEngineEvent(
     tabId: String,
@@ -693,4 +694,5 @@ private fun GeckoBrowserSessionState.toEngineEvent(
     canGoForward = canGoForward,
     failureDescription = failureDescription,
     isLoading = isLoading,
+    httpStatusCode = httpStatusCode,
 )

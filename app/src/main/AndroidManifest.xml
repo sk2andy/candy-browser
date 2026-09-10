@@ -233,6 +233,16 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".DownloadsActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".FavoritesActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <receiver
             android:name=".CandySearchWidgetProvider"
             android:exported="false"

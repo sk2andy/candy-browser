@@ -27,6 +27,7 @@ internal data class GeckoBrowserSessionState(
     val lastNavigationSucceeded: Boolean? = null,
     val crashed: Boolean = false,
     val failureDescription: String? = null,
+    val httpStatusCode: Int? = null,
 )
 
 internal fun interface GeckoBrowserSessionStateListener {

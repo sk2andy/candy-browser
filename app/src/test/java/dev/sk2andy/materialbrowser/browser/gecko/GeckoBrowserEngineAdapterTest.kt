@@ -509,7 +509,47 @@ class GeckoBrowserEngineAdapterTest {
     }
 
     @Test
-    fun `Gecko crash detaches dead session but preserves recovery event`() {
+    fun `late main frame HTTP status is forwarded as shared state`() {
+        val session = FakeGeckoBrowserSession()
+        val events = mutableListOf<BrowserEngineEvent>()
+        GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = events::add,
+        )
+
+        session.emit(
+            GeckoBrowserSessionState(url = "https://example.com/missing", isLoading = true),
+        )
+        session.emit(
+            GeckoBrowserSessionState(
+                url = "https://example.com/missing",
+                isLoading = false,
+                lastNavigationSucceeded = true,
+            ),
+        )
+        session.emit(
+            GeckoBrowserSessionState(
+                url = "https://example.com/missing",
+                isLoading = false,
+                lastNavigationSucceeded = true,
+                httpStatusCode = 404,
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                BrowserEngineEventType.NavigationStarted,
+                BrowserEngineEventType.NavigationCommitted,
+                BrowserEngineEventType.StateChanged,
+            ),
+            events.map(BrowserEngineEvent::type),
+        )
+        assertEquals(404, events.last().httpStatusCode)
+    }
+
+    @Test
+    fun `Gecko content process termination detaches dead session but preserves recovery event`() {
         val session = FakeGeckoBrowserSession()
         val events = mutableListOf<BrowserEngineEvent>()
         val adapter = GeckoBrowserEngineSessionAdapter(
@@ -522,6 +562,7 @@ class GeckoBrowserEngineAdapterTest {
         adapter.execute(BrowserEngineCommands.reload())
 
         assertEquals(listOf(BrowserEngineEventType.Crashed), events.map(BrowserEngineEvent::type))
+        assertEquals("Gecko content process terminated", events.single().failureDescription)
         assertTrue(session.actions.isEmpty())
     }
 }

@@ -52,6 +52,8 @@ enum class BrowserFeatureMenuAction {
     SnoozeTab,
     DockAddressBar,
     OpenSnoozedTabs,
+    OpenFavorites,
+    OpenDownloads,
     OpenHistory,
     OpenSettings,
     OpenFirefoxExtensions,
@@ -92,6 +94,8 @@ enum class BrowserFeatureMenuLabelKey {
     SnoozeTab,
     DockAddressBar,
     SnoozedTabs,
+    Favorites,
+    Downloads,
     History,
     Settings,
     FirefoxExtensions,
@@ -416,6 +420,8 @@ object BrowserFeatureMenuRules {
                 BrowserFeatureMenuLabelKey.SnoozedTabs,
             ),
         )
+        add(navigation(BrowserFeatureMenuAction.OpenFavorites, BrowserFeatureMenuLabelKey.Favorites))
+        add(navigation(BrowserFeatureMenuAction.OpenDownloads, BrowserFeatureMenuLabelKey.Downloads))
         add(navigation(BrowserFeatureMenuAction.OpenHistory, BrowserFeatureMenuLabelKey.History))
         if (capabilities.supportsFirefoxExtensions) {
             add(
