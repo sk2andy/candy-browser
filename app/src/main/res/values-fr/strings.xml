@@ -273,6 +273,9 @@
     <string name="favorites_save_failed">Impossible d’enregistrer les favoris</string>
     <string name="content_actions_title">Contenu de la page</string>
     <string name="action_open_link_background_tab">Ouvrir le lien dans un nouvel onglet en arrière-plan</string>
+    <string name="action_open_link_foreground_tab">Ouvrir le lien dans un nouvel onglet au premier plan</string>
+    <string name="action_open_link_private_background_tab">Ouvrir le lien dans un nouvel onglet privé en arrière-plan</string>
+    <string name="action_open_link_private_foreground_tab">Ouvrir le lien dans un nouvel onglet privé au premier plan</string>
     <string name="link_peek_title">Aperçu du lien</string>
     <string name="action_open_in_new_tab">Ouvrir dans un nouvel onglet</string>
     <string name="action_open_in_new_tab_and_switch">Ouvrir dans un nouvel onglet et y accéder</string>

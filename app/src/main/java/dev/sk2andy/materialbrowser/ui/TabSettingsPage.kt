@@ -263,7 +263,12 @@ internal fun TabsAndGesturesSettingsPage(
 private fun LinkLongPressAction.labelRes(): Int = when (this) {
     LinkLongPressAction.LinkPeek -> R.string.link_peek_title
     LinkLongPressAction.CopyLink -> R.string.external_link_preview_copy_link
-    LinkLongPressAction.OpenInNewTab -> R.string.action_open_in_new_tab
-    LinkLongPressAction.OpenInPrivateTab -> R.string.action_open_link_in_private_tab
     LinkLongPressAction.Share -> R.string.action_share
+    LinkLongPressAction.DownloadLink -> R.string.action_download_link
+    LinkLongPressAction.OpenInNewTabInBackground -> R.string.action_open_link_background_tab
+    LinkLongPressAction.OpenInNewTabInForeground -> R.string.action_open_link_foreground_tab
+    LinkLongPressAction.OpenInPrivateTabInBackground ->
+        R.string.action_open_link_private_background_tab
+    LinkLongPressAction.OpenInPrivateTabInForeground ->
+        R.string.action_open_link_private_foreground_tab
 }

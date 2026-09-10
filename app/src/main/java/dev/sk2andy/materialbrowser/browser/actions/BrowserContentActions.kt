@@ -29,6 +29,8 @@ class WebContentActionState {
         private set
     var addressBarPulseNonce by mutableIntStateOf(0)
         private set
+    var longPressActionHapticNonce by mutableIntStateOf(0)
+        private set
     var linkPeekProgress by mutableFloatStateOf(0f)
         private set
     var isLinkPeekArmed by mutableStateOf(false)
@@ -88,6 +90,10 @@ class WebContentActionState {
 
     fun requestAddressBarPulse() {
         addressBarPulseNonce++
+    }
+
+    fun requestLongPressActionHaptic() {
+        longPressActionHapticNonce++
     }
 }
 

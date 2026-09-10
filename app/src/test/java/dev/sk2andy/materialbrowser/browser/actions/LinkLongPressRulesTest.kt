@@ -11,9 +11,16 @@ class LinkLongPressRulesTest {
         val expected = mapOf(
             LinkLongPressAction.LinkPeek to LinkLongPressOutcome.ShowContext,
             LinkLongPressAction.CopyLink to LinkLongPressOutcome.CopyLink,
-            LinkLongPressAction.OpenInNewTab to LinkLongPressOutcome.OpenInNewTab,
-            LinkLongPressAction.OpenInPrivateTab to LinkLongPressOutcome.OpenInPrivateTab,
             LinkLongPressAction.Share to LinkLongPressOutcome.Share,
+            LinkLongPressAction.DownloadLink to LinkLongPressOutcome.DownloadLink,
+            LinkLongPressAction.OpenInNewTabInBackground to
+                LinkLongPressOutcome.OpenInNewTabInBackground,
+            LinkLongPressAction.OpenInNewTabInForeground to
+                LinkLongPressOutcome.OpenInNewTabInForeground,
+            LinkLongPressAction.OpenInPrivateTabInBackground to
+                LinkLongPressOutcome.OpenInPrivateTabInBackground,
+            LinkLongPressAction.OpenInPrivateTabInForeground to
+                LinkLongPressOutcome.OpenInPrivateTabInForeground,
         )
 
         expected.forEach { (action, outcome) ->
@@ -39,14 +46,19 @@ class LinkLongPressRulesTest {
     }
 
     @Test
-    fun `unavailable private action falls back to Link Peek context`() {
-        assertEquals(
-            LinkLongPressOutcome.ShowContext,
-            LinkLongPressRules.outcome(
-                action = LinkLongPressAction.OpenInPrivateTab,
-                target = link,
-                canOpenInPrivate = false,
-            ),
-        )
+    fun `unavailable private actions fall back to Link Peek context`() {
+        listOf(
+            LinkLongPressAction.OpenInPrivateTabInBackground,
+            LinkLongPressAction.OpenInPrivateTabInForeground,
+        ).forEach { action ->
+            assertEquals(
+                LinkLongPressOutcome.ShowContext,
+                LinkLongPressRules.outcome(
+                    action = action,
+                    target = link,
+                    canOpenInPrivate = false,
+                ),
+            )
+        }
     }
 }

@@ -90,6 +90,16 @@ class WebContentActionStateTest {
     }
 
     @Test
+    fun `long press action haptic nonce increments only when explicitly requested`() {
+        val state = WebContentActionState()
+
+        state.requestLongPressActionHaptic()
+        state.requestLongPressActionHaptic()
+
+        assertEquals(2, state.longPressActionHapticNonce)
+    }
+
+    @Test
     fun `show and dismiss invalidate pending content replies`() {
         val state = WebContentActionState()
         val initialRevision = state.revision

@@ -158,9 +158,16 @@ class TabSettingsScreenInstrumentedTest {
         val actions = listOf(
             LinkLongPressAction.LinkPeek to R.string.link_peek_title,
             LinkLongPressAction.CopyLink to R.string.external_link_preview_copy_link,
-            LinkLongPressAction.OpenInNewTab to R.string.action_open_in_new_tab,
-            LinkLongPressAction.OpenInPrivateTab to R.string.action_open_link_in_private_tab,
             LinkLongPressAction.Share to R.string.action_share,
+            LinkLongPressAction.DownloadLink to R.string.action_download_link,
+            LinkLongPressAction.OpenInNewTabInBackground to
+                R.string.action_open_link_background_tab,
+            LinkLongPressAction.OpenInNewTabInForeground to
+                R.string.action_open_link_foreground_tab,
+            LinkLongPressAction.OpenInPrivateTabInBackground to
+                R.string.action_open_link_private_background_tab,
+            LinkLongPressAction.OpenInPrivateTabInForeground to
+                R.string.action_open_link_private_foreground_tab,
         )
         actions.forEach { (candidate, label) ->
             composeRule.onNode(
