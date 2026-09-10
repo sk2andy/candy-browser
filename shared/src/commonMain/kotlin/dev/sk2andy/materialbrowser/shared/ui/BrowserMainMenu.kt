@@ -129,6 +129,7 @@ data class BrowserMainMenuStyle(
     val rowLabelFontSize: TextUnit = TextUnit.Unspecified,
     val rowSupportingTextFontSize: TextUnit = TextUnit.Unspecified,
     val toggleTrackColor: Color? = null,
+    val useExpressiveToggleButtons: Boolean = false,
 )
 
 interface BrowserMainMenuResources {
@@ -646,6 +647,33 @@ private fun BrowserMainMenuItemGroup(
             }
             val itemModifier = item.testTagModifier()
             when {
+                effects.style.useExpressiveToggleButtons &&
+                    item.kind == BrowserFeatureMenuItemKind.Toggle &&
+                    item.checked != null -> {
+                    BrowserMenuExpressiveToggleButton(
+                        label = resources.label(item),
+                        icon = { resources.icon(item, Modifier.size(20.dp)) },
+                        checked = item.checked,
+                        enabled = item.enabled,
+                        onCheckedChange = { onToggle(item) },
+                        modifier = itemModifier,
+                        minHeight = effects.style.rowMinHeight,
+                        horizontalPadding = effects.style.rowHorizontalPadding,
+                        verticalPadding = effects.style.rowVerticalPadding,
+                        labelFontSize = effects.style.rowLabelFontSize,
+                        uncheckedContainerColor = effects.containerColor(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            frostedAlpha = 1f,
+                        ),
+                        uncheckedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        checkedContainerColor = effects.containerColor(
+                            color = MaterialTheme.colorScheme.secondary,
+                            frostedAlpha = 1f,
+                            role = BrowserMainMenuContainerRole.Selected,
+                        ),
+                        checkedContentColor = MaterialTheme.colorScheme.onSecondary,
+                    )
+                }
                 item.action == BrowserFeatureMenuAction.ToggleDomainMute -> {
                     BrowserMenuIconToggleItem(
                         label = resources.label(item),

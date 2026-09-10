@@ -1,5 +1,9 @@
 package dev.sk2andy.materialbrowser.shared.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,12 +15,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +31,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,6 +39,21 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+internal object BrowserMenuExpressiveToggleRules {
+    val SelectedCornerRadius = 12.dp
+    val PressedCornerRadius = 8.dp
+
+    fun cornerRadius(
+        checked: Boolean,
+        pressed: Boolean,
+        buttonHeight: Dp,
+    ): Dp = when {
+        pressed -> PressedCornerRadius
+        checked -> SelectedCornerRadius
+        else -> buttonHeight / 2
+    }
+}
 
 /** Shared rendering primitives extracted from Android's production browser menu. */
 @Composable
@@ -244,6 +267,86 @@ fun BrowserMenuToggleItem(
                         checkedTrackColor = checkedTrackColor,
                     )
                 },
+            )
+        }
+    }
+}
+
+@Composable
+internal fun BrowserMenuExpressiveToggleButton(
+    label: String,
+    icon: @Composable () -> Unit,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    minHeight: Dp = 48.dp,
+    horizontalPadding: Dp = 16.dp,
+    verticalPadding: Dp = 0.dp,
+    labelFontSize: TextUnit = TextUnit.Unspecified,
+    uncheckedContainerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    uncheckedContentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    checkedContainerColor: Color = MaterialTheme.colorScheme.secondary,
+    checkedContentColor: Color = MaterialTheme.colorScheme.onSecondary,
+) {
+    val colors = MaterialTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val cornerRadius by animateDpAsState(
+        targetValue = BrowserMenuExpressiveToggleRules.cornerRadius(
+            checked = checked,
+            pressed = pressed,
+            buttonHeight = minHeight,
+        ),
+        label = "browser menu toggle corner radius",
+    )
+    val containerColor by animateColorAsState(
+        targetValue = when {
+            !enabled -> colors.onSurface.copy(alpha = 0.1f)
+            checked -> checkedContainerColor
+            else -> uncheckedContainerColor
+        },
+        label = "browser menu toggle container color",
+    )
+    val contentColor by animateColorAsState(
+        targetValue = when {
+            !enabled -> colors.onSurfaceVariant.copy(alpha = 0.38f)
+            checked -> checkedContentColor
+            else -> uncheckedContentColor
+        },
+        label = "browser menu toggle content color",
+    )
+    Surface(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { role = Role.Checkbox },
+        enabled = enabled,
+        shape = RoundedCornerShape(cornerRadius),
+        color = containerColor,
+        contentColor = contentColor,
+        interactionSource = interactionSource,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = minHeight)
+                .padding(
+                    horizontal = horizontalPadding,
+                    vertical = verticalPadding,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            icon()
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = labelFontSize,
             )
         }
     }

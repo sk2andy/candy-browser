@@ -19,6 +19,12 @@ The same effect seam supplies additive iOS presentation tokens: Apple-style type
 a compact 44-point control rhythm, horizontal overflow glyph, subtle tab-count treatment and continuous
 grouped menu rows. Android keeps the existing Candy Material presentation; neither platform forks the menu
 or address component tree.
+Android renders page-specific binary menu actions as compact Material 3 Expressive tonal toggle
+buttons: unselected controls use the round `secondaryContainer` treatment, selected controls morph
+to a 12dp rounded-square `secondary` treatment, and pressed controls use the shared 8dp shape. All
+colors resolve from `MaterialTheme.colorScheme`, so the saved Candy or Neutral palette and Android
+dynamic device colors continue to follow the appearance setting. iOS keeps its native-style switch
+presentation through the shared menu effect seam.
 
 ## Address flow
 

@@ -9,6 +9,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
@@ -260,6 +264,12 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CookieBannerRemoval)
             .performScrollTo()
             .assertIsDisplayed()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Role,
+                    Role.Checkbox,
+                ),
+            )
             .assertIsOff()
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
@@ -299,6 +309,15 @@ class BrowserMainMenuInstrumentedTest {
             .performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceSafeArea).assertIsOn()
+        composeRule.onNodeWithTag(DomainMuteMenuTestTags.Item)
+            .performScrollTo()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Role,
+                    Role.Checkbox,
+                ),
+            )
+            .assertIsOff()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
         assertEquals(1, cookieChanges.get())
         assertEquals(1, scrollChanges.get())
