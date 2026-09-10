@@ -91,4 +91,63 @@ class PageTranslationRulesTest {
         assertEquals("en", PageTranslationRules.targetLanguage(""))
         assertEquals("en", PageTranslationRules.targetLanguage("de-DE"))
     }
+
+    @Test
+    fun providerPagesAcceptOnlyExactEntryAndResultHosts() {
+        val accepted = mapOf(
+            PageTranslationProvider.Google to listOf(
+                "https://translate.google.com/translate?u=https%3A%2F%2Fexample.com",
+                "https://example-com.translate.goog/",
+            ),
+            PageTranslationProvider.Yandex to listOf(
+                "https://translate.yandex.com/translate?url=https%3A%2F%2Fexample.com",
+                "https://translated.turbopages.org/proxy_u/en/https/example.com/",
+            ),
+            PageTranslationProvider.Kagi to listOf(
+                "https://translate.kagi.com/example.com?to=en",
+            ),
+        )
+        accepted.forEach { (provider, urls) ->
+            urls.forEach { url -> assertTrue(PageTranslationRules.isProviderPage(provider, url)) }
+        }
+
+        listOf(
+            "https://translate.google.com.evil.example/",
+            "https://translate.goog.evil.example/",
+            "https://translated.turbopages.org.evil.example/",
+            "https://translate.kagi.com.evil.example/",
+        ).forEach { url ->
+            PageTranslationProvider.entries.forEach { provider ->
+                assertFalse(PageTranslationRules.isProviderPage(provider, url))
+            }
+        }
+    }
+
+    @Test
+    fun resultPagesExcludeProviderEntryRoutes() {
+        assertTrue(
+            PageTranslationRules.isProviderResultPage(
+                PageTranslationProvider.Google,
+                "https://mt-cc.translate.goog/download/",
+            ),
+        )
+        assertTrue(
+            PageTranslationRules.isProviderResultPage(
+                PageTranslationProvider.Yandex,
+                "https://translated.turbopages.org/proxy_u/en/https/mt.cc/download/",
+            ),
+        )
+        assertFalse(
+            PageTranslationRules.isProviderResultPage(
+                PageTranslationProvider.Google,
+                "https://translate.google.com/translate",
+            ),
+        )
+        assertFalse(
+            PageTranslationRules.isProviderResultPage(
+                PageTranslationProvider.Yandex,
+                "https://translate.yandex.com/translate",
+            ),
+        )
+    }
 }

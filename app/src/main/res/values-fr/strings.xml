@@ -927,6 +927,9 @@
     <string name="popup_blocked">Fenêtre pop-up bloquée</string>
     <string name="action_open_popup">Ouvrir</string>
     <string name="action_translate_page">Traduire la page</string>
+    <string name="page_translation_failed">%1$s n’a pas pu traduire cette page.</string>
+    <string name="action_try_yandex_translation">Essayer Yandex</string>
+    <string name="action_open_original_page">Ouvrir l’original</string>
     <string name="settings_translation_provider">Service de traduction des pages</string>
     <string name="settings_translation_provider_summary">Lors de la traduction, l’adresse complète de la page est envoyée à ce service. Les onglets privés ne conservent aucun état de traduction.</string>
     <string name="settings_translation_provider_google_summary">Google Traduction peut afficher une page vide sur certains sites web. Candy utilise le traducteur de sites web de Google, et non la traduction intégrée de Chrome. Dans ce cas, choisissez Yandex. L’adresse complète de la page est envoyée à Google.</string>

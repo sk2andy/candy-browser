@@ -19,6 +19,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.json.JSONObject
 
 @RunWith(AndroidJUnit4::class)
 class GeckoReaderViewInstrumentedTest {
@@ -105,8 +106,11 @@ class GeckoReaderViewInstrumentedTest {
             )
 
             val result = ReaderExtractionParser.parseJson(rawResult.get())
+            val payload = JSONObject(requireNotNull(rawResult.get()))
 
             assertTrue(result is ReaderExtractionResult.Success)
+            assertTrue(payload.getBoolean("hasVisibleContent"))
+            assertTrue(payload.getString("visibleText").contains("Gecko Reader Story"))
             val document = (result as ReaderExtractionResult.Success).document
             assertEquals("Gecko Reader Story", document.title)
             assertEquals(server.url, document.sourceUrl)

@@ -23,6 +23,7 @@ import dev.sk2andy.materialbrowser.browser.FederatedLoginOffer
 import dev.sk2andy.materialbrowser.browser.FederatedLoginPromptChoice
 import dev.sk2andy.materialbrowser.browser.CaptchaCompatibilityOffer
 import dev.sk2andy.materialbrowser.browser.CaptchaCompatibilityPromptChoice
+import dev.sk2andy.materialbrowser.browser.PageTranslationRecoveryAction
 
 @Composable
 internal fun BrowserOfferSnackbarEffects(
@@ -41,6 +42,12 @@ internal fun BrowserOfferSnackbarEffects(
         controller.captchaCompatibilityOffer?.provider?.displayName.orEmpty(),
     )
     val captchaOptionsLabel = stringResource(R.string.captcha_compatibility_options)
+    val translationFailedMessage = stringResource(
+        R.string.page_translation_failed,
+        controller.pageTranslationRecoveryOffer?.provider?.displayName.orEmpty(),
+    )
+    val tryYandexLabel = stringResource(R.string.action_try_yandex_translation)
+    val openOriginalLabel = stringResource(R.string.action_open_original_page)
     val blockedPopupOffer = controller.blockedPopupOffer
     LaunchedEffect(blockedPopupOffer?.token) {
         val offer = blockedPopupOffer ?: return@LaunchedEffect
@@ -58,6 +65,28 @@ internal fun BrowserOfferSnackbarEffects(
             }
         } finally {
             if (!opened) controller.dismissBlockedPopup(offer.token)
+        }
+    }
+    val pageTranslationRecoveryOffer = controller.pageTranslationRecoveryOffer
+    LaunchedEffect(pageTranslationRecoveryOffer?.token) {
+        val offer = pageTranslationRecoveryOffer ?: return@LaunchedEffect
+        var recovered = false
+        try {
+            val result = hostState.showSnackbar(
+                message = translationFailedMessage,
+                actionLabel = when (offer.action) {
+                    PageTranslationRecoveryAction.TryYandex -> tryYandexLabel
+                    PageTranslationRecoveryAction.OpenOriginal -> openOriginalLabel
+                },
+                withDismissAction = true,
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                recovered = true
+                controller.recoverPageTranslation(offer.token)
+            }
+        } finally {
+            if (!recovered) controller.dismissPageTranslationRecovery(offer.token)
         }
     }
     val federatedLoginOffer = controller.federatedLoginOffer
