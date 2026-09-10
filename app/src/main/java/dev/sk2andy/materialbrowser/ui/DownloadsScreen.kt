@@ -22,17 +22,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,7 +63,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun DownloadsScreen(
     downloads: List<DownloadEntry>,
@@ -131,25 +129,13 @@ internal fun DownloadsScreen(
                 .testTag(DownloadsScreenTestTags.List),
         ) {
             item(key = "search") {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it.take(DownloadHistoryRules.MAX_QUERY_CHARS) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .testTag(DownloadsScreenTestTags.SearchField),
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.downloads_search)) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.downloads_clear_search),
-                                )
-                            }
-                        }
+                LibrarySearchBar(
+                    query = query,
+                    placeholder = stringResource(R.string.downloads_search),
+                    clearContentDescription = stringResource(R.string.downloads_clear_search),
+                    testTag = DownloadsScreenTestTags.SearchField,
+                    onQueryChange = {
+                        query = it.take(DownloadHistoryRules.MAX_QUERY_CHARS)
                     },
                 )
             }
@@ -224,6 +210,7 @@ internal fun DownloadsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun DownloadRow(
     entry: DownloadEntry,
@@ -283,14 +270,14 @@ private fun DownloadRow(
         )
         if (entry.status.isActive) {
             if (progress == null) {
-                LinearProgressIndicator(
+                LinearWavyProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .testTag(DownloadsScreenTestTags.progress(entry.id)),
                 )
             } else {
-                LinearProgressIndicator(
+                LinearWavyProgressIndicator(
                     progress = { progress },
                     modifier = Modifier
                         .fillMaxWidth()

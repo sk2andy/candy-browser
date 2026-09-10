@@ -343,6 +343,13 @@
     <string name="settings_download_manager_ask">Perguntar sempre</string>
     <string name="settings_download_manager_external_unavailable">A aplicação selecionada não está disponível</string>
     <string name="settings_download_no_external_managers">Não está instalado nenhum gestor de transferências externo compatível.</string>
+    <string name="settings_download_folder_title">Pasta de transferências</string>
+    <string name="settings_download_folder_default">Transferências</string>
+    <string name="settings_download_folder_path">Transferências/%1$s</string>
+    <string name="settings_download_folder_summary">Escolha uma subpasta em Transferências para o gestor integrado do Candy.</string>
+    <string name="settings_download_folder_input">Subpasta</string>
+    <string name="settings_download_folder_reset">Usar a pasta Transferências</string>
+    <string name="settings_download_folder_invalid">Use um nome de pasta relativo sem segmentos . ou ...</string>
     <string name="settings_download_one_dm_session_title">Partilhar dados da sessão com o 1DM</string>
     <string name="settings_download_one_dm_session_summary">Partilha cookies, agente do utilizador e referenciador com o 1DM para permitir transferências com sessão iniciada. A aplicação pode usá-los para aceder à sua sessão. Os dados da sessão nunca são partilhados na navegação privada.</string>
     <string name="settings_section_tabs">Separadores</string>

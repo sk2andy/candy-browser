@@ -108,6 +108,8 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRuntime
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
+import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.DownloadDirectoryRules
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
@@ -1501,7 +1503,10 @@ private class SystemWebViewBrowserEngineSession(
             )
             .setDestinationInExternalPublicDir(
                 Environment.DIRECTORY_DOWNLOADS,
-                fileName,
+                DownloadDirectoryRules.downloadManagerFilePath(
+                    BrowserSessionStore(appContext).loadDownloadSettings().downloadSubdirectory,
+                    fileName,
+                ),
             )
         WebViewProfileCookies.managerFor(webView)?.getCookie(url)
             ?.let { request.addRequestHeader("Cookie", it) }

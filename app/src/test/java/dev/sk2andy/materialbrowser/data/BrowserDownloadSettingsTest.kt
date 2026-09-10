@@ -14,6 +14,7 @@ class BrowserDownloadSettingsTest {
         assertEquals(DownloadManagerMode.BuiltIn, settings.managerMode)
         assertNull(settings.externalManagerId)
         assertFalse(settings.shareSessionDataWithOneDm)
+        assertNull(settings.downloadSubdirectory)
     }
 
     @Test
@@ -32,5 +33,33 @@ class BrowserDownloadSettingsTest {
     @Test
     fun `unknown mode wire value falls back to built in`() {
         assertEquals(DownloadManagerMode.BuiltIn, DownloadManagerMode.fromStableId("future"))
+    }
+
+    @Test
+    fun `download subdirectory is normalized and unsafe paths fall back to root`() {
+        assertEquals(
+            "Candy/Images",
+            BrowserDownloadSettings(downloadSubdirectory = " /Candy/Images/ ")
+                .normalized()
+                .downloadSubdirectory,
+        )
+        assertNull(
+            BrowserDownloadSettings(downloadSubdirectory = "Candy/ .. /Secrets")
+                .normalized()
+                .downloadSubdirectory,
+        )
+    }
+
+    @Test
+    fun `destination paths stay inside downloads`() {
+        assertEquals("Download", DownloadDirectoryRules.mediaStoreRelativePath(null))
+        assertEquals(
+            "Download/Candy/Images",
+            DownloadDirectoryRules.mediaStoreRelativePath("Candy/Images"),
+        )
+        assertEquals(
+            "Candy/Images/file.pdf",
+            DownloadDirectoryRules.downloadManagerFilePath("Candy/Images", "file.pdf"),
+        )
     }
 }
