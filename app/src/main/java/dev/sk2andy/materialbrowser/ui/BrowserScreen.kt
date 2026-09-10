@@ -174,6 +174,7 @@ internal fun BrowserScreen(
     onManageFirefoxExtensions: (() -> Unit)? = onOpenFirefoxExtensions,
     openAddressEditorOnLaunch: Boolean = false,
     launcherAddressEditorRequestId: Int = 0,
+    hardwareTabChangeRequestId: Int = 0,
 ) {
     val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
         onTabOverviewPortraitLockChanged,
@@ -240,6 +241,7 @@ internal fun BrowserScreen(
     val searchSuggestionClient = remember { SearchSuggestionClient() }
     var highlightedSuggestionIndex by remember { mutableIntStateOf(-1) }
     var addressFocusNonce by remember { mutableIntStateOf(0) }
+    var addressEditorOpenGeneration by remember { mutableIntStateOf(0) }
     var pendingCommand by remember { mutableStateOf<CommandSuggestion?>(null) }
     val overviewGestureProgress = remember { mutableFloatStateOf(0f) }
     val overviewMorphProgress = remember { mutableFloatStateOf(0f) }
@@ -551,8 +553,18 @@ internal fun BrowserScreen(
     val openAddressEditor: () -> Unit = {
         if (activeCommandExecutionId == null) {
             controller.closeFindInPage()
+            val openGeneration = ++addressEditorOpenGeneration
+            val requestedTabId = controller.selectedTabId
             controller.refreshSelectedTabPreview {
-                val initialAddress = selectedTab.url.takeUnless { it == BLANK_URL }.orEmpty()
+                if (
+                    openGeneration != addressEditorOpenGeneration ||
+                    requestedTabId != controller.selectedTabId
+                ) {
+                    return@refreshSelectedTabPreview
+                }
+                val initialAddress = controller.selectedTab.url
+                    .takeUnless { it == BLANK_URL }
+                    .orEmpty()
                 addressValue = TextFieldValue(
                     text = initialAddress,
                     selection = TextRange(initialAddress.length, 0),
@@ -568,6 +580,15 @@ internal fun BrowserScreen(
             closeTabOverview()
             settingsVisible = false
             openAddressEditor()
+        }
+    }
+    LaunchedEffect(hardwareTabChangeRequestId) {
+        if (hardwareTabChangeRequestId > 0) {
+            addressEditorOpenGeneration++
+            addressEditorVisible = false
+            highlightedSuggestionIndex = -1
+            pendingCommand = null
+            commandFeedback = null
         }
     }
     fun createTabAndConfirm(isIncognito: Boolean, emitHaptic: Boolean): Boolean {
@@ -1106,7 +1127,10 @@ internal fun BrowserScreen(
         }
     }
 
-    BrowserImeOwnershipEffect(controller, addressEditorVisible)
+    BrowserImeOwnershipEffect(
+        controller = controller,
+        ownsIme = addressEditorVisible || controller.findInPageState != null,
+    )
     val firefoxExtensionOptionsTitle = controller.selectedFirefoxExtensionOptionsTitle
     val showFirefoxExtensionOptionsChrome =
         firefoxExtensionOptionsTitle != null && !webViewVideoOnlyPresentation

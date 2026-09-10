@@ -53,6 +53,8 @@ internal interface BrowserEngineViewPort {
 
     fun scrollToVerticalOffset(offsetPx: Int) = Unit
 
+    fun scrollByVerticalOffset(deltaPx: Int) = Unit
+
     /** Opaque Gecko state for same-device resume; never a cross-engine archive payload. */
     fun sessionStateSnapshot(): String? = null
 
@@ -382,6 +384,11 @@ internal class GeckoBrowserEngineSessionAdapter(
     @UiThread
     override fun scrollToVerticalOffset(offsetPx: Int) {
         if (!closed) session.scrollToVerticalOffset(offsetPx)
+    }
+
+    @UiThread
+    override fun scrollByVerticalOffset(deltaPx: Int) {
+        if (!closed) session.scrollByVerticalOffset(deltaPx)
     }
 
     @UiThread

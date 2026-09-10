@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Region
 import android.os.Handler
 import android.os.Looper
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
@@ -64,6 +65,7 @@ import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.GeckoWebExecutor
 import org.mozilla.geckoview.ScreenLength
 import org.mozilla.geckoview.MediaSession
+import org.mozilla.geckoview.PanZoomController
 import org.mozilla.geckoview.StorageController
 import org.mozilla.geckoview.WebResponse
 import org.mozilla.geckoview.WebRequest
@@ -2209,6 +2211,14 @@ private class GeckoViewBrowserSession(
     }
 
     @UiThread
+    override fun scrollByVerticalOffset(deltaPx: Int) {
+        val currentOffsetPx = privacyBinding.scrollMetrics()?.offsetPx ?: 0
+        boundView?.scrollToVerticalOffset(
+            (currentOffsetPx + deltaPx).coerceAtLeast(0),
+        )
+    }
+
+    @UiThread
     override fun awaitContentPresented(listener: () -> Unit) {
         if (!closed) contentPresentationGate.awaitContentPresented(listener)
     }
@@ -2693,10 +2703,18 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 
     fun cancelActiveTouch(): Boolean = engineView.cancelActiveTouch()
 
+    fun requestEngineFocus(): Boolean = engineView.requestFocus()
+
+    fun dispatchEngineKeyEvent(event: KeyEvent): Boolean = engineView.dispatchKeyEvent(event)
+
+    fun dispatchEngineGenericMotionEvent(event: MotionEvent): Boolean =
+        engineView.dispatchGenericMotionEvent(event)
+
     fun scrollToVerticalOffset(offsetPx: Int) {
         engineView.panZoomController.scrollTo(
             ScreenLength.fromPixels(0.0),
             ScreenLength.fromPixels(offsetPx.coerceAtLeast(0).toDouble()),
+            PanZoomController.SCROLL_BEHAVIOR_AUTO,
         )
     }
 

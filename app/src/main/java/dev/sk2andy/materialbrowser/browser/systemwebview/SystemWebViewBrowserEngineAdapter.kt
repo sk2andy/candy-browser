@@ -673,6 +673,10 @@ private class SystemWebViewBrowserEngineSession(
         webView.scrollTo(webView.scrollX, offsetPx.coerceAtLeast(0))
     }
 
+    override fun scrollByVerticalOffset(deltaPx: Int) {
+        webView.scrollBy(0, deltaPx)
+    }
+
     override fun platformViewStateSnapshot(): Bundle? {
         if (closed || isPrivate) return null
         val state = Bundle()
@@ -825,12 +829,8 @@ private class SystemWebViewBrowserEngineSession(
                 ),
             )
         }
-        webView.setOnLongClickListener {
-            val hit = webView.hitTestResult
-            val target = WebViewHitTestResolver.resolve(hit.type, hit.extra)
-            target?.let { contentTargetListener?.onLongPress(it) }
-            target != null
-        }
+        webView.setOnLongClickListener { dispatchContentTargetFromHitTest() }
+        webView.setOnContextClickListener { dispatchContentTargetFromHitTest() }
         webView.webViewClient = browserClient()
         webView.webChromeClient = chromeClient()
         webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
@@ -851,6 +851,13 @@ private class SystemWebViewBrowserEngineSession(
         }
         installMediaBridge()
         installAutoplayPolicy()
+    }
+
+    private fun dispatchContentTargetFromHitTest(): Boolean {
+        val hit = webView.hitTestResult
+        val target = WebViewHitTestResolver.resolve(hit.type, hit.extra)
+        target?.let { contentTargetListener?.onLongPress(it) }
+        return target != null
     }
 
     private fun browserClient() = object : WebViewClient() {
