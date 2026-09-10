@@ -111,6 +111,7 @@ internal object TabReorderMotion {
         rowPitchPx: Float,
         columnCount: Int,
         allowedRange: IntRange,
+        leadingEmptyCellCount: Int = 0,
     ): Int {
         if (
             allowedRange.isEmpty() ||
@@ -120,13 +121,15 @@ internal object TabReorderMotion {
         ) {
             return sourceIndex
         }
-        val sourceRow = sourceIndex / columnCount
-        val sourceColumn = sourceIndex % columnCount
+        val safeLeadingEmptyCellCount = leadingEmptyCellCount.coerceAtLeast(0)
+        val sourceGridIndex = sourceIndex + safeLeadingEmptyCellCount
+        val sourceRow = sourceGridIndex / columnCount
+        val sourceColumn = sourceGridIndex % columnCount
         val targetRow = sourceRow + kotlin.math.round(dragOffsetPx.y / rowPitchPx).toInt()
         val targetColumn = (sourceColumn +
             kotlin.math.round(dragOffsetPx.x / columnPitchPx).toInt())
             .coerceIn(0, columnCount - 1)
-        return (targetRow * columnCount + targetColumn)
+        return (targetRow * columnCount + targetColumn - safeLeadingEmptyCellCount)
             .coerceIn(allowedRange.first, allowedRange.last)
     }
 

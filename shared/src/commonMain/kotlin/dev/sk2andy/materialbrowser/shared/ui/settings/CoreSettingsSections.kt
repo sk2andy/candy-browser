@@ -69,7 +69,7 @@ fun TabOverviewSettings(
         title = strings.listStartsAtBottom,
         subtitle = strings.listStartsAtBottomSummary,
         checked = listStartsAtBottom,
-        enabled = listStartsAtBottomAvailable && mode == TabOverviewMode.List,
+        enabled = listStartsAtBottomAvailable && mode != TabOverviewMode.Hero,
         onCheckedChange = onListStartsAtBottomChanged,
         modifier = listStartsAtBottomModifier,
     )

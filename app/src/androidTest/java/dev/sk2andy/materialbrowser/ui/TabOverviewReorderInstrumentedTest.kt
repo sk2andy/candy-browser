@@ -69,6 +69,12 @@ class TabOverviewReorderInstrumentedTest {
     fun gridTabsReorderAfterLongPressDrag() = verifyReorder(TabOverviewMode.Grid)
 
     @Test
+    fun bottomStartGridTabsReorderAfterLongPressDrag() = verifyReorder(
+        mode = TabOverviewMode.Grid,
+        startsAtBottom = true,
+    )
+
+    @Test
     fun heroStackCollapseExpandOpensConfiguredFolder() {
         lateinit var browserController: BrowserController
         lateinit var selectedTabId: String
@@ -334,6 +340,12 @@ class TabOverviewReorderInstrumentedTest {
     fun gridPinnedTabsJumpScrollsToPins() = verifyPinnedTabsJump(TabOverviewMode.Grid)
 
     @Test
+    fun bottomStartGridPinnedTabsJumpScrollsToPins() = verifyPinnedTabsJump(
+        mode = TabOverviewMode.Grid,
+        startsAtBottom = true,
+    )
+
+    @Test
     fun listPinnedTabsJumpScrollsToPins() = verifyPinnedTabsJump(TabOverviewMode.List)
 
     @Test
@@ -388,6 +400,46 @@ class TabOverviewReorderInstrumentedTest {
             .boundsInRoot
 
         assertTrue(newestBounds.bottom > listBounds.center.y)
+    }
+
+    @Test
+    fun gridCanAnchorNewestTabsAtBottomRight() {
+        lateinit var browserController: BrowserController
+        lateinit var olderTabId: String
+        lateinit var newestTabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            olderTabId = requireNotNull(
+                browserController.createBackgroundTab("https://grid-older.example"),
+            )
+            newestTabId = requireNotNull(
+                browserController.createBackgroundTab("https://grid-newest.example"),
+            )
+            browserController.updateTabOverviewMode(TabOverviewMode.Grid)
+            browserController.updateTabListStartsAtBottom(true)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        val gridBounds = composeRule
+            .onNodeWithTag(TabOverviewChromeTestTags.Grid)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val olderBounds = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(olderTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val newestBounds = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(newestTabId))
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(newestBounds.center.x > gridBounds.center.x)
+        assertTrue(newestBounds.bottom > gridBounds.center.y)
+        assertTrue(olderBounds.center.x < newestBounds.center.x)
+        assertEquals(olderBounds.center.y, newestBounds.center.y, 1f)
     }
 
     @Test
@@ -721,6 +773,7 @@ class TabOverviewReorderInstrumentedTest {
     private fun verifyReorder(
         mode: TabOverviewMode,
         moveDurationMillis: Long = 240L,
+        startsAtBottom: Boolean = false,
     ) {
         lateinit var browserController: BrowserController
         lateinit var sourceTabId: String
@@ -737,6 +790,7 @@ class TabOverviewReorderInstrumentedTest {
             )
             browserController.selectTab(sourceTabId)
             browserController.updateTabOverviewMode(mode)
+            browserController.updateTabListStartsAtBottom(startsAtBottom)
         }
         setOverviewContent(browserController)
         composeRule.waitForIdle()
@@ -815,7 +869,10 @@ class TabOverviewReorderInstrumentedTest {
         composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).assertIsDisplayed()
     }
 
-    private fun verifyPinnedTabsJump(mode: TabOverviewMode) {
+    private fun verifyPinnedTabsJump(
+        mode: TabOverviewMode,
+        startsAtBottom: Boolean = false,
+    ) {
         lateinit var browserController: BrowserController
         lateinit var pinnedTabId: String
         composeRule.runOnIdle {
@@ -834,6 +891,7 @@ class TabOverviewReorderInstrumentedTest {
             }
             browserController.selectTab(newestTabId)
             browserController.updateTabOverviewMode(mode)
+            browserController.updateTabListStartsAtBottom(startsAtBottom)
         }
         setOverviewContent(browserController)
         composeRule.waitForIdle()

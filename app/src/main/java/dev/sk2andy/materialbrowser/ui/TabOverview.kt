@@ -271,7 +271,7 @@ internal fun TabOverview(
                     activeTabs.getOrNull(page.index)?.isPinned == true
                 }
                 TabOverviewMode.Grid -> gridState.layoutInfo.visibleItemsInfo.any { item ->
-                    activeTabs.getOrNull(item.index)?.isPinned == true
+                    activeTabs.any { tab -> tab.isPinned && item.key == tab.id }
                 }
                 TabOverviewMode.List -> listState.layoutInfo.visibleItemsInfo.any { item ->
                     activeTabs.getOrNull(item.index)?.isPinned == true
@@ -501,6 +501,11 @@ internal fun TabOverview(
         )
         val gridColumnPitchPx = with(density) { gridLayout.columnPitch.dp.toPx() }
         val gridRowPitchPx = with(density) { gridLayout.rowPitch.dp.toPx() }
+        val gridLeadingEmptyCellCount = TabOverviewGridRules.leadingEmptyCellCount(
+            tabCount = controller.activeTabs.size,
+            columnCount = gridLayout.columnCount,
+            startsAtBottom = controller.tabListStartsAtBottom,
+        )
         val listRowPitchPx = with(density) { 72.dp.toPx() }
         val heroPagerTopOverflow = TAB_OVERVIEW_TOP_SPACING +
             if (controller.profilesEnabled) {
@@ -520,10 +525,12 @@ internal fun TabOverview(
                     y = 0f,
                 )
                 TabOverviewMode.Grid -> {
-                    val sourceRow = sourceIndex / gridLayout.columnCount
-                    val sourceColumn = sourceIndex % gridLayout.columnCount
-                    val destinationRow = destinationIndex / gridLayout.columnCount
-                    val destinationColumn = destinationIndex % gridLayout.columnCount
+                    val sourceGridIndex = sourceIndex + gridLeadingEmptyCellCount
+                    val destinationGridIndex = destinationIndex + gridLeadingEmptyCellCount
+                    val sourceRow = sourceGridIndex / gridLayout.columnCount
+                    val sourceColumn = sourceGridIndex % gridLayout.columnCount
+                    val destinationRow = destinationGridIndex / gridLayout.columnCount
+                    val destinationColumn = destinationGridIndex % gridLayout.columnCount
                     Offset(
                         x = (destinationColumn - sourceColumn) * gridColumnPitchPx,
                         y = (destinationRow - sourceRow) * gridRowPitchPx,
@@ -609,6 +616,7 @@ internal fun TabOverview(
                         rowPitchPx = gridRowPitchPx,
                         columnCount = gridLayout.columnCount,
                         allowedRange = reorder.allowedRange,
+                        leadingEmptyCellCount = gridLeadingEmptyCellCount,
                     )
                     TabOverviewMode.List -> TabReorderMotion.horizontalDestinationIndex(
                         sourceIndex = reorder.sourceIndex,
@@ -1153,6 +1161,7 @@ internal fun TabOverview(
                     gridState = gridState,
                     layout = gridLayout,
                     tabs = controller.activeTabs,
+                    startsAtBottom = controller.tabListStartsAtBottom,
                     visible = visible,
                     selectedTabId = controller.selectedTabId,
                     initialTabId = initialTabId,

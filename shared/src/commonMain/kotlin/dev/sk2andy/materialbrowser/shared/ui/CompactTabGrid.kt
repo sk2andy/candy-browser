@@ -73,6 +73,7 @@ fun CompactTabGrid(
     gridState: LazyGridState,
     layout: TabOverviewGridRules.Layout,
     tabs: List<BrowserTab>,
+    startsAtBottom: Boolean,
     visible: Boolean,
     selectedTabId: String,
     initialTabId: String,
@@ -106,11 +107,25 @@ fun CompactTabGrid(
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
-    LaunchedEffect(visible, initialTabId, selectedTabId, tabs.size) {
+    val leadingEmptyCellCount = TabOverviewGridRules.leadingEmptyCellCount(
+        tabCount = tabs.size,
+        columnCount = layout.columnCount,
+        startsAtBottom = startsAtBottom,
+    )
+    LaunchedEffect(
+        visible,
+        initialTabId,
+        selectedTabId,
+        tabs.size,
+        startsAtBottom,
+        layout.columnCount,
+    ) {
         if (!visible || tabs.isEmpty()) return@LaunchedEffect
         withFrameNanos { }
-        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
-            gridState.scrollToItem(selectedIndex)
+        val targetTabIndex = if (startsAtBottom) tabs.lastIndex else selectedIndex
+        val targetGridIndex = leadingEmptyCellCount + targetTabIndex
+        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == targetGridIndex }) {
+            gridState.scrollToItem(targetGridIndex)
         }
     }
     val topFadeAlpha by animateFloatAsState(
@@ -149,8 +164,14 @@ fun CompactTabGrid(
                 bottom = 8.dp,
             ),
             horizontalArrangement = Arrangement.spacedBy(layout.itemSpacing.dp),
-            verticalArrangement = Arrangement.spacedBy(layout.itemSpacing.dp),
+            verticalArrangement = Arrangement.spacedBy(
+                space = layout.itemSpacing.dp,
+                alignment = if (startsAtBottom) Alignment.Bottom else Alignment.Top,
+            ),
         ) {
+            repeat(leadingEmptyCellCount) { index ->
+                item(key = "compact-grid-leading-space-$index") { Box(Modifier) }
+            }
             itemsIndexed(
                 items = tabs,
                 key = { _, tab -> tab.id },

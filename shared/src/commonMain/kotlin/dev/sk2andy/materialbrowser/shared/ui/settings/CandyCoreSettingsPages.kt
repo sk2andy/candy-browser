@@ -59,9 +59,9 @@ private val candyTabOverviewStrings = TabOverviewSettingsStrings(
         TabOverviewMode.Grid to "Kompaktes Raster",
         TabOverviewMode.List to "Liste ohne Vorschauen",
     ),
-    listStartsAtBottom = "Tab-Liste unten beginnen",
+    listStartsAtBottom = "Tabs unten beginnen",
     listStartsAtBottomSummary =
-        "Öffnet die Liste bei den neuesten Tabs und verankert kurze Listen in Daumennähe.",
+        "Öffnet Liste oder Raster bei den neuesten Tabs und verankert kurze Ansichten in Daumennähe.",
 )
 
 private val candyTranslationStrings = TranslationProviderSettingsStrings(

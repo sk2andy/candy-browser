@@ -824,6 +824,7 @@ private fun CandyTabOverview(
                         viewportHeight = maxHeight.value,
                     ),
                     tabs = tabs,
+                    startsAtBottom = false,
                     visible = true,
                     selectedTabId = selectedTabId,
                     initialTabId = initialTabId,
