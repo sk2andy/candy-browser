@@ -22,11 +22,6 @@ data class BrowserTab(
 val BrowserTab.isSynced: Boolean
     get() = syncCandyId != null
 
-enum class RootTabBackResult {
-    ReturnedToOpener,
-    ShowTabOverview,
-}
-
 val BrowserTab.isFreshBlankTab: Boolean
     get() = url == BLANK_URL &&
         title.isBlank() &&

@@ -55,9 +55,9 @@ class BrowserRootBackInstrumentedTest {
     }
 
     @Test
-    fun systemBackOnRootTabWithoutOpenerClosesTabAndOpensOverview() {
+    fun systemBackOnRootTabWithSiblingClosesTabAndOpensOverview() {
         val browserController = createController()
-        val closingTabId = browserController.selectedTabId
+        val closingTabId = browserController.createTab()
         setBrowserContent(browserController)
 
         composeRule.activityRule.scenario.onActivity { activity ->
@@ -68,6 +68,21 @@ class BrowserRootBackInstrumentedTest {
             browserController.tabs.none { it.id == closingTabId }
         }
         composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertExists()
+    }
+
+    @Test
+    fun singleRootTabLeavesSystemBackUnclaimed() {
+        val browserController = createController()
+        val tabId = browserController.selectedTabId
+        setBrowserContent(browserController)
+
+        composeRule.activityRule.scenario.onActivity { activity ->
+            assertFalse(activity.onBackPressedDispatcher.hasEnabledCallbacks())
+        }
+        composeRule.runOnIdle {
+            assertEquals(tabId, browserController.selectedTabId)
+            assertTrue(browserController.tabs.any { it.id == tabId })
+        }
     }
 
     @Test

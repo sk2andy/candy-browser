@@ -5547,20 +5547,18 @@ class BrowserController(
         return tabIds.size
     }
 
-    fun closeSelectedRootTab(): RootTabBackResult {
-        val closingTab = tabs.firstOrNull { it.id == selectedTabId }
-            ?: return RootTabBackResult.ShowTabOverview
-        if (!TabDeletionRules.canDelete(closingTab)) {
-            return RootTabBackResult.ShowTabOverview
+    internal val selectedRootTabBackDecision: RootTabBackDecision
+        get() = RootTabBackRules.decide(
+            tabs = activeTabs,
+            selectedTabId = selectedTabId,
+        )
+
+    internal fun performSelectedRootTabBack(): RootTabBackDecision {
+        val decision = selectedRootTabBackDecision
+        if (decision != RootTabBackDecision.DelegateToSystem) {
+            closeTab(selectedTabId)
         }
-        val openerTabId = closingTab.openerTabId
-            ?.takeIf { openerId -> activeTabs.any { it.id == openerId } }
-        closeTab(closingTab.id)
-        return if (openerTabId != null && selectedTabId == openerTabId) {
-            RootTabBackResult.ReturnedToOpener
-        } else {
-            RootTabBackResult.ShowTabOverview
-        }
+        return decision
     }
 
     fun snoozeContextLink(
