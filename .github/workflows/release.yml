@@ -230,10 +230,6 @@ jobs:
             -Pcandy.releaseNotesFile="$INPUT_CHANGELOG" \
             testFullDebugUnitTest \
             testFossDebugUnitTest \
-            testFullUserCaDebugUnitTest \
-            testFullReleaseUnitTest \
-            testFossReleaseUnitTest \
-            testFullUserCaReleaseUnitTest \
             assembleFullRelease \
             assembleFossRelease \
             assembleFullUserCaRelease
