@@ -12,8 +12,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.PageTranslationContentOutcome
+import dev.sk2andy.materialbrowser.browser.PageTranslationRecoveryRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
@@ -161,6 +164,61 @@ class SystemWebViewBrowserEngineInstrumentedTest {
                 assertFalse(browserController.selectedTab.isLoading)
             }
         }
+    }
+
+    @Test
+    fun translationContentProbeDistinguishesBlankGoogleShellFromVisiblePage() {
+        lateinit var browserController: BrowserController
+        lateinit var webView: WebView
+        composeRule.runOnIdle {
+            val created = createControllerWithView()
+            browserController = created.first
+            webView = created.second
+            controller = browserController
+            webView.loadDataWithBaseURL(
+                "https://mt-cc.translate.goog/",
+                """
+                    <html>
+                      <head><title>Blank probe ready</title></head>
+                      <body><iframe id="gt-nvframe" style="width:100%;height:57px"></iframe></body>
+                    </html>
+                """.trimIndent(),
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "Blank probe ready"
+        }
+        assertEquals(PageTranslationContentOutcome.Empty, extractContentOutcome(webView))
+
+        composeRule.runOnIdle {
+            webView.loadDataWithBaseURL(
+                "https://mt-cc.translate.goog/",
+                "<html><head><title>Visible probe ready</title></head><body>OK</body></html>",
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "Visible probe ready"
+        }
+        assertEquals(PageTranslationContentOutcome.Visible, extractContentOutcome(webView))
+    }
+
+    private fun extractContentOutcome(webView: WebView): PageTranslationContentOutcome {
+        val result = AtomicReference<String?>()
+        val completed = CountDownLatch(1)
+        composeRule.runOnIdle {
+            webView.evaluateJavascript(ReaderExtractionScript.javascript) { value ->
+                result.set(value)
+                completed.countDown()
+            }
+        }
+        assertTrue(completed.await(5, TimeUnit.SECONDS))
+        return PageTranslationRecoveryRules.contentOutcome(result.get())
     }
 
     private fun createControllerWithView(): Pair<BrowserController, WebView> {

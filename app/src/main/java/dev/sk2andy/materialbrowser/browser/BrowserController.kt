@@ -853,6 +853,10 @@ class BrowserController(
     private var captchaCompatibilityOfferSequence = 0L
     private val captchaCompatibilityOfferKeys =
         ConcurrentHashMap<String, MutableSet<String>>()
+    private val pageTranslationAttempts = mutableMapOf<String, PageTranslationAttempt>()
+    internal var pageTranslationRecoveryOffer by mutableStateOf<PageTranslationRecoveryOffer?>(null)
+        private set
+    private var pageTranslationRecoveryOfferSequence = 0L
     private val federatedLoginPopupTabIds = mutableSetOf<String>()
     private val federatedLoginCompatibilityTabIds = mutableSetOf<String>()
     private val pageUrls = ConcurrentHashMap<String, String>()
@@ -5029,14 +5033,53 @@ class BrowserController(
     fun openSelectedPageExternally() = openPageExternally(selectedTabId)
 
     fun translateSelectedPage() {
+        val tab = selectedTab
         val translationUrl = PageTranslationRules.buildTranslationUrl(
             provider = pageTranslationProvider,
-            sourceUrl = selectedTab.url,
+            sourceUrl = tab.url,
             targetLanguage = PageTranslationRules.targetLanguage(
                 activity.resources.configuration.locales[0].language,
             ),
         ) ?: return
+        pageTranslationAttempts[tab.id] = PageTranslationAttempt(
+            tabId = tab.id,
+            sourceUrl = tab.url,
+            provider = pageTranslationProvider,
+        )
+        if (pageTranslationRecoveryOffer?.tabId == tab.id) {
+            pageTranslationRecoveryOffer = null
+        }
         submitAddress(translationUrl)
+    }
+
+    internal fun recoverPageTranslation(token: Long) {
+        val offer = pageTranslationRecoveryOffer?.takeIf { it.token == token } ?: return
+        pageTranslationRecoveryOffer = null
+        if (!isCurrentPageTranslationRecoveryOffer(offer)) return
+        val targetUrl = when (offer.action) {
+            PageTranslationRecoveryAction.TryYandex -> {
+                val provider = PageTranslationProvider.Yandex
+                val translationUrl = PageTranslationRules.buildTranslationUrl(
+                    provider = provider,
+                    sourceUrl = offer.sourceUrl,
+                    targetLanguage = PageTranslationRules.targetLanguage(
+                        activity.resources.configuration.locales[0].language,
+                    ),
+                ) ?: return
+                pageTranslationAttempts[offer.tabId] = PageTranslationAttempt(
+                    tabId = offer.tabId,
+                    sourceUrl = offer.sourceUrl,
+                    provider = provider,
+                )
+                translationUrl
+            }
+            PageTranslationRecoveryAction.OpenOriginal -> offer.sourceUrl
+        }
+        submitAddress(targetUrl)
+    }
+
+    internal fun dismissPageTranslationRecovery(token: Long) {
+        if (pageTranslationRecoveryOffer?.token == token) pageTranslationRecoveryOffer = null
     }
 
     private fun showExternalAppOpenedToast() {
@@ -7460,6 +7503,8 @@ class BrowserController(
         federatedLoginOfferKeys.clear()
         captchaCompatibilityOffer = null
         captchaCompatibilityOfferKeys.clear()
+        pageTranslationRecoveryOffer = null
+        pageTranslationAttempts.clear()
         cancelPendingPermissionAccess()
         pendingGeckoAndroidPermissionRequest?.request?.response?.complete(false)
         pendingGeckoAndroidPermissionRequest = null
@@ -8598,7 +8643,158 @@ class BrowserController(
                 browserEngineSessions.remove(event.tabId)
             }
         }
+        handlePageTranslationEngineEvent(event)
         engineViewRevision++
+    }
+
+    private fun handlePageTranslationEngineEvent(event: BrowserEngineEvent) {
+        val attempt = pageTranslationAttempts[event.tabId] ?: return
+        if (event.type == BrowserEngineEventType.Closed) {
+            pageTranslationAttempts.remove(event.tabId)
+            return
+        }
+        val currentTab = tabs.firstOrNull { tab -> tab.id == event.tabId } ?: run {
+            pageTranslationAttempts.remove(event.tabId)
+            return
+        }
+        val eventUrl = event.address ?: currentTab.url
+        if (!PageTranslationRules.isProviderPage(attempt.provider, eventUrl)) {
+            if (event.type == BrowserEngineEventType.NavigationStarted) {
+                pageTranslationAttempts.remove(event.tabId)
+            }
+            return
+        }
+        if (
+            PageTranslationRecoveryRules.isProviderFailure(
+                provider = attempt.provider,
+                url = eventUrl,
+                navigationFailed = event.type == BrowserEngineEventType.NavigationFailed ||
+                    event.type == BrowserEngineEventType.Crashed,
+                httpStatusCode = event.httpStatusCode,
+            ) || PageTranslationRecoveryRules.isRejectedEntryPage(
+                provider = attempt.provider,
+                url = eventUrl,
+                navigationCommitted = event.type == BrowserEngineEventType.NavigationCommitted,
+            )
+        ) {
+            reportPageTranslationFailure(
+                attempt = attempt,
+                failedUrl = eventUrl,
+                navigationGeneration = navigationGenerations.getOrDefault(event.tabId, 0),
+            )
+            return
+        }
+        if (event.type != BrowserEngineEventType.NavigationCommitted ||
+            !PageTranslationRules.isProviderResultPage(attempt.provider, eventUrl)
+        ) return
+        if (!PageTranslationRecoveryRules.shouldCheckResultContent(attempt.provider, eventUrl)) {
+            pageTranslationAttempts.remove(event.tabId)
+            return
+        }
+        schedulePageTranslationContentCheck(
+            attempt = attempt,
+            resultUrl = eventUrl,
+            navigationGeneration = navigationGenerations.getOrDefault(event.tabId, 0),
+        )
+    }
+
+    private fun schedulePageTranslationContentCheck(
+        attempt: PageTranslationAttempt,
+        resultUrl: String,
+        navigationGeneration: Int,
+        emptyChecksRemaining: Int = PAGE_TRANSLATION_EMPTY_CHECKS_REQUIRED,
+        delayMillis: Long = PAGE_TRANSLATION_CONTENT_CHECK_DELAY_MILLIS,
+    ) {
+        val session = browserEngineSessions[attempt.tabId] ?: return
+        mainHandler.postDelayed(
+            {
+                if (!isCurrentPageTranslationAttempt(
+                        attempt = attempt,
+                        resultUrl = resultUrl,
+                        navigationGeneration = navigationGeneration,
+                        session = session,
+                    )
+                ) return@postDelayed
+                session.extractPageForReader { rawResult ->
+                    if (!isCurrentPageTranslationAttempt(
+                            attempt = attempt,
+                            resultUrl = resultUrl,
+                            navigationGeneration = navigationGeneration,
+                            session = session,
+                        )
+                    ) return@extractPageForReader
+                    when (
+                        PageTranslationRecoveryRules.contentAction(
+                            outcome = PageTranslationRecoveryRules.contentOutcome(rawResult),
+                            emptyChecksRemaining = emptyChecksRemaining,
+                        )
+                    ) {
+                        PageTranslationContentAction.ReportFailure -> {
+                            reportPageTranslationFailure(
+                                attempt = attempt,
+                                failedUrl = resultUrl,
+                                navigationGeneration = navigationGeneration,
+                            )
+                        }
+                        PageTranslationContentAction.Retry -> {
+                            schedulePageTranslationContentCheck(
+                                attempt = attempt,
+                                resultUrl = resultUrl,
+                                navigationGeneration = navigationGeneration,
+                                emptyChecksRemaining = emptyChecksRemaining - 1,
+                                delayMillis = PAGE_TRANSLATION_CONTENT_RETRY_DELAY_MILLIS,
+                            )
+                        }
+                        PageTranslationContentAction.Complete ->
+                            pageTranslationAttempts.remove(attempt.tabId)
+                    }
+                }
+            },
+            delayMillis,
+        )
+    }
+
+    private fun isCurrentPageTranslationAttempt(
+        attempt: PageTranslationAttempt,
+        resultUrl: String,
+        navigationGeneration: Int,
+        session: AndroidBrowserEngineSessionPort,
+    ): Boolean {
+        val tab = tabs.firstOrNull { candidate -> candidate.id == attempt.tabId } ?: return false
+        return !destroyed &&
+            pageTranslationAttempts[attempt.tabId] == attempt &&
+            browserEngineSessions[attempt.tabId] === session &&
+            navigationGenerations.getOrDefault(attempt.tabId, 0) == navigationGeneration &&
+            BrowserUriPolicy.normalizeHttpUrl(tab.url) ==
+            BrowserUriPolicy.normalizeHttpUrl(resultUrl)
+    }
+
+    private fun reportPageTranslationFailure(
+        attempt: PageTranslationAttempt,
+        failedUrl: String,
+        navigationGeneration: Int,
+    ) {
+        if (pageTranslationAttempts.remove(attempt.tabId) != attempt) return
+        pageTranslationRecoveryOfferSequence++
+        pageTranslationRecoveryOffer = PageTranslationRecoveryOffer(
+            token = pageTranslationRecoveryOfferSequence,
+            tabId = attempt.tabId,
+            sourceUrl = attempt.sourceUrl,
+            failedUrl = failedUrl,
+            provider = attempt.provider,
+            navigationGeneration = navigationGeneration,
+        )
+    }
+
+    private fun isCurrentPageTranslationRecoveryOffer(
+        offer: PageTranslationRecoveryOffer,
+    ): Boolean {
+        val tab = tabs.firstOrNull { candidate -> candidate.id == offer.tabId } ?: return false
+        return !destroyed &&
+            selectedTabId == offer.tabId &&
+            navigationGenerations.getOrDefault(offer.tabId, 0) == offer.navigationGeneration &&
+            BrowserUriPolicy.normalizeHttpUrl(tab.url) ==
+            BrowserUriPolicy.normalizeHttpUrl(offer.failedUrl)
     }
 
     private fun onGeckoTrailHistoryEvent(
@@ -8668,6 +8864,7 @@ class BrowserController(
 
     private fun closeBrowserEngineSession(tabId: String) {
         cancelPendingGeckoPreviewCapture(tabId)
+        pageTranslationAttempts.remove(tabId)
         if (geckoMediaPresentation?.tabId == tabId) clearGeckoMediaPresentation()
         geckoMediaStates.remove(tabId)
         geckoContentFullscreenTabIds.remove(tabId)
@@ -10627,6 +10824,7 @@ class BrowserController(
         if (blockedPopupOffer?.popupTabId == tabId) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
         if (captchaCompatibilityOffer?.tabId == tabId) captchaCompatibilityOffer = null
+        if (pageTranslationRecoveryOffer?.tabId == tabId) pageTranslationRecoveryOffer = null
         pendingCandyTrailRestoreIds.remove(tabId)
         suppressedCandyTrailTabIds.remove(tabId)
         candyTrails.remove(tabId)
@@ -10661,6 +10859,7 @@ class BrowserController(
         if (blockedPopupOffer?.popupTabId == tab.id) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tab.id) federatedLoginOffer = null
         if (captchaCompatibilityOffer?.tabId == tab.id) captchaCompatibilityOffer = null
+        if (pageTranslationRecoveryOffer?.tabId == tab.id) pageTranslationRecoveryOffer = null
         pendingCandyTrailRestoreIds.remove(tab.id)
         suppressedCandyTrailTabIds.remove(tab.id)
         previews.remove(tab.id)
@@ -11233,6 +11432,9 @@ class BrowserController(
             WindowInsetsCompat.Type.displayCutout(),
         )
         const val PREVIEW_CAPTURE_TIMEOUT_MS = 64L
+        const val PAGE_TRANSLATION_CONTENT_CHECK_DELAY_MILLIS = 2_500L
+        const val PAGE_TRANSLATION_CONTENT_RETRY_DELAY_MILLIS = 2_500L
+        const val PAGE_TRANSLATION_EMPTY_CHECKS_REQUIRED = 2
         const val CAMERA_FACING_EXTRA = "android.intent.extras.CAMERA_FACING"
         const val CAMERA_FACING_BACK = 0
         const val CAMERA_FACING_FRONT = 1

@@ -332,8 +332,32 @@ window.addEventListener("orientationchange", scheduleCandyPictureInPictureAlignm
 })();
 
 function extractCandyReaderPayload() {
+  const pageRoot = document.body;
+  const visibleText = (pageRoot?.innerText || "").replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ").trim().slice(0, 2000);
+  const hasVisibleContent = (() => {
+    if (!pageRoot) return false;
+    if (visibleText) return true;
+    return Array.from(
+      pageRoot.querySelectorAll("img,svg,canvas,video,iframe,object,embed"),
+    ).some((node) => {
+      if (
+        node.id === "gt-nvframe" ||
+        node.closest('#gt-nvframe,[hidden],[aria-hidden="true"]')
+      ) return false;
+      const style = getComputedStyle(node);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.opacity === "0" ||
+        style.contentVisibility === "hidden"
+      ) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width >= 32 && rect.height >= 32 && rect.width * rect.height >= 4096;
+    });
+  })();
   const source = document.querySelector("article") || document.querySelector("main") || document.body;
-  if (!source) return { error: "missing-root" };
+  if (!source) return { error: "missing-root", hasVisibleContent, visibleText };
   const root = source.cloneNode(true);
   root.querySelectorAll("script,style,noscript,template,iframe,object,embed,canvas,svg,form,input,button,nav,aside,footer,video,audio").forEach((node) => node.remove());
   const clean = (value, maxLength) => (value || "").replace(/[\u0000-\u001f\u007f]+/g, " ")
@@ -371,6 +395,8 @@ function extractCandyReaderPayload() {
     siteName: clean(document.querySelector('meta[property="og:site_name"]')?.content, 200) ||
       clean(location.hostname, 200),
     sourceUrl: location.href.slice(0, 2048),
+    hasVisibleContent,
+    visibleText,
     blocks,
   };
 }

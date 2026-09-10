@@ -47,6 +47,34 @@ object PageTranslationRules {
             !hasKagiProviderParameter(rawQuery(safeUrl))
     }
 
+    fun isProviderPage(
+        provider: PageTranslationProvider,
+        url: String?,
+    ): Boolean {
+        val safeUrl = normalizedSourceUrl(url) ?: return false
+        val host = httpHost(safeUrl)?.lowercase()?.trimEnd('.') ?: return false
+        return when (provider) {
+            PageTranslationProvider.Google ->
+                host == "translate.google.com" || host.endsWith(".translate.goog")
+            PageTranslationProvider.Yandex ->
+                host == "translate.yandex.com" || host == "translated.turbopages.org"
+            PageTranslationProvider.Kagi -> host == "translate.kagi.com"
+        }
+    }
+
+    fun isProviderResultPage(
+        provider: PageTranslationProvider,
+        url: String?,
+    ): Boolean {
+        val safeUrl = normalizedSourceUrl(url) ?: return false
+        val host = httpHost(safeUrl)?.lowercase()?.trimEnd('.') ?: return false
+        return when (provider) {
+            PageTranslationProvider.Google -> host.endsWith(".translate.goog")
+            PageTranslationProvider.Yandex -> host == "translated.turbopages.org"
+            PageTranslationProvider.Kagi -> host == "translate.kagi.com"
+        }
+    }
+
     fun buildTranslationUrl(
         provider: PageTranslationProvider,
         sourceUrl: String?,

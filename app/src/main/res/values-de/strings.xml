@@ -922,6 +922,9 @@
     <string name="popup_blocked">Pop-up blockiert</string>
     <string name="action_open_popup">Öffnen</string>
     <string name="action_translate_page">Seite übersetzen</string>
+    <string name="page_translation_failed">%1$s konnte diese Seite nicht übersetzen.</string>
+    <string name="action_try_yandex_translation">Mit Yandex versuchen</string>
+    <string name="action_open_original_page">Original öffnen</string>
     <string name="settings_translation_provider">Anbieter für Seitenübersetzung</string>
     <string name="settings_translation_provider_summary">Beim Übersetzen wird die vollständige Seitenadresse an diesen Anbieter gesendet. Private Tabs speichern keinen Übersetzungsstatus.</string>
     <string name="settings_translation_provider_google_summary">Google Translate kann bei manchen Websites eine leere Seite anzeigen. Candy nutzt Googles Website-Übersetzer, nicht die integrierte Übersetzung von Chrome. Wähle in diesem Fall Yandex. Die vollständige Seitenadresse wird an Google gesendet.</string>
