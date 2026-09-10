@@ -143,8 +143,10 @@ private class AndroidBrowserMainMenuEffects(
 ) : BrowserMainMenuEffects {
     override val style = BrowserMainMenuStyle(
         toolbarLabelFontSize = 12.sp,
+        rowMinHeight = 48.dp,
         rowLabelFontSize = 16.sp,
         rowSupportingTextFontSize = 12.sp,
+        useExpressiveToggleButtons = true,
     )
 
     @Composable
