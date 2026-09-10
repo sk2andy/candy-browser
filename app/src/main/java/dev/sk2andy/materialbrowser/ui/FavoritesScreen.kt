@@ -13,16 +13,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -98,27 +94,13 @@ internal fun FavoritesScreen(
                 .testTag(FavoritesScreenTestTags.List),
         ) {
             item(key = "search") {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it.take(BrowsingFavoritesRules.MAX_QUERY_CHARS) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .testTag(FavoritesScreenTestTags.SearchField),
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.favorites_search)) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = stringResource(
-                                        R.string.favorites_clear_search,
-                                    ),
-                                )
-                            }
-                        }
+                LibrarySearchBar(
+                    query = query,
+                    placeholder = stringResource(R.string.favorites_search),
+                    clearContentDescription = stringResource(R.string.favorites_clear_search),
+                    testTag = FavoritesScreenTestTags.SearchField,
+                    onQueryChange = {
+                        query = it.take(BrowsingFavoritesRules.MAX_QUERY_CHARS)
                     },
                 )
             }
@@ -154,7 +136,6 @@ internal fun FavoritesScreen(
                             }
                         },
                     )
-                    HorizontalDivider()
                 }
             }
         }

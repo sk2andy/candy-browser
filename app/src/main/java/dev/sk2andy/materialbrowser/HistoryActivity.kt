@@ -59,7 +59,6 @@ class HistoryActivity : ComponentActivity() {
         } ?: profiles.first().id
         clearRequests += HistoryActivityContract.clearRequestsFrom(savedInstanceState)
         history = historyRepository.snapshot()
-        var recordingMode by mutableStateOf(historyRepository.recordingMode())
         val appearanceSettings = store.loadAppearanceSettings()
         val recallEnabled = store.loadRecallEnabled()
 
@@ -72,7 +71,6 @@ class HistoryActivity : ComponentActivity() {
                     activeProfileId = activeProfileId,
                     history = history,
                     recallMatches = recallMatches,
-                    recordingMode = recordingMode,
                     onRecallCriteriaChanged = { query, profileIds ->
                         val requestId = ++recallRequestId
                         val recallQuery = RecallRules.historyQuery(query)
@@ -90,9 +88,6 @@ class HistoryActivity : ComponentActivity() {
                                 }
                             }
                         }
-                    },
-                    onRecordingModeChange = { mode ->
-                        if (historyRepository.setRecordingMode(mode)) recordingMode = mode
                     },
                     onDeleteEntries = deleteEntries@{ entries ->
                         if (isMutationInProgress) return@deleteEntries

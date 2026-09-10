@@ -22,6 +22,7 @@ import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
+import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.data.LinkPeekAction
 import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
@@ -50,6 +51,7 @@ internal fun SettingsScreen(
     searchSuggestionProvider: SearchSuggestionProvider,
     isHistorySuggestionsEnabled: Boolean,
     isRecallEnabled: Boolean,
+    historyRecordingMode: HistoryRecordingMode,
     tabOverviewMode: TabOverviewMode,
     tabStackFolderMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
@@ -95,6 +97,7 @@ internal fun SettingsScreen(
     onSearchSuggestionProviderChanged: (SearchSuggestionProvider) -> Unit,
     onHistorySuggestionsEnabledChanged: (Boolean) -> Unit,
     onRecallEnabledChanged: (Boolean) -> Unit,
+    onHistoryRecordingModeChanged: (HistoryRecordingMode) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     onTabStackFolderModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
@@ -333,9 +336,11 @@ internal fun SettingsScreen(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
                     isRecallEnabled = isRecallEnabled,
+                    historyRecordingMode = historyRecordingMode,
                     trustsUserCertificates = trustsUserCertificates,
                     onBlockerSettingsChanged = onBlockerSettingsChanged,
                     onRecallEnabledChanged = onRecallEnabledChanged,
+                    onHistoryRecordingModeChanged = onHistoryRecordingModeChanged,
                     onPrivacyXRay = onPrivacyXRay,
                     onPermissionRadar = onPermissionRadar,
                     onFilterStudio = onFilterStudio,

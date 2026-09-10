@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
+import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 
 internal object ProtectionSettingsTestTags {
@@ -26,6 +27,8 @@ internal object ProtectionSettingsTestTags {
     const val ExportAppData = "protection_settings_export_app_data"
     const val ImportAppData = "protection_settings_import_app_data"
     const val Recall = "protection_settings_recall"
+    const val SaveHistory = "protection_settings_save_history"
+    const val ClearHistoryOnExit = "protection_settings_clear_history_on_exit"
 }
 
 @Composable
@@ -33,9 +36,11 @@ internal fun ProtectionAndDataSettingsPage(
     blockerSettings: BlockerSettings,
     blockedCount: Int,
     isRecallEnabled: Boolean = false,
+    historyRecordingMode: HistoryRecordingMode = HistoryRecordingMode.Enabled,
     trustsUserCertificates: Boolean,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onRecallEnabledChanged: (Boolean) -> Unit = {},
+    onHistoryRecordingModeChanged: (HistoryRecordingMode) -> Unit = {},
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
     onFilterStudio: () -> Unit,
@@ -140,6 +145,35 @@ internal fun ProtectionAndDataSettingsPage(
             stringResource(R.string.settings_protection_disclaimer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        SettingsSectionTitle(stringResource(R.string.history_title))
+        SettingsSwitch(
+            title = stringResource(R.string.history_save_title),
+            subtitle = stringResource(R.string.history_save_summary),
+            checked = historyRecordingMode != HistoryRecordingMode.Disabled,
+            onCheckedChange = { enabled ->
+                onHistoryRecordingModeChanged(
+                    if (enabled) HistoryRecordingMode.Enabled else HistoryRecordingMode.Disabled,
+                )
+            },
+            modifier = Modifier.testTag(ProtectionSettingsTestTags.SaveHistory),
+        )
+        SettingsSwitch(
+            title = stringResource(R.string.history_clear_on_exit_title),
+            subtitle = stringResource(R.string.history_clear_on_exit_summary),
+            checked = historyRecordingMode == HistoryRecordingMode.ClearOnExit,
+            enabled = historyRecordingMode != HistoryRecordingMode.Disabled,
+            onCheckedChange = { enabled ->
+                onHistoryRecordingModeChanged(
+                    if (enabled) {
+                        HistoryRecordingMode.ClearOnExit
+                    } else {
+                        HistoryRecordingMode.Enabled
+                    },
+                )
+            },
+            modifier = Modifier.testTag(ProtectionSettingsTestTags.ClearHistoryOnExit),
         )
         Spacer(Modifier.height(16.dp))
         SettingsSwitch(
