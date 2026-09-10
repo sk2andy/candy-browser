@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.browser.engine
 
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowsingData
@@ -36,6 +37,8 @@ internal interface AndroidBrowserEngineFactory {
     fun requestProfileDataDeletion(profileId: String): Boolean
 
     fun setBlockThirdPartyCookies(blocked: Boolean)
+
+    fun setWebRtcProtectionMode(mode: WebRtcProtectionMode)
 
     fun setWebContentFontSizeFactor(factor: Float)
 

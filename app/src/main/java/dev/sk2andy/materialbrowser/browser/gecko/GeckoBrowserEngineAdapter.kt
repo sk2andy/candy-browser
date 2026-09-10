@@ -14,8 +14,10 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
@@ -155,6 +157,7 @@ internal class GeckoBrowserEngineSessionFactory(
     private val extensionSessionGenerations = mutableMapOf<String, Long>()
     private val extensionSessionIdentities = mutableMapOf<String, GeckoExtensionSessionIdentity>()
     private val preparedSessions = mutableMapOf<String, GeckoSession>()
+    private val sessions = mutableMapOf<GeckoBrowserSession, GeckoBrowserEngineSessionAdapter>()
 
     constructor(context: Context) : this(GeckoRuntimeOwner.getOrCreate(context.applicationContext))
 
@@ -192,6 +195,16 @@ internal class GeckoBrowserEngineSessionFactory(
     @UiThread
     override fun setBlockThirdPartyCookies(blocked: Boolean) {
         runtime.setBlockThirdPartyCookies(blocked)
+    }
+
+    @UiThread
+    override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode) {
+        val sessionsToReload = sessions.values.toList()
+        runtime.setWebRtcProtectionMode(mode) {
+            sessionsToReload.forEach { session ->
+                session.execute(BrowserEngineCommands.reload())
+            }
+        }
     }
 
     @UiThread
@@ -290,7 +303,8 @@ internal class GeckoBrowserEngineSessionFactory(
             onActiveChanged = { active ->
                 runtime.toppings.setActiveTab(tabId.takeIf { active })
             },
-        )
+            onClosed = { sessions.remove(session) },
+        ).also { adapter -> sessions[session] = adapter }
     }
 }
 
@@ -307,6 +321,7 @@ internal class GeckoBrowserEngineSessionAdapter(
     trailHistoryEventSink: GeckoCandyTrailHistoryEventSink =
         GeckoCandyTrailHistoryEventSink { _, _ -> },
     private val onActiveChanged: (Boolean) -> Unit = {},
+    private val onClosed: () -> Unit = {},
 ) : AndroidBrowserEngineSessionPort {
     private var previousState = GeckoBrowserSessionState()
     private var closed = false
@@ -601,6 +616,7 @@ internal class GeckoBrowserEngineSessionAdapter(
         session.setAuthPromptListener(null)
         session.setWebPromptListener(null)
         session.close()
+        onClosed()
         eventSink.onEngineEvent(
             previousState.toEngineEvent(
                 tabId = tabId,
@@ -630,6 +646,7 @@ internal class GeckoBrowserEngineSessionAdapter(
             session.setAuthPromptListener(null)
             session.setWebPromptListener(null)
             session.close()
+            onClosed()
             eventSink.onEngineEvent(
                 state.toEngineEvent(
                     tabId = tabId,

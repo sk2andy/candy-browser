@@ -14,6 +14,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.PageTranslationContentOutcome
 import dev.sk2andy.materialbrowser.browser.PageTranslationRecoveryRules
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
@@ -140,6 +141,45 @@ class SystemWebViewBrowserEngineInstrumentedTest {
 
             assertTrue(browserController.isVideoAutoplayBlocked)
             assertTrue(webView.settings.mediaPlaybackRequiresUserGesture)
+        }
+    }
+
+    @Test
+    fun webRtcProtectionBlocksByDefaultAndStandardRestoresCompatibility() {
+        lateinit var browserController: BrowserController
+        lateinit var webView: WebView
+        composeRule.runOnIdle {
+            val created = createControllerWithView()
+            browserController = created.first
+            webView = created.second
+            controller = browserController
+            webView.loadDataWithBaseURL(
+                "https://webrtc.test/",
+                """
+                    <html><head><title>Checking WebRTC</title></head><body><script>
+                      try {
+                        const connection = new RTCPeerConnection();
+                        connection.close();
+                        document.title = 'WebRTC available';
+                      } catch (error) {
+                        document.title = 'WebRTC blocked';
+                      }
+                    </script></body></html>
+                """.trimIndent(),
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "WebRTC blocked"
+        }
+        composeRule.runOnIdle {
+            browserController.updateWebRtcProtectionMode(WebRtcProtectionMode.Standard)
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "WebRTC available"
         }
     }
 

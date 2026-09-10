@@ -6,12 +6,13 @@ import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
-import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
-import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
@@ -40,6 +41,7 @@ internal fun SettingsScreen(
     downloadSettings: BrowserDownloadSettings,
     externalDownloadManagers: List<ExternalDownloadManagerApp>,
     blockerSettings: BlockerSettings,
+    webRtcProtectionMode: WebRtcProtectionMode = WebRtcProtectionMode.Default,
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
     searchEngine: SearchEngine,
@@ -86,6 +88,7 @@ internal fun SettingsScreen(
     onAppearanceSettingsChanged: (AppearanceSettings) -> Unit,
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
+    onWebRtcProtectionModeChanged: (WebRtcProtectionMode) -> Unit = {},
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
@@ -335,10 +338,13 @@ internal fun SettingsScreen(
                 SettingsDestination.ProtectionAndData -> ProtectionAndDataSettingsPage(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
+                    browserEngineKind = browserEngineKind,
+                    webRtcProtectionMode = webRtcProtectionMode,
                     isRecallEnabled = isRecallEnabled,
                     historyRecordingMode = historyRecordingMode,
                     trustsUserCertificates = trustsUserCertificates,
                     onBlockerSettingsChanged = onBlockerSettingsChanged,
+                    onWebRtcProtectionModeChanged = onWebRtcProtectionModeChanged,
                     onRecallEnabledChanged = onRecallEnabledChanged,
                     onHistoryRecordingModeChanged = onHistoryRecordingModeChanged,
                     onPrivacyXRay = onPrivacyXRay,

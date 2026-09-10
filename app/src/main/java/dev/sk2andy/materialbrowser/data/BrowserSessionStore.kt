@@ -23,6 +23,7 @@ import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.sync.SyncTabRules
@@ -952,6 +953,14 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_VIDEO_AUTOPLAY_BLOCKED, blocked).apply()
     }
 
+    fun loadWebRtcProtectionMode(): WebRtcProtectionMode = WebRtcProtectionMode.fromStableId(
+        preferences.getString(KEY_WEBRTC_PROTECTION_MODE, null),
+    )
+
+    fun saveWebRtcProtectionMode(mode: WebRtcProtectionMode) {
+        preferences.edit().putString(KEY_WEBRTC_PROTECTION_MODE, mode.stableId).apply()
+    }
+
     fun loadAndroidBrowserEngineKind(): AndroidBrowserEngineKind =
         AndroidBrowserEngineKind.fromStableId(
             preferences.getString(KEY_ANDROID_BROWSER_ENGINE, null),
@@ -1193,6 +1202,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_DEVELOPER_SAFE_AREA_REQUIRED_FAILURE_COUNT =
             "developer_safe_area_required_failure_count"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
+        const val KEY_WEBRTC_PROTECTION_MODE = "webrtc_protection_mode"
         const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
         const val KEY_FORCE_DARK_WEBSITES = "force_dark_websites"

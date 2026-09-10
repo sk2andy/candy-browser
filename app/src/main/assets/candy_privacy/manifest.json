@@ -27,6 +27,7 @@
   "permissions": [
     "geckoViewAddons",
     "nativeMessaging",
+    "privacy",
     "webRequest",
     "webRequestBlocking",
     "<all_urls>"

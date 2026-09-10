@@ -14,6 +14,7 @@ import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
@@ -992,6 +993,22 @@ class BrowserSessionStoreInstrumentedTest {
 
         store.saveVideoAutoplayBlocked(true)
         assertTrue(store.loadVideoAutoplayBlocked())
+    }
+
+    @Test
+    fun webRtcProtectionDefaultsToProtectedAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(WebRtcProtectionMode.ProtectIpAddresses, store.loadWebRtcProtectionMode())
+        WebRtcProtectionMode.entries.forEach { mode ->
+            store.saveWebRtcProtectionMode(mode)
+            assertEquals(mode, store.loadWebRtcProtectionMode())
+        }
+        preferences.edit().putString(
+            BrowserSessionStore.KEY_WEBRTC_PROTECTION_MODE,
+            "future-mode",
+        ).commit()
+        assertEquals(WebRtcProtectionMode.ProtectIpAddresses, store.loadWebRtcProtectionMode())
     }
 
     @Test

@@ -14,6 +14,8 @@ let nativePort = null;
 let cookieRules = null;
 let cookieRulesPromise = null;
 let flushTimer = null;
+let latestWebRtcPolicyRevision = 0;
+let webRtcPolicyQueue = Promise.resolve();
 
 async function loadText(fileName) {
   const response = await fetch(browser.runtime.getURL(`rules/${fileName}`));
@@ -321,11 +323,71 @@ function updatePictureInPicturePlayback(message) {
   }).catch(() => {});
 }
 
+async function applyWebRtcPolicy(message) {
+  const network = browser.privacy?.network;
+  const peerConnectionEnabled = network?.peerConnectionEnabled;
+  const ipHandlingPolicy = network?.webRTCIPHandlingPolicy;
+  if (!peerConnectionEnabled || !ipHandlingPolicy) {
+    throw new Error("WebRTC privacy settings unavailable");
+  }
+  const details = { scope: "regular" };
+  const clearOwnSetting = async (setting) => {
+    await setting.clear(details);
+    const current = await setting.get({});
+    if (current.levelOfControl === "controlled_by_this_extension") {
+      throw new Error("WebRTC privacy setting could not be cleared");
+    }
+  };
+  const setAndVerify = async (setting, value) => {
+    await setting.set({ ...details, value });
+    const current = await setting.get({});
+    if (current.value !== value || current.levelOfControl !== "controlled_by_this_extension") {
+      throw new Error("WebRTC privacy setting is controlled elsewhere");
+    }
+  };
+  if (message.peerConnectionsEnabled === false) {
+    await setAndVerify(peerConnectionEnabled, false);
+    await clearOwnSetting(ipHandlingPolicy);
+  } else if (message.peerConnectionsEnabled === true && message.ipHandlingPolicy !== null) {
+    await setAndVerify(ipHandlingPolicy, message.ipHandlingPolicy);
+    await clearOwnSetting(peerConnectionEnabled);
+  } else if (message.peerConnectionsEnabled === true && message.ipHandlingPolicy === null) {
+    await clearOwnSetting(peerConnectionEnabled);
+    await clearOwnSetting(ipHandlingPolicy);
+  } else {
+    throw new Error("Invalid WebRTC peer connection policy");
+  }
+}
+
 function connectNative() {
   nativePort = browser.runtime.connectNative(NATIVE_APP);
   nativePort.onMessage.addListener((message) => {
     if (!message || message.protocolVersion !== PROTOCOL_VERSION) return;
     if (
+      message.type === "webrtc-policy" &&
+      Number.isSafeInteger(message.revision)
+    ) {
+      if (message.revision < latestWebRtcPolicyRevision) return;
+      latestWebRtcPolicyRevision = message.revision;
+      webRtcPolicyQueue = webRtcPolicyQueue.then(async () => {
+        if (message.revision !== latestWebRtcPolicyRevision) return;
+        await applyWebRtcPolicy(message);
+        if (message.revision !== latestWebRtcPolicyRevision) return;
+        nativePort?.postMessage({
+          type: "webrtc-policy-ready",
+          protocolVersion: PROTOCOL_VERSION,
+          revision: message.revision,
+        });
+      }).catch((error) => {
+        if (message.revision === latestWebRtcPolicyRevision) {
+          nativePort?.postMessage({
+            type: "failed",
+            protocolVersion: PROTOCOL_VERSION,
+            reason: String(error).slice(0, 512),
+          });
+        }
+      });
+    } else if (
       message.type === "policy" &&
       typeof message.token === "string" &&
       Number.isSafeInteger(message.revision)
