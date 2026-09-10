@@ -35,6 +35,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEvent
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEventSource
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetKind
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetRules
@@ -172,6 +173,11 @@ internal class GeckoViewRuntimeHandle private constructor(
     @UiThread
     override fun setBlockThirdPartyCookies(blocked: Boolean) {
         cookieBehavior.setGloballyBlocked(blocked)
+    }
+
+    @UiThread
+    override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode, onReady: () -> Unit) {
+        privacyHost.setWebRtcProtectionMode(mode, onReady)
     }
 
     @UiThread

@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 
@@ -44,6 +45,9 @@ internal interface GeckoRuntimeHandle {
 
     @UiThread
     fun setBlockThirdPartyCookies(blocked: Boolean)
+
+    @UiThread
+    fun setWebRtcProtectionMode(mode: WebRtcProtectionMode, onReady: () -> Unit = {})
 
     @UiThread
     fun setWebContentFontSizeFactor(factor: Float)

@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +12,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -19,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 
@@ -29,16 +36,20 @@ internal object ProtectionSettingsTestTags {
     const val Recall = "protection_settings_recall"
     const val SaveHistory = "protection_settings_save_history"
     const val ClearHistoryOnExit = "protection_settings_clear_history_on_exit"
+    const val WebRtcProtection = "protection_settings_webrtc_protection"
 }
 
 @Composable
 internal fun ProtectionAndDataSettingsPage(
     blockerSettings: BlockerSettings,
     blockedCount: Int,
+    browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
+    webRtcProtectionMode: WebRtcProtectionMode = WebRtcProtectionMode.Default,
     isRecallEnabled: Boolean = false,
     historyRecordingMode: HistoryRecordingMode = HistoryRecordingMode.Enabled,
     trustsUserCertificates: Boolean,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
+    onWebRtcProtectionModeChanged: (WebRtcProtectionMode) -> Unit = {},
     onRecallEnabledChanged: (Boolean) -> Unit = {},
     onHistoryRecordingModeChanged: (HistoryRecordingMode) -> Unit = {},
     onPrivacyXRay: () -> Unit,
@@ -49,6 +60,7 @@ internal fun ProtectionAndDataSettingsPage(
     onClearData: () -> Unit,
     onBack: () -> Unit,
 ) {
+    var webRtcMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.settings_protection_data_title),
         onBack = onBack,
@@ -141,6 +153,50 @@ internal fun ProtectionAndDataSettingsPage(
             },
         )
         Spacer(Modifier.height(8.dp))
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_webrtc_protection_title),
+                value = webRtcProtectionMode.displayName(),
+                expanded = webRtcMenuExpanded,
+                onClick = { webRtcMenuExpanded = true },
+                modifier = Modifier.testTag(ProtectionSettingsTestTags.WebRtcProtection),
+            )
+            SettingsDropdown(
+                expanded = webRtcMenuExpanded,
+                onDismissRequest = { webRtcMenuExpanded = false },
+            ) {
+                WebRtcProtectionMode.entries.forEach { mode ->
+                    SettingsDropdownItem(
+                        label = mode.displayName(),
+                        selected = mode == webRtcProtectionMode,
+                        onClick = {
+                            webRtcMenuExpanded = false
+                            if (mode != webRtcProtectionMode) {
+                                onWebRtcProtectionModeChanged(mode)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        Text(
+            text = stringResource(
+                when (webRtcProtectionMode) {
+                    WebRtcProtectionMode.Standard -> R.string.settings_webrtc_standard_summary
+                    WebRtcProtectionMode.ProtectIpAddresses -> when (browserEngineKind) {
+                        AndroidBrowserEngineKind.GeckoView ->
+                            R.string.settings_webrtc_protect_gecko_summary
+                        AndroidBrowserEngineKind.SystemWebView ->
+                            R.string.settings_webrtc_protect_system_summary
+                    }
+                    WebRtcProtectionMode.Block -> R.string.settings_webrtc_block_summary
+                },
+            ),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.settings_protection_disclaimer),
             style = MaterialTheme.typography.bodySmall,
@@ -216,6 +272,15 @@ internal fun ProtectionAndDataSettingsPage(
         }
     }
 }
+
+@Composable
+private fun WebRtcProtectionMode.displayName(): String = stringResource(
+    when (this) {
+        WebRtcProtectionMode.Standard -> R.string.settings_webrtc_mode_standard
+        WebRtcProtectionMode.ProtectIpAddresses -> R.string.settings_webrtc_mode_protect
+        WebRtcProtectionMode.Block -> R.string.settings_webrtc_mode_block
+    },
+)
 
 @Composable
 private fun DataArchiveAction(

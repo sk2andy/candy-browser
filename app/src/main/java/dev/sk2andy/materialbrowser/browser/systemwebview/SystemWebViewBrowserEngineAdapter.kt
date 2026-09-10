@@ -60,6 +60,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserWebPromptKind
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DesktopViewportScript
 import dev.sk2andy.materialbrowser.browser.VideoAutoplayBlockerScript
+import dev.sk2andy.materialbrowser.browser.WebRtcBlockerScript
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
@@ -137,6 +140,7 @@ internal class SystemWebViewBrowserEngineFactory(
     private var toppingDelegate = GeckoToppingInteractionDelegate.None
     private var toppingStateListener: (GeckoToppingHostState) -> Unit = {}
     private var blockThirdPartyCookies = true
+    private var webRtcProtectionMode = WebRtcProtectionMode.Default
     private var fontSizeFactor = 1f
     private val sessions = mutableSetOf<SystemWebViewBrowserEngineSession>()
     private val knownCookieManagers = mutableListOf<CookieManager>()
@@ -211,6 +215,11 @@ internal class SystemWebViewBrowserEngineFactory(
         sessions.forEach { it.setGlobalThirdPartyCookieBlocking(blocked) }
     }
 
+    override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode) {
+        webRtcProtectionMode = mode
+        sessions.forEach { it.setWebRtcProtectionMode(mode) }
+    }
+
     override fun setWebContentFontSizeFactor(factor: Float) {
         fontSizeFactor = factor.coerceIn(0.5f, 2f)
         sessions.forEach { it.setFontSizeFactor(fontSizeFactor) }
@@ -251,6 +260,7 @@ internal class SystemWebViewBrowserEngineFactory(
         trailHistoryEventSink = trailHistoryEventSink,
         eventSink = eventSink,
         blockThirdPartyCookies = blockThirdPartyCookies,
+        initialWebRtcProtectionMode = webRtcProtectionMode,
         fontSizeFactor = fontSizeFactor,
         onClosed = sessions::remove,
     ).also { session ->
@@ -324,6 +334,7 @@ private class SystemWebViewBrowserEngineSession(
     trailHistoryEventSink: GeckoCandyTrailHistoryEventSink,
     private val eventSink: BrowserEngineEventSink,
     blockThirdPartyCookies: Boolean,
+    initialWebRtcProtectionMode: WebRtcProtectionMode,
     fontSizeFactor: Float,
     private val onClosed: (SystemWebViewBrowserEngineSession) -> Unit,
 ) : AndroidBrowserEngineSessionPort {
@@ -336,6 +347,7 @@ private class SystemWebViewBrowserEngineSession(
     private var desktopMode = false
     private var desktopViewportDomain: String? = null
     private var autoplayBlocked = true
+    private var webRtcProtectionMode = initialWebRtcProtectionMode
     private var privacyPolicy = initialPrivacyPolicy
     @Volatile
     private var requestPrivacyState = SystemWebViewRequestPrivacyState(
@@ -357,6 +369,7 @@ private class SystemWebViewBrowserEngineSession(
     private var scrollListener: BrowserEngineScrollListener? = null
     private var contentTargetListener: dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener? = null
     private var autoplayScriptHandler: ScriptHandler? = null
+    private var webRtcScriptHandler: ScriptHandler? = null
     private var topInsetScriptHandler: ScriptHandler? = null
     private var mediaScriptHandler: ScriptHandler? = null
     private var desktopViewportScriptHandler: ScriptHandler? = null
@@ -397,6 +410,7 @@ private class SystemWebViewBrowserEngineSession(
         }
         defaultUserAgent = webView.settings.userAgentString
         configureWebView(fontSizeFactor)
+        installWebRtcPolicy()
         installTopInsetScript()
         installToppings(initialScripts)
         setGlobalThirdPartyCookieBlocking(blockThirdPartyCookies)
@@ -516,6 +530,13 @@ private class SystemWebViewBrowserEngineSession(
         autoplayBlocked = blocked
         webView.settings.mediaPlaybackRequiresUserGesture = blocked
         installAutoplayPolicy()
+        webView.reload()
+    }
+
+    fun setWebRtcProtectionMode(mode: WebRtcProtectionMode) {
+        if (closed || webRtcProtectionMode == mode) return
+        webRtcProtectionMode = mode
+        installWebRtcPolicy()
         webView.reload()
     }
 
@@ -781,6 +802,7 @@ private class SystemWebViewBrowserEngineSession(
         closed = true
         toppingRuntime.remove(webView)
         autoplayScriptHandler?.remove()
+        webRtcScriptHandler?.remove()
         topInsetScriptHandler?.remove()
         desktopViewportScriptHandler?.remove()
         removeMediaBridge()
@@ -1066,6 +1088,7 @@ private class SystemWebViewBrowserEngineSession(
         ): Boolean {
             val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
             val popup = WebView(view.context)
+            popup.settings.javaScriptEnabled = false
             assignedProfileName?.let { profileName -> WebViewCompat.setProfile(popup, profileName) }
             if (isPrivate) {
                 popup.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
@@ -1356,6 +1379,17 @@ private class SystemWebViewBrowserEngineSession(
             !supportsDocumentStartInjection()
         ) return
         autoplayScriptHandler = addDocumentStartScript(VideoAutoplayBlockerScript.installScript)
+    }
+
+    private fun installWebRtcPolicy() {
+        webRtcScriptHandler?.remove()
+        webRtcScriptHandler = null
+        if (!WebRtcProtectionRules.blocksSystemWebViewPeerConnections(webRtcProtectionMode)) {
+            webView.settings.javaScriptEnabled = true
+            return
+        }
+        webRtcScriptHandler = addDocumentStartScript(WebRtcBlockerScript.installScript)
+        webView.settings.javaScriptEnabled = webRtcScriptHandler != null
     }
 
     private fun installDesktopViewportPolicy() {

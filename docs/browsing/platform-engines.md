@@ -63,6 +63,31 @@ call-site cutover are not complete.
 - WKWebView remains the fixed iOS adapter, making the product's three adapters GeckoView, Android
   System WebView and WKWebView while only Android presents an engine selector.
 
+### WebRTC protection
+
+The protection settings expose one process-wide WebRTC choice for regular and private browsing,
+including normal tabs, Link Peek and external-link previews. The stored default is **Protect IP
+addresses**; unknown stored values fail back to that protected mode.
+
+| Choice | GeckoView | Android System WebView |
+| --- | --- | --- |
+| Standard | Clears Candy's WebRTC overrides | Does not install a blocker |
+| Protect IP addresses | Allows WebRTC only through a compatible proxy (`proxy_only`) | Blocks `RTCPeerConnection`, because WebView has no public proxy-only ICE policy |
+| Disable WebRTC | Disables peer connections through Gecko's global privacy setting | Blocks `RTCPeerConnection` |
+
+Gecko applies and verifies its global WebExtension browser settings before the Privacy host releases
+the first page navigation. Policy transitions use fail-closed ordering: proxy-only is established
+before peer connections are re-enabled, and peer connections are disabled before an obsolete IP
+override is cleared. A setting controlled by another extension fails the Privacy host instead of
+claiming protection.
+
+System WebView installs the blocker in the page JavaScript world at document start for every frame,
+before a page script can capture the constructor. Changing the mode installs or removes the handler
+and reloads every factory-owned session. If an outdated WebView provider lacks document-start
+injection, Candy disables page JavaScript while a protected mode is active rather than allowing an
+unprotected connection. Temporary popup WebViews keep JavaScript explicitly disabled.
+Camera and microphone permissions remain separate and continue through Candy's permission policy.
+
 ## Android Gecko and extension invariants
 
 - `GeckoRuntimeOwner` creates exactly one `GeckoRuntime` for the app process. Sessions are cheap,

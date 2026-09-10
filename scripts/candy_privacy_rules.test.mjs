@@ -160,6 +160,7 @@ test("privacy host uses required MV2 web origins for document-start scripts", ()
 
   assert.equal(manifest.manifest_version, 2);
   assert.ok(manifest.permissions.includes("<all_urls>"));
+  assert.ok(manifest.permissions.includes("privacy"));
   assert.equal(manifest.host_permissions, undefined);
   assert.equal(manifest.content_scripts[0].all_frames, false);
   assert.deepEqual(
@@ -167,6 +168,117 @@ test("privacy host uses required MV2 web origins for document-start scripts", ()
     ["content_top_inset_bridge.js", "content_top_inset.js"],
   );
   assert.equal(manifest.content_scripts[1].all_frames, true);
+});
+
+test("WebRTC policies use fail-closed ordering and acknowledge verified settings", async () => {
+  let nativeMessageListener;
+  const operations = [];
+  const postedNativeMessages = [];
+  const setting = (name, defaultValue) => {
+    let value = defaultValue;
+    let controlled = false;
+    return {
+      set: async (details) => {
+        operations.push(`${name}:set:${details.value}`);
+        value = details.value;
+        controlled = true;
+      },
+      clear: async () => {
+        operations.push(`${name}:clear`);
+        value = defaultValue;
+        controlled = false;
+      },
+      get: async () => ({
+        value,
+        levelOfControl: controlled ?
+          "controlled_by_this_extension" : "controllable_by_this_extension",
+      }),
+    };
+  };
+  const backgroundContext = vm.createContext({
+    URL,
+    Map,
+    Set,
+    Array,
+    Promise,
+    Number,
+    String,
+    Boolean,
+    setTimeout,
+    clearTimeout,
+    CandyPrivacyRules: {},
+    browser: {
+      privacy: {
+        network: {
+          peerConnectionEnabled: setting("peer", true),
+          webRTCIPHandlingPolicy: setting("ip", "default"),
+        },
+      },
+      runtime: {
+        getURL: (path) => path,
+        connectNative: () => ({
+          postMessage: (message) => postedNativeMessages.push(message),
+          onMessage: { addListener: (listener) => { nativeMessageListener = listener; } },
+          onDisconnect: { addListener: () => {} },
+        }),
+        onMessage: { addListener: () => {} },
+      },
+      tabs: {
+        sendMessage: () => Promise.resolve(),
+        onRemoved: { addListener: () => {} },
+      },
+      webRequest: {
+        onBeforeRequest: { addListener: () => {} },
+        onHeadersReceived: { addListener: () => {} },
+        onErrorOccurred: { addListener: () => {} },
+      },
+    },
+  });
+  vm.runInContext(
+    fs.readFileSync(
+      new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+      "utf8",
+    ),
+    backgroundContext,
+  );
+
+  nativeMessageListener({
+    type: "webrtc-policy",
+    protocolVersion: 2,
+    revision: 1,
+    peerConnectionsEnabled: true,
+    ipHandlingPolicy: "proxy_only",
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(operations, ["ip:set:proxy_only", "peer:clear"]);
+
+  operations.length = 0;
+  nativeMessageListener({
+    type: "webrtc-policy",
+    protocolVersion: 2,
+    revision: 2,
+    peerConnectionsEnabled: false,
+    ipHandlingPolicy: null,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(operations, ["peer:set:false", "ip:clear"]);
+
+  operations.length = 0;
+  nativeMessageListener({
+    type: "webrtc-policy",
+    protocolVersion: 2,
+    revision: 3,
+    peerConnectionsEnabled: true,
+    ipHandlingPolicy: null,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(operations, ["peer:clear", "ip:clear"]);
+  assert.deepEqual(
+    postedNativeMessages
+      .filter((message) => message.type === "webrtc-policy-ready")
+      .map((message) => message.revision),
+    [1, 2, 3],
+  );
 });
 
 test("newer privacy policy wins while older cookie rules are still loading", async () => {

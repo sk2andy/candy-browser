@@ -458,6 +458,14 @@
     <string name="settings_hide_cookie_banners_subtitle">As sobreposições de consentimento conhecidas são removidas</string>
     <string name="settings_block_third_party_cookies_title">Bloquear cookies de terceiros</string>
     <string name="settings_block_third_party_cookies_subtitle">Os cookies próprios permanecem ativos para iniciar sessão</string>
+    <string name="settings_webrtc_protection_title">Ligações WebRTC</string>
+    <string name="settings_webrtc_mode_standard">Padrão</string>
+    <string name="settings_webrtc_mode_protect">Proteger endereços IP (Recomendado)</string>
+    <string name="settings_webrtc_mode_block">Desativar WebRTC (Rigoroso)</string>
+    <string name="settings_webrtc_standard_summary">Máxima compatibilidade. Os sites podem ver endereços IP adicionais do dispositivo.</string>
+    <string name="settings_webrtc_protect_gecko_summary">Impede ligações WebRTC diretas. O WebRTC funciona apenas através de um proxy compatível. Sem ele, as chamadas e os chats em direto não estabelecem ligação.</string>
+    <string name="settings_webrtc_protect_system_summary">O System WebView não consegue ocultar com segurança endereços IP adicionais. Por isso, o Candy bloqueia o WebRTC. Com uma versão antiga do System WebView, outras funções interativas também podem deixar de funcionar.</string>
+    <string name="settings_webrtc_block_summary">Interrompe chamadas, chats em direto e outras ligações diretas do navegador.</string>
     <string name="settings_protection_disclaimer">Proteção heurística local. Alguns anúncios, rastreadores CNAME e banners em frames fechadas podem passar.</string>
     <string name="settings_user_ca_title">Certificados de AC instalados pelo utilizador são considerados fidedignos</string>
     <string name="settings_user_ca_summary">Esta versão permite que qualquer AC instalada por si ou pelo administrador do dispositivo inspecione e altere o tráfego HTTPS do Candy. Utilize apenas certificados e ferramentas de filtragem em que confia.</string>

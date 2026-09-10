@@ -542,6 +542,8 @@ class BrowserController(
         private set
     var isVideoAutoplayBlocked by mutableStateOf(false)
         private set
+    var webRtcProtectionMode by mutableStateOf(WebRtcProtectionMode.Default)
+        private set
     var externalLinkPreviewState by mutableStateOf<ExternalLinkPreviewState?>(null)
         private set
     var appearanceSettings by mutableStateOf(AppearanceSettings())
@@ -1704,6 +1706,8 @@ class BrowserController(
         browserEngineSessionFactory.setBlockThirdPartyCookies(
             workerSettings.blockThirdPartyCookies,
         )
+        webRtcProtectionMode = store.loadWebRtcProtectionMode()
+        browserEngineSessionFactory.setWebRtcProtectionMode(webRtcProtectionMode)
         if (usesGeckoEngine) {
             geckoEngineSessionFactory.setExtensionChromeHost(
                 object : GeckoExtensionChromeHost {
@@ -6681,6 +6685,13 @@ class BrowserController(
         browserEngineSessions.values.forEach { session ->
             session.setVideoAutoplayBlocked(blocked)
         }
+    }
+
+    fun updateWebRtcProtectionMode(mode: WebRtcProtectionMode) {
+        if (webRtcProtectionMode == mode) return
+        webRtcProtectionMode = mode
+        store.saveWebRtcProtectionMode(mode)
+        browserEngineSessionFactory.setWebRtcProtectionMode(mode)
     }
 
     fun updateBrowserEngineKind(kind: AndroidBrowserEngineKind) {

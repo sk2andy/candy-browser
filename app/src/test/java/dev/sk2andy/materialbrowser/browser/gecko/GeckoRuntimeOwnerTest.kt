@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -77,6 +78,10 @@ class GeckoRuntimeOwnerTest {
 
         override fun setBlockThirdPartyCookies(blocked: Boolean) {
             thirdPartyCookiesBlocked = blocked
+        }
+
+        override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode, onReady: () -> Unit) {
+            onReady()
         }
 
         override fun setWebContentFontSizeFactor(factor: Float) {

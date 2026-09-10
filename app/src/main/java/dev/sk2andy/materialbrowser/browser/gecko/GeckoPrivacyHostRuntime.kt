@@ -4,6 +4,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import java.util.UUID
 import org.json.JSONObject
 import org.mozilla.geckoview.GeckoResult
@@ -54,6 +56,10 @@ internal class GeckoViewPrivacyHostRuntime(
     private var port: WebExtension.Port? = null
     private var extensionRulesReady = false
     private var hostPermissionsReady = false
+    private var webRtcPolicyReady = false
+    private var webRtcProtectionMode = WebRtcProtectionMode.Default
+    private var webRtcPolicyRevision = 1L
+    private val webRtcPolicyReadyCallbacks = mutableListOf<() -> Unit>()
     private var initializationComplete = false
     private var failureDescription: String? = null
     private var nextReaderRequestId = 0L
@@ -79,6 +85,19 @@ internal class GeckoViewPrivacyHostRuntime(
             failureDescription != null -> action(false)
             else -> initializationCallbacks += action
         }
+    }
+
+    fun setWebRtcProtectionMode(mode: WebRtcProtectionMode, onReady: () -> Unit = {}) {
+        if (webRtcProtectionMode == mode && webRtcPolicyReady) {
+            onReady()
+            return
+        }
+        webRtcPolicyReadyCallbacks += onReady
+        if (webRtcProtectionMode == mode) return
+        webRtcProtectionMode = mode
+        webRtcPolicyRevision++
+        webRtcPolicyReady = false
+        publishWebRtcPolicy()
     }
 
     private fun beginInitialization() {
@@ -260,7 +279,15 @@ internal class GeckoViewPrivacyHostRuntime(
         when (value.optString("type")) {
             "ready" -> {
                 extensionRulesReady = true
+                publishWebRtcPolicy()
+            }
+            "webrtc-policy-ready" -> {
+                if (value.optLong("revision", -1) != webRtcPolicyRevision) return
+                webRtcPolicyReady = true
                 releaseIfReady()
+                val callbacks = webRtcPolicyReadyCallbacks.toList()
+                webRtcPolicyReadyCallbacks.clear()
+                callbacks.forEach { callback -> callback() }
             }
             "policy-ready" -> {
                 val binding = bindings[value.optString("token")] ?: return
@@ -437,7 +464,7 @@ internal class GeckoViewPrivacyHostRuntime(
             binding.failed?.invoke(description)
             return
         }
-        if (extensionRulesReady && hostPermissionsReady) {
+        if (extensionRulesReady && hostPermissionsReady && webRtcPolicyReady) {
             action()
         } else {
             pendingUntilReady += {
@@ -495,7 +522,12 @@ internal class GeckoViewPrivacyHostRuntime(
     }
 
     private fun releaseIfReady() {
-        if (!extensionRulesReady || !hostPermissionsReady || failureDescription != null) return
+        if (
+            !extensionRulesReady ||
+            !hostPermissionsReady ||
+            !webRtcPolicyReady ||
+            failureDescription != null
+        ) return
         initializationComplete = true
         mainHandler.removeCallbacks(initializationTimeout)
         val actions = pendingUntilReady.toList()
@@ -506,10 +538,25 @@ internal class GeckoViewPrivacyHostRuntime(
         callbacks.forEach { callback -> callback(true) }
     }
 
+    private fun publishWebRtcPolicy() {
+        val connectedPort = port ?: return
+        if (!extensionRulesReady || failureDescription != null) return
+        val policy = WebRtcProtectionRules.geckoPolicy(webRtcProtectionMode)
+        connectedPort.postMessage(
+            JSONObject()
+                .put("type", "webrtc-policy")
+                .put("protocolVersion", CandyPrivacyHostContract.PROTOCOL_VERSION)
+                .put("revision", webRtcPolicyRevision)
+                .put("peerConnectionsEnabled", policy.peerConnectionsEnabled)
+                .put("ipHandlingPolicy", policy.ipHandlingPolicy ?: JSONObject.NULL),
+        )
+    }
+
     private fun fail(error: Throwable) {
         if (failureDescription != null) return
         mainHandler.removeCallbacks(initializationTimeout)
         pendingUntilReady.clear()
+        webRtcPolicyReadyCallbacks.clear()
         val description = error.message
             ?.takeIf(String::isNotBlank)
             ?.take(MAX_FAILURE_DESCRIPTION_CHARS)
@@ -552,6 +599,7 @@ internal class GeckoViewPrivacyHostRuntime(
                     if (port === sourcePort) {
                         port = null
                         extensionRulesReady = false
+                        webRtcPolicyReady = false
                         if (initializationComplete) {
                             fail(IllegalStateException("Candy Privacy host disconnected"))
                         }
