@@ -113,13 +113,14 @@ fun SiteCapsuleBrowserScreen(
     controller: BrowserController,
     capsule: SiteCapsule,
     webViewVideoOnlyPresentation: Boolean = false,
+    videoOnlyPresentation: Boolean = webViewVideoOnlyPresentation,
 ) {
     val tab = controller.selectedTab
     val entrance = remember(capsule.id) { Animatable(0f) }
     LaunchedEffect(capsule.id) {
         entrance.animateTo(1f, spring(dampingRatio = 0.84f, stiffness = 520f))
     }
-    PredictiveBackHandler(enabled = !webViewVideoOnlyPresentation && tab.canGoBack) { events ->
+    PredictiveBackHandler(enabled = !videoOnlyPresentation && tab.canGoBack) { events ->
         events.collect { }
         controller.goBack()
     }
@@ -140,10 +141,10 @@ fun SiteCapsuleBrowserScreen(
         CapsuleBrowserEngineHost(
             controller = controller,
             statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
-            showStatusBarOverlay = !webViewVideoOnlyPresentation,
+            showStatusBarOverlay = !videoOnlyPresentation,
         )
         tab.error?.takeIf {
-            !webViewVideoOnlyPresentation && capsule.chromeMode.showsControls
+            !videoOnlyPresentation && capsule.chromeMode.showsControls
         }?.let { error ->
             CapsuleErrorCard(
                 message = error,
@@ -151,7 +152,7 @@ fun SiteCapsuleBrowserScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
         }
-        if (!webViewVideoOnlyPresentation && capsule.chromeMode.showsControls && tab.isLoading) {
+        if (!videoOnlyPresentation && capsule.chromeMode.showsControls && tab.isLoading) {
             LinearProgressIndicator(
                 progress = { (tab.progress / 100f).coerceIn(0f, 1f) },
                 modifier = Modifier
@@ -160,7 +161,7 @@ fun SiteCapsuleBrowserScreen(
                     .align(Alignment.TopCenter),
             )
         }
-        if (!webViewVideoOnlyPresentation && capsule.chromeMode.showsControls) {
+        if (!videoOnlyPresentation && capsule.chromeMode.showsControls) {
             CapsuleChrome(
                 capsule = capsule,
                 currentUrl = tab.url,

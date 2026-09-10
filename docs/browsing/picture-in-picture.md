@@ -31,7 +31,9 @@ During Android's video-only presentation, the bundled content bridge hides non-v
 sizes the browser viewport to the media aspect ratio and moves the selected playing video to the
 viewport origin. The measured offset correction is required for players such as YouTube whose
 transformed player container remains below a fixed site header. Every temporary attribute, style
-and offset is removed when PiP preparation is cancelled or PiP returns.
+and offset is removed when PiP preparation is cancelled or PiP returns. Compose removes browser
+chrome from the video-only tree, including a parked address pill, until the expanded return layout
+is ready; this prevents chrome from being composited through the resizing Gecko SurfaceView.
 
 Android's confirmed PiP mode callback is forwarded to Gecko's `CompositorController` exactly once
 per state change for the owning session. Preparation never sends this signal: Gecko documents it as

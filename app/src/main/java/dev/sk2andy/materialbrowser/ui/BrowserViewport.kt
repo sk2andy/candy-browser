@@ -281,6 +281,7 @@ private fun ExternalLinkPreviewViewport(
 internal fun BrowserViewport(
     controller: BrowserController,
     webViewVideoOnlyPresentation: Boolean,
+    videoOnlyPresentation: Boolean = webViewVideoOnlyPresentation,
     selectedTab: BrowserTab,
     dragOffset: MutableFloatState,
     travelDistance: Float,
@@ -416,7 +417,7 @@ internal fun BrowserViewport(
                 visible = webViewVideoOnlyPresentation ||
                     !tabOverviewVisible ||
                     selectedTab.isIncognito,
-                showStatusBarOverlay = !webViewVideoOnlyPresentation &&
+                showStatusBarOverlay = !videoOnlyPresentation &&
                     !tabOverviewVisible &&
                     controller.selectedFirefoxExtensionOptionsTitle == null,
                 statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
@@ -429,7 +430,7 @@ internal fun BrowserViewport(
 
         if (
             controller.isScrollBarEnabled &&
-            !webViewVideoOnlyPresentation &&
+            !videoOnlyPresentation &&
             !tabOverviewVisible &&
             selectedTab.url != BLANK_URL
         ) {
