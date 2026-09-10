@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertHasClickAction
@@ -313,6 +314,66 @@ class AddressBarDockInstrumentedTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertIsFocused()
+    }
+
+    @Test
+    fun videoOnlyPresentationKeepsParkedPillHiddenUntilReturnCompletes() {
+        lateinit var browserController: BrowserController
+        val webViewVideoOnlyPresentation = mutableStateOf(false)
+        val videoOnlyPresentation = mutableStateOf(false)
+        composeRule.runOnIdle {
+            clearSession()
+            val tab = BrowserTab(
+                id = "video-only-dock-tab",
+                lastAccessedAt = 1L,
+                title = "Video",
+                url = "https://media.example/video",
+            )
+            BrowserSessionStore(composeRule.activity).apply {
+                saveTabsImmediately(listOf(tab), tab.id)
+                saveAddressBarDockPlacement(
+                    AddressBarDockPlacement(
+                        edge = AddressBarDockEdge.Right,
+                        verticalFraction = 0.44f,
+                    ),
+                )
+            }
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserScreen(
+                    controller = browserController,
+                    webViewVideoOnlyPresentation = webViewVideoOnlyPresentation.value,
+                    videoOnlyPresentation = videoOnlyPresentation.value,
+                )
+            }
+        }
+
+        val initialBounds = composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        composeRule.runOnIdle {
+            webViewVideoOnlyPresentation.value = true
+            videoOnlyPresentation.value = true
+        }
+
+        composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab).assertDoesNotExist()
+
+        composeRule.runOnIdle { webViewVideoOnlyPresentation.value = false }
+
+        composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab).assertDoesNotExist()
+
+        composeRule.runOnIdle { videoOnlyPresentation.value = false }
+
+        val returnedBounds = composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        assertEquals(initialBounds, returnedBounds)
     }
 
     @Test

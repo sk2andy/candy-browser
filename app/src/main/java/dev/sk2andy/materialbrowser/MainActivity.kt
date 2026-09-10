@@ -465,6 +465,7 @@ class MainActivity : AppCompatActivity() {
                         onCastVolumeChange = { volume -> castController?.setDeviceVolume(volume) },
                         onDisconnectCast = { castController?.disconnect() },
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
+                        videoOnlyPresentation = videoOnlyPresentation,
                         incomingBrowserNavigationRequestId =
                             incomingBrowserNavigationRequestId,
                         externalLaunchTabId = externalLaunchTabId,

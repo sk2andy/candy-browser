@@ -84,7 +84,6 @@ internal fun BoxScope.BrowserAddressChrome(
     addressBarMorphInFront: Boolean,
     browserRootBottomInWindowPx: Int,
     visibleSnoozedTabCount: Int,
-    webViewVideoOnlyPresentation: Boolean,
     onToggleCastPlayback: () -> Unit,
     onSeekCast: (Long) -> Unit,
     onCastVolumeChange: (Float) -> Unit,
@@ -483,8 +482,7 @@ internal fun BoxScope.BrowserAddressChrome(
         !selectedTab.isIncognito &&
         !tabOverviewVisible &&
         !addressEditorVisible &&
-        !settingsVisible &&
-        !webViewVideoOnlyPresentation
+        !settingsVisible
     ) {
         CastControls(
             state = castUiState,

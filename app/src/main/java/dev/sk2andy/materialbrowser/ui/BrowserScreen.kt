@@ -159,6 +159,7 @@ internal fun BrowserScreen(
     onCastVolumeChange: (Float) -> Unit = {},
     onDisconnectCast: () -> Unit = {},
     webViewVideoOnlyPresentation: Boolean = false,
+    videoOnlyPresentation: Boolean = webViewVideoOnlyPresentation,
     incomingBrowserNavigationRequestId: Int = 0,
     externalLaunchTabId: String? = null,
     onReturnToExternalApp: () -> Unit = {},
@@ -187,6 +188,7 @@ internal fun BrowserScreen(
             controller = controller,
             capsule = capsule,
             webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
+            videoOnlyPresentation = videoOnlyPresentation,
         )
         return
     }
@@ -1133,7 +1135,7 @@ internal fun BrowserScreen(
     )
     val firefoxExtensionOptionsTitle = controller.selectedFirefoxExtensionOptionsTitle
     val showFirefoxExtensionOptionsChrome =
-        firefoxExtensionOptionsTitle != null && !webViewVideoOnlyPresentation
+        firefoxExtensionOptionsTitle != null && !videoOnlyPresentation
     val showInteractiveBlankStart = addressEditorVisible &&
         selectedTab.url == BLANK_URL &&
         addressValue.text.isEmpty() &&
@@ -1177,6 +1179,7 @@ internal fun BrowserScreen(
                     BrowserViewport(
                         controller = controller,
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
+                        videoOnlyPresentation = videoOnlyPresentation,
                         selectedTab = selectedTab,
                         dragOffset = browserDragOffset,
                         travelDistance = tabSwitchTravelPx,
@@ -1209,7 +1212,7 @@ internal fun BrowserScreen(
         }
 
         controller.findInPageState
-            ?.takeIf { firefoxExtensionOptionsTitle == null }
+            ?.takeIf { firefoxExtensionOptionsTitle == null && !videoOnlyPresentation }
             ?.let { findState ->
             val matchPosition = FindInPageRules.displayPosition(findState)
             FindInPageBar(
@@ -1244,7 +1247,7 @@ internal fun BrowserScreen(
             )
         }
 
-        if (firefoxExtensionOptionsTitle == null) {
+        if (firefoxExtensionOptionsTitle == null && !videoOnlyPresentation) {
             BrowserAddressChrome(
             controller = controller,
             selectedTab = selectedTab,
@@ -1277,7 +1280,6 @@ internal fun BrowserScreen(
             addressBarMorphInFront = addressBarMorphInFront,
             browserRootBottomInWindowPx = browserRootBottomInWindowPx,
             visibleSnoozedTabCount = visibleSnoozedTabs.size,
-            webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
             onToggleCastPlayback = onToggleCastPlayback,
             onSeekCast = onSeekCast,
             onCastVolumeChange = onCastVolumeChange,
