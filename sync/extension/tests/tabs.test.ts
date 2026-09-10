@@ -217,6 +217,7 @@ test("remote mutation applies one browser operation and maintains UUID mapping",
         const tab = { id: 11, windowId: 1, index: properties.index ?? 0, active: false, pinned: properties.pinned ?? false, incognito: false, url: properties.url } as chrome.tabs.Tab;
         tabs.push(tab); return tab;
       },
+      get: async (tabId: number) => tabs.find((tab) => tab.id === tabId)!,
       update: async (tabId: number, properties: chrome.tabs.UpdateProperties) => { updates.push([tabId, properties]); return tabs[0]!; },
       move: async (tabId: number, properties: chrome.tabs.MoveProperties) => { moves.push([tabId, properties]); return tabs[0]!; },
       remove: async (tabId: number) => { removals.push(tabId); },
@@ -236,4 +237,102 @@ test("remote mutation applies one browser operation and maintains UUID mapping",
   assert.deepEqual(updates, [[11, { url: "https://two.example/" }], [11, { pinned: true }]]);
   assert.deepEqual(moves, [[11, { index: 0 }]]);
   assert.deepEqual(removals, [11]);
+});
+
+test("remote navigate reloads only when normalized current and pending URLs differ", async () => {
+  const local = new Map<string, unknown>([["candySyncTabIdentitiesV1", { "11": "remote-tab" }]]);
+  const updates: Array<[number, chrome.tabs.UpdateProperties]> = [];
+  const tab = {
+    id: 11,
+    windowId: 1,
+    index: 0,
+    active: true,
+    pinned: false,
+    incognito: false,
+    url: "https://www.youtube.com/watch?v=candy",
+  } as chrome.tabs.Tab;
+  const fakeChrome = {
+    tabs: {
+      get: async () => tab,
+      update: async (tabId: number, properties: chrome.tabs.UpdateProperties) => {
+        updates.push([tabId, properties]);
+        return tab;
+      },
+    },
+    storage: { local: storageArea(local) },
+  } as unknown as typeof chrome;
+  (globalThis as typeof globalThis & { chrome: typeof chrome }).chrome = fakeChrome;
+
+  async function navigate(url: string): Promise<number | null> {
+    return applyTabMutation({
+      schemaVersion: 2,
+      mutationId: "mutation-title",
+      targetDeviceId: "desktop-1",
+      type: "navigate",
+      candyId: "remote-tab",
+      url,
+      title: "Candy video loaded on Android",
+    });
+  }
+
+  assert.equal(await navigate("https://www.youtube.com/watch?v=candy"), 11);
+  assert.deepEqual(updates, []);
+
+  tab.url = "https://www.youtube.com:443/watch?v=candy";
+  assert.equal(await navigate("https://www.youtube.com/watch?v=candy"), 11);
+  assert.deepEqual(updates, []);
+
+  tab.url = "https://old.example/";
+  tab.pendingUrl = "https://www.youtube.com/watch?v=candy";
+  assert.equal(await navigate("https://www.youtube.com/watch?v=candy"), 11);
+  assert.deepEqual(updates, []);
+
+  delete tab.pendingUrl;
+  assert.equal(await navigate("https://new.example/"), 11);
+  assert.deepEqual(updates, [[11, { url: "https://new.example/" }]]);
+});
+
+test("remote snapshot does not reload a tab whose normalized URL already matches", async () => {
+  const local = new Map<string, unknown>([["candySyncTabIdentitiesV1", { "11": "remote-tab" }]]);
+  const updates: Array<[number, chrome.tabs.UpdateProperties]> = [];
+  const tab = {
+    id: 11,
+    windowId: 1,
+    index: 0,
+    active: true,
+    pinned: false,
+    incognito: false,
+    url: "https://www.youtube.com:443/watch?v=candy",
+  } as chrome.tabs.Tab;
+  const fakeChrome = {
+    tabs: {
+      query: async () => [tab],
+      update: async (tabId: number, properties: chrome.tabs.UpdateProperties) => {
+        updates.push([tabId, properties]);
+        Object.assign(tab, properties);
+        return tab;
+      },
+      move: async () => tab,
+      remove: async () => undefined,
+    },
+    storage: { local: storageArea(local) },
+  } as unknown as typeof chrome;
+  (globalThis as typeof globalThis & { chrome: typeof chrome }).chrome = fakeChrome;
+
+  await applyTabSnapshot({
+    schemaVersion: 1,
+    capturedAt: "2026-09-10T10:00:00Z",
+    tabs: [{
+      candyId: "remote-tab",
+      windowId: 1,
+      index: 0,
+      groupId: null,
+      active: true,
+      pinned: false,
+      title: "Candy video loaded on Android",
+      url: "https://www.youtube.com/watch?v=candy",
+    }],
+  });
+
+  assert.equal(updates.some(([, properties]) => properties.url !== undefined), false);
 });
