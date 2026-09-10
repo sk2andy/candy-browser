@@ -207,6 +207,7 @@ import dev.sk2andy.materialbrowser.data.FavoriteUndoRules
 import dev.sk2andy.materialbrowser.data.FaviconRepository
 import dev.sk2andy.materialbrowser.data.HistoryClearRequest
 import dev.sk2andy.materialbrowser.data.HistoryEntry
+import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.data.LinkPeekActionLayoutRules
@@ -490,6 +491,8 @@ class BrowserController(
     var isAiModeToggleVisible by mutableStateOf(false)
         private set
     var isRecallEnabled by mutableStateOf(false)
+        private set
+    internal var historyRecordingMode by mutableStateOf(HistoryRecordingMode.Enabled)
         private set
     var searchSuggestionProvider by mutableStateOf(defaultSearchSuggestionProvider())
         private set
@@ -1840,6 +1843,7 @@ class BrowserController(
         linkPeekActionLayout = store.loadLinkPeekActionLayout()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
         isRecallEnabled = store.loadRecallEnabled()
+        historyRecordingMode = historyRepository.recordingMode()
         if (!isRecallEnabled) recallRepository.clearAsync()
         searchSuggestionProvider = store.loadSearchSuggestionProvider(
             fallback = defaultSearchSuggestionProvider(),
@@ -6923,6 +6927,11 @@ class BrowserController(
                 recallDisablePending = false
             }
         }
+    }
+
+    internal fun updateHistoryRecordingMode(mode: HistoryRecordingMode) {
+        if (historyRecordingMode == mode) return
+        if (historyRepository.setRecordingMode(mode)) historyRecordingMode = mode
     }
 
     fun updateSearchSuggestionProvider(provider: SearchSuggestionProvider) {

@@ -1,14 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -16,11 +9,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.data.HistoryClearRequest
 import dev.sk2andy.materialbrowser.data.HistoryEntry
-import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import java.util.concurrent.atomic.AtomicReference
@@ -61,8 +54,6 @@ class HistoryScreenInstrumentedTest {
                             profileId = "work",
                         ),
                     ),
-                    recordingMode = HistoryRecordingMode.Enabled,
-                    onRecordingModeChange = {},
                     onDeleteEntries = {},
                     onClearHistory = {},
                     onOpenEntry = {},
@@ -81,12 +72,12 @@ class HistoryScreenInstrumentedTest {
         composeRule.onNodeWithText("Personal page").assertIsDisplayed()
         composeRule.onNodeWithText("Work guide").assertIsDisplayed()
 
-        composeRule.onNodeWithTag(HistoryScreenTestTags.Search).performClick()
+        composeRule.onNodeWithTag(HistoryScreenTestTags.SearchField).assertIsDisplayed()
         composeRule.onNodeWithTag(HistoryScreenTestTags.SearchField).performTextInput("work")
         composeRule.onNodeWithText("Personal page").assertDoesNotExist()
         composeRule.onNodeWithText("Work guide").assertIsDisplayed()
 
-        composeRule.onNodeWithTag(HistoryScreenTestTags.Search).performClick()
+        composeRule.onNodeWithTag(HistoryScreenTestTags.SearchField).performTextReplacement("")
         composeRule.onNodeWithText("Personal page").assertIsDisplayed()
     }
 
@@ -114,8 +105,6 @@ class HistoryScreenInstrumentedTest {
                         ),
                     ),
                     recallMatches = listOf(match),
-                    recordingMode = HistoryRecordingMode.Enabled,
-                    onRecordingModeChange = {},
                     onDeleteEntries = {},
                     onClearHistory = {},
                     onOpenEntry = {},
@@ -124,7 +113,6 @@ class HistoryScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(HistoryScreenTestTags.Search).performClick()
         composeRule.onNodeWithTag(HistoryScreenTestTags.SearchField).performTextInput("matching")
 
         composeRule.onNodeWithText("Remembered page").assertIsDisplayed()
@@ -132,16 +120,19 @@ class HistoryScreenInstrumentedTest {
     }
 
     @Test
-    fun disablingHistoryAlsoDisablesClearOnExit() {
+    fun selectedEntryUsesMaterialSelectedSemantics() {
+        val entry = HistoryEntry(
+            url = "https://selected.example/",
+            title = "Selected",
+            lastVisitedAt = System.currentTimeMillis(),
+            profileId = "personal",
+        )
         composeRule.setContent {
             MaterialBrowserTheme {
-                var mode by remember { mutableStateOf(HistoryRecordingMode.ClearOnExit) }
                 HistoryScreen(
                     profiles = listOf(BrowserProfile(id = "personal", emoji = "🏠")),
                     activeProfileId = "personal",
-                    history = emptyList(),
-                    recordingMode = mode,
-                    onRecordingModeChange = { mode = it },
+                    history = listOf(entry),
                     onDeleteEntries = {},
                     onClearHistory = {},
                     onOpenEntry = {},
@@ -150,14 +141,10 @@ class HistoryScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(HistoryScreenTestTags.ClearOnExit).assertIsOn()
-        composeRule.onNodeWithTag(HistoryScreenTestTags.SaveHistory)
-            .assertIsOn()
+        composeRule.onNodeWithTag(HistoryScreenTestTags.entry(entry)).assertIsNotSelected()
+        composeRule.onNodeWithTag(HistoryScreenTestTags.select(entry))
             .performClick()
-            .assertIsOff()
-        composeRule.onNodeWithTag(HistoryScreenTestTags.ClearOnExit)
-            .assertIsOff()
-            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(HistoryScreenTestTags.entry(entry)).assertIsSelected()
     }
 
     @Test
@@ -188,8 +175,6 @@ class HistoryScreenInstrumentedTest {
                             profileId = "work",
                         ),
                     ),
-                    recordingMode = HistoryRecordingMode.Enabled,
-                    onRecordingModeChange = {},
                     onDeleteEntries = {},
                     onClearHistory = request::set,
                     onOpenEntry = {},

@@ -22,28 +22,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -59,12 +54,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,7 +72,6 @@ import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.data.BrowsingHistoryRules
 import dev.sk2andy.materialbrowser.data.HistoryClearRequest
 import dev.sk2andy.materialbrowser.data.HistoryEntry
-import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.data.HistoryRecallRules
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import dev.sk2andy.materialbrowser.recall.RecallRules
@@ -94,9 +91,7 @@ internal fun HistoryScreen(
     activeProfileId: String,
     history: List<HistoryEntry>,
     recallMatches: List<RecallMatch> = emptyList(),
-    recordingMode: HistoryRecordingMode,
     onRecallCriteriaChanged: (String, Set<String>) -> Unit = { _, _ -> },
-    onRecordingModeChange: (HistoryRecordingMode) -> Unit,
     onDeleteEntries: (List<HistoryEntry>) -> Unit,
     onClearHistory: (HistoryClearRequest) -> Unit,
     onOpenEntry: (HistoryEntry) -> Unit,
@@ -117,7 +112,6 @@ internal fun HistoryScreen(
     }
     var selectedEntryKeys by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
     var query by rememberSaveable { mutableStateOf("") }
-    var searchVisible by rememberSaveable { mutableStateOf(false) }
     var clearConfirmationVisible by rememberSaveable { mutableStateOf(false) }
     val selectedProfiles = selectedProfileIds.toSet()
     LaunchedEffect(query, selectedProfiles) {
@@ -149,10 +143,6 @@ internal fun HistoryScreen(
     fun handleBack() {
         when {
             selectedEntries.isNotEmpty() -> selectedEntryKeys = arrayListOf()
-            searchVisible -> {
-                searchVisible = false
-                query = ""
-            }
             else -> onBack()
         }
     }
@@ -195,18 +185,6 @@ internal fun HistoryScreen(
                             )
                         }
                     } else {
-                        IconButton(
-                            onClick = {
-                                searchVisible = !searchVisible
-                                if (!searchVisible) query = ""
-                            },
-                            modifier = Modifier.testTag(HistoryScreenTestTags.Search),
-                        ) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = stringResource(R.string.history_search),
-                            )
-                        }
                         TextButton(
                             onClick = { clearConfirmationVisible = true },
                             enabled = clearableHistory.any { entry ->
@@ -228,38 +206,15 @@ internal fun HistoryScreen(
                 .navigationBarsPadding()
                 .testTag(HistoryScreenTestTags.List),
         ) {
-            if (searchVisible) {
-                item(key = "search") {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it.take(RecallRules.MAX_QUERY_CHARS) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .testTag(HistoryScreenTestTags.SearchField),
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.history_search)) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = stringResource(
-                                            R.string.history_clear_search,
-                                        ),
-                                    )
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-
-            item(key = "controls") {
-                HistoryRecordingControls(
-                    recordingMode = recordingMode,
-                    onRecordingModeChange = onRecordingModeChange,
+            item(key = "search") {
+                LibrarySearchBar(
+                    query = query,
+                    placeholder = stringResource(R.string.history_search),
+                    clearContentDescription = stringResource(R.string.history_clear_search),
+                    testTag = HistoryScreenTestTags.SearchField,
+                    onQueryChange = {
+                        query = it.take(RecallRules.MAX_QUERY_CHARS)
+                    },
                 )
             }
 
@@ -362,7 +317,6 @@ internal fun HistoryScreen(
                             },
                             onOpen = { onOpenEntry(entry) },
                         )
-                        HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
                     }
                 }
             }
@@ -734,84 +688,6 @@ private fun historyClearBoundaryLabel(field: HistoryClearDateField): String = st
 )
 
 @Composable
-private fun HistoryRecordingControls(
-    recordingMode: HistoryRecordingMode,
-    onRecordingModeChange: (HistoryRecordingMode) -> Unit,
-) {
-    Surface(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Column {
-            HistoryControlRow(
-                title = stringResource(R.string.history_save_title),
-                summary = stringResource(R.string.history_save_summary),
-                checked = recordingMode != HistoryRecordingMode.Disabled,
-                enabled = true,
-                onCheckedChange = { enabled ->
-                    onRecordingModeChange(
-                        if (enabled) HistoryRecordingMode.Enabled else HistoryRecordingMode.Disabled,
-                    )
-                },
-                modifier = Modifier.testTag(HistoryScreenTestTags.SaveHistory),
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            HistoryControlRow(
-                title = stringResource(R.string.history_clear_on_exit_title),
-                summary = stringResource(R.string.history_clear_on_exit_summary),
-                checked = recordingMode == HistoryRecordingMode.ClearOnExit,
-                enabled = recordingMode != HistoryRecordingMode.Disabled,
-                onCheckedChange = { enabled ->
-                    onRecordingModeChange(
-                        if (enabled) {
-                            HistoryRecordingMode.ClearOnExit
-                        } else {
-                            HistoryRecordingMode.Enabled
-                        },
-                    )
-                },
-                modifier = Modifier.testTag(HistoryScreenTestTags.ClearOnExit),
-            )
-        }
-    }
-}
-
-@Composable
-private fun HistoryControlRow(
-    title: String,
-    summary: String,
-    checked: Boolean,
-    enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = checked,
-                enabled = enabled,
-                role = Role.Switch,
-                onValueChange = onCheckedChange,
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                summary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(Modifier.width(16.dp))
-        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
-    }
-}
-
-@Composable
 private fun HistoryEntryRow(
     entry: HistoryEntry,
     time: String,
@@ -821,54 +697,67 @@ private fun HistoryEntryRow(
     onSelectedChange: (Boolean) -> Unit,
     onOpen: () -> Unit,
 ) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = entry.title.ifBlank { BrowserUriPolicy.displayHttpHost(entry.url) },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+    Surface(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 2.dp)
+            .semantics { this.selected = selected }
+            .clickable(onClick = onOpen)
+            .testTag(HistoryScreenTestTags.entry(entry)),
+        shape = MaterialTheme.shapes.large,
+        color = if (selected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            Color.Transparent
         },
-        supportingContent = {
-            Column {
+    ) {
+        ListItem(
+            headlineContent = {
                 Text(
-                    text = BrowserUriPolicy.displayHttpHost(entry.url),
+                    text = entry.title.ifBlank { BrowserUriPolicy.displayHttpHost(entry.url) },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                excerpt?.takeIf(String::isNotBlank)?.let { value ->
+            },
+            supportingContent = {
+                Column {
                     Text(
-                        text = value,
-                        maxLines = 2,
+                        text = BrowserUriPolicy.displayHttpHost(entry.url),
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                    )
+                    excerpt?.takeIf(String::isNotBlank)?.let { value ->
+                        Text(
+                            text = value,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            },
+            leadingContent = {
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = onSelectedChange,
+                    modifier = Modifier.testTag(HistoryScreenTestTags.select(entry)),
+                )
+            },
+            trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    profileEmoji?.let { emoji ->
+                        Text(emoji, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(
+                        time,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-        },
-        leadingContent = {
-            Checkbox(
-                checked = selected,
-                onCheckedChange = onSelectedChange,
-            )
-        },
-        trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                profileEmoji?.let { emoji ->
-                    Text(emoji, style = MaterialTheme.typography.bodyMedium)
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(
-                    time,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        modifier = Modifier
-            .clickable(onClick = onOpen)
-            .testTag(HistoryScreenTestTags.entry(entry)),
-    )
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        )
+    }
 }
 
 @Composable
@@ -898,7 +787,6 @@ private fun HistoryEmptyState(
 
 internal object HistoryScreenTestTags {
     const val List = "history_list"
-    const val Search = "history_search"
     const val SearchField = "history_search_field"
     const val Clear = "history_clear"
     const val ClearDialog = "history_clear_dialog"
@@ -910,12 +798,12 @@ internal object HistoryScreenTestTags {
     const val ClearConfirm = "history_clear_confirm"
     const val DeleteSelected = "history_delete_selected"
     const val AllProfiles = "history_all_profiles"
-    const val SaveHistory = "history_save"
-    const val ClearOnExit = "history_clear_on_exit"
 
     fun profile(profileId: String): String = "history_profile:$profileId"
 
     fun clearProfile(profileId: String): String = "history_clear_profile:$profileId"
 
     fun entry(entry: HistoryEntry): String = "history_entry:${entry.profileId}:${entry.url}"
+
+    fun select(entry: HistoryEntry): String = "history_select:${entry.profileId}:${entry.url}"
 }
