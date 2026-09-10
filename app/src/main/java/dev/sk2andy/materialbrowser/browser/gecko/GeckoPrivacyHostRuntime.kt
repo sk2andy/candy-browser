@@ -44,6 +44,7 @@ internal class GeckoViewPrivacyHostRuntime(
         var pictureInPicturePlaybackExpected: Boolean = false,
         var scrollMetrics: BrowserEngineScrollMetrics? = null,
         val onScrollMetrics: (BrowserEngineScrollMetrics) -> Unit,
+        val onMainFrameResponse: (GeckoMainFrameResponse) -> Unit,
     )
 
     private val bindings = linkedMapOf<String, Binding>()
@@ -96,6 +97,7 @@ internal class GeckoViewPrivacyHostRuntime(
         policy: GeckoPrivacyPolicy,
         sink: GeckoPrivacyEventSink,
         onScrollMetrics: (BrowserEngineScrollMetrics) -> Unit,
+        onMainFrameResponse: (GeckoMainFrameResponse) -> Unit,
         onBound: () -> Unit,
         onFailure: (String) -> Unit,
     ): GeckoPrivacyBinding {
@@ -105,6 +107,7 @@ internal class GeckoViewPrivacyHostRuntime(
             session = session,
             sink = sink,
             onScrollMetrics = onScrollMetrics,
+            onMainFrameResponse = onMainFrameResponse,
             bound = onBound,
             failed = onFailure,
         )
@@ -288,6 +291,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 completeBindingIfReady(binding)
             }
             "events" -> acceptEvents(value)
+            "main-frame-response" -> acceptMainFrameResponse(value)
             "safe-area-fallback" -> acceptSafeAreaFallback(value)
             "scroll-metrics" -> acceptScrollMetrics(value)
             "reader-result" -> acceptReaderResult(value)
@@ -380,6 +384,18 @@ internal class GeckoViewPrivacyHostRuntime(
                 ),
             )
         }
+    }
+
+    private fun acceptMainFrameResponse(value: JSONObject) {
+        val binding = bindings[value.optString("token")] ?: return
+        if (binding.handshake.publishedRevision != value.optLong("revision", -1)) return
+        val response = GeckoMainFrameResponseRules.resolve(
+            url = value.optString("url"),
+            statusCode = value.optInt("statusCode", -1),
+            navigationGeneration = value.optInt("navigationGeneration", -1),
+        ) ?: return
+        if (response.navigationGeneration != binding.policy.navigationGeneration) return
+        binding.onMainFrameResponse(response)
     }
 
     private fun acceptSafeAreaFallback(value: JSONObject) {

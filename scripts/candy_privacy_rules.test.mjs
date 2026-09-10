@@ -172,6 +172,8 @@ test("privacy host uses required MV2 web origins for document-start scripts", ()
 test("newer privacy policy wins while older cookie rules are still loading", async () => {
   let resolveCookieAsset;
   let nativeMessageListener;
+  let beforeRequestListener;
+  let headersReceivedListener;
   const runtimeMessageListeners = [];
   const postedNativeMessages = [];
   const backgroundContext = vm.createContext({
@@ -205,7 +207,15 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
         sendMessage: () => Promise.resolve(),
         onRemoved: { addListener: () => {} },
       },
-      webRequest: { onBeforeRequest: { addListener: () => {} } },
+      webRequest: {
+        onBeforeRequest: {
+          addListener: (listener) => { beforeRequestListener = listener; },
+        },
+        onHeadersReceived: {
+          addListener: (listener) => { headersReceivedListener = listener; },
+        },
+        onErrorOccurred: { addListener: () => {} },
+      },
     },
   });
   vm.runInContext(
@@ -247,6 +257,44 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   await sendRuntimeMessage(
     { type: "bind", token: "tab-token" },
     { tab: { id: 7 } },
+  );
+  beforeRequestListener({
+    type: "main_frame",
+    tabId: 7,
+    requestId: "request-404",
+    url: "https://example.com/missing",
+  });
+  headersReceivedListener({
+    type: "xmlhttprequest",
+    tabId: 7,
+    requestId: "request-subresource",
+    url: "https://example.com/missing-api",
+    statusCode: 404,
+  });
+  assert.equal(
+    postedNativeMessages.some((message) => message.type === "main-frame-response"),
+    false,
+  );
+  headersReceivedListener({
+    type: "main_frame",
+    tabId: 7,
+    requestId: "request-404",
+    url: "https://example.com/missing",
+    statusCode: 404,
+  });
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(
+      postedNativeMessages.find((message) => message.type === "main-frame-response"),
+    )),
+    {
+      type: "main-frame-response",
+      protocolVersion: 2,
+      token: "tab-token",
+      revision: 2,
+      navigationGeneration: 0,
+      url: "https://example.com/missing",
+      statusCode: 404,
+    },
   );
   const policy = await sendRuntimeMessage(
     { type: "content-policy-request" },

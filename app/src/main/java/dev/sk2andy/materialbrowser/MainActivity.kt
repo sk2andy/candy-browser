@@ -56,6 +56,7 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnActivityDelegate
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineProcessRestart
 import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
+import dev.sk2andy.materialbrowser.browser.integration.FavoritesActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
@@ -171,6 +172,16 @@ class MainActivity : AppCompatActivity() {
             if (browserController.openHistoryEntry(request.url, request.profileId)) {
                 incomingBrowserNavigationRequestId++
             }
+        }
+    }
+    private val favoritesLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (!::browserController.isInitialized) return@registerForActivityResult
+        browserController.reloadFavorites()
+        if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+        FavoritesActivityContract.navigationUrlFrom(result.data)?.let { url ->
+            if (browserController.openFavorite(url)) incomingBrowserNavigationRequestId++
         }
     }
 
@@ -450,6 +461,14 @@ class MainActivity : AppCompatActivity() {
                             externalLaunchTabId = tabId
                         },
                         onTabOverviewPortraitLockChanged = ::setTabOverviewPortraitLocked,
+                        onOpenFavorites = {
+                            favoritesLauncher.launch(
+                                FavoritesActivityContract.launchIntent(this@MainActivity),
+                            )
+                        },
+                        onOpenDownloads = {
+                            startActivity(Intent(this@MainActivity, DownloadsActivity::class.java))
+                        },
                         onOpenHistory = {
                             historyLauncher.launch(
                                 HistoryActivityContract.launchIntent(this@MainActivity),

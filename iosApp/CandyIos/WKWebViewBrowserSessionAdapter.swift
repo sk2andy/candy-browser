@@ -220,7 +220,8 @@ final class WKWebViewBrowserSessionAdapter: NSObject, @preconcurrency BrowserEng
                 canGoBack: webView.canGoBack,
                 canGoForward: webView.canGoForward,
                 failureDescription: failureDescription,
-                isLoading: KotlinBoolean(bool: webView.isLoading)
+                isLoading: KotlinBoolean(bool: webView.isLoading),
+                httpStatusCode: nil
             )
         )
     }

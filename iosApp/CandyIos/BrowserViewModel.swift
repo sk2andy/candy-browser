@@ -49,8 +49,11 @@ final class BrowserViewModel: NSObject, ObservableObject {
     @Published private(set) var searxngInstanceUrl: String
     @Published private(set) var translationProvider: PageTranslationProvider
     @Published private(set) var menuItems: [BrowserFeatureMenuItem] = []
+    @Published private(set) var favoriteItems: [BrowserFavoriteItem] = []
+    @Published private(set) var pendingFavoriteRemoval: BrowserFavoriteRemoval?
     @Published private(set) var isTabOverviewVisible = false
     @Published private(set) var isSettingsVisible = false
+    @Published private(set) var isFavoritesVisible = false
     @Published private(set) var addressFocusRequest: Int64 = 0
     @Published var findQuery = ""
     @Published private(set) var findResultText = ""
@@ -308,6 +311,59 @@ final class BrowserViewModel: NSObject, ObservableObject {
 
     func dismissSettings() {
         isSettingsVisible = false
+    }
+
+    func showFavorites() {
+        cancelFeaturePresentations()
+        publishFavoriteItems()
+        isFavoritesVisible = true
+    }
+
+    func dismissFavorites() {
+        isFavoritesVisible = false
+        pendingFavoriteRemoval = nil
+    }
+
+    func openFavorite(_ item: BrowserFavoriteItem) {
+        guard favoriteAddresses.contains(item.address) else {
+            return
+        }
+        let resolution = sessionController.navigateSelected(input: item.address)
+        guard let value = resolution.url?.value else {
+            errorMessage = "Dieser Favorit kann nicht geöffnet werden."
+            return
+        }
+        address = value
+        errorMessage = nil
+        isFavoritesVisible = false
+        pendingFavoriteRemoval = nil
+        synchronizeTabs()
+    }
+
+    func deleteFavorite(_ item: BrowserFavoriteItem) {
+        guard favoriteAddresses.remove(item.address) != nil else {
+            return
+        }
+        pendingFavoriteRemoval = BrowserFavoriteRemoval(id: UUID(), item: item)
+        publishFavoriteItems()
+        synchronizeTabs()
+    }
+
+    func undoFavoriteRemoval(id: UUID) {
+        guard let removal = pendingFavoriteRemoval, removal.id == id else {
+            return
+        }
+        favoriteAddresses.insert(removal.item.address)
+        pendingFavoriteRemoval = nil
+        publishFavoriteItems()
+        synchronizeTabs()
+    }
+
+    func dismissFavoriteRemoval(id: UUID) {
+        guard pendingFavoriteRemoval?.id == id else {
+            return
+        }
+        pendingFavoriteRemoval = nil
     }
 
     var syncSettingsUiState: SyncSettingsUiState {
@@ -593,6 +649,8 @@ final class BrowserViewModel: NSObject, ObservableObject {
             }
         } else if action == .translatepage {
             translateSelectedPage()
+        } else if action == .openfavorites {
+            showFavorites()
         } else if action == .opensettings {
             showSettings()
         }
@@ -1249,6 +1307,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
             action == .share ||
             action == .openexternal ||
             action == .print ||
+            action == .openfavorites ||
             action == .opensettings ||
             action == .invoketoppingcommand
     }
@@ -1269,7 +1328,15 @@ final class BrowserViewModel: NSObject, ObservableObject {
         } else {
             favoriteAddresses.insert(value)
         }
+        if pendingFavoriteRemoval?.item.address == value {
+            pendingFavoriteRemoval = nil
+        }
+        publishFavoriteItems()
         synchronizeTabs()
+    }
+
+    private func publishFavoriteItems() {
+        favoriteItems = BrowserFavoritesRules.items(from: favoriteAddresses)
     }
 
     private func togglePinned() {
@@ -1302,6 +1369,8 @@ final class BrowserViewModel: NSObject, ObservableObject {
         pageExtractionRequestId = nil
         readerSnapshot = nil
         sharePayload = nil
+        isFavoritesVisible = false
+        pendingFavoriteRemoval = nil
     }
 
     private func presentReader() {

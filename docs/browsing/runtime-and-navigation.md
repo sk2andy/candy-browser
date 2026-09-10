@@ -9,7 +9,7 @@
 | Controller | Gecko session creation, tab/profile state, navigation, persistence coordination, platform and fullscreen-video callbacks | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
 | Platform engine adapters | Own GeckoView sessions/extensions on Android and WKWebView/Toppings on iOS | [`platform-engines.md`](platform-engines.md) |
 | Compose root | Read controller state, own transient screen state and route browser surfaces | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt) |
-| Compose surfaces | Host engine/preview content, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
+| Compose surfaces | Host engine/preview content, native page-error/offline presentation, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`PageErrorFeedback.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/PageErrorFeedback.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
 | Policies | Resolve input, URLs, settings, media, file chooser and external routes | [`browser/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/) |
 
 ## Navigation paths
@@ -31,6 +31,8 @@
 | Gecko downloads and uploads | `BrowserEngineDownloadRules` / `FileChooserRules` → controller → Android download/file presenters | Accept bounded HTTP(S) downloads and readable `content://` file results only; reject stale session/navigation/activity results |
 | Gecko permissions and prompts | `PermissionRequestRules` / `BrowserWebPromptRules` → controller → existing Candy dialogs and Android permission presenter | Preserve profile/private permission scope, deny stale prompts, and fail closed for unsupported sensitive prompt classes |
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
+| Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
+| Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
 
 ## Invariants
 
@@ -99,6 +101,22 @@
   permissions, authentication and web prompts to the exact session plus navigation generation.
   Navigation, tab replacement, backgrounding and destruction cancel pending delivery exactly once.
 - Keep private tab state memory-only and skip remote suggestions for private input.
+- Treat Android connectivity as a process-local observable effect. A default network counts as online
+  only with both `NET_CAPABILITY_INTERNET` and `NET_CAPABILITY_VALIDATED`; close the registered callback
+  with `BrowserController`. Do not issue Candy-owned probe requests or replace an already usable page
+  solely because the network disconnects. Show the offline surface after a main-frame transport failure.
+  Offline Candy Circuit board, score, combo, moves and best score remain UI-local and memory-only.
+  The deterministic 4×4 rotation puzzle gives a round twelve moves; a circuit scores only when at least
+  four connected tiles have reciprocal edge connections without a dangling endpoint, and a circuit
+  fingerprint scores at most once per round. If connectivity returns during the game, keep game state and expose a
+  polite **Back online** banner whose button performs the only reload; without a started game, reconnect
+  performs one automatic reload.
+- Treat a main-frame HTTP 404 as a committed response, not a failed navigation. System WebView reports it
+  from `onReceivedHttpError`; Gecko's authenticated internal Privacy WebExtension reports the main-frame
+  response status because GeckoView's session delegate exposes transport errors but not HTTP response
+  codes. Bind response messages to the request's policy revision and navigation generation. Reject
+  non-HTTP(S), out-of-range, stale-policy, and URL-mismatched response messages. Subresource
+  failures never replace page content. Clear status on every new navigation.
 - Keep private desktop-view domains memory-only; persist regular domains per profile only.
 - Desktop view must present one coherent desktop identity: desktop user-agent text, Linux desktop
   client hints, and a 980-CSS-pixel layout viewport. Rewrite mobile viewport sizing only for
@@ -280,6 +298,7 @@ WebView request state.
 | --- | --- |
 | Input/URL policy | Matching JVM rule test |
 | WebView settings or callbacks | Focused browser instrumented test |
+| Native 404/offline pages and Candy Circuit | `CandyCircuitRulesTest`, `PageErrorFeedbackRulesTest`, `BrowserConnectivityRulesTest`, `GeckoMainFrameResponseRulesTest`, `PageErrorFeedbackInstrumentedTest`, and engine-specific main-frame 404 coverage |
 | Federated login | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, and popup-blocker regression tests |
 | CAPTCHA compatibility | `CaptchaCompatibilityRulesTest`, `CaptchaCompatibilityPromptInstrumentedTest`, `BrowserControllerCaptchaCompatibilityInstrumentedTest`, and `BrowserSessionStoreInstrumentedTest` |
 | Gecko password Autofill, Credential Manager and browser-origin manifest contract | `GeckoCredentialsInstrumentedTest` on API 34+ |

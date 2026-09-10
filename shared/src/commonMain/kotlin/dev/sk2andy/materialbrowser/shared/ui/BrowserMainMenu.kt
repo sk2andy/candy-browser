@@ -719,6 +719,8 @@ private fun BrowserMainMenuItemGroup(
 
 private fun BrowserFeatureMenuItem.hasTrailingIcon(): Boolean = action in setOf(
     BrowserFeatureMenuAction.OpenSnoozedTabs,
+    BrowserFeatureMenuAction.OpenFavorites,
+    BrowserFeatureMenuAction.OpenDownloads,
     BrowserFeatureMenuAction.OpenHistory,
     BrowserFeatureMenuAction.OpenFirefoxExtensions,
     BrowserFeatureMenuAction.OpenSettings,
@@ -745,6 +747,8 @@ private fun BrowserFeatureMenuItem.testTagModifier(): Modifier = when (action) {
     BrowserFeatureMenuAction.SnoozeTab -> Modifier.testTag(BrowserMainMenuTestTags.Snooze)
     BrowserFeatureMenuAction.DockAddressBar -> Modifier.testTag(BrowserMainMenuTestTags.DockAddressBar)
     BrowserFeatureMenuAction.OpenSnoozedTabs -> Modifier.testTag(BrowserMainMenuTestTags.SnoozedTabs)
+    BrowserFeatureMenuAction.OpenFavorites -> Modifier.testTag(BrowserMainMenuTestTags.Favorites)
+    BrowserFeatureMenuAction.OpenDownloads -> Modifier.testTag(BrowserMainMenuTestTags.Downloads)
     BrowserFeatureMenuAction.OpenHistory -> Modifier.testTag(BrowserMainMenuTestTags.History)
     BrowserFeatureMenuAction.OpenFirefoxExtensions ->
         Modifier.testTag(BrowserMainMenuTestTags.FirefoxExtensions)
@@ -764,6 +768,8 @@ object BrowserMainMenuTestTags {
     const val CandyGroup = "browser_main_menu_candy_group"
     const val ToppingsGroup = "browser_main_menu_toppings_group"
     const val BrowserGroup = "browser_main_menu_browser_group"
+    const val Favorites = "browser_main_menu_favorites"
+    const val Downloads = "browser_main_menu_downloads"
     const val History = "browser_main_menu_history"
     const val FirefoxExtensions = "browser_main_menu_firefox_extensions"
     const val Settings = "browser_main_menu_settings"

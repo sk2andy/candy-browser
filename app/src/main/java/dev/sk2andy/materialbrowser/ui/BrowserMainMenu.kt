@@ -244,6 +244,8 @@ internal fun BrowserMainMenu(
     canDockAddressBar: Boolean = true,
     onDockAddressBar: () -> Unit,
     onParkAddressBarRight: () -> Unit = {},
+    onFavorites: () -> Unit = {},
+    onDownloads: () -> Unit = {},
     onHistory: () -> Unit,
     onOpenFirefoxExtensions: (() -> Unit)? = null,
     onSettings: () -> Unit,
@@ -336,6 +338,8 @@ internal fun BrowserMainMenu(
                 BrowserFeatureMenuAction.SnoozeTab -> onSnooze()
                 BrowserFeatureMenuAction.DockAddressBar -> onDockAddressBar()
                 BrowserFeatureMenuAction.OpenSnoozedTabs -> onSnoozedTabs()
+                BrowserFeatureMenuAction.OpenFavorites -> onFavorites()
+                BrowserFeatureMenuAction.OpenDownloads -> onDownloads()
                 BrowserFeatureMenuAction.OpenHistory -> onHistory()
                 BrowserFeatureMenuAction.OpenFirefoxExtensions ->
                     onOpenFirefoxExtensions?.invoke()
@@ -409,6 +413,8 @@ private fun BrowserFeatureMenuLabelKey.androidStringResource(): Int = when (this
     BrowserFeatureMenuLabelKey.SnoozeTab -> R.string.action_snooze_tab
     BrowserFeatureMenuLabelKey.DockAddressBar -> R.string.action_dock_address_bar
     BrowserFeatureMenuLabelKey.SnoozedTabs -> R.string.snoozed_tabs_title
+    BrowserFeatureMenuLabelKey.Favorites -> R.string.favorites_title
+    BrowserFeatureMenuLabelKey.Downloads -> R.string.downloads_title
     BrowserFeatureMenuLabelKey.History -> R.string.action_history
     BrowserFeatureMenuLabelKey.Settings -> R.string.action_settings
     BrowserFeatureMenuLabelKey.FirefoxExtensions -> R.string.gecko_extensions_title
@@ -446,6 +452,8 @@ private fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (action
     BrowserFeatureMenuAction.OpenSnoozedTabs,
     -> R.drawable.ic_snooze
     BrowserFeatureMenuAction.DockAddressBar -> R.drawable.ic_symbol_chevron_right
+    BrowserFeatureMenuAction.OpenFavorites -> R.drawable.ic_symbol_favorite
+    BrowserFeatureMenuAction.OpenDownloads -> R.drawable.ic_reader_download
     BrowserFeatureMenuAction.OpenHistory -> R.drawable.ic_history
     BrowserFeatureMenuAction.OpenSettings -> R.drawable.ic_symbol_settings
     BrowserFeatureMenuAction.OpenFirefoxExtensions,

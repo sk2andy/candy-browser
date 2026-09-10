@@ -553,6 +553,12 @@ class BrowserController(
     private var isScrollAwareTopInsetEnabled = true
     var isDefaultBrowser by mutableStateOf(false)
         private set
+    var isOnline by mutableStateOf(true)
+        private set
+    private val connectivityMonitor = BrowserConnectivityMonitor(
+        context = activity.applicationContext,
+        onOnlineChanged = { isOnline = it },
+    )
     var activeCapsuleId by mutableStateOf<String?>(null)
         private set
     var engineViewRevision by mutableIntStateOf(0)
@@ -3456,6 +3462,7 @@ class BrowserController(
                 isLoading = target != BLANK_URL,
                 progress = 0,
                 error = null,
+                httpStatusCode = null,
             )
         }
         if (target == BLANK_URL) {
@@ -3498,6 +3505,15 @@ class BrowserController(
             openUrl(safeUrl)
         }
         return true
+    }
+
+    fun openFavorite(url: String): Boolean {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        if (selectedTab.isIncognito) {
+            val previousTabId = selectedTabId
+            return createTab(initialUrl = safeUrl, isIncognito = false) != previousTabId
+        }
+        return openUrl(safeUrl)
     }
 
     internal fun applyHistoryClearRequests(requests: List<HistoryClearRequest>) {
@@ -3638,6 +3654,7 @@ class BrowserController(
                     canGoForward = false,
                     blockedCount = 0,
                     error = null,
+                    httpStatusCode = null,
                 )
             }
             setBlankTabIncognito(false)
@@ -4241,7 +4258,13 @@ class BrowserController(
         }
         if (tab.profileId != activeProfileId && profilesEnabled) selectProfile(tab.profileId)
         updateTab(tab.id) { current ->
-            current.copy(url = offer.targetUrl, isLoading = true, progress = 0, error = null)
+            current.copy(
+                url = offer.targetUrl,
+                isLoading = true,
+                progress = 0,
+                error = null,
+                httpStatusCode = null,
+            )
         }
         tabs.firstOrNull { it.id == tab.id }?.let(::markSyncedTabPending)
         scheduleSyncedTabNavigation(tab.id)
@@ -5462,6 +5485,7 @@ class BrowserController(
                 canGoForward = false,
                 blockedCount = 0,
                 error = null,
+                httpStatusCode = null,
                 syncCandyId = when {
                     enabled -> null
                     isBoundSyncProfile(it.profileId) ->
@@ -6098,7 +6122,9 @@ class BrowserController(
         browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.forward())
     }
     fun reload() {
-        updateTab(selectedTabId) { it.copy(isLoading = true, progress = 0, error = null) }
+        updateTab(selectedTabId) {
+            it.copy(isLoading = true, progress = 0, error = null, httpStatusCode = null)
+        }
         browserEngineSessionFor(selectedTabId).execute(BrowserEngineCommands.reload())
     }
 
@@ -6109,8 +6135,15 @@ class BrowserController(
 
     fun retryFailedPage(): Boolean {
         val tabId = selectedTabId
-        if (selectedTab.error == null || selectedTab.isLoading) return false
-        updateTab(tabId) { it.copy(isLoading = true, progress = 0, error = null) }
+        if (
+            (selectedTab.error == null && selectedTab.httpStatusCode == null) ||
+            selectedTab.isLoading
+        ) {
+            return false
+        }
+        updateTab(tabId) {
+            it.copy(isLoading = true, progress = 0, error = null, httpStatusCode = null)
+        }
         browserEngineSessionFor(tabId).execute(BrowserEngineCommands.reload())
         return true
 
@@ -6167,7 +6200,12 @@ class BrowserController(
             )
             if (unchanged) {
                 updateTab(tabId) { tab ->
-                    tab.copy(isLoading = true, progress = 0, error = null)
+                    tab.copy(
+                        isLoading = true,
+                        progress = 0,
+                        error = null,
+                        httpStatusCode = null,
+                    )
                 }
                 session.execute(BrowserEngineCommands.reload())
             }
@@ -7278,6 +7316,7 @@ class BrowserController(
     }
 
     fun destroy() {
+        connectivityMonitor.close()
         if (usesGeckoEngine) {
             // The runtime is process-scoped; do not let it retain this Activity via the listener.
             geckoEngineSessionFactory.setExtensionChromeHost(null)
@@ -8344,6 +8383,7 @@ class BrowserController(
                         isLoading = true,
                         progress = 0,
                         error = null,
+                        httpStatusCode = null,
                     )
                 }
             }
@@ -8360,6 +8400,7 @@ class BrowserController(
                         canGoBack = event.canGoBack,
                         canGoForward = event.canGoForward,
                         error = null,
+                        httpStatusCode = event.httpStatusCode.takeIf { it == 404 },
                     )
                 }
                 val committedUrl = event.address ?: currentTab?.url
@@ -8385,6 +8426,7 @@ class BrowserController(
                         canGoBack = event.canGoBack,
                         canGoForward = event.canGoForward,
                         error = event.failureDescription,
+                        httpStatusCode = event.httpStatusCode,
                     )
                 }
             }
@@ -8398,6 +8440,9 @@ class BrowserController(
                         title = event.title ?: tab.title,
                         canGoBack = event.canGoBack,
                         canGoForward = event.canGoForward,
+                        httpStatusCode = event.httpStatusCode
+                            ?.takeIf { statusCode -> statusCode == 404 }
+                            ?: tab.httpStatusCode,
                     )
                 }
                 val changedUrl = event.address ?: currentTab?.url
@@ -8439,6 +8484,7 @@ class BrowserController(
                         canGoBack = event.canGoBack,
                         canGoForward = event.canGoForward,
                         error = event.failureDescription,
+                        httpStatusCode = null,
                     )
                 }
             }
@@ -9255,6 +9301,7 @@ class BrowserController(
                             isLoading = true,
                             progress = 0,
                             error = null,
+                            httpStatusCode = null,
                         )
                     }
                     loadGeckoWithPrivacy(opener.id, view, candidate.originalOpenerUrl)
@@ -9498,6 +9545,14 @@ class BrowserController(
         if (restored == history) return
         history.clear()
         history += restored
+    }
+
+    internal fun reloadFavorites() {
+        val restored = store.loadFavorites()
+        favoriteRevision++
+        if (restored == favorites) return
+        favorites.clear()
+        favorites += restored
     }
 
     private fun updateTab(tabId: String, transform: (BrowserTab) -> BrowserTab) {

@@ -357,6 +357,49 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun HTTP404CommitKeepsNavigationDataAndExposesNotFoundStatus() {
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            )
+            val missingUrl = "https://example.com/missing"
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = missingUrl,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = missingUrl,
+                    title = "Missing",
+                    canGoBack = true,
+                    canGoForward = false,
+                    failureDescription = null,
+                    httpStatusCode = 404,
+                ),
+            )
+
+            assertEquals(missingUrl, browserController.selectedTab.url)
+            assertEquals("Missing", browserController.selectedTab.title)
+            assertEquals(404, browserController.selectedTab.httpStatusCode)
+            assertNull(browserController.selectedTab.error)
+            assertEquals(true, browserController.selectedTab.canGoBack)
+        }
+    }
+
+    @Test
     fun synchronousReleaseReentryDoesNotDiscardReplacementBinding() {
         composeRule.runOnIdle {
             val activity = composeRule.activity

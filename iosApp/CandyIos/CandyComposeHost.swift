@@ -14,6 +14,19 @@ struct CandyComposeHost: View {
             CandyNativeBrowserChrome(browser: browser)
                 .zIndex(10)
 
+            if browser.isFavoritesVisible {
+                BrowserFavoritesSurface(
+                    items: browser.favoriteItems,
+                    pendingRemoval: browser.pendingFavoriteRemoval,
+                    onOpen: browser.openFavorite,
+                    onDelete: browser.deleteFavorite,
+                    onUndo: browser.undoFavoriteRemoval,
+                    onDismissRemoval: browser.dismissFavoriteRemoval,
+                    onDismiss: browser.dismissFavorites
+                )
+                .zIndex(30)
+            }
+
             if let error = browser.errorMessage {
                 Text(error)
                     .font(.caption)
@@ -52,6 +65,7 @@ struct CandyComposeHost: View {
 
     private var composeIgnoredSafeAreaEdges: Edge.Set {
         let usesBrowserSurface = !browser.isSettingsVisible &&
+            !browser.isFavoritesVisible &&
             browser.readerSnapshot == nil &&
             browser.candyTrailTabId == nil
         return usesBrowserSurface ? [.top, .bottom] : .top

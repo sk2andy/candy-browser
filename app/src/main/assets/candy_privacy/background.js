@@ -7,6 +7,7 @@ const policiesByToken = new Map();
 const latestPolicyRevisionByToken = new Map();
 const tokenByTab = new Map();
 const pendingEvents = new Map();
+const mainFrameRequestsById = new Map();
 const contentPolicyTimersByTab = new Map();
 const contentPolicyRetryDelaysMillis = [25, 50, 100, 200, 400, 800, 1200];
 let nativePort = null;
@@ -115,6 +116,13 @@ browser.webRequest.onBeforeRequest.addListener((details) => {
   if (details.type === "main_frame") {
     if (policy) {
       policy.pageHost = hostFromUrl(details.url);
+      if (typeof details.requestId === "string") {
+        mainFrameRequestsById.set(details.requestId, {
+          token,
+          revision: policy.revision,
+          navigationGeneration: policy.navigationGeneration,
+        });
+      }
       scheduleContentPolicy(details.tabId);
     }
     return {};
@@ -146,6 +154,28 @@ browser.webRequest.onBeforeRequest.addListener((details) => {
   }
   return {};
 }, { urls: ["http://*/*", "https://*/*"] }, ["blocking"]);
+
+browser.webRequest.onHeadersReceived.addListener((details) => {
+  if (details.type !== "main_frame" || !nativePort || !Number.isInteger(details.statusCode)) {
+    return;
+  }
+  const request = mainFrameRequestsById.get(details.requestId);
+  mainFrameRequestsById.delete(details.requestId);
+  if (!request) return;
+  nativePort.postMessage({
+    type: "main-frame-response",
+    protocolVersion: PROTOCOL_VERSION,
+    token: request.token,
+    revision: request.revision,
+    navigationGeneration: request.navigationGeneration,
+    url: details.url,
+    statusCode: details.statusCode,
+  });
+}, { urls: ["http://*/*", "https://*/*"] });
+
+browser.webRequest.onErrorOccurred.addListener((details) => {
+  if (details.type === "main_frame") mainFrameRequestsById.delete(details.requestId);
+}, { urls: ["http://*/*", "https://*/*"] });
 
 browser.runtime.onMessage.addListener((message, sender) => {
   if (!message || !sender.tab) {

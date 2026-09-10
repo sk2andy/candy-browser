@@ -50,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.key
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -294,7 +295,7 @@ internal fun BrowserViewport(
     onFavorite: (String) -> Unit,
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
-    onRetry: () -> Boolean,
+    onRetry: () -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
@@ -311,21 +312,52 @@ internal fun BrowserViewport(
         dragDirection > 0 -> tabs.getOrNull(selectedTabIndex - 1)
         else -> null
     }
-    var pageErrorFeedback by remember(selectedTab.id) {
-        mutableStateOf(
-            PageErrorFeedbackRules.observe(
-                current = PageErrorFeedbackState.Hidden(),
-                error = selectedTab.error,
-                isLoading = selectedTab.isLoading,
-            ),
-        )
+    val pageErrorFeedbackByTab = remember {
+        mutableMapOf<String, MutableState<PageErrorFeedbackState>>()
     }
-    LaunchedEffect(selectedTab.id, selectedTab.error, selectedTab.isLoading) {
-        pageErrorFeedback = PageErrorFeedbackRules.observe(
+    val initialPageErrorFeedback = PageErrorFeedbackRules.observe(
+        current = PageErrorFeedbackState.Hidden,
+        error = selectedTab.error,
+        httpStatusCode = selectedTab.httpStatusCode,
+        isLoading = selectedTab.isLoading,
+        isOnline = controller.isOnline,
+        isWebPage = selectedTab.url.startsWith("http://") ||
+            selectedTab.url.startsWith("https://"),
+    ).state
+    val pageErrorFeedbackHolder = remember(selectedTab.id) {
+        pageErrorFeedbackByTab.getOrPut(selectedTab.id) {
+            mutableStateOf(initialPageErrorFeedback)
+        }
+    }
+    var pageErrorFeedback by pageErrorFeedbackHolder
+    LaunchedEffect(tabs.map(BrowserTab::id)) {
+        pageErrorFeedbackByTab.keys.retainAll(tabs.map(BrowserTab::id).toSet())
+    }
+    LaunchedEffect(
+        selectedTab.id,
+        selectedTab.url,
+        selectedTab.error,
+        selectedTab.httpStatusCode,
+        selectedTab.isLoading,
+        controller.isOnline,
+    ) {
+        val observation = PageErrorFeedbackRules.observe(
             current = pageErrorFeedback,
             error = selectedTab.error,
+            httpStatusCode = selectedTab.httpStatusCode,
             isLoading = selectedTab.isLoading,
+            isOnline = controller.isOnline,
+            isWebPage = selectedTab.url.startsWith("http://") ||
+                selectedTab.url.startsWith("https://"),
         )
+        pageErrorFeedback = observation.state
+        if (observation.shouldReload) onRetry()
+    }
+    val gameState = pageErrorFeedback as? PageErrorFeedbackState.Offline
+    BackHandler(enabled = gameState?.gameStarted == true) {
+        if (gameState?.isOnlineReady != true) {
+            pageErrorFeedback = PageErrorFeedbackRules.stopGame(pageErrorFeedback)
+        }
     }
 
     adjacentTab?.let { tab ->
@@ -398,6 +430,7 @@ internal fun BrowserViewport(
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
                 onBlurTargetReleased = onBlurTargetReleased,
+                contentObscured = pageErrorFeedback !is PageErrorFeedbackState.Hidden,
             )
         }
 
@@ -435,24 +468,41 @@ internal fun BrowserViewport(
             }
         }
 
-        PageErrorFeedback(
-            state = pageErrorFeedback,
-            onRetry = retry@{
-                val transition = PageErrorFeedbackRules.requestRetry(pageErrorFeedback)
-                if (!transition.shouldReload) return@retry
-                pageErrorFeedback = transition.state
-                if (onRetry()) {
+        key(selectedTab.id, selectedTab.url) {
+            PageErrorFeedback(
+                state = pageErrorFeedback,
+                onRetry = retry@{
+                    val transition = PageErrorFeedbackRules.requestRetry(pageErrorFeedback)
+                    if (!transition.shouldReload) return@retry
+                    pageErrorFeedback = transition.state
+                    onRetry()
                     if (transition.emitConfirmHaptic) hapticView.performConfirmHaptic()
-                } else {
-                    pageErrorFeedback = PageErrorFeedbackRules.observe(
-                        current = pageErrorFeedback,
-                        error = selectedTab.error,
-                        isLoading = selectedTab.isLoading,
-                    )
-                }
-            },
-            modifier = Modifier.align(Alignment.Center),
-        )
+                },
+                onStartGame = {
+                    pageErrorFeedback = PageErrorFeedbackRules.startGame(pageErrorFeedback)
+                },
+                onStopGame = {
+                    pageErrorFeedback = PageErrorFeedbackRules.stopGame(pageErrorFeedback)
+                },
+                onGameChange = { game ->
+                    val offline = pageErrorFeedback as? PageErrorFeedbackState.Offline
+                    if (offline != null) pageErrorFeedback = offline.copy(game = game)
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        bottom = with(density) {
+                            val bottomBarTop = bottomBarTopPx.floatValue
+                            if (bottomBarTop > 0f && bottomBarTop < rootHeightPx) {
+                                (rootHeightPx - bottomBarTop).toDp()
+                            } else {
+                                0.dp
+                            }
+                        },
+                    ),
+            )
+        }
 
     }
 
@@ -495,6 +545,7 @@ private fun ActiveBrowserEngineView(
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
+    contentObscured: Boolean,
 ) {
     val browserContentBlurEnabled = browserChromeSurfaceTokens().backdropBlurEnabled
     val density = LocalDensity.current
@@ -517,6 +568,12 @@ private fun ActiveBrowserEngineView(
             update = { hostView ->
                 hostView.blurTarget?.let(currentOnBlurTargetAttached)
                 hostView.alpha = if (visible) 1f else 0f
+                hostView.visibility = if (contentObscured) View.INVISIBLE else View.VISIBLE
+                hostView.importantForAccessibility = if (contentObscured) {
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                } else {
+                    View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+                }
                 hostView.updateOverlay(
                     geometry = statusBarGeometry,
                     tint = statusBarTint,

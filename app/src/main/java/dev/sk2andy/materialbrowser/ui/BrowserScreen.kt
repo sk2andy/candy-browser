@@ -163,6 +163,8 @@ internal fun BrowserScreen(
     onReturnToExternalApp: () -> Unit = {},
     onExternalPreviewCommitted: (String) -> Unit = {},
     onTabOverviewPortraitLockChanged: (Boolean) -> Unit = {},
+    onOpenFavorites: () -> Unit = {},
+    onOpenDownloads: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onImportUserScript: () -> Unit = {},
     onExportAppData: () -> Unit = {},
@@ -1165,7 +1167,7 @@ internal fun BrowserScreen(
                         },
                         blankTabModeProgress = blankTabModeProgress,
                         blankTabModeRevealOrigin = blankTabModeRevealOrigin,
-                        onRetry = controller::retryFailedPage,
+                        onRetry = controller::reload,
                         onBlurTargetAttached = { target -> browserContentBlurTarget = target },
                         onBlurTargetReleased = { target ->
                             if (browserContentBlurTarget === target) browserContentBlurTarget = null
@@ -1277,6 +1279,8 @@ internal fun BrowserScreen(
             toggleFavoriteWithFeedback = toggleFavoriteWithFeedback,
             onBlankTabModeRevealOriginChanged = { blankTabModeRevealOrigin = it },
             onSnoozedTabs = { snoozedTabsVisible = true },
+            onOpenFavorites = onOpenFavorites,
+            onOpenDownloads = onOpenDownloads,
             onOpenHistory = onOpenHistory,
             onOpenFirefoxExtensions = onOpenFirefoxExtensions,
             onSettings = {

@@ -22,6 +22,8 @@ import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -79,6 +81,42 @@ class NewTabFavoriteInstrumentedTest {
         }
         composeRule.onNodeWithContentDescription(closeAddressDescription).assertDoesNotExist()
         assertEquals(favoriteUrl, browserController.selectedTab.url)
+    }
+
+    @Test
+    fun openingFavoriteFromPrivateTabCreatesRegularTab() {
+        val favorite = FavoriteEntry(
+            url = "https://favorite.example/",
+            title = "Favorite",
+            addedAt = 1L,
+        )
+        val browserController = createController(favorite)
+
+        composeRule.runOnIdle {
+            browserController.createTab(isIncognito = true)
+            assertTrue(browserController.selectedTab.isIncognito)
+
+            assertTrue(browserController.openFavorite(favorite.url))
+            assertFalse(browserController.selectedTab.isIncognito)
+            assertEquals(favorite.url, browserController.selectedTab.url)
+        }
+    }
+
+    @Test
+    fun equalFavoriteReloadInvalidatesOlderUndo() {
+        val favorite = FavoriteEntry(
+            url = "https://favorite.example/",
+            title = "Favorite",
+            addedAt = 1L,
+        )
+        val browserController = createController(favorite)
+
+        composeRule.runOnIdle {
+            val mutation = requireNotNull(browserController.toggleFavorite())
+            browserController.reloadFavorites()
+
+            assertFalse(browserController.undoFavorite(mutation))
+        }
     }
 
     private fun createController(favorite: FavoriteEntry): BrowserController {
