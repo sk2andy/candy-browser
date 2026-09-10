@@ -424,7 +424,7 @@ private fun BrowserFeatureMenuLabelKey.androidStringResource(): Int = when (this
 }
 
 @DrawableRes
-private fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (action) {
+internal fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (action) {
     BrowserFeatureMenuAction.Back -> R.drawable.ic_symbol_arrow_back
     BrowserFeatureMenuAction.Forward -> R.drawable.ic_symbol_arrow_forward
     BrowserFeatureMenuAction.Reload -> R.drawable.ic_symbol_refresh
@@ -461,11 +461,11 @@ private fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (action
     BrowserFeatureMenuAction.OpenFirefoxExtensions,
     BrowserFeatureMenuAction.InvokeToppingCommand,
     -> R.drawable.ic_symbol_extension
-    BrowserFeatureMenuAction.ToggleCookieBannerRemoval,
-    BrowserFeatureMenuAction.ToggleForceVerticalScrolling,
-    BrowserFeatureMenuAction.ToggleForcePageZooming,
-    BrowserFeatureMenuAction.ToggleForceSafeArea,
-    BrowserFeatureMenuAction.ToggleAlwaysBlockPopups,
-    BrowserFeatureMenuAction.ToggleDesktopView,
-    -> R.drawable.ic_symbol_settings
+    BrowserFeatureMenuAction.ToggleCookieBannerRemoval -> R.drawable.ic_symbol_cookie
+    BrowserFeatureMenuAction.ToggleForceVerticalScrolling ->
+        R.drawable.ic_symbol_vertical_scroll
+    BrowserFeatureMenuAction.ToggleForcePageZooming -> R.drawable.ic_symbol_zoom_in
+    BrowserFeatureMenuAction.ToggleForceSafeArea -> R.drawable.ic_symbol_fit_screen
+    BrowserFeatureMenuAction.ToggleAlwaysBlockPopups -> R.drawable.ic_symbol_block
+    BrowserFeatureMenuAction.ToggleDesktopView -> R.drawable.ic_symbol_desktop
 }
