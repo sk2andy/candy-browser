@@ -117,6 +117,34 @@ class TabReorderMotionTest {
     }
 
     @Test
+    fun `grid destination accounts for bottom-start leading cells`() {
+        assertEquals(
+            2,
+            TabReorderMotion.gridDestinationIndex(
+                sourceIndex = 1,
+                dragOffsetPx = Offset(x = 100f, y = 0f),
+                columnPitchPx = 100f,
+                rowPitchPx = 100f,
+                columnCount = 2,
+                allowedRange = 0..2,
+                leadingEmptyCellCount = 1,
+            ),
+        )
+        assertEquals(
+            0,
+            TabReorderMotion.gridDestinationIndex(
+                sourceIndex = 0,
+                dragOffsetPx = Offset(x = -100f, y = 0f),
+                columnPitchPx = 100f,
+                rowPitchPx = 100f,
+                columnCount = 2,
+                allowedRange = 0..2,
+                leadingEmptyCellCount = 1,
+            ),
+        )
+    }
+
+    @Test
     fun `hero viewport offset advances full slots without fractional rounding drift`() {
         assertEquals(
             4,

@@ -58,4 +58,18 @@ class TabOverviewGridRulesTest {
         assertEquals(0f, layout.cardWidth, 0f)
         assertEquals(0.72f, layout.previewAspectRatio, 0f)
     }
+
+    @Test
+    fun `bottom-start grid pads incomplete first row`() {
+        assertEquals(1, TabOverviewGridRules.leadingEmptyCellCount(3, 2, true))
+        assertEquals(2, TabOverviewGridRules.leadingEmptyCellCount(4, 3, true))
+    }
+
+    @Test
+    fun `bottom-start grid keeps complete rows and disabled layouts unchanged`() {
+        assertEquals(0, TabOverviewGridRules.leadingEmptyCellCount(4, 2, true))
+        assertEquals(0, TabOverviewGridRules.leadingEmptyCellCount(3, 2, false))
+        assertEquals(0, TabOverviewGridRules.leadingEmptyCellCount(0, 2, true))
+        assertEquals(0, TabOverviewGridRules.leadingEmptyCellCount(3, 0, true))
+    }
 }

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -36,6 +37,49 @@ class TabSettingsScreenInstrumentedTest {
     val composeRule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test
+    fun bottomStartIsAvailableForGridAndListOnly() {
+        var mode by mutableStateOf(TabOverviewMode.Grid)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsAndGesturesSettingsPage(
+                    inactiveTabLifetime = InactiveTabLifetime.Never,
+                    residentTabLimit = 10,
+                    tabOverviewMode = mode,
+                    tabStackFolderMode = TabOverviewMode.Grid,
+                    tabListStartsAtBottom = false,
+                    automaticTabSortingEnabled = false,
+                    dismissResistancePercent = 40,
+                    profilesEnabled = true,
+                    isAddressBarDockingEnabled = true,
+                    onInactiveTabLifetimeChanged = {},
+                    onResidentTabLimitChanged = {},
+                    onTabOverviewModeChanged = { mode = it },
+                    onTabStackFolderModeChanged = {},
+                    onTabListStartsAtBottomChanged = {},
+                    onAutomaticTabSortingEnabledChanged = {},
+                    onDismissResistancePercentChanged = {},
+                    onProfilesEnabledChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
+                    onAddressBarActions = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TabSettingsTestTags.ListStartsAtBottom).assertIsEnabled()
+        composeRule.onNodeWithText(context.getString(R.string.tab_overview_mode_grid))
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.tab_overview_mode_list))
+            .performClick()
+        composeRule.onNodeWithTag(TabSettingsTestTags.ListStartsAtBottom).assertIsEnabled()
+        composeRule.onNodeWithText(context.getString(R.string.tab_overview_mode_list))
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.tab_overview_mode_hero))
+            .performClick()
+        composeRule.onNodeWithTag(TabSettingsTestTags.ListStartsAtBottom).assertIsNotEnabled()
+    }
 
     @Test
     fun linkPeekActionEditorEntryInvokesCallback() {

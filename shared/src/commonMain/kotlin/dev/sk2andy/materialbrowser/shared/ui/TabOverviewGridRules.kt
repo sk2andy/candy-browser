@@ -30,4 +30,14 @@ object TabOverviewGridRules {
             itemSpacing = layout.itemSpacing,
         )
     }
+
+    fun leadingEmptyCellCount(
+        tabCount: Int,
+        columnCount: Int,
+        startsAtBottom: Boolean,
+    ): Int {
+        if (!startsAtBottom || tabCount <= 0 || columnCount <= 0) return 0
+        val remainder = tabCount % columnCount
+        return if (remainder == 0) 0 else columnCount - remainder
+    }
 }
