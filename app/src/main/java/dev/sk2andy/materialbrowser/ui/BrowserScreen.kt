@@ -84,7 +84,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileWallpaperEditorContract
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperEditorRequest
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperTarget
 import dev.sk2andy.materialbrowser.browser.wallpaperFor
-import dev.sk2andy.materialbrowser.browser.RootTabBackResult
+import dev.sk2andy.materialbrowser.browser.RootTabBackDecision
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionRules
 import dev.sk2andy.materialbrowser.browser.commands.AddressAiModeRules
@@ -134,6 +134,7 @@ private enum class BrowserBackTarget {
     WebHistory,
     ExternalApp,
     RootTab,
+    System,
 }
 
 private data class PendingLinkSnooze(
@@ -964,10 +965,12 @@ internal fun BrowserScreen(
             tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
             selectedTab.id == externalLaunchTabId -> BrowserBackTarget.ExternalApp
+            controller.selectedRootTabBackDecision ==
+                RootTabBackDecision.DelegateToSystem -> BrowserBackTarget.System
             else -> BrowserBackTarget.RootTab
         },
     )
-    PredictiveBackHandler(enabled = true) { events ->
+    PredictiveBackHandler(enabled = currentBackTarget != BrowserBackTarget.System) { events ->
         val target = currentBackTarget
         var receivedProgress = false
         try {
@@ -1034,10 +1037,14 @@ internal fun BrowserScreen(
                 BrowserBackTarget.WebHistory -> controller.goBack()
                 BrowserBackTarget.ExternalApp -> onReturnToExternalApp()
                 BrowserBackTarget.RootTab -> {
-                    if (controller.closeSelectedRootTab() == RootTabBackResult.ShowTabOverview) {
+                    if (
+                        controller.performSelectedRootTabBack() ==
+                        RootTabBackDecision.CloseAndShowTabOverview
+                    ) {
                         openTabOverview()
                     }
                 }
+                BrowserBackTarget.System -> Unit
             }
         } catch (cancellation: CancellationException) {
             if (target == BrowserBackTarget.Settings) {

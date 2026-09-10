@@ -55,8 +55,11 @@
   `sw600dp` windows preserve their current orientation.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Keep the external-app return marker memory-only and scoped to the tab opened by the latest accepted
-  `ACTION_VIEW` or `ACTION_SEND`. Engine history consumes Back first; normal root tabs keep
-  the tab-close/overview flow.
+  `ACTION_VIEW` or `ACTION_SEND`. Engine history consumes Back first. A root tab with an active opener
+  closes and returns to that opener; a deletable root tab with another active-profile sibling closes
+  into the tab overview. When the root tab is the active profile's last tab, or the selected root tab is
+  pinned, do not mutate tabs and let Android handle Back-to-Home. Tabs in other profiles do not become
+  implicit Back targets.
 - Keep external-link preview sessions, URLs, engine views, progress, and target-profile selection out of
   tab/session, history, Candy Trail, favicon, Gecko-session-state, and tab-preview persistence. Recreate
   the transient engine session when its target profile changes and reload the final normalized HTTP(S) URL

@@ -45,16 +45,30 @@ class BrowserControllerRootBackInstrumentedTest {
             val childTab = browserController.tabs.single { it.id != openerTabId }
             browserController.selectTab(childTab.id)
 
-            val result = browserController.closeSelectedRootTab()
+            val result = browserController.performSelectedRootTabBack()
 
-            assertEquals(RootTabBackResult.ReturnedToOpener, result)
+            assertEquals(RootTabBackDecision.CloseAndReturnToOpener, result)
             assertEquals(openerTabId, browserController.selectedTabId)
             assertFalse(browserController.tabs.any { it.id == childTab.id })
         }
     }
 
     @Test
-    fun rootBackRequestsOverviewWhenOpenerNoLongerExists() {
+    fun rootBackDelegatesToSystemAndKeepsOnlyActiveTab() {
+        activityRule.scenario.onActivity { activity ->
+            val browserController = freshController(activity)
+            val tabId = browserController.selectedTabId
+
+            val result = browserController.performSelectedRootTabBack()
+
+            assertEquals(RootTabBackDecision.DelegateToSystem, result)
+            assertEquals(tabId, browserController.selectedTabId)
+            assertTrue(browserController.tabs.any { it.id == tabId })
+        }
+    }
+
+    @Test
+    fun rootBackDelegatesToSystemWhenOrphanIsOnlyActiveTab() {
         activityRule.scenario.onActivity { activity ->
             val browserController = freshController(activity)
             val openerTabId = browserController.selectedTabId
@@ -67,10 +81,10 @@ class BrowserControllerRootBackInstrumentedTest {
             browserController.closeTab(openerTabId)
             browserController.selectTab(childTabId)
 
-            val result = browserController.closeSelectedRootTab()
+            val result = browserController.performSelectedRootTabBack()
 
-            assertEquals(RootTabBackResult.ShowTabOverview, result)
-            assertFalse(browserController.tabs.any { it.id == childTabId })
+            assertEquals(RootTabBackDecision.DelegateToSystem, result)
+            assertTrue(browserController.tabs.any { it.id == childTabId })
         }
     }
 
@@ -80,23 +94,23 @@ class BrowserControllerRootBackInstrumentedTest {
             val browserController = freshController(activity)
             val tabId = browserController.createTab()
 
-            val result = browserController.closeSelectedRootTab()
+            val result = browserController.performSelectedRootTabBack()
 
-            assertEquals(RootTabBackResult.ShowTabOverview, result)
+            assertEquals(RootTabBackDecision.CloseAndShowTabOverview, result)
             assertFalse(browserController.tabs.any { it.id == tabId })
         }
     }
 
     @Test
-    fun rootBackKeepsPinnedTabAndRequestsOverview() {
+    fun rootBackKeepsPinnedTabAndDelegatesToSystem() {
         activityRule.scenario.onActivity { activity ->
             val browserController = freshController(activity)
             val tabId = browserController.createTab()
             assertTrue(browserController.setTabPinned(tabId, true))
 
-            val result = browserController.closeSelectedRootTab()
+            val result = browserController.performSelectedRootTabBack()
 
-            assertEquals(RootTabBackResult.ShowTabOverview, result)
+            assertEquals(RootTabBackDecision.DelegateToSystem, result)
             assertEquals(tabId, browserController.selectedTabId)
             assertTrue(browserController.tabs.any { it.id == tabId })
         }
