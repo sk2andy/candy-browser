@@ -3,9 +3,12 @@ package dev.sk2andy.materialbrowser.browser.actions
 enum class LinkLongPressOutcome {
     ShowContext,
     CopyLink,
-    OpenInNewTab,
-    OpenInPrivateTab,
     Share,
+    DownloadLink,
+    OpenInNewTabInBackground,
+    OpenInNewTabInForeground,
+    OpenInPrivateTabInBackground,
+    OpenInPrivateTabInForeground,
 }
 
 object LinkLongPressRules {
@@ -18,13 +21,22 @@ object LinkLongPressRules {
         return when (action) {
             LinkLongPressAction.LinkPeek -> LinkLongPressOutcome.ShowContext
             LinkLongPressAction.CopyLink -> LinkLongPressOutcome.CopyLink
-            LinkLongPressAction.OpenInNewTab -> LinkLongPressOutcome.OpenInNewTab
-            LinkLongPressAction.OpenInPrivateTab -> if (canOpenInPrivate) {
-                LinkLongPressOutcome.OpenInPrivateTab
+            LinkLongPressAction.Share -> LinkLongPressOutcome.Share
+            LinkLongPressAction.DownloadLink -> LinkLongPressOutcome.DownloadLink
+            LinkLongPressAction.OpenInNewTabInBackground ->
+                LinkLongPressOutcome.OpenInNewTabInBackground
+            LinkLongPressAction.OpenInNewTabInForeground ->
+                LinkLongPressOutcome.OpenInNewTabInForeground
+            LinkLongPressAction.OpenInPrivateTabInBackground -> if (canOpenInPrivate) {
+                LinkLongPressOutcome.OpenInPrivateTabInBackground
             } else {
                 LinkLongPressOutcome.ShowContext
             }
-            LinkLongPressAction.Share -> LinkLongPressOutcome.Share
+            LinkLongPressAction.OpenInPrivateTabInForeground -> if (canOpenInPrivate) {
+                LinkLongPressOutcome.OpenInPrivateTabInForeground
+            } else {
+                LinkLongPressOutcome.ShowContext
+            }
         }
     }
 }

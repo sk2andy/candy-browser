@@ -16,4 +16,16 @@ class LinkLongPressActionTest {
             assertEquals(action, LinkLongPressAction.fromStableId(action.stableId))
         }
     }
+
+    @Test
+    fun `legacy tab action ids retain their original behavior`() {
+        assertEquals(
+            LinkLongPressAction.OpenInNewTabInBackground,
+            LinkLongPressAction.fromStableId("open_in_new_tab"),
+        )
+        assertEquals(
+            LinkLongPressAction.OpenInPrivateTabInForeground,
+            LinkLongPressAction.fromStableId("open_in_private_tab"),
+        )
+    }
 }

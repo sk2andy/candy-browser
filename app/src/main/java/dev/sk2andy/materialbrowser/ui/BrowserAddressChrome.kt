@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -121,6 +122,12 @@ internal fun BoxScope.BrowserAddressChrome(
     val context = LocalContext.current
     val density = LocalDensity.current
     val rootView = LocalView.current
+    val longPressActionHapticNonce = controller.contentActions.longPressActionHapticNonce
+    LaunchedEffect(longPressActionHapticNonce) {
+        if (longPressActionHapticNonce != 0) {
+            rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        }
+    }
     val chromeBackdropSource = browserContentBlurTarget.asCandyChromeBackdropSource()
     val qrScanFailureMessage = stringResource(R.string.toast_qr_scan_failed)
     val qrScanner = rememberQrCodeScanner()

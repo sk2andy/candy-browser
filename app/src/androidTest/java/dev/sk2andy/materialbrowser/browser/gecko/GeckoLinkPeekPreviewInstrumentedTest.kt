@@ -5,6 +5,7 @@ import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
@@ -110,11 +111,21 @@ class GeckoLinkPeekPreviewInstrumentedTest {
     fun configuredLongPressActionRunsThroughGeckoContentTarget() {
         lateinit var controller: BrowserController
         lateinit var sourceTabId: String
+        lateinit var sourceProfileId: String
+        lateinit var originalTabIds: Set<String>
+        var pulseNonceBefore = 0
+        var hapticNonceBefore = 0
         val targetUrl = "https://example.com/from-gecko"
         activityRule.scenario.onActivity { activity ->
             controller = BrowserController(activity)
+            controller.onStart()
+            controller.onResume()
             sourceTabId = controller.selectedTabId
-            controller.updateLinkLongPressAction(LinkLongPressAction.OpenInNewTab)
+            sourceProfileId = controller.selectedTab.profileId
+            originalTabIds = controller.tabs.map(BrowserTab::id).toSet()
+            pulseNonceBefore = controller.contentActions.addressBarPulseNonce
+            hapticNonceBefore = controller.contentActions.longPressActionHapticNonce
+            controller.updateLinkLongPressAction(LinkLongPressAction.OpenInNewTabInBackground)
             controller.dispatchSelectedGeckoContentTargetForTesting(
                 WebContentTarget(linkUrl = targetUrl),
             )
@@ -122,8 +133,177 @@ class GeckoLinkPeekPreviewInstrumentedTest {
         instrumentation.waitForIdleSync()
 
         activityRule.scenario.onActivity {
+            val created = controller.tabs.single { tab -> tab.id !in originalTabIds }
             assertEquals(sourceTabId, controller.selectedTabId)
-            assertTrue(controller.tabs.any { tab -> tab.url == targetUrl })
+            assertEquals(targetUrl, created.url)
+            assertEquals(sourceTabId, created.openerTabId)
+            assertEquals(sourceProfileId, created.profileId)
+            assertFalse(created.isIncognito)
+            assertEquals(pulseNonceBefore + 1, controller.contentActions.addressBarPulseNonce)
+            assertEquals(
+                hapticNonceBefore + 1,
+                controller.contentActions.longPressActionHapticNonce,
+            )
+            assertFalse(controller.contentActions.isVisible)
+            controller.destroy()
+        }
+    }
+
+    @Test
+    fun configuredDownloadActionUsesContextPathWithoutOpeningTab() {
+        lateinit var controller: BrowserController
+        lateinit var originalTabIds: Set<String>
+        var pulseNonceBefore = 0
+        var hapticNonceBefore = 0
+        activityRule.scenario.onActivity { activity ->
+            controller = BrowserController(activity)
+            controller.onStart()
+            controller.onResume()
+            originalTabIds = controller.tabs.map(BrowserTab::id).toSet()
+            pulseNonceBefore = controller.contentActions.addressBarPulseNonce
+            hapticNonceBefore = controller.contentActions.longPressActionHapticNonce
+            controller.updateLinkLongPressAction(LinkLongPressAction.DownloadLink)
+            controller.dispatchSelectedGeckoContentTargetForTesting(
+                WebContentTarget(linkUrl = "https://example.invalid/direct-download.bin"),
+            )
+        }
+        instrumentation.waitForIdleSync()
+
+        activityRule.scenario.onActivity {
+            assertEquals(originalTabIds, controller.tabs.map(BrowserTab::id).toSet())
+            assertEquals(pulseNonceBefore, controller.contentActions.addressBarPulseNonce)
+            assertEquals(
+                hapticNonceBefore + 1,
+                controller.contentActions.longPressActionHapticNonce,
+            )
+            assertFalse(controller.contentActions.isVisible)
+            controller.destroy()
+        }
+    }
+
+    @Test
+    fun configuredForegroundActionSelectsRegularChildTab() {
+        lateinit var controller: BrowserController
+        lateinit var sourceTabId: String
+        lateinit var sourceProfileId: String
+        var pulseNonceBefore = 0
+        var hapticNonceBefore = 0
+        val targetUrl = "https://example.com/foreground-from-gecko"
+        activityRule.scenario.onActivity { activity ->
+            controller = BrowserController(activity)
+            controller.onStart()
+            controller.onResume()
+            sourceTabId = controller.selectedTabId
+            sourceProfileId = controller.selectedTab.profileId
+            pulseNonceBefore = controller.contentActions.addressBarPulseNonce
+            hapticNonceBefore = controller.contentActions.longPressActionHapticNonce
+            controller.updateLinkLongPressAction(LinkLongPressAction.OpenInNewTabInForeground)
+            controller.dispatchSelectedGeckoContentTargetForTesting(
+                WebContentTarget(linkUrl = targetUrl),
+            )
+        }
+        instrumentation.waitForIdleSync()
+
+        activityRule.scenario.onActivity {
+            val created = controller.selectedTab
+            assertTrue(created.id != sourceTabId)
+            assertEquals(targetUrl, created.url)
+            assertEquals(sourceTabId, created.openerTabId)
+            assertEquals(sourceProfileId, created.profileId)
+            assertFalse(created.isIncognito)
+            assertEquals(pulseNonceBefore, controller.contentActions.addressBarPulseNonce)
+            assertEquals(
+                hapticNonceBefore + 1,
+                controller.contentActions.longPressActionHapticNonce,
+            )
+            assertFalse(controller.contentActions.isVisible)
+            controller.destroy()
+        }
+    }
+
+    @Test
+    fun configuredPrivateBackgroundActionKeepsRegularSourceSelected() {
+        lateinit var controller: BrowserController
+        lateinit var sourceTabId: String
+        lateinit var sourceProfileId: String
+        lateinit var originalTabIds: Set<String>
+        var pulseNonceBefore = 0
+        var hapticNonceBefore = 0
+        val targetUrl = "https://example.com/private-background-from-gecko"
+        activityRule.scenario.onActivity { activity ->
+            controller = BrowserController(activity)
+            controller.onStart()
+            controller.onResume()
+            assumeTrue(controller.canOpenLinkInPrivate)
+            sourceTabId = controller.selectedTabId
+            sourceProfileId = controller.selectedTab.profileId
+            originalTabIds = controller.tabs.map(BrowserTab::id).toSet()
+            pulseNonceBefore = controller.contentActions.addressBarPulseNonce
+            hapticNonceBefore = controller.contentActions.longPressActionHapticNonce
+            controller.updateLinkLongPressAction(
+                LinkLongPressAction.OpenInPrivateTabInBackground,
+            )
+            controller.dispatchSelectedGeckoContentTargetForTesting(
+                WebContentTarget(linkUrl = targetUrl),
+            )
+        }
+        instrumentation.waitForIdleSync()
+
+        activityRule.scenario.onActivity {
+            val created = controller.tabs.single { tab -> tab.id !in originalTabIds }
+            assertEquals(sourceTabId, controller.selectedTabId)
+            assertEquals(targetUrl, created.url)
+            assertEquals(sourceTabId, created.openerTabId)
+            assertEquals(sourceProfileId, created.profileId)
+            assertTrue(created.isIncognito)
+            assertEquals(pulseNonceBefore + 1, controller.contentActions.addressBarPulseNonce)
+            assertEquals(
+                hapticNonceBefore + 1,
+                controller.contentActions.longPressActionHapticNonce,
+            )
+            assertFalse(controller.contentActions.isVisible)
+            controller.destroy()
+        }
+    }
+
+    @Test
+    fun configuredPrivateForegroundActionSelectsPrivateChildTab() {
+        lateinit var controller: BrowserController
+        lateinit var sourceTabId: String
+        lateinit var sourceProfileId: String
+        var pulseNonceBefore = 0
+        var hapticNonceBefore = 0
+        val targetUrl = "https://example.com/private-foreground-from-gecko"
+        activityRule.scenario.onActivity { activity ->
+            controller = BrowserController(activity)
+            controller.onStart()
+            controller.onResume()
+            assumeTrue(controller.canOpenLinkInPrivate)
+            sourceTabId = controller.selectedTabId
+            sourceProfileId = controller.selectedTab.profileId
+            pulseNonceBefore = controller.contentActions.addressBarPulseNonce
+            hapticNonceBefore = controller.contentActions.longPressActionHapticNonce
+            controller.updateLinkLongPressAction(
+                LinkLongPressAction.OpenInPrivateTabInForeground,
+            )
+            controller.dispatchSelectedGeckoContentTargetForTesting(
+                WebContentTarget(linkUrl = targetUrl),
+            )
+        }
+        instrumentation.waitForIdleSync()
+
+        activityRule.scenario.onActivity {
+            val created = controller.selectedTab
+            assertTrue(created.id != sourceTabId)
+            assertEquals(targetUrl, created.url)
+            assertEquals(sourceTabId, created.openerTabId)
+            assertEquals(sourceProfileId, created.profileId)
+            assertTrue(created.isIncognito)
+            assertEquals(pulseNonceBefore, controller.contentActions.addressBarPulseNonce)
+            assertEquals(
+                hapticNonceBefore + 1,
+                controller.contentActions.longPressActionHapticNonce,
+            )
             assertFalse(controller.contentActions.isVisible)
             controller.destroy()
         }
@@ -132,9 +312,13 @@ class GeckoLinkPeekPreviewInstrumentedTest {
     @Test
     fun configuredLinkActionFallsBackToContextForImageOnlyGeckoTarget() {
         lateinit var controller: BrowserController
+        var hapticNonceBefore = 0
         activityRule.scenario.onActivity { activity ->
             controller = BrowserController(activity)
-            controller.updateLinkLongPressAction(LinkLongPressAction.OpenInNewTab)
+            controller.onStart()
+            controller.onResume()
+            hapticNonceBefore = controller.contentActions.longPressActionHapticNonce
+            controller.updateLinkLongPressAction(LinkLongPressAction.OpenInNewTabInBackground)
             controller.dispatchSelectedGeckoContentTargetForTesting(
                 WebContentTarget(imageUrl = "https://example.com/image.png"),
             )
@@ -146,6 +330,10 @@ class GeckoLinkPeekPreviewInstrumentedTest {
             assertEquals(
                 "https://example.com/image.png",
                 controller.contentActions.target?.imageUrl,
+            )
+            assertEquals(
+                hapticNonceBefore + 1,
+                controller.contentActions.longPressActionHapticNonce,
             )
             controller.destroy()
         }

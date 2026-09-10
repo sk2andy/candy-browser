@@ -4247,7 +4247,7 @@ class BrowserController(
     fun createBackgroundTab(
         initialUrl: String,
         openerTabId: String? = null,
-        isIncognito: Boolean = selectedTab.isIncognito,
+        isIncognito: Boolean? = null,
         transientPopup: Boolean = false,
     ): String? {
         pruneStaleTabs()
@@ -4272,7 +4272,7 @@ class BrowserController(
         val tab = newTabState(
             url = resolvedUrl,
             nowMillis = System.currentTimeMillis(),
-            isIncognito = openerTab?.isIncognito ?: isIncognito,
+            isIncognito = isIncognito ?: openerTab?.isIncognito ?: selectedTab.isIncognito,
             openerTabId = openerTabId,
             profileId = openerTab?.profileId ?: activeProfileId,
         )
@@ -4945,32 +4945,62 @@ class BrowserController(
     }
 
     private fun handleWebContentLongPress(target: WebContentTarget, tabId: String) {
-        when (
-            LinkLongPressRules.outcome(
-                action = linkLongPressAction,
-                target = target,
-                canOpenInPrivate = canOpenLinkInPrivate,
-            )
-        ) {
+        val outcome = LinkLongPressRules.outcome(
+            action = linkLongPressAction,
+            target = target,
+            canOpenInPrivate = canOpenLinkInPrivate,
+        )
+        contentActions.requestLongPressActionHaptic()
+        when (outcome) {
             LinkLongPressOutcome.ShowContext -> contentActions.show(target, tabId)
             LinkLongPressOutcome.CopyLink -> {
                 contentActions.dismiss()
                 copyLink(requireNotNull(target.linkUrl))
             }
-            LinkLongPressOutcome.OpenInNewTab -> {
-                contentActions.dismiss()
-                createBackgroundTab(requireNotNull(target.linkUrl), openerTabId = tabId)
-            }
-            LinkLongPressOutcome.OpenInPrivateTab -> {
-                if (!openLinkInPrivate(requireNotNull(target.linkUrl))) {
-                    contentActions.show(target, tabId)
-                }
-            }
             LinkLongPressOutcome.Share -> {
                 contentActions.dismiss()
                 shareLink(requireNotNull(target.linkUrl))
             }
+            LinkLongPressOutcome.DownloadLink -> {
+                contentActions.show(target, tabId)
+                downloadContextLink()
+            }
+            LinkLongPressOutcome.OpenInNewTabInBackground -> {
+                contentActions.dismiss()
+                createBackgroundTab(requireNotNull(target.linkUrl), openerTabId = tabId)
+            }
+            LinkLongPressOutcome.OpenInNewTabInForeground -> {
+                contentActions.dismiss()
+                val sourceTab = tabs.firstOrNull { tab -> tab.id == tabId } ?: return
+                createTab(
+                    initialUrl = requireNotNull(target.linkUrl),
+                    isIncognito = sourceTab.isIncognito,
+                    openerTabId = tabId,
+                )
+            }
+            LinkLongPressOutcome.OpenInPrivateTabInBackground -> {
+                if (!openLinkInPrivateBackground(requireNotNull(target.linkUrl))) {
+                    contentActions.show(target, tabId)
+                }
+            }
+            LinkLongPressOutcome.OpenInPrivateTabInForeground -> {
+                if (!openLinkInPrivate(requireNotNull(target.linkUrl))) {
+                    contentActions.show(target, tabId)
+                }
+            }
         }
+    }
+
+    fun openLinkInPrivateBackground(url: String): Boolean {
+        if (!canOpenLinkInPrivate) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        val openerTabId = selectedTabId
+        contentActions.dismiss()
+        return createBackgroundTab(
+            initialUrl = safeUrl,
+            openerTabId = openerTabId,
+            isIncognito = true,
+        ) != null
     }
 
     fun openLinkInPrivate(url: String): Boolean {

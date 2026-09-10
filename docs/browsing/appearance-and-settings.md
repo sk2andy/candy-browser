@@ -31,7 +31,7 @@
 | Shape | Angular, rounded, extra rounded | Rounded |
 | Startup animation | Off, on | On |
 | Open home page on startup | Off, on | Off |
-| Long-press link action | Link Peek, copy link, open in new tab, open in private tab, share | Link Peek |
+| Long-press link action | Link Peek, copy, share, download, regular foreground/background tab, private foreground/background tab | Link Peek |
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Yandex Translate on Android; Google Translate on iOS |
 | Prevent automatic video playback | Off, on | Off |
@@ -140,8 +140,11 @@ Frosted exposes three persisted controls while selected:
 - Tabs & gestures owns the expanded address-bar action editor. The former standalone tab-button
   visibility switch is intentionally absent because **Tabs** is now an ordinary configurable action.
 - Tabs & gestures owns the global long-press link action. Invalid stored values fall back to Link
-  Peek. Image-only long presses keep their content sheet, and private-open falls back to Link Peek
-  when the active profile cannot create private tabs.
+  Peek. Regular and private tab targets distinguish foreground from background creation. Legacy
+  stored choices retain regular-background and private-foreground behavior. Image-only long presses
+  keep their content sheet, and private-open falls back to Link Peek when the active profile cannot
+  create private tabs. Direct downloads reuse the source tab's engine-scoped context-download path;
+  Gecko retains its referrer and private session context.
 - Tabs & gestures also owns the Link Peek action editor. It reuses the address-action editor's
   breakaway, snap, settle, haptic and accessibility behavior. Its three configurable positions may
   hold unique actions or remain empty; dragging a toolbar action back to the palette clears that

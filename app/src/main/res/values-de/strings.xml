@@ -273,6 +273,9 @@
     <string name="favorites_save_failed">Favoriten konnten nicht gespeichert werden</string>
     <string name="content_actions_title">Seiteninhalt</string>
     <string name="action_open_link_background_tab">Link in neuem Hintergrund-Tab öffnen</string>
+    <string name="action_open_link_foreground_tab">Link in neuem Vordergrund-Tab öffnen</string>
+    <string name="action_open_link_private_background_tab">Link in neuem privaten Hintergrund-Tab öffnen</string>
+    <string name="action_open_link_private_foreground_tab">Link in neuem privaten Vordergrund-Tab öffnen</string>
     <string name="link_peek_title">Link-Vorschau</string>
     <string name="action_open_in_new_tab">In neuem Tab öffnen</string>
     <string name="action_open_in_new_tab_and_switch">In neuem Tab öffnen und wechseln</string>

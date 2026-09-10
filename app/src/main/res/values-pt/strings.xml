@@ -273,6 +273,9 @@
     <string name="favorites_save_failed">Não foi possível guardar os favoritos</string>
     <string name="content_actions_title">Conteúdo da página</string>
     <string name="action_open_link_background_tab">Abrir ligação num novo separador em segundo plano</string>
+    <string name="action_open_link_foreground_tab">Abrir ligação num novo separador em primeiro plano</string>
+    <string name="action_open_link_private_background_tab">Abrir ligação num novo separador privado em segundo plano</string>
+    <string name="action_open_link_private_foreground_tab">Abrir ligação num novo separador privado em primeiro plano</string>
     <string name="link_peek_title">Pré-visualização da ligação</string>
     <string name="action_open_in_new_tab">Abrir num novo separador</string>
     <string name="action_open_in_new_tab_and_switch">Abrir num novo separador e mudar</string>
