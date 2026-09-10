@@ -50,7 +50,12 @@ export async function applyTabSnapshot(rawSnapshot: unknown): Promise<DeviceTabS
     const desired = ordered[index]!;
     let tab = byCandyId.get(desired.candyId) ?? unclaimed.shift();
     if (tab) {
-      const updated = await api.tabs.update(tab.id, { url: desired.url, pinned: desired.pinned, active: false });
+      const properties: chrome.tabs.UpdateProperties = {
+        pinned: desired.pinned,
+        active: false,
+      };
+      if (!tabAlreadyTargetsUrl(tab, desired.url)) properties.url = desired.url;
+      const updated = await api.tabs.update(tab.id, properties);
       tab = { ...tab, ...updated, id: tab.id };
     } else {
       const created = await api.tabs.create({ url: desired.url, pinned: desired.pinned, active: false });
@@ -71,6 +76,14 @@ export async function applyTabSnapshot(rawSnapshot: unknown): Promise<DeviceTabS
 
 function tabUrl(tab: Pick<chrome.tabs.Tab, "url" | "pendingUrl">): string | undefined {
   return syncableTabUrl(tab);
+}
+
+function tabAlreadyTargetsUrl(
+  tab: Pick<chrome.tabs.Tab, "url" | "pendingUrl">,
+  desiredUrl: string,
+): boolean {
+  const currentUrl = tabUrl(tab);
+  return currentUrl !== undefined && new URL(currentUrl).href === new URL(desiredUrl).href;
 }
 
 function isTransientNavigation(changeInfo: chrome.tabs.OnUpdatedInfo, tab: chrome.tabs.Tab): boolean {
@@ -167,7 +180,12 @@ export async function applyTabMutation(mutation: TabMutation): Promise<number | 
       return created.id;
     }
     case "navigate":
-      if (tabId !== undefined) await api.tabs.update(tabId, { url: mutation.url });
+      if (tabId !== undefined) {
+        const tab = await api.tabs.get(tabId);
+        if (!tabAlreadyTargetsUrl(tab, mutation.url)) {
+          await api.tabs.update(tabId, { url: mutation.url });
+        }
+      }
       return tabId ?? null;
     case "close":
       if (tabId !== undefined) {

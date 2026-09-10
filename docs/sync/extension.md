@@ -132,8 +132,11 @@ Before uploading its own browser state, the extension pulls and applies pending 
 its device profile. Stable `candyId` values are persisted in `storage.local`, so normal navigation
 does not create a new logical tab. A syncable `pendingUrl` takes precedence while navigation is
 loading, and transient blank or internal states retain the existing identity until the browser
-reports a committed destination. Reconciliation creates, updates, pins, moves, and removes only
-eligible HTTP(S) tabs; incognito, internal, local-file, and unmanaged tabs are preserved.
+reports a committed destination. A remote navigation whose normalized URL already matches the
+desktop tab's current or pending URL updates logical sync state without calling the browser's URL
+update API, so title-only reconciliation cannot reload or autoplay an existing page. Reconciliation
+creates, updates, pins, moves, and removes only eligible HTTP(S) tabs; incognito, internal,
+local-file, and unmanaged tabs are preserved.
 
 ## Protocol v2 encryption and delivery
 
