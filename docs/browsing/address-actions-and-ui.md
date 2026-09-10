@@ -153,7 +153,8 @@ the centered pill, hides the built-in compact-pill park control, and prevents a 
 after restart. Compact address text stays vertically centered whether the park action or Cast action
 is present. Active docking and the last edge/height are stored separately: restoring or disabling the
 pill centers it without forgetting where the next park action should place it. The normalized position
-survives window-size changes and restart. Clicking a parked pill restores it and focuses address input.
+survives window-size changes and restart. Clicking a parked pill restores the expanded address bar
+without focusing address input or opening the keyboard.
 Dragging a parked pill into the 28-dp normal-address-bar zone now magnetically resolves its live
 vertical position to the safe-area-adjusted anchor, emits one confirm haptic on entry, and persists
 that exact anchor on drop. The same rule uses the post-inset travel distance, so navigation-bar and

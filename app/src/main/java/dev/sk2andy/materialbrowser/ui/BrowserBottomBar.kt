@@ -339,9 +339,9 @@ internal fun BrowserBottomBar(
             verticalTravelPx = with(density) { verticalTravel.toPx() },
             density = density,
             onPlacementChanged = onDockPlacementChanged,
-            onRestoreAndEdit = {
+            onRestore = {
                 onRestoreDock()
-                onAddress()
+                onExpand()
             },
         )
         val dockStretchProgress by animateFloatAsState(
