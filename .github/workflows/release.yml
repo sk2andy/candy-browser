@@ -226,12 +226,18 @@ jobs:
             app/src/main/assets/uassets_cosmetic_rules.txt \
             app/src/main/assets/uassets_procedural_cosmetic_rules.txt \
             app/src/main/assets/uassets_filters_source.txt
-          ./gradlew --no-daemon \
+          ./gradlew --no-daemon --max-workers=1 \
             -Pcandy.releaseNotesFile="$INPUT_CHANGELOG" \
             testFullDebugUnitTest \
-            testFossDebugUnitTest \
-            assembleFullRelease \
-            assembleFossRelease \
+            testFossDebugUnitTest
+          ./gradlew --no-daemon --max-workers=1 \
+            -Pcandy.releaseNotesFile="$INPUT_CHANGELOG" \
+            assembleFullRelease
+          ./gradlew --no-daemon --max-workers=1 \
+            -Pcandy.releaseNotesFile="$INPUT_CHANGELOG" \
+            assembleFossRelease
+          ./gradlew --no-daemon --max-workers=1 \
+            -Pcandy.releaseNotesFile="$INPUT_CHANGELOG" \
             assembleFullUserCaRelease
           CANDY_STANDARD_APK="app/build/outputs/apk/full/release/app-full-release.apk" \
             CANDY_FOSS_APK="app/build/outputs/apk/foss/release/app-foss-release.apk" \
