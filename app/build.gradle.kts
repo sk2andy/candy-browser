@@ -491,9 +491,10 @@ val verifyFossReleaseDependencies by tasks.registering {
             "com.google.mlkit",
         )
         val violations = configurations.getByName("fossReleaseRuntimeClasspath")
-            .resolvedConfiguration
-            .resolvedArtifacts
-            .map { it.moduleVersion.id }
+            .incoming
+            .resolutionResult
+            .allComponents
+            .mapNotNull { it.moduleVersion }
             .filter { module ->
                 forbiddenGroups.any { group ->
                     module.group == group || module.group.startsWith("$group.")
@@ -513,6 +514,8 @@ tasks.matching { it.name == "preFossReleaseBuild" }.configureEach {
     dependsOn(verifyFossReleaseDependencies)
 }
 
+val geckoViewDependency = "org.mozilla.geckoview:geckoview:155.0.20260903215306"
+
 dependencies {
     implementation(project(":shared"))
     implementation("androidx.activity:activity-compose:1.9.3")
@@ -529,7 +532,10 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.lambdapioneer.argon2kt:argon2kt:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
-    implementation("org.mozilla.geckoview:geckoview:155.0.20260903215306")
+    "fullImplementation"(geckoViewDependency)
+    "fossImplementation"(geckoViewDependency) {
+        exclude(group = "com.google.android.gms", module = "play-services-fido")
+    }
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material-icons-core")
