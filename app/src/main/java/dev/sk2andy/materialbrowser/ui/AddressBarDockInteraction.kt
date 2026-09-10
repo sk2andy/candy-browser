@@ -44,7 +44,7 @@ internal fun rememberAddressBarDockInteractionState(
     verticalTravelPx: Float,
     density: Density,
     onPlacementChanged: (AddressBarDockPlacement) -> Unit,
-    onRestoreAndEdit: () -> Unit,
+    onRestore: () -> Unit,
     haptics: AddressBarDockHaptics? = null,
 ): AddressBarDockInteractionState {
     val motionScheme = LocalCandyMotionScheme.current
@@ -63,7 +63,7 @@ internal fun rememberAddressBarDockInteractionState(
     val currentVerticalTravelPx by rememberUpdatedState(verticalTravelPx)
     val currentDensity by rememberUpdatedState(density)
     val currentOnPlacementChanged by rememberUpdatedState(onPlacementChanged)
-    val currentOnRestoreAndEdit by rememberUpdatedState(onRestoreAndEdit)
+    val currentOnRestore by rememberUpdatedState(onRestore)
     var position by remember {
         mutableStateOf(AddressBarDockingRules.positionForPlacement(placement))
     }
@@ -261,7 +261,7 @@ internal fun rememberAddressBarDockInteractionState(
         breakawaySpringOffset = Offset.Zero
         normalAnchorResistanceProgress = 0f
         currentHaptics.confirm()
-        currentOnRestoreAndEdit()
+        currentOnRestore()
     }
 
     return AddressBarDockInteractionState(

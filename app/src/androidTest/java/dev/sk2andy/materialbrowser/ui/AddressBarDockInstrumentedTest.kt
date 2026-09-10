@@ -91,9 +91,8 @@ class AddressBarDockInstrumentedTest {
     }
 
     @Test
-    fun edgeTabClickRestoresAndRequestsAddressEditor() {
+    fun edgeTabClickRestoresThroughInteractionState() {
         val restores = AtomicInteger()
-        val addressRequests = AtomicInteger()
         composeRule.setContent {
             MaterialBrowserTheme {
                 val interaction = rememberAddressBarDockInteractionState(
@@ -104,10 +103,7 @@ class AddressBarDockInstrumentedTest {
                     verticalTravelPx = 400f,
                     density = Density(1f),
                     onPlacementChanged = {},
-                    onRestoreAndEdit = {
-                        restores.incrementAndGet()
-                        addressRequests.incrementAndGet()
-                    },
+                    onRestore = restores::incrementAndGet,
                 )
                 Box(Modifier.size(width = 52.dp, height = 48.dp)) {
                     AddressBarEdgeTab(
@@ -126,7 +122,6 @@ class AddressBarDockInstrumentedTest {
         composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab).performClick()
 
         assertEquals(1, restores.get())
-        assertEquals(1, addressRequests.get())
     }
 
     @Test
@@ -142,7 +137,7 @@ class AddressBarDockInstrumentedTest {
                     verticalTravelPx = 200f,
                     density = Density(1f),
                     onPlacementChanged = settledPlacement::set,
-                    onRestoreAndEdit = {},
+                    onRestore = {},
                 )
                 Box(Modifier.size(width = 52.dp, height = 48.dp)) {
                     AddressBarEdgeTab(
@@ -194,7 +189,7 @@ class AddressBarDockInstrumentedTest {
                         settledPlacement.set(placement)
                         sessionStore.saveAddressBarDockPlacement(placement)
                     },
-                    onRestoreAndEdit = {},
+                    onRestore = {},
                     haptics = AddressBarDockHaptics(
                         startMovement = {},
                         stopMovement = {},
@@ -247,7 +242,7 @@ class AddressBarDockInstrumentedTest {
                     verticalTravelPx = 400f,
                     density = Density(1f),
                     onPlacementChanged = {},
-                    onRestoreAndEdit = {},
+                    onRestore = {},
                 )
             }
         }
@@ -280,7 +275,7 @@ class AddressBarDockInstrumentedTest {
     }
 
     @Test
-    fun parkedPillClickRestoresAndFocusesAddressEditor() {
+    fun parkedPillClickRestoresWithoutOpeningAddressEditor() {
         lateinit var browserController: BrowserController
         composeRule.runOnIdle {
             clearSession()
@@ -310,10 +305,11 @@ class AddressBarDockInstrumentedTest {
         composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab).performClick()
 
         composeRule.waitUntil(timeoutMillis = 5_000L) {
-            composeRule.onAllNodesWithTag(AddressBarTestTags.Editor)
-                .fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithTag(AddressBarDockTestTags.EdgeTab)
+                .fetchSemanticsNodes().isEmpty()
         }
-        composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertIsFocused()
+        composeRule.onNodeWithTag(AddressBarTestTags.TabButton).assertIsDisplayed()
+        composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertDoesNotExist()
     }
 
     @Test
