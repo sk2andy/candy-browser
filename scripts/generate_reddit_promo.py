@@ -54,12 +54,12 @@ class Scene:
 SCENES = (
     Scene(0.0, 1.6, "hook"),
     Scene(1.6, 4.0, "tabs"),
-    Scene(4.0, 7.2, "sync"),
-    Scene(7.2, 10.2, "peek"),
-    Scene(10.2, 12.2, "topping_intro"),
-    Scene(12.2, 15.7, "spoiler"),
-    Scene(15.7, 19.0, "hackernews"),
-    Scene(19.0, 21.4, "privacy_toppings"),
+    Scene(4.0, 6.4, "engines_extensions"),
+    Scene(6.4, 9.6, "sync"),
+    Scene(9.6, 12.6, "peek"),
+    Scene(12.6, 14.6, "topping_intro"),
+    Scene(14.6, 18.1, "spoiler"),
+    Scene(18.1, 21.4, "hackernews"),
     Scene(21.4, 25.0, "privacy"),
     Scene(25.0, 27.6, "more"),
     Scene(27.6, 30.4, "end"),
@@ -617,7 +617,7 @@ def render_topping_intro(local: float, time: float) -> Image.Image:
     draw_chip(
         draw,
         (round(-360 + 470 * ease_out_quint(local / 0.42)), 64),
-        "TOPPINGS · ONE-TAP EXTENSIONS",
+        "TOPPINGS · FOCUSED USER SCRIPTS",
         "#FFFFFFD9",
         PURPLE,
     )
@@ -665,44 +665,175 @@ def render_topping_intro(local: float, time: float) -> Image.Image:
     return canvas
 
 
-def render_privacy_toppings(local: float, time: float) -> Image.Image:
-    canvas = background(time, accent="#00A9A5")
+def draw_engine_choice(
+    canvas: Image.Image,
+    *,
+    y: int,
+    title_text: str,
+    detail: str,
+    badge: str,
+    selected: bool,
+    progress: float,
+    delay: float,
+) -> None:
+    reveal = ease_out_quint((progress - delay) / 0.42)
+    if reveal <= 0.0:
+        return
+    x = 105
+    y += round(55 * (1.0 - reveal))
+    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    draw.rounded_rectangle(
+        (x, y, x + 770, y + 174),
+        radius=40,
+        fill=(255, 255, 255, round(248 * reveal)),
+        outline=PURPLE if selected else "#D7D0EA",
+        width=4 if selected else 2,
+    )
+    draw.ellipse((x + 28, y + 39, x + 124, y + 135), fill=PURPLE if selected else "#ECE8F5")
+    monogram = "G" if selected else "W"
+    monogram_font = font(38, weight="semibold")
+    bounds = draw.textbbox((0, 0), monogram, font=monogram_font)
+    draw.text(
+        (x + 76 - (bounds[2] - bounds[0]) // 2, y + 62),
+        monogram,
+        font=monogram_font,
+        fill="white" if selected else MUTED,
+    )
+    draw.text((x + 150, y + 38), title_text, font=font(30, weight="semibold"), fill=INK)
+    draw.text((x + 150, y + 91), detail, font=font(23, weight="medium"), fill=MUTED)
+    badge_font = font(17, weight="semibold")
+    badge_bounds = draw.textbbox((0, 0), badge, font=badge_font)
+    badge_width = badge_bounds[2] - badge_bounds[0] + 30
+    badge_left = x + 740 - badge_width
+    draw.rounded_rectangle((badge_left, y + 18, badge_left + badge_width, y + 56), radius=19, fill="#ECE8FF")
+    draw.text((badge_left + 15, y + 28), badge, font=badge_font, fill=PURPLE)
+    canvas.alpha_composite(layer)
+
+
+def draw_extension_row(
+    canvas: Image.Image,
+    *,
+    x: int,
+    y: int,
+    monogram: str,
+    label: str,
+    detail: str,
+    progress: float,
+    delay: float,
+) -> None:
+    reveal = ease_out_quint((progress - delay) / 0.38)
+    if reveal <= 0.0:
+        return
+    y += round(45 * (1.0 - reveal))
+    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    draw.rounded_rectangle((x, y, x + 690, y + 156), radius=36, fill=(250, 249, 255, round(255 * reveal)))
+    draw.ellipse((x + 26, y + 30, x + 122, y + 126), fill=PINK if monogram == "u" else "#FF9A62")
+    monogram_font = font(38, weight="bold")
+    bounds = draw.textbbox((0, 0), monogram, font=monogram_font)
+    draw.text(
+        (x + 74 - (bounds[2] - bounds[0]) // 2, y + 54),
+        monogram,
+        font=monogram_font,
+        fill="white",
+    )
+    draw.text((x + 150, y + 30), label, font=font(26, weight="semibold"), fill=INK)
+    draw.text((x + 150, y + 79), detail, font=font(21, weight="medium"), fill=MUTED)
+    draw.rounded_rectangle((x + 566, y + 99, x + 650, y + 133), radius=17, fill="#DDF8ED")
+    draw.text((x + 587, y + 108), "ON", font=font(16, weight="semibold"), fill="#12845E")
+    canvas.alpha_composite(layer)
+
+
+def render_engines_extensions(local: float, time: float) -> Image.Image:
+    canvas = background(time, accent=PURPLE)
     draw = ImageDraw.Draw(canvas)
     draw_chip(
         draw,
-        (round(-360 + 470 * ease_out_quint(local / 0.42)), 64),
-        "PRIVACY TOPPINGS",
+        (round(-430 + 540 * ease_out_quint(local / 0.42)), 52),
+        "ANDROID · TWO WEB ENGINES",
         "#FFFFFFD9",
-        "#007F7B",
+        PURPLE,
     )
-    reveal = ease_out_quint(local / 0.58)
-    draw.text(
-        (110, 190 + round(50 * (1.0 - reveal))),
-        "LESS TRACKING. CLEANER LINKS.",
-        font=font(75, weight="semibold"),
+    reveal = ease_out_quint(local / 0.62)
+    draw.multiline_text(
+        (105, 145 + round(48 * (1.0 - reveal))),
+        "PICK YOUR\nWEB ENGINE.",
+        font=font(72, weight="semibold"),
         fill=INK,
+        spacing=0,
     )
     draw.text(
-        (115, 300),
-        "Small upgrades. Visible privacy wins.",
-        font=font(35, weight="medium"),
+        (110, 365),
+        "Extensions or Android's system runtime. Your call.",
+        font=font(30, weight="medium"),
         fill=MUTED,
     )
-    items = (
-        ("LINK TRACKING CLEANER", "Removes known tracking parameters", PINK),
-        ("GOOGLE SEARCH CLEANUP", "Cleans redirects before you tap", PURPLE),
-        ("MEDIUM READING FOCUS", "Drops sticky sign-up chrome", "#00A9A5"),
+    draw_engine_choice(
+        canvas,
+        y=470,
+        title_text="Extensions · GeckoView",
+        detail="Firefox add-ons + Toppings",
+        badge="DEFAULT",
+        selected=True,
+        progress=local,
+        delay=0.10,
     )
-    for index, (label, detail, accent) in enumerate(items):
-        draw_feature_card(
-            canvas,
-            xy=(170 + index * 565, 540 + (index % 2) * 45),
-            label=label,
-            detail=detail,
-            accent=accent,
-            progress=local,
-            delay=0.16 + index * 0.16,
-        )
+    draw_engine_choice(
+        canvas,
+        y=680,
+        title_text="Android System WebView",
+        detail="Toppings + Candy protection",
+        badge="SYSTEM",
+        selected=False,
+        progress=local,
+        delay=0.22,
+    )
+
+    panel_progress = ease_out_quint((local - 0.08) / 0.62)
+    panel_x = round(970 + 830 * (1.0 - panel_progress))
+    draw_glass_card(canvas, (panel_x, 115, panel_x + 850, 940), radius=46, fill=(255, 255, 255, 238))
+    draw = ImageDraw.Draw(canvas)
+    draw.ellipse((panel_x + 55, 168, panel_x + 151, 264), fill="#FF7139")
+    draw.text((panel_x + 88, 190), "F", font=font(43, weight="bold"), fill="white")
+    draw.text((panel_x + 180, 164), "Firefox extensions", font=font(38, weight="semibold"), fill=INK)
+    draw.text(
+        (panel_x + 180, 220),
+        "Mozilla-signed add-ons in Candy chrome",
+        font=font(22, weight="medium"),
+        fill=MUTED,
+    )
+    draw_extension_row(
+        canvas,
+        x=panel_x + 70,
+        y=330,
+        monogram="u",
+        label="uBlock Origin",
+        detail="Bundled default · Mozilla-signed",
+        progress=local,
+        delay=0.24,
+    )
+    draw_extension_row(
+        canvas,
+        x=panel_x + 70,
+        y=525,
+        monogram="C",
+        label="I still don't care about cookies",
+        detail="Bundled default · Mozilla-signed",
+        progress=local,
+        delay=0.36,
+    )
+    draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle((panel_x + 70, 785, panel_x + 780, 875), radius=45, fill=PURPLE)
+    button_label = "INSTALL MOZILLA-SIGNED XPI"
+    button_font = font(24, weight="semibold")
+    button_bounds = draw.textbbox((0, 0), button_label, font=button_font)
+    draw.text(
+        (panel_x + 425 - (button_bounds[2] - button_bounds[0]) // 2, 817),
+        button_label,
+        font=button_font,
+        fill="white",
+    )
     return canvas
 
 
@@ -813,7 +944,7 @@ def camera_move(
 
 
 def apply_scene_camera(kind: str, image: Image.Image, local: float) -> Image.Image:
-    if kind in {"hook", "sync", "topping_intro", "privacy_toppings", "end"}:
+    if kind in {"hook", "sync", "topping_intro", "engines_extensions", "end"}:
         return image
     camera_progress = ease_in_out((local - 0.55) / 2.35)
     if kind == "spoiler":
@@ -855,12 +986,11 @@ def render_scene(scene: Scene, local: float, time: float) -> Image.Image:
             local,
             time,
             screen=video_screen("tabs", local),
-            headline="SWIPE UP.\nSEE EVERY TAB.",
-            body="One gesture opens your\nlive tab switcher.",
-            chip_label="LIVE · TAB SWITCHER",
+            headline="GESTURES\nLEAD THE WAY.",
+            body="Switch, preview and manage tabs\nwith natural movement.",
+            chip_label="GESTURE-FIRST · LIVE",
             accent=PURPLE,
             side="right",
-            swipe=True,
         )
     elif scene.kind == "peek":
         image = render_feature(
@@ -899,8 +1029,8 @@ def render_scene(scene: Scene, local: float, time: float) -> Image.Image:
             accent=PURPLE,
             side="left",
         )
-    elif scene.kind == "privacy_toppings":
-        image = render_privacy_toppings(local, time)
+    elif scene.kind == "engines_extensions":
+        image = render_engines_extensions(local, time)
     elif scene.kind == "privacy":
         image = render_feature(
             local,
@@ -1301,7 +1431,7 @@ def main() -> None:
     ) as export_temporary:
         extract_video_frames(Path(temporary), ffmpeg=ffmpeg)
         synthesize_theme(theme)
-        render_frame(5.65).save(poster, quality=92, optimize=True)
+        render_frame(5.2).save(poster, quality=92, optimize=True)
         temporary_output = Path(export_temporary) / output.name
         render_video(temporary_output, theme, ffmpeg=ffmpeg)
         temporary_output.replace(output)
