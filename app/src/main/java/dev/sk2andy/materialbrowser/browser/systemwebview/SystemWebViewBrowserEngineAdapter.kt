@@ -343,6 +343,7 @@ private class SystemWebViewBrowserEngineSession(
     private val profileId = profileId
     private val webView = SystemWebViewHost(context, ::onSafeAreaFallback)
     private val host = webView
+    private val blobDownloadTransfer = SystemWebViewBlobDownloadTransfer(appContext, webView)
     private var closed = false
     private var active = true
     private var desktopMode = false
@@ -807,6 +808,7 @@ private class SystemWebViewBrowserEngineSession(
         topInsetScriptHandler?.remove()
         desktopViewportScriptHandler?.remove()
         removeMediaBridge()
+        blobDownloadTransfer.close()
         dismissCustomFullscreenView(notify = false)
         webView.stopLoading()
         webView.webChromeClient = null
@@ -866,7 +868,23 @@ private class SystemWebViewBrowserEngineSession(
                 GeckoExternalDownloadResponse(
                     metadata = metadata,
                     startTransfer = { listener ->
-                        startDownload(url, contentDisposition, mimeType, listener)
+                        if (
+                            SystemWebViewBlobDownloadRules.isSameOriginBlob(
+                                url,
+                                webView.url.orEmpty(),
+                            )
+                        ) {
+                            blobDownloadTransfer.start(
+                                blobUrl = url,
+                                pageUrl = webView.url,
+                                contentDisposition = contentDisposition,
+                                mimeType = mimeType,
+                                referrer = webView.url,
+                                listener = listener,
+                            )
+                        } else {
+                            startDownload(url, contentDisposition, mimeType, listener)
+                        }
                     },
                     discard = {},
                 ),
@@ -954,6 +972,7 @@ private class SystemWebViewBrowserEngineSession(
         }
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+            blobDownloadTransfer.cancelAll()
             lastLoadFailed = false
             lastMainFrameHttpResponse = null
             currentPageUrl = url
