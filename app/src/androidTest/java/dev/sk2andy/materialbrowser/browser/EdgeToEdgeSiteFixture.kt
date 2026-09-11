@@ -25,6 +25,11 @@ internal object EdgeToEdgeSiteMatrix {
     )
 
     val additionalSites = listOf(
+        Site(
+            "TapTap",
+            Layout.Sticky,
+            requiresImmediateStickyProtection = true,
+        ),
         Site("Vimeo", Layout.LateSticky),
         Site("Wikipedia", Layout.Flow),
         Site("Stack Overflow", Layout.Sticky),
@@ -37,7 +42,8 @@ internal object EdgeToEdgeSiteMatrix {
 
     fun html(site: Site): String {
         val cases = "{name:${site.name.jsQuoted()},layout:${site.layout.name.jsQuoted()}," +
-            "focusedSearch:${site.focusedSearch}}"
+            "focusedSearch:${site.focusedSearch}," +
+            "requiresImmediateStickyProtection:${site.requiresImmediateStickyProtection}}"
         return """
             <!doctype html>
             <html>
@@ -189,6 +195,8 @@ internal object EdgeToEdgeSiteMatrix {
                       const offsetStableAcrossVisibilityChange = site.name !== 'Vimeo' ||
                         ownedOffsetBeforeVisibilityChange === ownedOffsetAfterVisibilityChange;
                       scrollTo(0, 480);
+                      const immediateTopWhileScrolled = document.querySelector('#header')
+                        .getBoundingClientRect().top;
                       await settleScrollLayout(site);
                       const topWhileScrolled = document.querySelector('#header')
                         .getBoundingClientRect().top;
@@ -216,6 +224,12 @@ internal object EdgeToEdgeSiteMatrix {
                       const protectedOffset = protectedElement.style.getPropertyValue(
                         '--candy-browser-owned-top-inset-offset'
                       );
+                      const protectedStickyOwned = protectedElement.getAttribute(
+                        'data-candy-browser-top-inset-sticky'
+                      );
+                      const protectedStickyTop = protectedElement.style.getPropertyValue(
+                        '--candy-browser-owned-sticky-top'
+                      );
                       const safeAreaPaddingTop = Number.parseFloat(
                         getComputedStyle(document.querySelector('#header')).paddingTop
                       ) || 0;
@@ -232,16 +246,21 @@ internal object EdgeToEdgeSiteMatrix {
                         (candyCompatibilityApplied && candyTopInset > 0);
                       const ownedProtectionValid = site.layout === 'Flow' ||
                         protectedOwned === 'true' &&
-                        protectedOffset.endsWith('px');
+                        protectedOffset.endsWith('px') ||
+                        protectedStickyOwned === 'true' &&
+                        protectedStickyTop.endsWith('px');
                       const requiredTop = usesEngineSafeArea ? 0 : candyTopInset;
                       results.push({
                         name: site.name,
                         beforeFocusTop,
+                        immediateTopWhileScrolled,
                         topWhileScrolled,
                         afterScrollTop,
                         protectedTop,
                         protectedOwned,
                         protectedOffset,
+                        protectedStickyOwned,
+                        protectedStickyTop,
                         safeAreaPaddingTop,
                         focused,
                         candyTopInset,
@@ -252,6 +271,8 @@ internal object EdgeToEdgeSiteMatrix {
                         ),
                         offsetStableAcrossVisibilityChange,
                         passed: beforeFocusTop >= requiredTop - 0.5 &&
+                          (!site.requiresImmediateStickyProtection ||
+                            immediateTopWhileScrolled >= requiredTop - 0.5) &&
                           afterScrollTop >= requiredTop - 0.5 &&
                           (['Flow', 'Absolute'].includes(site.layout) ||
                             topWhileScrolled >= requiredTop - 0.5) &&
@@ -290,6 +311,7 @@ internal object EdgeToEdgeSiteMatrix {
         val name: String,
         val layout: Layout,
         val focusedSearch: Boolean = false,
+        val requiresImmediateStickyProtection: Boolean = false,
     )
 
     internal enum class Layout {

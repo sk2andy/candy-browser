@@ -13,6 +13,10 @@ internal object WebContentTopInsetScript {
               const offsetAttribute = 'data-candy-browser-top-inset-offset';
               const offsetSelector = `[${'$'}{offsetAttribute}="true"]`;
               const offsetProperty = '--candy-browser-owned-top-inset-offset';
+              const stickyAttribute = 'data-candy-browser-top-inset-sticky';
+              const stickySelector = `[${'$'}{stickyAttribute}="true"]`;
+              const stickyOriginalTopProperty = '--candy-browser-owned-sticky-original-top';
+              const stickyTopProperty = '--candy-browser-owned-sticky-top';
               const panelAttribute = 'data-candy-browser-top-inset-panel';
               const panelMaxHeightProperty = '--candy-browser-owned-panel-max-height';
               const flowRootAttribute = 'data-candy-browser-targeted-top-inset';
@@ -35,6 +39,8 @@ internal object WebContentTopInsetScript {
                 globalThis[stateKey]?.ownedOffsetElements || new Set();
               const ownedTranslateStates =
                 globalThis[stateKey]?.ownedTranslateStates || new Map();
+              const ownedStickyElements =
+                globalThis[stateKey]?.ownedStickyElements || new Set();
               let deferredLayoutChecks = 0;
               let deferredLayoutCheckTimer = 0;
               let immediateLayoutCheckFrame = 0;
@@ -106,6 +112,18 @@ internal object WebContentTopInsetScript {
                   ...ownedOffsetElements,
                   ...document.querySelectorAll(offsetSelector),
                 ]).forEach(clearOwnedOffset);
+              };
+              const clearOwnedSticky = (element) => {
+                element.removeAttribute(stickyAttribute);
+                element.style.removeProperty(stickyOriginalTopProperty);
+                element.style.removeProperty(stickyTopProperty);
+                ownedStickyElements.delete(element);
+              };
+              const clearOwnedStickyElements = () => {
+                new Set([
+                  ...ownedStickyElements,
+                  ...document.querySelectorAll(stickySelector),
+                ]).forEach(clearOwnedSticky);
               };
               const clearOwnedFlowTarget = (root) => {
                 root.removeAttribute(flowRootAttribute);
@@ -266,6 +284,116 @@ internal object WebContentTopInsetScript {
                   }
                 }
                 return absoluteCandidate;
+              };
+              const refreshOwnedStickyElements = (cssPixels) => {
+                for (const element of new Set([
+                  ...ownedStickyElements,
+                  ...document.querySelectorAll(stickySelector),
+                ])) {
+                  if (!element.isConnected) {
+                    clearOwnedSticky(element);
+                    continue;
+                  }
+                  const style = getComputedStyle(element);
+                  const originalTop = Number.parseFloat(
+                    element.style.getPropertyValue(stickyOriginalTopProperty),
+                  );
+                  if (
+                    style.position !== 'sticky' ||
+                    !Number.isFinite(originalTop) ||
+                    originalTop < -0.5
+                  ) {
+                    clearOwnedSticky(element);
+                    continue;
+                  }
+                  applyStickyTopAnchor(element, originalTop, cssPixels);
+                }
+              };
+              const stickyScrollportTop = (element, root) => {
+                for (
+                  let current = parentElementOrShadowHost(element);
+                  current && current !== root;
+                  current = parentElementOrShadowHost(current)
+                ) {
+                  const style = getComputedStyle(current);
+                  if (['auto', 'scroll', 'hidden', 'overlay'].includes(style.overflowY)) {
+                    return Math.max(
+                      0,
+                      current.getBoundingClientRect().top +
+                        (Number.parseFloat(style.borderTopWidth) || 0),
+                    );
+                  }
+                }
+                return 0;
+              };
+              const applyStickyTopAnchor = (element, originalTop, cssPixels) => {
+                const scrollportTop = stickyScrollportTop(
+                  element,
+                  document.documentElement,
+                );
+                const anchoredTop = Math.max(originalTop, cssPixels - scrollportTop);
+                if (anchoredTop <= originalTop + 0.5) {
+                  clearOwnedSticky(element);
+                  return;
+                }
+                element.style.setProperty(
+                  stickyOriginalTopProperty,
+                  `${'$'}{originalTop}px`,
+                  'important',
+                );
+                element.style.setProperty(
+                  stickyTopProperty,
+                  `${'$'}{anchoredTop}px`,
+                  'important',
+                );
+                element.setAttribute(stickyAttribute, 'true');
+                ownedStickyElements.add(element);
+              };
+              const protectStickyTopAnchors = (root, cssPixels, refreshOwned = true) => {
+                if (refreshOwned) refreshOwnedStickyElements(cssPixels);
+                const activeOwnedHeader = Array.from(ownedStickyElements).some((element) => {
+                  if (!element.isConnected) return false;
+                  const rect = element.getBoundingClientRect();
+                  return rect.width >= globalThis.innerWidth * 0.8 &&
+                    rect.top >= cssPixels - 0.5 && rect.top <= cssPixels + 0.5 &&
+                    rect.bottom > cssPixels + 0.5;
+                });
+                if (activeOwnedHeader) return;
+                const sampleY = [
+                  ...sampleAxis(cssPixels),
+                  Math.min(globalThis.innerHeight - 1, cssPixels + 1),
+                ];
+                const sampleX = [
+                  1,
+                  globalThis.innerWidth * 0.25,
+                  globalThis.innerWidth * 0.5,
+                  globalThis.innerWidth * 0.75,
+                  globalThis.innerWidth - 1,
+                ].filter((value) => value >= 0 && value < globalThis.innerWidth);
+                const candidates = new Set();
+                for (const y of sampleY) {
+                  for (const x of sampleX) {
+                    for (const element of deepElementsFromPoint(x, y)) {
+                      const candidate = findPositionedCandidate(element, root, false);
+                      if (candidate && getComputedStyle(candidate).position === 'sticky') {
+                        candidates.add(candidate);
+                        break;
+                      }
+                    }
+                  }
+                }
+                candidates.forEach((element) => {
+                  if (element.getAttribute(stickyAttribute) === 'true') return;
+                  const style = getComputedStyle(element);
+                  const originalTop = Number.parseFloat(style.top);
+                  if (
+                    !Number.isFinite(originalTop) ||
+                    originalTop < -0.5
+                  ) {
+                    return;
+                  }
+                  applyStickyTopAnchor(element, originalTop, cssPixels);
+                });
               };
               const hasActiveTranslateMotion = (style) => {
                 const durations = style.transitionDuration.split(',').map(Number.parseFloat);
@@ -845,6 +973,16 @@ internal object WebContentTopInsetScript {
                   globalThis.cancelAnimationFrame(scrollLayoutCheckFrame);
                   scrollLayoutCheckFrame = 0;
                 }
+                scrollLayoutCheckFrame = globalThis.requestAnimationFrame(() => {
+                  scrollLayoutCheckFrame = 0;
+                  const root = document.documentElement;
+                  const physicalPixels = Number(
+                    globalThis.$bridgeName?.topInsetPx?.(),
+                  ) || 0;
+                  if (!root || physicalPixels <= 0) return;
+                  const density = Number(globalThis.devicePixelRatio) || 1;
+                  protectStickyTopAnchors(root, physicalPixels / density, false);
+                });
                 scrollVerificationTimer = globalThis.setTimeout(
                   () => {
                     scrollVerificationTimer = 0;
@@ -976,6 +1114,7 @@ internal object WebContentTopInsetScript {
                   consecutiveLayoutFailures = 0;
                   root.removeAttribute('data-candy-browser-top-inset-failure');
                   clearOwnedOffsets();
+                  clearOwnedStickyElements();
                   clearOwnedFlowTarget(root);
                   document.querySelector(ownedSelector)?.remove();
                   root.style.removeProperty(property);
@@ -1007,6 +1146,9 @@ internal object WebContentTopInsetScript {
                         var(${'$'}{flowOffsetProperty}, 0px)
                       ) !important;
                     }
+                    [${'$'}{stickyAttribute}="true"] {
+                      top: var(${'$'}{stickyTopProperty}, 0px) !important;
+                    }
                     [${'$'}{panelAttribute}="true"] {
                       max-height: var(${'$'}{panelMaxHeightProperty}) !important;
                     }
@@ -1030,6 +1172,7 @@ internal object WebContentTopInsetScript {
                   root.style.setProperty(backgroundProperty, topBackground, 'important');
                 }
                 protectFocusedContainer(root, cssPixels);
+                protectStickyTopAnchors(root, cssPixels);
                 let activeFlowTarget = document.querySelector(flowTargetSelector);
                 if (
                   root.getAttribute(flowRootAttribute) === 'true' &&
@@ -1231,6 +1374,7 @@ internal object WebContentTopInsetScript {
                   windowLoadListener,
                   ownedOffsetElements,
                   ownedTranslateStates,
+                  ownedStickyElements,
                   stabilizationCheckTimers: [],
                   dispose: null,
                 };

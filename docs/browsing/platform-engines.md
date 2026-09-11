@@ -109,10 +109,13 @@ Camera and microphone permissions remain separate and continue through Candy's p
   safe area is therefore zero while side and bottom CSS safe-area values remain available.
   Every page receives a document-start compatibility inset: normal flow starts below the protected
   top and top-anchored fixed, sticky, absolute, or focused containers are shifted by the same stable
-  amount. Candy reacts to new DOM and focus/input transitions, but never recomputes offsets because
-  of scrolling; an established offset survives site-owned hide/show, while a visible element that
-  returns to normal flow has Candy's old translation removed. A passive animation-frame-bounded scroll
-  check protects a newly stuck top element without recomputing established moving offsets. When
+  amount. A sticky element whose site-owned `top` would enter the protected strip receives a stable
+  safe-area-relative sticky anchor before it starts scrolling; the flow spacer therefore cannot scroll
+  away underneath headers such as TapTap's. Candy reacts to new DOM and focus/input transitions, but
+  never recomputes established moving offsets because of scrolling; an established offset survives
+  site-owned hide/show, while a visible element that returns to normal flow has Candy's old translation
+  removed. A passive animation-frame-bounded scroll check anchors a newly stuck top element before
+  paint. When
   repeated verified layout failures cannot be repaired locally, Candy moves only the top edge into
   a native margin for that navigation; side and bottom rendering stays edge to edge.
   The explicit per-site **Force safe area** override moves every edge into native margins.

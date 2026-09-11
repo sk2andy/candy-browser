@@ -650,7 +650,7 @@ class WebContentTopInsetScriptInstrumentedTest {
             html = """
                 <html><head><style>
                   html, body { margin: 0; }
-                  #scroller { position: fixed; inset: 0; overflow-y: auto; }
+                  #scroller { height: 400px; overflow-y: auto; }
                   #lead { height: 240px; }
                   #header { position: sticky; top: 0; height: 64px; background: white; }
                   #content { height: 2000px; }
@@ -664,12 +664,71 @@ class WebContentTopInsetScriptInstrumentedTest {
 
         evaluate(view, WebContentTopInsetScript.installScript)
         evaluate(view, "document.querySelector('#scroller').scrollTop = 400")
-        SystemClock.sleep(SCROLL_SETTLE_MILLIS)
+        SystemClock.sleep(MUTATION_SETTLE_MILLIS)
 
         val density = evaluate(view, "devicePixelRatio").toDouble()
-        assertTrue(elementTop(view, "#header") >= TOP_INSET_PX / density - CSS_PIXEL_TOLERANCE)
+        val requiredTop = TOP_INSET_PX / density
+        assertEquals(
+            "Nested scrollport already below status bar received a duplicate inset",
+            requiredTop,
+            elementTop(view, "#header"),
+            CSS_PIXEL_TOLERANCE,
+        )
         assertFalse(
             "Nested scroll sticky header required native fallback",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+    }
+
+    @Test
+    fun tapTapStickyHeaderUsesSafeTopBeforeFirstScrollFrame() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(fallbackReceived),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 250vh; }
+                  #header {
+                    position: sticky;
+                    top: 0;
+                    height: 56px;
+                    background: white;
+                    transition: top 200ms linear;
+                  }
+                  #content { height: 2000px; }
+                </style></head><body>
+                <header id="header">TapTap</header><div id="content"></div>
+                </body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+        SystemClock.sleep(250L)
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        val requiredTop = TOP_INSET_PX / density
+        assertTrue(elementTop(view, "#header") >= requiredTop - CSS_PIXEL_TOLERANCE)
+
+        val immediateTop = evaluate(
+            view,
+            "(() => { scrollTo(0, 480); " +
+                "return document.querySelector('#header').getBoundingClientRect().top; })()",
+        ).toDouble()
+
+        assertTrue(
+            "TapTap-style sticky header entered status bar before deferred recovery: " +
+                "top=$immediateTop expected=$requiredTop",
+            immediateTop >= requiredTop - CSS_PIXEL_TOLERANCE,
+        )
+        assertEquals(
+            "true",
+            evaluate(
+                view,
+                "document.querySelector('#header').getAttribute(" +
+                    "'data-candy-browser-top-inset-sticky')",
+            ).removeSurrounding("\""),
+        )
+        assertFalse(
+            "TapTap-style sticky header required native fallback",
             fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
         )
     }
@@ -690,7 +749,7 @@ class WebContentTopInsetScriptInstrumentedTest {
                   #lead { height: 240px; }
                   #header {
                     position: sticky;
-                    top: 0;
+                    top: -1px;
                     height: 64px;
                     background: white;
                     transition: translate 1s linear;
