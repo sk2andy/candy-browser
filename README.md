@@ -18,6 +18,14 @@
 </p>
 
 <p align="center">
+  <a href="https://sk2andy.github.io/candy-browser/"><strong>Website</strong></a>
+  ·
+  <a href="https://sk2andy.github.io/candy-browser/privacy/">Privacy</a>
+  ·
+  <a href="https://github.com/sk2andy/candy-browser/releases">Releases</a>
+</p>
+
+<p align="center">
   <a href="https://buymeacoffee.com/sk2andy"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" alt="Buy me a coffee"></a>
 </p>
 
