@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -24,6 +27,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -35,6 +39,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -54,6 +60,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun FavoritesScreen(
     favorites: List<FavoriteEntry>,
+    favicons: Map<String, Bitmap> = emptyMap(),
     onDeleteFavorite: (FavoriteEntry, (FavoriteMutation?) -> Unit) -> Unit,
     onUndoDelete: (FavoriteMutation) -> Unit,
     onOpenFavorite: (FavoriteEntry) -> Unit,
@@ -116,6 +123,7 @@ internal fun FavoritesScreen(
                 ) { favorite ->
                     FavoriteListItem(
                         favorite = favorite,
+                        favicon = favicons[favorite.url],
                         onOpen = { onOpenFavorite(favorite) },
                         onDelete = {
                             onDeleteFavorite(favorite) { mutation ->
@@ -145,6 +153,7 @@ internal fun FavoritesScreen(
 @Composable
 private fun FavoriteListItem(
     favorite: FavoriteEntry,
+    favicon: Bitmap?,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -165,12 +174,7 @@ private fun FavoriteListItem(
             )
         },
         leadingContent = {
-            Icon(
-                painter = painterResource(R.drawable.ic_symbol_favorite_filled),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            FavoriteFavicon(favorite = favorite, favicon = favicon)
         },
         trailingContent = {
             IconButton(
@@ -190,6 +194,42 @@ private fun FavoriteListItem(
             .clickable(role = Role.Button, onClick = onOpen)
             .testTag(FavoritesScreenTestTags.favorite(favorite.url)),
     )
+}
+
+@Composable
+private fun FavoriteFavicon(
+    favorite: FavoriteEntry,
+    favicon: Bitmap?,
+) {
+    if (favicon != null && !favicon.isRecycled) {
+        Image(
+            bitmap = favicon.asImageBitmap(),
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            contentScale = ContentScale.Fit,
+        )
+        return
+    }
+    Surface(
+        modifier = Modifier.size(32.dp),
+        shape = RoundedCornerShape(9.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = favoriteInitial(favorite),
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+    }
+}
+
+private fun favoriteInitial(favorite: FavoriteEntry): String {
+    val label = favorite.title.ifBlank { AddressResolver.displayText(favorite.url) }.trim()
+    if (label.isEmpty()) return ""
+    return String(Character.toChars(label.codePointAt(0))).uppercase()
 }
 
 @Composable

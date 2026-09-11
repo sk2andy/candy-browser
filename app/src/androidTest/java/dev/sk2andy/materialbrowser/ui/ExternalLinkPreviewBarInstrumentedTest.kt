@@ -19,6 +19,7 @@ import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -107,12 +108,21 @@ class ExternalLinkPreviewBarInstrumentedTest {
     }
 
     @Test
-    fun compactBarKeepsBackdropAndTransparencyAcrossRecomposition() {
+    fun compactBarKeepsBackdropAndTransparencyAcrossPreviewStateChanges() {
         val firstBackdrop = object : CandyChromeBackdropSource {}
         val secondBackdrop = object : CandyChromeBackdropSource {}
         val observedBackdrop = AtomicReference<CandyChromeBackdropSource?>()
         val observedAlpha = AtomicReference<Float>()
-        var backdrop by mutableStateOf<CandyChromeBackdropSource?>(firstBackdrop)
+        var backdrop by mutableStateOf<CandyChromeBackdropSource?>(null)
+        var previewState by mutableStateOf(
+            ExternalLinkPreviewState(
+                sessionId = 1,
+                generation = 0,
+                currentUrl = "https://example.com/path",
+                targetProfileId = "default",
+            ),
+        )
+        var rootBottomInWindowPx by mutableStateOf(0)
         var appearance by mutableStateOf(
             AppearanceSettings(
                 surfaceStyle = BrowserSurfaceStyle.Frosted,
@@ -139,16 +149,11 @@ class ExternalLinkPreviewBarInstrumentedTest {
                 },
             ) {
                 ExternalLinkPreviewBar(
-                    state = ExternalLinkPreviewState(
-                        sessionId = 1,
-                        generation = 0,
-                        currentUrl = "https://example.com/path",
-                        targetProfileId = "default",
-                    ),
+                    state = previewState,
                     profiles = listOf(BrowserProfile(id = "default", emoji = "🍬")),
                     isDesktopView = false,
                     backdropSource = backdrop,
-                    rootBottomInWindowPx = 0,
+                    rootBottomInWindowPx = rootBottomInWindowPx,
                     onDismissPreview = {},
                     onOpenInCandy = {},
                     onSelectProfile = {},
@@ -162,15 +167,38 @@ class ExternalLinkPreviewBarInstrumentedTest {
         composeRule.waitForIdle()
 
         val firstAlpha = requireNotNull(observedAlpha.get())
+        assertNull(observedBackdrop.get())
+        assertEquals(0.8f, firstAlpha, 0.001f)
+
+        composeRule.runOnUiThread { backdrop = firstBackdrop }
+        composeRule.waitForIdle()
+
         assertSame(firstBackdrop, observedBackdrop.get())
+        assertEquals(firstAlpha, observedAlpha.get())
 
         composeRule.runOnUiThread {
-            backdrop = secondBackdrop
             appearance = appearance.copy(frostedAddressBarTransparencyPercent = 70)
         }
         composeRule.waitForIdle()
 
+        val updatedAlpha = requireNotNull(observedAlpha.get())
+        assertSame(firstBackdrop, observedBackdrop.get())
+        assertNotEquals(firstAlpha, updatedAlpha)
+        assertEquals(0.3f, updatedAlpha, 0.001f)
+
+        composeRule.runOnUiThread { rootBottomInWindowPx = 1_200 }
+        composeRule.waitForIdle()
+
+        assertSame(firstBackdrop, observedBackdrop.get())
+        assertEquals(updatedAlpha, observedAlpha.get())
+
+        composeRule.runOnUiThread {
+            previewState = previewState.copy(sessionId = 2)
+            backdrop = secondBackdrop
+        }
+        composeRule.waitForIdle()
+
         assertSame(secondBackdrop, observedBackdrop.get())
-        assertNotEquals(firstAlpha, observedAlpha.get())
+        assertEquals(updatedAlpha, observedAlpha.get())
     }
 }

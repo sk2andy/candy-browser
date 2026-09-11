@@ -2,7 +2,10 @@ package dev.sk2andy.materialbrowser.shared.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,6 +19,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 internal object AddressBarFieldFocusRules {
@@ -38,21 +42,24 @@ fun AddressBarFieldContent(
     onSubmitAddress: (String) -> Unit,
     submissionText: (String, String?) -> String,
     modifier: Modifier = Modifier,
+    fieldHeight: Dp = 48.dp,
     editorModifier: Modifier = Modifier,
     displayTextModifier: Modifier = Modifier,
     editorTrailingContent: @Composable () -> Unit = {},
     displayTrailingContent: @Composable () -> Unit = {},
 ) {
-    Box(modifier = modifier) {
+    Box(modifier = modifier.height(fieldHeight)) {
         if (editing) {
             Row(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                modifier = Modifier.padding(horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 BasicTextField(
                     value = editValue,
                     onValueChange = onEditValueChange,
-                    modifier = editorModifier.weight(1f),
+                    modifier = editorModifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface,
@@ -66,11 +73,9 @@ fun AddressBarFieldContent(
                     ),
                     decorationBox = { innerTextField ->
                         Box(
-                            modifier = Modifier.padding(
-                                start = 8.dp,
-                                top = 10.dp,
-                                bottom = 10.dp,
-                            ),
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .padding(start = 8.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             if (editValue.text.isEmpty()) {
@@ -110,11 +115,11 @@ fun AddressBarFieldContent(
                     text = displayText,
                     modifier = displayTextModifier
                         .weight(1f)
+                        .fillMaxHeight()
+                        .wrapContentHeight(Alignment.CenterVertically)
                         .padding(
                             start = 13.dp,
                             end = 6.dp,
-                            top = 15.dp,
-                            bottom = 15.dp,
                         ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
