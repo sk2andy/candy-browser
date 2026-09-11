@@ -51,7 +51,15 @@ class NewTabPageInstrumentedTest {
     fun favoritesShowSectionHeading() {
         setNewTab(favorites = listOf(favorite(1)))
 
-        composeRule.onNodeWithText(favoritesTitle()).assertIsDisplayed()
+        val headingBounds = composeRule.onNodeWithText(favoritesTitle())
+            .assertIsDisplayed()
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val gridBounds = composeRule.onNodeWithTag(NewTabFavoritesTestTags.Container)
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(headingBounds.bottom < gridBounds.top)
     }
 
     @Test

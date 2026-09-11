@@ -7,12 +7,15 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -125,7 +129,7 @@ internal fun NewTabPage(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .fillMaxWidth(0.82f)
-                    .heightIn(max = 568.dp)
+                    .heightIn(max = 624.dp)
                     .padding(vertical = BlankTabModeMorphRules.HERO_SHADOW_CLEARANCE_DP.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -184,49 +188,58 @@ internal fun NewTabPage(
                                 alpha = favoritesAlpha().coerceIn(0f, 1f)
                             },
                     ) {
-                        Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(24.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 6.dp, end = 6.dp, bottom = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(colors.primary, CircleShape),
+                            )
+                            Text(
+                                text = stringResource(R.string.favorites_title),
+                                color = colors.onSurfaceVariant,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f, fill = false),
-                            shape = RoundedCornerShape(24.dp),
-                            color = colors.surfaceContainerHigh.copy(alpha = 0.9f),
-                            tonalElevation = 8.dp,
+                            shape = RoundedCornerShape(28.dp),
+                            color = colors.surfaceContainerLow.copy(alpha = 0.74f),
+                            tonalElevation = 3.dp,
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = colors.outlineVariant.copy(alpha = 0.32f),
+                            ),
                         ) {
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.favorites_title),
-                                    modifier = Modifier.padding(
-                                        start = 20.dp,
-                                        top = 16.dp,
-                                        end = 20.dp,
-                                        bottom = 4.dp,
-                                    ),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                NewTabFavoriteGrid(
-                                    favorites = favorites,
-                                    favicons = favicons,
-                                    enabled = contentEnabled,
-                                    onFavorite = { favorite, startCenterInWindow ->
-                                        if (
-                                            !favoriteLaunchAnimationEnabled ||
-                                            !startCenterInWindow.isUsable() ||
-                                            !rootOriginInWindow.isUsable() ||
-                                            !heroCenterInWindow.isUsable()
-                                        ) {
-                                            onFavorite(favorite.url)
-                                        } else {
-                                            launchRequest = NewTabFavoriteLaunchRequest(
-                                                favorite = favorite,
-                                                startCenterInWindow = startCenterInWindow,
-                                            )
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f, fill = false),
-                                )
-                            }
+                            NewTabFavoriteGrid(
+                                favorites = favorites,
+                                favicons = favicons,
+                                enabled = contentEnabled,
+                                onFavorite = { favorite, startCenterInWindow ->
+                                    if (
+                                        !favoriteLaunchAnimationEnabled ||
+                                        !startCenterInWindow.isUsable() ||
+                                        !rootOriginInWindow.isUsable() ||
+                                        !heroCenterInWindow.isUsable()
+                                    ) {
+                                        onFavorite(favorite.url)
+                                    } else {
+                                        launchRequest = NewTabFavoriteLaunchRequest(
+                                            favorite = favorite,
+                                            startCenterInWindow = startCenterInWindow,
+                                        )
+                                    }
+                                },
+                            )
                         }
                     }
                 }

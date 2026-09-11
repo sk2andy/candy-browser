@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -65,8 +66,8 @@ internal object NewTabFavoritesTestTags {
 internal object NewTabFavoriteGridRules {
     const val COLUMN_COUNT = 4
     const val MAX_VISIBLE_ROWS = 5
-    const val CELL_HEIGHT_DP = 64
-    const val VERTICAL_CONTENT_PADDING_DP = 8
+    const val CELL_HEIGHT_DP = 76
+    const val VERTICAL_CONTENT_PADDING_DP = 12
 
     fun rowCount(itemCount: Int): Int =
         (itemCount.coerceAtLeast(0) + COLUMN_COUNT - 1) / COLUMN_COUNT
@@ -119,10 +120,10 @@ internal fun NewTabFavoriteGrid(
             .height(NewTabFavoriteGridRules.containerHeightDp(favorites.size).dp)
             .testTag(NewTabFavoritesTestTags.Container),
         contentPadding = PaddingValues(
-            horizontal = 12.dp,
+            horizontal = 16.dp,
             vertical = NewTabFavoriteGridRules.VERTICAL_CONTENT_PADDING_DP.dp,
         ),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         userScrollEnabled = enabled,
     ) {
         items(
@@ -160,12 +161,12 @@ private fun FavoriteShortcut(
         color = Color.Transparent,
     ) {
         Box(
-            modifier = Modifier.padding(horizontal = 2.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 3.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center,
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 NewTabFavoriteIcon(
                     favorite = favorite,
@@ -177,10 +178,12 @@ private fun FavoriteShortcut(
                     text = favorite.title.ifBlank {
                         AddressResolver.displayText(favorite.url)
                     },
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
             }
         }
