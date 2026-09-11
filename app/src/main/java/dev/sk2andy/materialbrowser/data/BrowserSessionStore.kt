@@ -394,17 +394,40 @@ class BrowserSessionStore internal constructor(
             .put("addedAt", entry.addedAt)
     }
 
-    @Synchronized
-    internal fun saveFavoritesCommitted(favorites: List<FavoriteEntry>): Boolean =
-        saveArrayCommitted(
-            key = KEY_FAVORITES,
-            values = favorites,
-        ) { entry ->
-            JSONObject()
-                .put("url", entry.url)
-                .put("title", entry.title)
-                .put("addedAt", entry.addedAt)
+    internal fun saveFavoritesCommitted(
+        favorites: List<FavoriteEntry>,
+        expectedCurrent: List<FavoriteEntry>? = null,
+    ): Boolean =
+        synchronized(FAVORITES_COMMIT_LOCK) {
+            synchronized(this) favoriteWrite@{
+                if (expectedCurrent != null && loadFavorites() != expectedCurrent) {
+                    return@favoriteWrite false
+                }
+                saveArrayCommitted(
+                    key = KEY_FAVORITES,
+                    values = favorites,
+                ) { entry ->
+                    JSONObject()
+                        .put("url", entry.url)
+                        .put("title", entry.title)
+                        .put("addedAt", entry.addedAt)
+                }
+            }
         }
+
+    internal fun mergeImportedFavoritesCommitted(
+        imported: List<FavoriteEntry>,
+    ): FavoriteBookmarkMergeResult? = synchronized(FAVORITES_COMMIT_LOCK) {
+        val result = FavoriteBookmarkImportRules.merge(
+            current = loadFavorites(),
+            imported = imported,
+        )
+        if (result.importedCount == 0 || saveFavoritesCommitted(result.favorites)) {
+            result
+        } else {
+            null
+        }
+    }
 
     fun loadBlockerSettings(): BlockerSettings = BlockerSettings(
         blockAdsAndTrackers = preferences.getBoolean(KEY_BLOCK_ADS, true),
@@ -1189,6 +1212,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_HISTORY_SESSION_ACTIVE = "history_session_active"
         const val KEY_PENDING_CANDY_TRAIL_REDACTIONS = "pending_candy_trail_redactions"
         const val KEY_FAVORITES = "favorites"
+        private val FAVORITES_COMMIT_LOCK = Any()
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
         const val KEY_RESIDENT_TAB_LIMIT = "resident_tab_limit"
         const val KEY_SEARCH_ENGINE = "search_engine"

@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -53,6 +55,7 @@ internal fun BrowserSettingsPage(
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onFavoriteLaunchAnimationEnabledChanged: (Boolean) -> Unit = {},
+    onImportFavoriteBookmarks: () -> Unit = {},
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
@@ -123,6 +126,13 @@ internal fun BrowserSettingsPage(
             checked = isFavoriteLaunchAnimationEnabled,
             onCheckedChange = onFavoriteLaunchAnimationEnabledChanged,
             modifier = Modifier.testTag(BrowserSettingsTestTags.FavoriteLaunchAnimation),
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingsLink(
+            icon = Icons.Filled.Favorite,
+            title = stringResource(R.string.settings_favorite_bookmark_import_title),
+            subtitle = stringResource(R.string.settings_favorite_bookmark_import_summary),
+            onClick = onImportFavoriteBookmarks,
         )
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(

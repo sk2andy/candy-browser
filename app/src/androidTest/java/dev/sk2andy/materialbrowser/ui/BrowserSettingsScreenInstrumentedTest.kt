@@ -161,6 +161,38 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
+    fun favoriteBookmarkImportOpensFilePicker() {
+        var importRequested = false
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onImportFavoriteBookmarks = { importRequested = true },
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_favorite_bookmark_import_title),
+        ).performScrollTo().performClick()
+
+        assertTrue(importRequested)
+    }
+
+    @Test
     fun openHomeOnStartupSwitchUpdatesSetting() {
         var enabled by mutableStateOf(false)
         composeRule.setContent {

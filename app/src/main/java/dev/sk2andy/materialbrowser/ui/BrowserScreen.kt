@@ -169,6 +169,7 @@ internal fun BrowserScreen(
     onOpenDownloads: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onImportUserScript: () -> Unit = {},
+    onImportFavoriteBookmarks: () -> Unit = {},
     onExportAppData: () -> Unit = {},
     onImportAppData: () -> Unit = {},
     onShowGestureOnboarding: () -> Unit = {},
@@ -1548,6 +1549,7 @@ internal fun BrowserScreen(
             },
             onDeleteCapsule = { capsule -> pendingCapsuleDelete = capsule },
             onImportUserScript = onImportUserScript,
+            onImportFavoriteBookmarks = onImportFavoriteBookmarks,
             onOpenFilterStudio = {
                 filterStudioSelectedRuleId = null
                 filterStudioVisible = true

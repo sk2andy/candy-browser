@@ -419,6 +419,24 @@
     <string name="settings_startup_animation_subtitle">Mostra a animação do Candy ao iniciar normalmente. Desative para abrir imediatamente a barra de endereço.</string>
     <string name="settings_favorite_launch_animation_title">Animação ao abrir favoritos</string>
     <string name="settings_favorite_launch_animation_subtitle">Envia o favorito por um redemoinho Candy colorido antes de o abrir.</string>
+    <string name="settings_favorite_bookmark_import_title">Importar HTML de marcadores</string>
+    <string name="settings_favorite_bookmark_import_summary">Adiciona aos Favoritos marcadores exportados de outro navegador.</string>
+    <plurals name="favorite_bookmark_import_success">
+        <item quantity="one">%d favorito importado</item>
+        <item quantity="other">%d favoritos importados</item>
+    </plurals>
+    <plurals name="favorite_bookmark_import_partial">
+        <item quantity="one">%1$d favorito importado. O limite de Favoritos é %2$d.</item>
+        <item quantity="other">%1$d favoritos importados. O limite de Favoritos é %2$d.</item>
+    </plurals>
+    <string name="favorite_bookmark_import_no_bookmarks">Nenhum marcador encontrado neste ficheiro</string>
+    <string name="favorite_bookmark_import_no_new">Nenhum favorito novo encontrado</string>
+    <string name="favorite_bookmark_import_limit_reached">Limite de %d favoritos atingido</string>
+    <string name="favorite_bookmark_import_empty">O ficheiro de marcadores está vazio</string>
+    <string name="favorite_bookmark_import_too_large">Os ficheiros de marcadores podem ter no máximo %d MB</string>
+    <string name="favorite_bookmark_import_invalid_utf8">O ficheiro de marcadores não é UTF-8 válido</string>
+    <string name="favorite_bookmark_import_invalid_format">Este não é um ficheiro HTML de marcadores Netscape</string>
+    <string name="favorite_bookmark_import_unreadable">Não foi possível ler o ficheiro de marcadores</string>
     <string name="settings_open_home_on_startup_title">Abrir a página inicial ao arrancar</string>
     <string name="settings_open_home_on_startup_subtitle">Mostra um novo separador vazio em vez do último separador ativo ao abrir o Candy.</string>
     <string name="settings_full_immersive_mode_title">Modo imersivo em ecrã inteiro</string>

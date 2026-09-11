@@ -118,6 +118,7 @@ internal fun SettingsScreen(
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onHttpPasswordAutofillEnabledChanged: (Boolean) -> Unit = {},
     onFavoriteLaunchAnimationEnabledChanged: (Boolean) -> Unit = {},
+    onImportFavoriteBookmarks: () -> Unit = {},
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
@@ -295,6 +296,7 @@ internal fun SettingsScreen(
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
                     onFavoriteLaunchAnimationEnabledChanged =
                         onFavoriteLaunchAnimationEnabledChanged,
+                    onImportFavoriteBookmarks = onImportFavoriteBookmarks,
                     onOpenHomeOnStartupEnabledChanged =
                         onOpenHomeOnStartupEnabledChanged,
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
