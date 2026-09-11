@@ -113,13 +113,16 @@
   The deterministic 4×4 rotation puzzle gives a round twelve moves; a circuit scores only when at least
   four tiles form a cycle through reciprocal edge connections. Extra open or dangling branches do not
   invalidate that cycle. Scoring replaces every participating tile with a different randomized tile,
-  rejects refills that already contain a closed cycle, and grants two moves per scored component. A
+  rejects refills that already contain a closed cycle, and grants one capped nonlinear move reward per
+  scoring turn: two moves for 4–7 tiles, three for 8–11, five for 12–15, and nine for all 16;
+  consecutive scoring turns add up to three combo moves, with ten moves as the per-turn cap. A
   player may rebuild and score the same circuit positions again after refill. The UI resolves a scored
   turn as one input-locked sequence: rotate the closing
   tile, pulse and dissolve the closed circuit, then fly the randomized refill tiles in with a stable
   stagger; score and move semantics update from the reducer result without waiting for motion. Open the
   puzzle immediately with no intermediate play prompt. If connectivity
-  returns, keep game state and expose a polite **Back online** banner whose button performs the only reload.
+  returns, keep game state and morph the offline pill into a polite **Back online** banner. Its button
+  plays the page exit motion before performing the only reload.
 - Treat a main-frame HTTP 404 as a committed response, not a failed navigation. System WebView reports it
   from `onReceivedHttpError`; Gecko's authenticated internal Privacy WebExtension reports the main-frame
   response status because GeckoView's session delegate exposes transport errors but not HTTP response

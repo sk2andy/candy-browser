@@ -93,7 +93,7 @@ class CandyCircuitRulesTest {
     }
 
     @Test
-    fun `each scored component gives two moves after rotation cost`() {
+    fun `small scored component gives two moves after rotation cost`() {
         val state = CandyCircuitGameState(
             tiles = loopReadyBoard(),
             movesRemaining = 1,
@@ -101,9 +101,42 @@ class CandyCircuitRulesTest {
 
         val next = CandyCircuitRules.rotate(state, tileIndex = 5)
 
-        assertEquals(2, CandyCircuitRules.MOVES_PER_CLOSED_COMPONENT)
+        assertEquals(2, next.lastMovesGained)
         assertEquals(2, next.movesRemaining)
         assertFalse(next.isGameOver)
+    }
+
+    @Test
+    fun `move reward grows nonlinearly with circuit size`() {
+        val rewards = listOf(4, 7, 8, 11, 12, 15, 16).map { tileCount ->
+            CandyCircuitRules.movesForClosedCircuit(tileCount = tileCount, combo = 1)
+        }
+
+        assertEquals(listOf(2, 2, 3, 3, 5, 5, 9), rewards)
+    }
+
+    @Test
+    fun `combo adds capped moves without exceeding reward cap`() {
+        assertEquals(2, CandyCircuitRules.movesForClosedCircuit(tileCount = 4, combo = 1))
+        assertEquals(3, CandyCircuitRules.movesForClosedCircuit(tileCount = 4, combo = 2))
+        assertEquals(5, CandyCircuitRules.movesForClosedCircuit(tileCount = 4, combo = 4))
+        assertEquals(5, CandyCircuitRules.movesForClosedCircuit(tileCount = 4, combo = 8))
+        assertEquals(10, CandyCircuitRules.movesForClosedCircuit(tileCount = 16, combo = 8))
+    }
+
+    @Test
+    fun `multiple circuits share one capped move reward`() {
+        val state = CandyCircuitGameState(
+            tiles = fourLoopsReadyBoard(),
+            movesRemaining = 1,
+            combo = 4,
+        )
+
+        val next = CandyCircuitRules.rotate(state, tileIndex = 5, random = Random(81))
+
+        assertEquals(16, next.lastClosedTileCount)
+        assertEquals(10, next.lastMovesGained)
+        assertEquals(10, next.movesRemaining)
     }
 
     @Test
@@ -138,6 +171,7 @@ class CandyCircuitRulesTest {
         val second = CandyCircuitRules.rotate(rebuilt, tileIndex = 5, random = Random(12))
 
         assertEquals(800, second.lastPointsGained)
+        assertEquals(3, second.lastMovesGained)
         assertEquals(1_200, second.score)
         assertEquals(setOf(0, 1, 4, 5), second.lastClosedTileIndices)
         assertTrue(CandyCircuitRules.closedComponents(second.tiles).isEmpty())
@@ -221,6 +255,7 @@ class CandyCircuitRulesTest {
         )
 
         assertEquals(1_200, next.lastPointsGained)
+        assertEquals(5, next.lastMovesGained)
         assertEquals(setOf(1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 14, 15), next.lastClosedTileIndices)
         assertTrue(CandyCircuitRules.closedComponents(next.tiles).isEmpty())
     }
@@ -323,6 +358,24 @@ class CandyCircuitRulesTest {
         this[11] = CandyCircuitTile(CandyCircuitTileShape.Straight, rotation = 0)
         this[14] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 0)
         this[15] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 3)
+    }
+
+    private fun fourLoopsReadyBoard(): List<CandyCircuitTile> = emptyBoard().toMutableList().apply {
+        repeat(4) { loopIndex ->
+            val rowOffset = loopIndex / 2 * 2
+            val columnOffset = loopIndex % 2 * 2
+            val topLeft = rowOffset * CandyCircuitRules.COLUMN_COUNT + columnOffset
+            this[topLeft] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 1)
+            this[topLeft + 1] = CandyCircuitTile(CandyCircuitTileShape.Curve, rotation = 2)
+            this[topLeft + CandyCircuitRules.COLUMN_COUNT] = CandyCircuitTile(
+                CandyCircuitTileShape.Curve,
+                rotation = 0,
+            )
+            this[topLeft + CandyCircuitRules.COLUMN_COUNT + 1] = CandyCircuitTile(
+                CandyCircuitTileShape.Curve,
+                rotation = if (loopIndex == 0) 2 else 3,
+            )
+        }
     }
 
     private fun CandyCircuitTile.normalizedForTest(): CandyCircuitTile = copy(

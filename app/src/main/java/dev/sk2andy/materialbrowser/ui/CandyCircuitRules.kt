@@ -54,7 +54,6 @@ internal object CandyCircuitRules {
     const val ROW_COUNT = 4
     const val COLUMN_COUNT = 4
     const val STARTING_MOVES = 12
-    const val MOVES_PER_CLOSED_COMPONENT = 2
 
     fun initialState(bestScore: Int = 0): CandyCircuitGameState =
         CandyCircuitGameState(bestScore = bestScore.coerceAtLeast(0))
@@ -118,7 +117,11 @@ internal object CandyCircuitRules {
         val pointsGained = closedComponents.sumOf { component -> component.tileIndices.size * POINTS_PER_TILE } *
             nextCombo
         val nextScore = state.score + pointsGained
-        val movesGained = closedComponents.size * MOVES_PER_CLOSED_COMPONENT
+        val closedTileCount = closedComponents.sumOf { component -> component.tileIndices.size }
+        val movesGained = if (closedTileCount == 0) 0 else movesForClosedCircuit(
+            tileCount = closedTileCount,
+            combo = nextCombo,
+        )
         val refilledTiles = refillClosedComponents(
             tiles = rotatedTiles,
             components = closedComponents,
@@ -141,6 +144,17 @@ internal object CandyCircuitRules {
 
     fun restart(state: CandyCircuitGameState): CandyCircuitGameState =
         initialState(bestScore = state.bestScore)
+
+    fun movesForClosedCircuit(
+        tileCount: Int,
+        combo: Int,
+    ): Int {
+        val sizeTier = ((tileCount.coerceAtLeast(MINIMUM_CLOSED_TILE_COUNT) -
+            MINIMUM_CLOSED_TILE_COUNT) / MOVE_REWARD_TIER_SIZE).coerceIn(0, MAX_MOVE_REWARD_TIER)
+        val sizeBonus = (1 shl sizeTier) - 1
+        val comboBonus = (combo - 1).coerceIn(0, MAX_COMBO_MOVE_BONUS)
+        return (BASE_MOVES_REWARD + sizeBonus + comboBonus).coerceAtMost(MAX_MOVES_REWARD)
+    }
 
     fun closedComponents(tiles: List<CandyCircuitTile>): List<CandyCircuitClosedComponent> {
         if (tiles.size != BOARD_SIZE) return emptyList()
@@ -325,6 +339,11 @@ internal object CandyCircuitRules {
     private const val DIRECTION_COUNT = 4
     private const val MINIMUM_CLOSED_TILE_COUNT = 4
     private const val POINTS_PER_TILE = 100
+    private const val BASE_MOVES_REWARD = 2
+    private const val MOVE_REWARD_TIER_SIZE = 4
+    private const val MAX_MOVE_REWARD_TIER = 3
+    private const val MAX_COMBO_MOVE_BONUS = 3
+    private const val MAX_MOVES_REWARD = 10
     private const val MAX_RANDOM_REFILL_ATTEMPTS = 64
     private const val STRAIGHT_ROTATION_COUNT = 2
     private const val UNVISITED = -1

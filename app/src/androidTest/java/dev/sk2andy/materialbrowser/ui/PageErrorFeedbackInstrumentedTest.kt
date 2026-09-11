@@ -139,8 +139,17 @@ class PageErrorFeedbackInstrumentedTest {
             )
         assertEquals(0, reloads.get())
 
+        composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry).performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(PageErrorFeedbackTestTags.Retry).assertIsNotEnabled()
+        assertEquals(0, reloads.get())
+        composeRule.mainClock.advanceTimeBy(
+            CandyCircuitMotionRules.PAGE_EXIT_DURATION_MILLIS.toLong() + 100L,
+        )
+        composeRule.waitForIdle()
         assertEquals(1, reloads.get())
+        composeRule.mainClock.autoAdvance = true
     }
 
     @Test

@@ -3,13 +3,17 @@ package dev.sk2andy.materialbrowser.ui
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -45,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,17 +102,49 @@ internal fun CandyCircuitGame(
     onGameChange: (CandyCircuitGameState) -> Unit,
 ) {
     val hapticView = LocalView.current
+    val currentOnReload by rememberUpdatedState(onReload)
+    val pageProgress = remember { Animatable(0f) }
     var resolution by remember { mutableStateOf<CandyCircuitResolution?>(null) }
     var resolutionSequence by remember { mutableIntStateOf(0) }
+    var isReloading by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        pageProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = CandyCircuitMotionRules.PAGE_ENTRY_DURATION_MILLIS,
+                easing = FastOutSlowInEasing,
+            ),
+        )
+    }
+    LaunchedEffect(isReloading) {
+        if (!isReloading) return@LaunchedEffect
+        pageProgress.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(
+                durationMillis = CandyCircuitMotionRules.PAGE_EXIT_DURATION_MILLIS,
+                easing = FastOutSlowInEasing,
+            ),
+        )
+        currentOnReload()
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .graphicsLayer {
+                alpha = CandyCircuitMotionRules.pageAlpha(pageProgress.value)
+                val scale = CandyCircuitMotionRules.pageScale(pageProgress.value)
+                scaleX = scale
+                scaleY = scale
+                translationY = size.height *
+                    CandyCircuitMotionRules.pageOffsetFraction(pageProgress.value)
+            }
             .testTag(PageErrorFeedbackTestTags.Game),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ConnectionHeader(
             isOnlineReady = isOnlineReady,
-            onReload = onReload,
+            isReloading = isReloading,
+            onReload = { isReloading = true },
         )
         Column(
             modifier = Modifier
@@ -139,7 +176,7 @@ internal fun CandyCircuitGame(
                 game = game,
                 resolution = resolution,
                 onRotate = { tileIndex ->
-                    if (resolution != null) return@CandyCircuitBoard
+                    if (resolution != null || isReloading) return@CandyCircuitBoard
                     val next = CandyCircuitRules.rotate(game, tileIndex)
                     if (next === game) return@CandyCircuitBoard
                     if (next.lastPointsGained > 0) {
@@ -165,13 +202,18 @@ internal fun CandyCircuitGame(
                 onResolutionFinished = { finishedId ->
                     if (resolution?.id == finishedId) resolution = null
                 },
+                inputEnabled = !isReloading,
             )
             Spacer(Modifier.height(14.dp))
-            CircuitResult(game = game, onRestart = {
-                hapticView.performConfirmHaptic()
-                resolution = null
-                onGameChange(CandyCircuitRules.restart(game))
-            })
+            CircuitResult(
+                game = game,
+                restartEnabled = !isReloading,
+                onRestart = {
+                    hapticView.performConfirmHaptic()
+                    resolution = null
+                    onGameChange(CandyCircuitRules.restart(game))
+                },
+            )
             Spacer(Modifier.height(10.dp))
             CircuitRecordProgress(game)
             Spacer(Modifier.height(10.dp))
@@ -189,6 +231,7 @@ internal fun CandyCircuitGame(
 @Composable
 private fun ConnectionHeader(
     isOnlineReady: Boolean,
+    isReloading: Boolean,
     onReload: () -> Unit,
 ) {
     Box(
@@ -198,48 +241,72 @@ private fun ConnectionHeader(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (isOnlineReady) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CandyPurpleSoft, RoundedCornerShape(28.dp))
-                    .padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)
-                    .testTag(PageErrorFeedbackTestTags.OnlineBanner)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                ConnectivityGlyph(
-                    isOnline = true,
-                    color = CandyPurple,
-                    modifier = Modifier.size(38.dp),
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.page_error_back_online),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = stringResource(R.string.page_error_back_online_body),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Button(
-                    onClick = onReload,
-                    modifier = Modifier.testTag(PageErrorFeedbackTestTags.Retry),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Black,
-                        contentColor = Color.White,
+        AnimatedContent(
+            targetState = isOnlineReady,
+            transitionSpec = {
+                val transform = (fadeIn(
+                    animationSpec = tween(durationMillis = 260, delayMillis = 70),
+                ) + scaleIn(
+                    initialScale = 0.90f,
+                    animationSpec = tween(
+                        durationMillis = 380,
+                        easing = FastOutSlowInEasing,
                     ),
+                )) togetherWith (fadeOut(
+                    animationSpec = tween(durationMillis = 150),
+                ) + scaleOut(
+                    targetScale = 0.94f,
+                    animationSpec = tween(durationMillis = 180),
+                ))
+                transform.using(SizeTransform(clip = false))
+            },
+            contentAlignment = Alignment.Center,
+            label = "connection header",
+        ) { online ->
+            if (online) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(CandyPurpleSoft, RoundedCornerShape(28.dp))
+                        .padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)
+                        .testTag(PageErrorFeedbackTestTags.OnlineBanner)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text(stringResource(R.string.page_error_load_page))
+                    ConnectivityGlyph(
+                        isOnline = true,
+                        color = CandyPurple,
+                        modifier = Modifier.size(38.dp),
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.page_error_back_online),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = stringResource(R.string.page_error_back_online_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Button(
+                        onClick = onReload,
+                        enabled = !isReloading,
+                        modifier = Modifier.testTag(PageErrorFeedbackTestTags.Retry),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Black,
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Text(stringResource(R.string.page_error_load_page))
+                    }
                 }
+            } else {
+                OfflinePill()
             }
-        } else {
-            OfflinePill()
         }
     }
 }
@@ -346,6 +413,7 @@ private fun CandyCircuitBoard(
     resolution: CandyCircuitResolution?,
     onRotate: (Int) -> Unit,
     onResolutionFinished: (Int) -> Unit,
+    inputEnabled: Boolean,
 ) {
     val resolutionProgress = remember(resolution?.id) {
         Animatable(if (resolution == null) 1f else 0f)
@@ -397,7 +465,7 @@ private fun CandyCircuitBoard(
                         resolutionOrder = orderedClosedIndices.indexOf(index).coerceAtLeast(0),
                         resolutionCount = orderedClosedIndices.size,
                         isRotatedTile = resolution?.rotatedIndex == index,
-                        enabled = !game.isGameOver && resolution == null,
+                        enabled = inputEnabled && !game.isGameOver && resolution == null,
                         onRotate = { onRotate(index) },
                         modifier = Modifier.weight(1f),
                     )
@@ -678,6 +746,7 @@ private fun CandyCircuitRibbon(
 @Composable
 private fun CircuitResult(
     game: CandyCircuitGameState,
+    restartEnabled: Boolean,
     onRestart: () -> Unit,
 ) {
     val status = when {
@@ -717,6 +786,7 @@ private fun CircuitResult(
         AnimatedVisibility(visible = game.isGameOver) {
             Button(
                 onClick = onRestart,
+                enabled = restartEnabled,
                 modifier = Modifier
                     .padding(top = 10.dp)
                     .testTag(PageErrorFeedbackTestTags.Restart),
