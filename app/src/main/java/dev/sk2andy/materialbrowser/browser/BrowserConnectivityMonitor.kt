@@ -49,6 +49,10 @@ internal class BrowserConnectivityMonitor(
         runCatching { connectivityManager.unregisterNetworkCallback(networkCallback) }
     }
 
+    fun refresh() {
+        refreshStatus()
+    }
+
     private fun refreshStatus() {
         if (closed.get()) return
         val capabilities = connectivityManager.activeNetwork?.let(

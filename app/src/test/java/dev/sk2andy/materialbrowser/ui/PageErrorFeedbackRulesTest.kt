@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,6 +32,20 @@ class PageErrorFeedbackRulesTest {
         )
 
         assertEquals(PageErrorFeedbackState.Offline(), observation.state)
+    }
+
+    @Test
+    fun `engine offline error never becomes unknown host while connectivity catches up`() {
+        val observation = PageErrorFeedbackRules.observe(
+            current = PageErrorFeedbackState.Hidden,
+            error = "Gecko navigation failed",
+            httpStatusCode = null,
+            isLoading = false,
+            isOnline = true,
+            failureKind = BrowserEngineFailureKind.Offline,
+        )
+
+        assertEquals(PageErrorFeedbackState.Offline(isOnlineReady = true), observation.state)
     }
 
     @Test

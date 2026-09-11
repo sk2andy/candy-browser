@@ -62,6 +62,7 @@ import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSessionSettings
+import org.mozilla.geckoview.WebRequestError
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.GeckoWebExecutor
 import org.mozilla.geckoview.ScreenLength
@@ -979,6 +980,20 @@ private class GeckoViewBrowserSession(
             override fun onKill(session: GeckoSession) = onContentProcessTerminated()
         }
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLoadError(
+                session: GeckoSession,
+                uri: String?,
+                error: WebRequestError,
+            ): GeckoResult<String>? {
+                updateState { current ->
+                    current.copy(
+                        failureDescription = GECKO_NAVIGATION_FAILURE,
+                        failureKind = GeckoNavigationFailureRules.kindForErrorCode(error.code),
+                    )
+                }
+                return null
+            }
+
             override fun onLoadRequest(
                 session: GeckoSession,
                 request: GeckoSession.NavigationDelegate.LoadRequest,
@@ -1679,6 +1694,7 @@ private class GeckoViewBrowserSession(
                         progress = 0,
                         lastNavigationSucceeded = null,
                         failureDescription = null,
+                        failureKind = null,
                         httpStatusCode = null,
                     )
                 }
@@ -2668,6 +2684,7 @@ private class GeckoViewBrowserSession(
     }
 
     private companion object {
+        const val GECKO_NAVIGATION_FAILURE = "Gecko navigation failed"
         const val CHOICE_VALUE_SEPARATOR = "\u001F"
         const val MAX_EXTENSION_URL_LENGTH = 4_096
         const val MAX_MEDIA_TIME_MILLIS = 604_800_000L

@@ -15,7 +15,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import org.mozilla.geckoview.GeckoSession
+import org.mozilla.geckoview.WebRequestError
 
 internal data class GeckoBrowserSessionState(
     val url: String? = null,
@@ -27,8 +29,17 @@ internal data class GeckoBrowserSessionState(
     val lastNavigationSucceeded: Boolean? = null,
     val crashed: Boolean = false,
     val failureDescription: String? = null,
+    val failureKind: BrowserEngineFailureKind? = null,
     val httpStatusCode: Int? = null,
 )
+
+internal object GeckoNavigationFailureRules {
+    fun kindForErrorCode(errorCode: Int): BrowserEngineFailureKind = when (errorCode) {
+        WebRequestError.ERROR_OFFLINE -> BrowserEngineFailureKind.Offline
+        WebRequestError.ERROR_UNKNOWN_HOST -> BrowserEngineFailureKind.UnknownHost
+        else -> BrowserEngineFailureKind.Other
+    }
+}
 
 internal fun interface GeckoBrowserSessionStateListener {
     fun onStateChanged(state: GeckoBrowserSessionState)

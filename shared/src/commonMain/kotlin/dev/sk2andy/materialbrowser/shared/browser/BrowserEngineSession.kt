@@ -59,6 +59,12 @@ enum class BrowserEngineEventType {
     Closed,
 }
 
+enum class BrowserEngineFailureKind {
+    Offline,
+    UnknownHost,
+    Other,
+}
+
 data class BrowserEngineEvent(
     val tabId: String,
     val type: BrowserEngineEventType,
@@ -69,6 +75,7 @@ data class BrowserEngineEvent(
     val failureDescription: String?,
     val isLoading: Boolean? = null,
     val httpStatusCode: Int? = null,
+    val failureKind: BrowserEngineFailureKind? = null,
 )
 
 class BrowserSessionController(
