@@ -6,7 +6,20 @@ import android.view.View
 
 internal object BrowserInputDiagnostics {
     private const val TAG = "CandyTouch"
-    private val enabled = Log.isLoggable(TAG, Log.VERBOSE)
+    private val systemEnabled = Log.isLoggable(TAG, Log.VERBOSE)
+
+    @Volatile
+    private var sessionEnabled = false
+
+    val isSessionEnabled: Boolean
+        get() = sessionEnabled
+
+    private val enabled: Boolean
+        get() = systemEnabled || sessionEnabled
+
+    fun setSessionEnabled(enabled: Boolean) {
+        sessionEnabled = enabled
+    }
 
     fun activityDispatch(
         event: MotionEvent,

@@ -445,6 +445,7 @@ class BrowserSessionStoreInstrumentedTest {
             DeveloperSettings(
                 safeAreaLayoutQuietPeriodMillis = 250,
                 safeAreaRequiredFailureCount = 4,
+                forceSafeAreaFallback = true,
             ),
         )
 
@@ -453,6 +454,7 @@ class BrowserSessionStoreInstrumentedTest {
             DeveloperSettings(
                 safeAreaLayoutQuietPeriodMillis = 250,
                 safeAreaRequiredFailureCount = 4,
+                forceSafeAreaFallback = true,
             ),
             store.loadDeveloperSettings(),
         )

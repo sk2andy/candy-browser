@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 data class DeveloperSettings(
     val safeAreaLayoutQuietPeriodMillis: Int = DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
     val safeAreaRequiredFailureCount: Int = DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT,
+    val forceSafeAreaFallback: Boolean = false,
 ) {
     fun normalized(): DeveloperSettings = copy(
         safeAreaLayoutQuietPeriodMillis = normalizedLayoutQuietPeriodMillis(),

@@ -215,8 +215,8 @@ Camera and microphone permissions remain separate and continue through Candy's p
   before Android's Sharesheet is launched. GeckoView exposes only a certificate alias confirmation,
   not a safe Android key-selection contract, so Candy never auto-selects or confirms a certificate;
   no prompt silently falls through a nullable Gecko delegate default.
-- Cleartext HTTP password-manager access is an explicit, default-off GeckoView-only compatibility
-  option. A user must tap a login field before Candy can open the default Android password manager;
+- Cleartext HTTP password-manager access is an explicit, default-off GeckoView-only Developer
+  option with a separate warning confirmation. A user must tap a login field before Candy can open the default Android password manager;
   automatic filling and saving remain disabled. The option never expands FedCM, passkeys, private
   tabs, Link Peek or external-link previews. Android System WebView keeps Android Autofill enabled for
   supported secure pages, but its public API cannot mark selected HTTP origins as secure, so Candy

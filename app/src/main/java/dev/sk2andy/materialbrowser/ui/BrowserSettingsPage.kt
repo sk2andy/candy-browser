@@ -27,9 +27,6 @@ import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 
 internal object BrowserSettingsTestTags {
     const val StartupAnimation = "browser_settings_startup_animation"
-    const val HttpPasswordAutofill = "browser_settings_http_password_autofill"
-    const val HttpPasswordAutofillWarning =
-        "browser_settings_http_password_autofill_warning"
     const val FavoriteLaunchAnimation = "browser_settings_favorite_launch_animation"
     const val OpenHomeOnStartup = "browser_settings_open_home_on_startup"
     const val ScrollBar = "browser_settings_scroll_bar"
@@ -45,9 +42,6 @@ internal fun BrowserSettingsPage(
     isExternalLinkPreviewEnabled: Boolean = false,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
-    isHttpPasswordAutofillEnabled: Boolean = false,
-    isHttpPasswordAutofillSupported: Boolean =
-        browserEngineKind == AndroidBrowserEngineKind.GeckoView,
     isFavoriteLaunchAnimationEnabled: Boolean = true,
     isOpenHomeOnStartupEnabled: Boolean = false,
     isScrollBarEnabled: Boolean,
@@ -58,7 +52,6 @@ internal fun BrowserSettingsPage(
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
-    onHttpPasswordAutofillEnabledChanged: (Boolean) -> Unit = {},
     onFavoriteLaunchAnimationEnabledChanged: (Boolean) -> Unit = {},
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
@@ -112,29 +105,6 @@ internal fun BrowserSettingsPage(
         Text(
             text = stringResource(R.string.settings_browser_engine_restart_warning),
             modifier = Modifier.padding(start = 18.dp, top = 4.dp, end = 18.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_http_password_autofill_title),
-            subtitle = stringResource(
-                if (isHttpPasswordAutofillSupported) {
-                    R.string.settings_http_password_autofill_gecko_summary
-                } else {
-                    R.string.settings_http_password_autofill_system_webview_summary
-                },
-            ),
-            checked = isHttpPasswordAutofillSupported && isHttpPasswordAutofillEnabled,
-            enabled = isHttpPasswordAutofillSupported,
-            onCheckedChange = onHttpPasswordAutofillEnabledChanged,
-            modifier = Modifier.testTag(BrowserSettingsTestTags.HttpPasswordAutofill),
-        )
-        Text(
-            text = stringResource(R.string.settings_http_password_autofill_warning),
-            modifier = Modifier
-                .padding(start = 18.dp, top = 8.dp, end = 18.dp)
-                .testTag(BrowserSettingsTestTags.HttpPasswordAutofillWarning),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
         )

@@ -156,6 +156,7 @@ internal class GeckoBrowserEngineSessionFactory(
     override val kind = AndroidBrowserEngineKind.GeckoView
 
     override val capabilities = AndroidBrowserEngineCapabilities.GeckoView
+    override val runtimeVersionName: String = org.mozilla.geckoview.BuildConfig.MOZ_APP_VERSION
     private val extensionSessionGenerations = mutableMapOf<String, Long>()
     private val extensionSessionIdentities = mutableMapOf<String, GeckoExtensionSessionIdentity>()
     private val preparedSessions = mutableMapOf<String, GeckoSession>()

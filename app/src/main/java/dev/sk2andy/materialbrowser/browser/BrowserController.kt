@@ -10,6 +10,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -561,6 +562,10 @@ class BrowserController(
     var developerSettings by mutableStateOf(DeveloperSettings())
         private set
     var isDeveloperOptionsUnlocked by mutableStateOf(false)
+        private set
+    var isInputDiagnosticsEnabled by mutableStateOf(
+        BrowserInputDiagnostics.isSessionEnabled,
+    )
         private set
     var pendingDownloadChoice by mutableStateOf<PendingDownloadChoice?>(null)
         private set
@@ -3035,7 +3040,7 @@ class BrowserController(
                 tab = policyTab,
                 pageUrl = state.currentUrl,
                 context = requestContext,
-                topInsetPx = currentSafeAreaTopInsetPx(),
+                topInsetPx = externalLinkPreviewContentTopInsetPx(),
                 navigationGeneration = state.generation,
             ),
             privacyEventSink = GeckoPrivacyEventSink { },
@@ -3143,7 +3148,7 @@ class BrowserController(
                     tab = runtime.policyTab,
                     pageUrl = safeUrl,
                     context = requestContext,
-                    topInsetPx = currentSafeAreaTopInsetPx(),
+                    topInsetPx = externalLinkPreviewContentTopInsetPx(),
                     navigationGeneration = generation,
                 ),
                 reloadOnCookiePermissionChange = true,
@@ -3440,8 +3445,8 @@ class BrowserController(
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
             forceNativeSafeArea = forceNativeSafeArea,
-            forceNativeTopSafeArea =
-                tabId != null && tabId in automaticNativeTopSafeAreaTabIds,
+            forceNativeTopSafeArea = developerSettings.forceSafeAreaFallback ||
+                (tabId != null && tabId in automaticNativeTopSafeAreaTabIds),
             isFullscreenContent = isFullscreenContent,
             isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
                 (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
@@ -6703,9 +6708,47 @@ class BrowserController(
     fun updateDeveloperSettings(settings: DeveloperSettings) {
         val normalized = settings.normalized()
         if (developerSettings == normalized) return
+        val safeAreaModeChanged =
+            developerSettings.forceSafeAreaFallback != normalized.forceSafeAreaFallback
         developerSettings = normalized
         store.saveDeveloperSettings(normalized)
-        refreshGeckoContentTopInsetPolicies()
+        refreshDeveloperSafeAreaConfiguration(safeAreaModeChanged)
+    }
+
+    fun updateInputDiagnosticsEnabled(enabled: Boolean) {
+        if (isInputDiagnosticsEnabled == enabled) return
+        BrowserInputDiagnostics.setSessionEnabled(enabled)
+        isInputDiagnosticsEnabled = enabled
+    }
+
+    fun copyDeveloperDiagnostics() {
+        val report = DeveloperDiagnosticsReport.render(
+            DeveloperDiagnosticsSnapshot(
+                appVersion = BuildConfig.VERSION_NAME,
+                versionCode = BuildConfig.VERSION_CODE.toLong(),
+                buildType = BuildConfig.BUILD_TYPE,
+                sdkInt = Build.VERSION.SDK_INT,
+                engine = browserEngineKind,
+                engineVersion = browserEngineSessionFactory.runtimeVersionName,
+                activeTabCount = activeTabs.size,
+                rendererSessionCount = browserEngineSessions.size,
+                fullscreenActive = fullscreenVideoState != null,
+                externalPreviewActive = externalLinkPreviewState != null,
+                inputDiagnosticsEnabled = isInputDiagnosticsEnabled,
+                developerSettings = developerSettings,
+            ),
+        )
+        activity.getSystemService(ClipboardManager::class.java).setPrimaryClip(
+            ClipData.newPlainText(
+                activity.getString(R.string.developer_options_copy_diagnostics),
+                report,
+            ),
+        )
+        Toast.makeText(
+            activity,
+            R.string.developer_options_diagnostics_copied,
+            Toast.LENGTH_SHORT,
+        ).show()
     }
 
     internal fun selectedBrowserEngineScrollMetrics(): BrowserEngineScrollMetrics? =
@@ -6843,7 +6886,9 @@ class BrowserController(
     }
 
     fun previewTopInsetPx(tabId: String): Int = if (
-        !isSafeAreaForced(tabId) && tabId !in automaticNativeTopSafeAreaTabIds
+        !developerSettings.forceSafeAreaFallback &&
+        !isSafeAreaForced(tabId) &&
+        tabId !in automaticNativeTopSafeAreaTabIds
     ) {
         0
     } else {
@@ -8482,6 +8527,7 @@ class BrowserController(
 
     private fun geckoContentTopInsetPx(tabId: String): Int {
         if (
+            developerSettings.forceSafeAreaFallback ||
             usesNativeSafeArea(tabId) ||
             tabId in automaticNativeTopSafeAreaTabIds ||
             fullscreenVideoState?.tabId == tabId
@@ -8496,6 +8542,9 @@ class BrowserController(
         ?.top
         ?.coerceAtLeast(0)
         ?: 0
+
+    private fun externalLinkPreviewContentTopInsetPx(): Int =
+        if (developerSettings.forceSafeAreaFallback) 0 else currentSafeAreaTopInsetPx()
 
     private fun usesNativeSafeArea(tabId: String): Boolean =
         isSafeAreaForced(tabId) ||
@@ -8513,6 +8562,49 @@ class BrowserController(
                 session.updatePrivacyPolicy(policy)
             }
         }
+    }
+
+    private fun refreshDeveloperSafeAreaConfiguration(forceNativeChanged: Boolean) {
+        browserEngineSessions.forEach { (tabId, session) ->
+            val dispatchUpdatedInsets = {
+                if (forceNativeChanged) {
+                    lastWindowInsets?.let { insets ->
+                        geckoViewBindings.values
+                            .filter { binding -> binding.tabId == tabId }
+                            .forEach { binding ->
+                                applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+                            }
+                    }
+                }
+                Unit
+            }
+            geckoPrivacyPolicyFor(tabId)?.let { policy ->
+                session.updatePrivacyPolicy(policy, onReady = dispatchUpdatedInsets)
+            } ?: dispatchUpdatedInsets()
+        }
+        val runtime = externalLinkPreviewRuntime ?: return
+        val state = externalLinkPreviewState ?: return
+        val pageUrl = ExternalLinkPreviewRules.safeCurrentUrl(state.currentUrl) ?: return
+        val context = protectionRequestContexts[runtime.policyTab.id]
+            ?: protectionRequestContextFor(runtime.policyTab, pageUrl)
+        val dispatchUpdatedInsets = {
+            if (forceNativeChanged && externalLinkPreviewRuntime === runtime) {
+                lastWindowInsets?.let { insets ->
+                    applyGeckoWindowInsets(runtime.binding.view, tabId = null, insets)
+                }
+            }
+            Unit
+        }
+        runtime.geckoBinding.session.updatePrivacyPolicy(
+            policy = geckoPrivacyPolicyFor(
+                tab = runtime.policyTab,
+                pageUrl = pageUrl,
+                context = context,
+                topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                navigationGeneration = runtime.generation,
+            ),
+            onReady = dispatchUpdatedInsets,
+        )
     }
 
     private fun onGeckoPrivacyEvent(tabId: String, event: GeckoPrivacyEvent) {

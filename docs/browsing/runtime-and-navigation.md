@@ -135,8 +135,9 @@
   declared for GeckoView's passkey lookup, origin-bound WebAuthn, and Candy's password Credential
   Manager bridge. GeckoView 155 uses Android's framework Credential Manager for passkeys on API 34+
   when `android.software.credentials` exists. Regular HTTPS Gecko views expose
-  native virtual Autofill nodes; private views do not. Browser settings provide a default-off
-  **Password manager on HTTP sites** option only when GeckoView is selected. When enabled, an
+  native virtual Autofill nodes; private views do not. Developer options provide a default-off
+  **Password manager on HTTP sites** override only when GeckoView is selected. Enabling it requires
+  an explicit cleartext-HTTP warning confirmation. Once enabled, an
   explicit tap on an HTTP login field may open the default Android password manager for login
   selection. It never enables automatic HTTP filling, HTTP login saving, FedCM, passkeys, private
   tabs, Link Peek or external-link previews. Android System WebView exposes no public API for this
@@ -310,7 +311,7 @@ WebView request state.
 | Native 404/offline pages and Candy Circuit | `CandyCircuitRulesTest`, `PageErrorFeedbackRulesTest`, `BrowserConnectivityRulesTest`, `GeckoMainFrameResponseRulesTest`, `PageErrorFeedbackInstrumentedTest`, and engine-specific main-frame 404 coverage |
 | Federated login | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, and popup-blocker regression tests |
 | CAPTCHA compatibility | `CaptchaCompatibilityRulesTest`, `CaptchaCompatibilityPromptInstrumentedTest`, `BrowserControllerCaptchaCompatibilityInstrumentedTest`, and `BrowserSessionStoreInstrumentedTest` |
-| Gecko password Autofill, opt-in HTTP login selection, Credential Manager and browser-origin manifest contract | `CredentialPromptRulesTest`, `BrowserSettingsScreenInstrumentedTest` and `GeckoCredentialsInstrumentedTest` on API 34+ |
+| Gecko password Autofill, opt-in HTTP login selection, Credential Manager and browser-origin manifest contract | `CredentialPromptRulesTest`, `DeveloperOptionsSettingsPageInstrumentedTest` and `GeckoCredentialsInstrumentedTest` on API 34+ |
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |

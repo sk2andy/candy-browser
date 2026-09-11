@@ -41,6 +41,31 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     private var controller: BrowserController? = null
 
+    @Test
+    fun developerSafeAreaFallbackForcesNativePreviewInset() {
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(
+                        WindowInsetsCompat.Type.statusBars(),
+                        Insets.of(0, 72, 0, 0),
+                    )
+                    .build(),
+            )
+
+            assertEquals(0, browserController.previewTopInsetPx(browserController.selectedTabId))
+
+            browserController.updateDeveloperSettings(
+                DeveloperSettings(forceSafeAreaFallback = true),
+            )
+
+            assertEquals(72, browserController.previewTopInsetPx(browserController.selectedTabId))
+            browserController.updateDeveloperSettings(DeveloperSettings())
+        }
+    }
+
     @After
     fun tearDown() {
         composeRule.runOnIdle { controller?.destroy() }

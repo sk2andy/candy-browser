@@ -136,6 +136,8 @@ internal class SystemWebViewBrowserEngineFactory(
 ) : AndroidBrowserEngineFactory {
     override val kind = AndroidBrowserEngineKind.SystemWebView
     override val capabilities = AndroidBrowserEngineCapabilities.SystemWebView
+    override val runtimeVersionName: String?
+        get() = WebView.getCurrentWebViewPackage()?.versionName
 
     private var scripts = emptyList<UserScript>()
     private var toppingDelegate = GeckoToppingInteractionDelegate.None

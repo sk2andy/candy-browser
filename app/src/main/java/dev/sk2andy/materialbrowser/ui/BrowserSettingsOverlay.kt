@@ -56,6 +56,8 @@ internal fun BrowserSettingsOverlay(
     onOpenFilterStudio: () -> Unit,
     onExportAppData: () -> Unit,
     onImportAppData: () -> Unit,
+    onShowGestureOnboarding: () -> Unit,
+    onShowReleaseNotes: () -> Unit,
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -183,6 +185,7 @@ internal fun BrowserSettingsOverlay(
             isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
             developerSettings = controller.developerSettings,
             isDeveloperOptionsUnlocked = controller.isDeveloperOptionsUnlocked,
+            isInputDiagnosticsEnabled = controller.isInputDiagnosticsEnabled,
             blockedCount = selectedTab.blockedCount,
             isDefaultBrowser = controller.isDefaultBrowser,
             isUserScriptSupported = controller.isUserScriptSupported,
@@ -253,6 +256,10 @@ internal fun BrowserSettingsOverlay(
             onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
             onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
             onDeveloperSettingsChanged = controller::updateDeveloperSettings,
+            onInputDiagnosticsEnabledChanged = controller::updateInputDiagnosticsEnabled,
+            onCopyDeveloperDiagnostics = controller::copyDeveloperDiagnostics,
+            onShowGestureOnboarding = onShowGestureOnboarding,
+            onShowReleaseNotes = onShowReleaseNotes,
             onUnlockDeveloperOptions = {
                 if (controller.unlockDeveloperOptions()) {
                     Toast.makeText(
