@@ -1823,18 +1823,6 @@ private class GeckoViewBrowserSession(
     }
 
     private fun currentCredentialPromptIdentity(): CredentialPromptIdentity? {
-        return currentCredentialPromptIdentity(allowHttp = false)
-    }
-
-    private fun currentCredentialLoginSelectionIdentity(): CredentialPromptIdentity? {
-        return currentCredentialPromptIdentity(
-            allowHttp = httpPasswordManagerSelectionEnabled,
-        )
-    }
-
-    private fun currentCredentialPromptIdentity(
-        allowHttp: Boolean,
-    ): CredentialPromptIdentity? {
         val extension = extensionIdentity ?: return null
         return CredentialPromptRules.identity(
             tabId = extension.tabId,
@@ -1844,7 +1832,20 @@ private class GeckoViewBrowserSession(
             pageUrl = currentPageUrl,
             sessionGeneration = extension.generation,
             navigationGeneration = credentialNavigationGeneration,
-            allowHttp = allowHttp,
+        )
+    }
+
+    private fun currentCredentialLoginSelectionIdentity(): CredentialPromptIdentity? {
+        val extension = extensionIdentity ?: return null
+        return CredentialPromptRules.loginSelectionIdentity(
+            tabId = extension.tabId,
+            profileId = profileId,
+            isPrivate = isPrivate,
+            isActive = active,
+            pageUrl = currentPageUrl,
+            sessionGeneration = extension.generation,
+            navigationGeneration = credentialNavigationGeneration,
+            allowHttp = httpPasswordManagerSelectionEnabled,
         )
     }
 

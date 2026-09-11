@@ -44,7 +44,7 @@ class CredentialPromptRulesTest {
 
     @Test
     fun `explicit opt in creates exact http login selection identity`() {
-        val identity = CredentialPromptRules.identity(
+        val identity = CredentialPromptRules.loginSelectionIdentity(
             tabId = "tab-1",
             profileId = "profile-1",
             isPrivate = false,
@@ -57,7 +57,7 @@ class CredentialPromptRulesTest {
 
         assertEquals("http://example.com:8080", identity?.origin)
         assertNull(
-            CredentialPromptRules.identity(
+            CredentialPromptRules.loginSelectionIdentity(
                 tabId = "tab-1",
                 profileId = "profile-1",
                 isPrivate = false,
@@ -77,7 +77,7 @@ class CredentialPromptRulesTest {
             false to false,
         ).forEach { (privateMode, active) ->
             assertNull(
-                CredentialPromptRules.identity(
+                CredentialPromptRules.loginSelectionIdentity(
                     tabId = "tab",
                     profileId = "profile",
                     isPrivate = privateMode,
@@ -104,27 +104,27 @@ class CredentialPromptRulesTest {
     }
 
     @Test
-    fun `login origin must match exact web origin`() {
+    fun `saved login origin must match exact https origin`() {
         assertTrue(
-            CredentialPromptRules.matchesOrigin(
+            CredentialPromptRules.matchesHttpsOrigin(
                 candidate = "https://example.com/login",
                 expected = "https://example.com",
             ),
         )
         assertFalse(
-            CredentialPromptRules.matchesOrigin(
+            CredentialPromptRules.matchesHttpsOrigin(
                 candidate = "https://accounts.example.com",
                 expected = "https://example.com",
             ),
         )
         assertFalse(
-            CredentialPromptRules.matchesOrigin(
+            CredentialPromptRules.matchesHttpsOrigin(
                 candidate = "http://example.com",
                 expected = "https://example.com",
             ),
         )
-        assertTrue(
-            CredentialPromptRules.matchesOrigin(
+        assertFalse(
+            CredentialPromptRules.matchesHttpsOrigin(
                 candidate = "http://example.com/login",
                 expected = "http://example.com",
             ),

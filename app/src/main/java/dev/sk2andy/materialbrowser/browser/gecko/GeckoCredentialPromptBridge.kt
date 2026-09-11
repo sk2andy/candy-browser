@@ -25,7 +25,7 @@ internal class GeckoCredentialPromptBridge(
     ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
         val identity = currentSecureIdentity() ?: return dismissed(request)
         val option = request.options.singleOrNull() ?: return dismissed(request)
-        if (!CredentialPromptRules.matchesOrigin(option.value.origin, identity.origin)) {
+        if (!CredentialPromptRules.matchesHttpsOrigin(option.value.origin, identity.origin)) {
             return dismissed(request)
         }
         val login = CredentialPromptRules.login(option.value.username, option.value.password)

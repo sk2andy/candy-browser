@@ -18,6 +18,7 @@ import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowserEngineSessionFactory
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoCredentialPromptBridge
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewRuntimeHandle
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnActivityDelegate
@@ -34,12 +35,63 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mozilla.geckoview.Autocomplete
 import org.mozilla.geckoview.GeckoResult
+import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = 34)
 class GeckoCredentialsInstrumentedTest {
+    @Test
+    fun httpIdentityReachesOnlyOptedInLoginSelectionPath() {
+        val identity = requireNotNull(
+            CredentialPromptRules.loginSelectionIdentity(
+                tabId = "http-tab",
+                profileId = "local",
+                isPrivate = false,
+                isActive = true,
+                pageUrl = "http://example.com/login",
+                sessionGeneration = 1,
+                navigationGeneration = 1,
+                allowHttp = true,
+            ),
+        )
+        val host = RecordingCredentialPromptHost()
+        val bridge = GeckoCredentialPromptBridge(
+            currentLoginSelectionIdentity = { identity },
+            currentSecureIdentity = { null },
+            currentHost = { host },
+        )
+        val entry = Autocomplete.LoginEntry.Builder()
+            .origin(identity.origin)
+            .formActionOrigin(identity.origin)
+            .username("alice")
+            .password("secret")
+            .build()
+
+        bridge.onLoginSelect(
+            TestAutocompleteRequest(arrayOf(Autocomplete.LoginSelectOption(entry))),
+        ).poll(0)
+        bridge.onLoginSave(
+            TestAutocompleteRequest(arrayOf(Autocomplete.LoginSaveOption(entry))),
+        ).poll(0)
+
+        assertEquals(1, host.loginSelectionCount)
+        assertEquals(0, host.loginSaveCount)
+
+        val disabledBridge = GeckoCredentialPromptBridge(
+            currentLoginSelectionIdentity = { null },
+            currentSecureIdentity = { null },
+            currentHost = { host },
+        )
+        disabledBridge.onLoginSelect(
+            TestAutocompleteRequest(arrayOf(Autocomplete.LoginSelectOption(entry))),
+        ).poll(0)
+
+        assertEquals(1, host.loginSelectionCount)
+    }
+
     @Test
     fun bundlesCredentialManagerAndBrowserOriginPermission() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -363,4 +415,49 @@ class GeckoCredentialsInstrumentedTest {
     private companion object {
         const val WEB_AUTHN_FIXTURE_URL = "https://example.com/passkey-fixture"
     }
+}
+
+private class TestAutocompleteRequest<T : Autocomplete.Option<*>>(
+    options: Array<T>,
+) : GeckoSession.PromptDelegate.AutocompleteRequest<T>(
+    "test",
+    options,
+    object : GeckoSession.PromptDelegate.BasePrompt.Observer {},
+)
+
+private class RecordingCredentialPromptHost : CredentialPromptHost {
+    var loginSaveCount = 0
+        private set
+    var loginSelectionCount = 0
+        private set
+
+    override fun saveLogin(prompt: CredentialLoginSavePrompt, onComplete: (Boolean) -> Unit) {
+        loginSaveCount++
+        onComplete(false)
+    }
+
+    override fun selectLogin(
+        prompt: CredentialLoginSelectPrompt,
+        onComplete: (CredentialLogin?) -> Unit,
+    ) {
+        loginSelectionCount++
+        onComplete(null)
+    }
+
+    override fun selectIdentityProvider(
+        prompt: IdentityCredentialProviderPrompt,
+        onComplete: (Int?) -> Unit,
+    ) = onComplete(null)
+
+    override fun selectIdentityAccount(
+        prompt: IdentityCredentialAccountPrompt,
+        onComplete: (Int?) -> Unit,
+    ) = onComplete(null)
+
+    override fun confirmIdentityPrivacyPolicy(
+        prompt: IdentityCredentialPrivacyPrompt,
+        onComplete: (Boolean) -> Unit,
+    ) = onComplete(false)
+
+    override fun close() = Unit
 }
