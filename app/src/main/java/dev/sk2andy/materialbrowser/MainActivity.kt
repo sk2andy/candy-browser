@@ -243,7 +243,9 @@ class MainActivity : AppCompatActivity() {
         val hadCompletedOnboarding = onboardingStore.hasCompletedAnyVersion()
         val onboardingRequired = onboardingStore.shouldShow()
         initialOnboardingRequired = onboardingRequired && !hadCompletedOnboarding
-        onboardingVisible = onboardingRequired
+        onboardingVisible = savedInstanceState
+            ?.getBoolean(STATE_ONBOARDING_VISIBLE)
+            ?: onboardingRequired
         releaseNotesStore = ReleaseNotesStore(this)
         if (
             intent.action == Intent.ACTION_MAIN ||
@@ -515,6 +517,15 @@ class MainActivity : AppCompatActivity() {
                             appDataImportLauncher.launch(
                                 arrayOf("application/zip", "application/octet-stream"),
                             )
+                        },
+                        onShowGestureOnboarding = {
+                            initialOnboardingRequired = false
+                            releaseNotesVisible = false
+                            onboardingVisible = true
+                        },
+                        onShowReleaseNotes = {
+                            loadReleaseNotesContent()
+                            releaseNotesVisible = releaseNotesContent != null
                         },
                         onOpenFirefoxExtensions = if (
                             browserController.usesGeckoEngine &&
@@ -1042,6 +1053,7 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         externalLaunchTabId?.let { outState.putString(STATE_EXTERNAL_LAUNCH_TAB_ID, it) }
+        outState.putBoolean(STATE_ONBOARDING_VISIBLE, onboardingVisible)
         outState.putBoolean(STATE_RELEASE_NOTES_VISIBLE, releaseNotesVisible)
         super.onSaveInstanceState(outState)
     }
@@ -1502,6 +1514,7 @@ class MainActivity : AppCompatActivity() {
         const val STATE_EXTERNAL_LINK_PREVIEW_APP_HANDOFF_EXPIRATION =
             "external_link_preview_app_handoff_expiration"
         const val STATE_EXTERNAL_LAUNCH_TAB_ID = "external_launch_tab_id"
+        const val STATE_ONBOARDING_VISIBLE = "onboarding_visible"
         const val STATE_RELEASE_NOTES_VISIBLE = "release_notes_visible"
         const val MOUSE_NAVIGATION_DUPLICATE_WINDOW_MILLIS = 16L
     }

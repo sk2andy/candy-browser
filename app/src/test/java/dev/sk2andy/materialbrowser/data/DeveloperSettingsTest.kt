@@ -10,6 +10,7 @@ class DeveloperSettingsTest {
 
         assertEquals(400, settings.safeAreaLayoutQuietPeriodMillis)
         assertEquals(3, settings.safeAreaRequiredFailureCount)
+        assertEquals(false, settings.forceSafeAreaFallback)
     }
 
     @Test
@@ -18,10 +19,12 @@ class DeveloperSettingsTest {
             DeveloperSettings(
                 safeAreaLayoutQuietPeriodMillis = 100,
                 safeAreaRequiredFailureCount = 5,
+                forceSafeAreaFallback = true,
             ),
             DeveloperSettings(
                 safeAreaLayoutQuietPeriodMillis = 0,
                 safeAreaRequiredFailureCount = 99,
+                forceSafeAreaFallback = true,
             ).normalized(),
         )
     }

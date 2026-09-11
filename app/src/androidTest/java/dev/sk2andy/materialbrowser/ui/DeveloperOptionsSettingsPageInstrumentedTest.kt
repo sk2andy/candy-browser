@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -87,20 +89,117 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
         }
 
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.LayoutQuietPeriod)
+            .performScrollTo()
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
                 setProgress(250f)
             }
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.RequiredFailures)
+            .performScrollTo()
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
                 setProgress(4f)
             }
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ForceSafeAreaFallback)
+            .performScrollTo()
+            .performClick()
 
         assertEquals(250, settings.safeAreaLayoutQuietPeriodMillis)
         assertEquals(4, settings.safeAreaRequiredFailureCount)
+        assertTrue(settings.forceSafeAreaFallback)
         assertFalse(settings == DeveloperSettings())
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.Reset)
             .performScrollTo()
             .performClick()
         assertEquals(DeveloperSettings(), settings)
+    }
+
+    @Test
+    fun httpPasswordAutofillRequiresExplicitConfirmation() {
+        var enabled by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = DeveloperSettings(),
+                    isHttpPasswordAutofillEnabled = enabled,
+                    isHttpPasswordAutofillSupported = true,
+                    onSettingsChanged = {},
+                    onHttpPasswordAutofillEnabledChanged = { enabled = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.HttpPasswordAutofill)
+            .assertIsEnabled()
+            .performClick()
+
+        assertFalse(enabled)
+        composeRule.onNodeWithText(
+            context.getString(R.string.developer_options_http_warning_title),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText(
+            context.getString(R.string.developer_options_http_warning_confirm),
+        ).performClick()
+
+        assertTrue(enabled)
+    }
+
+    @Test
+    fun unsupportedHttpPasswordAutofillStaysDisabled() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = DeveloperSettings(),
+                    isHttpPasswordAutofillEnabled = true,
+                    isHttpPasswordAutofillSupported = false,
+                    onSettingsChanged = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.HttpPasswordAutofill)
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun diagnosticsAndPresentationActionsEmitCallbacks() {
+        var inputDiagnosticsEnabled by mutableStateOf(false)
+        var diagnosticsCopied = false
+        var onboardingShown = false
+        var releaseNotesShown = false
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = DeveloperSettings(),
+                    isInputDiagnosticsEnabled = inputDiagnosticsEnabled,
+                    onSettingsChanged = {},
+                    onInputDiagnosticsEnabledChanged = {
+                        inputDiagnosticsEnabled = it
+                    },
+                    onCopyDiagnostics = { diagnosticsCopied = true },
+                    onShowOnboarding = { onboardingShown = true },
+                    onShowReleaseNotes = { releaseNotesShown = true },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.InputDiagnostics)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.CopyDiagnostics)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ShowOnboarding)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ShowReleaseNotes)
+            .performScrollTo()
+            .performClick()
+
+        assertTrue(inputDiagnosticsEnabled)
+        assertTrue(diagnosticsCopied)
+        assertTrue(onboardingShown)
+        assertTrue(releaseNotesShown)
     }
 }

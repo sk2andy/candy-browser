@@ -5,8 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -68,79 +66,9 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.settings_browser_engine_system_summary),
         ).assertIsDisplayed()
-    }
-
-    @Test
-    fun geckoHttpPasswordAutofillExplainsRiskAndUpdatesSetting() {
-        var enabled by mutableStateOf(false)
-        composeRule.setContent {
-            MaterialBrowserTheme {
-                BrowserSettingsPage(
-                    browserEngineKind = AndroidBrowserEngineKind.GeckoView,
-                    pageTranslationProvider = PageTranslationProvider.Google,
-                    isFullImmersiveModeEnabled = false,
-                    isStartupAnimationEnabled = true,
-                    isHttpPasswordAutofillEnabled = enabled,
-                    isHttpPasswordAutofillSupported = true,
-                    isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
-                    isDefaultBrowser = false,
-                    onFullImmersiveModeEnabledChanged = {},
-                    onStartupAnimationEnabledChanged = {},
-                    onHttpPasswordAutofillEnabledChanged = { enabled = it },
-                    onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
-                    onPageTranslationProviderChanged = {},
-                    onOpenDefaultBrowserSettings = {},
-                    onBack = {},
-                )
-            }
-        }
-
         composeRule.onNodeWithText(
-            context.getString(R.string.settings_http_password_autofill_gecko_summary),
-        ).assertIsDisplayed()
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.HttpPasswordAutofillWarning)
-            .assertIsDisplayed()
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.HttpPasswordAutofill)
-            .assertIsEnabled()
-            .performClick()
-
-        assertTrue(enabled)
-    }
-
-    @Test
-    fun systemWebViewDisablesHttpPasswordAutofillAndExplainsLimitation() {
-        composeRule.setContent {
-            MaterialBrowserTheme {
-                BrowserSettingsPage(
-                    browserEngineKind = AndroidBrowserEngineKind.SystemWebView,
-                    pageTranslationProvider = PageTranslationProvider.Google,
-                    isFullImmersiveModeEnabled = false,
-                    isStartupAnimationEnabled = true,
-                    isHttpPasswordAutofillEnabled = true,
-                    isHttpPasswordAutofillSupported = false,
-                    isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
-                    isDefaultBrowser = false,
-                    onFullImmersiveModeEnabledChanged = {},
-                    onStartupAnimationEnabledChanged = {},
-                    onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
-                    onPageTranslationProviderChanged = {},
-                    onOpenDefaultBrowserSettings = {},
-                    onBack = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithText(
-            context.getString(R.string.settings_http_password_autofill_system_webview_summary),
-        ).assertIsDisplayed()
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.HttpPasswordAutofill)
-            .assertIsNotEnabled()
+            context.getString(R.string.settings_http_password_autofill_title),
+        ).assertDoesNotExist()
     }
 
     @Test

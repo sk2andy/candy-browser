@@ -12,7 +12,7 @@
 | Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
 | Page scroll bar | Persisted opt-in, engine-neutral scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, browser-engine session ports, `ui/BrowserScrollBar` |
-| Developer options | Persisted hidden unlock plus bounded safe-area fallback tuning | `DeveloperSettings`, `BrowserSessionStore`, `BrowserController`, `ui/DeveloperOptionsSettingsPage` |
+| Developer options | Persisted hidden unlock, bounded safe-area fallback tuning, insecure-HTTP autofill override, process-local input diagnostics, privacy-safe runtime report and presentation replay actions | `DeveloperSettings`, `BrowserSessionStore`, `BrowserInputDiagnostics`, `DeveloperDiagnosticsReport`, `BrowserController`, `MainActivity`, `ui/DeveloperOptionsSettingsPage` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
 | Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
 | App data archive | SAF launch and confirmation stay in the activity and Protection page; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `ui/ProtectionSettingsPage.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
@@ -37,6 +37,8 @@
 | Prevent automatic video playback | Off, on | Off |
 | Developer safe-area layout quiet | 100–800 ms in 50-ms steps | 400 ms |
 | Developer safe-area failed checks | 2–5 | 3 |
+| Force native safe-area fallback | Off, on | Off |
+| Touch and input diagnostics | Off, on for current process | Off |
 
 ## Cross-platform settings migration
 
@@ -131,6 +133,17 @@ Frosted exposes three persisted controls while selected:
 - Developer options stay hidden until **About & legal** is long-pressed once. The global unlock
   persists across restarts. Its safe-area controls are bounded before persistence, apply live to
   Gecko and System WebView without reloading, and reset any pending fallback confirmation chain.
+  The native-fallback override updates document policy before redispatching window insets so pages
+  never retain both Candy's scrollable inset and a native top margin.
+- HTTP password-manager selection lives only in Developer options. It stays Gecko-only, defaults
+  off and requires an explicit insecure-HTTP warning confirmation each time it is enabled.
+- Touch and input diagnostics are process-local and automatically return off after process restart.
+  The copied diagnostic report contains build, engine and aggregate runtime state, but no page URL,
+  tab identifier or profile name.
+- The experimental-features section exposes only functional experiments; currently this is the
+  global native safe-area fallback.
+- Developer presentation actions show gesture onboarding or the bundled release notes again without
+  resetting either completion store. Settings closes before the requested presentation opens.
 - Full-screen platform overlays launched from Settings preserve the Settings destination below
   them. They own predictive-back handling, so a system edge gesture dismisses only the overlay and
   returns to Settings instead of reaching the underlying browser/settings back target.

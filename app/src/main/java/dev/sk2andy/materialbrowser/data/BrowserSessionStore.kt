@@ -944,6 +944,10 @@ class BrowserSessionStore internal constructor(
             range = DeveloperSettings.MIN_SAFE_AREA_REQUIRED_FAILURE_COUNT..
                 DeveloperSettings.MAX_SAFE_AREA_REQUIRED_FAILURE_COUNT,
         ),
+        forceSafeAreaFallback = preferences.getBoolean(
+            KEY_DEVELOPER_FORCE_SAFE_AREA_FALLBACK,
+            false,
+        ),
     ).normalized()
 
     fun saveDeveloperSettings(settings: DeveloperSettings) {
@@ -956,6 +960,10 @@ class BrowserSessionStore internal constructor(
             .putInt(
                 KEY_DEVELOPER_SAFE_AREA_REQUIRED_FAILURE_COUNT,
                 normalized.safeAreaRequiredFailureCount,
+            )
+            .putBoolean(
+                KEY_DEVELOPER_FORCE_SAFE_AREA_FALLBACK,
+                normalized.forceSafeAreaFallback,
             )
             .apply()
     }
@@ -1218,6 +1226,8 @@ class BrowserSessionStore internal constructor(
             "developer_safe_area_layout_quiet_period_millis"
         const val KEY_DEVELOPER_SAFE_AREA_REQUIRED_FAILURE_COUNT =
             "developer_safe_area_required_failure_count"
+        const val KEY_DEVELOPER_FORCE_SAFE_AREA_FALLBACK =
+            "developer_force_safe_area_fallback"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_WEBRTC_PROTECTION_MODE = "webrtc_protection_mode"
         const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"

@@ -171,6 +171,8 @@ internal fun BrowserScreen(
     onImportUserScript: () -> Unit = {},
     onExportAppData: () -> Unit = {},
     onImportAppData: () -> Unit = {},
+    onShowGestureOnboarding: () -> Unit = {},
+    onShowReleaseNotes: () -> Unit = {},
     onOpenFirefoxExtensions: (() -> Unit)? = null,
     onManageFirefoxExtensions: (() -> Unit)? = onOpenFirefoxExtensions,
     openAddressEditorOnLaunch: Boolean = false,
@@ -1552,6 +1554,14 @@ internal fun BrowserScreen(
             },
             onExportAppData = onExportAppData,
             onImportAppData = onImportAppData,
+            onShowGestureOnboarding = {
+                settingsVisible = false
+                onShowGestureOnboarding()
+            },
+            onShowReleaseNotes = {
+                settingsVisible = false
+                onShowReleaseNotes()
+            },
             onClearData = { clearDialogVisible = true },
             onOpenLegalUrl = { url ->
                 settingsVisible = false

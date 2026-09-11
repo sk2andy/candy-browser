@@ -77,6 +77,7 @@ internal fun SettingsScreen(
     isVideoAutoplayBlockingSupported: Boolean,
     developerSettings: DeveloperSettings = DeveloperSettings(),
     isDeveloperOptionsUnlocked: Boolean = false,
+    isInputDiagnosticsEnabled: Boolean = false,
     trustsUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
@@ -121,6 +122,10 @@ internal fun SettingsScreen(
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onDeveloperSettingsChanged: (DeveloperSettings) -> Unit = {},
+    onInputDiagnosticsEnabledChanged: (Boolean) -> Unit = {},
+    onCopyDeveloperDiagnostics: () -> Unit = {},
+    onShowGestureOnboarding: () -> Unit = {},
+    onShowReleaseNotes: () -> Unit = {},
     onUnlockDeveloperOptions: () -> Unit = {},
     onOpenDefaultBrowserSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
@@ -277,8 +282,6 @@ internal fun SettingsScreen(
                     isExternalLinkPreviewEnabled = isExternalLinkPreviewEnabled,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
                     isStartupAnimationEnabled = isStartupAnimationEnabled,
-                    isHttpPasswordAutofillEnabled = isHttpPasswordAutofillEnabled,
-                    isHttpPasswordAutofillSupported = isHttpPasswordAutofillSupported,
                     isFavoriteLaunchAnimationEnabled = isFavoriteLaunchAnimationEnabled,
                     isOpenHomeOnStartupEnabled = isOpenHomeOnStartupEnabled,
                     isScrollBarEnabled = isScrollBarEnabled,
@@ -290,8 +293,6 @@ internal fun SettingsScreen(
                         onExternalLinkPreviewEnabledChanged,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
-                    onHttpPasswordAutofillEnabledChanged =
-                        onHttpPasswordAutofillEnabledChanged,
                     onFavoriteLaunchAnimationEnabledChanged =
                         onFavoriteLaunchAnimationEnabledChanged,
                     onOpenHomeOnStartupEnabledChanged =
@@ -370,7 +371,16 @@ internal fun SettingsScreen(
 
                 SettingsDestination.DeveloperOptions -> DeveloperOptionsSettingsPage(
                     settings = developerSettings,
+                    isHttpPasswordAutofillEnabled = isHttpPasswordAutofillEnabled,
+                    isHttpPasswordAutofillSupported = isHttpPasswordAutofillSupported,
+                    isInputDiagnosticsEnabled = isInputDiagnosticsEnabled,
                     onSettingsChanged = onDeveloperSettingsChanged,
+                    onHttpPasswordAutofillEnabledChanged =
+                        onHttpPasswordAutofillEnabledChanged,
+                    onInputDiagnosticsEnabledChanged = onInputDiagnosticsEnabledChanged,
+                    onCopyDiagnostics = onCopyDeveloperDiagnostics,
+                    onShowOnboarding = onShowGestureOnboarding,
+                    onShowReleaseNotes = onShowReleaseNotes,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 

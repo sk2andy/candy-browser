@@ -20,6 +20,8 @@ internal interface AndroidBrowserEngineFactory {
 
     val capabilities: AndroidBrowserEngineCapabilities
 
+    val runtimeVersionName: String?
+
     fun reconcileToppings(scripts: List<UserScript>)
 
     fun setToppingHostStateListener(listener: (GeckoToppingHostState) -> Unit)
