@@ -226,7 +226,7 @@ private fun FavoriteFavicon(
     }
 }
 
-private fun favoriteInitial(favorite: FavoriteEntry): String {
+internal fun favoriteInitial(favorite: FavoriteEntry): String {
     val label = favorite.title.ifBlank { AddressResolver.displayText(favorite.url) }.trim()
     if (label.isEmpty()) return ""
     return String(Character.toChars(label.codePointAt(0))).uppercase()

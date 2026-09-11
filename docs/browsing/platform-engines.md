@@ -104,20 +104,20 @@ Camera and microphone permissions remain separate and continue through Candy's p
   API 34+ regression fixtures verify a real GeckoSession and the production controller-listener
   seam, including page scroll, Link Peek and tab/session replacement guards.
 - Android keeps Candy's window, Gecko surface, and System WebView at the full edge-to-edge frame.
-  Both engines receive Android's renderer safe area. A page that declares `viewport-fit=cover`
-  owns its layout through CSS `env(safe-area-inset-*)` and receives no Candy compatibility offset
-  when the engine supports that contract. System WebView exposes full non-fullscreen CSS safe-area
-  insets from milestone 144; older or unparseable providers keep Candy's document compatibility
-  inset instead of silently exposing zero-valued CSS environment variables.
-  Other pages receive a document-start compatibility inset: normal flow starts below the protected
+  Candy always owns the normal-tab top safe area because `viewport-fit=cover` only opts into the
+  viewport and does not prove that a page consumes `env(safe-area-inset-top)`. The renderer top
+  safe area is therefore zero while side and bottom CSS safe-area values remain available.
+  Every page receives a document-start compatibility inset: normal flow starts below the protected
   top and top-anchored fixed, sticky, absolute, or focused containers are shifted by the same stable
   amount. Candy reacts to new DOM and focus/input transitions, but never recomputes offsets because
   of scrolling; an established offset survives site-owned hide/show, while a visible element that
-  returns to normal flow has Candy's old translation removed. A persistent layout conflict suspends
-  timer retries until a later DOM change or user interaction resumes recovery. Layout-recovery
-  failure cannot move a normal tab into native margins. Only the explicit per-site
-  **Force safe area** override does that. Fullscreen remains truly edge to edge, while Compose
-  safe-drawing hosts clear duplicate renderer insets.
+  returns to normal flow has Candy's old translation removed. A passive animation-frame-bounded scroll
+  check protects a newly stuck top element without recomputing established moving offsets. When
+  repeated verified layout failures cannot be repaired locally, Candy moves only the top edge into
+  a native margin for that navigation; side and bottom rendering stays edge to edge.
+  The explicit per-site **Force safe area** override moves every edge into native margins.
+  Fullscreen remains truly edge to edge, while Compose safe-drawing hosts clear duplicate renderer
+  insets.
   Candy keeps GeckoView's default SurfaceView backend so page frames go directly to Android's
   compositor instead of being copied through a TextureView.
 - The optional draggable scrollbar reads bounded document metrics from Candy's authenticated,
@@ -212,6 +212,12 @@ Camera and microphone permissions remain separate and continue through Candy's p
   before Android's Sharesheet is launched. GeckoView exposes only a certificate alias confirmation,
   not a safe Android key-selection contract, so Candy never auto-selects or confirms a certificate;
   no prompt silently falls through a nullable Gecko delegate default.
+- Cleartext HTTP password-manager access is an explicit, default-off GeckoView-only compatibility
+  option. A user must tap a login field before Candy can open the default Android password manager;
+  automatic filling and saving remain disabled. The option never expands FedCM, passkeys, private
+  tabs, Link Peek or external-link previews. Android System WebView keeps Android Autofill enabled for
+  supported secure pages, but its public API cannot mark selected HTTP origins as secure, so Candy
+  shows the option disabled in that engine and recommends HTTPS or GeckoView.
 - Main-frame navigation keeps Gecko's current/new target. User-activated `target=_blank` HTTP(S)
   loads enter a Candy-managed tab in the opener's exact profile/private context, while uBlock Origin
   owns filter-list popup and popunder blocking. GeckoView's unopened

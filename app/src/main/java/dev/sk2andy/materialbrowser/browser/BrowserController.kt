@@ -432,7 +432,10 @@ class BrowserController(
     val favicons = mutableStateMapOf<String, Bitmap>()
     val history = mutableStateListOf<HistoryEntry>()
     val favorites = mutableStateListOf<FavoriteEntry>()
+    val favoriteFavicons = mutableStateMapOf<String, Bitmap>()
+    private val retiredFavoriteFavicons = mutableSetOf<Bitmap>()
     private var favoriteRevision = 0L
+    private var favoriteFaviconLoadGeneration = 0
     val privacySnapshots = mutableStateMapOf<String, PrivacyXRaySnapshot>()
     val filterRules = mutableStateListOf<CandyRule>()
     private val incognitoRuleHits = mutableStateMapOf<String, Int>()
@@ -535,6 +538,10 @@ class BrowserController(
         private set
     var isStartupAnimationEnabled by mutableStateOf(true)
         private set
+    var isHttpPasswordAutofillEnabled by mutableStateOf(false)
+        private set
+    var isFavoriteLaunchAnimationEnabled by mutableStateOf(true)
+        private set
     var isOpenHomeOnStartupEnabled by mutableStateOf(false)
         private set
     var isScrollBarEnabled by mutableStateOf(false)
@@ -588,6 +595,9 @@ class BrowserController(
     val isVideoAutoplayBlockingSupported: Boolean
         get() = isVideoAutoplayBlockingSupportedState
     private var isVideoAutoplayBlockingSupportedState by mutableStateOf(true)
+
+    val isHttpPasswordAutofillSupported: Boolean
+        get() = browserEngineCapabilities.insecureHttpPasswordManagerSelection
 
     val isUserScriptSupported: Boolean
         get() = isUserScriptSupportedState
@@ -827,6 +837,7 @@ class BrowserController(
     private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
     private var nextExternalLinkPreviewSessionId = 0L
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private val automaticNativeTopSafeAreaTabIds = mutableSetOf<String>()
     private val firefoxExtensionOptionsTabs =
         mutableMapOf<String, FirefoxExtensionOptionsTabChrome>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
@@ -860,6 +871,12 @@ class BrowserController(
     private val federatedLoginCompatibilityTabIds = mutableSetOf<String>()
     private val pageUrls = ConcurrentHashMap<String, String>()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val recycleRetiredFavoriteFavicons = Runnable {
+        val displayedBitmaps = favoriteFavicons.values.toSet()
+        val recyclable = retiredFavoriteFavicons.filterNot(displayedBitmaps::contains)
+        recycleFavoriteFavicons(recyclable)
+        retiredFavoriteFavicons.removeAll(recyclable.toSet())
+    }
     val syncIconCatalog = SyncDeviceIconCatalog.decode(
         activity.assets.open("candy_sync_device_icons_v1.json")
             .bufferedReader(Charsets.UTF_8)
@@ -1877,6 +1894,8 @@ class BrowserController(
         addressBarActionLayout = store.loadAddressBarActionLayout()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         isStartupAnimationEnabled = store.loadStartupAnimationEnabled()
+        isHttpPasswordAutofillEnabled = store.loadHttpPasswordAutofillEnabled()
+        isFavoriteLaunchAnimationEnabled = store.loadFavoriteLaunchAnimationEnabled()
         isOpenHomeOnStartupEnabled = store.loadOpenHomeOnStartupEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
         isDeveloperOptionsUnlocked = store.loadDeveloperOptionsUnlocked()
@@ -1944,6 +1963,7 @@ class BrowserController(
         val (restoredTabs, restoredSelection) = store.loadTabs(nowMillis)
         history += historyRepository.snapshot()
         favorites += store.loadFavorites()
+        refreshFavoriteFavicons()
         val profileIds = profiles.mapTo(mutableSetOf(), BrowserProfile::id)
         tabs += restoredTabs.take(MAX_TABS).map { tab ->
             if (tab.profileId in profileIds) tab else tab.copy(profileId = profiles.first().id)
@@ -3420,6 +3440,8 @@ class BrowserController(
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
             forceNativeSafeArea = forceNativeSafeArea,
+            forceNativeTopSafeArea =
+                tabId != null && tabId in automaticNativeTopSafeAreaTabIds,
             isFullscreenContent = isFullscreenContent,
             isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
                 (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
@@ -6493,6 +6515,7 @@ class BrowserController(
         if (mutation?.added == true) {
             favoriteFaviconRepository.capture(tab.url, favicons[tabId])
         }
+        if (mutation != null) refreshFavoriteFavicons()
         return mutation
     }
 
@@ -6506,6 +6529,7 @@ class BrowserController(
         )
         if (mutation != null) {
             if (mutation.added) favoriteFaviconRepository.capture(safeUrl, bitmap = null)
+            refreshFavoriteFavicons()
             contentActions.dismiss()
         }
         return mutation
@@ -6551,6 +6575,7 @@ class BrowserController(
                 .firstOrNull { entry -> mutation.applied.none { it.url == entry.url } }
                 ?.let { entry -> favoriteFaviconRepository.capture(entry.url, bitmap = null) }
         }
+        refreshFavoriteFavicons()
         return true
     }
 
@@ -6634,6 +6659,22 @@ class BrowserController(
         if (isStartupAnimationEnabled == enabled) return
         isStartupAnimationEnabled = enabled
         store.saveStartupAnimationEnabled(enabled)
+    }
+
+    fun updateHttpPasswordAutofillEnabled(enabled: Boolean) {
+        if (enabled && !isHttpPasswordAutofillSupported) return
+        if (isHttpPasswordAutofillEnabled == enabled) return
+        isHttpPasswordAutofillEnabled = enabled
+        store.saveHttpPasswordAutofillEnabled(enabled)
+        browserEngineSessions.values.forEach { session ->
+            session.setHttpPasswordManagerSelectionEnabled(enabled)
+        }
+    }
+
+    fun updateFavoriteLaunchAnimationEnabled(enabled: Boolean) {
+        if (isFavoriteLaunchAnimationEnabled == enabled) return
+        isFavoriteLaunchAnimationEnabled = enabled
+        store.saveFavoriteLaunchAnimationEnabled(enabled)
     }
 
     fun updateOpenHomeOnStartupEnabled(enabled: Boolean) {
@@ -6801,7 +6842,9 @@ class BrowserController(
         previewContentBottomInWindowPx = bottomPx.takeIf { it > 0 }
     }
 
-    fun previewTopInsetPx(tabId: String): Int = if (!isSafeAreaForced(tabId)) {
+    fun previewTopInsetPx(tabId: String): Int = if (
+        !isSafeAreaForced(tabId) && tabId !in automaticNativeTopSafeAreaTabIds
+    ) {
         0
     } else {
         lastWindowInsets?.getInsets(SAFE_AREA_INSET_TYPES)?.top?.coerceAtLeast(0) ?: 0
@@ -7535,6 +7578,8 @@ class BrowserController(
         profileTabSwitcherWallpaperLoadGeneration++
         profileWallpaperExecutor.shutdownNow()
         historyMutationExecutor.shutdown()
+        favoriteFaviconLoadGeneration++
+        mainHandler.removeCallbacks(recycleRetiredFavoriteFavicons)
         activePermissions.clear()
         permissionRepository.clearPrivateSession()
         mainHandler.removeCallbacks(blockerCountFlush)
@@ -7564,6 +7609,7 @@ class BrowserController(
         castMediaCandidate = null
         pendingConsentCssUrls.clear()
         navigationGenerations.clear()
+        automaticNativeTopSafeAreaTabIds.clear()
         firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
         externalNavigationGrants.clear()
@@ -7574,6 +7620,9 @@ class BrowserController(
         browserChromeScrollStates.clear()
         previews.clear()
         favicons.clear()
+        recycleFavoriteFavicons(favoriteFavicons.values + retiredFavoriteFavicons)
+        favoriteFavicons.clear()
+        retiredFavoriteFavicons.clear()
         privacySnapshots.clear()
         faviconGenerations.clear()
         candyTrailEpoch++
@@ -7606,6 +7655,7 @@ class BrowserController(
                 eventSink = ::onGeckoEngineEvent,
             ).also { session ->
                 session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
+                session.setHttpPasswordManagerSelectionEnabled(isHttpPasswordAutofillEnabled)
                 session.setAudioMuted(isTabAudioMuted(tab, tab.url))
                 session.setNativeVerticalScrollBarEnabled(!isScrollBarEnabled)
                 connectBrowserEngineScrollListener(tab.id, session)
@@ -8370,7 +8420,10 @@ class BrowserController(
         }
     }
 
-    private fun geckoPrivacyPolicyFor(tabId: String): GeckoPrivacyPolicy? {
+    private fun geckoPrivacyPolicyFor(
+        tabId: String,
+        topInsetPx: Int = geckoContentTopInsetPx(tabId),
+    ): GeckoPrivacyPolicy? {
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return null
         val pageUrl = pageUrls[tabId] ?: tab.url
         val context = protectionRequestContexts[tabId]
@@ -8381,7 +8434,7 @@ class BrowserController(
             tab = tab,
             pageUrl = pageUrl,
             context = context,
-            topInsetPx = geckoContentTopInsetPx(tabId),
+            topInsetPx = topInsetPx,
             navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
         )
     }
@@ -8428,7 +8481,13 @@ class BrowserController(
     }
 
     private fun geckoContentTopInsetPx(tabId: String): Int {
-        if (usesNativeSafeArea(tabId) || fullscreenVideoState?.tabId == tabId) return 0
+        if (
+            usesNativeSafeArea(tabId) ||
+            tabId in automaticNativeTopSafeAreaTabIds ||
+            fullscreenVideoState?.tabId == tabId
+        ) {
+            return 0
+        }
         return currentSafeAreaTopInsetPx()
     }
 
@@ -8457,7 +8516,10 @@ class BrowserController(
     }
 
     private fun onGeckoPrivacyEvent(tabId: String, event: GeckoPrivacyEvent) {
-        if (event.safeAreaFallbackNavigationGeneration != null) return
+        event.safeAreaFallbackNavigationGeneration?.let { navigationGeneration ->
+            enableAutomaticNativeTopSafeArea(tabId, navigationGeneration)
+            return
+        }
         val context = protectionRequestContexts[tabId] ?: return
         if (event.isCompatibilityObservation) {
             val observedPageHost = event.pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: return
@@ -8496,6 +8558,34 @@ class BrowserController(
         )
     }
 
+    private fun enableAutomaticNativeTopSafeArea(
+        tabId: String,
+        navigationGeneration: Int,
+    ) {
+        if (
+            navigationGenerations[tabId] != navigationGeneration ||
+            !automaticNativeTopSafeAreaTabIds.add(tabId)
+        ) {
+            return
+        }
+        val dispatchUpdatedInsets = {
+            lastWindowInsets?.let { insets ->
+                geckoViewBindings.values
+                    .filter { binding -> binding.tabId == tabId }
+                    .forEach { binding ->
+                        applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+                    }
+            }
+            Unit
+        }
+        val session = browserEngineSessions[tabId]
+        val policy = geckoPrivacyPolicyFor(tabId)
+        dispatchUpdatedInsets()
+        if (session != null && policy != null) {
+            session.updatePrivacyPolicy(policy)
+        }
+    }
+
     private fun onGeckoEngineEvent(event: BrowserEngineEvent) {
         if (destroyed || browserEngineSessions[event.tabId] == null) return
         if (ignoreSupersededRemoteNavigationEvent(event)) {
@@ -8506,6 +8596,8 @@ class BrowserController(
             BrowserEngineEventType.NavigationStarted -> {
                 val nextNavigationGeneration =
                     navigationGenerations.getOrDefault(event.tabId, 0) + 1
+                val restoreDocumentTopSafeArea =
+                    event.tabId in automaticNativeTopSafeAreaTabIds
                 clearPermissionActivity(event.tabId)
                 if (contentActions.sourceTabId == event.tabId) contentActions.dismiss()
                 resetBrowserChromeScroll(event.tabId)
@@ -8513,10 +8605,36 @@ class BrowserController(
                 event.address?.let { address -> pageUrls[event.tabId] = address }
                 refreshDomainMuteForTab(event.tabId)
                 updateProtectionRequestContext(event.tabId, event.address)
-                geckoPrivacyPolicyFor(event.tabId)?.let { policy ->
+                val restoredDocumentTopInset = if (restoreDocumentTopSafeArea) {
+                    currentSafeAreaTopInsetPx()
+                } else {
+                    geckoContentTopInsetPx(event.tabId)
+                }
+                geckoPrivacyPolicyFor(
+                    tabId = event.tabId,
+                    topInsetPx = restoredDocumentTopInset,
+                )?.let { policy ->
                     browserEngineSessions[event.tabId]?.updatePrivacyPolicy(
                         policy = policy,
                         reloadOnCookiePermissionChange = true,
+                        onReady = {
+                            if (
+                                restoreDocumentTopSafeArea &&
+                                automaticNativeTopSafeAreaTabIds.remove(event.tabId)
+                            ) {
+                                lastWindowInsets?.let { insets ->
+                                    geckoViewBindings.values
+                                        .filter { binding -> binding.tabId == event.tabId }
+                                        .forEach { binding ->
+                                            applyGeckoWindowInsets(
+                                                binding.view,
+                                                binding.tabId,
+                                                insets,
+                                            )
+                                        }
+                                }
+                            }
+                        },
                     )
                 }
                 updateTab(event.tabId) { tab ->
@@ -9845,9 +9963,57 @@ class BrowserController(
     internal fun reloadFavorites() {
         val restored = store.loadFavorites()
         favoriteRevision++
-        if (restored == favorites) return
-        favorites.clear()
-        favorites += restored
+        if (restored != favorites) {
+            favorites.clear()
+            favorites += restored
+        }
+        refreshFavoriteFavicons()
+    }
+
+    private fun refreshFavoriteFavicons() {
+        if (destroyed) return
+        val urls = favorites.map(FavoriteEntry::url)
+        val validUrls = urls.toSet()
+        val removedBitmaps = favoriteFavicons.keys
+            .filterNot(validUrls::contains)
+            .mapNotNull(favoriteFavicons::remove)
+        retireFavoriteFavicons(removedBitmaps)
+        val missingUrls = urls.filterNot(favoriteFavicons::containsKey)
+        val generation = ++favoriteFaviconLoadGeneration
+        if (missingUrls.isEmpty()) return
+        favoriteFaviconRepository.loadAll(missingUrls) { loaded ->
+            mainHandler.post {
+                val currentUrls = favorites.mapTo(hashSetOf(), FavoriteEntry::url)
+                if (destroyed || generation != favoriteFaviconLoadGeneration) {
+                    recycleFavoriteFavicons(loaded.values)
+                    return@post
+                }
+                val accepted = loaded.filterKeys(currentUrls::contains)
+                val installedBitmaps = mutableSetOf<Bitmap>()
+                accepted.forEach { (url, bitmap) ->
+                    if (favoriteFavicons.putIfAbsent(url, bitmap) == null) {
+                        installedBitmaps += bitmap
+                    }
+                }
+                recycleFavoriteFavicons(loaded.values.filterNot(installedBitmaps::contains))
+            }
+        }
+    }
+
+    private fun retireFavoriteFavicons(bitmaps: Collection<Bitmap>) {
+        if (bitmaps.isEmpty()) return
+        retiredFavoriteFavicons += bitmaps
+        mainHandler.removeCallbacks(recycleRetiredFavoriteFavicons)
+        mainHandler.postDelayed(
+            recycleRetiredFavoriteFavicons,
+            FAVORITE_FAVICON_RECYCLE_DELAY_MILLIS,
+        )
+    }
+
+    private fun recycleFavoriteFavicons(bitmaps: Collection<Bitmap>) {
+        bitmaps.distinct().forEach { bitmap ->
+            if (!bitmap.isRecycled) bitmap.recycle()
+        }
     }
 
     private fun updateTab(tabId: String, transform: (BrowserTab) -> BrowserTab) {
@@ -10803,6 +10969,7 @@ class BrowserController(
         clearPrivacyDataForTab(tabId)
         residentSessionAccessOrder.remove(tabId)
         navigationGenerations.remove(tabId)
+        automaticNativeTopSafeAreaTabIds.remove(tabId)
         firefoxExtensionOptionsTabs.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
         pageUrls.remove(tabId)
@@ -11441,6 +11608,7 @@ class BrowserController(
         const val BLOCKER_COUNT_FLUSH_DELAY_MS = 250L
         const val SYNC_REFRESH_INTERVAL_MILLIS = 15_000L
         const val SYNC_NAVIGATION_DEBOUNCE_MILLIS = 450L
+        const val FAVORITE_FAVICON_RECYCLE_DELAY_MILLIS = 64L
         const val MAX_COSMETIC_DOCUMENT_START_RULES = 64
         const val MAX_GENERIC_POLICY_HOST_LENGTH = 253
         const val MAX_GENERIC_POLICY_CACHE_ENTRIES = 64

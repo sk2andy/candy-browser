@@ -5,12 +5,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -65,6 +68,79 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.settings_browser_engine_system_summary),
         ).assertIsDisplayed()
+    }
+
+    @Test
+    fun geckoHttpPasswordAutofillExplainsRiskAndUpdatesSetting() {
+        var enabled by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    browserEngineKind = AndroidBrowserEngineKind.GeckoView,
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isHttpPasswordAutofillEnabled = enabled,
+                    isHttpPasswordAutofillSupported = true,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onHttpPasswordAutofillEnabledChanged = { enabled = it },
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_http_password_autofill_gecko_summary),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.HttpPasswordAutofillWarning)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.HttpPasswordAutofill)
+            .assertIsEnabled()
+            .performClick()
+
+        assertTrue(enabled)
+    }
+
+    @Test
+    fun systemWebViewDisablesHttpPasswordAutofillAndExplainsLimitation() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    browserEngineKind = AndroidBrowserEngineKind.SystemWebView,
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isHttpPasswordAutofillEnabled = true,
+                    isHttpPasswordAutofillSupported = false,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_http_password_autofill_system_webview_summary),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.HttpPasswordAutofill)
+            .assertIsNotEnabled()
     }
 
     @Test
@@ -126,6 +202,37 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
+    fun favoriteLaunchAnimationSwitchUpdatesSetting() {
+        var enabled by mutableStateOf(true)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isFavoriteLaunchAnimationEnabled = enabled,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onFavoriteLaunchAnimationEnabledChanged = { enabled = it },
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.FavoriteLaunchAnimation).performClick()
+
+        assertFalse(enabled)
+    }
+
+    @Test
     fun openHomeOnStartupSwitchUpdatesSetting() {
         var enabled by mutableStateOf(false)
         composeRule.setContent {
@@ -182,7 +289,7 @@ class BrowserSettingsScreenInstrumentedTest {
 
         composeRule.onNodeWithText(
             context.getString(R.string.settings_translation_provider_google_summary),
-        ).assertIsDisplayed()
+        ).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag(BrowserSettingsTestTags.TranslationProvider).performClick()
         composeRule.onNode(
             hasText(PageTranslationProvider.Google.displayName) and
@@ -226,7 +333,9 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreview).performClick()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreview)
+            .performScrollTo()
+            .performClick()
 
         assertTrue(enabled)
     }

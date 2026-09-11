@@ -130,11 +130,13 @@ internal fun TabPreviewContent(
     preview: Bitmap?,
     favicon: Bitmap?,
     favorites: List<FavoriteEntry> = emptyList(),
+    favoriteFavicons: Map<String, Bitmap> = emptyMap(),
 ) {
     when {
         tab.isIncognito -> IncognitoTabPlaceholder()
         tab.url == BLANK_URL -> BlankTabPreview(
             favorites = favorites,
+            favoriteFavicons = favoriteFavicons,
             favoritesAlpha = { 0f },
         )
         preview != null && !preview.isRecycled -> Image(

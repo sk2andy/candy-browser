@@ -30,9 +30,15 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
-    fun reinjectionNeverAbandonsEdgeToEdgeAfterPersistentLayoutFailure() {
+    fun reinjectionKeepsBoundedNativeFallbackAfterPersistentLayoutFailure() {
         val fallbackReceived = CountDownLatch(1)
-        val view = loadPage(TopInsetBridge(fallbackReceived))
+        val view = loadPage(
+            TopInsetBridge(
+                fallbackReceived = fallbackReceived,
+                layoutQuietPeriodMillis = 100,
+                requiredFailureCount = 2,
+            ),
+        )
         evaluate(view, WebContentTopInsetScript.installScript)
         evaluate(
             view,
@@ -52,6 +58,10 @@ class WebContentTopInsetScriptInstrumentedTest {
             """.trimIndent(),
         )
 
+        assertTrue(
+            "Persistent layout failure did not request native top protection",
+            fallbackReceived.await(STALE_TIMER_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
         evaluate(view, WebContentTopInsetScript.installScript)
 
         assertEquals(
@@ -62,14 +72,10 @@ class WebContentTopInsetScriptInstrumentedTest {
                     "'style[data-candy-browser-owned=\"true\"]'))",
             ),
         )
-        assertFalse(
-            "Persistent layout failure moved the WebView out of edge-to-edge",
-            fallbackReceived.await(STALE_TIMER_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
-        )
     }
 
     @Test
-    fun bridgeFailureSettingsCannotRequestNativeFallback() {
+    fun bridgeFailureSettingsBoundNativeFallbackConfirmation() {
         val fallbackReceived = CountDownLatch(1)
         val view = loadPage(
             TopInsetBridge(
@@ -90,8 +96,8 @@ class WebContentTopInsetScriptInstrumentedTest {
         )
         evaluate(view, "globalThis.__candyReconfigureContentTopInset();")
 
-        assertFalse(
-            "Bridge failure settings moved the WebView out of edge-to-edge",
+        assertTrue(
+            "Confirmed bridge failure did not request native top protection",
             fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
         )
     }
@@ -238,13 +244,17 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
-    fun viewportCoverAttributeChangeTransfersOwnershipWithoutManualReconcile() {
+    fun viewportCoverAttributeCannotDisableCandyTopProtection() {
         val view = loadPage(
             bridge = TopInsetBridge(CountDownLatch(1), viewportCoverAllowed = true),
             html = """
                 <html><head>
                   <meta name="viewport" content="width=device-width,initial-scale=1">
-                </head><body><main>Content</main></body></html>
+                  <style>
+                    html, body { margin: 0; }
+                    #header { position: fixed; inset: 0 0 auto 0; height: 64px; }
+                  </style>
+                </head><body><header id="header">Reddit</header><main>Content</main></body></html>
             """.trimIndent(),
         )
         evaluate(view, WebContentTopInsetScript.installScript)
@@ -260,8 +270,12 @@ class WebContentTopInsetScriptInstrumentedTest {
         SystemClock.sleep(MUTATION_SETTLE_MILLIS)
 
         assertEquals(
-            "false",
+            "true",
             evaluate(view, "Boolean(document.querySelector('style[data-candy-browser-owned]'))"),
+        )
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        assertTrue(
+            elementTop(view, "#header") >= TOP_INSET_PX / density - CSS_PIXEL_TOLERANCE,
         )
     }
 
@@ -500,6 +514,208 @@ class WebContentTopInsetScriptInstrumentedTest {
         assertElementUsesExactStatusInset(view, "#decoration")
     }
 
+    @Test
+    fun nestedAbsoluteSearchUsesOuterHeaderAndSurvivesParentVisibility() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(fallbackReceived),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 200vh; }
+                  #header { position: absolute; inset: 0 0 auto 0; height: 64px; }
+                  #search { position: absolute; inset: 12px 12px auto 72px; height: 40px; }
+                </style></head><body>
+                <header id="header"><input id="search"></header><main>Content</main>
+                </body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+        assertEquals(
+            "true",
+            evaluate(
+                view,
+                "document.querySelector('#header').getAttribute(" +
+                    "'data-candy-browser-top-inset-offset')",
+            ).removeSurrounding("\""),
+        )
+        assertEquals(
+            "null",
+            evaluate(
+                view,
+                "document.querySelector('#search').getAttribute(" +
+                    "'data-candy-browser-top-inset-offset')",
+            ),
+        )
+
+        evaluate(view, "document.querySelector('#header').hidden = true")
+        repeat(4) { evaluate(view, "globalThis.__candyReconcileContentTopInset()") }
+        evaluate(view, "document.querySelector('#header').hidden = false")
+        SystemClock.sleep(MUTATION_SETTLE_MILLIS)
+
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        assertTrue(elementTop(view, "#header") >= TOP_INSET_PX / density - CSS_PIXEL_TOLERANCE)
+        assertFalse(
+            "Hidden absolute search child accumulated offsets and forced native fallback",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+    }
+
+    @Test
+    fun preFocusedSearchReceivesOneTopInset() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(fallbackReceived),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 200vh; }
+                  #header { position: fixed; inset: 0 0 auto 0; height: 64px; }
+                </style></head><body>
+                <header id="header"><input id="search"></header><main>Content</main>
+                </body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, "document.querySelector('#search').focus({ preventScroll: true })")
+        evaluate(view, WebContentTopInsetScript.installScript)
+
+        assertElementUsesExactStatusInset(view, "#header")
+        assertTrue(
+            evaluate(view, "document.querySelector('#header').style.translate")
+                .contains("--candy-browser-owned-top-inset-offset"),
+        )
+        assertFalse(
+            "Pre-focused search accumulated top offsets",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+    }
+
+    @Test
+    fun openShadowRootFixedHeaderReceivesTopProtection() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(fallbackReceived),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 200vh; }
+                  shreddit-app { display: block; width: 100%; height: 64px; }
+                </style></head>
+                <body><shreddit-app id="app"></shreddit-app><main>Content</main>
+                <script>
+                  const root = document.querySelector('#app').attachShadow({ mode: 'open' });
+                </script></body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+        evaluate(
+            view,
+            "document.querySelector('#app').shadowRoot.innerHTML = " +
+                "'<header id=\"shadow-header\" " +
+                "style=\"position:fixed;inset:0 0 auto 0;height:64px;background:white\">" +
+                "<button>Reddit</button></header>'",
+        )
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        val headerTop = awaitElementTop(
+            view,
+            "document.querySelector('#app').shadowRoot" +
+                ".querySelector('#shadow-header').getBoundingClientRect().top",
+            TOP_INSET_PX / density - CSS_PIXEL_TOLERANCE,
+        )
+        val diagnostics = evaluate(
+            view,
+            "JSON.stringify({" +
+                "hits:document.elementsFromPoint(10,10).map(element=>element.tagName)," +
+                "shadowHits:typeof document.querySelector('#app').shadowRoot.elementsFromPoint," +
+                "owned:document.querySelector('#app').shadowRoot.querySelector('#shadow-header')" +
+                ".getAttribute('data-candy-browser-top-inset-offset')," +
+                "style:Boolean(document.querySelector('style[data-candy-browser-owned]'))})",
+        )
+        assertTrue(
+            "Open ShadowRoot header remained under status bar: " +
+                "top=$headerTop expected=${TOP_INSET_PX / density} diagnostics=$diagnostics",
+            headerTop >= TOP_INSET_PX / density - CSS_PIXEL_TOLERANCE,
+        )
+        assertFalse(
+            "Late ShadowRoot header required native fallback",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+    }
+
+    @Test
+    fun nestedScrollContainerProtectsHeaderWhenItBecomesSticky() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(fallbackReceived),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; }
+                  #scroller { position: fixed; inset: 0; overflow-y: auto; }
+                  #lead { height: 240px; }
+                  #header { position: sticky; top: 0; height: 64px; background: white; }
+                  #content { height: 2000px; }
+                </style></head><body>
+                <section id="scroller">
+                  <div id="lead"></div><header id="header">Vimeo</header><div id="content"></div>
+                </section>
+                </body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+        evaluate(view, "document.querySelector('#scroller').scrollTop = 400")
+        SystemClock.sleep(SCROLL_SETTLE_MILLIS)
+
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        assertTrue(elementTop(view, "#header") >= TOP_INSET_PX / density - CSS_PIXEL_TOLERANCE)
+        assertFalse(
+            "Nested scroll sticky header required native fallback",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+    }
+
+    @Test
+    fun stickyHeaderThatRejectsLocalOffsetFallsBackAfterScrollSettles() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(
+                fallbackReceived = fallbackReceived,
+                layoutQuietPeriodMillis = 100,
+                requiredFailureCount = 2,
+            ),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; }
+                  #scroller { position: fixed; inset: 0; overflow-y: auto; }
+                  #lead { height: 240px; }
+                  #header {
+                    position: sticky;
+                    top: 0;
+                    height: 64px;
+                    background: white;
+                    transition: translate 1s linear;
+                  }
+                  #content { height: 2000px; }
+                </style></head><body>
+                <section id="scroller">
+                  <div id="lead"></div><header id="header">Vimeo</header><div id="content"></div>
+                </section>
+                </body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+        evaluate(
+            view,
+            "document.querySelector('#scroller').scrollTop = 400",
+        )
+
+        assertTrue(
+            "Unstable sticky header did not request native top fallback",
+            fallbackReceived.await(STALE_TIMER_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+    }
+
     private fun assertElementUsesExactStatusInset(
         view: WebView,
         selector: String,
@@ -524,6 +740,21 @@ class WebContentTopInsetScriptInstrumentedTest {
         view,
         "document.querySelector('$selector').getBoundingClientRect().top",
     ).toDouble()
+
+    private fun awaitElementTop(
+        view: WebView,
+        script: String,
+        minimumTop: Double,
+    ): Double {
+        val deadline = SystemClock.uptimeMillis() + PAGE_TIMEOUT_SECONDS * 1_000
+        var top = Double.NEGATIVE_INFINITY
+        while (SystemClock.uptimeMillis() < deadline) {
+            top = evaluate(view, script).toDouble()
+            if (top >= minimumTop) return top
+            SystemClock.sleep(50)
+        }
+        return top
+    }
 
     private fun loadPage(
         bridge: TopInsetBridge,
@@ -616,6 +847,7 @@ class WebContentTopInsetScriptInstrumentedTest {
         const val NAVIGATION_GENERATION = 7
         const val POLICY_REVISION = 11L
         const val MUTATION_SETTLE_MILLIS = 100L
+        const val SCROLL_SETTLE_MILLIS = 550L
         const val COMPACT_CONTROL_PADDING_CSS_PIXELS = 8.0
         const val CSS_PIXEL_TOLERANCE = 0.5
         const val NO_FALLBACK_WINDOW_MILLIS = 350L

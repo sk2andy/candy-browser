@@ -53,6 +53,14 @@ internal class FavoriteFaviconRepository private constructor(context: Context) {
         return loadedByUrl
     }
 
+    fun loadAll(
+        urls: List<String>,
+        onLoaded: (Map<String, Bitmap>) -> Unit,
+    ) {
+        val snapshot = urls.toList()
+        executor.execute { onLoaded(loadAll(snapshot)) }
+    }
+
     fun prune(validUrls: Set<String>) {
         val snapshot = validUrls.toSet()
         executor.execute { store.prune(snapshot) }

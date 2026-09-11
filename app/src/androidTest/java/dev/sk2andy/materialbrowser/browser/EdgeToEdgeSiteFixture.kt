@@ -16,7 +16,7 @@ internal object EdgeToEdgeSiteMatrix {
         Site("ESPN", Layout.Sticky),
         Site("New York Times", Layout.Flow),
         Site("CNN", Layout.Sticky),
-        Site("Reddit", Layout.TransformedFixed),
+        Site("Reddit", Layout.CoverWithoutSafeArea),
         Site("Facebook", Layout.Fixed),
         Site("IKEA", Layout.Sticky),
         Site("GitHub", Layout.Flow),
@@ -25,7 +25,7 @@ internal object EdgeToEdgeSiteMatrix {
     )
 
     val additionalSites = listOf(
-        Site("Vimeo", Layout.Fixed),
+        Site("Vimeo", Layout.LateSticky),
         Site("Wikipedia", Layout.Flow),
         Site("Stack Overflow", Layout.Sticky),
         Site("DuckDuckGo", Layout.Absolute, focusedSearch = true),
@@ -56,6 +56,10 @@ internal object EdgeToEdgeSiteMatrix {
                   #header.transformed {
                     position: fixed; inset: 0 0 auto 0; transform: translateZ(0);
                   }
+                  #header.cover-without-safe-area {
+                    position: fixed; inset: 0 0 auto 0; transform: translateZ(0);
+                  }
+                  #header.late-sticky { position: sticky; top: 0; margin-top: 180px; }
                   #header.safe-area {
                     position: fixed; inset: 0 0 auto 0; padding-top: env(safe-area-inset-top);
                   }
@@ -82,22 +86,30 @@ internal object EdgeToEdgeSiteMatrix {
                     ) {
                       await frame();
                     }
-                    for (let pass = 0; pass < 3; pass++) {
-                      globalThis.__candyReconcileContentTopInset?.();
-                      await frame();
-                    }
+                    for (let pass = 0; pass < 4; pass++) await frame();
+                  };
+                  const settleScrollLayout = async (site) => {
+                    await settleCandyLayout();
+                    if (site.layout !== 'LateSticky') return;
+                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    for (let pass = 0; pass < 4; pass++) await frame();
                   };
                   const headerClass = (layout) => ({
                     Fixed: 'fixed',
                     Sticky: 'sticky',
                     Absolute: 'absolute',
                     TransformedFixed: 'transformed',
+                    CoverWithoutSafeArea: 'cover-without-safe-area',
+                    LateSticky: 'late-sticky',
                     CoverWithSafeArea: 'safe-area',
                     Flow: ''
                   })[layout];
                   const renderSite = (site) => {
                     const viewport = document.querySelector('#viewport');
-                    viewport.content = site.layout === 'CoverWithSafeArea'
+                    viewport.content = [
+                      'CoverWithoutSafeArea',
+                      'CoverWithSafeArea'
+                    ].includes(site.layout)
                       ? 'width=device-width,initial-scale=1,viewport-fit=cover'
                       : 'width=device-width,initial-scale=1';
                     document.body.innerHTML = `
@@ -177,11 +189,11 @@ internal object EdgeToEdgeSiteMatrix {
                       const offsetStableAcrossVisibilityChange = site.name !== 'Vimeo' ||
                         ownedOffsetBeforeVisibilityChange === ownedOffsetAfterVisibilityChange;
                       scrollTo(0, 480);
-                      await settleCandyLayout();
+                      await settleScrollLayout(site);
                       const topWhileScrolled = document.querySelector('#header')
                         .getBoundingClientRect().top;
                       scrollTo(0, 0);
-                      await settleCandyLayout();
+                      await settleScrollLayout(site);
                       const afterScrollTop = document.querySelector('#header')
                         .getBoundingClientRect().top;
                       if (site.focusedSearch) {
@@ -218,6 +230,9 @@ internal object EdgeToEdgeSiteMatrix {
                         !candyCompatibilityApplied && safeAreaPaddingTop > 0;
                       const protectionModeValid = usesEngineSafeArea ||
                         (candyCompatibilityApplied && candyTopInset > 0);
+                      const ownedProtectionValid = site.layout === 'Flow' ||
+                        protectedOwned === 'true' &&
+                        protectedOffset.endsWith('px');
                       const requiredTop = usesEngineSafeArea ? 0 : candyTopInset;
                       results.push({
                         name: site.name,
@@ -232,6 +247,9 @@ internal object EdgeToEdgeSiteMatrix {
                         candyTopInset,
                         candyCompatibilityApplied,
                         protectionModeValid,
+                        failureReason: document.documentElement.getAttribute(
+                          'data-candy-browser-top-inset-failure'
+                        ),
                         offsetStableAcrossVisibilityChange,
                         passed: beforeFocusTop >= requiredTop - 0.5 &&
                           afterScrollTop >= requiredTop - 0.5 &&
@@ -241,7 +259,8 @@ internal object EdgeToEdgeSiteMatrix {
                           (!site.focusedSearch || focusedQueryTop >= requiredTop - 0.5) &&
                           (!site.focusedSearch ||
                             Math.abs(protectedTop - beforeFocusTop) <= 0.5) &&
-                          focused && protectionModeValid && offsetStableAcrossVisibilityChange
+                          focused && protectionModeValid && ownedProtectionValid &&
+                          offsetStableAcrossVisibilityChange
                       });
                     }
                     globalThis.__candySiteMatrix = {
@@ -279,6 +298,8 @@ internal object EdgeToEdgeSiteMatrix {
         Sticky,
         Absolute,
         TransformedFixed,
+        CoverWithoutSafeArea,
+        LateSticky,
         CoverWithSafeArea,
     }
 

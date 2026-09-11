@@ -408,8 +408,14 @@
     <string name="settings_browser_engine_gecko_summary">Toppings plus Firefox-Erweiterungen wie uBlock Origin. Benötigt mehr Arbeitsspeicher.</string>
     <string name="settings_browser_engine_system_summary">Benötigt weniger Arbeitsspeicher und unterstützt Toppings, aber keine Firefox-Erweiterungen. Candy-Schutz bleibt verfügbar.</string>
     <string name="settings_browser_engine_restart_warning">Ein Wechsel startet Candy neu. Logins, Cookies und Seitenverlauf bleiben pro Engine getrennt.</string>
+    <string name="settings_http_password_autofill_title">Passwortmanager auf HTTP-Seiten</string>
+    <string name="settings_http_password_autofill_gecko_summary">Nur GeckoView: Nach Tippen auf ein Anmeldefeld darf Candy deinen Standard-Passwortmanager öffnen. Kein automatisches Ausfüllen oder Speichern auf HTTP.</string>
+    <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Nicht unterstützt. Dessen öffentliche API kann die Passwortmanager-Auswahl auf HTTP-Seiten nicht freischalten. Wechsle zu GeckoView oder HTTPS.</string>
+    <string name="settings_http_password_autofill_warning">HTTP überträgt Benutzernamen und Passwörter ohne Transportverschlüsselung. Wer die Verbindung abhören kann, kann sie lesen.</string>
     <string name="settings_startup_animation_title">Startanimation</string>
     <string name="settings_startup_animation_subtitle">Zeigt die Candy-Animation beim normalen App-Start. Deaktivieren, um die Adressleiste sofort zu öffnen.</string>
+    <string name="settings_favorite_launch_animation_title">Favoriten-Startanimation</string>
+    <string name="settings_favorite_launch_animation_subtitle">Schickt einen Favoriten durch einen farbigen Candy-Wirbel, bevor er geöffnet wird.</string>
     <string name="settings_open_home_on_startup_title">Beim Start Startseite öffnen</string>
     <string name="settings_open_home_on_startup_subtitle">Zeigt beim Öffnen von Candy einen neuen leeren Tab statt des zuletzt aktiven Tabs.</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>

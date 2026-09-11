@@ -411,8 +411,14 @@
     <string name="settings_browser_engine_gecko_summary">Toppings y extensiones de Firefox como uBlock Origin. Usa más memoria.</string>
     <string name="settings_browser_engine_system_summary">Usa menos memoria y admite Toppings, pero no extensiones de Firefox. La protección de Candy sigue disponible.</string>
     <string name="settings_browser_engine_restart_warning">Cambiar el motor reinicia Candy. Las sesiones, cookies y el historial de página quedan separados por motor.</string>
+    <string name="settings_http_password_autofill_title">Gestor de contraseñas en sitios HTTP</string>
+    <string name="settings_http_password_autofill_gecko_summary">Solo GeckoView: Después de tocar un campo de inicio de sesión, Candy puede abrir el gestor de contraseñas predeterminado de Android. Sin rellenado ni guardado automático en HTTP.</string>
+    <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: No compatible. Su API pública no puede activar la selección del gestor de contraseñas en sitios HTTP. Cambia a GeckoView o usa HTTPS.</string>
+    <string name="settings_http_password_autofill_warning">HTTP envía nombres de usuario y contraseñas sin cifrado de transporte. Cualquiera que intercepte la conexión puede leerlos.</string>
     <string name="settings_startup_animation_title">Animación de inicio</string>
     <string name="settings_startup_animation_subtitle">Muestra la animación de Candy al iniciar la aplicación normalmente. Desactívala para abrir la barra de direcciones de inmediato.</string>
+    <string name="settings_favorite_launch_animation_title">Animación al abrir favoritos</string>
+    <string name="settings_favorite_launch_animation_subtitle">Envía el favorito por un remolino de colores Candy antes de abrirlo.</string>
     <string name="settings_open_home_on_startup_title">Abrir la página de inicio al arrancar</string>
     <string name="settings_open_home_on_startup_subtitle">Muestra una pestaña nueva en blanco en lugar de la última pestaña activa al abrir Candy.</string>
     <string name="settings_full_immersive_mode_title">Modo inmersivo a pantalla completa</string>

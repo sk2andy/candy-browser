@@ -6,10 +6,9 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -34,6 +33,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -52,11 +56,13 @@ import dev.sk2andy.materialbrowser.data.FavoriteEntry
 @Composable
 internal fun NewTabPage(
     favorites: List<FavoriteEntry>,
+    favicons: Map<String, Bitmap> = emptyMap(),
     incognito: Boolean,
     modeProgress: Float,
     revealOriginInRoot: Offset,
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
+    favoriteLaunchAnimationEnabled: Boolean = true,
     interactive: Boolean = true,
     favoritesAlpha: () -> Float = { 1f },
     explicitSafeDrawingPadding: PaddingValues? = null,
@@ -67,10 +73,16 @@ internal fun NewTabPage(
     val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
     val incognitoIconAlpha = BlankTabModeMorphRules.incognitoIconAlpha(boundedProgress)
     val openSearchDescription = stringResource(R.string.cd_open_search)
-    val scrollState = rememberScrollState()
+    var rootOriginInWindow by remember { mutableStateOf(Offset.Unspecified) }
+    var heroCenterInWindow by remember { mutableStateOf(Offset.Unspecified) }
+    var launchRequest by remember { mutableStateOf<NewTabFavoriteLaunchRequest?>(null) }
+    val contentEnabled = interactive && launchRequest == null
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onGloballyPositioned { coordinates ->
+                rootOriginInWindow = coordinates.positionInWindow()
+            }
             .blankTabModeBackground(
                 progress = boundedProgress,
                 revealOriginInRoot = revealOriginInRoot,
@@ -112,79 +124,111 @@ internal fun NewTabPage(
                     .align(Alignment.Center)
                     .fillMaxWidth(0.86f)
                     .heightIn(max = 520.dp)
-                    .then(if (interactive) Modifier.verticalScroll(scrollState) else Modifier)
                     .padding(vertical = BlankTabModeMorphRules.HERO_SHADOW_CLEARANCE_DP.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Surface(
-                onClick = onSearch,
-                enabled = interactive,
-                modifier = Modifier
-                    .semantics {
-                        contentDescription = openSearchDescription
-                    },
-                shape = RoundedCornerShape(
-                    BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
-                ),
-                color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
-                shadowElevation = BlankTabModeMorphRules.HERO_SHADOW_ELEVATION_DP.dp,
-            ) {
-                Box(
-                    modifier = Modifier.size(96.dp),
-                    contentAlignment = Alignment.Center,
+                    onClick = onSearch,
+                    enabled = contentEnabled,
+                    modifier = Modifier
+                        .onGloballyPositioned { coordinates ->
+                            heroCenterInWindow = coordinates.boundsInWindow().center
+                        }
+                        .semantics {
+                            contentDescription = openSearchDescription
+                        },
+                    shape = RoundedCornerShape(
+                        BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
+                    ),
+                    color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
+                    shadowElevation = BlankTabModeMorphRules.HERO_SHADOW_ELEVATION_DP.dp,
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_launcher_foreground_art),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(68.dp)
-                            .graphicsLayer {
-                                alpha = regularIconAlpha
-                                scaleX = BlankTabModeMorphRules.iconScale(regularIconAlpha)
-                                scaleY = scaleX
-                            },
-                        tint = Color.Unspecified,
-                    )
-                    Icon(
-                        painter = painterResource(R.drawable.ic_incognito_filled),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .graphicsLayer {
-                                alpha = incognitoIconAlpha
-                                scaleX = BlankTabModeMorphRules.iconScale(incognitoIconAlpha)
-                                scaleY = scaleX
-                            },
-                        tint = colors.inverseOnSurface,
-                    )
+                    Box(
+                        modifier = Modifier.size(96.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_launcher_foreground_art),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(68.dp)
+                                .graphicsLayer {
+                                    alpha = regularIconAlpha
+                                    scaleX = BlankTabModeMorphRules.iconScale(regularIconAlpha)
+                                    scaleY = scaleX
+                                },
+                            tint = Color.Unspecified,
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.ic_incognito_filled),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .graphicsLayer {
+                                    alpha = incognitoIconAlpha
+                                    scaleX = BlankTabModeMorphRules.iconScale(incognitoIconAlpha)
+                                    scaleY = scaleX
+                                },
+                            tint = colors.inverseOnSurface,
+                        )
+                    }
                 }
-            }
                 if (!incognito && favorites.isNotEmpty()) {
                     Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer {
-                            alpha = favoritesAlpha().coerceIn(0f, 1f)
-                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .graphicsLayer {
+                                alpha = favoritesAlpha().coerceIn(0f, 1f)
+                            },
                     ) {
-                        Spacer(Modifier.height(28.dp))
+                        Spacer(Modifier.height(20.dp))
                         Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        color = colors.surfaceContainerHigh.copy(alpha = 0.9f),
-                        tonalElevation = 8.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false),
+                            shape = RoundedCornerShape(24.dp),
+                            color = colors.surfaceContainerHigh.copy(alpha = 0.9f),
+                            tonalElevation = 8.dp,
                         ) {
-                            Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                                ExpressiveFavoriteRows(
+                            NewTabFavoriteGrid(
                                 favorites = favorites,
-                                onFavorite = onFavorite,
-                                enabled = interactive,
-                                )
-                            }
+                                favicons = favicons,
+                                enabled = contentEnabled,
+                                onFavorite = { favorite, startCenterInWindow ->
+                                    if (
+                                        !favoriteLaunchAnimationEnabled ||
+                                        !startCenterInWindow.isUsable() ||
+                                        !rootOriginInWindow.isUsable() ||
+                                        !heroCenterInWindow.isUsable()
+                                    ) {
+                                        onFavorite(favorite.url)
+                                    } else {
+                                        launchRequest = NewTabFavoriteLaunchRequest(
+                                            favorite = favorite,
+                                            startCenterInWindow = startCenterInWindow,
+                                        )
+                                    }
+                                },
+                            )
                         }
                     }
                 }
             }
         }
+        launchRequest?.let { request ->
+            NewTabFavoriteLaunchOverlay(
+                request = request,
+                favicon = favicons[request.favorite.url],
+                rootOriginInWindow = rootOriginInWindow,
+                targetCenterInWindow = heroCenterInWindow,
+                onFinished = { favorite ->
+                    launchRequest = null
+                    onFavorite(favorite.url)
+                },
+            )
+        }
     }
 }
+
+private fun Offset.isUsable(): Boolean = x.isFinite() && y.isFinite()
