@@ -4,7 +4,17 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 internal object CandyCircuitMotionRules {
+    const val PAGE_ENTRY_DURATION_MILLIS = 520
+    const val PAGE_EXIT_DURATION_MILLIS = 280
     const val RESOLUTION_DURATION_MILLIS = 1_250
+
+    fun pageAlpha(progress: Float): Float = segment(progress, 0f, PAGE_ALPHA_END)
+
+    fun pageScale(progress: Float): Float =
+        PAGE_INITIAL_SCALE + (1f - PAGE_INITIAL_SCALE) * progress.coerceIn(0f, 1f)
+
+    fun pageOffsetFraction(progress: Float): Float =
+        PAGE_INITIAL_OFFSET_FRACTION * (1f - progress.coerceIn(0f, 1f))
 
     fun closingRotationProgress(progress: Float): Float = segment(progress, 0f, ROTATION_END)
 
@@ -67,4 +77,7 @@ internal object CandyCircuitMotionRules {
     private const val ENTRY_OVERSHOOT = 0.24f
     private const val ENTRY_TRAVEL = 0.82f
     private const val ROTATION_END = 0.20f
+    private const val PAGE_ALPHA_END = 0.72f
+    private const val PAGE_INITIAL_SCALE = 0.965f
+    private const val PAGE_INITIAL_OFFSET_FRACTION = 0.018f
 }

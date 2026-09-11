@@ -6,6 +6,16 @@ import org.junit.Test
 
 class CandyCircuitMotionRulesTest {
     @Test
+    fun `page motion enters from a soft offset and settles`() {
+        assertEquals(0f, CandyCircuitMotionRules.pageAlpha(0f), 0.001f)
+        assertTrue(CandyCircuitMotionRules.pageScale(0f) < 1f)
+        assertTrue(CandyCircuitMotionRules.pageOffsetFraction(0f) > 0f)
+        assertEquals(1f, CandyCircuitMotionRules.pageAlpha(1f), 0.001f)
+        assertEquals(1f, CandyCircuitMotionRules.pageScale(1f), 0.001f)
+        assertEquals(0f, CandyCircuitMotionRules.pageOffsetFraction(1f), 0.001f)
+    }
+
+    @Test
     fun `closed tile stays visible before dissolving`() {
         assertEquals(1f, CandyCircuitMotionRules.outgoingAlpha(0.30f), 0.001f)
         assertEquals(0f, CandyCircuitMotionRules.outgoingAlpha(0.56f), 0.001f)
