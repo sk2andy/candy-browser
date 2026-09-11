@@ -320,7 +320,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 session.commands.map(BrowserEngineCommand::type),
             )
             assertEquals(1, session.privacyPolicies.size)
-            assertEquals(96, session.privacyPolicies.single().topInsetPx)
+            assertEquals(0, session.privacyPolicies.single().topInsetPx)
             assertEquals(
                 250,
                 session.privacyPolicies.single().safeAreaLayoutQuietPeriodMillis,

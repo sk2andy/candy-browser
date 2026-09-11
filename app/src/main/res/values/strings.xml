@@ -429,8 +429,14 @@
     <string name="settings_browser_engine_gecko_summary">Toppings plus Firefox extensions such as uBlock Origin. Uses more memory.</string>
     <string name="settings_browser_engine_system_summary">Uses less memory and supports Toppings, but not Firefox extensions. Candy protection remains available.</string>
     <string name="settings_browser_engine_restart_warning">Changing the engine restarts Candy. Logins, cookies and page history stay separate for each engine.</string>
+    <string name="settings_http_password_autofill_title">Password manager on HTTP sites</string>
+    <string name="settings_http_password_autofill_gecko_summary">GeckoView only: After you tap a login field, Candy may open your default Android password manager. No automatic filling or saving on HTTP.</string>
+    <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Unsupported. Its public API cannot enable password-manager selection on HTTP sites. Switch to GeckoView or use HTTPS.</string>
+    <string name="settings_http_password_autofill_warning">HTTP sends usernames and passwords without transport encryption. Anyone able to intercept the connection can read them.</string>
     <string name="settings_startup_animation_title">Startup animation</string>
     <string name="settings_startup_animation_subtitle">Shows the Candy animation on regular app launches. Turn it off to open the address bar immediately.</string>
+    <string name="settings_favorite_launch_animation_title">Favorite launch animation</string>
+    <string name="settings_favorite_launch_animation_subtitle">Sends a favorite through a colorful Candy warp before opening it.</string>
     <string name="settings_open_home_on_startup_title">Open home page on startup</string>
     <string name="settings_open_home_on_startup_subtitle">Shows a new blank tab instead of the last active tab when Candy opens.</string>
     <string name="settings_full_immersive_mode_title">Full immersive mode</string>

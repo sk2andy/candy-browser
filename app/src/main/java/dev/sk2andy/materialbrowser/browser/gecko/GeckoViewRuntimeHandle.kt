@@ -869,6 +869,7 @@ private class GeckoViewBrowserSession(
     private var activeMediaSession: MediaSession? = null
     private var videoAutoplayBlocked = false
     private var audioMuted = false
+    private var httpPasswordManagerSelectionEnabled = false
     private var autoplayPolicyRevision = 0
     private var autoplayLocationUrl: String? = null
     private val autoplayPermissions =
@@ -882,7 +883,8 @@ private class GeckoViewBrowserSession(
     private var credentialPromptHost: CredentialPromptHost? = null
     private var credentialNavigationGeneration = 0L
     private val credentialPromptBridge = GeckoCredentialPromptBridge(
-        currentIdentity = ::currentCredentialPromptIdentity,
+        currentLoginSelectionIdentity = ::currentCredentialLoginSelectionIdentity,
+        currentSecureIdentity = ::currentCredentialPromptIdentity,
         currentHost = { credentialPromptHost },
     )
     // Private sessions wait as well: the bundled host must first confirm that Gecko has revoked
@@ -1821,6 +1823,18 @@ private class GeckoViewBrowserSession(
     }
 
     private fun currentCredentialPromptIdentity(): CredentialPromptIdentity? {
+        return currentCredentialPromptIdentity(allowHttp = false)
+    }
+
+    private fun currentCredentialLoginSelectionIdentity(): CredentialPromptIdentity? {
+        return currentCredentialPromptIdentity(
+            allowHttp = httpPasswordManagerSelectionEnabled,
+        )
+    }
+
+    private fun currentCredentialPromptIdentity(
+        allowHttp: Boolean,
+    ): CredentialPromptIdentity? {
         val extension = extensionIdentity ?: return null
         return CredentialPromptRules.identity(
             tabId = extension.tabId,
@@ -1830,6 +1844,7 @@ private class GeckoViewBrowserSession(
             pageUrl = currentPageUrl,
             sessionGeneration = extension.generation,
             navigationGeneration = credentialNavigationGeneration,
+            allowHttp = allowHttp,
         )
     }
 
@@ -1886,6 +1901,12 @@ private class GeckoViewBrowserSession(
         // Confirm both stored values before reloading: setPermission is asynchronous and has no
         // completion callback in GeckoView 155.
         beginAutoplayPermissionSync(state.url)
+    }
+
+    override fun setHttpPasswordManagerSelectionEnabled(enabled: Boolean) {
+        if (isPrivate || httpPasswordManagerSelectionEnabled == enabled) return
+        httpPasswordManagerSelectionEnabled = enabled
+        invalidateCredentialPrompts(recreateHost = true)
     }
 
     private fun beginAutoplayPermissionSync(url: String?) {

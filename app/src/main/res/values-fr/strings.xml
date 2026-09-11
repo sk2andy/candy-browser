@@ -411,8 +411,14 @@
     <string name="settings_browser_engine_gecko_summary">Toppings et extensions Firefox comme uBlock Origin. Utilise plus de mémoire.</string>
     <string name="settings_browser_engine_system_summary">Utilise moins de mémoire et prend en charge les Toppings, mais pas les extensions Firefox. La protection Candy reste disponible.</string>
     <string name="settings_browser_engine_restart_warning">Changer de moteur redémarre Candy. Les connexions, cookies et l’historique de page restent séparés par moteur.</string>
+    <string name="settings_http_password_autofill_title">Gestionnaire de mots de passe sur les sites HTTP</string>
+    <string name="settings_http_password_autofill_gecko_summary">GeckoView uniquement : après avoir touché un champ de connexion, Candy peut ouvrir le gestionnaire de mots de passe Android par défaut. Aucun remplissage ni enregistrement automatique sur HTTP.</string>
+    <string name="settings_http_password_autofill_system_webview_summary">Android System WebView : non pris en charge. Son API publique ne permet pas la sélection du gestionnaire de mots de passe sur les sites HTTP. Utilisez GeckoView ou HTTPS.</string>
+    <string name="settings_http_password_autofill_warning">HTTP envoie les identifiants et mots de passe sans chiffrement du transport. Toute personne interceptant la connexion peut les lire.</string>
     <string name="settings_startup_animation_title">Animation de démarrage</string>
     <string name="settings_startup_animation_subtitle">Affiche l’animation Candy lors d’un lancement normal. Désactivez-la pour ouvrir immédiatement la barre d’adresse.</string>
+    <string name="settings_favorite_launch_animation_title">Animation d’ouverture des favoris</string>
+    <string name="settings_favorite_launch_animation_subtitle">Fait passer le favori dans un tourbillon Candy coloré avant de l’ouvrir.</string>
     <string name="settings_open_home_on_startup_title">Ouvrir la page d’accueil au démarrage</string>
     <string name="settings_open_home_on_startup_subtitle">Affiche un nouvel onglet vide plutôt que le dernier onglet actif à l’ouverture de Candy.</string>
     <string name="settings_full_immersive_mode_title">Mode immersif plein écran</string>

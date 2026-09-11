@@ -1,40 +1,18 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -42,17 +20,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.sk2andy.materialbrowser.browser.AddressResolver
-import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -62,20 +34,6 @@ internal data class FavoriteFeedbackEvent(
     val id: Int,
     val added: Boolean,
 )
-
-internal object FavoriteRowOrderRules {
-    fun mergeForExit(
-        currentUrls: List<String>,
-        targetUrls: List<String>,
-    ): List<String> {
-        val targetSet = targetUrls.toSet()
-        return targetUrls.distinct().toMutableList().apply {
-            currentUrls.withIndex()
-                .filter { (_, url) -> url !in targetSet }
-                .forEach { (index, url) -> add(index.coerceAtMost(size), url) }
-        }
-    }
-}
 
 @Composable
 internal fun ExpressiveFavoriteStar(
@@ -165,113 +123,6 @@ internal fun FavoriteToggleFeedback(
 }
 
 @Composable
-internal fun ExpressiveFavoriteRows(
-    favorites: List<FavoriteEntry>,
-    onFavorite: (String) -> Unit,
-    enabled: Boolean = true,
-) {
-    val targetFavorites = favorites.take(MAX_VISIBLE_FAVORITES)
-    val initialFavorites = remember { targetFavorites }
-    val rows = remember {
-        mutableStateListOf<FavoriteRowState>().apply {
-            initialFavorites.forEach { add(FavoriteRowState(it, initiallyVisible = true)) }
-        }
-    }
-
-    LaunchedEffect(targetFavorites) {
-        val targetUrls = targetFavorites.map(FavoriteEntry::url)
-        val targetUrlSet = targetUrls.toSet()
-        val currentUrls = rows.map { it.entry.url }
-        val rowsByUrl = rows.associateBy { it.entry.url }.toMutableMap()
-        rows.filter { it.entry.url !in targetUrlSet }.forEach { it.visible = false }
-        targetFavorites.forEach { favorite ->
-            val row = rowsByUrl.getOrPut(favorite.url) {
-                FavoriteRowState(favorite, initiallyVisible = false)
-            }
-            row.entry = favorite
-            row.visible = true
-        }
-        val mergedUrls = FavoriteRowOrderRules.mergeForExit(currentUrls, targetUrls)
-        val mergedRows = mergedUrls.mapNotNull(rowsByUrl::get)
-        if (rows != mergedRows) {
-            rows.clear()
-            rows.addAll(mergedRows)
-        }
-    }
-
-    Column {
-        rows.forEach { row ->
-            key(row.entry.url) {
-                AnimatedFavoriteRow(
-                    row = row,
-                    enabled = enabled,
-                    onClick = { onFavorite(row.entry.url) },
-                    onExited = { if (!row.visible) rows.remove(row) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AnimatedFavoriteRow(
-    row: FavoriteRowState,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    onExited: () -> Unit,
-) {
-    val visibility = remember(row) {
-        MutableTransitionState(row.initiallyVisible).apply { targetState = row.visible }
-    }
-    LaunchedEffect(row.visible) { visibility.targetState = row.visible }
-    LaunchedEffect(visibility) {
-        snapshotFlow { visibility.isIdle && !visibility.currentState }
-            .first { it }
-        onExited()
-    }
-    AnimatedVisibility(
-        visibleState = visibility,
-        enter = fadeIn(tween(150)) +
-            expandVertically(spring(dampingRatio = 0.84f, stiffness = 520f)) +
-            slideInVertically(spring(dampingRatio = 0.82f, stiffness = 560f)) { -it / 4 },
-        exit = fadeOut(tween(110)) +
-            shrinkVertically(tween(190, easing = FastOutSlowInEasing)) +
-            slideOutVertically(tween(170, easing = FastOutSlowInEasing)) { it / 5 },
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ExpressiveFavoriteStar(
-                filled = true,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    row.entry.title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    AddressResolver.displayText(row.entry.url),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun FavoriteStarCanvas(
     fillProgress: Float,
     popScale: Float,
@@ -340,13 +191,4 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFavoriteSparkle
     }
 }
 
-private class FavoriteRowState(
-    entry: FavoriteEntry,
-    val initiallyVisible: Boolean,
-) {
-    var entry by mutableStateOf(entry)
-    var visible by mutableStateOf(true)
-}
-
-private const val MAX_VISIBLE_FAVORITES = 6
 private const val STAR_POINT_COUNT = 5

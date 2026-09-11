@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Color
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.click
@@ -18,6 +20,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteFaviconStore
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.After
@@ -41,6 +44,7 @@ class NewTabFavoriteInstrumentedTest {
             controller?.destroy()
             controller = null
             clearSession()
+            FavoriteFaviconStore(composeRule.activity).prune(emptySet())
         }
     }
 
@@ -84,6 +88,55 @@ class NewTabFavoriteInstrumentedTest {
     }
 
     @Test
+    fun newlyAddedFavoriteOpensAfterReturningToExistingNewTab() {
+        val browserController = createController(
+            favorite = FavoriteEntry(
+                url = "https://existing-favorite.example/",
+                title = "Existing favorite",
+                addedAt = 1L,
+            ),
+        )
+        setBrowserContent(browserController)
+        val newFavoriteUrl = "https://new-favorite.example/"
+        lateinit var blankTabId: String
+
+        composeRule.runOnIdle {
+            blankTabId = browserController.createTab()
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.selectedTabId == blankTabId
+        }
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            browserController.createTab(initialUrl = newFavoriteUrl)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.selectedTab.url == newFavoriteUrl
+        }
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertTrue(requireNotNull(browserController.toggleFavorite()).added)
+        }
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            browserController.selectTab(blankTabId)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.selectedTabId == blankTabId &&
+                browserController.favorites.any { it.url == newFavoriteUrl }
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(NewTabFavoritesTestTags.favorite(newFavoriteUrl))
+            .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.selectedTab.url == newFavoriteUrl
+        }
+        assertEquals(blankTabId, browserController.selectedTabId)
+    }
+
+    @Test
     fun openingFavoriteFromPrivateTabCreatesRegularTab() {
         val favorite = FavoriteEntry(
             url = "https://favorite.example/",
@@ -117,6 +170,32 @@ class NewTabFavoriteInstrumentedTest {
 
             assertFalse(browserController.undoFavorite(mutation))
         }
+    }
+
+    @Test
+    fun storedFavoriteFaviconLoadsIntoNewTabState() {
+        val favorite = FavoriteEntry(
+            url = "https://favorite.example/",
+            title = "Favorite",
+            addedAt = 1L,
+        )
+        val bitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.MAGENTA)
+        }
+        composeRule.runOnIdle {
+            FavoriteFaviconStore(composeRule.activity).apply {
+                prune(emptySet())
+                assertTrue(save(favorite.url, bitmap))
+            }
+        }
+        bitmap.recycle()
+
+        val browserController = createController(favorite)
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.favoriteFavicons[favorite.url]?.isRecycled == false
+        }
+        assertEquals(16, browserController.favoriteFavicons[favorite.url]?.width)
     }
 
     private fun createController(favorite: FavoriteEntry): BrowserController {

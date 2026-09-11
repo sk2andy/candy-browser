@@ -105,11 +105,12 @@ internal object CredentialPromptRules {
         pageUrl: String?,
         sessionGeneration: Long,
         navigationGeneration: Long,
+        allowHttp: Boolean = false,
     ): CredentialPromptIdentity? {
         if (isPrivate || !isActive || sessionGeneration <= 0 || navigationGeneration < 0) return null
         val safeTabId = boundedText(tabId, MAX_TAB_ID_LENGTH) ?: return null
         val safeProfileId = boundedText(profileId, MAX_PROFILE_ID_LENGTH) ?: return null
-        val origin = httpsOrigin(pageUrl) ?: return null
+        val origin = credentialOrigin(pageUrl, allowHttp) ?: return null
         return CredentialPromptIdentity(
             tabId = safeTabId,
             profileId = safeProfileId,
@@ -148,7 +149,7 @@ internal object CredentialPromptRules {
             (allowedUserIds.isEmpty() || username in allowedUserIds)
 
     fun matchesOrigin(candidate: String?, expected: String): Boolean =
-        httpsOrigin(candidate) == expected
+        credentialOrigin(candidate, allowHttp = true) == expected
 
     fun displayLabel(value: String?): String? = boundedText(value, MAX_LABEL_LENGTH)
 
@@ -216,10 +217,11 @@ internal object CredentialPromptRules {
         current: CredentialPromptIdentity?,
     ): Boolean = captured == current
 
-    private fun httpsOrigin(value: String?): String? {
-        val uri = parseHttps(value) ?: return null
+    private fun credentialOrigin(value: String?, allowHttp: Boolean): String? {
+        val uri = parseWebUri(value, allowHttp) ?: return null
+        val scheme = uri.scheme.lowercase()
         return runCatching {
-            URI("https", null, canonicalDomain(uri.host) ?: return null, uri.port, null, null, null)
+            URI(scheme, null, canonicalDomain(uri.host) ?: return null, uri.port, null, null, null)
                 .toASCIIString()
         }.getOrNull()
     }
@@ -237,6 +239,16 @@ internal object CredentialPromptRules {
         ?.let { candidate -> runCatching { URI(candidate) }.getOrNull() }
         ?.takeIf { uri ->
             uri.isAbsolute && !uri.isOpaque && uri.scheme.equals("https", ignoreCase = true) &&
+                uri.rawUserInfo == null && uri.host != null
+        }
+
+    private fun parseWebUri(value: String?, allowHttp: Boolean): URI? = value
+        ?.takeIf { it.length <= MAX_URL_LENGTH }
+        ?.let { candidate -> runCatching { URI(candidate) }.getOrNull() }
+        ?.takeIf { uri ->
+            val scheme = uri.scheme?.lowercase()
+            uri.isAbsolute && !uri.isOpaque &&
+                (scheme == "https" || allowHttp && scheme == "http") &&
                 uri.rawUserInfo == null && uri.host != null
         }
 

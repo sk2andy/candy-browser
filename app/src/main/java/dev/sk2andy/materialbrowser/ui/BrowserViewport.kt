@@ -360,6 +360,7 @@ internal fun BrowserViewport(
             preview = controller.previews[tab.id],
             favicon = controller.favicons[tab.id],
             favorites = controller.favorites,
+            favoriteFavicons = controller.favoriteFavicons,
             dragOffset = dragOffset,
             dragDirection = dragDirection,
             travelDistance = travelDistance,
@@ -451,14 +452,19 @@ internal fun BrowserViewport(
                 onTargetReleased = onBlurTargetReleased,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                NewTabPage(
-                    favorites = controller.favorites,
-                    incognito = selectedTab.isIncognito,
-                    modeProgress = blankTabModeProgress,
-                    revealOriginInRoot = blankTabModeRevealOrigin,
-                    onSearch = onSearch,
-                    onFavorite = onFavorite,
-                )
+                key(selectedTab.id) {
+                    NewTabPage(
+                        favorites = controller.favorites,
+                        favicons = controller.favoriteFavicons,
+                        incognito = selectedTab.isIncognito,
+                        modeProgress = blankTabModeProgress,
+                        revealOriginInRoot = blankTabModeRevealOrigin,
+                        onSearch = onSearch,
+                        onFavorite = onFavorite,
+                        favoriteLaunchAnimationEnabled =
+                            controller.isFavoriteLaunchAnimationEnabled,
+                    )
+                }
             }
         }
 
@@ -499,6 +505,7 @@ internal fun BrowserViewport(
             handoff = currentHandoff,
             tab = controller.activeTabs.firstOrNull { it.id == currentHandoff.tabId },
             favorites = controller.favorites,
+            favoriteFavicons = controller.favoriteFavicons,
             alpha = if (liveFrameTabId == currentHandoff.tabId && !tabOverviewVisible) {
                 handoffAlpha
             } else {
@@ -688,6 +695,7 @@ private fun TabHandoffOverlay(
     handoff: TabHandoff,
     tab: BrowserTab?,
     favorites: List<FavoriteEntry>,
+    favoriteFavicons: Map<String, Bitmap>,
     alpha: Float,
     rootHeightPx: Float,
     bottomBarTopPx: FloatState,
@@ -704,6 +712,7 @@ private fun TabHandoffOverlay(
                 preview = handoff.preview,
                 favicon = handoff.favicon,
                 favorites = favorites,
+                favoriteFavicons = favoriteFavicons,
                 rootHeightPx = rootHeightPx,
                 previewTopInsetPx = handoff.previewTopInsetPx,
                 bottomBarTopPx = bottomBarTopPx,
@@ -725,6 +734,7 @@ private fun TabSwitchPreview(
     preview: Bitmap?,
     favicon: Bitmap?,
     favorites: List<FavoriteEntry>,
+    favoriteFavicons: Map<String, Bitmap>,
     dragOffset: MutableFloatState,
     dragDirection: Int,
     travelDistance: Float,
@@ -756,6 +766,7 @@ private fun TabSwitchPreview(
             preview = preview,
             favicon = favicon,
             favorites = favorites,
+            favoriteFavicons = favoriteFavicons,
             rootHeightPx = rootHeightPx,
             previewTopInsetPx = previewTopInsetPx,
             bottomBarTopPx = bottomBarTopPx,
@@ -772,6 +783,7 @@ internal fun FullscreenTabPreviewContent(
     previewTopInsetPx: Int,
     bottomBarTopPx: FloatState,
     favorites: List<FavoriteEntry>,
+    favoriteFavicons: Map<String, Bitmap> = emptyMap(),
     blankFavoritesAlpha: () -> Float = { 1f },
 ) {
     val density = LocalDensity.current
@@ -797,6 +809,7 @@ internal fun FullscreenTabPreviewContent(
             tab.isIncognito -> IncognitoTabPlaceholder()
             tab.url == BLANK_URL -> BlankTabPreview(
                 favorites = favorites,
+                favoriteFavicons = favoriteFavicons,
                 favoritesAlpha = blankFavoritesAlpha,
             )
             else -> {
@@ -846,6 +859,7 @@ private fun rootSafeDrawingPadding(rootView: View): PaddingValues {
 @Composable
 internal fun BlankTabPreview(
     favorites: List<FavoriteEntry>,
+    favoriteFavicons: Map<String, Bitmap> = emptyMap(),
     favoritesAlpha: () -> Float,
 ) {
     val configuration = LocalConfiguration.current
@@ -890,6 +904,7 @@ internal fun BlankTabPreview(
         ) {
             NewTabPage(
                 favorites = favorites,
+                favicons = favoriteFavicons,
                 incognito = false,
                 modeProgress = 0f,
                 revealOriginInRoot = Offset.Zero,

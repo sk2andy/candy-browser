@@ -293,6 +293,32 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun httpPasswordAutofillDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadHttpPasswordAutofillEnabled())
+
+        store.saveHttpPasswordAutofillEnabled(true)
+        assertTrue(store.loadHttpPasswordAutofillEnabled())
+
+        store.saveHttpPasswordAutofillEnabled(false)
+        assertFalse(store.loadHttpPasswordAutofillEnabled())
+    }
+
+    @Test
+    fun favoriteLaunchAnimationDefaultsOnAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertTrue(store.loadFavoriteLaunchAnimationEnabled())
+
+        store.saveFavoriteLaunchAnimationEnabled(false)
+        assertFalse(store.loadFavoriteLaunchAnimationEnabled())
+
+        store.saveFavoriteLaunchAnimationEnabled(true)
+        assertTrue(store.loadFavoriteLaunchAnimationEnabled())
+    }
+
+    @Test
     fun openHomeOnStartupDefaultsOffAndRoundTrips() {
         val store = BrowserSessionStore(context)
 

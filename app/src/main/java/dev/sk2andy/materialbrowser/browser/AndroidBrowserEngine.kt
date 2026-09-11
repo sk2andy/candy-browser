@@ -17,18 +17,21 @@ internal data class AndroidBrowserEngineCapabilities(
     val firefoxExtensions: Boolean,
     val toppings: Boolean,
     val nativeAutoplayPolicy: Boolean,
+    val insecureHttpPasswordManagerSelection: Boolean,
 ) {
     companion object {
         val GeckoView = AndroidBrowserEngineCapabilities(
             firefoxExtensions = true,
             toppings = true,
             nativeAutoplayPolicy = true,
+            insecureHttpPasswordManagerSelection = true,
         )
 
         val SystemWebView = AndroidBrowserEngineCapabilities(
             firefoxExtensions = false,
             toppings = true,
             nativeAutoplayPolicy = true,
+            insecureHttpPasswordManagerSelection = false,
         )
     }
 }

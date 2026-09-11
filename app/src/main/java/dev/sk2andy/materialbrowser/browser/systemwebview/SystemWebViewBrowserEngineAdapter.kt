@@ -1733,11 +1733,9 @@ private class SystemWebViewHost(
         val previousTopInset = topInsetPx
         val previousBottomPadding = paddingBottom
         applyCurrentLayout()
-        val rendererInsets = if (layout.rendererSafeAreaOverride == GeckoViewInsets.Zero) {
-            windowInsets.withSafeAreaCleared()
-        } else {
-            windowInsets
-        }
+        val rendererInsets = layout.rendererSafeAreaOverride
+            ?.let(windowInsets::withSafeAreaOverride)
+            ?: windowInsets
         ViewCompat.dispatchApplyWindowInsets(this, rendererInsets)
         if (previousTopInset != topInsetPx || previousBottomPadding != paddingBottom) {
             evaluateJavascript(WebContentTopInsetScript.installScript, null)
@@ -1779,12 +1777,27 @@ private class SystemWebViewHost(
     }
 }
 
-private fun WindowInsetsCompat.withSafeAreaCleared(): WindowInsetsCompat {
-    val safeAreaTypes =
-        WindowInsetsCompat.Type.systemBars() or
-            WindowInsetsCompat.Type.displayCutout()
-    return WindowInsetsCompat.Builder(this)
-        .setInsets(safeAreaTypes, Insets.NONE)
-        .setInsetsIgnoringVisibility(safeAreaTypes, Insets.NONE)
-        .build()
+private fun WindowInsetsCompat.withSafeAreaOverride(
+    override: GeckoViewInsets,
+): WindowInsetsCompat {
+    val builder = WindowInsetsCompat.Builder(this)
+    listOf(
+        WindowInsetsCompat.Type.statusBars(),
+        WindowInsetsCompat.Type.navigationBars(),
+        WindowInsetsCompat.Type.displayCutout(),
+    ).forEach { type ->
+        builder.setInsets(type, getInsets(type).clampedTo(override))
+        builder.setInsetsIgnoringVisibility(
+            type,
+            getInsetsIgnoringVisibility(type).clampedTo(override),
+        )
+    }
+    return builder.build()
 }
+
+private fun Insets.clampedTo(maximum: GeckoViewInsets): Insets = Insets.of(
+    left.coerceAtMost(maximum.left),
+    top.coerceAtMost(maximum.top),
+    right.coerceAtMost(maximum.right),
+    bottom.coerceAtMost(maximum.bottom),
+)

@@ -94,6 +94,11 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                 )
                 scenario.onActivity { activity -> assertWebViewGeometry(activity, webView) }
                 SystemClock.sleep(LAYOUT_STABILITY_WINDOW_MILLIS)
+                scenario.onActivity { activity -> assertWebViewGeometry(activity, webView) }
+                assertTrue(
+                    "${site.name} became unsafe after delayed top-inset verification: $result",
+                    evaluateBoolean(scenario, "globalThis.__candySiteMatrix.passed"),
+                )
                 assertEquals(
                     "Scrolling ${site.name} reloaded the current page",
                     documentRequests,
@@ -231,12 +236,22 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                 )
                 assertWebViewGeometry(activity, webView)
             }
-            assertTrue(
-                "Disabling Force safe area must restore renderer CSS safe-area ownership",
+            assertEquals(
+                "Disabling Force safe area must keep renderer top ownership cleared",
+                0.0,
                 evaluateNumber(
                     scenario,
                     "Number.parseFloat(" +
                         "getComputedStyle(document.querySelector('#header')).paddingTop)",
+                ),
+                CSS_TOLERANCE,
+            )
+            assertTrue(
+                "Disabling Force safe area must restore Candy document top protection",
+                evaluateNumber(
+                    scenario,
+                    "Number.parseFloat(document.documentElement.style.getPropertyValue(" +
+                        "'--candy-browser-content-top-inset'))",
                 ) > 0,
             )
         }

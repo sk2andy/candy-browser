@@ -49,11 +49,11 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
-    fun `viewport cover delegates top protection to engine safe area`() {
+    fun `viewport cover cannot disable Candy top protection`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("topInsetPx"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("viewportFitsCover"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("viewportCoverAllowed"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("viewport-fit"))
+        assertFalse(WebContentTopInsetScript.installScript.contains("viewportFitsCover"))
+        assertFalse(WebContentTopInsetScript.installScript.contains("viewportCoverAllowed"))
+        assertFalse(WebContentTopInsetScript.installScript.contains("viewport-fit"))
     }
 
     @Test
@@ -63,11 +63,11 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
-    fun `blocked spacer preserves edge to edge and stops repeated recovery`() {
+    fun `blocked spacer requests bounded native top fallback`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("getComputedStyle"))
         assertTrue(WebContentTopInsetScript.installScript.contains("suspendLayoutRecovery"))
         assertTrue(WebContentTopInsetScript.installScript.contains("suspendedLayoutRecoveryKey"))
-        assertFalse(WebContentTopInsetScript.installScript.contains("fallbackToNative"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("fallbackToNative"))
         assertTrue(WebContentTopInsetScript.installScript.contains("navigationGeneration"))
         assertTrue(WebContentTopInsetScript.installScript.contains("policyRevision"))
     }
@@ -80,13 +80,14 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("planLocalOffset"))
         assertTrue(WebContentTopInsetScript.installScript.contains("isVisiblePositionedElement"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.opacity"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("translate: 0 var"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("'translate'"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("`0 var("))
         assertTrue(WebContentTopInsetScript.installScript.contains("position === 'fixed'"))
         assertTrue(WebContentTopInsetScript.installScript.contains("absoluteCandidate"))
         assertTrue(WebContentTopInsetScript.installScript.contains("panelMaxHeight"))
         assertTrue(WebContentTopInsetScript.installScript.contains("isBackdrop"))
         assertTrue(WebContentTopInsetScript.installScript.contains("hasPositionedPeerCollision"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("peer.contains(plan.element)"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("composedContains(peer, plan.element)"))
         assertTrue(WebContentTopInsetScript.installScript.contains("interactivePeerSelector"))
         assertTrue(WebContentTopInsetScript.installScript.contains("isInteractivePositionedPeer"))
         assertTrue(WebContentTopInsetScript.installScript.contains("isInteractiveAtPoint"))
@@ -125,17 +126,32 @@ class WebContentTopInsetScriptTest {
 
         assertTrue(refresh.contains("Keep an established offset"))
         assertTrue(refresh.contains("clearOwnedOffset(element)"))
-        assertTrue(
-            refresh.indexOf("Number.parseFloat(style.opacity) <= 0.01") <
-                refresh.indexOf("clearOwnedOffset(element)"),
-        )
+        assertTrue(refresh.contains("!isVisiblePositionedElement(element)"))
     }
 
     @Test
     fun `sticky controls are rechecked and offset while the page scrolls`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("position === 'sticky'"))
-        assertFalse(WebContentTopInsetScript.installScript.contains("windowScrollListener"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("windowScrollListener"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("protectLateTopInset"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("verifyLateTopInset"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("scrollVerificationTimer"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("scrollVerificationFailures"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("requiredConsecutiveLayoutFailures"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("{ passive: true }"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("capture: true"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.position !== 'sticky'"))
+    }
+
+    @Test
+    fun `open shadow roots participate in top obstruction checks`() {
+        assertTrue(WebContentTopInsetScript.installScript.contains("deepElementsFromPoint"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("element.shadowRoot"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("parentElementOrShadowHost"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("ownedOffsetElements"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("observeOpenShadowRoots"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("observedShadowRoots"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("shadowHitTestCache"))
     }
 
     @Test
@@ -163,7 +179,7 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("windowResizeListener"))
         assertTrue(WebContentTopInsetScript.installScript.contains("resumeLayoutRecovery"))
         assertTrue(WebContentTopInsetScript.installScript.contains("'load',"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("style.display === 'none'"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("isVisiblePositionedElement"))
     }
 
     @Test
@@ -212,6 +228,7 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("deferredLayoutCheckTimer = 0"))
         assertTrue(WebContentTopInsetScript.installScript.contains("domContentLoadedListener"))
         assertTrue(WebContentTopInsetScript.installScript.contains("windowLoadListener"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("scrollLayoutCheckFrame"))
         assertTrue(
             WebContentTopInsetScript.installScript.contains(
                 "runtimeState.stabilizationCheckTimers.forEach(globalThis.clearTimeout)",
@@ -238,7 +255,7 @@ class WebContentTopInsetScriptTest {
     @Test
     fun `policy revisions reset failures before they suspend layout recovery`() {
         val recoverySuspension = WebContentTopInsetScript.installScript
-            .substringAfter("const suspendLayoutRecovery = () =>")
+            .substringAfter("const suspendLayoutRecovery = (reason = 'unknown') =>")
             .substringBefore("const layoutRecoverySuspendedForCurrentPolicy")
 
         assertTrue(recoverySuspension.contains("resetFailuresForPolicy(policyKey)"))
@@ -250,7 +267,7 @@ class WebContentTopInsetScriptTest {
         assertTrue(recoverySuspension.contains("resetFailuresForPolicy(confirmedPolicyKey, true)"))
         assertTrue(recoverySuspension.contains("suspendedLayoutRecoveryKey = policyKey"))
         assertFalse(recoverySuspension.contains("remove()"))
-        assertFalse(recoverySuspension.contains("fallbackToNative"))
+        assertTrue(recoverySuspension.contains("requestNativeFallback()"))
         assertTrue(
             WebContentTopInsetScript.installScript.contains(
                 "resetFailuresForPolicy(currentPolicyKey(), true)",

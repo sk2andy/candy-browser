@@ -897,6 +897,20 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_STARTUP_ANIMATION_ENABLED, enabled).apply()
     }
 
+    fun loadHttpPasswordAutofillEnabled(): Boolean =
+        preferences.getBoolean(KEY_HTTP_PASSWORD_AUTOFILL_ENABLED, false)
+
+    fun saveHttpPasswordAutofillEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_HTTP_PASSWORD_AUTOFILL_ENABLED, enabled).apply()
+    }
+
+    fun loadFavoriteLaunchAnimationEnabled(): Boolean =
+        preferences.getBoolean(KEY_FAVORITE_LAUNCH_ANIMATION_ENABLED, true)
+
+    fun saveFavoriteLaunchAnimationEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_FAVORITE_LAUNCH_ANIMATION_ENABLED, enabled).apply()
+    }
+
     fun loadOpenHomeOnStartupEnabled(): Boolean =
         preferences.getBoolean(KEY_OPEN_HOME_ON_STARTUP_ENABLED, false)
 
@@ -1194,6 +1208,9 @@ class BrowserSessionStore internal constructor(
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
         const val KEY_STARTUP_ANIMATION_ENABLED = "startup_animation_enabled"
+        const val KEY_HTTP_PASSWORD_AUTOFILL_ENABLED = "http_password_autofill_enabled"
+        const val KEY_FAVORITE_LAUNCH_ANIMATION_ENABLED =
+            "favorite_launch_animation_enabled"
         const val KEY_OPEN_HOME_ON_STARTUP_ENABLED = "open_home_on_startup_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"

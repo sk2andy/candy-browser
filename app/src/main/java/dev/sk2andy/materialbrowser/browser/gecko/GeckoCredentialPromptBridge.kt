@@ -16,13 +16,14 @@ import org.mozilla.geckoview.GeckoSession
 
 /** Exact GeckoView-140 prompt translation; credential policy stays engine-neutral. */
 internal class GeckoCredentialPromptBridge(
-    private val currentIdentity: () -> CredentialPromptIdentity?,
+    private val currentLoginSelectionIdentity: () -> CredentialPromptIdentity?,
+    private val currentSecureIdentity: () -> CredentialPromptIdentity?,
     private val currentHost: () -> CredentialPromptHost?,
 ) {
     fun onLoginSave(
         request: GeckoSession.PromptDelegate.AutocompleteRequest<Autocomplete.LoginSaveOption>,
     ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
-        val identity = currentIdentity() ?: return dismissed(request)
+        val identity = currentSecureIdentity() ?: return dismissed(request)
         val option = request.options.singleOrNull() ?: return dismissed(request)
         if (!CredentialPromptRules.matchesOrigin(option.value.origin, identity.origin)) {
             return dismissed(request)
@@ -34,7 +35,10 @@ internal class GeckoCredentialPromptBridge(
             host.saveLogin(CredentialLoginSavePrompt(identity, login)) { accepted ->
                 complete(
                     Unit.takeIf {
-                        accepted && CredentialPromptRules.remainsCurrent(identity, currentIdentity())
+                        accepted && CredentialPromptRules.remainsCurrent(
+                            identity,
+                            currentSecureIdentity(),
+                        )
                     },
                 ) { request.confirm(option) }
             }
@@ -44,7 +48,7 @@ internal class GeckoCredentialPromptBridge(
     fun onLoginSelect(
         request: GeckoSession.PromptDelegate.AutocompleteRequest<Autocomplete.LoginSelectOption>,
     ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
-        val identity = currentIdentity() ?: return dismissed(request)
+        val identity = currentLoginSelectionIdentity() ?: return dismissed(request)
         val allowedUserIds = CredentialPromptRules.allowedUserIds(
             request.options.map { option -> option.value.username },
         ) ?: return dismissed(request)
@@ -53,7 +57,10 @@ internal class GeckoCredentialPromptBridge(
             host.selectLogin(CredentialLoginSelectPrompt(identity, allowedUserIds)) { login ->
                 val accepted = login?.takeIf { candidate ->
                     CredentialPromptRules.acceptsSelectedUser(candidate.username, allowedUserIds) &&
-                        CredentialPromptRules.remainsCurrent(identity, currentIdentity())
+                        CredentialPromptRules.remainsCurrent(
+                            identity,
+                            currentLoginSelectionIdentity(),
+                        )
                 }
                 complete(accepted) { selected ->
                     request.confirm(
@@ -74,7 +81,7 @@ internal class GeckoCredentialPromptBridge(
     fun onIdentityProviderSelect(
         prompt: GeckoSession.PromptDelegate.IdentityCredential.ProviderSelectorPrompt,
     ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
-        val identity = currentIdentity() ?: return dismissed(prompt)
+        val identity = currentSecureIdentity() ?: return dismissed(prompt)
         val providers = CredentialPromptRules.providers(
             prompt.providers.map { provider ->
                 IdentityCredentialProvider(
@@ -89,7 +96,7 @@ internal class GeckoCredentialPromptBridge(
             host.selectIdentityProvider(IdentityCredentialProviderPrompt(identity, providers)) { id ->
                 val selected = id?.takeIf { candidate ->
                     providers.any { provider -> provider.id == candidate } &&
-                        CredentialPromptRules.remainsCurrent(identity, currentIdentity())
+                        CredentialPromptRules.remainsCurrent(identity, currentSecureIdentity())
                 }
                 complete(selected, prompt::confirm)
             }
@@ -99,7 +106,7 @@ internal class GeckoCredentialPromptBridge(
     fun onIdentityAccountSelect(
         prompt: GeckoSession.PromptDelegate.IdentityCredential.AccountSelectorPrompt,
     ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
-        val identity = currentIdentity() ?: return dismissed(prompt)
+        val identity = currentSecureIdentity() ?: return dismissed(prompt)
         val providerName = CredentialPromptRules.displayLabel(prompt.provider.name)
             ?: return dismissed(prompt)
         val providerDomain = CredentialPromptRules.providerDomain(prompt.provider.domain)
@@ -125,7 +132,7 @@ internal class GeckoCredentialPromptBridge(
             ) { id ->
                 val selected = id?.takeIf { candidate ->
                     accounts.any { account -> account.id == candidate } &&
-                        CredentialPromptRules.remainsCurrent(identity, currentIdentity())
+                        CredentialPromptRules.remainsCurrent(identity, currentSecureIdentity())
                 }
                 complete(selected, prompt::confirm)
             }
@@ -135,7 +142,7 @@ internal class GeckoCredentialPromptBridge(
     fun onIdentityPrivacyPolicy(
         prompt: GeckoSession.PromptDelegate.IdentityCredential.PrivacyPolicyPrompt,
     ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
-        val identity = currentIdentity() ?: return dismissed(prompt)
+        val identity = currentSecureIdentity() ?: return dismissed(prompt)
         val request = CredentialPromptRules.identityPrivacyPrompt(
             identity = identity,
             providerName = prompt.providerDomain,
@@ -148,7 +155,7 @@ internal class GeckoCredentialPromptBridge(
         return pending(prompt) { complete ->
             host.confirmIdentityPrivacyPolicy(request) { accepted ->
                 val safeAccepted = accepted &&
-                    CredentialPromptRules.remainsCurrent(identity, currentIdentity())
+                    CredentialPromptRules.remainsCurrent(identity, currentSecureIdentity())
                 complete(safeAccepted) { value -> prompt.confirm(value) }
             }
         }

@@ -135,8 +135,15 @@
   declared for GeckoView's passkey lookup, origin-bound WebAuthn, and Candy's password Credential
   Manager bridge. GeckoView 155 uses Android's framework Credential Manager for passkeys on API 34+
   when `android.software.credentials` exists. Regular HTTPS Gecko views expose
-  native virtual Autofill nodes; private views do not. Login save/select and FedCM callbacks carry a
-  tab, profile, session, origin and navigation identity and deny stale, private or cross-origin work.
+  native virtual Autofill nodes; private views do not. Browser settings provide a default-off
+  **Password manager on HTTP sites** option only when GeckoView is selected. When enabled, an
+  explicit tap on an HTTP login field may open the default Android password manager for login
+  selection. It never enables automatic HTTP filling, HTTP login saving, FedCM, passkeys, private
+  tabs, Link Peek or external-link previews. Android System WebView exposes no public API for this
+  insecure-origin exception, so the same setting is visible but disabled and explains that HTTPS or
+  GeckoView is required. Credential providers may still reject Candy or an HTTP origin independently.
+  Login save/select and FedCM callbacks carry a tab, profile, session, origin and navigation identity
+  and deny stale, private or cross-origin work.
   `MainActivity` binds Gecko's process-owned `GeckoRuntime.ActivityDelegate` to a lifecycle-scoped
   Activity Result launcher so WebAuthn can open its passkey provider and return the result. A successful
   provider result may carry no `Intent` payload; Candy buffers it until the same Activity has resumed
@@ -162,18 +169,18 @@
   traversal. Never replay a committed navigation or convert POST to GET. Reload matching open tabs
   only when the user explicitly changes the domain preference.
 - Keep the engine view's measured frame stable at the full window while pages scroll.
-  `GeckoViewInsetRules` forwards the status-bar, cutout, side, and navigation safe area to the
-  renderer without adding native margins. `viewport-fit=cover` pages consume that safe area through
-  CSS `env(safe-area-inset-*)`; System WebView delegates this only from milestone 144, where full
-  non-fullscreen safe-area forwarding exists. Other pages and older providers receive Candy's
-  document-start compatibility top inset.
+  `GeckoViewInsetRules` forwards side and navigation safe areas to the renderer without adding
+  native margins. Candy owns the status-bar and cutout top edge for every normal page because a
+  `viewport-fit=cover` declaration does not guarantee use of `env(safe-area-inset-top)`.
+  The document-start compatibility inset protects normal flow and top-positioned content.
   Top-anchored fixed, sticky, absolute, and focused containers are shifted once into the safe area.
-  Scroll events never trigger layout reconciliation. Owned offsets survive temporary hide/show, but
+  A passive animation-frame-bounded scroll check handles newly stuck headers without recomputing
+  established offsets. Owned offsets survive temporary hide/show, but
   are cleared when a visible element returns to normal flow. Persistent layout conflicts suspend
-  timer retries until a later DOM change or user interaction resumes recovery, rather
-  than switching the WebView to native margins. The explicit per-site **Force safe area** override is
-  the only normal browsing path that moves the engine into native safe-area margins. Fullscreen keeps
-  the renderer edge to edge.
+  timer retries until a later DOM change or user interaction resumes recovery before switching only
+  the top edge into a navigation-scoped native fallback margin. The explicit
+  per-site **Force safe area** override still moves every edge into native safe-area margins.
+  Fullscreen keeps the renderer edge to edge.
   GeckoView keeps its default SurfaceView backend so frames reach Android's compositor directly.
   PiP, clipping and tab motion preserve the same browser host, GeckoView, surface, display and
   session; browser blur is a sibling chrome effect and does not require a TextureView copy. The
@@ -303,7 +310,7 @@ WebView request state.
 | Native 404/offline pages and Candy Circuit | `CandyCircuitRulesTest`, `PageErrorFeedbackRulesTest`, `BrowserConnectivityRulesTest`, `GeckoMainFrameResponseRulesTest`, `PageErrorFeedbackInstrumentedTest`, and engine-specific main-frame 404 coverage |
 | Federated login | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, and popup-blocker regression tests |
 | CAPTCHA compatibility | `CaptchaCompatibilityRulesTest`, `CaptchaCompatibilityPromptInstrumentedTest`, `BrowserControllerCaptchaCompatibilityInstrumentedTest`, and `BrowserSessionStoreInstrumentedTest` |
-| Gecko password Autofill, Credential Manager and browser-origin manifest contract | `GeckoCredentialsInstrumentedTest` on API 34+ |
+| Gecko password Autofill, opt-in HTTP login selection, Credential Manager and browser-origin manifest contract | `CredentialPromptRulesTest`, `BrowserSettingsScreenInstrumentedTest` and `GeckoCredentialsInstrumentedTest` on API 34+ |
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |

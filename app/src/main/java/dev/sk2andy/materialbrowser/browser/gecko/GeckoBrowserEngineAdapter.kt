@@ -118,6 +118,8 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setVideoAutoplayBlocked(blocked: Boolean)
 
+    fun setHttpPasswordManagerSelectionEnabled(enabled: Boolean) = Unit
+
     fun setAudioMuted(muted: Boolean)
 
     fun executeMediaCommand(command: GeckoMediaCommand)
@@ -473,6 +475,11 @@ internal class GeckoBrowserEngineSessionAdapter(
     @UiThread
     override fun setVideoAutoplayBlocked(blocked: Boolean) {
         if (!closed) session.setVideoAutoplayBlocked(blocked)
+    }
+
+    @UiThread
+    override fun setHttpPasswordManagerSelectionEnabled(enabled: Boolean) {
+        if (!closed) session.setHttpPasswordManagerSelectionEnabled(enabled)
     }
 
     @UiThread

@@ -43,6 +43,55 @@ class CredentialPromptRulesTest {
     }
 
     @Test
+    fun `explicit opt in creates exact http login selection identity`() {
+        val identity = CredentialPromptRules.identity(
+            tabId = "tab-1",
+            profileId = "profile-1",
+            isPrivate = false,
+            isActive = true,
+            pageUrl = "http://Example.com:8080/login?next=%2F",
+            sessionGeneration = 7,
+            navigationGeneration = 11,
+            allowHttp = true,
+        )
+
+        assertEquals("http://example.com:8080", identity?.origin)
+        assertNull(
+            CredentialPromptRules.identity(
+                tabId = "tab-1",
+                profileId = "profile-1",
+                isPrivate = false,
+                isActive = true,
+                pageUrl = "ftp://example.com/login",
+                sessionGeneration = 7,
+                navigationGeneration = 11,
+                allowHttp = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `http opt in never admits private or inactive pages`() {
+        listOf(
+            true to true,
+            false to false,
+        ).forEach { (privateMode, active) ->
+            assertNull(
+                CredentialPromptRules.identity(
+                    tabId = "tab",
+                    profileId = "profile",
+                    isPrivate = privateMode,
+                    isActive = active,
+                    pageUrl = "http://example.com/login",
+                    sessionGeneration = 1,
+                    navigationGeneration = 1,
+                    allowHttp = true,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `login accepts bounded values and never prints secrets`() {
         val login = CredentialPromptRules.login("alice", "secret")
 
@@ -55,7 +104,7 @@ class CredentialPromptRulesTest {
     }
 
     @Test
-    fun `login origin must match exact https origin`() {
+    fun `login origin must match exact web origin`() {
         assertTrue(
             CredentialPromptRules.matchesOrigin(
                 candidate = "https://example.com/login",
@@ -72,6 +121,12 @@ class CredentialPromptRulesTest {
             CredentialPromptRules.matchesOrigin(
                 candidate = "http://example.com",
                 expected = "https://example.com",
+            ),
+        )
+        assertTrue(
+            CredentialPromptRules.matchesOrigin(
+                candidate = "http://example.com/login",
+                expected = "http://example.com",
             ),
         )
     }

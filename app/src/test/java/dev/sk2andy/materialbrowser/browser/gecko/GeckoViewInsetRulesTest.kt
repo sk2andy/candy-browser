@@ -5,17 +5,18 @@ import org.junit.Test
 
 class GeckoViewInsetRulesTest {
     @Test
-    fun `engine safe area keeps Gecko surface behind system bars`() {
+    fun `document owns top while renderer keeps other safe area edges`() {
         val safeArea = GeckoViewInsets(left = 8, top = 96, right = 6, bottom = 34)
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
             forceNativeSafeArea = false,
+            forceNativeTopSafeArea = false,
             isFullscreenContent = false,
             isInsideSafeDrawingHost = false,
         )
 
         assertEquals(GeckoViewInsets.Zero, layout.margins)
-        assertEquals(safeArea, layout.rendererSafeAreaOverride)
+        assertEquals(safeArea.copy(top = 0), layout.rendererSafeAreaOverride)
         assertEquals(safeArea.top, layout.scrollableTopInsetPx)
     }
 
@@ -24,6 +25,7 @@ class GeckoViewInsetRulesTest {
         val layout = GeckoViewInsetRules.resolve(
             safeArea = GeckoViewInsets(left = 0, top = 72, right = 0, bottom = 34),
             forceNativeSafeArea = false,
+            forceNativeTopSafeArea = false,
             isFullscreenContent = false,
             isInsideSafeDrawingHost = false,
         )
@@ -33,7 +35,7 @@ class GeckoViewInsetRulesTest {
             layout.margins,
         )
         assertEquals(
-            GeckoViewInsets(left = 0, top = 72, right = 0, bottom = 34),
+            GeckoViewInsets(left = 0, top = 0, right = 0, bottom = 34),
             layout.rendererSafeAreaOverride,
         )
         assertEquals(72, layout.scrollableTopInsetPx)
@@ -44,6 +46,7 @@ class GeckoViewInsetRulesTest {
         val layout = GeckoViewInsetRules.resolve(
             safeArea = GeckoViewInsets(left = 0, top = 72, right = 0, bottom = 48),
             forceNativeSafeArea = false,
+            forceNativeTopSafeArea = false,
             isFullscreenContent = false,
             isInsideSafeDrawingHost = false,
         )
@@ -53,7 +56,7 @@ class GeckoViewInsetRulesTest {
             layout.margins,
         )
         assertEquals(
-            GeckoViewInsets(left = 0, top = 72, right = 0, bottom = 48),
+            GeckoViewInsets(left = 0, top = 0, right = 0, bottom = 48),
             layout.rendererSafeAreaOverride,
         )
         assertEquals(72, layout.scrollableTopInsetPx)
@@ -66,6 +69,7 @@ class GeckoViewInsetRulesTest {
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
             forceNativeSafeArea = true,
+            forceNativeTopSafeArea = false,
             isFullscreenContent = false,
             isInsideSafeDrawingHost = false,
         )
@@ -75,10 +79,34 @@ class GeckoViewInsetRulesTest {
     }
 
     @Test
+    fun `automatic fallback moves only top safe area into native margin`() {
+        val safeArea = GeckoViewInsets(left = 8, top = 72, right = 6, bottom = 48)
+
+        val layout = GeckoViewInsetRules.resolve(
+            safeArea = safeArea,
+            forceNativeSafeArea = false,
+            forceNativeTopSafeArea = true,
+            isFullscreenContent = false,
+            isInsideSafeDrawingHost = false,
+        )
+
+        assertEquals(
+            GeckoViewInsets(left = 0, top = 72, right = 0, bottom = 0),
+            layout.margins,
+        )
+        assertEquals(
+            GeckoViewInsets(left = 8, top = 0, right = 6, bottom = 48),
+            layout.rendererSafeAreaOverride,
+        )
+        assertEquals(0, layout.scrollableTopInsetPx)
+    }
+
+    @Test
     fun `forced native safe area rejects negative synthetic inset values`() {
         val layout = GeckoViewInsetRules.resolve(
             safeArea = GeckoViewInsets(left = -8, top = -1, right = -6, bottom = -48),
             forceNativeSafeArea = true,
+            forceNativeTopSafeArea = false,
             isFullscreenContent = false,
             isInsideSafeDrawingHost = false,
         )
@@ -92,6 +120,7 @@ class GeckoViewInsetRulesTest {
         val layout = GeckoViewInsetRules.resolve(
             safeArea = GeckoViewInsets(left = 18, top = 72, right = 6, bottom = 48),
             forceNativeSafeArea = true,
+            forceNativeTopSafeArea = false,
             isFullscreenContent = true,
             isInsideSafeDrawingHost = false,
         )
@@ -106,6 +135,7 @@ class GeckoViewInsetRulesTest {
         val layout = GeckoViewInsetRules.resolve(
             safeArea = GeckoViewInsets(left = 18, top = 72, right = 6, bottom = 48),
             forceNativeSafeArea = true,
+            forceNativeTopSafeArea = false,
             isFullscreenContent = true,
             isInsideSafeDrawingHost = true,
         )

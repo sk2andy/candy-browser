@@ -23,5 +23,18 @@ class AndroidBrowserEngineRulesTest {
         assertTrue(capabilities.toppings)
         assertFalse(capabilities.firefoxExtensions)
         assertTrue(capabilities.nativeAutoplayPolicy)
+        assertFalse(capabilities.insecureHttpPasswordManagerSelection)
+    }
+
+    @Test
+    fun `only GeckoView supports insecure HTTP password manager selection`() {
+        assertTrue(
+            AndroidBrowserEngineRules.capabilities(AndroidBrowserEngineKind.GeckoView)
+                .insecureHttpPasswordManagerSelection,
+        )
+        assertFalse(
+            AndroidBrowserEngineRules.capabilities(AndroidBrowserEngineKind.SystemWebView)
+                .insecureHttpPasswordManagerSelection,
+        )
     }
 }

@@ -228,6 +228,9 @@ internal interface GeckoBrowserSession {
 
     fun setVideoAutoplayBlocked(blocked: Boolean)
 
+    /** Allows explicit Gecko login selection for cleartext HTTP origins. */
+    fun setHttpPasswordManagerSelectionEnabled(enabled: Boolean) = Unit
+
     /** Mutes current and future Gecko media sessions without changing tab activity. */
     fun setAudioMuted(muted: Boolean)
 

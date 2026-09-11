@@ -173,6 +173,10 @@ internal fun BrowserSettingsOverlay(
             isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
             isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
             isStartupAnimationEnabled = controller.isStartupAnimationEnabled,
+            isHttpPasswordAutofillEnabled = controller.isHttpPasswordAutofillEnabled,
+            isHttpPasswordAutofillSupported = controller.isHttpPasswordAutofillSupported,
+            isFavoriteLaunchAnimationEnabled =
+                controller.isFavoriteLaunchAnimationEnabled,
             isOpenHomeOnStartupEnabled = controller.isOpenHomeOnStartupEnabled,
             isScrollBarEnabled = controller.isScrollBarEnabled,
             isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
@@ -240,6 +244,10 @@ internal fun BrowserSettingsOverlay(
                 controller::updateFullImmersiveModeEnabled,
             onStartupAnimationEnabledChanged =
                 controller::updateStartupAnimationEnabled,
+            onHttpPasswordAutofillEnabledChanged =
+                controller::updateHttpPasswordAutofillEnabled,
+            onFavoriteLaunchAnimationEnabledChanged =
+                controller::updateFavoriteLaunchAnimationEnabled,
             onOpenHomeOnStartupEnabledChanged =
                 controller::updateOpenHomeOnStartupEnabled,
             onScrollBarEnabledChanged = controller::updateScrollBarEnabled,

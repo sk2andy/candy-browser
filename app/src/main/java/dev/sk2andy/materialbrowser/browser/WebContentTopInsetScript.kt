@@ -31,6 +31,10 @@ internal object WebContentTopInsetScript {
               const maximumRequiredConsecutiveLayoutFailures = 5;
               const compactControlTopPaddingCssPixels = 8;
               const stabilizationCheckDelaysMs = [250, 1000, 2500, 5000];
+              const ownedOffsetElements =
+                globalThis[stateKey]?.ownedOffsetElements || new Set();
+              const ownedTranslateStates =
+                globalThis[stateKey]?.ownedTranslateStates || new Map();
               let deferredLayoutChecks = 0;
               let deferredLayoutCheckTimer = 0;
               let immediateLayoutCheckFrame = 0;
@@ -38,6 +42,13 @@ internal object WebContentTopInsetScript {
               let activePolicyKey = null;
               let suspendedLayoutRecoveryKey = null;
               let localOffsetCollisionDetected = false;
+              let nativeFallbackRequested = false;
+              let scrollLayoutCheckFrame = 0;
+              let scrollVerificationTimer = 0;
+              let scrollVerificationFailures = 0;
+              let scrollVerificationPolicyKey = null;
+              let shadowHitTestCache = new WeakMap();
+              let shadowHitTestCacheResetFrame = 0;
               const currentPolicyKey = () => {
                 const generation = Number(
                   globalThis.$bridgeName?.navigationGeneration?.(),
@@ -73,13 +84,28 @@ internal object WebContentTopInsetScript {
                   : defaultRequiredConsecutiveLayoutFailures;
               };
               const clearOwnedOffset = (element) => {
+                const translateState = ownedTranslateStates.get(element);
                 element.removeAttribute(offsetAttribute);
                 element.removeAttribute(panelAttribute);
                 element.style.removeProperty(offsetProperty);
                 element.style.removeProperty(panelMaxHeightProperty);
+                if (translateState?.value) {
+                  element.style.setProperty(
+                    'translate',
+                    translateState.value,
+                    translateState.priority,
+                  );
+                } else {
+                  element.style.removeProperty('translate');
+                }
+                ownedTranslateStates.delete(element);
+                ownedOffsetElements.delete(element);
               };
               const clearOwnedOffsets = () => {
-                document.querySelectorAll(offsetSelector).forEach(clearOwnedOffset);
+                new Set([
+                  ...ownedOffsetElements,
+                  ...document.querySelectorAll(offsetSelector),
+                ]).forEach(clearOwnedOffset);
               };
               const clearOwnedFlowTarget = (root) => {
                 root.removeAttribute(flowRootAttribute);
@@ -89,7 +115,22 @@ internal object WebContentTopInsetScript {
                   element.style.removeProperty(flowOffsetProperty);
                 });
               };
-              const suspendLayoutRecovery = () => {
+              const requestNativeFallback = () => {
+                if (nativeFallbackRequested) return;
+                nativeFallbackRequested = true;
+                const generation = Number(
+                  globalThis.$bridgeName?.navigationGeneration?.(),
+                ) || 0;
+                const revision = Number(
+                  globalThis.$bridgeName?.policyRevision?.(),
+                ) || 0;
+                globalThis.$bridgeName?.fallbackToNative?.(generation, revision);
+              };
+              const suspendLayoutRecovery = (reason = 'unknown') => {
+                document.documentElement?.setAttribute(
+                  'data-candy-browser-top-inset-failure',
+                  reason,
+                );
                 if (document.readyState === 'loading') return;
                 const policyKey = currentPolicyKey();
                 resetFailuresForPolicy(policyKey);
@@ -106,6 +147,7 @@ internal object WebContentTopInsetScript {
                   return;
                 }
                 suspendedLayoutRecoveryKey = policyKey;
+                requestNativeFallback();
               };
               const layoutRecoverySuspendedForCurrentPolicy = () => {
                 return suspendedLayoutRecoveryKey === currentPolicyKey();
@@ -129,6 +171,69 @@ internal object WebContentTopInsetScript {
                 }
                 return points;
               };
+              const parentElementOrShadowHost = (element) =>
+                element?.parentElement || element?.getRootNode?.()?.host || null;
+              const composedContains = (container, element) => {
+                for (
+                  let current = element;
+                  current;
+                  current = parentElementOrShadowHost(current)
+                ) {
+                  if (current === container) return true;
+                }
+                return false;
+              };
+              const cachedShadowElements = (scope) => {
+                const cached = shadowHitTestCache.get(scope);
+                if (cached) return cached;
+                const elements = Array.from(scope.querySelectorAll?.('*') || []).map(
+                  (element) => ({ element, rect: element.getBoundingClientRect() }),
+                );
+                shadowHitTestCache.set(scope, elements);
+                if (!shadowHitTestCacheResetFrame) {
+                  shadowHitTestCacheResetFrame = globalThis.requestAnimationFrame(() => {
+                    shadowHitTestCacheResetFrame = 0;
+                    shadowHitTestCache = new WeakMap();
+                  });
+                }
+                return elements;
+              };
+              const deepElementsFromPoint = (x, y) => {
+                const layers = [];
+                const visitedRoots = new Set();
+                let scope = document;
+                while (scope && !visitedRoots.has(scope)) {
+                  visitedRoots.add(scope);
+                  const hitElements = typeof scope.elementsFromPoint === 'function'
+                    ? Array.from(scope.elementsFromPoint(x, y))
+                    : [];
+                  const hasScopedHit = hitElements.some(
+                    (element) => element.getRootNode?.() === scope,
+                  );
+                  const queriedElements = scope === document || hasScopedHit
+                    ? []
+                    : cachedShadowElements(scope).filter(({ rect }) => {
+                      return rect.left <= x && rect.right >= x &&
+                        rect.top <= y && rect.bottom >= y;
+                    }).map(({ element }) => element);
+                  const scopedElements = [...hitElements, ...queriedElements];
+                  layers.push(scopedElements);
+                  const shadowRoot = scopedElements
+                    .map((element) => element.shadowRoot)
+                    .find((candidate) => candidate && !visitedRoots.has(candidate));
+                  if (!shadowRoot) break;
+                  scope = shadowRoot;
+                }
+                const elements = [];
+                const visitedElements = new Set();
+                layers.reverse().forEach((layer) => layer.forEach((element) => {
+                  if (!visitedElements.has(element)) {
+                    visitedElements.add(element);
+                    elements.push(element);
+                  }
+                }));
+                return elements;
+              };
               const isVisiblePositionedElement = (element) => {
                 const style = getComputedStyle(element);
                 const rect = element.getBoundingClientRect();
@@ -140,7 +245,11 @@ internal object WebContentTopInsetScript {
               };
               const findPositionedCandidate = (element, root, fixedOnly) => {
                 let absoluteCandidate = null;
-                for (let current = element; current && current !== root; current = current.parentElement) {
+                for (
+                  let current = element;
+                  current && current !== root;
+                  current = parentElementOrShadowHost(current)
+                ) {
                   const position = getComputedStyle(current).position;
                   if (
                     (position === 'fixed' || position === 'sticky') &&
@@ -151,7 +260,6 @@ internal object WebContentTopInsetScript {
                   if (
                     !fixedOnly &&
                     position === 'absolute' &&
-                    !absoluteCandidate &&
                     isVisiblePositionedElement(current)
                   ) {
                     absoluteCandidate = current;
@@ -224,12 +332,24 @@ internal object WebContentTopInsetScript {
               };
               const applyLocalOffsetPlans = (plans) => {
                 for (const plan of plans) {
+                  if (plan.element.getAttribute(offsetAttribute) !== 'true') {
+                    ownedTranslateStates.set(plan.element, {
+                      value: plan.element.style.getPropertyValue('translate'),
+                      priority: plan.element.style.getPropertyPriority('translate'),
+                    });
+                  }
                   plan.element.style.setProperty(
                     offsetProperty,
                     `${'$'}{plan.offset}px`,
                     'important',
                   );
+                  plan.element.style.setProperty(
+                    'translate',
+                    `0 var(${'$'}{offsetProperty}, 0px)`,
+                    'important',
+                  );
                   plan.element.setAttribute(offsetAttribute, 'true');
+                  ownedOffsetElements.add(plan.element);
                   if (plan.panelMaxHeight === null) {
                     plan.element.removeAttribute(panelAttribute);
                     plan.element.style.removeProperty(panelMaxHeightProperty);
@@ -269,8 +389,8 @@ internal object WebContentTopInsetScript {
               const isInteractiveAtPoint = (element, boundary) => {
                 for (
                   let current = element;
-                  current && boundary.contains(current);
-                  current = current.parentElement
+                  current && composedContains(boundary, current);
+                  current = parentElementOrShadowHost(current)
                 ) {
                   const style = getComputedStyle(current);
                   if (
@@ -290,7 +410,11 @@ internal object WebContentTopInsetScript {
                 excluded,
                 includeNonInteractiveAbsolute,
               ) => {
-                for (let current = element; current && current !== root; current = current.parentElement) {
+                for (
+                  let current = element;
+                  current && current !== root;
+                  current = parentElementOrShadowHost(current)
+                ) {
                   const style = getComputedStyle(current);
                   const position = style.position;
                   if (
@@ -302,8 +426,8 @@ internal object WebContentTopInsetScript {
                   }
                   if (
                     current !== excluded &&
-                    !excluded.contains(current) &&
-                    !current.contains(excluded) &&
+                    !composedContains(excluded, current) &&
+                    !composedContains(current, excluded) &&
                     (
                       position === 'absolute' ||
                       position === 'fixed' ||
@@ -317,11 +441,15 @@ internal object WebContentTopInsetScript {
                 return null;
               };
               const findCompactViewportWidePeer = (element, root, excluded) => {
-                for (let current = element; current && current !== root; current = current.parentElement) {
+                for (
+                  let current = element;
+                  current && current !== root;
+                  current = parentElementOrShadowHost(current)
+                ) {
                   if (
                     current === excluded ||
-                    excluded.contains(current) ||
-                    current.contains(excluded)
+                    composedContains(excluded, current) ||
+                    composedContains(current, excluded)
                   ) {
                     continue;
                   }
@@ -347,14 +475,14 @@ internal object WebContentTopInsetScript {
                 const overlapTop = Math.max(planRect.top, peerRect.top);
                 const overlapBottom = Math.min(planRect.bottom, peerRect.bottom);
                 if (overlapRight <= overlapLeft || overlapBottom <= overlapTop) return false;
-                const stack = Array.from(document.elementsFromPoint(
+                const stack = deepElementsFromPoint(
                   (overlapLeft + overlapRight) / 2,
                   (overlapTop + overlapBottom) / 2,
-                ));
+                );
                 const planIndex = stack.findIndex((element) =>
-                  element === planElement || planElement.contains(element));
+                  element === planElement || composedContains(planElement, element));
                 const peerIndex = stack.findIndex((element) =>
-                  element === peer || peer.contains(element));
+                  element === peer || composedContains(peer, element));
                 return planIndex >= 0 && peerIndex > planIndex;
               };
               const hasPositionedPeerCollision = (plans, root, projected) => {
@@ -378,11 +506,11 @@ internal object WebContentTopInsetScript {
                     Math.max(1, rect.bottom - 1),
                   ].filter((value) => value < globalThis.innerHeight);
                   return xCoordinates.some((x) => yCoordinates.some((y) =>
-                    Array.from(document.elementsFromPoint(x, y)).some((element) => {
+                    deepElementsFromPoint(x, y).some((element) => {
                       if (
                         element === plan.element ||
-                        plan.element.contains(element) ||
-                        element.contains(plan.element)
+                        composedContains(plan.element, element) ||
+                        composedContains(element, plan.element)
                       ) {
                         return false;
                       }
@@ -398,8 +526,8 @@ internal object WebContentTopInsetScript {
                       if (
                         !peer ||
                         peer === plan.element ||
-                        plan.element.contains(peer) ||
-                        peer.contains(plan.element)
+                        composedContains(plan.element, peer) ||
+                        composedContains(peer, plan.element)
                       ) {
                         return false;
                       }
@@ -431,14 +559,16 @@ internal object WebContentTopInsetScript {
               };
               const refreshOwnedOffsets = (cssPixels) => {
                 const plans = [];
-                for (const element of document.querySelectorAll(offsetSelector)) {
+                for (const element of new Set([
+                  ...ownedOffsetElements,
+                  ...document.querySelectorAll(offsetSelector),
+                ])) {
+                  if (!element.isConnected) {
+                    clearOwnedOffset(element);
+                    continue;
+                  }
                   const style = getComputedStyle(element);
-                  if (
-                    style.display === 'none' ||
-                    style.visibility === 'hidden' ||
-                    style.visibility === 'collapse' ||
-                    Number.parseFloat(style.opacity) <= 0.01
-                  ) {
+                  if (!isVisiblePositionedElement(element)) {
                     // Keep an established offset while a site temporarily hides its header.
                     // Scroll events do not reconcile, so transient scroll motion stays untouched.
                     continue;
@@ -490,7 +620,14 @@ internal object WebContentTopInsetScript {
                     Number.isFinite(candidateZIndex) && candidateZIndex > zIndex;
                 });
               };
-              const protectTopInset = (root, body, style, cssPixels, fixedOnly) => {
+              const protectTopInset = (
+                root,
+                body,
+                style,
+                cssPixels,
+                fixedOnly,
+                preserveOwnedOffsets = false,
+              ) => {
                 const ignored = (element) =>
                   !element || element === root || element === body || element === style ||
                   element.matches?.(flowTargetSelector) || element.tagName === 'HEAD';
@@ -499,22 +636,35 @@ internal object WebContentTopInsetScript {
                   const plannedCandidates = new Map();
                   for (const y of sampleAxis(cssPixels)) {
                     for (const x of sampleAxis(globalThis.innerWidth)) {
-                      for (const element of document.elementsFromPoint(x, y)) {
+                      for (const element of deepElementsFromPoint(x, y)) {
                         if (ignored(element)) continue;
                         const candidate = findPositionedCandidate(element, root, fixedOnly);
                         if (!candidate) {
                           if (fixedOnly) continue;
                           return false;
                         }
-                        candidates.add(candidate);
+                        if (
+                          preserveOwnedOffsets &&
+                          candidate.getAttribute(offsetAttribute) === 'true'
+                        ) {
+                          break;
+                        }
                         const plan = planLocalOffset(candidate, cssPixels);
-                        if (!plan) continue;
+                        if (!plan) {
+                          const candidateRect = candidate.getBoundingClientRect();
+                          const coversViewport =
+                            candidateRect.width >= globalThis.innerWidth * 0.8 &&
+                            candidateRect.height >= globalThis.innerHeight * 0.8;
+                          if (!coversViewport) candidates.add(candidate);
+                          continue;
+                        }
+                        candidates.add(candidate);
                         plannedCandidates.set(candidate, plan);
                         break;
                       }
                     }
                   }
-                  if (plannedCandidates.size === 0) return true;
+                  if (plannedCandidates.size === 0) return candidates.size === 0;
                   const candidateList = Array.from(candidates);
                   const backdropPeers = Array.from(new Set([
                     ...candidateList,
@@ -611,10 +761,109 @@ internal object WebContentTopInsetScript {
                   });
                 });
               };
+              const protectLateTopInset = () => {
+                const root = document.documentElement;
+                const body = document.body;
+                const style = document.querySelector(ownedSelector);
+                const physicalPixels = Number(
+                  globalThis.$bridgeName?.topInsetPx?.(),
+                ) || 0;
+                if (!root || !body || !style || physicalPixels <= 0) return;
+                const density = Number(globalThis.devicePixelRatio) || 1;
+                localOffsetCollisionDetected = false;
+                const protectedTop = protectTopInset(
+                  root,
+                  body,
+                  style,
+                  physicalPixels / density,
+                  true,
+                  true,
+                );
+                if (protectedTop) {
+                  consecutiveLayoutFailures = 0;
+                } else {
+                  scheduleDeferredLayoutCheck(false);
+                }
+              };
+              const verifyLateTopInset = () => {
+                scrollVerificationTimer = 0;
+                const root = document.documentElement;
+                const body = document.body;
+                const style = document.querySelector(ownedSelector);
+                const physicalPixels = Number(
+                  globalThis.$bridgeName?.topInsetPx?.(),
+                ) || 0;
+                if (!root || !body || !style || physicalPixels <= 0) return;
+                const density = Number(globalThis.devicePixelRatio) || 1;
+                const cssPixels = physicalPixels / density;
+                for (const y of sampleAxis(cssPixels)) {
+                  for (const x of sampleAxis(globalThis.innerWidth)) {
+                    for (const element of deepElementsFromPoint(x, y)) {
+                      if (
+                        !element || element === root || element === body || element === style ||
+                        element.tagName === 'HEAD'
+                      ) {
+                        continue;
+                      }
+                      const candidate = findPositionedCandidate(element, root, true);
+                      if (!candidate) continue;
+                      const candidateRect = candidate.getBoundingClientRect();
+                      const coversViewport =
+                        candidateRect.width >= globalThis.innerWidth * 0.8 &&
+                        candidateRect.height >= globalThis.innerHeight * 0.8;
+                      if (coversViewport) continue;
+                      const policyKey = currentPolicyKey();
+                      if (scrollVerificationPolicyKey !== policyKey) {
+                        scrollVerificationPolicyKey = policyKey;
+                        scrollVerificationFailures = 0;
+                      }
+                      scrollVerificationFailures++;
+                      if (
+                        scrollVerificationFailures >= requiredConsecutiveLayoutFailures()
+                      ) {
+                        requestNativeFallback();
+                      } else {
+                        scrollVerificationTimer = globalThis.setTimeout(
+                          verifyLateTopInset,
+                          layoutQuietPeriodMs(),
+                        );
+                      }
+                      return;
+                    }
+                  }
+                }
+                scrollVerificationFailures = 0;
+                scrollVerificationPolicyKey = currentPolicyKey();
+              };
+              const windowScrollListener = () => {
+                scrollVerificationFailures = 0;
+                scrollVerificationPolicyKey = currentPolicyKey();
+                if (scrollVerificationTimer) {
+                  globalThis.clearTimeout(scrollVerificationTimer);
+                }
+                if (scrollLayoutCheckFrame) {
+                  globalThis.cancelAnimationFrame(scrollLayoutCheckFrame);
+                  scrollLayoutCheckFrame = 0;
+                }
+                scrollVerificationTimer = globalThis.setTimeout(
+                  () => {
+                    scrollVerificationTimer = 0;
+                    scrollLayoutCheckFrame = globalThis.requestAnimationFrame(() => {
+                      scrollLayoutCheckFrame = 0;
+                      protectLateTopInset();
+                      scrollVerificationTimer = globalThis.setTimeout(
+                        verifyLateTopInset,
+                        layoutQuietPeriodMs(),
+                      );
+                    });
+                  },
+                  layoutQuietPeriodMs(),
+                );
+              };
               const protectInteractionTarget = (event) => {
                 const root = document.documentElement;
                 const target = event?.target;
-                if (!root || !(target instanceof Element) || viewportFitsCover()) return;
+                if (!root || !(target instanceof Element)) return;
                 const physicalPixels =
                   Number(globalThis.$bridgeName?.topInsetPx?.()) || 0;
                 if (physicalPixels <= 0) return;
@@ -629,18 +878,8 @@ internal object WebContentTopInsetScript {
                 if (!(target instanceof Element) || target === document.body) return;
                 const candidate = findPositionedCandidate(target, root, false);
                 if (!candidate) return;
-                const rect = candidate.getBoundingClientRect();
-                const requiredDelta = Math.max(0, cssPixels - rect.top);
-                if (requiredDelta <= 0) return;
-                const previousOffset = Number.parseFloat(
-                  candidate.style.getPropertyValue(offsetProperty),
-                ) || 0;
-                candidate.style.setProperty(
-                  offsetProperty,
-                  `${'$'}{previousOffset + requiredDelta}px`,
-                  'important',
-                );
-                candidate.setAttribute(offsetAttribute, 'true');
+                const plan = planLocalOffset(candidate, cssPixels);
+                if (plan) applyLocalOffsetPlans([plan]);
               };
               const scheduleInteractionLayoutCheck = () => {
                 resumeLayoutRecovery();
@@ -696,11 +935,6 @@ internal object WebContentTopInsetScript {
                 }
                 return null;
               };
-              const viewportFitsCover = () => {
-                const viewport = document.querySelector('meta[name="viewport"]');
-                return globalThis.$bridgeName?.viewportCoverAllowed?.() === true &&
-                  /viewport-fit\s*=\s*cover/i.test(viewport?.content || '');
-              };
               const topContentBackground = (root, cssPixels) => {
                 const viewportWidth = globalThis.innerWidth;
                 const viewportHeight = globalThis.innerHeight;
@@ -740,15 +974,7 @@ internal object WebContentTopInsetScript {
                   Number(globalThis.$bridgeName?.topInsetPx?.()) || 0;
                 if (physicalPixels <= 0) {
                   consecutiveLayoutFailures = 0;
-                  clearOwnedOffsets();
-                  clearOwnedFlowTarget(root);
-                  document.querySelector(ownedSelector)?.remove();
-                  root.style.removeProperty(property);
-                  root.style.removeProperty(backgroundProperty);
-                  return;
-                }
-                if (viewportFitsCover()) {
-                  consecutiveLayoutFailures = 0;
+                  root.removeAttribute('data-candy-browser-top-inset-failure');
                   clearOwnedOffsets();
                   clearOwnedFlowTarget(root);
                   document.querySelector(ownedSelector)?.remove();
@@ -780,9 +1006,6 @@ internal object WebContentTopInsetScript {
                         var(${'$'}{flowMarginProperty}, 0px) +
                         var(${'$'}{flowOffsetProperty}, 0px)
                       ) !important;
-                    }
-                    [${'$'}{offsetAttribute}="true"] {
-                      translate: 0 var(${'$'}{offsetProperty}, 0px) !important;
                     }
                     [${'$'}{panelAttribute}="true"] {
                       max-height: var(${'$'}{panelMaxHeightProperty}) !important;
@@ -831,11 +1054,11 @@ internal object WebContentTopInsetScript {
                   !Number.isFinite(appliedPixels) || !Number.isFinite(expectedPixels) ||
                   Math.abs(appliedPixels - expectedPixels) > 0.5
                 ) {
-                  if (allowRecoverySuspension) suspendLayoutRecovery();
+                  if (allowRecoverySuspension) suspendLayoutRecovery('flow-inset-mismatch');
                   return;
                 }
                 if (!refreshOwnedOffsets(cssPixels)) {
-                  if (allowRecoverySuspension) suspendLayoutRecovery();
+                  if (allowRecoverySuspension) suspendLayoutRecovery('owned-offset-refresh');
                   return;
                 }
                 if (document.readyState !== 'loading') {
@@ -858,14 +1081,21 @@ internal object WebContentTopInsetScript {
                       protectTopInset(root, body, style, cssPixels, false);
                   }
                   if (!topInsetProtected) {
-                    if (allowRecoverySuspension) suspendLayoutRecovery();
+                    if (allowRecoverySuspension) suspendLayoutRecovery(
+                      localOffsetCollisionDetected ? 'positioned-peer-collision' : 'top-obstruction',
+                    );
                     return;
                   }
                 }
                 consecutiveLayoutFailures = 0;
+                root.removeAttribute('data-candy-browser-top-inset-failure');
               };
               const styleWithoutCandyProperties = (value) => (value || '')
                 .replace(/--candy-browser-[^:;]+\s*:\s*[^;]*(?:;|${'$'})/gi, '')
+                .replace(
+                  /translate\s*:\s*0\s+var\(--candy-browser-owned-top-inset-offset[^;]*(?:;|${'$'})/gi,
+                  '',
+                )
                 .replace(/\s+/g, ' ')
                 .trim();
               const isRelevantLayoutMutation = (record) => {
@@ -907,21 +1137,54 @@ internal object WebContentTopInsetScript {
                       previousState.windowResizeListener,
                     );
                   }
+                  if (previousState?.windowScrollListener) {
+                    globalThis.removeEventListener(
+                      'scroll',
+                      previousState.windowScrollListener,
+                    );
+                    document.removeEventListener(
+                      'scroll',
+                      previousState.windowScrollListener,
+                      true,
+                    );
+                  }
                 }
-                const observer = new MutationObserver((records) => {
+                const observerOptions = {
+                  attributeFilter: ['class', 'content', 'style'],
+                  attributeOldValue: true,
+                  attributes: true,
+                  childList: true,
+                  subtree: true,
+                };
+                const observedShadowRoots = new WeakSet();
+                let observer = null;
+                const observeOpenShadowRoots = (scope) => {
+                  const elements = [
+                    ...(scope instanceof Element ? [scope] : []),
+                    ...Array.from(scope.querySelectorAll?.('*') || []),
+                  ];
+                  elements.forEach((element) => {
+                    const shadowRoot = element.shadowRoot;
+                    if (!shadowRoot || observedShadowRoots.has(shadowRoot)) return;
+                    observedShadowRoots.add(shadowRoot);
+                    observer.observe(shadowRoot, observerOptions);
+                    observeOpenShadowRoots(shadowRoot);
+                  });
+                };
+                observer = new MutationObserver((records) => {
+                  records.forEach((record) => {
+                    record.addedNodes?.forEach((node) => {
+                      if (node instanceof Element) observeOpenShadowRoots(node);
+                    });
+                  });
                   if (records.some(isRelevantLayoutMutation)) {
                     resumeLayoutRecovery();
                     scheduleImmediateLayoutCheck();
                     scheduleDeferredLayoutCheck(true);
                   }
                 });
-                observer.observe(root, {
-                  attributeFilter: ['class', 'content', 'style'],
-                  attributeOldValue: true,
-                  attributes: true,
-                  childList: true,
-                  subtree: true,
-                });
+                observer.observe(root, observerOptions);
+                observeOpenShadowRoots(root);
                 const interactionEvents = [
                   'click',
                   'change',
@@ -949,6 +1212,11 @@ internal object WebContentTopInsetScript {
                   scheduleDeferredLayoutCheck(true);
                 };
                 globalThis.addEventListener('resize', windowResizeListener);
+                globalThis.addEventListener('scroll', windowScrollListener, { passive: true });
+                document.addEventListener('scroll', windowScrollListener, {
+                  capture: true,
+                  passive: true,
+                });
                 const domContentLoadedListener = () => scheduleDeferredLayoutCheck(true);
                 const windowLoadListener = () => scheduleDeferredLayoutCheck(true);
                 const runtimeState = {
@@ -958,8 +1226,11 @@ internal object WebContentTopInsetScript {
                   immediateInteractionEvents,
                   immediateInteractionListener: scheduleImmediateInteractionLayoutCheck,
                   windowResizeListener,
+                  windowScrollListener,
                   domContentLoadedListener,
                   windowLoadListener,
+                  ownedOffsetElements,
+                  ownedTranslateStates,
                   stabilizationCheckTimers: [],
                   dispose: null,
                 };
@@ -969,6 +1240,13 @@ internal object WebContentTopInsetScript {
                   deferredLayoutCheckTimer = 0;
                   globalThis.cancelAnimationFrame(immediateLayoutCheckFrame);
                   immediateLayoutCheckFrame = 0;
+                  globalThis.cancelAnimationFrame(scrollLayoutCheckFrame);
+                  scrollLayoutCheckFrame = 0;
+                  globalThis.cancelAnimationFrame(shadowHitTestCacheResetFrame);
+                  shadowHitTestCacheResetFrame = 0;
+                  shadowHitTestCache = new WeakMap();
+                  globalThis.clearTimeout(scrollVerificationTimer);
+                  scrollVerificationTimer = 0;
                   runtimeState.stabilizationCheckTimers.forEach(globalThis.clearTimeout);
                   interactionEvents.forEach((eventName) => {
                     document.removeEventListener(
@@ -985,6 +1263,8 @@ internal object WebContentTopInsetScript {
                     );
                   });
                   globalThis.removeEventListener('resize', windowResizeListener);
+                  globalThis.removeEventListener('scroll', windowScrollListener);
+                  document.removeEventListener('scroll', windowScrollListener, true);
                   document.removeEventListener(
                     'DOMContentLoaded',
                     domContentLoadedListener,
