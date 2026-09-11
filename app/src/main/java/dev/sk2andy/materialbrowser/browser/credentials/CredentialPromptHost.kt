@@ -105,7 +105,46 @@ internal object CredentialPromptRules {
         pageUrl: String?,
         sessionGeneration: Long,
         navigationGeneration: Long,
-        allowHttp: Boolean = false,
+    ): CredentialPromptIdentity? = promptIdentity(
+        tabId = tabId,
+        profileId = profileId,
+        isPrivate = isPrivate,
+        isActive = isActive,
+        pageUrl = pageUrl,
+        sessionGeneration = sessionGeneration,
+        navigationGeneration = navigationGeneration,
+        allowHttp = false,
+    )
+
+    fun loginSelectionIdentity(
+        tabId: String?,
+        profileId: String,
+        isPrivate: Boolean,
+        isActive: Boolean,
+        pageUrl: String?,
+        sessionGeneration: Long,
+        navigationGeneration: Long,
+        allowHttp: Boolean,
+    ): CredentialPromptIdentity? = promptIdentity(
+        tabId = tabId,
+        profileId = profileId,
+        isPrivate = isPrivate,
+        isActive = isActive,
+        pageUrl = pageUrl,
+        sessionGeneration = sessionGeneration,
+        navigationGeneration = navigationGeneration,
+        allowHttp = allowHttp,
+    )
+
+    private fun promptIdentity(
+        tabId: String?,
+        profileId: String,
+        isPrivate: Boolean,
+        isActive: Boolean,
+        pageUrl: String?,
+        sessionGeneration: Long,
+        navigationGeneration: Long,
+        allowHttp: Boolean,
     ): CredentialPromptIdentity? {
         if (isPrivate || !isActive || sessionGeneration <= 0 || navigationGeneration < 0) return null
         val safeTabId = boundedText(tabId, MAX_TAB_ID_LENGTH) ?: return null
@@ -148,8 +187,8 @@ internal object CredentialPromptRules {
             username.none(::isUnsafeTextCharacter) &&
             (allowedUserIds.isEmpty() || username in allowedUserIds)
 
-    fun matchesOrigin(candidate: String?, expected: String): Boolean =
-        credentialOrigin(candidate, allowHttp = true) == expected
+    fun matchesHttpsOrigin(candidate: String?, expected: String): Boolean =
+        credentialOrigin(candidate, allowHttp = false) == expected
 
     fun displayLabel(value: String?): String? = boundedText(value, MAX_LABEL_LENGTH)
 
