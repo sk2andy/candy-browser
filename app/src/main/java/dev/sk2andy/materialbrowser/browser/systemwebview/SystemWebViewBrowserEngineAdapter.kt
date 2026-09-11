@@ -29,6 +29,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.UiThread
+import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptExecutionWorld
@@ -964,6 +965,9 @@ private class SystemWebViewBrowserEngineSession(
         }
 
         override fun onPageCommitVisible(view: WebView, url: String?) {
+            if (topInsetScriptHandler == null) {
+                view.evaluateJavascript(WebContentTopInsetScript.installScript, null)
+            }
             applyDocumentCosmetics(url)
         }
 
@@ -1367,7 +1371,6 @@ private class SystemWebViewBrowserEngineSession(
 
     private fun installTopInsetScript() {
         topInsetScriptHandler = addDocumentStartScript(WebContentTopInsetScript.installScript)
-        host.setDocumentStartAvailable(topInsetScriptHandler != null)
     }
 
     private fun installAutoplayPolicy() {
@@ -1635,7 +1638,9 @@ private class SystemWebViewHost(
     private var topInsetEnabled = false
     private var safeAreaLayoutQuietPeriodMillis = 400
     private var safeAreaRequiredFailureCount = 3
-    private var documentStartAvailable = false
+    private val viewportCoverAllowed = SystemWebViewSafeAreaRules.supportsCssSafeAreaInsets(
+        WebView.getCurrentWebViewPackage()?.versionName,
+    )
     private var currentLayout = GeckoViewInsetLayout(
         margins = GeckoViewInsets.Zero,
         rendererSafeAreaOverride = null,
@@ -1649,7 +1654,7 @@ private class SystemWebViewHost(
                 fun topInsetPx(): Int = topInsetPx
 
                 @android.webkit.JavascriptInterface
-                fun viewportCoverAllowed(): Boolean = true
+                fun viewportCoverAllowed(): Boolean = viewportCoverAllowed
 
                 @android.webkit.JavascriptInterface
                 fun navigationGeneration(): Int = navigationGeneration
@@ -1674,12 +1679,6 @@ private class SystemWebViewHost(
     }
 
     fun contentScrollRangePx(): Int = computeVerticalScrollRange()
-
-    fun setDocumentStartAvailable(available: Boolean) {
-        if (documentStartAvailable == available) return
-        documentStartAvailable = available
-        applyCurrentLayout()
-    }
 
     fun updatePolicy(
         topInsetEnabled: Boolean,
@@ -1715,7 +1714,12 @@ private class SystemWebViewHost(
         val previousTopInset = topInsetPx
         val previousBottomPadding = paddingBottom
         applyCurrentLayout()
-        ViewCompat.dispatchApplyWindowInsets(this, windowInsets)
+        val rendererInsets = if (layout.rendererSafeAreaOverride == GeckoViewInsets.Zero) {
+            windowInsets.withSafeAreaCleared()
+        } else {
+            windowInsets
+        }
+        ViewCompat.dispatchApplyWindowInsets(this, rendererInsets)
         if (previousTopInset != topInsetPx || previousBottomPadding != paddingBottom) {
             evaluateJavascript(WebContentTopInsetScript.installScript, null)
         }
@@ -1727,7 +1731,6 @@ private class SystemWebViewHost(
             drawsEdgeToEdge = layout.margins.top == 0 && layout.scrollableTopInsetPx == 0,
             forceSafeArea = layout.margins.top > 0,
             scrollableDocumentEnabled = topInsetEnabled && layout.scrollableTopInsetPx > 0,
-            documentStartAvailable = documentStartAvailable,
         )
         val nativeTopInset = when (mode) {
             WebContentTopInsetMode.NativeSafeArea ->
@@ -1753,7 +1756,16 @@ private class SystemWebViewHost(
             }
         }
         topInsetPx = if (mode == WebContentTopInsetMode.ScrollableDocument) layoutTopInsetPx else 0
-        val bottomPadding = layout.rendererSafeAreaOverride?.bottom?.coerceAtLeast(0) ?: 0
-        setPadding(0, 0, 0, bottomPadding)
+        setPadding(0, 0, 0, 0)
     }
+}
+
+private fun WindowInsetsCompat.withSafeAreaCleared(): WindowInsetsCompat {
+    val safeAreaTypes =
+        WindowInsetsCompat.Type.systemBars() or
+            WindowInsetsCompat.Type.displayCutout()
+    return WindowInsetsCompat.Builder(this)
+        .setInsets(safeAreaTypes, Insets.NONE)
+        .setInsetsIgnoringVisibility(safeAreaTypes, Insets.NONE)
+        .build()
 }

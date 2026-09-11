@@ -91,6 +91,7 @@ function applyPolicy(policy) {
 
 globalThis.CandyContentTopInset = Object.freeze({
   topInsetPx: () => state.topInsetPx,
+  viewportCoverAllowed: () => true,
   navigationGeneration: () => state.navigationGeneration,
   policyRevision: () => state.revision,
   safeAreaLayoutQuietPeriodMillis: () => state.safeAreaLayoutQuietPeriodMillis,

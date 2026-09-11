@@ -103,28 +103,23 @@ Camera and microphone permissions remain separate and continue through Candy's p
   compact state while background, replaced and closed sessions are ignored.
   API 34+ regression fixtures verify a real GeckoSession and the production controller-listener
   seam, including page scroll, Link Peek and tab/session replacement guards.
-- Android keeps its root window and Gecko surface edge to edge. Candy's document-start privacy bridge
-  inserts one scrollable top inset and offsets obstructing fixed/sticky page controls. Compact
-  interactive controls keep an extra 8-CSS-pixel gap below that inset without moving viewport-wide
-  headers or decorative elements. Candidate discovery scans the full hit-test stack and skips
-  unmovable fullscreen shells, allowing nested absolute controls such as Google's mobile menu to be
-  protected. Collision checks stay inside the projected control bounds, ignore viewport-wide peers
-  for compact controls, and ignore lower-stacked peers behind a moved control. This prevents distant,
-  hidden, or visually covered actions from triggering native fallback; the bounded
-  policy retry closes the cold-navigation race before the Gecko session binding exists. Gecko receives
-  the bottom CSS `safe-area-inset-*`. A page's `viewport-fit=cover` declaration cannot disable Candy's
-  scrollable top inset because Candy intentionally owns that edge and sets Gecko's top CSS safe area
-  to zero. If a page defeats the guarded layout, the navigation-bound
-  fallback waits for 400 ms of layout quiet and three consecutive failures by default, then switches
-  that renderer live to inner native margins and clears Candy's document inset without reloading.
-  Search-input and IME composition changes run a fallback-free repair during the next two animation
-  frames, so newly displayed search headers clear the status bar while typing instead of waiting for
-  the fallback quiet period.
-  Hidden developer options can tune those bounded values live for both Android engines. The
-  per-site **Force safe area** override
-  does the same explicitly. Fullscreen remains truly edge to edge, while Compose safe-drawing hosts
-  clear duplicate renderer insets. Candy keeps GeckoView's default SurfaceView backend so page frames
-  go directly to Android's compositor instead of being copied through a TextureView.
+- Android keeps Candy's window, Gecko surface, and System WebView at the full edge-to-edge frame.
+  Both engines receive Android's renderer safe area. A page that declares `viewport-fit=cover`
+  owns its layout through CSS `env(safe-area-inset-*)` and receives no Candy compatibility offset
+  when the engine supports that contract. System WebView exposes full non-fullscreen CSS safe-area
+  insets from milestone 144; older or unparseable providers keep Candy's document compatibility
+  inset instead of silently exposing zero-valued CSS environment variables.
+  Other pages receive a document-start compatibility inset: normal flow starts below the protected
+  top and top-anchored fixed, sticky, absolute, or focused containers are shifted by the same stable
+  amount. Candy reacts to new DOM and focus/input transitions, but never recomputes offsets because
+  of scrolling; an established offset survives site-owned hide/show, while a visible element that
+  returns to normal flow has Candy's old translation removed. A persistent layout conflict suspends
+  timer retries until a later DOM change or user interaction resumes recovery. Layout-recovery
+  failure cannot move a normal tab into native margins. Only the explicit per-site
+  **Force safe area** override does that. Fullscreen remains truly edge to edge, while Compose
+  safe-drawing hosts clear duplicate renderer insets.
+  Candy keeps GeckoView's default SurfaceView backend so page frames go directly to Android's
+  compositor instead of being copied through a TextureView.
 - The optional draggable scrollbar reads bounded document metrics from Candy's authenticated,
   top-frame Gecko content bridge; GeckoView's Android view scrollbar metrics describe only the
   compositor host and are not a document-height API. The same overlay writes absolute offsets through

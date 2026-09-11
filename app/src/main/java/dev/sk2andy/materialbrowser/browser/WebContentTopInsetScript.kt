@@ -36,7 +36,7 @@ internal object WebContentTopInsetScript {
               let immediateLayoutCheckFrame = 0;
               let consecutiveLayoutFailures = 0;
               let activePolicyKey = null;
-              let nativeFallbackRequestKey = null;
+              let suspendedLayoutRecoveryKey = null;
               let localOffsetCollisionDetected = false;
               const currentPolicyKey = () => {
                 const generation = Number(
@@ -72,13 +72,14 @@ internal object WebContentTopInsetScript {
                   )
                   : defaultRequiredConsecutiveLayoutFailures;
               };
+              const clearOwnedOffset = (element) => {
+                element.removeAttribute(offsetAttribute);
+                element.removeAttribute(panelAttribute);
+                element.style.removeProperty(offsetProperty);
+                element.style.removeProperty(panelMaxHeightProperty);
+              };
               const clearOwnedOffsets = () => {
-                document.querySelectorAll(offsetSelector).forEach((element) => {
-                  element.removeAttribute(offsetAttribute);
-                  element.removeAttribute(panelAttribute);
-                  element.style.removeProperty(offsetProperty);
-                  element.style.removeProperty(panelMaxHeightProperty);
-                });
+                document.querySelectorAll(offsetSelector).forEach(clearOwnedOffset);
               };
               const clearOwnedFlowTarget = (root) => {
                 root.removeAttribute(flowRootAttribute);
@@ -88,7 +89,7 @@ internal object WebContentTopInsetScript {
                   element.style.removeProperty(flowOffsetProperty);
                 });
               };
-              const requestNativeFallback = () => {
+              const suspendLayoutRecovery = () => {
                 if (document.readyState === 'loading') return;
                 const policyKey = currentPolicyKey();
                 resetFailuresForPolicy(policyKey);
@@ -104,21 +105,18 @@ internal object WebContentTopInsetScript {
                   scheduleDeferredLayoutCheck(false);
                   return;
                 }
-                if (nativeFallbackRequestKey === policyKey) return;
-                nativeFallbackRequestKey = policyKey;
-                const [generation, revision] = policyKey.split(':').map(Number);
-                clearOwnedOffsets();
-                const root = document.documentElement;
-                if (root) {
-                  clearOwnedFlowTarget(root);
-                  document.querySelector(ownedSelector)?.remove();
-                  root.style.removeProperty(property);
-                  root.style.removeProperty(backgroundProperty);
-                }
-                globalThis.$bridgeName?.fallbackToNative?.(generation, revision);
+                suspendedLayoutRecoveryKey = policyKey;
               };
-              const nativeFallbackRequestedForCurrentPolicy = () => {
-                return nativeFallbackRequestKey === currentPolicyKey();
+              const layoutRecoverySuspendedForCurrentPolicy = () => {
+                return suspendedLayoutRecoveryKey === currentPolicyKey();
+              };
+              const resumeLayoutRecovery = () => {
+                const policyKey = currentPolicyKey();
+                if (suspendedLayoutRecoveryKey === policyKey) {
+                  suspendedLayoutRecoveryKey = null;
+                }
+                resetFailuresForPolicy(policyKey, true);
+                deferredLayoutChecks = 0;
               };
               const sampleAxis = (limit) => {
                 const points = [];
@@ -439,17 +437,18 @@ internal object WebContentTopInsetScript {
                     style.display === 'none' ||
                     style.visibility === 'hidden' ||
                     style.visibility === 'collapse' ||
-                    Number.parseFloat(style.opacity) <= 0.01 ||
-                    (
-                      style.position !== 'absolute' &&
-                      style.position !== 'fixed' &&
-                      style.position !== 'sticky'
-                    )
+                    Number.parseFloat(style.opacity) <= 0.01
                   ) {
-                    element.removeAttribute(offsetAttribute);
-                    element.removeAttribute(panelAttribute);
-                    element.style.removeProperty(offsetProperty);
-                    element.style.removeProperty(panelMaxHeightProperty);
+                    // Keep an established offset while a site temporarily hides its header.
+                    // Scroll events do not reconcile, so transient scroll motion stays untouched.
+                    continue;
+                  }
+                  if (
+                    style.position !== 'absolute' &&
+                    style.position !== 'fixed' &&
+                    style.position !== 'sticky'
+                  ) {
+                    clearOwnedOffset(element);
                     continue;
                   }
                   plans.push(planLocalOffset(element, cssPixels));
@@ -584,7 +583,7 @@ internal object WebContentTopInsetScript {
               const scheduleDeferredLayoutCheck = (resetFailures = true) => {
                 if (
                   document.readyState === 'loading' ||
-                  nativeFallbackRequestedForCurrentPolicy() ||
+                  layoutRecoverySuspendedForCurrentPolicy() ||
                   deferredLayoutChecks >= maxDeferredLayoutChecks
                 ) {
                   return;
@@ -600,7 +599,7 @@ internal object WebContentTopInsetScript {
                 }, layoutQuietPeriodMs());
               };
               const scheduleImmediateLayoutCheck = () => {
-                if (nativeFallbackRequestedForCurrentPolicy()) return;
+                if (layoutRecoverySuspendedForCurrentPolicy()) return;
                 if (immediateLayoutCheckFrame) {
                   globalThis.cancelAnimationFrame(immediateLayoutCheckFrame);
                 }
@@ -612,12 +611,44 @@ internal object WebContentTopInsetScript {
                   });
                 });
               };
+              const protectInteractionTarget = (event) => {
+                const root = document.documentElement;
+                const target = event?.target;
+                if (!root || !(target instanceof Element) || viewportFitsCover()) return;
+                const physicalPixels =
+                  Number(globalThis.$bridgeName?.topInsetPx?.()) || 0;
+                if (physicalPixels <= 0) return;
+                const candidate = findPositionedCandidate(target, root, false);
+                if (!candidate) return;
+                const density = Number(globalThis.devicePixelRatio) || 1;
+                const plan = planLocalOffset(candidate, physicalPixels / density);
+                if (plan) applyLocalOffsetPlans([plan]);
+              };
+              const protectFocusedContainer = (root, cssPixels) => {
+                const target = document.activeElement;
+                if (!(target instanceof Element) || target === document.body) return;
+                const candidate = findPositionedCandidate(target, root, false);
+                if (!candidate) return;
+                const rect = candidate.getBoundingClientRect();
+                const requiredDelta = Math.max(0, cssPixels - rect.top);
+                if (requiredDelta <= 0) return;
+                const previousOffset = Number.parseFloat(
+                  candidate.style.getPropertyValue(offsetProperty),
+                ) || 0;
+                candidate.style.setProperty(
+                  offsetProperty,
+                  `${'$'}{previousOffset + requiredDelta}px`,
+                  'important',
+                );
+                candidate.setAttribute(offsetAttribute, 'true');
+              };
               const scheduleInteractionLayoutCheck = () => {
-                deferredLayoutChecks = 0;
+                resumeLayoutRecovery();
                 scheduleDeferredLayoutCheck(true);
               };
-              const scheduleImmediateInteractionLayoutCheck = () => {
-                deferredLayoutChecks = 0;
+              const scheduleImmediateInteractionLayoutCheck = (event) => {
+                protectInteractionTarget(event);
+                resumeLayoutRecovery();
                 scheduleImmediateLayoutCheck();
                 scheduleDeferredLayoutCheck(true);
               };
@@ -665,6 +696,11 @@ internal object WebContentTopInsetScript {
                 }
                 return null;
               };
+              const viewportFitsCover = () => {
+                const viewport = document.querySelector('meta[name="viewport"]');
+                return globalThis.$bridgeName?.viewportCoverAllowed?.() === true &&
+                  /viewport-fit\s*=\s*cover/i.test(viewport?.content || '');
+              };
               const topContentBackground = (root, cssPixels) => {
                 const viewportWidth = globalThis.innerWidth;
                 const viewportHeight = globalThis.innerHeight;
@@ -697,12 +733,21 @@ internal object WebContentTopInsetScript {
                 }
                 return activeThemeColor() || canvasBackground(root);
               };
-              const reconcile = (allowNativeFallback = true) => {
+              const reconcile = (allowRecoverySuspension = true) => {
                 const root = document.documentElement;
                 if (!root) return;
                 const physicalPixels =
                   Number(globalThis.$bridgeName?.topInsetPx?.()) || 0;
                 if (physicalPixels <= 0) {
+                  consecutiveLayoutFailures = 0;
+                  clearOwnedOffsets();
+                  clearOwnedFlowTarget(root);
+                  document.querySelector(ownedSelector)?.remove();
+                  root.style.removeProperty(property);
+                  root.style.removeProperty(backgroundProperty);
+                  return;
+                }
+                if (viewportFitsCover()) {
                   consecutiveLayoutFailures = 0;
                   clearOwnedOffsets();
                   clearOwnedFlowTarget(root);
@@ -761,6 +806,7 @@ internal object WebContentTopInsetScript {
                 ) {
                   root.style.setProperty(backgroundProperty, topBackground, 'important');
                 }
+                protectFocusedContainer(root, cssPixels);
                 let activeFlowTarget = document.querySelector(flowTargetSelector);
                 if (
                   root.getAttribute(flowRootAttribute) === 'true' &&
@@ -785,11 +831,11 @@ internal object WebContentTopInsetScript {
                   !Number.isFinite(appliedPixels) || !Number.isFinite(expectedPixels) ||
                   Math.abs(appliedPixels - expectedPixels) > 0.5
                 ) {
-                  if (allowNativeFallback) requestNativeFallback();
+                  if (allowRecoverySuspension) suspendLayoutRecovery();
                   return;
                 }
                 if (!refreshOwnedOffsets(cssPixels)) {
-                  if (allowNativeFallback) requestNativeFallback();
+                  if (allowRecoverySuspension) suspendLayoutRecovery();
                   return;
                 }
                 if (document.readyState !== 'loading') {
@@ -812,11 +858,31 @@ internal object WebContentTopInsetScript {
                       protectTopInset(root, body, style, cssPixels, false);
                   }
                   if (!topInsetProtected) {
-                    if (allowNativeFallback) requestNativeFallback();
+                    if (allowRecoverySuspension) suspendLayoutRecovery();
                     return;
                   }
                 }
                 consecutiveLayoutFailures = 0;
+              };
+              const styleWithoutCandyProperties = (value) => (value || '')
+                .replace(/--candy-browser-[^:;]+\s*:\s*[^;]*(?:;|${'$'})/gi, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              const isRelevantLayoutMutation = (record) => {
+                if (record.addedNodes?.length > 0 || record.removedNodes?.length > 0) {
+                  return true;
+                }
+                if (record.type !== 'attributes') return false;
+                if (
+                  record.attributeName === 'content' &&
+                  record.target?.matches?.('meta[name="viewport"]')
+                ) {
+                  return true;
+                }
+                if (record.attributeName === 'class') return true;
+                return record.attributeName === 'style' &&
+                  styleWithoutCandyProperties(record.oldValue) !==
+                    styleWithoutCandyProperties(record.target?.getAttribute?.('style'));
               };
               const start = () => {
                 const root = document.documentElement;
@@ -835,32 +901,34 @@ internal object WebContentTopInsetScript {
                       true,
                     );
                   });
-                  if (previousState?.windowScrollListener) {
+                  if (previousState?.windowResizeListener) {
                     globalThis.removeEventListener(
-                      'scroll',
-                      previousState.windowScrollListener,
-                      true,
+                      'resize',
+                      previousState.windowResizeListener,
                     );
                   }
                 }
                 const observer = new MutationObserver((records) => {
-                  if (records.some((record) => record.addedNodes?.length > 0)) {
-                    deferredLayoutChecks = 0;
+                  if (records.some(isRelevantLayoutMutation)) {
+                    resumeLayoutRecovery();
+                    scheduleImmediateLayoutCheck();
                     scheduleDeferredLayoutCheck(true);
                   }
                 });
                 observer.observe(root, {
+                  attributeFilter: ['class', 'content', 'style'],
+                  attributeOldValue: true,
+                  attributes: true,
                   childList: true,
                   subtree: true,
                 });
                 const interactionEvents = [
                   'click',
                   'change',
-                  'focusin',
                   'keydown',
                   'pointerup',
                 ];
-                const immediateInteractionEvents = ['compositionend', 'input'];
+                const immediateInteractionEvents = ['focusin', 'compositionend', 'input'];
                 interactionEvents.forEach((eventName) => {
                   document.addEventListener(
                     eventName,
@@ -875,11 +943,12 @@ internal object WebContentTopInsetScript {
                     true,
                   );
                 });
-                globalThis.addEventListener(
-                  'scroll',
-                  scheduleInteractionLayoutCheck,
-                  true,
-                );
+                const windowResizeListener = () => {
+                  resumeLayoutRecovery();
+                  scheduleImmediateLayoutCheck();
+                  scheduleDeferredLayoutCheck(true);
+                };
+                globalThis.addEventListener('resize', windowResizeListener);
                 const domContentLoadedListener = () => scheduleDeferredLayoutCheck(true);
                 const windowLoadListener = () => scheduleDeferredLayoutCheck(true);
                 const runtimeState = {
@@ -888,7 +957,7 @@ internal object WebContentTopInsetScript {
                   interactionListener: scheduleInteractionLayoutCheck,
                   immediateInteractionEvents,
                   immediateInteractionListener: scheduleImmediateInteractionLayoutCheck,
-                  windowScrollListener: scheduleInteractionLayoutCheck,
+                  windowResizeListener,
                   domContentLoadedListener,
                   windowLoadListener,
                   stabilizationCheckTimers: [],
@@ -915,11 +984,7 @@ internal object WebContentTopInsetScript {
                       true,
                     );
                   });
-                  globalThis.removeEventListener(
-                    'scroll',
-                    scheduleInteractionLayoutCheck,
-                    true,
-                  );
+                  globalThis.removeEventListener('resize', windowResizeListener);
                   document.removeEventListener(
                     'DOMContentLoaded',
                     domContentLoadedListener,

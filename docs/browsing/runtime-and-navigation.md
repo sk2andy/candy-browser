@@ -161,25 +161,19 @@
 - Apply desktop identity to the target Gecko session before controller-owned navigation or history
   traversal. Never replay a committed navigation or convert POST to GET. Reload matching open tabs
   only when the user explicitly changes the domain preference.
-- Keep the engine view's measured frame stable while pages scroll. `GeckoViewInsetRules` keeps the
-  Gecko surface behind the status bar while the document-start privacy bridge adds one scrollable top
-  inset and offsets fixed/sticky controls. A bounded policy retry handles content scripts that start
-  before the Gecko session binding, rejects stale policy revisions and reads the current policy from
-  every delayed retry. Compact interactive positioned controls keep an additional 8-CSS-pixel gap
-  below the top inset; viewport-wide headers and decorative elements stay aligned to the inset.
-  Gecko receives the remaining bottom CSS safe area. `viewport-fit=cover`
-  cannot disable Candy's scrollable top inset because Candy owns that edge while Gecko's top CSS
-  safe area is zero. Layout checks never request fallback while the document is loading. Input and
-  IME composition changes repair newly displayed search headers during the next two animation frames
-  without counting fallback failures. Lower-stacked peers behind the repaired control do not count as
-  collisions. Late DOM changes and interactions restart a 400-ms quiet window by default; three
-  consecutive failures are required. Unlocked developer options can tune the global quiet window from
-  100–800 ms and the
-  confirmation count from 2–5; changes reset pending checks and apply live to both Android engines.
-  A confirmed failure removes Candy-owned document offsets, switches the current renderer live to
-  native margins and republishes a zero-top-inset policy without reloading the page. The explicit
-  per-site **Force safe area** override also moves every safe edge to inner native margins. Fullscreen
-  keeps the renderer edge to edge.
+- Keep the engine view's measured frame stable at the full window while pages scroll.
+  `GeckoViewInsetRules` forwards the status-bar, cutout, side, and navigation safe area to the
+  renderer without adding native margins. `viewport-fit=cover` pages consume that safe area through
+  CSS `env(safe-area-inset-*)`; System WebView delegates this only from milestone 144, where full
+  non-fullscreen safe-area forwarding exists. Other pages and older providers receive Candy's
+  document-start compatibility top inset.
+  Top-anchored fixed, sticky, absolute, and focused containers are shifted once into the safe area.
+  Scroll events never trigger layout reconciliation. Owned offsets survive temporary hide/show, but
+  are cleared when a visible element returns to normal flow. Persistent layout conflicts suspend
+  timer retries until a later DOM change or user interaction resumes recovery, rather
+  than switching the WebView to native margins. The explicit per-site **Force safe area** override is
+  the only normal browsing path that moves the engine into native safe-area margins. Fullscreen keeps
+  the renderer edge to edge.
   GeckoView keeps its default SurfaceView backend so frames reach Android's compositor directly.
   PiP, clipping and tab motion preserve the same browser host, GeckoView, surface, display and
   session; browser blur is a sibling chrome effect and does not require a TextureView copy. The
@@ -313,7 +307,7 @@ WebView request state.
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |
-| Renderer edge-to-edge bounds and scrolling controls | `SystemWebViewEdgeToEdgeInstrumentedTest`, `GeckoEdgeToEdgeInstrumentedTest`, and the regular/private document-start inset cases in `CandyPrivacyHostInstrumentedTest` on API 34+ |
+| Edge-to-edge window, safe web viewport, focused search, and representative site layouts | `SystemWebViewEdgeToEdgeInstrumentedTest` and `GeckoEdgeToEdgeInstrumentedTest` run deterministic layout profiles derived from YouTube, Google, ESPN, NYTimes, CNN, Reddit, Facebook, IKEA, GitHub, Discord, Instagram, Wikipedia, Stack Overflow, and DuckDuckGo on API 34+; live sites are manual/nightly smoke targets rather than merge gates |
 | Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `BrowserIntentFilterInstrumentedTest`, plus `MainActivityExternalBackInstrumentedTest` when lifecycle matters |
 | Distribution and TLS channels | `./gradlew testFullDebugUnitTest testFossDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFossDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |

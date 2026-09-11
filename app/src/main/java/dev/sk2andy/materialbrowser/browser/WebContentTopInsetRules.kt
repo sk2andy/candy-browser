@@ -11,12 +11,10 @@ internal object WebContentTopInsetRules {
         drawsEdgeToEdge: Boolean,
         forceSafeArea: Boolean,
         scrollableDocumentEnabled: Boolean,
-        documentStartAvailable: Boolean,
     ): WebContentTopInsetMode = when {
         drawsEdgeToEdge -> WebContentTopInsetMode.EdgeToEdge
         forceSafeArea -> WebContentTopInsetMode.NativeSafeArea
-        scrollableDocumentEnabled && documentStartAvailable ->
-            WebContentTopInsetMode.ScrollableDocument
-        else -> WebContentTopInsetMode.NativeSafeArea
+        scrollableDocumentEnabled -> WebContentTopInsetMode.ScrollableDocument
+        else -> WebContentTopInsetMode.EdgeToEdge
     }
 }

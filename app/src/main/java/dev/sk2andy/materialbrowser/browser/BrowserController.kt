@@ -205,6 +205,7 @@ import dev.sk2andy.materialbrowser.data.BrowsingHistoryRepository
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
 import dev.sk2andy.materialbrowser.data.CandyRuleRepository
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteFaviconRepository
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.data.FavoriteUndoRules
 import dev.sk2andy.materialbrowser.data.FaviconRepository
@@ -556,9 +557,6 @@ class BrowserController(
         private set
     var pendingDownloadChoice by mutableStateOf<PendingDownloadChoice?>(null)
         private set
-    var isWebContentEdgeToEdgeEnabled by mutableStateOf(true)
-        private set
-    private var isScrollAwareTopInsetEnabled = true
     var isDefaultBrowser by mutableStateOf(false)
         private set
     var isOnline by mutableStateOf(true)
@@ -829,7 +827,6 @@ class BrowserController(
     private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
     private var nextExternalLinkPreviewSessionId = 0L
     private val navigationGenerations = mutableMapOf<String, Int>()
-    private val nativeSafeAreaFallbackTabs = mutableSetOf<String>()
     private val firefoxExtensionOptionsTabs =
         mutableMapOf<String, FirefoxExtensionOptionsTabChrome>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
@@ -971,6 +968,7 @@ class BrowserController(
     private val temporaryAlwaysBlockPopupDomains = mutableStateMapOf<String, Set<String>>()
     private val previewRepository = TabPreviewRepository.get(activity)
     private val faviconRepository = FaviconRepository.get(activity)
+    private val favoriteFaviconRepository = FavoriteFaviconRepository.get(activity)
     private val candyTrailRepository = CandyTrailRepository.get(activity)
     private val geckoSessionStateStore = GeckoSessionStateStore(activity.applicationContext)
     private val webViewStateRepository = TabWebViewStateRepository.get(activity)
@@ -3017,6 +3015,8 @@ class BrowserController(
                 tab = policyTab,
                 pageUrl = state.currentUrl,
                 context = requestContext,
+                topInsetPx = currentSafeAreaTopInsetPx(),
+                navigationGeneration = state.generation,
             ),
             privacyEventSink = GeckoPrivacyEventSink { },
             eventSink = { event ->
@@ -3123,6 +3123,8 @@ class BrowserController(
                     tab = runtime.policyTab,
                     pageUrl = safeUrl,
                     context = requestContext,
+                    topInsetPx = currentSafeAreaTopInsetPx(),
+                    navigationGeneration = generation,
                 ),
                 reloadOnCookiePermissionChange = true,
             )
@@ -3418,9 +3420,6 @@ class BrowserController(
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
             forceNativeSafeArea = forceNativeSafeArea,
-            useScrollableTopInset = tabId != null &&
-                isScrollAwareTopInsetEnabled &&
-                !forceNativeSafeArea,
             isFullscreenContent = isFullscreenContent,
             isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
                 (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
@@ -3455,10 +3454,6 @@ class BrowserController(
         previous.getInsets(type) == current.getInsets(type) &&
             previous.isVisible(type) == current.isVisible(type)
     }
-
-    private fun drawsEdgeToEdge(tabId: String): Boolean =
-        !isSafeAreaForced(tabId) &&
-            isWebContentEdgeToEdgeEnabled
 
     fun submitAddress(
         input: String,
@@ -6491,10 +6486,14 @@ class BrowserController(
     fun toggleFavorite(tabId: String = selectedTabId): FavoriteMutation? {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return null
         if (tab.isIncognito || tab.url == BLANK_URL) return null
-        return toggleFavoriteEntry(
+        val mutation = toggleFavoriteEntry(
             url = tab.url,
             title = tab.title,
         )
+        if (mutation?.added == true) {
+            favoriteFaviconRepository.capture(tab.url, favicons[tabId])
+        }
+        return mutation
     }
 
     fun toggleContextLinkFavorite(url: String, title: String?): FavoriteMutation? {
@@ -6505,7 +6504,10 @@ class BrowserController(
             url = safeUrl,
             title = title.orEmpty(),
         )
-        if (mutation != null) contentActions.dismiss()
+        if (mutation != null) {
+            if (mutation.added) favoriteFaviconRepository.capture(safeUrl, bitmap = null)
+            contentActions.dismiss()
+        }
         return mutation
     }
 
@@ -6524,6 +6526,7 @@ class BrowserController(
         favorites.clear()
         favorites += updated
         store.saveFavorites(updated)
+        favoriteFaviconRepository.prune(updated.map(FavoriteEntry::url).toSet())
         return FavoriteMutation(
             before = before,
             applied = updated,
@@ -6542,6 +6545,12 @@ class BrowserController(
         favorites.clear()
         favorites += restored
         store.saveFavorites(restored)
+        favoriteFaviconRepository.prune(restored.map(FavoriteEntry::url).toSet())
+        if (!mutation.added) {
+            mutation.before
+                .firstOrNull { entry -> mutation.applied.none { it.url == entry.url } }
+                ?.let { entry -> favoriteFaviconRepository.capture(entry.url, bitmap = null) }
+        }
         return true
     }
 
@@ -6655,10 +6664,6 @@ class BrowserController(
         if (developerSettings == normalized) return
         developerSettings = normalized
         store.saveDeveloperSettings(normalized)
-        if (nativeSafeAreaFallbackTabs.isNotEmpty()) {
-            nativeSafeAreaFallbackTabs.clear()
-            lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
-        }
         refreshGeckoContentTopInsetPolicies()
     }
 
@@ -6775,19 +6780,6 @@ class BrowserController(
         }
     }
 
-    fun updateWebContentEdgeToEdgeEnabled(enabled: Boolean) {
-        if (
-            isWebContentEdgeToEdgeEnabled == enabled &&
-            isScrollAwareTopInsetEnabled == enabled
-        ) {
-            return
-        }
-        isWebContentEdgeToEdgeEnabled = enabled
-        isScrollAwareTopInsetEnabled = enabled
-        lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
-        refreshGeckoContentTopInsetPolicies()
-    }
-
     fun prepareTabOverview(onReady: () -> Unit = {}) {
         pruneStaleTabs()
         refreshSelectedTabPreview(onReady)
@@ -6809,7 +6801,7 @@ class BrowserController(
         previewContentBottomInWindowPx = bottomPx.takeIf { it > 0 }
     }
 
-    fun previewTopInsetPx(tabId: String): Int = if (drawsEdgeToEdge(tabId) && !isSafeAreaForced(tabId)) {
+    fun previewTopInsetPx(tabId: String): Int = if (!isSafeAreaForced(tabId)) {
         0
     } else {
         lastWindowInsets?.getInsets(SAFE_AREA_INSET_TYPES)?.top?.coerceAtLeast(0) ?: 0
@@ -7010,13 +7002,29 @@ class BrowserController(
         }
         siteExceptionRevision++
         affectedTabIds.forEach { affectedTabId ->
-            lastWindowInsets?.let { insets ->
-                geckoViewBindings.values.filter { it.tabId == affectedTabId }.forEach { binding ->
-                    applyGeckoWindowInsets(binding.view, binding.tabId, insets)
-                }
-            }
             val hasResidentEngineSession = affectedTabId == tabId ||
                 affectedTabId in browserEngineSessions
+            val dispatchUpdatedInsets = {
+                lastWindowInsets?.let { insets ->
+                    geckoViewBindings.values
+                        .filter { binding -> binding.tabId == affectedTabId }
+                        .forEach { binding ->
+                            applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+                        }
+                }
+                Unit
+            }
+            val residentSession = browserEngineSessions[affectedTabId]
+            if (!reloadAffectedPages && residentSession != null) {
+                val policy = geckoPrivacyPolicyFor(affectedTabId)
+                if (policy != null) {
+                    residentSession.updatePrivacyPolicy(policy, onReady = dispatchUpdatedInsets)
+                } else {
+                    dispatchUpdatedInsets()
+                }
+            } else {
+                dispatchUpdatedInsets()
+            }
             if (reloadAffectedPages && hasResidentEngineSession) {
                 reloadTabWithProtection(affectedTabId)
             }
@@ -7556,7 +7564,6 @@ class BrowserController(
         castMediaCandidate = null
         pendingConsentCssUrls.clear()
         navigationGenerations.clear()
-        nativeSafeAreaFallbackTabs.clear()
         firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
         externalNavigationGrants.clear()
@@ -8421,23 +8428,18 @@ class BrowserController(
     }
 
     private fun geckoContentTopInsetPx(tabId: String): Int {
-        if (
-            !isScrollAwareTopInsetEnabled ||
-            usesNativeSafeArea(tabId) ||
-            fullscreenVideoState?.tabId == tabId
-        ) {
-            return 0
-        }
-        return lastWindowInsets
-            ?.getInsets(SAFE_AREA_INSET_TYPES)
-            ?.top
-            ?.coerceAtLeast(0)
-            ?: 0
+        if (usesNativeSafeArea(tabId) || fullscreenVideoState?.tabId == tabId) return 0
+        return currentSafeAreaTopInsetPx()
     }
+
+    private fun currentSafeAreaTopInsetPx(): Int = lastWindowInsets
+        ?.getInsets(SAFE_AREA_INSET_TYPES)
+        ?.top
+        ?.coerceAtLeast(0)
+        ?: 0
 
     private fun usesNativeSafeArea(tabId: String): Boolean =
         isSafeAreaForced(tabId) ||
-            tabId in nativeSafeAreaFallbackTabs ||
             isActiveFirefoxExtensionOptionsPage(tabId)
 
     private fun isActiveFirefoxExtensionOptionsPage(tabId: String): Boolean {
@@ -8455,18 +8457,7 @@ class BrowserController(
     }
 
     private fun onGeckoPrivacyEvent(tabId: String, event: GeckoPrivacyEvent) {
-        event.safeAreaFallbackNavigationGeneration?.let { navigationGeneration ->
-            if (
-                navigationGenerations.getOrDefault(tabId, 0) == navigationGeneration &&
-                nativeSafeAreaFallbackTabs.add(tabId)
-            ) {
-                lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
-                geckoPrivacyPolicyFor(tabId)?.let { policy ->
-                    browserEngineSessions[tabId]?.updatePrivacyPolicy(policy)
-                }
-            }
-            return
-        }
+        if (event.safeAreaFallbackNavigationGeneration != null) return
         val context = protectionRequestContexts[tabId] ?: return
         if (event.isCompatibilityObservation) {
             val observedPageHost = event.pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: return
@@ -8515,7 +8506,6 @@ class BrowserController(
             BrowserEngineEventType.NavigationStarted -> {
                 val nextNavigationGeneration =
                     navigationGenerations.getOrDefault(event.tabId, 0) + 1
-                val hadNativeSafeAreaFallback = nativeSafeAreaFallbackTabs.remove(event.tabId)
                 clearPermissionActivity(event.tabId)
                 if (contentActions.sourceTabId == event.tabId) contentActions.dismiss()
                 resetBrowserChromeScroll(event.tabId)
@@ -8528,9 +8518,6 @@ class BrowserController(
                         policy = policy,
                         reloadOnCookiePermissionChange = true,
                     )
-                }
-                if (hadNativeSafeAreaFallback) {
-                    lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
                 }
                 updateTab(event.tabId) { tab ->
                     tab.copy(
@@ -10816,7 +10803,6 @@ class BrowserController(
         clearPrivacyDataForTab(tabId)
         residentSessionAccessOrder.remove(tabId)
         navigationGenerations.remove(tabId)
-        nativeSafeAreaFallbackTabs.remove(tabId)
         firefoxExtensionOptionsTabs.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
         pageUrls.remove(tabId)
@@ -10854,7 +10840,6 @@ class BrowserController(
         clearPrivacyDataForTab(tab.id)
         residentSessionAccessOrder.remove(tab.id)
         navigationGenerations.remove(tab.id)
-        nativeSafeAreaFallbackTabs.remove(tab.id)
         pageUrls.remove(tab.id)
         bottomBarCompactStates.remove(tab.id)
         browserChromeScrollStates.remove(tab.id)

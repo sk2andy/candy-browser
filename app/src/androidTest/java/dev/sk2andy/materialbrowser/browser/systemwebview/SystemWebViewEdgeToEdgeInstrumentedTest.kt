@@ -5,22 +5,22 @@ import android.content.Intent
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteFixtureServer
+import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteMatrix
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
-import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
-import java.io.Closeable
-import java.net.InetAddress
-import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -39,11 +39,11 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
     private val preferences by lazy {
         context.getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
     }
-    private lateinit var server: EdgeToEdgeFixtureServer
+    private lateinit var server: EdgeToEdgeSiteFixtureServer
 
     @Before
     fun setUp() {
-        server = EdgeToEdgeFixtureServer()
+        server = EdgeToEdgeSiteFixtureServer()
         preferences.edit().clear().commit()
         GestureOnboardingStore(context).markCompleted()
         store.saveStartupAnimationEnabled(false)
@@ -64,209 +64,297 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
     }
 
     @Test
-    fun selectedSystemWebViewUsesFullRendererBoundsAndProtectsScrollingControls() {
-        ActivityScenario.launch<MainActivity>(
-            Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
-        ).use { scenario ->
+    fun requestedSiteLayoutsAndFocusedSearchesStaySafeAndEdgeToEdge() {
+        ActivityScenario.launch<MainActivity>(testIntent()).use { scenario ->
             val webView = awaitViewReady(scenario)
-            scenario.onActivity { activity ->
-                val controller = activity.browserControllerForTesting()
-                val view = requireNotNull(controller.selectedBrowserEngineViewForTesting())
-                controller.onWindowInsetsChanged(
-                    WindowInsetsCompat.Builder()
-                        .setInsets(
-                            WindowInsetsCompat.Type.statusBars(),
-                            Insets.of(0, STATUS_BAR_INSET_PX, 0, 0),
+            EdgeToEdgeSiteMatrix.allSites.forEachIndexed { index, site ->
+                if (index > 0) {
+                    scenario.onActivity { activity ->
+                        assertTrue(
+                            activity.browserControllerForTesting().openUrl(server.siteUrl(site)),
                         )
-                        .setInsets(
-                            WindowInsetsCompat.Type.navigationBars(),
-                            Insets.of(0, 0, 0, NAVIGATION_BAR_INSET_PX),
-                        )
-                        .build(),
+                    }
+                }
+                awaitWebViewTitle(scenario, EdgeToEdgeSiteMatrix.readyTitle(site))
+                val documentRequests = server.documentRequestCount.get()
+                val result = evaluate(
+                    scenario,
+                    "JSON.stringify(globalThis.__candySiteMatrix.results[0])",
                 )
-
-                assertWindowTop(view, expectedTop = 0)
-                assertWindowTop(webView, expectedTop = 0)
-                assertWindowBottom(view, activity.window.decorView.height)
-                assertWindowBottom(webView, activity.window.decorView.height)
-                assertEquals(0, (view.layoutParams as ViewGroup.MarginLayoutParams).topMargin)
-                assertEquals(0, (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin)
-            }
-
-            var edgeState = "not sampled"
-            awaitJavaScript({ "System WebView did not apply scrollable top inset: $edgeState" }) {
-                val expectedCssPx = STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio")
-                val menuTop = evaluateNumber(scenario, "menuTop")
-                val spacer = evaluateNumber(scenario, "rootSpacerHeight")
-                edgeState = "expected=$expectedCssPx menu=$menuTop spacer=$spacer"
-                menuTop >= expectedCssPx + COMPACT_CONTROL_PADDING_CSS_PIXELS - CSS_TOLERANCE &&
-                    spacer >= expectedCssPx - CSS_TOLERANCE
-            }
-            val documentToken = evaluateString(scenario, "globalThis.__candyDocumentToken")
-            evaluateNumber(scenario, "scrollPage")
-            awaitJavaScript({ "Sticky control entered status bar after scroll: $edgeState" }) {
-                val expectedCssPx = STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio")
-                val scrollY = evaluateNumber(scenario, "scrollY")
-                val stickyTop = evaluateNumber(scenario, "stickyTop")
-                edgeState = "expected=$expectedCssPx scroll=$scrollY sticky=$stickyTop"
-                scrollY > 300.0 &&
-                    stickyTop >= expectedCssPx - CSS_TOLERANCE
-            }
-            evaluateNumber(scenario, "scrollTop")
-            awaitJavaScript({ "Compact menu entered status bar after returning: $edgeState" }) {
-                val expectedCssPx = STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio")
-                val scrollY = evaluateNumber(scenario, "scrollY")
-                val menuTop = evaluateNumber(scenario, "menuTop")
-                edgeState = "expected=$expectedCssPx scroll=$scrollY menu=$menuTop"
-                scrollY <= CSS_TOLERANCE &&
-                    menuTop >=
-                    expectedCssPx + COMPACT_CONTROL_PADDING_CSS_PIXELS - CSS_TOLERANCE
-            }
-            SystemClock.sleep(FALLBACK_REGRESSION_WINDOW_MILLIS)
-
-            assertEquals(
-                "Scrolling reloaded the current document",
-                documentToken,
-                evaluateString(scenario, "globalThis.__candyDocumentToken"),
-            )
-            scenario.onActivity { activity ->
-                val view = requireNotNull(
-                    activity.browserControllerForTesting().selectedBrowserEngineViewForTesting(),
+                assertTrue(
+                    "System WebView profile ${site.name} failed: $result",
+                    evaluateBoolean(scenario, "globalThis.__candySiteMatrix.passed"),
                 )
-                val currentWebView = requireNotNull(view.findSystemWebView())
-                assertWindowTop(view, expectedTop = 0)
-                assertWindowTop(currentWebView, expectedTop = 0)
-                assertWindowBottom(view, activity.window.decorView.height)
-                assertWindowBottom(currentWebView, activity.window.decorView.height)
-                assertEquals(0, (view.layoutParams as ViewGroup.MarginLayoutParams).topMargin)
-                assertEquals(
-                    0,
-                    (currentWebView.layoutParams as ViewGroup.MarginLayoutParams).topMargin,
-                )
-            }
-        }
-    }
-
-    @Test
-    fun inputActivatedSearchHeaderClearsStatusBarWithoutNativeFallback() {
-        ActivityScenario.launch<MainActivity>(
-            Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
-        ).use { scenario ->
-            val webView = awaitViewReady(scenario)
-            scenario.onActivity { activity ->
-                activity.browserControllerForTesting().onWindowInsetsChanged(
-                    WindowInsetsCompat.Builder()
-                        .setInsets(
-                            WindowInsetsCompat.Type.statusBars(),
-                            Insets.of(0, STATUS_BAR_INSET_PX, 0, 0),
-                        )
-                        .setInsets(
-                            WindowInsetsCompat.Type.navigationBars(),
-                            Insets.of(0, 0, 0, NAVIGATION_BAR_INSET_PX),
-                        )
-                        .build(),
-                )
-            }
-            awaitJavaScript({ "System WebView did not apply initial top inset" }) {
-                evaluateNumber(scenario, "rootSpacerHeight") >=
-                    STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio") -
-                    CSS_TOLERANCE
-            }
-            val documentToken = evaluateString(scenario, "globalThis.__candyDocumentToken")
-
-            evaluateNumber(scenario, "activateSearchHeader")
-            val expectedTop =
-                STATUS_BAR_INSET_PX / evaluateNumber(scenario, "devicePixelRatio")
-            val deadline = SystemClock.elapsedRealtime() + IMMEDIATE_LAYOUT_TIMEOUT_MILLIS
-            var headerTop = Double.NEGATIVE_INFINITY
-            while (SystemClock.elapsedRealtime() < deadline) {
-                headerTop = evaluateNumber(scenario, "searchHeaderTop")
-                if (headerTop >= expectedTop - CSS_TOLERANCE) break
-                SystemClock.sleep(FRAME_SETTLE_MILLIS)
-            }
-            assertTrue(
-                "Input-activated search header remained in the status bar: " +
-                    "top=$headerTop expected=$expectedTop",
-                headerTop >= expectedTop - CSS_TOLERANCE,
-            )
-            SystemClock.sleep(FALLBACK_REGRESSION_WINDOW_MILLIS)
-
-            assertEquals(
-                "Search-header repair reloaded the current document",
-                documentToken,
-                evaluateString(scenario, "globalThis.__candyDocumentToken"),
-            )
-            scenario.onActivity { activity ->
-                assertEquals(0, (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin)
-                assertWindowTop(webView, expectedTop = 0)
-                assertWindowBottom(webView, activity.window.decorView.height)
-            }
-        }
-    }
-
-    @Test
-    fun developerSafeAreaSettingsReachOpenDocumentWithoutReload() {
-        ActivityScenario.launch<MainActivity>(
-            Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
-        ).use { scenario ->
-            awaitViewReady(scenario)
-            val documentToken = evaluateString(scenario, "globalThis.__candyDocumentToken")
-            scenario.onActivity { activity ->
-                activity.browserControllerForTesting().updateDeveloperSettings(
-                    DeveloperSettings(
-                        safeAreaLayoutQuietPeriodMillis = 250,
-                        safeAreaRequiredFailureCount = 4,
+                assertTrue(
+                    "${site.name} must use exactly one stable safe-area mode",
+                    evaluateBoolean(
+                        scenario,
+                        "globalThis.__candySiteMatrix.results[0].protectionModeValid",
                     ),
                 )
+                scenario.onActivity { activity -> assertWebViewGeometry(activity, webView) }
+                SystemClock.sleep(LAYOUT_STABILITY_WINDOW_MILLIS)
+                assertEquals(
+                    "Scrolling ${site.name} reloaded the current page",
+                    documentRequests,
+                    server.documentRequestCount.get(),
+                )
             }
+        }
+    }
 
-            assertEquals(
-                250.0,
-                evaluateRawNumber(
-                    scenario,
-                    "globalThis.CandyContentTopInset.safeAreaLayoutQuietPeriodMillis()",
-                ),
-                0.0,
+    @Test
+    fun coverAwarePageUsesExactlyOneSupportedSafeAreaMode() {
+        ActivityScenario.launch<MainActivity>(testIntent()).use { scenario ->
+            val webView = awaitViewReady(scenario)
+            val instagram = EdgeToEdgeSiteMatrix.requestedSites.first { site ->
+                site.name == "Instagram"
+            }
+            scenario.onActivity { activity ->
+                assertTrue(activity.browserControllerForTesting().openUrl(server.siteUrl(instagram)))
+            }
+            awaitWebViewTitle(scenario, EdgeToEdgeSiteMatrix.readyTitle(instagram))
+
+            val engineSafeAreaApplied = evaluateNumber(
+                scenario,
+                "globalThis.__candySiteMatrix.results.find(" +
+                    "result => result.name === 'Instagram').safeAreaPaddingTop",
+            ) > CSS_TOLERANCE
+            val candyCompatibilityApplied = evaluateBoolean(
+                scenario,
+                "globalThis.__candySiteMatrix.results.find(" +
+                    "result => result.name === 'Instagram').candyCompatibilityApplied",
             )
-            assertEquals(
-                4.0,
-                evaluateRawNumber(
-                    scenario,
-                    "globalThis.CandyContentTopInset.safeAreaRequiredFailureCount()",
-                ),
-                0.0,
+            assertTrue(
+                "viewport-fit=cover must use either supported engine CSS insets or Candy",
+                engineSafeAreaApplied.xor(candyCompatibilityApplied),
             )
-            assertEquals(READY_TITLE, evaluateString(scenario, "document.title"))
+            scenario.onActivity { activity -> assertWebViewGeometry(activity, webView) }
+        }
+    }
+
+    @Test
+    fun youtubeAndGoogleTouchFocusKeepSearchBelowStatusBarWhileImeResizes() {
+        ActivityScenario.launch<MainActivity>(testIntent()).use { scenario ->
+            awaitViewReady(scenario)
+
+            EdgeToEdgeSiteMatrix.focusedSearchSites
+                .filter { site -> site.name == "YouTube" || site.name == "Google" }
+                .forEach { site ->
+                scenario.onActivity { activity ->
+                    assertTrue(
+                        activity.browserControllerForTesting()
+                            .openUrl("${server.siteUrl(site)}#${site.name}"),
+                    )
+                }
+                awaitWebViewTitle(scenario, "Candy focused search ready: ${site.name}")
+                tapSearchField(scenario)
+                awaitWebViewTitle(scenario, "Candy focused search safe: ${site.name}")
+                awaitImeVisibility(scenario, expectedVisible = true)
+                scenario.onActivity { activity ->
+                    val webView = requireNotNull(
+                        activity.browserControllerForTesting()
+                            .selectedBrowserEngineViewForTesting()
+                            ?.findSystemWebView(),
+                    )
+                    assertWebViewGeometry(activity, webView)
+                    WindowCompat.getInsetsController(
+                        activity.window,
+                        activity.window.decorView,
+                    ).hide(WindowInsetsCompat.Type.ime())
+                }
+                awaitImeVisibility(scenario, expectedVisible = false)
+            }
+        }
+    }
+
+    @Test
+    fun forcedSafeAreaMovesSystemWebViewBottomIntoNativeSafeFrame() {
+        ActivityScenario.launch<MainActivity>(testIntent()).use { scenario ->
+            awaitViewReady(scenario)
+            val instagram = EdgeToEdgeSiteMatrix.requestedSites.first { site ->
+                site.name == "Instagram"
+            }
+            scenario.onActivity { activity ->
+                assertTrue(activity.browserControllerForTesting().openUrl(server.siteUrl(instagram)))
+            }
+            awaitWebViewTitle(scenario, EdgeToEdgeSiteMatrix.readyTitle(instagram))
+            var safeBottom = 0
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                safeBottom = requireNotNull(
+                    ViewCompat.getRootWindowInsets(activity.window.decorView),
+                ).getInsets(
+                    WindowInsetsCompat.Type.statusBars() or
+                        WindowInsetsCompat.Type.navigationBars() or
+                        WindowInsetsCompat.Type.displayCutout(),
+                ).bottom
+                assertTrue(controller.setForceSafeArea(controller.selectedTabId, true))
+            }
+            instrumentation.waitForIdleSync()
+            SystemClock.sleep(INSET_PROPAGATION_MILLIS)
+
+            scenario.onActivity { activity ->
+                val webView = requireNotNull(
+                    activity.browserControllerForTesting()
+                        .selectedBrowserEngineViewForTesting()
+                        ?.findSystemWebView(),
+                )
+                val margins = webView.layoutParams as ViewGroup.MarginLayoutParams
+                assertTrue("Expected a non-zero bottom safe area", safeBottom > 0)
+                assertEquals(safeBottom, margins.bottomMargin)
+                assertWindowBottom(webView, activity.window.decorView.height - safeBottom)
+            }
             assertEquals(
-                "Developer settings reloaded the current document",
-                documentToken,
-                evaluateString(scenario, "globalThis.__candyDocumentToken"),
+                "Native safe-area ownership must clear the renderer CSS inset",
+                0.0,
+                evaluateNumber(
+                    scenario,
+                    "Number.parseFloat(" +
+                        "getComputedStyle(document.querySelector('#header')).paddingTop)",
+                ),
+                CSS_TOLERANCE,
+            )
+
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.setForceSafeArea(controller.selectedTabId, false))
+            }
+            instrumentation.waitForIdleSync()
+            SystemClock.sleep(INSET_PROPAGATION_MILLIS)
+
+            scenario.onActivity { activity ->
+                val webView = requireNotNull(
+                    activity.browserControllerForTesting()
+                        .selectedBrowserEngineViewForTesting()
+                        ?.findSystemWebView(),
+                )
+                assertWebViewGeometry(activity, webView)
+            }
+            assertTrue(
+                "Disabling Force safe area must restore renderer CSS safe-area ownership",
+                evaluateNumber(
+                    scenario,
+                    "Number.parseFloat(" +
+                        "getComputedStyle(document.querySelector('#header')).paddingTop)",
+                ) > 0,
             )
         }
+    }
+
+    private fun testIntent(): Intent =
+        Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION)
+
+    private fun assertWebViewGeometry(
+        activity: MainActivity,
+        webView: android.webkit.WebView,
+    ) {
+        val view = requireNotNull(
+            activity.browserControllerForTesting().selectedBrowserEngineViewForTesting(),
+        )
+        val controller = activity.browserControllerForTesting()
+        assertEquals(0, controller.previewTopInsetPx(controller.selectedTabId))
+        assertWindowTop(view, 0)
+        assertWindowTop(webView, 0)
+        assertWindowBottom(view, activity.window.decorView.height)
+        assertWindowBottom(webView, activity.window.decorView.height)
+        assertEquals(
+            0,
+            (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin,
+        )
     }
 
     private fun awaitViewReady(scenario: ActivityScenario<MainActivity>): android.webkit.WebView {
         val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
+        var lastTitle: String? = null
         while (SystemClock.elapsedRealtime() < deadline) {
             instrumentation.waitForIdleSync()
             var readyView: android.webkit.WebView? = null
             scenario.onActivity { activity ->
                 readyView = activity.browserControllerForTesting()
                     .selectedBrowserEngineViewForTesting()
-                    ?.let { view ->
-                        view.findSystemWebView()?.takeIf { webView ->
-                            view.isAttachedToWindow &&
-                            view.width > 0 &&
-                            view.height > 0 &&
-                                webView.title == READY_TITLE
-                        }
+                    ?.findSystemWebView()
+                    ?.takeIf { webView ->
+                        lastTitle = webView.title
+                        webView.isAttachedToWindow &&
+                            webView.width > 0 &&
+                            webView.height > 0 &&
+                            webView.title == EdgeToEdgeSiteMatrix.readyTitle(
+                                EdgeToEdgeSiteMatrix.allSites.first(),
+                            )
                     }
             }
             readyView?.let { return it }
             SystemClock.sleep(POLL_MILLIS)
         }
-        assertTrue("System WebView did not become ready", false)
+        assertTrue("System WebView site matrix did not become ready; title=$lastTitle", false)
         error("unreachable")
+    }
+
+    private fun awaitWebViewTitle(
+        scenario: ActivityScenario<MainActivity>,
+        expectedTitle: String,
+    ) {
+        val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
+        var lastTitle: String? = null
+        while (SystemClock.elapsedRealtime() < deadline) {
+            instrumentation.waitForIdleSync()
+            scenario.onActivity { activity ->
+                lastTitle = activity.browserControllerForTesting()
+                    .selectedBrowserEngineViewForTesting()
+                    ?.findSystemWebView()
+                    ?.title
+            }
+            if (lastTitle == expectedTitle) return
+            SystemClock.sleep(POLL_MILLIS)
+        }
+        assertTrue("Expected title=$expectedTitle; last title=$lastTitle", false)
+    }
+
+    private fun tapSearchField(scenario: ActivityScenario<MainActivity>) {
+        val coordinates = FloatArray(2)
+        scenario.onActivity { activity ->
+            val webView = requireNotNull(
+                activity.browserControllerForTesting()
+                    .selectedBrowserEngineViewForTesting()
+                    ?.findSystemWebView(),
+            )
+            val location = IntArray(2)
+            webView.getLocationOnScreen(location)
+            val density = activity.resources.displayMetrics.density
+            val safeTop = requireNotNull(
+                ViewCompat.getRootWindowInsets(activity.window.decorView),
+            ).getInsets(
+                WindowInsetsCompat.Type.statusBars() or
+                    WindowInsetsCompat.Type.displayCutout(),
+            ).top
+            coordinates[0] = location[0] + SEARCH_TAP_X_CSS_PX * density
+            coordinates[1] = location[1] + safeTop + SEARCH_TAP_Y_CSS_PX * density
+        }
+        assertTrue(
+            UiDevice.getInstance(instrumentation).click(
+                coordinates[0].toInt(),
+                coordinates[1].toInt(),
+            ),
+        )
+    }
+
+    private fun awaitImeVisibility(
+        scenario: ActivityScenario<MainActivity>,
+        expectedVisible: Boolean,
+    ) {
+        val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
+        while (SystemClock.elapsedRealtime() < deadline) {
+            instrumentation.waitForIdleSync()
+            var visible = false
+            scenario.onActivity { activity ->
+                visible = ViewCompat.getRootWindowInsets(activity.window.decorView)
+                    ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+            }
+            if (visible == expectedVisible) return
+            SystemClock.sleep(POLL_MILLIS)
+        }
+        assertTrue("Expected IME visible=$expectedVisible", false)
     }
 
     private fun View.findSystemWebView(): android.webkit.WebView? = when (this) {
@@ -289,20 +377,15 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
         assertEquals(expectedBottom, location[1] + view.height)
     }
 
+    private fun evaluateBoolean(
+        scenario: ActivityScenario<MainActivity>,
+        expression: String,
+    ): Boolean = evaluate(scenario, expression).toBooleanStrict()
+
     private fun evaluateNumber(
         scenario: ActivityScenario<MainActivity>,
         expression: String,
-    ): Double = evaluateRawNumber(scenario, "globalThis.__candyEdgeToEdge.$expression")
-
-    private fun evaluateRawNumber(
-        scenario: ActivityScenario<MainActivity>,
-        expression: String,
     ): Double = evaluate(scenario, expression).toDouble()
-
-    private fun evaluateString(
-        scenario: ActivityScenario<MainActivity>,
-        expression: String,
-    ): String = evaluate(scenario, expression).removeSurrounding("\"")
 
     private fun evaluate(
         scenario: ActivityScenario<MainActivity>,
@@ -321,150 +404,22 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                 completed.countDown()
             }
         }
-        assertTrue("JavaScript result timed out for $expression", completed.await(5, TimeUnit.SECONDS))
+        assertTrue(
+            "JavaScript result timed out for $expression",
+            completed.await(5, TimeUnit.SECONDS),
+        )
         return requireNotNull(result.get())
-    }
-
-    private fun awaitJavaScript(
-        message: () -> String,
-        condition: () -> Boolean,
-    ) {
-        val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
-        while (SystemClock.elapsedRealtime() < deadline) {
-            if (condition()) return
-            SystemClock.sleep(POLL_MILLIS)
-        }
-        assertTrue(message(), condition())
-    }
-
-    private class EdgeToEdgeFixtureServer : Closeable {
-        private val server = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
-        private val thread = Thread(::serve, "system-webview-edge-to-edge-fixture").apply {
-            isDaemon = true
-            start()
-        }
-        val url = "http://127.0.0.1:${server.localPort}/edge-to-edge"
-
-        private fun serve() {
-            while (!server.isClosed) {
-                val socket = runCatching { server.accept() }.getOrNull() ?: return
-                socket.use { connection ->
-                    runCatching {
-                        connection.getInputStream().bufferedReader().apply {
-                            readLine()
-                            while (!readLine().isNullOrEmpty()) {
-                                // Drain request headers before serving deterministic content.
-                            }
-                        }
-                        val body = HTML.toByteArray()
-                        connection.getOutputStream().buffered().use { output ->
-                            output.write(
-                                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
-                                    .toByteArray(),
-                            )
-                            output.write(
-                                "Content-Length: ${body.size}\r\nConnection: close\r\n\r\n"
-                                    .toByteArray(),
-                            )
-                            output.write(body)
-                        }
-                    }
-                }
-            }
-        }
-
-        override fun close() {
-            server.close()
-            thread.join(1_000L)
-        }
     }
 
     private companion object {
         const val TEST_ACTIVITY_ACTION =
             "dev.sk2andy.materialbrowser.test.SYSTEM_WEBVIEW_EDGE_TO_EDGE"
-        const val READY_TITLE = "Candy System WebView edge ready"
-        const val STATUS_BAR_INSET_PX = 96
-        const val NAVIGATION_BAR_INSET_PX = 48
-        const val COMPACT_CONTROL_PADDING_CSS_PIXELS = 8.0
         const val CSS_TOLERANCE = 1.0
-        const val IMMEDIATE_LAYOUT_TIMEOUT_MILLIS = 250L
-        const val FRAME_SETTLE_MILLIS = 16L
-        const val FALLBACK_REGRESSION_WINDOW_MILLIS = 1_600L
-        const val TIMEOUT_MILLIS = 15_000L
+        const val SEARCH_TAP_X_CSS_PX = 100f
+        const val SEARCH_TAP_Y_CSS_PX = 16f
+        const val TIMEOUT_MILLIS = 20_000L
         const val POLL_MILLIS = 50L
-        val HTML =
-            """
-            <!doctype html>
-            <html><head><title>$READY_TITLE</title>
-            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-            <style>
-              html,body { margin:0; }
-              #drawer-shell, #drawer-backdrop {
-                position:fixed; inset:0; z-index:9998;
-              }
-              #drawer-shell { background:transparent; }
-              #drawer-backdrop { background:rgba(0,0,0,.6); z-index:9997; }
-              #navd { position:absolute; top:0; left:0; width:60px; height:64px; }
-              #header {
-                position:fixed; top:40px; left:0; width:100%; height:80px;
-                z-index:1; background:white;
-              }
-              #sign-in { position:absolute; top:8px; right:8px; }
-              #search-header {
-                position:fixed; top:0; left:0; width:100%; height:64px;
-                z-index:10000; background:white;
-              }
-              #lead { height:200px; }
-              #sticky { position:sticky; top:0; height:24px; background:blue; }
-              main { height:4000px; }
-            </style></head><body>
-              <div id="drawer-backdrop"></div>
-              <div id="drawer-shell"><div role="button" style="height:120px">Drawer</div></div>
-              <div id="navd"><div><div id="menu" role="button">Menu</div></div></div>
-              <header id="header"><button id="sign-in">Sign in</button></header>
-              <input id="query" aria-label="Search" hidden>
-              <form id="search-header" hidden>
-                <button type="button">Add</button><input value="Vimeo sample video">
-                <button type="button">Close</button>
-              </form>
-              <div id="lead"></div><nav id="sticky"></nav><main></main>
-              <script>
-                globalThis.__candyDocumentToken =
-                  String(performance.timeOrigin) + ':' + Math.random().toString(36);
-                document.querySelector('#query').addEventListener('input', () => {
-                  document.querySelector('#search-header').hidden = false;
-                });
-                globalThis.__candyEdgeToEdge = {
-                  get devicePixelRatio() { return globalThis.devicePixelRatio; },
-                  get menuTop() { return document.querySelector('#menu').getBoundingClientRect().top; },
-                  get searchHeaderTop() {
-                    return document.querySelector('#search-header').getBoundingClientRect().top;
-                  },
-                  get stickyTop() { return document.querySelector('#sticky').getBoundingClientRect().top; },
-                  get rootSpacerHeight() {
-                    return Number.parseFloat(
-                      getComputedStyle(document.documentElement, '::before').height
-                    ) || 0;
-                  },
-                  get scrollY() { return globalThis.scrollY; },
-                  get activateSearchHeader() {
-                    document.querySelector('#query').dispatchEvent(
-                      new InputEvent('input', {
-                        bubbles: true,
-                        inputType: 'insertText',
-                        data: 'v'
-                      })
-                    );
-                    return 0;
-                  },
-                  get scrollPage() { globalThis.scrollTo(0, 600); return 0; },
-                  get scrollTop() { globalThis.scrollTo(0, 0); return 0; }
-                };
-                addEventListener('scroll', () => {
-                  document.querySelector('#header').style.display = scrollY > 100 ? 'none' : 'block';
-                }, { passive: true });
-              </script>
-            </body></html>
-            """.trimIndent()
+        const val LAYOUT_STABILITY_WINDOW_MILLIS = 600L
+        const val INSET_PROPAGATION_MILLIS = 200L
     }
 }

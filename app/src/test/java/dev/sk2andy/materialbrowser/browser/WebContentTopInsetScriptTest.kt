@@ -49,10 +49,11 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
-    fun `viewport cover cannot disable the Candy owned top inset`() {
+    fun `viewport cover delegates top protection to engine safe area`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("topInsetPx"))
-        assertFalse(WebContentTopInsetScript.installScript.contains("viewportFitsCover"))
-        assertFalse(WebContentTopInsetScript.installScript.contains("viewport-fit"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("viewportFitsCover"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("viewportCoverAllowed"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("viewport-fit"))
     }
 
     @Test
@@ -62,12 +63,13 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
-    fun `blocked spacer requests native fallback for the current document`() {
+    fun `blocked spacer preserves edge to edge and stops repeated recovery`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("getComputedStyle"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("fallbackToNative"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("suspendLayoutRecovery"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("suspendedLayoutRecoveryKey"))
+        assertFalse(WebContentTopInsetScript.installScript.contains("fallbackToNative"))
         assertTrue(WebContentTopInsetScript.installScript.contains("navigationGeneration"))
         assertTrue(WebContentTopInsetScript.installScript.contains("policyRevision"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("nativeFallbackRequestKey"))
     }
 
     @Test
@@ -103,6 +105,12 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("elementsFromPoint"))
         assertTrue(WebContentTopInsetScript.installScript.contains("localOffsetCollisionDetected"))
         assertTrue(WebContentTopInsetScript.installScript.contains("scheduleInteractionLayoutCheck"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("protectInteractionTarget"))
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "['focusin', 'compositionend', 'input']",
+            ),
+        )
         assertTrue(
             WebContentTopInsetScript.installScript.contains("defaultLayoutQuietPeriodMs = 400"),
         )
@@ -110,18 +118,32 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
+    fun `site hide and show transitions retain established fixed offsets`() {
+        val refresh = WebContentTopInsetScript.installScript
+            .substringAfter("const refreshOwnedOffsets = (cssPixels) =>")
+            .substringBefore("const isBackdrop")
+
+        assertTrue(refresh.contains("Keep an established offset"))
+        assertTrue(refresh.contains("clearOwnedOffset(element)"))
+        assertTrue(
+            refresh.indexOf("Number.parseFloat(style.opacity) <= 0.01") <
+                refresh.indexOf("clearOwnedOffset(element)"),
+        )
+    }
+
+    @Test
     fun `sticky controls are rechecked and offset while the page scrolls`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("position === 'sticky'"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("'scroll'"))
+        assertFalse(WebContentTopInsetScript.installScript.contains("windowScrollListener"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.position !== 'sticky'"))
     }
 
     @Test
-    fun `incompatible root layout gets a targeted flow spacer before native fallback`() {
+    fun `incompatible root layout gets a targeted flow spacer before recovery stops`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("innerWidth * 0.8"))
         assertTrue(WebContentTopInsetScript.installScript.contains("installTargetedFlowInset"))
         assertTrue(WebContentTopInsetScript.installScript.contains("flowTargetAttribute"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("requestNativeFallback"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("suspendLayoutRecovery"))
         assertTrue(WebContentTopInsetScript.installScript.contains("DOMContentLoaded"))
     }
 
@@ -132,12 +154,20 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("stabilizationCheckDelaysMs"))
         assertTrue(WebContentTopInsetScript.installScript.contains("readyState === 'loading'"))
         assertTrue(WebContentTopInsetScript.installScript.contains("addedNodes"))
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "attributeFilter: ['class', 'content', 'style']",
+            ),
+        )
+        assertTrue(WebContentTopInsetScript.installScript.contains("record.removedNodes"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("windowResizeListener"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("resumeLayoutRecovery"))
         assertTrue(WebContentTopInsetScript.installScript.contains("'load',"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.display === 'none'"))
     }
 
     @Test
-    fun `native fallback waits for layout stability and repeated failures`() {
+    fun `layout recovery suspension waits for stability and repeated failures`() {
         assertTrue(
             WebContentTopInsetScript.installScript.contains(
                 "if (document.readyState === 'loading') return",
@@ -206,21 +236,21 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
-    fun `policy revisions reset failures before they count toward fallback`() {
-        val fallbackRequest = WebContentTopInsetScript.installScript
-            .substringAfter("const requestNativeFallback = () =>")
-            .substringBefore("const nativeFallbackRequestedForCurrentPolicy")
+    fun `policy revisions reset failures before they suspend layout recovery`() {
+        val recoverySuspension = WebContentTopInsetScript.installScript
+            .substringAfter("const suspendLayoutRecovery = () =>")
+            .substringBefore("const layoutRecoverySuspendedForCurrentPolicy")
 
-        assertTrue(fallbackRequest.contains("resetFailuresForPolicy(policyKey)"))
+        assertTrue(recoverySuspension.contains("resetFailuresForPolicy(policyKey)"))
         assertTrue(
-            fallbackRequest.indexOf("resetFailuresForPolicy(policyKey)") <
-                fallbackRequest.indexOf("consecutiveLayoutFailures++"),
+            recoverySuspension.indexOf("resetFailuresForPolicy(policyKey)") <
+                recoverySuspension.indexOf("consecutiveLayoutFailures++"),
         )
-        assertTrue(fallbackRequest.contains("confirmedPolicyKey !== policyKey"))
-        assertTrue(fallbackRequest.contains("resetFailuresForPolicy(confirmedPolicyKey, true)"))
-        assertTrue(fallbackRequest.contains("fallbackToNative?.(generation, revision)"))
-        assertTrue(fallbackRequest.contains("nativeFallbackRequestKey = policyKey"))
-        assertTrue(fallbackRequest.contains("policyKey.split(':').map(Number)"))
+        assertTrue(recoverySuspension.contains("confirmedPolicyKey !== policyKey"))
+        assertTrue(recoverySuspension.contains("resetFailuresForPolicy(confirmedPolicyKey, true)"))
+        assertTrue(recoverySuspension.contains("suspendedLayoutRecoveryKey = policyKey"))
+        assertFalse(recoverySuspension.contains("remove()"))
+        assertFalse(recoverySuspension.contains("fallbackToNative"))
         assertTrue(
             WebContentTopInsetScript.installScript.contains(
                 "resetFailuresForPolicy(currentPolicyKey(), true)",

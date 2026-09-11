@@ -29,10 +29,10 @@ class WebContentTopInsetRulesTest {
     }
 
     @Test
-    fun `missing document start support falls back to native margin`() {
+    fun `missing document top inset leaves native host edge to edge`() {
         assertEquals(
-            WebContentTopInsetMode.NativeSafeArea,
-            resolve(documentStartAvailable = false),
+            WebContentTopInsetMode.EdgeToEdge,
+            resolve(scrollableDocumentEnabled = false),
         )
     }
 
@@ -40,11 +40,9 @@ class WebContentTopInsetRulesTest {
         drawsEdgeToEdge: Boolean = false,
         forceSafeArea: Boolean = false,
         scrollableDocumentEnabled: Boolean = true,
-        documentStartAvailable: Boolean = true,
     ): WebContentTopInsetMode = WebContentTopInsetRules.resolve(
         drawsEdgeToEdge = drawsEdgeToEdge,
         forceSafeArea = forceSafeArea,
         scrollableDocumentEnabled = scrollableDocumentEnabled,
-        documentStartAvailable = documentStartAvailable,
     )
 }

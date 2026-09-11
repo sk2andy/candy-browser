@@ -30,7 +30,7 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
-    fun reinjectionCancelsPendingFallbackConfirmation() {
+    fun reinjectionNeverAbandonsEdgeToEdgeAfterPersistentLayoutFailure() {
         val fallbackReceived = CountDownLatch(1)
         val view = loadPage(TopInsetBridge(fallbackReceived))
         evaluate(view, WebContentTopInsetScript.installScript)
@@ -54,18 +54,22 @@ class WebContentTopInsetScriptInstrumentedTest {
 
         evaluate(view, WebContentTopInsetScript.installScript)
 
-        assertFalse(
-            "A pending check from the previous injection requested fallback",
-            fallbackReceived.await(STALE_TIMER_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        assertEquals(
+            "true",
+            evaluate(
+                view,
+                "Boolean(document.querySelector(" +
+                    "'style[data-candy-browser-owned=\"true\"]'))",
+            ),
         )
-        assertTrue(
-            "The current injection never confirmed the persistent layout failure",
-            fallbackReceived.await(FALLBACK_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        assertFalse(
+            "Persistent layout failure moved the WebView out of edge-to-edge",
+            fallbackReceived.await(STALE_TIMER_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
         )
     }
 
     @Test
-    fun bridgeSettingsControlFallbackConfirmationTiming() {
+    fun bridgeFailureSettingsCannotRequestNativeFallback() {
         val fallbackReceived = CountDownLatch(1)
         val view = loadPage(
             TopInsetBridge(
@@ -84,17 +88,180 @@ class WebContentTopInsetScriptInstrumentedTest {
                 document.head.appendChild(blocker);
             """.trimIndent(),
         )
-        val reconfiguredAt = SystemClock.elapsedRealtime()
-
         evaluate(view, "globalThis.__candyReconfigureContentTopInset();")
 
-        assertTrue(
-            "Configured fallback confirmation did not complete",
-            fallbackReceived.await(FALLBACK_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        assertFalse(
+            "Bridge failure settings moved the WebView out of edge-to-edge",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
         )
-        assertTrue(
-            "Fallback ignored the configured quiet period",
-            SystemClock.elapsedRealtime() - reconfiguredAt >= MINIMUM_CONFIGURED_WAIT_MILLIS,
+    }
+
+    @Test
+    fun fixedAndStickyHeadersKeepTheirSafeTopAcrossScrollAndVisibilityChanges() {
+        val view = loadPage(
+            bridge = TopInsetBridge(
+                fallbackReceived = CountDownLatch(1),
+                layoutQuietPeriodMillis = 100,
+                requiredFailureCount = 2,
+            ),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 300vh; }
+                  #fixed, #sticky {
+                    box-sizing: border-box;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 64px;
+                    background: white;
+                  }
+                  #fixed { position: fixed; }
+                  #sticky { position: sticky; margin-top: 96px; }
+                </style></head><body>
+                <header id="fixed"><button>Vimeo</button></header>
+                <header id="sticky"><button>Sticky</button></header>
+                <main>Content</main>
+                </body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+        SystemClock.sleep(MUTATION_SETTLE_MILLIS)
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        val expectedTop = TOP_INSET_PX / density
+        val fixedTopBefore = elementTop(view, "#fixed")
+
+        evaluate(view, "scrollTo(0, 400)")
+        SystemClock.sleep(SCROLL_REGRESSION_WINDOW_MILLIS)
+        val fixedTopAfterScroll = elementTop(view, "#fixed")
+        val stickyTopAfterScroll = elementTop(view, "#sticky")
+
+        evaluate(view, "document.querySelector('#fixed').style.display = 'none'")
+        SystemClock.sleep(MUTATION_SETTLE_MILLIS)
+        evaluate(view, "document.querySelector('#fixed').style.display = ''")
+        SystemClock.sleep(SCROLL_REGRESSION_WINDOW_MILLIS)
+        val fixedTopAfterVisibilityChange = elementTop(view, "#fixed")
+
+        assertTrue(fixedTopBefore >= expectedTop - CSS_PIXEL_TOLERANCE)
+        assertEquals(fixedTopBefore, fixedTopAfterScroll, CSS_PIXEL_TOLERANCE)
+        assertEquals(fixedTopBefore, fixedTopAfterVisibilityChange, CSS_PIXEL_TOLERANCE)
+        assertTrue(stickyTopAfterScroll >= expectedTop - CSS_PIXEL_TOLERANCE)
+    }
+
+    @Test
+    fun visibleHeaderReturningToFlowDropsItsOwnedTranslation() {
+        val view = loadPage(
+            bridge = TopInsetBridge(CountDownLatch(1)),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 200vh; }
+                  #header { position: fixed; inset: 0 0 auto 0; height: 64px; background: white; }
+                </style></head><body>
+                <header id="header"><button>Menu</button></header>
+                <main>Content</main>
+                </body></html>
+            """.trimIndent(),
+        )
+        evaluate(view, WebContentTopInsetScript.installScript)
+        assertEquals(
+            "true",
+            evaluate(
+                view,
+                "document.querySelector('#header').getAttribute(" +
+                    "'data-candy-browser-top-inset-offset')",
+            ).removeSurrounding("\""),
+        )
+
+        evaluate(
+            view,
+            "document.querySelector('#header').style.position='relative'",
+        )
+        SystemClock.sleep(MUTATION_SETTLE_MILLIS)
+
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        assertEquals(TOP_INSET_PX / density, elementTop(view, "#header"), CSS_PIXEL_TOLERANCE)
+        assertEquals(
+            "null",
+            evaluate(
+                view,
+                "document.querySelector('#header').getAttribute(" +
+                    "'data-candy-browser-top-inset-offset')",
+            ),
+        )
+        assertEquals(
+            "\"\"",
+            evaluate(
+                view,
+                "document.querySelector('#header').style.getPropertyValue(" +
+                    "'--candy-browser-owned-top-inset-offset')",
+            ),
+        )
+    }
+
+    @Test
+    fun laterDomMutationResumesSuspendedLayoutRecovery() {
+        val view = loadPage(
+            TopInsetBridge(
+                fallbackReceived = CountDownLatch(1),
+                layoutQuietPeriodMillis = 100,
+                requiredFailureCount = 2,
+            ),
+        )
+        evaluate(view, WebContentTopInsetScript.installScript)
+        evaluate(
+            view,
+            """
+                const blocker = document.createElement('style');
+                blocker.id = 'blocker';
+                blocker.textContent =
+                  'html:root::before { height: 0 !important; min-height: 0 !important; }';
+                document.head.appendChild(blocker);
+                globalThis.__candyReconcileContentTopInset();
+                globalThis.__candyReconcileContentTopInset();
+            """.trimIndent(),
+        )
+        SystemClock.sleep(MUTATION_SETTLE_MILLIS)
+
+        evaluate(
+            view,
+            "document.querySelector('#blocker').remove()",
+        )
+        SystemClock.sleep(MUTATION_SETTLE_MILLIS * 2)
+
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        assertEquals(
+            TOP_INSET_PX / density,
+            evaluate(view, "parseFloat(getComputedStyle(document.documentElement,'::before').height)")
+                .toDouble(),
+            CSS_PIXEL_TOLERANCE,
+        )
+    }
+
+    @Test
+    fun viewportCoverAttributeChangeTransfersOwnershipWithoutManualReconcile() {
+        val view = loadPage(
+            bridge = TopInsetBridge(CountDownLatch(1), viewportCoverAllowed = true),
+            html = """
+                <html><head>
+                  <meta name="viewport" content="width=device-width,initial-scale=1">
+                </head><body><main>Content</main></body></html>
+            """.trimIndent(),
+        )
+        evaluate(view, WebContentTopInsetScript.installScript)
+        assertEquals(
+            "true",
+            evaluate(view, "Boolean(document.querySelector('style[data-candy-browser-owned]'))"),
+        )
+
+        evaluate(
+            view,
+            "document.querySelector('meta[name=viewport]').content += ',viewport-fit=cover'",
+        )
+        SystemClock.sleep(MUTATION_SETTLE_MILLIS)
+
+        assertEquals(
+            "false",
+            evaluate(view, "Boolean(document.querySelector('style[data-candy-browser-owned]'))"),
         )
     }
 
@@ -350,6 +517,14 @@ class WebContentTopInsetScriptInstrumentedTest {
         )
     }
 
+    private fun elementTop(
+        view: WebView,
+        selector: String,
+    ): Double = evaluate(
+        view,
+        "document.querySelector('$selector').getBoundingClientRect().top",
+    ).toDouble()
+
     private fun loadPage(
         bridge: TopInsetBridge,
         html: String = "<html><head></head><body><main>Content</main></body></html>",
@@ -405,9 +580,13 @@ class WebContentTopInsetScriptInstrumentedTest {
         private val fallbackReceived: CountDownLatch,
         private val layoutQuietPeriodMillis: Int = 400,
         private val requiredFailureCount: Int = 3,
+        private val viewportCoverAllowed: Boolean = false,
     ) {
         @JavascriptInterface
         fun topInsetPx(): Int = TOP_INSET_PX
+
+        @JavascriptInterface
+        fun viewportCoverAllowed(): Boolean = viewportCoverAllowed
 
         @JavascriptInterface
         fun navigationGeneration(): Int = NAVIGATION_GENERATION
@@ -437,7 +616,6 @@ class WebContentTopInsetScriptInstrumentedTest {
         const val NAVIGATION_GENERATION = 7
         const val POLICY_REVISION = 11L
         const val MUTATION_SETTLE_MILLIS = 100L
-        const val MINIMUM_CONFIGURED_WAIT_MILLIS = 75L
         const val COMPACT_CONTROL_PADDING_CSS_PIXELS = 8.0
         const val CSS_PIXEL_TOLERANCE = 0.5
         const val NO_FALLBACK_WINDOW_MILLIS = 350L
@@ -448,7 +626,7 @@ class WebContentTopInsetScriptInstrumentedTest {
         const val VIEWPORT_WIDTH_PX = 1_080
         const val VIEWPORT_HEIGHT_PX = 1_920
         const val STALE_TIMER_WINDOW_MILLIS = 600L
+        const val SCROLL_REGRESSION_WINDOW_MILLIS = 600L
         const val PAGE_TIMEOUT_SECONDS = 5L
-        const val FALLBACK_TIMEOUT_SECONDS = 3L
     }
 }

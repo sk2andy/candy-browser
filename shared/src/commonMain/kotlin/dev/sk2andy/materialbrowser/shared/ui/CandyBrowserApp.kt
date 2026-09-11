@@ -1528,6 +1528,7 @@ private fun CandyBrowserChrome(
                             isAddressEditing = false
                         },
                         submissionText = { input, _ -> input },
+                        fieldHeight = chromeMetrics.actionSize,
                         editorModifier = Modifier
                             .focusRequester(addressFocusRequester)
                             .onFocusChanged { state ->
