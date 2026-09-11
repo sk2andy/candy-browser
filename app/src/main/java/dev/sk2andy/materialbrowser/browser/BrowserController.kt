@@ -3542,6 +3542,7 @@ class BrowserController(
                 isLoading = target != BLANK_URL,
                 progress = 0,
                 error = null,
+                failureKind = null,
                 httpStatusCode = null,
             )
         }
@@ -3734,6 +3735,7 @@ class BrowserController(
                     canGoForward = false,
                     blockedCount = 0,
                     error = null,
+                    failureKind = null,
                     httpStatusCode = null,
                 )
             }
@@ -4343,6 +4345,7 @@ class BrowserController(
                 isLoading = true,
                 progress = 0,
                 error = null,
+                failureKind = null,
                 httpStatusCode = null,
             )
         }
@@ -5645,6 +5648,7 @@ class BrowserController(
                 canGoForward = false,
                 blockedCount = 0,
                 error = null,
+                failureKind = null,
                 httpStatusCode = null,
                 syncCandyId = when {
                     enabled -> null
@@ -6281,7 +6285,13 @@ class BrowserController(
     }
     fun reload() {
         updateTab(selectedTabId) {
-            it.copy(isLoading = true, progress = 0, error = null, httpStatusCode = null)
+            it.copy(
+                isLoading = true,
+                progress = 0,
+                error = null,
+                failureKind = null,
+                httpStatusCode = null,
+            )
         }
         browserEngineSessionFor(selectedTabId).execute(BrowserEngineCommands.reload())
     }
@@ -6300,7 +6310,13 @@ class BrowserController(
             return false
         }
         updateTab(tabId) {
-            it.copy(isLoading = true, progress = 0, error = null, httpStatusCode = null)
+            it.copy(
+                isLoading = true,
+                progress = 0,
+                error = null,
+                failureKind = null,
+                httpStatusCode = null,
+            )
         }
         browserEngineSessionFor(tabId).execute(BrowserEngineCommands.reload())
         return true
@@ -6362,6 +6378,7 @@ class BrowserController(
                         isLoading = true,
                         progress = 0,
                         error = null,
+                        failureKind = null,
                         httpStatusCode = null,
                     )
                 }
@@ -8736,6 +8753,7 @@ class BrowserController(
                         isLoading = true,
                         progress = 0,
                         error = null,
+                        failureKind = null,
                         httpStatusCode = null,
                     )
                 }
@@ -8753,6 +8771,7 @@ class BrowserController(
                         canGoBack = event.canGoBack,
                         canGoForward = event.canGoForward,
                         error = null,
+                        failureKind = null,
                         httpStatusCode = event.httpStatusCode.takeIf { it == 404 },
                     )
                 }
@@ -8772,6 +8791,7 @@ class BrowserController(
             }
             BrowserEngineEventType.NavigationFailed -> {
                 clearRemoteSyncNavigationTracking(event.tabId)
+                connectivityMonitor.refresh()
                 updateTab(event.tabId) { tab ->
                     tab.copy(
                         isLoading = false,
@@ -8779,6 +8799,7 @@ class BrowserController(
                         canGoBack = event.canGoBack,
                         canGoForward = event.canGoForward,
                         error = event.failureDescription,
+                        failureKind = event.failureKind,
                         httpStatusCode = event.httpStatusCode,
                     )
                 }
@@ -9806,6 +9827,7 @@ class BrowserController(
                             isLoading = true,
                             progress = 0,
                             error = null,
+                            failureKind = null,
                             httpStatusCode = null,
                         )
                     }

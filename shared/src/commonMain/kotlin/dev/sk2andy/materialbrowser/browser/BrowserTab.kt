@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser
 
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
+
 data class BrowserTab(
     val id: String,
     val lastAccessedAt: Long,
@@ -17,6 +19,7 @@ data class BrowserTab(
     val error: String? = null,
     val syncCandyId: String? = null,
     val httpStatusCode: Int? = null,
+    val failureKind: BrowserEngineFailureKind? = null,
 )
 
 val BrowserTab.isSynced: Boolean
@@ -31,6 +34,7 @@ val BrowserTab.isFreshBlankTab: Boolean
         !canGoForward &&
         blockedCount == 0 &&
         error == null &&
+        failureKind == null &&
         httpStatusCode == null
 
 const val BLANK_URL = "about:blank"

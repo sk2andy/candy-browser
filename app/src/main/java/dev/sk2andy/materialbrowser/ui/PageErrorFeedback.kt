@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import dev.sk2andy.materialbrowser.ui.theme.CandyPink
 import dev.sk2andy.materialbrowser.ui.theme.CandyInk
 import dev.sk2andy.materialbrowser.ui.theme.CandyPinkSoft
@@ -86,6 +87,7 @@ internal object PageErrorFeedbackRules {
         httpStatusCode: Int?,
         isLoading: Boolean,
         isOnline: Boolean,
+        failureKind: BrowserEngineFailureKind? = null,
         isWebPage: Boolean = true,
     ): PageErrorObservation = when {
         !isWebPage -> PageErrorObservation(PageErrorFeedbackState.Hidden)
@@ -103,6 +105,9 @@ internal object PageErrorFeedbackRules {
         }
         isOnline && current is PageErrorFeedbackState.Offline ->
             PageErrorObservation(state = current.copy(isOnlineReady = true))
+        failureKind == BrowserEngineFailureKind.Offline && error != null -> PageErrorObservation(
+            state = PageErrorFeedbackState.Offline(isOnlineReady = isOnline),
+        )
         httpStatusCode == HTTP_NOT_FOUND_STATUS && !isLoading ->
             PageErrorObservation(PageErrorFeedbackState.NotFound)
         error != null -> PageErrorObservation(PageErrorFeedbackState.Error(error))

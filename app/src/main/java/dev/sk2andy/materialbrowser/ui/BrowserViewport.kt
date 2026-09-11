@@ -322,6 +322,7 @@ internal fun BrowserViewport(
         httpStatusCode = selectedTab.httpStatusCode,
         isLoading = selectedTab.isLoading,
         isOnline = controller.isOnline,
+        failureKind = selectedTab.failureKind,
         isWebPage = selectedTab.url.startsWith("http://") ||
             selectedTab.url.startsWith("https://"),
     ).state
@@ -340,6 +341,7 @@ internal fun BrowserViewport(
         selectedTab.error,
         selectedTab.httpStatusCode,
         selectedTab.isLoading,
+        selectedTab.failureKind,
         controller.isOnline,
     ) {
         val observation = PageErrorFeedbackRules.observe(
@@ -348,6 +350,7 @@ internal fun BrowserViewport(
             httpStatusCode = selectedTab.httpStatusCode,
             isLoading = selectedTab.isLoading,
             isOnline = controller.isOnline,
+            failureKind = selectedTab.failureKind,
             isWebPage = selectedTab.url.startsWith("http://") ||
                 selectedTab.url.startsWith("https://"),
         )

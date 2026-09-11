@@ -727,4 +727,5 @@ private fun GeckoBrowserSessionState.toEngineEvent(
     failureDescription = failureDescription,
     isLoading = isLoading,
     httpStatusCode = httpStatusCode,
+    failureKind = failureKind,
 )
