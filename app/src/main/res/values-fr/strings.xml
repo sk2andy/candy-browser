@@ -419,6 +419,24 @@
     <string name="settings_startup_animation_subtitle">Affiche l’animation Candy lors d’un lancement normal. Désactivez-la pour ouvrir immédiatement la barre d’adresse.</string>
     <string name="settings_favorite_launch_animation_title">Animation d’ouverture des favoris</string>
     <string name="settings_favorite_launch_animation_subtitle">Fait passer le favori dans un tourbillon Candy coloré avant de l’ouvrir.</string>
+    <string name="settings_favorite_bookmark_import_title">Importer un HTML de favoris</string>
+    <string name="settings_favorite_bookmark_import_summary">Ajoute aux favoris les marque-pages exportés depuis un autre navigateur.</string>
+    <plurals name="favorite_bookmark_import_success">
+        <item quantity="one">%d favori importé</item>
+        <item quantity="other">%d favoris importés</item>
+    </plurals>
+    <plurals name="favorite_bookmark_import_partial">
+        <item quantity="one">%1$d favori importé. La limite des favoris est de %2$d.</item>
+        <item quantity="other">%1$d favoris importés. La limite des favoris est de %2$d.</item>
+    </plurals>
+    <string name="favorite_bookmark_import_no_bookmarks">Aucun marque-page trouvé dans ce fichier</string>
+    <string name="favorite_bookmark_import_no_new">Aucun nouveau favori trouvé</string>
+    <string name="favorite_bookmark_import_limit_reached">Limite de %d favoris atteinte</string>
+    <string name="favorite_bookmark_import_empty">Le fichier de marque-pages est vide</string>
+    <string name="favorite_bookmark_import_too_large">La taille des fichiers de marque-pages est limitée à %d Mo</string>
+    <string name="favorite_bookmark_import_invalid_utf8">Le fichier de marque-pages n’est pas un UTF-8 valide</string>
+    <string name="favorite_bookmark_import_invalid_format">Ce fichier n’est pas un HTML de favoris Netscape</string>
+    <string name="favorite_bookmark_import_unreadable">Impossible de lire le fichier de marque-pages</string>
     <string name="settings_open_home_on_startup_title">Ouvrir la page d’accueil au démarrage</string>
     <string name="settings_open_home_on_startup_subtitle">Affiche un nouvel onglet vide plutôt que le dernier onglet actif à l’ouverture de Candy.</string>
     <string name="settings_full_immersive_mode_title">Mode immersif plein écran</string>

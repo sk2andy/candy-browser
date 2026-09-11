@@ -137,7 +137,10 @@ class FavoritesActivity : ComponentActivity() {
         isFavoriteMutationInFlight = true
         lifecycleScope.launch {
             val saved = withContext(Dispatchers.IO) {
-                store.saveFavoritesCommitted(updated)
+                store.saveFavoritesCommitted(
+                    favorites = updated,
+                    expectedCurrent = before,
+                )
             }
             isFavoriteMutationInFlight = false
             if (!saved) {
@@ -166,9 +169,13 @@ class FavoritesActivity : ComponentActivity() {
             mutation = mutation,
         ) ?: return
         isFavoriteMutationInFlight = true
+        val beforeUndo = favorites
         lifecycleScope.launch {
             val saved = withContext(Dispatchers.IO) {
-                store.saveFavoritesCommitted(restored)
+                store.saveFavoritesCommitted(
+                    favorites = restored,
+                    expectedCurrent = beforeUndo,
+                )
             }
             isFavoriteMutationInFlight = false
             if (!saved) {

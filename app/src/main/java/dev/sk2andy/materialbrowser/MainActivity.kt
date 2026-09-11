@@ -110,6 +110,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var releaseNotesStore: ReleaseNotesStore
     private lateinit var pictureInPictureController: MainActivityPictureInPictureController
     private lateinit var userScriptImporter: UserScriptImporter
+    private lateinit var favoriteBookmarksImporter: FavoriteBookmarksImporter
     private lateinit var launcherShortcutIntentHandler: LauncherShortcutIntentHandler
     private lateinit var geckoWebAuthnActivityDelegate: GeckoWebAuthnActivityDelegate
     private val launcherShortcutPublisher by lazy {
@@ -164,6 +165,13 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null && ::userScriptImporter.isInitialized) userScriptImporter.import(uri)
+    }
+    private val favoriteBookmarksImportLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null && ::favoriteBookmarksImporter.isInitialized) {
+            favoriteBookmarksImporter.import(uri)
+        }
     }
     private val appDataExportLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
@@ -324,6 +332,11 @@ class MainActivity : AppCompatActivity() {
             applyBrowserSystemUi = ::applyBrowserSystemUi,
         )
         userScriptImporter = UserScriptImporter(
+            context = this,
+            lifecycleScope = lifecycleScope,
+            browserController = browserController,
+        )
+        favoriteBookmarksImporter = FavoriteBookmarksImporter(
             context = this,
             lifecycleScope = lifecycleScope,
             browserController = browserController,
@@ -499,6 +512,16 @@ class MainActivity : AppCompatActivity() {
                                     "application/javascript",
                                     "text/javascript",
                                     "text/plain",
+                                ),
+                            )
+                        },
+                        onImportFavoriteBookmarks = {
+                            favoriteBookmarksImportLauncher.launch(
+                                arrayOf(
+                                    "text/html",
+                                    "application/xhtml+xml",
+                                    "text/plain",
+                                    "application/octet-stream",
                                 ),
                             )
                         },

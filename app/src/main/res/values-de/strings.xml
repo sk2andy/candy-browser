@@ -416,6 +416,24 @@
     <string name="settings_startup_animation_subtitle">Zeigt die Candy-Animation beim normalen App-Start. Deaktivieren, um die Adressleiste sofort zu öffnen.</string>
     <string name="settings_favorite_launch_animation_title">Favoriten-Startanimation</string>
     <string name="settings_favorite_launch_animation_subtitle">Schickt einen Favoriten durch einen farbigen Candy-Wirbel, bevor er geöffnet wird.</string>
+    <string name="settings_favorite_bookmark_import_title">Lesezeichen-HTML importieren</string>
+    <string name="settings_favorite_bookmark_import_summary">Fügt exportierte Lesezeichen eines anderen Browsers zu den Favoriten hinzu.</string>
+    <plurals name="favorite_bookmark_import_success">
+        <item quantity="one">%d Favorit importiert</item>
+        <item quantity="other">%d Favoriten importiert</item>
+    </plurals>
+    <plurals name="favorite_bookmark_import_partial">
+        <item quantity="one">%1$d Favorit importiert. Das Favoritenlimit ist %2$d.</item>
+        <item quantity="other">%1$d Favoriten importiert. Das Favoritenlimit ist %2$d.</item>
+    </plurals>
+    <string name="favorite_bookmark_import_no_bookmarks">Keine Lesezeichen in dieser Datei gefunden</string>
+    <string name="favorite_bookmark_import_no_new">Keine neuen Favoriten gefunden</string>
+    <string name="favorite_bookmark_import_limit_reached">Favoritenlimit von %d erreicht</string>
+    <string name="favorite_bookmark_import_empty">Die Lesezeichendatei ist leer</string>
+    <string name="favorite_bookmark_import_too_large">Lesezeichendateien dürfen höchstens %d MB groß sein</string>
+    <string name="favorite_bookmark_import_invalid_utf8">Die Lesezeichendatei ist kein gültiges UTF-8</string>
+    <string name="favorite_bookmark_import_invalid_format">Dies ist keine Netscape-Lesezeichen-HTML-Datei</string>
+    <string name="favorite_bookmark_import_unreadable">Die Lesezeichendatei konnte nicht gelesen werden</string>
     <string name="settings_open_home_on_startup_title">Beim Start Startseite öffnen</string>
     <string name="settings_open_home_on_startup_subtitle">Zeigt beim Öffnen von Candy einen neuen leeren Tab statt des zuletzt aktiven Tabs.</string>
     <string name="settings_full_immersive_mode_title">Vollbild-Immersivmodus</string>

@@ -53,6 +53,7 @@ internal fun BrowserSettingsOverlay(
     onEditCapsule: (SiteCapsule) -> Unit,
     onDeleteCapsule: (SiteCapsule) -> Unit,
     onImportUserScript: () -> Unit,
+    onImportFavoriteBookmarks: () -> Unit,
     onOpenFilterStudio: () -> Unit,
     onExportAppData: () -> Unit,
     onImportAppData: () -> Unit,
@@ -251,6 +252,7 @@ internal fun BrowserSettingsOverlay(
                 controller::updateHttpPasswordAutofillEnabled,
             onFavoriteLaunchAnimationEnabledChanged =
                 controller::updateFavoriteLaunchAnimationEnabled,
+            onImportFavoriteBookmarks = onImportFavoriteBookmarks,
             onOpenHomeOnStartupEnabledChanged =
                 controller::updateOpenHomeOnStartupEnabled,
             onScrollBarEnabledChanged = controller::updateScrollBarEnabled,

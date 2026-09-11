@@ -205,6 +205,7 @@ import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
 import dev.sk2andy.materialbrowser.data.BrowsingHistoryRepository
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
 import dev.sk2andy.materialbrowser.data.CandyRuleRepository
+import dev.sk2andy.materialbrowser.data.FavoriteBookmarkMergeResult
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteFaviconRepository
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
@@ -436,6 +437,7 @@ class BrowserController(
     val favoriteFavicons = mutableStateMapOf<String, Bitmap>()
     private val retiredFavoriteFavicons = mutableSetOf<Bitmap>()
     private var favoriteRevision = 0L
+    private var favoriteImportInFlight = false
     private var favoriteFaviconLoadGeneration = 0
     val privacySnapshots = mutableStateMapOf<String, PrivacyXRaySnapshot>()
     val filterRules = mutableStateListOf<CandyRule>()
@@ -913,6 +915,9 @@ class BrowserController(
     }
     private val historyMutationExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "browser-history-mutation")
+    }
+    private val favoriteMutationExecutor = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "browser-favorite-mutation")
     }
     private val pendingBlockedCounts = ConcurrentHashMap<String, AtomicInteger>()
     private val pendingPrivacyTabs = ConcurrentHashMap.newKeySet<String>()
@@ -6527,7 +6532,34 @@ class BrowserController(
 
     fun isFavorite(url: String): Boolean = BrowsingLibraryRules.isFavorite(favorites, url)
 
+    internal fun importFavoriteBookmarks(
+        imported: List<FavoriteEntry>,
+        onComplete: (FavoriteBookmarkMergeResult?) -> Unit,
+    ) {
+        if (favoriteImportInFlight) {
+            onComplete(null)
+            return
+        }
+        favoriteImportInFlight = true
+        favoriteMutationExecutor.execute {
+            val result = store.mergeImportedFavoritesCommitted(imported)
+            mainHandler.post {
+                favoriteImportInFlight = false
+                if (destroyed) return@post
+                if (result == null) {
+                    onComplete(null)
+                    return@post
+                }
+                if (result.importedCount > 0) {
+                    reloadFavorites()
+                }
+                onComplete(result)
+            }
+        }
+    }
+
     fun toggleFavorite(tabId: String = selectedTabId): FavoriteMutation? {
+        if (favoriteImportInFlight) return null
         val tab = tabs.firstOrNull { it.id == tabId } ?: return null
         if (tab.isIncognito || tab.url == BLANK_URL) return null
         val mutation = toggleFavoriteEntry(
@@ -6542,6 +6574,7 @@ class BrowserController(
     }
 
     fun toggleContextLinkFavorite(url: String, title: String?): FavoriteMutation? {
+        if (favoriteImportInFlight) return null
         val sourceTab = contextLinkSourceTab() ?: return null
         if (sourceTab.isIncognito) return null
         val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
@@ -6582,6 +6615,7 @@ class BrowserController(
     }
 
     fun undoFavorite(mutation: FavoriteMutation): Boolean {
+        if (favoriteImportInFlight) return false
         val restored = FavoriteUndoRules.restore(
             current = favorites.toList(),
             currentRevision = favoriteRevision,
@@ -7640,6 +7674,7 @@ class BrowserController(
         profileTabSwitcherWallpaperLoadGeneration++
         profileWallpaperExecutor.shutdownNow()
         historyMutationExecutor.shutdown()
+        favoriteMutationExecutor.shutdown()
         favoriteFaviconLoadGeneration++
         mainHandler.removeCallbacks(recycleRetiredFavoriteFavicons)
         activePermissions.clear()
