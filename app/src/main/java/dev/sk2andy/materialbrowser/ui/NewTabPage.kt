@@ -31,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
@@ -122,8 +124,8 @@ internal fun NewTabPage(
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .fillMaxWidth(0.86f)
-                    .heightIn(max = 520.dp)
+                    .fillMaxWidth(0.82f)
+                    .heightIn(max = 568.dp)
                     .padding(vertical = BlankTabModeMorphRules.HERO_SHADOW_CLEARANCE_DP.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -191,26 +193,40 @@ internal fun NewTabPage(
                             color = colors.surfaceContainerHigh.copy(alpha = 0.9f),
                             tonalElevation = 8.dp,
                         ) {
-                            NewTabFavoriteGrid(
-                                favorites = favorites,
-                                favicons = favicons,
-                                enabled = contentEnabled,
-                                onFavorite = { favorite, startCenterInWindow ->
-                                    if (
-                                        !favoriteLaunchAnimationEnabled ||
-                                        !startCenterInWindow.isUsable() ||
-                                        !rootOriginInWindow.isUsable() ||
-                                        !heroCenterInWindow.isUsable()
-                                    ) {
-                                        onFavorite(favorite.url)
-                                    } else {
-                                        launchRequest = NewTabFavoriteLaunchRequest(
-                                            favorite = favorite,
-                                            startCenterInWindow = startCenterInWindow,
-                                        )
-                                    }
-                                },
-                            )
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.favorites_title),
+                                    modifier = Modifier.padding(
+                                        start = 20.dp,
+                                        top = 16.dp,
+                                        end = 20.dp,
+                                        bottom = 4.dp,
+                                    ),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                NewTabFavoriteGrid(
+                                    favorites = favorites,
+                                    favicons = favicons,
+                                    enabled = contentEnabled,
+                                    onFavorite = { favorite, startCenterInWindow ->
+                                        if (
+                                            !favoriteLaunchAnimationEnabled ||
+                                            !startCenterInWindow.isUsable() ||
+                                            !rootOriginInWindow.isUsable() ||
+                                            !heroCenterInWindow.isUsable()
+                                        ) {
+                                            onFavorite(favorite.url)
+                                        } else {
+                                            launchRequest = NewTabFavoriteLaunchRequest(
+                                                favorite = favorite,
+                                                startCenterInWindow = startCenterInWindow,
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                            }
                         }
                     }
                 }

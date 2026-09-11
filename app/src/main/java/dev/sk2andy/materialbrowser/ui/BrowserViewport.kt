@@ -501,12 +501,16 @@ internal fun BrowserViewport(
     }
 
     handoff?.let { currentHandoff ->
+        val handoffTab = controller.activeTabs.firstOrNull { it.id == currentHandoff.tabId }
         TabHandoffOverlay(
             handoff = currentHandoff,
-            tab = controller.activeTabs.firstOrNull { it.id == currentHandoff.tabId },
+            tab = handoffTab,
             favorites = controller.favorites,
             favoriteFavicons = controller.favoriteFavicons,
-            alpha = if (liveFrameTabId == currentHandoff.tabId && !tabOverviewVisible) {
+            alpha = if (
+                !tabOverviewVisible &&
+                (liveFrameTabId == currentHandoff.tabId || handoffTab?.url == BLANK_URL)
+            ) {
                 handoffAlpha
             } else {
                 1f

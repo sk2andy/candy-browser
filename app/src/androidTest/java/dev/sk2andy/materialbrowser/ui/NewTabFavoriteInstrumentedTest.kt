@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -22,6 +23,7 @@ import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteFaviconStore
 import dev.sk2andy.materialbrowser.data.HistoryEntry
+import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -50,7 +52,7 @@ class NewTabFavoriteInstrumentedTest {
 
     @Test
     fun favoriteOpensFromNewTabWhileAddressEditorIsVisible() {
-        val favoriteUrl = "http://127.0.0.1/favorite"
+        val favoriteUrl = "https://127.0.0.1/favorite"
         val favoriteTitle = "Example favorite"
         val browserController = createController(
             favorite = FavoriteEntry(
@@ -73,7 +75,7 @@ class NewTabFavoriteInstrumentedTest {
         composeRule.onNodeWithContentDescription(closeAddressDescription).assertExists()
         composeRule.onNodeWithText(
             composeRule.activity.getString(R.string.favorites_title),
-        ).assertDoesNotExist()
+        ).assertIsDisplayed()
 
         composeRule.onNodeWithText(favoriteTitle)
             .assertHasClickAction()
@@ -118,13 +120,14 @@ class NewTabFavoriteInstrumentedTest {
             assertTrue(requireNotNull(browserController.toggleFavorite()).added)
         }
         composeRule.waitForIdle()
-        composeRule.runOnIdle {
-            browserController.selectTab(blankTabId)
-        }
+        composeRule.onNodeWithTag(AddressBarTestTags.TabButton).performClick()
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertExists()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(blankTabId)).performClick()
         composeRule.waitUntil(timeoutMillis = 5_000L) {
             browserController.selectedTabId == blankTabId &&
                 browserController.favorites.any { it.url == newFavoriteUrl }
         }
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root).assertDoesNotExist()
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(NewTabFavoritesTestTags.favorite(newFavoriteUrl))
@@ -165,6 +168,7 @@ class NewTabFavoriteInstrumentedTest {
         val browserController = createController(favorite)
 
         composeRule.runOnIdle {
+            assertTrue(browserController.openUrl(favorite.url))
             val mutation = requireNotNull(browserController.toggleFavorite())
             browserController.reloadFavorites()
 

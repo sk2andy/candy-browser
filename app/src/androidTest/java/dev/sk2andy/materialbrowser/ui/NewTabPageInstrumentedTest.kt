@@ -16,12 +16,16 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
@@ -40,6 +44,14 @@ class NewTabPageInstrumentedTest {
         setNewTab(favorites = emptyList())
 
         composeRule.onNodeWithTag(NewTabFavoritesTestTags.Container).assertDoesNotExist()
+        composeRule.onNodeWithText(favoritesTitle()).assertDoesNotExist()
+    }
+
+    @Test
+    fun favoritesShowSectionHeading() {
+        setNewTab(favorites = listOf(favorite(1)))
+
+        composeRule.onNodeWithText(favoritesTitle()).assertIsDisplayed()
     }
 
     @Test
@@ -54,10 +66,15 @@ class NewTabPageInstrumentedTest {
         val fifth = composeRule.onNodeWithTag(
             NewTabFavoritesTestTags.favorite(favorites[4].url),
         ).fetchSemanticsNode().boundsInRoot.center
+        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val containerBounds = composeRule.onNodeWithTag(NewTabFavoritesTestTags.Container)
+            .fetchSemanticsNode().boundsInRoot
 
         assertEquals(4, firstRow.map(Offset::x).distinct().size)
         assertEquals(1, firstRow.map(Offset::y).distinct().size)
         assertTrue(fifth.y > firstRow.first().y)
+        assertTrue(containerBounds.left >= rootBounds.width * 0.08f)
+        assertTrue(rootBounds.right - containerBounds.right >= rootBounds.width * 0.08f)
 
         composeRule.onNodeWithTag(NewTabFavoritesTestTags.Container)
             .performScrollToNode(
@@ -262,6 +279,10 @@ class NewTabPageInstrumentedTest {
         title = "Favorite $index",
         addedAt = index.toLong(),
     )
+
+    private fun favoritesTitle(): String = InstrumentationRegistry.getInstrumentation()
+        .targetContext
+        .getString(R.string.favorites_title)
 
     private companion object {
         const val SHORT_VIEWPORT_TAG = "new_tab_short_viewport"
