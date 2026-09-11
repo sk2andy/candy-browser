@@ -131,7 +131,23 @@ class WebContentTopInsetScriptTest {
 
     @Test
     fun `sticky controls are rechecked and offset while the page scrolls`() {
+        val scrollListener = WebContentTopInsetScript.installScript
+            .substringAfter("const windowScrollListener = () =>")
+            .substringBefore("const protectInteractionTarget")
+
         assertTrue(WebContentTopInsetScript.installScript.contains("position === 'sticky'"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("stickyAttribute"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("stickyOriginalTopProperty"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("stickyTopProperty"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("protectStickyTopAnchors"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("refreshOwnedStickyElements"))
+        assertTrue(
+            WebContentTopInsetScript.installScript.contains(
+                "top: var(",
+            ),
+        )
+        assertTrue(WebContentTopInsetScript.installScript.contains("stickyScrollportTop"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("Math.max(originalTop"))
         assertTrue(WebContentTopInsetScript.installScript.contains("windowScrollListener"))
         assertTrue(WebContentTopInsetScript.installScript.contains("protectLateTopInset"))
         assertTrue(WebContentTopInsetScript.installScript.contains("verifyLateTopInset"))
@@ -141,6 +157,10 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("{ passive: true }"))
         assertTrue(WebContentTopInsetScript.installScript.contains("capture: true"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.position !== 'sticky'"))
+        assertTrue(
+            scrollListener.indexOf("protectStickyTopAnchors") <
+                scrollListener.indexOf("scrollVerificationTimer = globalThis.setTimeout"),
+        )
     }
 
     @Test
