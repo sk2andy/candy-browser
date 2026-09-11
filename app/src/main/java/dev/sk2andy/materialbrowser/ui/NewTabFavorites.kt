@@ -110,15 +110,16 @@ internal fun NewTabFavoriteGrid(
     favicons: Map<String, Bitmap>,
     enabled: Boolean,
     onFavorite: (FavoriteEntry, Offset) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     if (favorites.isEmpty()) return
     LazyVerticalGrid(
         columns = GridCells.Fixed(NewTabFavoriteGridRules.COLUMN_COUNT),
-        modifier = Modifier
+        modifier = modifier
             .height(NewTabFavoriteGridRules.containerHeightDp(favorites.size).dp)
             .testTag(NewTabFavoritesTestTags.Container),
         contentPadding = PaddingValues(
-            horizontal = 8.dp,
+            horizontal = 12.dp,
             vertical = NewTabFavoriteGridRules.VERTICAL_CONTENT_PADDING_DP.dp,
         ),
         horizontalArrangement = Arrangement.spacedBy(4.dp),

@@ -910,16 +910,21 @@ internal fun BrowserScreen(
         tabHandoff?.tabId,
         liveFrameTabId,
         tabOverviewVisible,
-        controller.selectedTabId,
+        selectedTab.id,
+        selectedTab.url,
     ) {
         val handoff = tabHandoff ?: return@LaunchedEffect
-        if (handoff.tabId != controller.selectedTabId) {
+        if (handoff.tabId != selectedTab.id) {
             tabHandoffAlpha.snapTo(1f)
             tabHandoff = null
             return@LaunchedEffect
         }
         if (tabOverviewVisible) return@LaunchedEffect
-        if (liveFrameTabId != handoff.tabId) return@LaunchedEffect
+        if (selectedTab.url == BLANK_URL) {
+            withFrameNanos { }
+        } else if (liveFrameTabId != handoff.tabId) {
+            return@LaunchedEffect
+        }
         tabHandoffAlpha.animateTo(
             targetValue = 0f,
             animationSpec = tween(durationMillis = 110, easing = FastOutSlowInEasing),
