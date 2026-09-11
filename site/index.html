@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff8fa">
+  <meta name="description" content="Candy Browser is a gesture-first Android browser with local privacy tools, flexible browser engines, and self-hosted end-to-end encrypted tab sync.">
+  <title>Candy Browser — Browse with momentum</title>
+  <link rel="icon" type="image/png" href="assets/candy-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,75..125,100..1000&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Candy Browser home">
+      <img src="assets/candy-icon.png" width="44" height="44" alt="">
+      <span>Candy Browser</span>
+    </a>
+    <nav class="desktop-nav" aria-label="Primary navigation">
+      <a class="nav-destination destination-features" href="#features"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z"/></svg><span>Features</span></a>
+      <a class="nav-destination destination-sync" href="#sync"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l-2.5-2.5L16 3l5 5-5 5-1.5-1.5L17 9H7V7Zm10 10H7l2.5 2.5L8 21l-5-5 5-5 1.5 1.5L7 15h10v2Z"/></svg><span>Candy Sync</span></a>
+      <a class="nav-destination destination-privacy" href="privacy/"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 8 3v6c0 5.1-3.4 9.8-8 11-4.6-1.2-8-5.9-8-11V5l8-3Zm0 3.1L6 7.3V11c0 3.8 2.4 7.3 6 8.6 3.6-1.3 6-4.8 6-8.6V7.3l-6-2.2Z"/></svg><span>Privacy</span></a>
+      <a class="nav-destination nav-source" href="https://github.com/sk2andy/candy-browser"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6h-2V7.4l-7.3 7.3-1.4-1.4L16.6 6H14V4ZM5 6h6v2H7v9h9v-4h2v6H5V6Z"/></svg><span>GitHub</span></a>
+    </nav>
+    <details class="mobile-nav">
+      <summary aria-label="Open navigation"><span class="menu-glyph" aria-hidden="true"><i></i><i></i></span><span class="menu-label">Menu</span></summary>
+      <span class="drawer-scrim" aria-hidden="true"></span>
+      <nav aria-label="Mobile navigation">
+        <div class="drawer-heading">
+          <img src="assets/candy-icon.png" width="42" height="42" alt="">
+          <div><strong>Candy Browser</strong><small>Explore</small></div>
+        </div>
+        <a class="nav-destination destination-features" href="#features"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z"/></svg><strong>Features</strong></a>
+        <a class="nav-destination destination-sync" href="#sync"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l-2.5-2.5L16 3l5 5-5 5-1.5-1.5L17 9H7V7Zm10 10H7l2.5 2.5L8 21l-5-5 5-5 1.5 1.5L7 15h10v2Z"/></svg><strong>Candy Sync</strong></a>
+        <a class="nav-destination destination-more" href="#more-features-title"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3V3Zm10 0h8v5h-8V3ZM3 13h8v8H3v-8Zm10-3h8v11h-8V10Z"/></svg><strong>More features</strong></a>
+        <a class="nav-destination destination-privacy" href="privacy/"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 8 3v6c0 5.1-3.4 9.8-8 11-4.6-1.2-8-5.9-8-11V5l8-3Zm0 3.1L6 7.3V11c0 3.8 2.4 7.3 6 8.6 3.6-1.3 6-4.8 6-8.6V7.3l-6-2.2Z"/></svg><strong>Privacy</strong></a>
+        <a class="nav-destination drawer-source" href="https://github.com/sk2andy/candy-browser"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6h-2V7.4l-7.3 7.3-1.4-1.4L16.6 6H14V4ZM5 6h6v2H7v9h9v-4h2v6H5V6Z"/></svg><strong>Open GitHub</strong></a>
+      </nav>
+    </details>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">Browse with<br>momentum.<br><span>Keep your<br>world yours.</span></h1>
+        <div class="hero-actions">
+          <a class="hero-action" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D">
+            <img src="assets/obtainium.svg" width="32" height="32" alt="">
+            <span><small>Get it on</small><strong>Obtainium</strong></span>
+          </a>
+          <a class="hero-action" href="https://github.com/sk2andy/candy-browser">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.7.5.1.7-.2.7-.5v-2c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 0 1.5 1.1 1.5 1.1.9 1.6 2.4 1.1 3 .8.1-.7.4-1.1.7-1.4-2.2-.3-4.6-1.2-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7 1 .7 1.9v2.9c0 .4.2.6.7.5a10.2 10.2 0 0 0 6.8-9.7C22 6.6 17.5 2 12 2Z"/></svg>
+            <span><small>Explore on</small><strong>GitHub</strong></span>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-visual" role="img" aria-label="Candy Browser showing an abstract Material news page with the address bar at the bottom">
+        <figure class="hero-device" aria-hidden="true">
+          <span class="device-button device-button-top"></span>
+          <span class="device-button device-button-bottom"></span>
+          <div class="device-screen">
+            <img class="device-page" src="assets/candy-news-material.svg" width="720" height="1560" alt="">
+            <div class="device-status">
+              <span>09:41</span>
+              <span class="status-icons"><i></i><i></i><i></i><i></i><b></b></span>
+            </div>
+            <span class="device-camera"></span>
+            <div class="browser-toolbar">
+              <span class="address-bar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 0 1 6 0v3H9Z"/></svg><b>Search or enter an address</b></span>
+              <span class="toolbar-action">+</span>
+              <span class="toolbar-action">⋮</span>
+            </div>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <section class="customize-section" id="features" aria-labelledby="customize-title">
+      <div class="section-heading section-heading-center">
+        <h2 id="customize-title">Make Candy fit the way you browse.</h2>
+        <p>Choose how tabs move, where contexts live, and how the browser stays within reach.</p>
+      </div>
+
+      <div class="customize-shell">
+        <div class="customize-controls" role="tablist" aria-label="Ways to customize Candy Browser" aria-orientation="vertical">
+          <button class="customize-tab is-active" id="customize-tabs-tab" type="button" role="tab" aria-selected="true" aria-controls="customize-tabs" tabindex="0" data-customize-panel="customize-tabs">
+            <span>01</span><strong>Tab switcher</strong><small>Cover flow, Compact grid, or a focused List.</small>
+          </button>
+          <button class="customize-tab" id="customize-profiles-tab" type="button" role="tab" aria-selected="false" aria-controls="customize-profiles" tabindex="-1" data-customize-panel="customize-profiles">
+            <span>02</span><strong>Profiles + Candy Stacks</strong><small>Separate contexts, then bundle related tabs.</small>
+          </button>
+          <button class="customize-tab" id="customize-address-tab" type="button" role="tab" aria-selected="false" aria-controls="customize-address" tabindex="-1" data-customize-panel="customize-address">
+            <span>03</span><strong>Shape your address bar</strong><small>Place actions where they work for your hand.</small>
+          </button>
+        </div>
+
+        <div class="customize-canvas">
+          <div class="customize-panel is-active" id="customize-tabs" role="tabpanel" aria-labelledby="customize-tabs-tab">
+            <div class="tab-switcher-abstract" data-active-mode="cover" aria-hidden="true">
+              <div class="tab-view tab-view-cover">
+                <div class="tab-preview tab-preview-back"><i></i><span></span></div>
+                <div class="tab-preview tab-preview-middle"><i></i><span></span></div>
+                <div class="tab-preview tab-preview-front"><i></i><span></span><b></b></div>
+              </div>
+              <div class="tab-view tab-view-grid">
+                <div class="grid-preview"><i></i><span></span></div><div class="grid-preview"><i></i><span></span></div>
+                <div class="grid-preview"><i></i><span></span></div><div class="grid-preview"><i></i><span></span></div>
+              </div>
+              <div class="tab-view tab-view-list">
+                <div class="list-preview"><i></i><span></span><b></b></div>
+                <div class="list-preview"><i></i><span></span><b></b></div>
+                <div class="list-preview"><i></i><span></span><b></b></div>
+              </div>
+              <div class="switcher-chrome"><i></i><span></span><b>+</b></div>
+            </div>
+            <div class="mode-labels" role="group" aria-label="Tab switcher preview mode">
+              <button class="is-active" type="button" aria-pressed="true" data-tab-mode="cover">Cover flow</button>
+              <button type="button" aria-pressed="false" data-tab-mode="grid">Grid</button>
+              <button type="button" aria-pressed="false" data-tab-mode="list">List</button>
+            </div>
+          </div>
+
+          <div class="customize-panel" id="customize-profiles" role="tabpanel" aria-labelledby="customize-profiles-tab" hidden>
+            <div class="profile-stack-abstract" aria-hidden="true">
+              <div class="profile-switcher-abstract">
+                <div class="profile-chip is-selected"><span>H</span><strong>Home</strong></div>
+                <div class="profile-chip"><span>W</span><strong>Work</strong></div>
+                <div class="profile-chip"><span>R</span><strong>Research</strong></div>
+              </div>
+              <div class="stack-scene">
+                <div class="stack-layer stack-layer-back"></div>
+                <div class="stack-layer stack-layer-middle"></div>
+                <div class="stack-card-abstract">
+                  <div class="stack-heading"><i></i><strong>Design research</strong><b>3</b></div>
+                  <div class="stack-cover"><span></span><span></span><i></i></div>
+                  <div class="stack-members"><span></span><span></span><span></span></div>
+                </div>
+              </div>
+            </div>
+            <p class="canvas-note">Tabs, history, colors, and storage boundaries stay attached to the profile you chose.</p>
+          </div>
+
+          <div class="customize-panel" id="customize-address" role="tabpanel" aria-labelledby="customize-address-tab" hidden>
+            <div class="address-composer" aria-hidden="true">
+              <div class="address-only">
+                <i></i><span>Search or enter an address</span><b>⋮</b>
+              </div>
+              <div class="action-slots">
+                <span class="action-slot icon-cycle-a"></span>
+                <span class="action-slot icon-cycle-b"></span>
+                <span class="action-slot icon-cycle-c"></span>
+                <span class="action-slot icon-cycle-d"></span>
+              </div>
+            </div>
+            <p class="canvas-note">Pick the actions you want close at hand. Candy keeps the address field clear.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="core-section" aria-labelledby="core-title">
+      <div class="section-heading section-heading-center">
+        <h2 id="core-title">Your browser should connect more—not collect more.</h2>
+      </div>
+      <div class="core-grid">
+        <article class="feature-card addons-card">
+          <div class="card-copy">
+            <p class="card-label">Firefox add-ons</p>
+            <h3>Bring a real extension ecosystem to Android.</h3>
+            <p>Use Mozilla-signed WebExtensions in GeckoView mode, with actions, popups, options, permissions, and updates inside Candy.</p>
+            <p class="card-note">Support follows GeckoView’s public APIs; desktop-only extensions may not work.</p>
+          </div>
+          <div class="addon-abstract" role="img" aria-label="A Firefox add-on connects to Candy Browser through GeckoView">
+            <div class="puzzle-shape" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4a2 2 0 0 0-2 2v3.8h1.5a2.7 2.7 0 1 1 0 5.4H2V20a2 2 0 0 0 2 2h3.8v-1.5a2.7 2.7 0 1 1 5.4 0V22H17a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5Z"/></svg></div>
+            <div class="addon-heart" aria-hidden="true">♥</div>
+            <div class="candy-orb" aria-hidden="true"><img src="assets/candy-icon.png" width="58" height="58" alt=""></div>
+          </div>
+        </article>
+
+        <article class="feature-card sync-card" id="sync">
+          <div class="card-copy">
+            <p class="card-label">Cross-device E2EE sync</p>
+            <h3>Your tabs. Your server. Your keys.</h3>
+            <p>Candy encrypts URLs, titles, device names, and profile icons before they reach the server you control.</p>
+          </div>
+          <div class="sync-abstract" role="img" aria-label="Candy synchronizes encrypted browser data between Android and desktop through a self-hosted server">
+            <div class="sync-vertical-node sync-source" aria-hidden="true">
+              <span class="sync-node-icon"><svg viewBox="0 0 24 24"><path d="M7 1h10a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3Zm0 3v16h10V4H7Zm3 13h4v1h-4v-1Z"/></svg></span>
+              <span><strong>Candy on Android</strong><small>encrypts locally</small></span>
+            </div>
+            <div class="sync-vertical-route" aria-hidden="true"><i></i><span>◇ E2EE</span><i></i></div>
+            <div class="sync-vertical-node sync-vault" aria-hidden="true">
+              <span class="sync-node-icon"><svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v2h1a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h1V7a5 5 0 0 1 5-5Zm0 3a2 2 0 0 0-2 2v2h4V7a2 2 0 0 0-2-2Zm0 8a2 2 0 0 0-1 3.73V19h2v-2.27A2 2 0 0 0 12 13Z"/></svg></span>
+              <span><strong>Your server</strong><small>stores ciphertext only</small></span>
+            </div>
+            <div class="sync-vertical-route" aria-hidden="true"><i></i><span>◇ E2EE</span><i></i></div>
+            <div class="sync-vertical-node sync-target" aria-hidden="true">
+              <span class="sync-node-icon"><svg viewBox="0 0 24 24"><path d="M3 3h18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7v2h3v2H7v-2h3v-2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 3v10h18V6H3Z"/></svg></span>
+              <span><strong>Firefox + Chromium</strong><small>decrypt on-device</small></span>
+            </div>
+          </div>
+          <p class="key-note"><span aria-hidden="true">◇</span>Your passphrase never leaves your devices.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="power-section" aria-labelledby="more-features-title">
+      <div class="section-heading section-heading-center">
+        <h2 id="more-features-title">Go deeper when the web demands it.</h2>
+      </div>
+      <div class="power-grid">
+        <article class="power-card reader-card" id="reader-studio">
+          <div class="power-visual reader-abstract" aria-hidden="true">
+            <div class="reader-controls"><span>Aa−</span><span>Aa+</span><span>Listen</span></div>
+            <div class="reader-page"><strong></strong><i></i><i></i><i></i><i></i></div>
+          </div>
+          <p class="card-label">Reader Studio</p>
+          <h3>A calmer page, shaped for reading.</h3>
+          <p>Extract locally, tune type and themes, save offline, or listen with text-to-speech.</p>
+        </article>
+
+        <article class="power-card trails-card" id="candy-trails">
+          <div class="power-visual trails-abstract" aria-hidden="true">
+            <svg viewBox="0 0 360 210"><path d="M34 105H128M128 105V52M128 105v55M128 52h92M128 160h62M220 52h88M190 160h118"/><circle cx="34" cy="105" r="18"/><circle cx="128" cy="105" r="22"/><circle cx="220" cy="52" r="17"/><circle cx="190" cy="160" r="17"/><circle cx="308" cy="52" r="22"/><circle cx="308" cy="160" r="22"/></svg>
+          </div>
+          <p class="card-label">Candy Trails</p>
+          <h3>See where every link led.</h3>
+          <p>Pan, zoom, jump back, or fork a branch of your browsing history into a new tab.</p>
+        </article>
+
+        <article class="power-card capsules-card" id="site-capsules">
+          <div class="power-visual capsules-abstract" aria-hidden="true">
+            <div class="capsule-tile"><span>C</span><i></i></div>
+            <div class="capsule-tile"><span>R</span><i></i></div>
+            <div class="capsule-tile"><span>W</span><i></i></div>
+          </div>
+          <p class="card-label">Site Capsules</p>
+          <h3>Give any site its own home.</h3>
+          <p>Pin a profile-bound site with a custom icon, focused chrome, and link boundaries you control.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="privacy-hub" aria-labelledby="privacy-title">
+      <div class="section-heading section-heading-center">
+        <h2 id="privacy-title">See what stays private—and why.</h2>
+        <p>Candy turns privacy from fine print into visible product behavior.</p>
+      </div>
+      <div class="privacy-grid">
+        <article class="privacy-card insight-card">
+          <div class="insight-abstract" aria-hidden="true">
+            <div class="insight-score"><strong>87</strong><span>requests blocked</span></div>
+            <div class="insight-bars"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div>
+            <p class="card-label">Privacy Insights</p>
+            <h3>Useful insight without a surveillance backend.</h3>
+            <p>Filtering, history, favorites, and privacy telemetry stay on your device.</p>
+          </div>
+        </article>
+        <article class="privacy-card policy-card">
+          <p class="card-label">The privacy contract</p>
+          <h3>Plain rules. Visible boundaries.</h3>
+          <ul>
+            <li><span>01</span><strong>Local by default</strong></li>
+            <li><span>02</span><strong>Private means temporary</strong></li>
+            <li><span>03</span><strong>Sync means encrypted</strong></li>
+          </ul>
+          <a class="text-link" href="privacy/">Read the complete Privacy Policy <span aria-hidden="true">→</span></a>
+        </article>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <img src="assets/candy-icon.png" width="96" height="96" alt="">
+      <div>
+        <p class="eyebrow">Open source browser craft</p>
+        <h2>See how Candy is built.</h2>
+      </div>
+      <a class="button primary" href="https://github.com/sk2andy/candy-browser">Open GitHub</a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="brand footer-brand">
+      <img src="assets/candy-icon.png" width="34" height="34" alt="">
+      <span>Candy Browser</span>
+    </div>
+    <p>Gesture-first. Local-first. Built in the open.</p>
+    <nav aria-label="Footer navigation">
+      <a href="privacy/">Privacy</a>
+      <a href="imprint/">Imprint</a>
+      <a href="https://github.com/sk2andy/candy-browser/blob/main/LICENSE">License</a>
+      <a href="https://github.com/sk2andy/candy-browser/issues">Support</a>
+    </nav>
+  </footer>
+  <script>
+    const navigationDrawer = document.querySelector('.mobile-nav');
+    navigationDrawer.addEventListener('toggle', () => {
+      navigationDrawer.querySelector('summary').ariaLabel = navigationDrawer.open ? 'Close navigation' : 'Open navigation';
+    });
+    document.querySelectorAll('.mobile-nav nav a').forEach((destination) => {
+      destination.addEventListener('click', () => destination.closest('details')?.removeAttribute('open'));
+    });
+
+    const customizeTabs = [...document.querySelectorAll('[data-customize-panel]')];
+    const showCustomizePanel = (nextTab) => {
+      customizeTabs.forEach((tab) => {
+        const selected = tab === nextTab;
+        const panel = document.getElementById(tab.dataset.customizePanel);
+        tab.classList.toggle('is-active', selected);
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        panel.hidden = !selected;
+        panel.classList.toggle('is-active', selected);
+      });
+    };
+    customizeTabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => showCustomizePanel(tab));
+      tab.addEventListener('keydown', (event) => {
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const nextIndex = event.key === 'Home' ? 0
+          : event.key === 'End' ? customizeTabs.length - 1
+          : (index + (event.key === 'ArrowDown' ? 1 : -1) + customizeTabs.length) % customizeTabs.length;
+        customizeTabs[nextIndex].focus();
+        showCustomizePanel(customizeTabs[nextIndex]);
+      });
+    });
+
+    const tabModeButtons = [...document.querySelectorAll('[data-tab-mode]')];
+    const tabSwitcherPreview = document.querySelector('.tab-switcher-abstract');
+    tabModeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        tabSwitcherPreview.dataset.activeMode = button.dataset.tabMode;
+        tabModeButtons.forEach((candidate) => {
+          const selected = candidate === button;
+          candidate.classList.toggle('is-active', selected);
+          candidate.setAttribute('aria-pressed', String(selected));
+        });
+      });
+    });
+
+  </script>
+</body>
+</html>

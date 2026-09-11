@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1560" viewBox="0 0 720 1560" role="img" aria-labelledby="title desc">
+  <title id="title">Abstract Material news page</title>
+  <desc id="desc">A fictional mobile news page composed from Material tonal surfaces, editorial rules, and abstract image shapes.</desc>
+  <rect width="720" height="1560" fill="#fff8fa"/>
+
+  <g transform="translate(32 92)">
+    <rect width="118" height="20" rx="10" fill="#963a5e"/>
+    <rect x="148" width="72" height="20" rx="10" fill="#715760" opacity=".72"/>
+    <rect x="238" width="72" height="20" rx="10" fill="#715760" opacity=".52"/>
+    <rect x="328" width="72" height="20" rx="10" fill="#715760" opacity=".52"/>
+    <rect x="540" width="48" height="20" rx="10" fill="#ffd9e3"/>
+    <rect x="600" width="24" height="20" rx="10" fill="#c3ecdd"/>
+    <path d="M0 52H656" stroke="#d7c2c9" stroke-width="2"/>
+
+    <rect y="86" width="88" height="16" rx="8" fill="#963a5e"/>
+    <rect y="122" width="606" height="34" rx="10" fill="#201a1c"/>
+    <rect y="170" width="472" height="34" rx="10" fill="#201a1c"/>
+    <rect y="224" width="300" height="14" rx="7" fill="#715760" opacity=".54"/>
+
+    <g transform="translate(0 270)">
+      <rect width="656" height="430" rx="36" fill="#f3ddea"/>
+      <path d="M0 272C90 190 188 188 264 230C348 276 406 266 474 188C528 126 584 92 656 86V430H0Z" fill="#ffd9e3"/>
+      <path d="M362 430V170C362 106 414 54 478 54C542 54 594 106 594 170V430Z" fill="#715760"/>
+      <path d="M418 430V186C418 153 445 126 478 126C511 126 538 153 538 186V430Z" fill="#fff8fa"/>
+      <circle cx="190" cy="170" r="72" fill="#c3ecdd"/>
+      <path d="M190 122C206 144 226 151 248 154C226 163 209 178 198 200C191 178 179 164 156 152C177 148 187 139 190 122Z" fill="#41665c"/>
+      <rect x="26" y="360" width="184" height="42" rx="21" fill="#963a5e"/>
+      <circle cx="626" cy="46" r="14" fill="#963a5e"/>
+    </g>
+
+    <rect y="730" width="330" height="24" rx="8" fill="#201a1c"/>
+    <rect y="770" width="548" height="13" rx="6.5" fill="#715760" opacity=".58"/>
+    <rect y="796" width="480" height="13" rx="6.5" fill="#715760" opacity=".42"/>
+    <rect y="822" width="392" height="13" rx="6.5" fill="#715760" opacity=".32"/>
+
+    <g transform="translate(0 882)">
+      <rect width="318" height="276" rx="32" fill="#c3ecdd"/>
+      <rect x="24" y="24" width="72" height="16" rx="8" fill="#41665c"/>
+      <rect x="24" y="64" width="244" height="22" rx="8" fill="#002019"/>
+      <rect x="24" y="100" width="190" height="12" rx="6" fill="#41665c" opacity=".6"/>
+      <rect x="24" y="126" width="222" height="12" rx="6" fill="#41665c" opacity=".42"/>
+      <g transform="translate(186 152)">
+        <rect width="104" height="100" rx="24" fill="#fff8fa"/>
+        <circle cx="52" cy="50" r="28" fill="#963a5e"/>
+        <path d="M30 52C42 38 60 34 76 44C64 47 55 58 50 72C47 61 40 55 30 52Z" fill="#ffd9e3"/>
+      </g>
+    </g>
+
+    <g transform="translate(338 882)">
+      <rect width="318" height="276" rx="56 24 56 24" fill="#ffd9e3"/>
+      <rect x="24" y="24" width="72" height="16" rx="8" fill="#963a5e"/>
+      <rect x="24" y="64" width="244" height="22" rx="8" fill="#3d001d"/>
+      <rect x="24" y="100" width="210" height="12" rx="6" fill="#963a5e" opacity=".56"/>
+      <rect x="24" y="126" width="174" height="12" rx="6" fill="#963a5e" opacity=".38"/>
+      <path d="M196 174C196 144 220 120 250 120C280 120 304 144 304 174V252H196Z" fill="#715760"/>
+      <circle cx="224" cy="204" r="24" fill="#f3ddea"/>
+    </g>
+
+    <g transform="translate(0 1182)">
+      <rect width="656" height="172" rx="28" fill="#f8e9ee"/>
+      <rect x="22" y="22" width="148" height="128" rx="24" fill="#f3ddea"/>
+      <path d="M48 126V74C48 44 72 20 102 20C132 20 156 44 156 74V126Z" fill="#715760"/>
+      <circle cx="102" cy="76" r="24" fill="#ffd9e3"/>
+      <rect x="194" y="28" width="82" height="14" rx="7" fill="#963a5e"/>
+      <rect x="194" y="66" width="382" height="22" rx="8" fill="#201a1c"/>
+      <rect x="194" y="102" width="316" height="12" rx="6" fill="#715760" opacity=".5"/>
+      <rect x="194" y="128" width="242" height="12" rx="6" fill="#715760" opacity=".34"/>
+    </g>
+
+    <path d="M0 1390H656" stroke="#d7c2c9" stroke-width="2"/>
+    <rect y="1424" width="82" height="14" rx="7" fill="#715760" opacity=".32"/>
+    <rect x="118" y="1424" width="82" height="14" rx="7" fill="#715760" opacity=".32"/>
+    <rect x="462" y="1424" width="82" height="14" rx="7" fill="#715760" opacity=".32"/>
+    <rect x="574" y="1424" width="82" height="14" rx="7" fill="#715760" opacity=".32"/>
+  </g>
+</svg>
