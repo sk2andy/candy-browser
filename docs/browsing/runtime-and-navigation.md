@@ -111,11 +111,12 @@
   solely because the network disconnects. Show the offline surface after a main-frame transport failure.
   Offline Candy Circuit board, score, combo, moves and best score remain UI-local and memory-only.
   The deterministic 4×4 rotation puzzle gives a round twelve moves; a circuit scores only when at least
-  four connected tiles have reciprocal edge connections without a dangling endpoint, and a circuit
-  fingerprint scores at most once per round. Scoring replaces every participating tile with its fixed,
-  non-closed refill tile and grants two moves per scored component, so a round continues without a
-  retained closed loop. The UI resolves a scored turn as one input-locked sequence: rotate the closing
-  tile, pulse and dissolve the closed circuit, then fly the deterministic refill tiles in with a stable
+  four tiles form a cycle through reciprocal edge connections. Extra open or dangling branches do not
+  invalidate that cycle. Scoring replaces every participating tile with a different randomized tile,
+  rejects refills that already contain a closed cycle, and grants two moves per scored component. A
+  player may rebuild and score the same circuit positions again after refill. The UI resolves a scored
+  turn as one input-locked sequence: rotate the closing
+  tile, pulse and dissolve the closed circuit, then fly the randomized refill tiles in with a stable
   stagger; score and move semantics update from the reducer result without waiting for motion. Open the
   puzzle immediately with no intermediate play prompt. If connectivity
   returns, keep game state and expose a polite **Back online** banner whose button performs the only reload.
