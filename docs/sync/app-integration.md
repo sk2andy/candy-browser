@@ -87,7 +87,9 @@ federated-login URLs never enter the sync payload.
 
 Gecko commit and same-document navigation events are debounced before entering the serialized
 repository. Remote hydration is marked until commit so engine callbacks cannot echo the received
-URL back as a new mutation. The repository folds pending mutations into its observable state
+URL back as a new mutation. A local HTTP(S) navigation is protected from inbound reconciliation
+immediately and remains protected until the same target device, stable tab ID, and normalized URL
+appear in repository state. The repository folds pending mutations into its observable state
 immediately, persists them in a Keystore-protected cache, and retries them after reconnecting.
 
 ## Conflicts and delivery
@@ -221,7 +223,7 @@ strict parsing, Keystore restart behavior, offline retry, lost-response idempote
 The MainActivity settings-flow suite also enters Sync through the real browser menu and verifies the
 page renders on-device.
 Controller instrumentation covers Gecko `Open`/`Navigate`, SPA history changes, first-load hydration
-without echo, rapid superseding remote navigation, and remote navigation of an already resident
-Gecko session.
+without echo, stale linked-state rejection during local navigation, rapid superseding remote
+navigation, and remote navigation of an already resident Gecko session.
 `./sync/scripts/test-android.sh` provisions its own disposable API 35 AVD, sets the serial explicitly,
 runs the sync unit/UI/security suite, and deletes the AVD afterward.
