@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
+import android.content.res.Configuration
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Region
@@ -44,6 +45,7 @@ import dev.sk2andy.materialbrowser.browser.credentials.AndroidCredentialPromptHo
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptHost
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptIdentity
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptRules
+import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
@@ -60,6 +62,7 @@ import org.mozilla.geckoview.CandyGeckoViewSafeAreaBridge
 import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
+import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSessionSettings
 import org.mozilla.geckoview.WebRequestError
@@ -185,6 +188,20 @@ internal class GeckoViewRuntimeHandle private constructor(
     override fun setWebContentFontSizeFactor(factor: Float) {
         runtime.settings.automaticFontSizeAdjustment = false
         runtime.settings.fontSizeFactor = factor
+    }
+
+    @UiThread
+    override fun setWebContentColorScheme(colorScheme: BrowserWebContentColorScheme) {
+        runtime.settings.preferredColorScheme = when (colorScheme) {
+            BrowserWebContentColorScheme.System -> GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM
+            BrowserWebContentColorScheme.Light -> GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
+            BrowserWebContentColorScheme.Dark -> GeckoRuntimeSettings.COLOR_SCHEME_DARK
+        }
+    }
+
+    @UiThread
+    override fun onConfigurationChanged(configuration: Configuration) {
+        runtime.configurationChanged(configuration)
     }
 
     @UiThread

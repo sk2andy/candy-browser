@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -101,5 +102,25 @@ class AppearanceSettingsScreenInstrumentedTest {
             ),
             settings,
         )
+    }
+
+    @Test
+    fun forceDarkWebsitesIsDisabledWhenEngineDoesNotSupportIt() {
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = AppearanceSettings()) {
+                AppearanceSettingsPage(
+                    settings = AppearanceSettings(),
+                    onSettingsChanged = {},
+                    onBack = {},
+                    forceDarkWebsitesAvailable = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.ForceDarkWebsites)
+            .assertIsNotEnabled()
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_force_dark_websites_system_webview_only),
+        ).assertExists()
     }
 }

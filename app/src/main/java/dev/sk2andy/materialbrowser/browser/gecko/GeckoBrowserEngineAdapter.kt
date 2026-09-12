@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.View
@@ -16,6 +17,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
@@ -65,6 +67,11 @@ internal interface BrowserEngineViewPort {
     fun platformViewStateSnapshot(): Bundle? = null
 
     fun restorePlatformViewState(state: Bundle, expectedUrl: String): Boolean = false
+
+    /** In-memory-only renderer state used while replacing a platform view at runtime. */
+    fun transientPlatformViewStateSnapshot(): Bundle? = null
+
+    fun restoreTransientPlatformViewState(state: Bundle, expectedUrl: String): Boolean = false
 
     fun loadExtensionUrl(url: String): Boolean = false
 }
@@ -213,6 +220,16 @@ internal class GeckoBrowserEngineSessionFactory(
     @UiThread
     override fun setWebContentFontSizeFactor(factor: Float) {
         runtime.setWebContentFontSizeFactor(factor)
+    }
+
+    @UiThread
+    override fun setWebContentColorScheme(colorScheme: BrowserWebContentColorScheme) {
+        runtime.setWebContentColorScheme(colorScheme)
+    }
+
+    @UiThread
+    override fun onConfigurationChanged(configuration: Configuration) {
+        runtime.onConfigurationChanged(configuration)
     }
 
     @UiThread

@@ -1,9 +1,11 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 
@@ -51,6 +53,12 @@ internal interface GeckoRuntimeHandle {
 
     @UiThread
     fun setWebContentFontSizeFactor(factor: Float)
+
+    @UiThread
+    fun setWebContentColorScheme(colorScheme: BrowserWebContentColorScheme)
+
+    @UiThread
+    fun onConfigurationChanged(configuration: Configuration)
 
     @UiThread
     fun bindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate)

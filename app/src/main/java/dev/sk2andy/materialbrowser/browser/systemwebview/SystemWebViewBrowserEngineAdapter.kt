@@ -145,6 +145,7 @@ internal class SystemWebViewBrowserEngineFactory(
     private var blockThirdPartyCookies = true
     private var webRtcProtectionMode = WebRtcProtectionMode.Default
     private var fontSizeFactor = 1f
+    private var forceDarkWebsites = false
     private val sessions = mutableSetOf<SystemWebViewBrowserEngineSession>()
     private val knownCookieManagers = mutableListOf<CookieManager>()
     private val incognitoProfileName = INCOGNITO_PROFILE_NAME
@@ -228,6 +229,11 @@ internal class SystemWebViewBrowserEngineFactory(
         sessions.forEach { it.setFontSizeFactor(fontSizeFactor) }
     }
 
+    override fun setForceDarkWebsites(enabled: Boolean) {
+        forceDarkWebsites = enabled
+        sessions.forEach { it.setForceDarkWebsites(enabled) }
+    }
+
     override fun clearPrivateData() {
         if (!supportsMultiProfile()) return
         deleteProfileIfPresent(incognitoProfileName)
@@ -265,6 +271,7 @@ internal class SystemWebViewBrowserEngineFactory(
         blockThirdPartyCookies = blockThirdPartyCookies,
         initialWebRtcProtectionMode = webRtcProtectionMode,
         fontSizeFactor = fontSizeFactor,
+        forceDarkWebsites = forceDarkWebsites,
         onClosed = sessions::remove,
     ).also { session ->
         sessions += session
@@ -339,6 +346,7 @@ private class SystemWebViewBrowserEngineSession(
     blockThirdPartyCookies: Boolean,
     initialWebRtcProtectionMode: WebRtcProtectionMode,
     fontSizeFactor: Float,
+    forceDarkWebsites: Boolean,
     private val onClosed: (SystemWebViewBrowserEngineSession) -> Unit,
 ) : AndroidBrowserEngineSessionPort {
     private val appContext = context.applicationContext
@@ -413,7 +421,10 @@ private class SystemWebViewBrowserEngineSession(
             assignedProfileName = null
         }
         defaultUserAgent = webView.settings.userAgentString
-        configureWebView(fontSizeFactor)
+        configureWebView(
+            fontSizeFactor = fontSizeFactor,
+            forceDarkWebsites = forceDarkWebsites,
+        )
         installWebRtcPolicy()
         installTopInsetScript()
         installToppings(initialScripts)
@@ -702,8 +713,16 @@ private class SystemWebViewBrowserEngineSession(
         webView.scrollBy(0, deltaPx)
     }
 
-    override fun platformViewStateSnapshot(): Bundle? {
-        if (closed || isPrivate) return null
+    override fun platformViewStateSnapshot(): Bundle? = platformViewStateSnapshot(
+        allowPrivate = false,
+    )
+
+    override fun transientPlatformViewStateSnapshot(): Bundle? = platformViewStateSnapshot(
+        allowPrivate = true,
+    )
+
+    private fun platformViewStateSnapshot(allowPrivate: Boolean): Bundle? {
+        if (closed || isPrivate && !allowPrivate) return null
         val state = Bundle()
         val history = runCatching { webView.saveState(state) }.getOrNull()
         val currentUrl = history?.currentItem?.url
@@ -712,8 +731,18 @@ private class SystemWebViewBrowserEngineSession(
         return state
     }
 
-    override fun restorePlatformViewState(state: Bundle, expectedUrl: String): Boolean {
-        if (closed || isPrivate) return false
+    override fun restorePlatformViewState(state: Bundle, expectedUrl: String): Boolean =
+        restorePlatformViewState(state, expectedUrl, allowPrivate = false)
+
+    override fun restoreTransientPlatformViewState(state: Bundle, expectedUrl: String): Boolean =
+        restorePlatformViewState(state, expectedUrl, allowPrivate = true)
+
+    private fun restorePlatformViewState(
+        state: Bundle,
+        expectedUrl: String,
+        allowPrivate: Boolean,
+    ): Boolean {
+        if (closed || isPrivate && !allowPrivate) return false
         if (state.getString(PLATFORM_STATE_URL) != expectedUrl) return false
         val history = runCatching { webView.restoreState(state) }.getOrNull() ?: return false
         val restoredUrl = history.currentItem?.url ?: return false
@@ -773,6 +802,10 @@ private class SystemWebViewBrowserEngineSession(
         if (!closed) webView.settings.textZoom = (factor.coerceIn(0.5f, 2f) * 100).toInt()
     }
 
+    fun setForceDarkWebsites(enabled: Boolean) {
+        if (!closed) webView.settings.applyWebsiteDarkeningPolicy(enabled)
+    }
+
     fun clearCache() {
         if (!closed) webView.clearCache(true)
     }
@@ -821,7 +854,10 @@ private class SystemWebViewBrowserEngineSession(
         closedEvent?.let(eventSink::onEngineEvent)
     }
 
-    private fun configureWebView(fontSizeFactor: Float) {
+    private fun configureWebView(
+        fontSizeFactor: Float,
+        forceDarkWebsites: Boolean,
+    ) {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -839,7 +875,7 @@ private class SystemWebViewBrowserEngineSession(
             mediaPlaybackRequiresUserGesture = autoplayBlocked
             textZoom = (fontSizeFactor.coerceIn(0.5f, 2f) * 100).toInt()
             enablePinchZoom()
-            applyWebsiteDarkeningPolicy(forceDarkWebsites = false)
+            applyWebsiteDarkeningPolicy(forceDarkWebsites)
         }
         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         if (isPrivate) {
