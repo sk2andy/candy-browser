@@ -336,3 +336,67 @@ test("remote snapshot does not reload a tab whose normalized URL already matches
 
   assert.equal(updates.some(([, properties]) => properties.url !== undefined), false);
 });
+
+test("remote mutations recover from stale Chromium and Firefox tab identities", async () => {
+  const local = new Map<string, unknown>([["candySyncTabIdentitiesV1", {
+    "7": "stale-open", "8": "stale-nav", "9": "stale-pin",
+    "10": "stale-close", "11": "stale-order", "12": "live-order",
+  }]]);
+  const moved: number[] = [];
+  const fakeChrome = {
+    tabs: {
+      get: async (tabId: number) => ({ id: tabId, url: "https://before.example/" }),
+      update: async (tabId: number) => {
+        throw new Error(tabId === 7 || tabId === 9 ? `Invalid tab ID: ${tabId}` : `No tab with id: ${tabId}.`);
+      },
+      create: async () => ({ id: 13, incognito: false }),
+      move: async (tabId: number) => {
+        if (tabId === 11) throw new Error("No tab with id: 11.");
+        moved.push(tabId);
+      },
+      remove: async () => { throw new Error("No tab with id: 10."); },
+    },
+    storage: { local: storageArea(local) },
+  } as unknown as typeof chrome;
+  (globalThis as typeof globalThis & { chrome: typeof chrome }).chrome = fakeChrome;
+  const common = { schemaVersion: 2 as const, targetDeviceId: "desktop-1" };
+
+  assert.equal(await applyTabMutation({ ...common, mutationId: "open", type: "open", tab: {
+    candyId: "stale-open", windowId: 1, index: 0, groupId: null, active: false,
+    pinned: false, title: "Open", url: "https://open.example/",
+  } }), 13);
+  assert.equal(await applyTabMutation({
+    ...common, mutationId: "navigate", type: "navigate", candyId: "stale-nav",
+    url: "https://updated.example/", title: "Updated",
+  }), null);
+  assert.equal(await applyTabMutation({
+    ...common, mutationId: "pin", type: "set-pinned", candyId: "stale-pin", pinned: true,
+  }), null);
+  assert.equal(await applyTabMutation({
+    ...common, mutationId: "close", type: "close", candyId: "stale-close",
+  }), null);
+  await applyTabMutation({
+    ...common, mutationId: "order", type: "reorder", orderedCandyIds: ["stale-order", "live-order"],
+  });
+
+  assert.deepEqual(moved, [12]);
+  assert.deepEqual(local.get("candySyncTabIdentitiesV1"), { "12": "live-order", "13": "stale-open" });
+});
+
+test("remote mutation does not hide unrelated browser errors", async () => {
+  const local = new Map<string, unknown>([["candySyncTabIdentitiesV1", { "7": "existing-tab" }]]);
+  const fakeChrome = {
+    tabs: {
+      get: async () => ({ url: "https://before.example/" }),
+      update: async () => { throw new Error("Tabs cannot be edited right now."); },
+    },
+    storage: { local: storageArea(local) },
+  } as unknown as typeof chrome;
+  (globalThis as typeof globalThis & { chrome: typeof chrome }).chrome = fakeChrome;
+
+  await assert.rejects(applyTabMutation({
+    schemaVersion: 2, mutationId: "navigate", targetDeviceId: "desktop-1",
+    type: "navigate", candyId: "existing-tab", url: "https://updated.example/", title: "Updated",
+  }), /Tabs cannot be edited right now/u);
+  assert.deepEqual(local.get("candySyncTabIdentitiesV1"), { "7": "existing-tab" });
+});
