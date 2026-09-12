@@ -156,6 +156,15 @@ val localReleaseAppLabel =
     providers.gradleProperty("candy.localReleaseAppLabel")
         .orElse("Candy Browser Local")
         .map(::validatedAppLabel)
+val releaseAbi = providers.gradleProperty("candy.releaseAbi").map { value ->
+    require(value == "arm64-v8a") {
+        "candy.releaseAbi must be arm64-v8a."
+    }
+    value
+}
+val compressNativeLibs = providers.gradleProperty("candy.compressNativeLibs")
+    .map(String::toBooleanStrict)
+    .orElse(false)
 
 android {
     namespace = "dev.sk2andy.materialbrowser"
@@ -176,6 +185,12 @@ android {
         buildConfigField("String", "RELEASE_NOTES_VERSION", "\"${candyVersionName.get()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        releaseAbi.orNull?.let { abi ->
+            ndk {
+                abiFilters += abi
+            }
+        }
     }
 
     flavorDimensions += "distribution"
@@ -285,6 +300,7 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        jniLibs.useLegacyPackaging = compressNativeLibs.get()
     }
 }
 

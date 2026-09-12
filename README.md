@@ -317,9 +317,11 @@ Candy Browser requires Android 13 (API 33) or newer.
 
 [Download Candy Browser](https://github.com/sk2andy/candy-browser/releases)
 
-Standard and User CA production builds check GitHub for updates at startup and offer the signed APK
-for download. The FOSS build disables this updater. Android still requires you to open a downloaded
-file and approve installation.
+Standard and User CA production builds check GitHub for updates at startup and offer a signed APK
+for download. Standard installs on ARM64 devices prefer the smaller ARM64 APK and fall back to the
+universal APK when needed. Both use the same application ID, version, and signing key, so either can
+update an existing standard install. The FOSS build disables this updater. Android still requires
+you to open a downloaded file and approve installation.
 
 ### Obtainium
 
@@ -346,15 +348,16 @@ and cannot become versions of the new package. Submission files and maintainer s
 so F-Droid can verify its source build and preserve update compatibility with the upstream signing
 key.
 
-Releases contain three APK channels:
+Releases contain three APK channels plus an architecture-optimized standard APK:
 
 | APK suffix | Certificate trust | Intended use |
 | --- | --- | --- |
-| `-release.apk` | Android system CAs only | Recommended default |
+| `-release.apk` | Android system CAs only | Universal compatibility fallback |
+| `-arm64-v8a-release.apk` | Android system CAs only | Recommended smaller APK for ARM64 devices |
 | `-foss-release.apk` | Android system CAs only | F-Droid reproducible-build reference without proprietary Google integrations |
 | `-ca-release.apk` | System CAs plus every CA in Android's user store | Explicit opt-in for HTTPS filtering/proxy tools such as AdGuard |
 
-The standard build uses `dev.sk2andy.materialbrowser`, the FOSS build uses
+Both standard APKs use `dev.sk2andy.materialbrowser` and the same release signature. The FOSS build uses
 `dev.sk2andy.materialbrowser.foss`, and the User CA build uses
 `dev.sk2andy.materialbrowser.ca`. Android therefore installs all three side by side with isolated
 app data. Their launcher labels and badged icons distinguish the channels; the warning under
@@ -448,8 +451,9 @@ separate workflow signs and publishes the FOSS output from explicitly allowliste
 ### GitHub releases
 
 The manual `Release Android APK` workflow tests the selected source revision, builds the FOSS flavor,
-builds and verifies the signed standard and User CA APKs, creates a `v<version>` source tag, and
-publishes the two signed APKs plus their SHA-256 checksums. Add four repository secrets once:
+builds and verifies the signed universal standard, ARM64 standard, and User CA APKs, creates a
+`v<version>` source tag, and publishes the three signed APKs plus their SHA-256 checksums. Add four
+repository secrets once:
 
 ```bash
 base64 < "$CANDY_RELEASE_KEYSTORE_PATH" | gh secret set CANDY_RELEASE_KEYSTORE_BASE64

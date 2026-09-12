@@ -28,7 +28,7 @@ jobs:
   release:
     name: Build and publish v${{ inputs.version }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: release
     env:
       INPUT_VERSION: ${{ inputs.version }}
@@ -255,6 +255,17 @@ jobs:
             CANDY_FOSS_LAUNCHER_MONOCHROME="drawable/ic_launcher_monochrome_foss" \
             CANDY_USER_CA_LAUNCHER_MONOCHROME="drawable/ic_launcher_monochrome_ca" \
             python3 scripts/test_network_security_apks.py
+          cp \
+            "app/build/outputs/apk/full/release/app-full-release.apk" \
+            "$RUNNER_TEMP/candy-standard-universal-release.apk"
+          ./gradlew --no-daemon --max-workers=1 \
+            -Pcandy.releaseNotesFile="$INPUT_CHANGELOG" \
+            -Pcandy.releaseAbi=arm64-v8a \
+            -Pcandy.compressNativeLibs=true \
+            assembleFullRelease
+          cp \
+            "app/build/outputs/apk/full/release/app-full-release.apk" \
+            "$RUNNER_TEMP/candy-standard-arm64-v8a-release.apk"
 
       - name: Verify and checksum APKs
         shell: bash
@@ -264,17 +275,21 @@ jobs:
           set -euo pipefail
 
           release_apk="CandyBrowser-${RELEASE_TAG}-release.apk"
+          arm64_release_apk="CandyBrowser-${RELEASE_TAG}-arm64-v8a-release.apk"
           user_ca_release_apk="CandyBrowser-${RELEASE_TAG}-ca-release.apk"
-          cp "app/build/outputs/apk/full/release/app-full-release.apk" "$release_apk"
+          cp "$RUNNER_TEMP/candy-standard-universal-release.apk" "$release_apk"
+          cp "$RUNNER_TEMP/candy-standard-arm64-v8a-release.apk" "$arm64_release_apk"
           cp \
             "app/build/outputs/apk/full/userCaRelease/app-full-userCaRelease.apk" \
             "$user_ca_release_apk"
 
           apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)"
+          aapt2="$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -n 1)"
+          zipalign="$(ls "$ANDROID_HOME"/build-tools/*/zipalign | sort -V | tail -n 1)"
           expected_certificate="${CANDY_RELEASE_CERTIFICATE_SHA256//:/}"
           expected_certificate="${expected_certificate,,}"
 
-          for apk in "$release_apk" "$user_ca_release_apk"; do
+          for apk in "$release_apk" "$arm64_release_apk" "$user_ca_release_apk"; do
             verification="$("$apksigner" verify --verbose --print-certs "$apk")"
             printf '%s\n' "$verification"
             actual_certificate="$(
@@ -288,12 +303,31 @@ jobs:
               echo "${apk} certificate does not match pinned repository fingerprint." >&2
               exit 1
             fi
+            "$zipalign" -c -P 16 4 "$apk"
             sha256sum "$apk" > "${apk}.sha256"
           done
+
+          arm64_badging="$("$aapt2" dump badging "$arm64_release_apk")"
+          if ! grep -Fq \
+            "package: name='dev.sk2andy.materialbrowser' versionCode='${RELEASE_VERSION_CODE}' versionName='${RELEASE_VERSION}'" \
+            <<< "$arm64_badging"; then
+            echo "ARM64 APK package identity or version does not match universal release." >&2
+            exit 1
+          fi
+          if ! grep -Fxq "native-code: 'arm64-v8a'" <<< "$arm64_badging"; then
+            echo "ARM64 APK contains unexpected native architectures." >&2
+            exit 1
+          fi
+          if (( $(stat -c '%s' "$arm64_release_apk") >= $(stat -c '%s' "$release_apk") )); then
+            echo "ARM64 APK is not smaller than universal release." >&2
+            exit 1
+          fi
 
           {
             echo "RELEASE_APK=${release_apk}"
             echo "RELEASE_CHECKSUM=${release_apk}.sha256"
+            echo "ARM64_RELEASE_APK=${arm64_release_apk}"
+            echo "ARM64_RELEASE_CHECKSUM=${arm64_release_apk}.sha256"
             echo "USER_CA_RELEASE_APK=${user_ca_release_apk}"
             echo "USER_CA_RELEASE_CHECKSUM=${user_ca_release_apk}.sha256"
           } >> "$GITHUB_ENV"
@@ -318,6 +352,8 @@ jobs:
             "$RELEASE_TAG" \
             "$RELEASE_APK" \
             "$RELEASE_CHECKSUM" \
+            "$ARM64_RELEASE_APK" \
+            "$ARM64_RELEASE_CHECKSUM" \
             "$USER_CA_RELEASE_APK" \
             "$USER_CA_RELEASE_CHECKSUM" \
             "${release_flags[@]}"

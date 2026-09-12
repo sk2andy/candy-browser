@@ -30,6 +30,78 @@ class AppUpdateRulesTest {
     }
 
     @Test
+    fun `prefers arm64 release on compatible devices`() {
+        val universalAsset = asset("v0.9", suffix = "release")
+        val arm64Asset = asset("v0.9", suffix = "arm64-v8a-release")
+
+        val update = AppUpdateRules.findAvailableUpdate(
+            currentVersionName = "0.8",
+            release = release("v0.9", assets = listOf(universalAsset, arm64Asset)),
+            supportedAbis = listOf("arm64-v8a", "armeabi-v7a"),
+        )
+
+        assertEquals("CandyBrowser-v0.9-arm64-v8a-release.apk", update?.fileName)
+    }
+
+    @Test
+    fun `falls back to universal release when arm64 asset is missing`() {
+        val update = AppUpdateRules.findAvailableUpdate(
+            currentVersionName = "0.8",
+            release = release("v0.9"),
+            supportedAbis = listOf("arm64-v8a"),
+        )
+
+        assertEquals("CandyBrowser-v0.9-release.apk", update?.fileName)
+    }
+
+    @Test
+    fun `rejects ambiguous arm64 release instead of falling back`() {
+        val universalAsset = asset("v0.9", suffix = "release")
+        val arm64Asset = asset("v0.9", suffix = "arm64-v8a-release")
+
+        assertNull(
+            AppUpdateRules.findAvailableUpdate(
+                currentVersionName = "0.8",
+                release = release(
+                    "v0.9",
+                    assets = listOf(arm64Asset, arm64Asset, universalAsset),
+                ),
+                supportedAbis = listOf("arm64-v8a"),
+            ),
+        )
+    }
+
+    @Test
+    fun `rejects invalid arm64 release instead of falling back`() {
+        val universalAsset = asset("v0.9", suffix = "release")
+        val arm64Asset = asset("v0.9", suffix = "arm64-v8a-release").copy(
+            contentType = "application/octet-stream",
+        )
+
+        assertNull(
+            AppUpdateRules.findAvailableUpdate(
+                currentVersionName = "0.8",
+                release = release("v0.9", assets = listOf(arm64Asset, universalAsset)),
+                supportedAbis = listOf("arm64-v8a"),
+            ),
+        )
+    }
+
+    @Test
+    fun `keeps non arm64 devices on universal release`() {
+        val universalAsset = asset("v0.9", suffix = "release")
+        val arm64Asset = asset("v0.9", suffix = "arm64-v8a-release")
+
+        val update = AppUpdateRules.findAvailableUpdate(
+            currentVersionName = "0.8",
+            release = release("v0.9", assets = listOf(arm64Asset, universalAsset)),
+            supportedAbis = listOf("x86_64"),
+        )
+
+        assertEquals("CandyBrowser-v0.9-release.apk", update?.fileName)
+    }
+
+    @Test
     fun `does not offer same or older release`() {
         assertNull(AppUpdateRules.findAvailableUpdate("0.9", release("v0.9")))
         assertNull(AppUpdateRules.findAvailableUpdate("1.0", release("v0.9")))
@@ -44,6 +116,21 @@ class AppUpdateRulesTest {
             currentVersionName = "0.8",
             release = release("v0.9", assets = listOf(standardAsset, userCaAsset)),
             channel = AppReleaseChannel.UserCa,
+        )
+
+        assertEquals("CandyBrowser-v0.9-ca-release.apk", update?.fileName)
+    }
+
+    @Test
+    fun `keeps user CA installs on universal channel for arm64 devices`() {
+        val userCaAsset = asset("v0.9", suffix = "ca-release")
+        val arm64Asset = asset("v0.9", suffix = "arm64-v8a-release")
+
+        val update = AppUpdateRules.findAvailableUpdate(
+            currentVersionName = "0.8",
+            release = release("v0.9", assets = listOf(arm64Asset, userCaAsset)),
+            channel = AppReleaseChannel.UserCa,
+            supportedAbis = listOf("arm64-v8a"),
         )
 
         assertEquals("CandyBrowser-v0.9-ca-release.apk", update?.fileName)
