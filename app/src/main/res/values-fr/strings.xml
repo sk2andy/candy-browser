@@ -293,6 +293,7 @@
     <string name="appearance_mode_amoled">AMOLED</string>
     <string name="settings_force_dark_websites">Forcer le mode sombre sur les sites Web</string>
     <string name="settings_force_dark_websites_summary">Avec une apparence sombre du navigateur, assombrit automatiquement les sites sans thème sombre. Peut causer des problèmes d’affichage.</string>
+    <string name="settings_force_dark_websites_system_webview_only">Disponible uniquement avec le moteur WebView du système.</string>
     <string name="settings_web_content_font_size">Taille de police des sites web</string>
     <string name="settings_color_palette">Palette de couleurs</string>
     <string name="color_palette_dynamic">Material You</string>

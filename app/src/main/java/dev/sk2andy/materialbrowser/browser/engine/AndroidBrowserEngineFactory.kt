@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.engine
 
+import android.content.res.Configuration
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
@@ -44,6 +45,12 @@ internal interface AndroidBrowserEngineFactory {
 
     fun setWebContentFontSizeFactor(factor: Float)
 
+    fun setWebContentColorScheme(colorScheme: BrowserWebContentColorScheme) = Unit
+
+    fun onConfigurationChanged(configuration: Configuration) = Unit
+
+    fun setForceDarkWebsites(enabled: Boolean) = Unit
+
     fun clearPrivateData() = Unit
 
     fun shutdown() = Unit
@@ -59,4 +66,10 @@ internal interface AndroidBrowserEngineFactory {
             GeckoCandyTrailHistoryEventSink { _, _ -> },
         eventSink: BrowserEngineEventSink,
     ): AndroidBrowserEngineSessionPort
+}
+
+internal enum class BrowserWebContentColorScheme {
+    System,
+    Light,
+    Dark,
 }

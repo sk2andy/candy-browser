@@ -109,15 +109,20 @@ Frosted exposes three persisted controls while selected:
 - The main `…` menu shares the active browser-content blur source, including the new-tab page; its rows remain translucent and its individual quick-action tiles use the configured blur strength. It opens from the address-bar action with a spring scale-and-rise transition and leaves with a short fade-and-shrink transition.
 - Bottom sheets use the general Frosted transparency setting; Privacy X-Ray also blurs the active browser content. Clear and AMOLED sheets remain opaque.
 - Forced light, dark and AMOLED modes update system-bar icon contrast independently from system night mode.
-- Appearance mode also selects Android's activity night resources. WebView therefore exposes the
-  same effective light or dark mode to websites through `prefers-color-scheme`; AMOLED is dark,
-  while System follows the device setting. Live changes reload active pages against the new Android
-  theme without replacing the browser controller or persisting its in-memory private tabs. An open
-  Link Peek closes before its ephemeral preview WebView is released.
-- WebView algorithmic darkening is off by default. The optional **Force dark mode on websites**
-  setting allows WebView to recolor sites without their own dark theme while the effective app
-  appearance is dark. Websites can still respond to `prefers-color-scheme`; forced darkening may
-  cause display issues by altering author-defined colors and image assets.
+- Appearance mode also selects Android's activity night resources. Both browser engines therefore
+  expose the same effective light or dark mode to websites through `prefers-color-scheme`; AMOLED is
+  dark, while System follows the device setting. GeckoView receives the runtime color-scheme
+  preference plus Android configuration changes while System is active, then reloads resident
+  sessions so existing documents observe the change reliably. System WebView replaces active
+  renderer views against the new
+  Android theme while carrying navigation and document state through an in-memory-only handoff,
+  including for private tabs. Neither path replaces the browser controller or persists private
+  state. An open Link Peek closes before its ephemeral preview is released.
+- System WebView algorithmic darkening is off by default. The optional **Force dark mode on
+  websites** setting allows System WebView to recolor sites without their own dark theme while the
+  effective app appearance is dark. GeckoView has no equivalent API, so the control is disabled for
+  that engine. Websites can still respond to `prefers-color-scheme`; forced darkening may cause
+  display issues by altering author-defined colors and image assets.
 - Website font size is global across regular and private browsing and changes only text rendered by
   websites, not Candy's own interface. Android applies the persisted 50–200% value through
   GeckoView's runtime-wide font-size factor. GeckoView requires a document reload, so Candy reloads

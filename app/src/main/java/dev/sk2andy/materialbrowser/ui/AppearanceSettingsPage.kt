@@ -31,6 +31,7 @@ internal fun AppearanceSettingsPage(
     settings: AppearanceSettings,
     onSettingsChanged: (AppearanceSettings) -> Unit,
     onBack: () -> Unit,
+    forceDarkWebsitesAvailable: Boolean = true,
 ) {
     SharedAppearanceSettingsPage(
         settings = settings,
@@ -41,7 +42,11 @@ internal fun AppearanceSettingsPage(
             appearanceModeNames = BrowserAppearanceMode.entries.associateWith { it.displayName() },
             forceDarkWebsites = stringResource(R.string.settings_force_dark_websites),
             forceDarkWebsitesSummary = stringResource(
-                R.string.settings_force_dark_websites_summary,
+                if (forceDarkWebsitesAvailable) {
+                    R.string.settings_force_dark_websites_summary
+                } else {
+                    R.string.settings_force_dark_websites_system_webview_only
+                },
             ),
             webContentFontSize = stringResource(R.string.settings_web_content_font_size),
             colorPalette = stringResource(R.string.settings_color_palette),
@@ -60,5 +65,6 @@ internal fun AppearanceSettingsPage(
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         onSettingsChanged = onSettingsChanged,
         onBack = onBack,
+        forceDarkWebsitesAvailable = forceDarkWebsitesAvailable,
     )
 }

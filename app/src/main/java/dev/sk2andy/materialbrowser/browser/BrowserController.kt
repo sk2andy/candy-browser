@@ -11,6 +11,7 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -100,6 +101,7 @@ import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
 import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPrompt
 import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPromptRules
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
 import dev.sk2andy.materialbrowser.browser.gecko.CandyGeckoView
@@ -196,6 +198,7 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
@@ -804,6 +807,7 @@ class BrowserController(
     }
 
     private val browserEngineSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
+    private val transientPlatformViewStates = mutableMapOf<String, Bundle>()
     private val geckoViewBindings = mutableMapOf<FrameLayout, GeckoViewBinding>()
     private val geckoViewMutationHosts = mutableSetOf<FrameLayout>()
     private val geckoViewSessionsBeingReleased = mutableSetOf<AndroidBrowserEngineSessionPort>()
@@ -1914,6 +1918,7 @@ class BrowserController(
         isVideoAutoplayBlocked =
             isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
         appearanceSettings = store.loadAppearanceSettings()
+        applyWebContentAppearance(appearanceSettings)
         browserEngineSessionFactory.setWebContentFontSizeFactor(
             appearanceSettings.webContentFontSizePercent / 100f,
         )
@@ -6854,8 +6859,12 @@ class BrowserController(
         if (appearanceSettings == normalized) return
         val fontSizeChanged =
             appearanceSettings.webContentFontSizePercent != normalized.webContentFontSizePercent
+        val webContentAppearanceChanged =
+            appearanceSettings.appearanceMode != normalized.appearanceMode ||
+                appearanceSettings.forceDarkWebsites != normalized.forceDarkWebsites
         appearanceSettings = normalized
         store.saveAppearanceSettings(normalized)
+        if (webContentAppearanceChanged) applyWebContentAppearance(normalized)
         if (fontSizeChanged) {
             browserEngineSessionFactory.setWebContentFontSizeFactor(
                 normalized.webContentFontSizePercent / 100f,
@@ -6891,11 +6900,33 @@ class BrowserController(
 
     fun onAppearanceConfigurationChanged() {
         val externalPreview = externalLinkPreviewState
+        browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
+        applyWebContentAppearance(appearanceSettings)
         if (geckoLinkPeekBindings.isNotEmpty()) {
             contentActions.dismiss()
         }
         destroyLinkPeekPreviewSessions()
+        if (usesGeckoEngine) {
+            browserEngineSessions.values.forEach { session ->
+                session.execute(BrowserEngineCommands.reload())
+            }
+        } else {
+            recreateSystemWebViewSessionsForAppearance()
+        }
         if (externalPreview != null) recreateExternalLinkPreviewRuntime(externalPreview)
+    }
+
+    private fun applyWebContentAppearance(settings: AppearanceSettings) {
+        browserEngineSessionFactory.setWebContentColorScheme(
+            when (settings.appearanceMode) {
+                BrowserAppearanceMode.System -> BrowserWebContentColorScheme.System
+                BrowserAppearanceMode.Light -> BrowserWebContentColorScheme.Light
+                BrowserAppearanceMode.Dark,
+                BrowserAppearanceMode.Amoled,
+                -> BrowserWebContentColorScheme.Dark
+            },
+        )
+        browserEngineSessionFactory.setForceDarkWebsites(settings.forceDarkWebsites)
     }
 
     fun updateDownloadSettings(settings: BrowserDownloadSettings) {
@@ -7828,7 +7859,9 @@ class BrowserController(
                         ?.let { snapshot -> session.restoreSessionState(snapshot.encodedState) }
                         ?: false
                 } else {
-                    if (
+                    transientPlatformViewStates.remove(tab.id)?.let { state ->
+                        session.restoreTransientPlatformViewState(state, tab.url)
+                    } ?: if (
                         tab.url != BLANK_URL &&
                         !tab.isIncognito &&
                         !isSessionEphemeralTab(tab.id) &&
@@ -11638,6 +11671,21 @@ class BrowserController(
                 tabs.firstOrNull { tab -> tab.id == tabId && tab.url != BLANK_URL }
                     ?.let { browserEngineSessionFor(tabId) }
             }
+        }
+    }
+
+    private fun recreateSystemWebViewSessionsForAppearance() {
+        val tabIds = browserEngineSessions.keys.toSet()
+        if (tabIds.isEmpty()) return
+        browserEngineSessions.forEach { (tabId, session) ->
+            session.transientPlatformViewStateSnapshot()?.let { state ->
+                transientPlatformViewStates[tabId] = state
+            }
+        }
+        try {
+            recreateEngineSessions(tabIds, reloadImmediately = true)
+        } finally {
+            transientPlatformViewStates.keys.removeAll(tabIds)
         }
     }
 

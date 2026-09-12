@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import android.content.res.Configuration
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -57,11 +59,34 @@ class GeckoRuntimeOwnerTest {
         assertEquals(1.55f, runtime.recordedWebContentFontSizeFactor, 0f)
     }
 
+    @Test
+    fun `session factory forwards web content color scheme`() {
+        val runtime = FakeRuntimeHandle()
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+
+        factory.setWebContentColorScheme(BrowserWebContentColorScheme.Dark)
+
+        assertEquals(BrowserWebContentColorScheme.Dark, runtime.recordedWebContentColorScheme)
+    }
+
+    @Test
+    fun `session factory forwards host configuration changes`() {
+        val runtime = FakeRuntimeHandle()
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+        val configuration = Configuration()
+
+        factory.onConfigurationChanged(configuration)
+
+        assertSame(configuration, runtime.recordedConfiguration)
+    }
+
     private class FakeRuntimeHandle : GeckoRuntimeHandle {
         override val extensions = FakeExtensionRuntime()
         override val toppings = FakeToppingHostRuntime()
         var thirdPartyCookiesBlocked = true
         var recordedWebContentFontSizeFactor = 1f
+        var recordedWebContentColorScheme = BrowserWebContentColorScheme.System
+        var recordedConfiguration: Configuration? = null
 
         override fun createSession(
             profileId: String,
@@ -86,6 +111,14 @@ class GeckoRuntimeOwnerTest {
 
         override fun setWebContentFontSizeFactor(factor: Float) {
             recordedWebContentFontSizeFactor = factor
+        }
+
+        override fun setWebContentColorScheme(colorScheme: BrowserWebContentColorScheme) {
+            recordedWebContentColorScheme = colorScheme
+        }
+
+        override fun onConfigurationChanged(configuration: Configuration) {
+            recordedConfiguration = configuration
         }
 
         override fun bindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) = Unit

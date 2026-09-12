@@ -68,6 +68,7 @@ fun AppearanceSettingsPage(
     onSettingsChanged: (AppearanceSettings) -> Unit,
     onBack: () -> Unit,
     enabled: Boolean = true,
+    forceDarkWebsitesAvailable: Boolean = true,
 ) {
     var appearanceMenuExpanded by remember { mutableStateOf(false) }
     var paletteMenuExpanded by remember { mutableStateOf(false) }
@@ -113,7 +114,7 @@ fun AppearanceSettingsPage(
             title = strings.forceDarkWebsites,
             subtitle = strings.forceDarkWebsitesSummary,
             checked = settings.forceDarkWebsites,
-            enabled = enabled,
+            enabled = enabled && forceDarkWebsitesAvailable,
             onCheckedChange = { value ->
                 onSettingsChanged(settings.copy(forceDarkWebsites = value))
             },

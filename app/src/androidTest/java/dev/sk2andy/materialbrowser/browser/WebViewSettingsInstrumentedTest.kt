@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.systemwebview
 import android.webkit.WebView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.junit.Assert.assertFalse
@@ -59,6 +60,23 @@ class WebViewSettingsInstrumentedTest {
 
                 WebViewCompat.setAudioMuted(this, false)
                 assertFalse(WebViewCompat.isAudioMuted(this))
+
+                destroy()
+            }
+        }
+    }
+
+    @Test
+    fun togglesAlgorithmicWebsiteDarkeningWhenProviderSupportsIt() {
+        assumeTrue(WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING))
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            WebView(instrumentation.targetContext).apply {
+                settings.applyWebsiteDarkeningPolicy(forceDarkWebsites = true)
+                assertTrue(WebSettingsCompat.isAlgorithmicDarkeningAllowed(settings))
+
+                settings.applyWebsiteDarkeningPolicy(forceDarkWebsites = false)
+                assertFalse(WebSettingsCompat.isAlgorithmicDarkeningAllowed(settings))
 
                 destroy()
             }
