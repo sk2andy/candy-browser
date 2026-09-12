@@ -28,6 +28,54 @@ class NewTabFavoriteGridRulesTest {
     }
 
     @Test
+    fun `visible favorites receive stable unique start shapes`() {
+        val urls = (1..20).map { index -> "https://favorite-$index.example/" }
+        val first = NewTabFavoriteShapeRules.startVariants(urls)
+        val second = NewTabFavoriteShapeRules.startVariants(urls)
+
+        assertEquals(first, second)
+        assertEquals(NewTabFavoriteShapeVariant.entries.toSet(), first.toSet())
+    }
+
+    @Test
+    fun `morph phase advances from each assigned start shape`() {
+        val start = NewTabFavoriteShapeVariant.Arch
+
+        assertEquals(
+            NewTabFavoriteMorphState(
+                from = NewTabFavoriteShapeVariant.Arch,
+                to = NewTabFavoriteShapeVariant.Fan,
+                progress = 0f,
+            ),
+            NewTabFavoriteShapeRules.morphState(start, 0f),
+        )
+        assertEquals(
+            NewTabFavoriteMorphState(
+                from = NewTabFavoriteShapeVariant.Fan,
+                to = NewTabFavoriteShapeVariant.Triangle,
+                progress = 0.25f,
+            ),
+            NewTabFavoriteShapeRules.morphState(start, 1.25f),
+        )
+        assertEquals(
+            NewTabFavoriteMorphState(
+                from = NewTabFavoriteShapeVariant.Arch,
+                to = NewTabFavoriteShapeVariant.Fan,
+                progress = 0f,
+            ),
+            NewTabFavoriteShapeRules.morphState(start, Float.NaN),
+        )
+    }
+
+    @Test
+    fun `elapsed time produces bounded morph progress`() {
+        assertEquals(0f, NewTabFavoriteShapeRules.morphProgress(-1L, 3_600), 0.001f)
+        assertEquals(0.5f, NewTabFavoriteShapeRules.morphProgress(1_800L, 3_600), 0.001f)
+        assertEquals(1f, NewTabFavoriteShapeRules.morphProgress(9_600L, 3_600), 0.001f)
+        assertEquals(1f, NewTabFavoriteShapeRules.morphProgress(0L, 0), 0.001f)
+    }
+
+    @Test
     fun `launch path starts and finishes at its anchors`() {
         val start = Offset(280f, 620f)
         val target = Offset(180f, 180f)

@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
+import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PopupSiteRules
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
@@ -24,7 +25,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
-import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.sync.SyncTabRules
 import org.json.JSONArray
@@ -934,6 +937,15 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_FAVORITE_LAUNCH_ANIMATION_ENABLED, enabled).apply()
     }
 
+    fun loadFavoriteAnimationSpeed(): FavoriteAnimationSpeed =
+        FavoriteAnimationSpeed.fromWireValue(
+            preferences.getString(KEY_FAVORITE_ANIMATION_SPEED, null),
+        )
+
+    fun saveFavoriteAnimationSpeed(speed: FavoriteAnimationSpeed) {
+        preferences.edit().putString(KEY_FAVORITE_ANIMATION_SPEED, speed.wireValue).apply()
+    }
+
     fun loadOpenHomeOnStartupEnabled(): Boolean =
         preferences.getBoolean(KEY_OPEN_HOME_ON_STARTUP_ENABLED, false)
 
@@ -1243,6 +1255,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_HTTP_PASSWORD_AUTOFILL_ENABLED = "http_password_autofill_enabled"
         const val KEY_FAVORITE_LAUNCH_ANIMATION_ENABLED =
             "favorite_launch_animation_enabled"
+        const val KEY_FAVORITE_ANIMATION_SPEED = "favorite_animation_speed"
         const val KEY_OPEN_HOME_ON_STARTUP_ENABLED = "open_home_on_startup_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"

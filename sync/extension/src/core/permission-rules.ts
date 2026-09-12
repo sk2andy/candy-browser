@@ -9,7 +9,6 @@ export interface PermissionPlan {
 export function permissionsForSelection(selection: SyncSelection): string[] {
   const permissions = new Set<string>();
   if (selection.tabs || selection.groups) permissions.add("tabs");
-  if (selection.bookmarks) permissions.add("bookmarks");
   if (selection.groups) permissions.add("tabGroups");
   return [...permissions].sort();
 }
@@ -17,7 +16,6 @@ export function permissionsForSelection(selection: SyncSelection): string[] {
 export function dataCollectionForSelection(selection: SyncSelection): string[] {
   const values = new Set<string>();
   if (selection.tabs || selection.groups) values.add("browsingActivity");
-  if (selection.bookmarks) values.add("bookmarksInfo");
   return [...values].sort();
 }
 

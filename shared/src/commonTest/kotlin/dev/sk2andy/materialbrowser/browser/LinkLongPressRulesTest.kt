@@ -1,11 +1,9 @@
-package dev.sk2andy.materialbrowser.browser.actions
+package dev.sk2andy.materialbrowser.browser
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class LinkLongPressRulesTest {
-    private val link = WebContentTarget(linkUrl = "https://example.com/")
-
     @Test
     fun `link actions resolve to their matching outcomes`() {
         val expected = mapOf(
@@ -26,19 +24,23 @@ class LinkLongPressRulesTest {
         expected.forEach { (action, outcome) ->
             assertEquals(
                 outcome,
-                LinkLongPressRules.outcome(action, link, canOpenInPrivate = true),
+                LinkLongPressRules.outcome(
+                    action = action,
+                    hasLinkTarget = true,
+                    canOpenInPrivate = true,
+                ),
             )
         }
     }
 
     @Test
-    fun `image-only targets always keep content context`() {
+    fun `targets without a link always keep content context`() {
         LinkLongPressAction.entries.forEach { action ->
             assertEquals(
                 LinkLongPressOutcome.ShowContext,
                 LinkLongPressRules.outcome(
                     action = action,
-                    target = WebContentTarget(imageUrl = "https://example.com/image.png"),
+                    hasLinkTarget = false,
                     canOpenInPrivate = true,
                 ),
             )
@@ -55,7 +57,7 @@ class LinkLongPressRulesTest {
                 LinkLongPressOutcome.ShowContext,
                 LinkLongPressRules.outcome(
                     action = action,
-                    target = link,
+                    hasLinkTarget = true,
                     canOpenInPrivate = false,
                 ),
             )

@@ -74,7 +74,7 @@ test("background serializes selection updates without losing revision or durable
   });
   await Promise.all([
     send({ tabs: false, bookmarks: false, groups: false }),
-    send({ tabs: true, bookmarks: false, groups: false }),
+    send({ tabs: true, bookmarks: true, groups: false }),
   ]);
 
   const stored = local.get("candySyncSettingsV1") as StoredSettings;

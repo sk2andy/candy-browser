@@ -31,6 +31,7 @@ for (const browser of browsers) {
   const output = path.join(root, "dist", browser);
   fs.rmSync(output, { recursive: true, force: true });
   fs.mkdirSync(path.join(output, "options"), { recursive: true });
+  fs.mkdirSync(path.join(output, "icons"), { recursive: true });
 
   await Promise.all([
     build({
@@ -63,4 +64,7 @@ for (const browser of browsers) {
   copy(path.join(root, "src", "options", "index.html"), path.join(output, "options", "index.html"));
   copy(path.join(root, "src", "options", "options.css"), path.join(output, "options", "options.css"));
   copy(path.resolve(root, "../protocol/device-icons-v1.json"), path.join(output, "device-icons-v1.json"));
+  for (const size of [16, 32, 48, 96, 128]) {
+    copy(path.join(root, "assets", "icons", `icon-${size}.png`), path.join(output, "icons", `icon-${size}.png`));
+  }
 }

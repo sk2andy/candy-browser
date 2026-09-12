@@ -466,6 +466,7 @@ internal fun BrowserViewport(
                         onFavorite = onFavorite,
                         favoriteLaunchAnimationEnabled =
                             controller.isFavoriteLaunchAnimationEnabled,
+                        favoriteAnimationSpeed = controller.favoriteAnimationSpeed,
                     )
                 }
             }

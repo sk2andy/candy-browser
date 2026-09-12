@@ -20,8 +20,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.R
-import dev.sk2andy.materialbrowser.data.LinkPeekAction
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.browser.LinkPeekAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference

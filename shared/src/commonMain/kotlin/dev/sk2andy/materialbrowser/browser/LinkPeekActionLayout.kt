@@ -1,4 +1,4 @@
-package dev.sk2andy.materialbrowser.data
+package dev.sk2andy.materialbrowser.browser
 
 enum class LinkPeekAction(val wireValue: String) {
     ReaderLater("reader_later"),
@@ -30,7 +30,7 @@ data class LinkPeekActionLayout(
     }
 }
 
-internal sealed interface LinkPeekActionSlot {
+sealed interface LinkPeekActionSlot {
     data class Action(
         val action: LinkPeekAction,
         val actionIndex: Int,
@@ -43,7 +43,7 @@ internal sealed interface LinkPeekActionSlot {
     data object FixedPlus : LinkPeekActionSlot
 }
 
-internal object LinkPeekActionLayoutRules {
+object LinkPeekActionLayoutRules {
     const val CONFIGURABLE_ACTION_COUNT = 3
     const val TOOLBAR_SLOT_COUNT = 4
     const val FIXED_PLUS_SLOT_INDEX = 2

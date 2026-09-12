@@ -8,13 +8,14 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
-import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
@@ -24,8 +25,8 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
-import dev.sk2andy.materialbrowser.data.LinkPeekAction
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.browser.LinkPeekAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRouter
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
@@ -71,6 +72,7 @@ internal fun SettingsScreen(
     isHttpPasswordAutofillEnabled: Boolean = false,
     isHttpPasswordAutofillSupported: Boolean = false,
     isFavoriteLaunchAnimationEnabled: Boolean = true,
+    favoriteAnimationSpeed: FavoriteAnimationSpeed = FavoriteAnimationSpeed.Default,
     isOpenHomeOnStartupEnabled: Boolean = false,
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
@@ -118,6 +120,7 @@ internal fun SettingsScreen(
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onHttpPasswordAutofillEnabledChanged: (Boolean) -> Unit = {},
     onFavoriteLaunchAnimationEnabledChanged: (Boolean) -> Unit = {},
+    onFavoriteAnimationSpeedChanged: (FavoriteAnimationSpeed) -> Unit = {},
     onImportFavoriteBookmarks: () -> Unit = {},
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
@@ -284,6 +287,7 @@ internal fun SettingsScreen(
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
                     isStartupAnimationEnabled = isStartupAnimationEnabled,
                     isFavoriteLaunchAnimationEnabled = isFavoriteLaunchAnimationEnabled,
+                    favoriteAnimationSpeed = favoriteAnimationSpeed,
                     isOpenHomeOnStartupEnabled = isOpenHomeOnStartupEnabled,
                     isScrollBarEnabled = isScrollBarEnabled,
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
@@ -296,6 +300,7 @@ internal fun SettingsScreen(
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
                     onFavoriteLaunchAnimationEnabledChanged =
                         onFavoriteLaunchAnimationEnabledChanged,
+                    onFavoriteAnimationSpeedChanged = onFavoriteAnimationSpeedChanged,
                     onImportFavoriteBookmarks = onImportFavoriteBookmarks,
                     onOpenHomeOnStartupEnabledChanged =
                         onOpenHomeOnStartupEnabledChanged,

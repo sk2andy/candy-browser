@@ -43,6 +43,7 @@ data class BrowserTabsState(
 
 enum class BrowserTabsIntent {
     NewTab,
+    DuplicateTab,
     SelectTab,
     SelectTabInOverview,
     CloseTab,
@@ -101,6 +102,7 @@ class BrowserTabsController {
 
     fun dispatch(intent: BrowserTabsIntent, tabId: String?): BrowserTabsState = when (intent) {
         BrowserTabsIntent.NewTab -> addBlankTab()
+        BrowserTabsIntent.DuplicateTab -> duplicateSelectedTab(tabId)
         BrowserTabsIntent.SelectTab -> selectTab(tabId)
         BrowserTabsIntent.SelectTabInOverview -> selectTab(tabId, hideOverview = false)
         BrowserTabsIntent.CloseTab -> closeTab(tabId)
@@ -390,6 +392,31 @@ class BrowserTabsController {
                 ),
                 isOverviewVisible = false,
                 addressFocusRequest = state.addressFocusRequest + 1,
+            ),
+        )
+    }
+
+    private fun duplicateSelectedTab(tabId: String?): BrowserTabsState {
+        val source = state.tabs.firstOrNull { tab ->
+            tab.id == tabId && tab.id == state.selectedTabId && tab.address.isNotBlank()
+        } ?: return state
+        val duplicate = BrowserTabState(
+            id = tabId(nextTabNumber++),
+            address = source.address,
+            title = "",
+            profileId = source.profileId,
+            isPrivate = source.isPrivate,
+        )
+        return update(
+            state.copy(
+                tabs = state.tabs + duplicate,
+                selectedTabId = duplicate.id,
+                profiles = rememberSelectedTab(
+                    profiles = state.profiles,
+                    profileId = state.activeProfileId,
+                    tabId = duplicate.id,
+                ),
+                isOverviewVisible = false,
             ),
         )
     }

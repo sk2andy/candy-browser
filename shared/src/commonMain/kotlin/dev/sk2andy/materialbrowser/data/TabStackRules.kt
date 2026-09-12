@@ -4,7 +4,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 
-internal object TabStackRules {
+object TabStackRules {
     const val MAX_STACKS = 12
     const val MIN_MEMBER_COUNT = 2
     const val MAX_NAME_LENGTH = 40

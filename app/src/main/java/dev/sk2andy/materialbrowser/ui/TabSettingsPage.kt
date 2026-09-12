@@ -25,7 +25,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
-import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabDismissResistanceSettings

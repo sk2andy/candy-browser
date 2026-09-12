@@ -134,6 +134,7 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             isTabOverviewVisible: browser.isTabOverviewVisible,
             isSettingsVisible: browser.isSettingsVisible,
             tabOverviewMode: browser.tabOverviewMode.sharedMode,
+            tabListStartsAtBottom: browser.tabListStartsAtBottom,
             addressFocusRequest: browser.addressFocusRequest,
             searchEngine: browser.searchEngine,
             searxngInstanceUrl: browser.searxngInstanceUrl,
@@ -211,6 +212,7 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
                     isTabOverviewVisible: browser.isTabOverviewVisible,
                     isSettingsVisible: browser.isSettingsVisible,
                     tabOverviewMode: browser.tabOverviewMode.sharedMode,
+                    tabListStartsAtBottom: browser.tabListStartsAtBottom,
                     addressFocusRequest: browser.addressFocusRequest,
                     searchEngine: browser.searchEngine,
                     searxngInstanceUrl: browser.searxngInstanceUrl,
@@ -345,6 +347,10 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             } else {
                 browser.updateTabOverviewMode(.list)
             }
+        }
+
+        func changeTabListStartsAtBottom(enabled: Bool) {
+            browser.updateTabListStartsAtBottom(enabled)
         }
 
         func changeSearchEngine(searchEngine: SearchEngine) {

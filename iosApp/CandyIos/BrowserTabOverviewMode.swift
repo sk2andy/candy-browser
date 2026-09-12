@@ -35,3 +35,15 @@ enum BrowserTabOverviewModePreference {
         defaults.set(mode.rawValue, forKey: key)
     }
 }
+
+enum BrowserTabOverviewStartsAtBottomPreference {
+    static let key = "candy.tabs.overview.starts-at-bottom"
+
+    static func load(from defaults: UserDefaults) -> Bool {
+        defaults.bool(forKey: key)
+    }
+
+    static func save(_ enabled: Bool, to defaults: UserDefaults) {
+        defaults.set(enabled, forKey: key)
+    }
+}

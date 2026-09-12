@@ -8,9 +8,9 @@ test("maps selected data types to least browser permissions", () => {
   assert.deepEqual(permissionsForSelection({ tabs: true, bookmarks: false, groups: false }), ["tabs"]);
   assert.deepEqual(
     permissionsForSelection({ tabs: false, bookmarks: true, groups: true }),
-    ["bookmarks", "tabGroups", "tabs"],
+    ["tabGroups", "tabs"],
   );
-  assert.deepEqual(dataCollectionForSelection({ tabs: false, bookmarks: true, groups: true }), ["bookmarksInfo", "browsingActivity"]);
+  assert.deepEqual(dataCollectionForSelection({ tabs: false, bookmarks: true, groups: true }), ["browsingActivity"]);
 });
 
 test("adds Firefox data collection only to Firefox permission requests", () => {

@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 
 @Composable
@@ -69,6 +70,7 @@ internal fun NewTabPage(
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
     favoriteLaunchAnimationEnabled: Boolean = true,
+    favoriteAnimationSpeed: FavoriteAnimationSpeed = FavoriteAnimationSpeed.Default,
     interactive: Boolean = true,
     favoritesAlpha: () -> Float = { 1f },
     explicitSafeDrawingPadding: PaddingValues? = null,
@@ -129,7 +131,7 @@ internal fun NewTabPage(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .fillMaxWidth(0.82f)
-                    .heightIn(max = 624.dp)
+                    .heightIn(max = 664.dp)
                     .padding(vertical = BlankTabModeMorphRules.HERO_SHADOW_CLEARANCE_DP.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -224,7 +226,9 @@ internal fun NewTabPage(
                                 favorites = favorites,
                                 favicons = favicons,
                                 enabled = contentEnabled,
-                                onFavorite = { favorite, startCenterInWindow ->
+                                animateShapes = interactive && favoriteLaunchAnimationEnabled,
+                                animationSpeed = favoriteAnimationSpeed,
+                                onFavorite = { favorite, startCenterInWindow, shapeState ->
                                     if (
                                         !favoriteLaunchAnimationEnabled ||
                                         !startCenterInWindow.isUsable() ||
@@ -236,6 +240,7 @@ internal fun NewTabPage(
                                         launchRequest = NewTabFavoriteLaunchRequest(
                                             favorite = favorite,
                                             startCenterInWindow = startCenterInWindow,
+                                            shapeState = shapeState,
                                         )
                                     }
                                 },

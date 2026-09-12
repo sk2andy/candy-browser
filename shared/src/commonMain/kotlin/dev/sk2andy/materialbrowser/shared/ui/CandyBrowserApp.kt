@@ -177,6 +177,7 @@ data class BrowserViewportSnapshot(
     val isTabOverviewVisible: Boolean,
     val isSettingsVisible: Boolean = false,
     val tabOverviewMode: TabOverviewMode,
+    val tabListStartsAtBottom: Boolean = false,
     val addressFocusRequest: Long,
     val searchEngine: SearchEngine = SearchEngine.Google,
     val searxngInstanceUrl: String = "",
@@ -247,6 +248,8 @@ interface BrowserViewportActionSink : SyncSettingsActionSink {
     fun dismissSettings()
 
     fun changeTabOverviewMode(mode: TabOverviewMode)
+
+    fun changeTabListStartsAtBottom(enabled: Boolean)
 
     fun changeSearchEngine(searchEngine: SearchEngine)
 
@@ -360,6 +363,8 @@ fun CandyBrowserApp(
                 onSearxngInstanceUrlChanged = actionSink::changeSearxngInstanceUrl,
                 tabOverviewMode = snapshot.tabOverviewMode,
                 onTabOverviewModeChanged = actionSink::changeTabOverviewMode,
+                tabListStartsAtBottom = snapshot.tabListStartsAtBottom,
+                onTabListStartsAtBottomChanged = actionSink::changeTabListStartsAtBottom,
                 translationProvider = snapshot.translationProvider,
                 onTranslationProviderChanged = actionSink::changeTranslationProvider,
                 toppings = snapshot.toppings,
@@ -824,7 +829,7 @@ private fun CandyTabOverview(
                         viewportHeight = maxHeight.value,
                     ),
                     tabs = tabs,
-                    startsAtBottom = false,
+                    startsAtBottom = snapshot.tabListStartsAtBottom,
                     visible = true,
                     selectedTabId = selectedTabId,
                     initialTabId = initialTabId,
@@ -918,7 +923,7 @@ private fun CandyTabOverview(
                 CompactTabList(
                     listState = listState,
                     tabs = tabs,
-                    startsAtBottom = false,
+                    startsAtBottom = snapshot.tabListStartsAtBottom,
                     visible = true,
                     selectedTabId = selectedTabId,
                     initialTabId = initialTabId,

@@ -80,9 +80,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.sk2andy.materialbrowser.R
-import dev.sk2andy.materialbrowser.data.LinkPeekAction
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayoutRules
+import dev.sk2andy.materialbrowser.browser.LinkPeekAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch

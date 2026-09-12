@@ -38,8 +38,9 @@ shared rule objects, not a second iOS lazy-list implementation. Snapshot accepta
 the native identity rules above; UIKit image handles do not enter `commonMain`.
 
 Hero, grid and list can be changed through the visible switcher in the overview
-header. Only that presentation preference is stored in `UserDefaults`; snapshots
-remain memory-only. Missing or unknown stored values safely fall back to Hero.
+header. The selected mode and compact-overview bottom anchoring are stored in
+`UserDefaults`; snapshots remain memory-only. Missing or unknown stored values safely fall back to
+Hero with bottom anchoring disabled.
 
 ## Remaining visual differences from Android
 
@@ -85,7 +86,7 @@ no Basic or bearer credential until unauthenticated discovery returns `allowHttp
 
 The iOS-native bottom Candy chrome is `tab count | address | plus | more`, backed by the shared Kotlin
 snapshot and action sink. Back,
-forward, reload/stop, favorite/pin, new tab, close tab and tabs live in the more menu
+forward, reload/stop, favorite/pin, new tab, duplicate tab, close tab and tabs live in the more menu
 projected from shared `BrowserFeatureMenuRules`. Both the count button and a dominant 56-point upward drag open the same
 overview. A horizontal address-bar swipe selects the adjacent tab after 24% viewport
 travel, or after 24 points at 900 points/second. Address editing suppresses both gestures.

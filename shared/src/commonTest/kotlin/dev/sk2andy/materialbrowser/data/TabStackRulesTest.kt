@@ -3,9 +3,9 @@ package dev.sk2andy.materialbrowser.data
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class TabStackRulesTest {
     private val tabs = listOf(

@@ -1,8 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
-import dev.sk2andy.materialbrowser.data.LinkPeekAction
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayoutRules
+import dev.sk2andy.materialbrowser.browser.LinkPeekAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules
 import kotlin.math.hypot
 
 internal sealed interface LinkPeekActionEditorTarget {

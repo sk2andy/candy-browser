@@ -36,6 +36,78 @@ class BrowserTabsControllerTest {
     }
 
     @Test
+    fun `duplicate selected tab copies page identity without runtime state`() {
+        val source = BrowserTabState(
+            id = "tab-7",
+            address = "https://example.com/article",
+            title = "Article",
+            canGoBack = true,
+            canGoForward = true,
+            isLoading = true,
+            isPinned = true,
+            isPrivate = true,
+            syncCandyId = "candy-source",
+        )
+        val controller = BrowserTabsController(
+            initialState = BrowserTabsState(
+                tabs = listOf(source),
+                selectedTabId = source.id,
+            ),
+        )
+        controller.dispatch(BrowserTabsIntent.ShowOverview, tabId = null)
+
+        val state = controller.dispatch(BrowserTabsIntent.DuplicateTab, tabId = source.id)
+        val duplicate = state.tabs.last()
+
+        assertEquals(2, state.tabs.size)
+        assertNotEquals(source.id, duplicate.id)
+        assertEquals(duplicate.id, state.selectedTabId)
+        assertEquals(source.address, duplicate.address)
+        assertEquals("", duplicate.title)
+        assertEquals(source.profileId, duplicate.profileId)
+        assertTrue(duplicate.isPrivate)
+        assertFalse(duplicate.isPinned)
+        assertFalse(duplicate.canGoBack)
+        assertFalse(duplicate.canGoForward)
+        assertFalse(duplicate.isLoading)
+        assertEquals(null, duplicate.syncCandyId)
+        assertFalse(state.isOverviewVisible)
+        assertEquals(0, state.addressFocusRequest)
+    }
+
+    @Test
+    fun `duplicate rejects blank stale and non-selected sources`() {
+        val controller = BrowserTabsController()
+        val blankState = controller.state
+
+        assertEquals(
+            blankState,
+            controller.dispatch(BrowserTabsIntent.DuplicateTab, tabId = blankState.selectedTabId),
+        )
+
+        controller.updateTab(
+            tabId = blankState.selectedTabId,
+            address = "https://example.com/",
+            title = "Example",
+            canGoBack = false,
+            canGoForward = false,
+            isLoading = false,
+        )
+        val secondId = controller.dispatch(BrowserTabsIntent.NewTab, tabId = null).selectedTabId
+        val beforeRejectedDuplicates = controller.state
+
+        assertEquals(
+            beforeRejectedDuplicates,
+            controller.dispatch(BrowserTabsIntent.DuplicateTab, tabId = "missing"),
+        )
+        assertEquals(
+            beforeRejectedDuplicates,
+            controller.dispatch(BrowserTabsIntent.DuplicateTab, tabId = blankState.selectedTabId),
+        )
+        assertEquals(secondId, controller.state.selectedTabId)
+    }
+
+    @Test
     fun `select and close intents keep a valid selection`() {
         val controller = BrowserTabsController()
         val second = controller.dispatch(BrowserTabsIntent.NewTab, tabId = null).selectedTabId

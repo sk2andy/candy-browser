@@ -36,3 +36,20 @@ export function requiresRemoteHttpApproval(endpoint: string): boolean {
   const url = new URL(endpoint);
   return url.protocol === "http:" && !LOOPBACK_HOSTS.has(url.hostname);
 }
+
+export function endpointTransportWarning(input: string): string | null {
+  const value = input.trim();
+  if (!value.toLowerCase().startsWith("http:")) return null;
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return "HTTP is not encrypted. Complete the address to review the connection risk.";
+  }
+  if (url.protocol !== "http:") return null;
+  if (LOOPBACK_HOSTS.has(url.hostname)) {
+    return "Local HTTP is unencrypted. Use it only for development on this device.";
+  }
+  return "Remote HTTP is blocked because it can expose your server username, password, device token, and connection metadata. Use an HTTPS endpoint.";
+}

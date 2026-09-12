@@ -472,7 +472,7 @@ export function startBackground(): void {
       if (!value || typeof value.tabs !== "boolean" || typeof value.bookmarks !== "boolean" || typeof value.groups !== "boolean") {
         sendResponse({ ok: false, error: "Invalid sync selection." }); return false;
       }
-      void updateSelection({ tabs: value.tabs, bookmarks: value.bookmarks, groups: value.groups }).then(
+      void updateSelection({ tabs: value.tabs, bookmarks: false, groups: value.groups }).then(
         () => sendResponse({ ok: true }),
         (error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "Selection could not be saved." }),
       );

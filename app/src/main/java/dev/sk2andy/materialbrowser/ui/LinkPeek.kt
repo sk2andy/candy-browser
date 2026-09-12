@@ -73,10 +73,10 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
-import dev.sk2andy.materialbrowser.data.LinkPeekAction
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayoutRules as LinkPeekActionSelectionRules
-import dev.sk2andy.materialbrowser.data.LinkPeekActionSlot
+import dev.sk2andy.materialbrowser.browser.LinkPeekAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules as LinkPeekActionSelectionRules
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionSlot
 import java.net.URI
 import kotlin.math.roundToInt
 
