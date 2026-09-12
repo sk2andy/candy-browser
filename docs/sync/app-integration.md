@@ -91,6 +91,10 @@ URL back as a new mutation. A local HTTP(S) navigation is protected from inbound
 immediately and remains protected until the same target device, stable tab ID, and normalized URL
 appear in repository state. The repository folds pending mutations into its observable state
 immediately, persists them in a Keystore-protected cache, and retries them after reconnecting.
+Android instrumentation covers this race at both boundaries: controller tests exercise deterministic
+event ordering, while the address-bar E2E launches the real activity, submits a search through the
+visible editor, loads it in Gecko, injects the stale synchronized URL, and verifies that neither the
+selected tab nor the rendered engine returns to the old page.
 
 ## Conflicts and delivery
 
