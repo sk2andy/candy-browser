@@ -1103,6 +1103,14 @@
     <string name="developer_options_diagnostics_copied">Estado de diagnóstico copiado</string>
     <string name="developer_options_presentations_section">Presentaciones</string>
     <string name="developer_options_experiments_section">Funciones experimentales</string>
+    <string name="developer_options_performance_section">Rendimiento</string>
+    <string name="developer_options_scroll_dispatch_mode">Actualizaciones de desplazamiento de la barra del navegador</string>
+    <string name="developer_options_scroll_dispatch_mode_summary">«Optimizado» empieza a 60 Hz y baja a 30 o 15 Hz solo cuando el hilo principal permanece saturado. Los modos fijos no se adaptan.</string>
+    <string name="developer_options_scroll_dispatch_optimized">Optimizado</string>
+    <string name="developer_options_scroll_dispatch_120_hz">Fijo a 120 Hz</string>
+    <string name="developer_options_scroll_dispatch_60_hz">Fijo a 60 Hz</string>
+    <string name="developer_options_scroll_dispatch_30_hz">Fijo a 30 Hz</string>
+    <string name="developer_options_scroll_dispatch_15_hz">Fijo a 15 Hz</string>
     <string name="developer_options_show_onboarding">Mostrar introducción a los gestos</string>
     <string name="developer_options_show_onboarding_summary">Vuelve a ejecutar el tutorial de gestos sin restablecer su estado de finalización.</string>
     <string name="developer_options_show_release_notes">Mostrar novedades</string>

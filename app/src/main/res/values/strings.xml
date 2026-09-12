@@ -1113,6 +1113,14 @@
     <string name="developer_options_diagnostics_copied">Diagnostic status copied</string>
     <string name="developer_options_presentations_section">Presentations</string>
     <string name="developer_options_experiments_section">Experimental features</string>
+    <string name="developer_options_performance_section">Performance</string>
+    <string name="developer_options_scroll_dispatch_mode">Browser chrome scroll updates</string>
+    <string name="developer_options_scroll_dispatch_mode_summary">Optimized starts at 60 Hz and steps down to 30 or 15 Hz only during sustained main-thread pressure. Fixed modes never adapt.</string>
+    <string name="developer_options_scroll_dispatch_optimized">Optimized</string>
+    <string name="developer_options_scroll_dispatch_120_hz">Fixed 120 Hz</string>
+    <string name="developer_options_scroll_dispatch_60_hz">Fixed 60 Hz</string>
+    <string name="developer_options_scroll_dispatch_30_hz">Fixed 30 Hz</string>
+    <string name="developer_options_scroll_dispatch_15_hz">Fixed 15 Hz</string>
     <string name="developer_options_show_onboarding">Show gesture onboarding</string>
     <string name="developer_options_show_onboarding_summary">Runs the gesture tutorial again without resetting completion state.</string>
     <string name="developer_options_show_release_notes">Show What’s New</string>

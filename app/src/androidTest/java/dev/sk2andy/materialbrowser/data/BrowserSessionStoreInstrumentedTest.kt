@@ -461,6 +461,7 @@ class BrowserSessionStoreInstrumentedTest {
         store.saveDeveloperOptionsUnlocked(true)
         store.saveDeveloperSettings(
             DeveloperSettings(
+                browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.Fixed30Hz,
                 safeAreaLayoutQuietPeriodMillis = 250,
                 safeAreaRequiredFailureCount = 4,
                 forceSafeAreaFallback = true,
@@ -470,6 +471,7 @@ class BrowserSessionStoreInstrumentedTest {
         assertTrue(store.loadDeveloperOptionsUnlocked())
         assertEquals(
             DeveloperSettings(
+                browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.Fixed30Hz,
                 safeAreaLayoutQuietPeriodMillis = 250,
                 safeAreaRequiredFailureCount = 4,
                 forceSafeAreaFallback = true,
@@ -481,6 +483,7 @@ class BrowserSessionStoreInstrumentedTest {
     @Test
     fun corruptDeveloperSettingsFallBackAndRemainBoundedPerField() {
         preferences.edit()
+            .putString("developer_browser_chrome_scroll_dispatch_mode", "invalid")
             .putString("developer_safe_area_layout_quiet_period_millis", "invalid")
             .putInt("developer_safe_area_required_failure_count", 0)
             .commit()

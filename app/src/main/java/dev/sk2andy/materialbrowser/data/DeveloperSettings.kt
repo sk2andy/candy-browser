@@ -1,6 +1,27 @@
 package dev.sk2andy.materialbrowser.data
 
+enum class BrowserChromeScrollDispatchMode(
+    val stableId: String,
+    val fixedDispatchesPerSecond: Long?,
+) {
+    Optimized("optimized", null),
+    Fixed120Hz("fixed_120_hz", 120L),
+    Fixed60Hz("fixed_60_hz", 60L),
+    Fixed30Hz("fixed_30_hz", 30L),
+    Fixed15Hz("fixed_15_hz", 15L),
+    ;
+
+    companion object {
+        val Default = Optimized
+
+        fun fromStableId(value: String?): BrowserChromeScrollDispatchMode =
+            entries.firstOrNull { mode -> mode.stableId == value } ?: Default
+    }
+}
+
 data class DeveloperSettings(
+    val browserChromeScrollDispatchMode: BrowserChromeScrollDispatchMode =
+        BrowserChromeScrollDispatchMode.Default,
     val safeAreaLayoutQuietPeriodMillis: Int = DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
     val safeAreaRequiredFailureCount: Int = DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT,
     val forceSafeAreaFallback: Boolean = false,

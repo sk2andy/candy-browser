@@ -16,6 +16,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.MediaStore
+import android.view.Choreographer
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -193,8 +194,9 @@ import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
-import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
+import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
+import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
@@ -569,6 +571,11 @@ class BrowserController(
         private set
     var developerSettings by mutableStateOf(DeveloperSettings())
         private set
+    private val browserChromeScrollDispatchModeSelection = AtomicReference(
+        BrowserChromeScrollDispatchModeSelection(
+            mode = BrowserChromeScrollDispatchMode.Default,
+        ),
+    )
     var isDeveloperOptionsUnlocked by mutableStateOf(false)
         private set
     var isInputDiagnosticsEnabled by mutableStateOf(
@@ -1920,6 +1927,9 @@ class BrowserController(
         isScrollBarEnabled = store.loadScrollBarEnabled()
         isDeveloperOptionsUnlocked = store.loadDeveloperOptionsUnlocked()
         developerSettings = store.loadDeveloperSettings()
+        publishBrowserChromeScrollDispatchMode(
+            developerSettings.browserChromeScrollDispatchMode,
+        )
         isProfileIsolationSupportedState = usesGeckoEngine ||
             SystemWebViewBrowserEngineFactory.supportsMultiProfile()
         isVideoAutoplayBlocked =
@@ -6816,6 +6826,7 @@ class BrowserController(
         val safeAreaModeChanged =
             developerSettings.forceSafeAreaFallback != normalized.forceSafeAreaFallback
         developerSettings = normalized
+        publishBrowserChromeScrollDispatchMode(normalized.browserChromeScrollDispatchMode)
         store.saveDeveloperSettings(normalized)
         refreshDeveloperSafeAreaConfiguration(safeAreaModeChanged)
     }
@@ -7945,7 +7956,13 @@ class BrowserController(
             schedule = { delayMillis, dispatch ->
                 mainHandler.postDelayed(dispatch, delayMillis)
             },
+            scheduleFrame = { onFrame ->
+                Choreographer.getInstance().postFrameCallback { frameTimeNanos ->
+                    onFrame(frameTimeNanos)
+                }
+            },
             nowMillis = SystemClock::uptimeMillis,
+            chromeDispatchModeSelection = browserChromeScrollDispatchModeSelection::get,
             dispatchChrome = { event ->
                 val eventGeneration = event.navigationGeneration
                 onBrowserEngineScroll(
@@ -7967,13 +7984,34 @@ class BrowserController(
             },
         )
         session.setScrollListener { event ->
-            val currentEvent = event.copy(
-                navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
-            )
-            scrollDispatchers.onScrollChanged(
-                event = currentEvent,
-                scrollBarEnabled = isScrollBarEnabled,
-            )
+            if (
+                !destroyed &&
+                tabId == selectedTabId &&
+                browserEngineSessions[tabId] === session
+            ) {
+                val currentEvent = event.copy(
+                    navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
+                )
+                scrollDispatchers.onScrollChanged(
+                    event = currentEvent,
+                    scrollBarEnabled = isScrollBarEnabled,
+                )
+            }
+        }
+    }
+
+    private fun publishBrowserChromeScrollDispatchMode(
+        mode: BrowserChromeScrollDispatchMode,
+    ) {
+        browserChromeScrollDispatchModeSelection.updateAndGet { current ->
+            if (current.mode == mode) {
+                current
+            } else {
+                BrowserChromeScrollDispatchModeSelection(
+                    mode = mode,
+                    revision = current.revision + 1L,
+                )
+            }
         }
     }
 

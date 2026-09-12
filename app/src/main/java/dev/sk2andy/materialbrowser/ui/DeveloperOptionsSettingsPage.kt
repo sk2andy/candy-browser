@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -25,11 +27,13 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
 internal object DeveloperOptionsTestTags {
+    const val BrowserChromeScrollDispatchMode = "developer_options_scroll_dispatch_mode"
     const val LayoutQuietPeriod = "developer_options_layout_quiet_period"
     const val RequiredFailures = "developer_options_required_failures"
     const val ForceSafeAreaFallback = "developer_options_force_safe_area_fallback"
@@ -56,6 +60,7 @@ internal fun DeveloperOptionsSettingsPage(
     onBack: () -> Unit,
 ) {
     var httpAutofillConfirmationVisible by rememberSaveable { mutableStateOf(false) }
+    var scrollDispatchMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.developer_options_title),
         onBack = onBack,
@@ -133,6 +138,43 @@ internal fun DeveloperOptionsSettingsPage(
             modifier = Modifier.testTag(DeveloperOptionsTestTags.ForceSafeAreaFallback),
         )
         Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.developer_options_performance_section))
+        Spacer(Modifier.height(8.dp))
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.developer_options_scroll_dispatch_mode),
+                value = settings.browserChromeScrollDispatchMode.displayName(),
+                expanded = scrollDispatchMenuExpanded,
+                onClick = { scrollDispatchMenuExpanded = true },
+                modifier = Modifier.testTag(
+                    DeveloperOptionsTestTags.BrowserChromeScrollDispatchMode,
+                ),
+            )
+            SettingsDropdown(
+                expanded = scrollDispatchMenuExpanded,
+                onDismissRequest = { scrollDispatchMenuExpanded = false },
+            ) {
+                BrowserChromeScrollDispatchMode.entries.forEach { mode ->
+                    SettingsDropdownItem(
+                        label = mode.displayName(),
+                        selected = mode == settings.browserChromeScrollDispatchMode,
+                        onClick = {
+                            scrollDispatchMenuExpanded = false
+                            onSettingsChanged(
+                                settings.copy(browserChromeScrollDispatchMode = mode),
+                            )
+                        },
+                    )
+                }
+            }
+        }
+        Text(
+            text = stringResource(R.string.developer_options_scroll_dispatch_mode_summary),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(18.dp))
         SettingsSectionTitle(stringResource(R.string.developer_options_safe_area_section))
         Text(
             stringResource(R.string.developer_options_safe_area_summary),
@@ -181,8 +223,8 @@ internal fun DeveloperOptionsSettingsPage(
             },
         )
         TextButton(
-            onClick = { onSettingsChanged(DeveloperSettings()) },
-            enabled = settings != DeveloperSettings(),
+            onClick = { onSettingsChanged(settings.withDefaultSafeAreaSettings()) },
+            enabled = !settings.hasDefaultSafeAreaSettings,
             modifier = Modifier
                 .align(Alignment.End)
                 .testTag(DeveloperOptionsTestTags.Reset),
@@ -213,6 +255,37 @@ internal fun DeveloperOptionsSettingsPage(
         )
     }
 }
+
+@Composable
+private fun BrowserChromeScrollDispatchMode.displayName(): String = stringResource(
+    when (this) {
+        BrowserChromeScrollDispatchMode.Optimized ->
+            R.string.developer_options_scroll_dispatch_optimized
+        BrowserChromeScrollDispatchMode.Fixed120Hz ->
+            R.string.developer_options_scroll_dispatch_120_hz
+        BrowserChromeScrollDispatchMode.Fixed60Hz ->
+            R.string.developer_options_scroll_dispatch_60_hz
+        BrowserChromeScrollDispatchMode.Fixed30Hz ->
+            R.string.developer_options_scroll_dispatch_30_hz
+        BrowserChromeScrollDispatchMode.Fixed15Hz ->
+            R.string.developer_options_scroll_dispatch_15_hz
+    },
+)
+
+private val DeveloperSettings.hasDefaultSafeAreaSettings: Boolean
+    get() =
+        safeAreaLayoutQuietPeriodMillis ==
+        DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS &&
+            safeAreaRequiredFailureCount ==
+            DeveloperSettings.DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT &&
+            !forceSafeAreaFallback
+
+private fun DeveloperSettings.withDefaultSafeAreaSettings(): DeveloperSettings = copy(
+    safeAreaLayoutQuietPeriodMillis =
+        DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+    safeAreaRequiredFailureCount = DeveloperSettings.DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT,
+    forceSafeAreaFallback = false,
+)
 
 @Composable
 private fun DeveloperAction(

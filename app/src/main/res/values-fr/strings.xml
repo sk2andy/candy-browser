@@ -1103,6 +1103,14 @@
     <string name="developer_options_diagnostics_copied">État du diagnostic copié</string>
     <string name="developer_options_presentations_section">Présentations</string>
     <string name="developer_options_experiments_section">Fonctionnalités expérimentales</string>
+    <string name="developer_options_performance_section">Performances</string>
+    <string name="developer_options_scroll_dispatch_mode">Actualisation au défilement de la barre du navigateur</string>
+    <string name="developer_options_scroll_dispatch_mode_summary">« Optimisé » démarre à 60 Hz et ne descend à 30 ou 15 Hz qu’en cas de charge prolongée du thread principal. Les modes fixes ne s’adaptent pas.</string>
+    <string name="developer_options_scroll_dispatch_optimized">Optimisé</string>
+    <string name="developer_options_scroll_dispatch_120_hz">Fixe à 120 Hz</string>
+    <string name="developer_options_scroll_dispatch_60_hz">Fixe à 60 Hz</string>
+    <string name="developer_options_scroll_dispatch_30_hz">Fixe à 30 Hz</string>
+    <string name="developer_options_scroll_dispatch_15_hz">Fixe à 15 Hz</string>
     <string name="developer_options_show_onboarding">Afficher l’initiation aux gestes</string>
     <string name="developer_options_show_onboarding_summary">Relance le tutoriel des gestes sans réinitialiser son état d’achèvement.</string>
     <string name="developer_options_show_release_notes">Afficher les nouveautés</string>

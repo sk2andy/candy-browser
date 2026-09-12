@@ -31,6 +31,8 @@ internal object DeveloperDiagnosticsReport {
         "Fullscreen active: ${snapshot.fullscreenActive.yesOrNo}",
         "External preview active: ${snapshot.externalPreviewActive.yesOrNo}",
         "Input diagnostics enabled: ${snapshot.inputDiagnosticsEnabled.yesOrNo}",
+        "Browser chrome scroll dispatch: " +
+            snapshot.developerSettings.browserChromeScrollDispatchMode.stableId,
         "Safe-area layout quiet period: " +
             "${snapshot.developerSettings.safeAreaLayoutQuietPeriodMillis} ms",
         "Safe-area required failures: " +

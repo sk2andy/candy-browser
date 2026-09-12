@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
@@ -110,6 +111,50 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
             .performScrollTo()
             .performClick()
         assertEquals(DeveloperSettings(), settings)
+    }
+
+    @Test
+    fun scrollDispatchModeUpdatesAndSafeAreaResetPreservesIt() {
+        var settings by mutableStateOf(DeveloperSettings())
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.BrowserChromeScrollDispatchMode)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(
+            context.getString(R.string.developer_options_scroll_dispatch_120_hz),
+        ).performClick()
+
+        assertEquals(
+            BrowserChromeScrollDispatchMode.Fixed120Hz,
+            settings.browserChromeScrollDispatchMode,
+        )
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.LayoutQuietPeriod)
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
+                setProgress(250f)
+            }
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.Reset)
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(
+            BrowserChromeScrollDispatchMode.Fixed120Hz,
+            settings.browserChromeScrollDispatchMode,
+        )
+        assertEquals(
+            DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+            settings.safeAreaLayoutQuietPeriodMillis,
+        )
     }
 
     @Test
