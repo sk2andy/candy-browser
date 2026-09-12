@@ -1,8 +1,8 @@
-package dev.sk2andy.materialbrowser.data
+package dev.sk2andy.materialbrowser.browser
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class LinkPeekActionLayoutTest {
     @Test

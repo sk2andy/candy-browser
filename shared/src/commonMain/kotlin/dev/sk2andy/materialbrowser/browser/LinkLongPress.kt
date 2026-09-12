@@ -1,4 +1,21 @@
-package dev.sk2andy.materialbrowser.browser.actions
+package dev.sk2andy.materialbrowser.browser
+
+enum class LinkLongPressAction(val stableId: String) {
+    LinkPeek("link_peek"),
+    CopyLink("copy_link"),
+    Share("share"),
+    DownloadLink("download_link"),
+    OpenInNewTabInBackground("open_in_new_tab"),
+    OpenInNewTabInForeground("open_in_new_tab_foreground"),
+    OpenInPrivateTabInBackground("open_in_private_tab_background"),
+    OpenInPrivateTabInForeground("open_in_private_tab"),
+    ;
+
+    companion object {
+        fun fromStableId(value: String?): LinkLongPressAction =
+            entries.firstOrNull { it.stableId == value } ?: LinkPeek
+    }
+}
 
 enum class LinkLongPressOutcome {
     ShowContext,
@@ -14,10 +31,10 @@ enum class LinkLongPressOutcome {
 object LinkLongPressRules {
     fun outcome(
         action: LinkLongPressAction,
-        target: WebContentTarget,
+        hasLinkTarget: Boolean,
         canOpenInPrivate: Boolean,
     ): LinkLongPressOutcome {
-        if (target.linkUrl == null) return LinkLongPressOutcome.ShowContext
+        if (!hasLinkTarget) return LinkLongPressOutcome.ShowContext
         return when (action) {
             LinkLongPressAction.LinkPeek -> LinkLongPressOutcome.ShowContext
             LinkLongPressAction.CopyLink -> LinkLongPressOutcome.CopyLink

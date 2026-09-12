@@ -414,8 +414,12 @@
     <string name="settings_http_password_autofill_warning">HTTP überträgt Benutzernamen und Passwörter ohne Transportverschlüsselung. Wer die Verbindung abhören kann, kann sie lesen.</string>
     <string name="settings_startup_animation_title">Startanimation</string>
     <string name="settings_startup_animation_subtitle">Zeigt die Candy-Animation beim normalen App-Start. Deaktivieren, um die Adressleiste sofort zu öffnen.</string>
-    <string name="settings_favorite_launch_animation_title">Favoriten-Startanimation</string>
-    <string name="settings_favorite_launch_animation_subtitle">Schickt einen Favoriten durch einen farbigen Candy-Wirbel, bevor er geöffnet wird.</string>
+    <string name="settings_favorite_launch_animation_title">Favoriten-Animationen</string>
+    <string name="settings_favorite_launch_animation_subtitle">Lässt Favoritenformen morphen und schickt den gewählten Favoriten durch einen farbigen Candy-Wirbel.</string>
+    <string name="settings_favorite_animation_speed_title">Animationsgeschwindigkeit</string>
+    <string name="settings_favorite_animation_speed_relaxed">Entspannt</string>
+    <string name="settings_favorite_animation_speed_normal">Normal</string>
+    <string name="settings_favorite_animation_speed_fast">Schnell</string>
     <string name="settings_favorite_bookmark_import_title">Lesezeichen-HTML importieren</string>
     <string name="settings_favorite_bookmark_import_summary">Fügt exportierte Lesezeichen eines anderen Browsers zu den Favoriten hinzu.</string>
     <plurals name="favorite_bookmark_import_success">

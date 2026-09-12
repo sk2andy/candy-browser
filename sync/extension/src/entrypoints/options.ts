@@ -1,7 +1,7 @@
 import { removeEndpointPermission, requestSetupPermissions, requestSyncPermissions } from "../browser-adapters/permissions.js";
 import { SYNC_TYPES, type StoredSettings, type SyncSelection, type SyncStatus, type VaultSecrets } from "../core/models.js";
 import { defaultDeviceIconId, DEVICE_ICON_CATALOG, DEVICE_ICON_IDS } from "../core/device-icon-catalog.js";
-import { endpointPermissionOrigin, normalizeEndpoint } from "../core/endpoint-rules.js";
+import { endpointPermissionOrigin, endpointTransportWarning, normalizeEndpoint } from "../core/endpoint-rules.js";
 import {
   createRecoveryEnvelope,
   createVault,
@@ -55,13 +55,14 @@ const feedback = element<HTMLElement>("feedback");
 const statusCard = element<HTMLElement>("status-card");
 const statusCode = element<HTMLElement>("status-code");
 const statusMessage = element<HTMLElement>("status-message");
+const transportWarning = element<HTMLElement>("transport-warning");
 
 let settings: StoredSettings | null = null;
 
 const permissionOrigin = (endpoint: string): string => endpointPermissionOrigin(endpoint);
 
 function selection(): SyncSelection {
-  return { tabs: tabsInput.checked, bookmarks: bookmarksInput.checked, groups: groupsInput.checked };
+  return { tabs: tabsInput.checked, bookmarks: false, groups: groupsInput.checked };
 }
 
 function setBusy(busy: boolean): void {
@@ -71,6 +72,13 @@ function setBusy(busy: boolean): void {
 function showFeedback(message: string, kind: "error" | "success" | "neutral" = "neutral"): void {
   feedback.textContent = message;
   feedback.className = kind === "neutral" ? "feedback" : `feedback ${kind}`;
+}
+
+function renderTransportWarning(): void {
+  const message = endpointTransportWarning(endpointInput.value);
+  const nextText = message ?? "";
+  if (transportWarning.textContent !== nextText) transportWarning.textContent = nextText;
+  transportWarning.hidden = message === null;
 }
 
 function statusLabel(code: SyncStatus["code"]): string {
@@ -103,7 +111,7 @@ function renderConfigured(config: StoredSettings): void {
     ? config.deviceIconId
     : defaultDeviceIconId(navigator.userAgent, navigator.maxTouchPoints);
   tabsInput.checked = config.selection.tabs;
-  bookmarksInput.checked = config.selection.bookmarks;
+  bookmarksInput.checked = false;
   groupsInput.checked = config.selection.groups;
   for (const input of [endpointInput, usernameInput, deviceNameInput, deviceIconInput, passwordInput]) input.disabled = true;
   passwordInput.required = false;
@@ -132,8 +140,11 @@ async function initialize(): Promise<void> {
   } else {
     deviceNameInput.value = `${navigator.userAgent.includes("Firefox") ? "Firefox" : "Chromium"} on this device`;
   }
+  renderTransportWarning();
   await renderStatus();
 }
+
+endpointInput.addEventListener("input", renderTransportWarning);
 
 setupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -143,7 +154,7 @@ setupForm.addEventListener("submit", async (event) => {
   const confirmationText = confirmationInput.value;
   let endpoint: string;
   try {
-    endpoint = normalizeEndpoint(endpointInput.value, true);
+    endpoint = normalizeEndpoint(endpointInput.value);
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "Endpoint is invalid.", "error");
     return;

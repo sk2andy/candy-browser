@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { endpointPermissionOrigin, normalizeEndpoint } from "../src/core/endpoint-rules.js";
+import { endpointPermissionOrigin, endpointTransportWarning, normalizeEndpoint } from "../src/core/endpoint-rules.js";
 
 test("normalizes secure origins and loopback development endpoints", () => {
   assert.equal(normalizeEndpoint(" https://sync.example.net "), "https://sync.example.net/");
@@ -24,4 +24,11 @@ test("rejects unsafe or ambiguous endpoints", () => {
   ]) {
     assert.throws(() => normalizeEndpoint(value));
   }
+});
+
+test("warns about local HTTP and explains why remote HTTP is blocked", () => {
+  assert.equal(endpointTransportWarning("https://sync.example.net/"), null);
+  assert.equal(endpointTransportWarning("http://localhost:8080/"), "Local HTTP is unencrypted. Use it only for development on this device.");
+  assert.match(endpointTransportWarning("http://sync.example.net/") ?? "", /Remote HTTP is blocked/u);
+  assert.match(endpointTransportWarning("http://") ?? "", /not encrypted/u);
 });

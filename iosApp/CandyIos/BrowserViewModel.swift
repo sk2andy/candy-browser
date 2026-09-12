@@ -45,6 +45,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
     @Published private(set) var profiles: [BrowserProfile] = []
     @Published private(set) var activeProfileId = ""
     @Published private(set) var tabOverviewMode: BrowserTabOverviewMode
+    @Published private(set) var tabListStartsAtBottom: Bool
     @Published private(set) var searchEngine: SearchEngine
     @Published private(set) var searxngInstanceUrl: String
     @Published private(set) var translationProvider: PageTranslationProvider
@@ -141,7 +142,8 @@ final class BrowserViewModel: NSObject, ObservableObject {
             profileId: initialTab.profileId,
             profileIsolationEnabled: initialState.profiles
                 .first(where: { $0.id == initialTab.profileId })?
-                .isolationEnabled ?? false
+                .isolationEnabled ?? false,
+            isPrivate: initialTab.isPrivate
         )
 
         self.shared = shared
@@ -160,6 +162,9 @@ final class BrowserViewModel: NSObject, ObservableObject {
         selectedTabId = initialTab.id
         tabCountLabel = initialState.countLabel
         tabOverviewMode = BrowserTabOverviewModePreference.load(from: preferences)
+        tabListStartsAtBottom = BrowserTabOverviewStartsAtBottomPreference.load(
+            from: preferences
+        )
         searchEngine = initialSearchSettings.searchEngine
         searxngInstanceUrl = initialSearchSettings.searxngInstanceUrl
         translationProvider = PageTranslationProvider.companion.fromStableId(
@@ -233,7 +238,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
             }
             return
         }
-        if intent == .newtab ||
+        if intent == .newtab || intent == .duplicatetab ||
             ((intent == .selecttab || intent == .selecttabinoverview) &&
                 tabId != selectedTabId) {
             captureSnapshot(tabId: selectedTabId)
@@ -620,6 +625,8 @@ final class BrowserViewModel: NSObject, ObservableObject {
             perform(.stop)
         } else if action == .newtab {
             performTabs(.newtab)
+        } else if action == .duplicatetab {
+            performTabs(.duplicatetab, tabId: selectedTabId)
         } else if action == .closetab {
             performTabs(.closetab, tabId: selectedTabId)
         } else if action == .showtabs {
@@ -738,6 +745,11 @@ final class BrowserViewModel: NSObject, ObservableObject {
     func updateTabOverviewMode(_ mode: BrowserTabOverviewMode) {
         tabOverviewMode = mode
         BrowserTabOverviewModePreference.save(mode, to: preferences)
+    }
+
+    func updateTabListStartsAtBottom(_ enabled: Bool) {
+        tabListStartsAtBottom = enabled
+        BrowserTabOverviewStartsAtBottomPreference.save(enabled, to: preferences)
     }
 
     func updateSearchEngine(_ engine: SearchEngine) {
@@ -888,7 +900,8 @@ final class BrowserViewModel: NSObject, ObservableObject {
                 tabId: tab.id,
                 shared: shared,
                 profileId: profile.id,
-                profileIsolationEnabled: profile.isolationEnabled
+                profileIsolationEnabled: profile.isolationEnabled,
+                isPrivate: tab.isPrivate
             )
             session.eventSink = self
             sessions[tab.id] = session
@@ -1299,6 +1312,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
             action == .togglepinned ||
             action == .showtabs ||
             action == .newtab ||
+            action == .duplicatetab ||
             action == .closetab ||
             action == .openreader ||
             action == .opencandytrail ||

@@ -1,5 +1,8 @@
 package dev.sk2andy.materialbrowser.data
 
+import dev.sk2andy.materialbrowser.browser.LinkPeekAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -7,6 +10,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
 import dev.sk2andy.materialbrowser.browser.SearchEngine
@@ -15,7 +19,7 @@ import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
-import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
@@ -316,6 +320,20 @@ class BrowserSessionStoreInstrumentedTest {
 
         store.saveFavoriteLaunchAnimationEnabled(true)
         assertTrue(store.loadFavoriteLaunchAnimationEnabled())
+    }
+
+    @Test
+    fun favoriteAnimationSpeedDefaultsToNormalAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(FavoriteAnimationSpeed.Normal, store.loadFavoriteAnimationSpeed())
+
+        store.saveFavoriteAnimationSpeed(FavoriteAnimationSpeed.Fast)
+        assertEquals(FavoriteAnimationSpeed.Fast, store.loadFavoriteAnimationSpeed())
+
+        preferences.edit().putString(BrowserSessionStore.KEY_FAVORITE_ANIMATION_SPEED, "unknown")
+            .commit()
+        assertEquals(FavoriteAnimationSpeed.Normal, store.loadFavoriteAnimationSpeed())
     }
 
     @Test

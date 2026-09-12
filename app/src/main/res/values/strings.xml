@@ -435,8 +435,12 @@
     <string name="settings_http_password_autofill_warning">HTTP sends usernames and passwords without transport encryption. Anyone able to intercept the connection can read them.</string>
     <string name="settings_startup_animation_title">Startup animation</string>
     <string name="settings_startup_animation_subtitle">Shows the Candy animation on regular app launches. Turn it off to open the address bar immediately.</string>
-    <string name="settings_favorite_launch_animation_title">Favorite launch animation</string>
-    <string name="settings_favorite_launch_animation_subtitle">Sends a favorite through a colorful Candy warp before opening it.</string>
+    <string name="settings_favorite_launch_animation_title">Favorite animations</string>
+    <string name="settings_favorite_launch_animation_subtitle">Morphs favorite shapes and sends a selected favorite through a colorful Candy warp.</string>
+    <string name="settings_favorite_animation_speed_title">Animation speed</string>
+    <string name="settings_favorite_animation_speed_relaxed">Relaxed</string>
+    <string name="settings_favorite_animation_speed_normal">Normal</string>
+    <string name="settings_favorite_animation_speed_fast">Fast</string>
     <string name="settings_favorite_bookmark_import_title">Import bookmark HTML</string>
     <string name="settings_favorite_bookmark_import_summary">Add bookmarks exported by another browser to Favorites.</string>
     <plurals name="favorite_bookmark_import_success">

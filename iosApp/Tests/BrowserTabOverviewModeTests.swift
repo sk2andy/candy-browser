@@ -25,7 +25,17 @@ enum BrowserTabOverviewModeTests {
             BrowserTabOverviewModePreference.load(from: defaults) == .hero,
             "unknown wire value falls back to hero"
         )
-        print("BrowserTabOverviewModeTests: 3 passed")
+
+        expect(
+            !BrowserTabOverviewStartsAtBottomPreference.load(from: defaults),
+            "missing bottom-start preference falls back to disabled"
+        )
+        BrowserTabOverviewStartsAtBottomPreference.save(true, to: defaults)
+        expect(
+            BrowserTabOverviewStartsAtBottomPreference.load(from: defaults),
+            "saved bottom-start preference is restored"
+        )
+        print("BrowserTabOverviewModeTests: 5 passed")
     }
 
     private static func expect(_ condition: Bool, _ message: String) {

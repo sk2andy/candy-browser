@@ -22,8 +22,8 @@ notifications reduce active-session latency, while REST and a periodic alarm rec
 | Freely selectable shared Android-compatible profile icon | Implemented |
 | Bookmark merge and direct pairing | Not implemented |
 
-Selecting bookmarks currently manages the optional browser permission but does not enable bookmark
-merge. Tab-group assignments are included in tab snapshots when group sync is selected.
+The disabled bookmark row reserves the product direction without requesting browser access before
+bookmark merge exists. Tab-group assignments are included in tab snapshots when group sync is selected.
 
 ## Build and load
 
@@ -74,10 +74,9 @@ is not persisted. The passphrase is immutable for the workspace, cannot be chang
 either protocol version, is never persisted, and must be entered again after browser restart to
 unlock sync.
 
-For a non-loopback HTTP endpoint, setup first performs unauthenticated discovery. Basic credentials
-are blocked unless the server advertises `allowHttp: true`; background sync repeats discovery before
-sending the bearer token. This explicit opt-in prevents accidental cleartext configuration but does
-not make HTTP confidential or authenticate the server. Use it only on a trusted development LAN.
+Browser packages require HTTPS for remote endpoints and grant HTTP host access only for localhost.
+The protocol client retains the server-advertised `allowHttp` guard for development integration,
+but the Options Page blocks remote HTTP before requesting permissions or sending credentials.
 
 ## Device icon
 
@@ -178,19 +177,18 @@ V1 snapshot state and cursors remain separate for compatibility before promotion
 | `storage`, `alarms` | Baseline extension permissions |
 | `tabs` | Requested when tab sync is selected |
 | `tabGroups` | Requested when group sync is selected and supported |
-| `bookmarks` | Requested when bookmark sync is selected; merge is future work |
 | Endpoint host access | Requested for the configured scheme and host during explicit setup |
 
 There are no content scripts and no web-accessible resources. Permission add/remove events update
-effective sync state.
+effective sync state. Bookmark access is deliberately absent from both manifests until bookmark
+synchronization is implemented; the Options Page exposes only a disabled roadmap row.
 
 Chromium permission requests contain only standard `permissions` and `origins`. Firefox builds add
-the Firefox-only `data_collection` field declared by their Gecko manifest. Remote HTTP is listed as
-an optional host pattern, but setup requests only the configured scheme and host after direct user
-action; no blanket HTTP access is granted. The requested pattern intentionally omits the port in
-both builds: Firefox rejects ports in match patterns, while Arc can store a port-specific optional
-permission without activating it for extension requests. Endpoint access therefore covers all ports
-on that exact scheme and host.
+the Firefox-only `data_collection` field declared by their Gecko manifest. HTTPS is declared for
+user-selected remote endpoints; HTTP is declared only for `localhost`, `127.0.0.1`, and `[::1]`.
+Setup requests only the configured scheme and host after direct user action. The requested pattern
+intentionally omits the port because Firefox rejects ports in match patterns. Entering remote HTTP
+shows an inline block reason before any permission or credential request.
 
 ## Local storage
 

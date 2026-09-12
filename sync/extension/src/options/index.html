@@ -39,11 +39,12 @@
 
       <section id="connection" aria-labelledby="connection-title">
         <h2 id="connection-title">Connection</h2>
-        <p class="section-intro">HTTPS is recommended. Remote HTTP works only when the self-hosted server explicitly enables it.</p>
+        <p class="section-intro">HTTPS is required for remote servers. Local HTTP is available only for development on this device.</p>
         <form id="setup-form">
           <div class="field">
             <label for="endpoint">Server-Endpoint</label>
             <input id="endpoint" name="endpoint" type="url" placeholder="https://sync.example.net/" required spellcheck="false" autocomplete="url">
+            <p class="transport-warning" id="transport-warning" aria-live="polite" aria-atomic="true" hidden></p>
           </div>
           <div class="field-row">
             <div class="field">

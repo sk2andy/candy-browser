@@ -417,8 +417,12 @@
     <string name="settings_http_password_autofill_warning">HTTP envoie les identifiants et mots de passe sans chiffrement du transport. Toute personne interceptant la connexion peut les lire.</string>
     <string name="settings_startup_animation_title">Animation de démarrage</string>
     <string name="settings_startup_animation_subtitle">Affiche l’animation Candy lors d’un lancement normal. Désactivez-la pour ouvrir immédiatement la barre d’adresse.</string>
-    <string name="settings_favorite_launch_animation_title">Animation d’ouverture des favoris</string>
-    <string name="settings_favorite_launch_animation_subtitle">Fait passer le favori dans un tourbillon Candy coloré avant de l’ouvrir.</string>
+    <string name="settings_favorite_launch_animation_title">Animations des favoris</string>
+    <string name="settings_favorite_launch_animation_subtitle">Transforme les formes et envoie le favori choisi dans un tourbillon Candy coloré.</string>
+    <string name="settings_favorite_animation_speed_title">Vitesse d’animation</string>
+    <string name="settings_favorite_animation_speed_relaxed">Douce</string>
+    <string name="settings_favorite_animation_speed_normal">Normale</string>
+    <string name="settings_favorite_animation_speed_fast">Rapide</string>
     <string name="settings_favorite_bookmark_import_title">Importer un HTML de favoris</string>
     <string name="settings_favorite_bookmark_import_summary">Ajoute aux favoris les marque-pages exportés depuis un autre navigateur.</string>
     <plurals name="favorite_bookmark_import_success">

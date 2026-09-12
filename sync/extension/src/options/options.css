@@ -46,6 +46,7 @@ label, legend { font-weight: 650; }
 .field label { display: block; margin-bottom: 7px; font-size: 14px; }
 .field input, .field select { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; color: var(--text); background: var(--surface); }
 .field small { display: block; margin-top: 6px; color: var(--muted); }
+.transport-warning { margin: 10px 0 0; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--warn) 62%, var(--border)); border-radius: 10px; color: var(--text); background: color-mix(in srgb, var(--warn) 14%, var(--surface)); font-size: 13px; font-weight: 550; }
 .security-box { margin: 28px 0; padding: 22px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: 15px; background: var(--accent-soft); }
 .acknowledge { display: flex; gap: 10px; align-items: flex-start; font-weight: 500; }
 .acknowledge input { margin-top: 5px; }

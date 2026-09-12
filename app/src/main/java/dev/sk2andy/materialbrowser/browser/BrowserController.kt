@@ -84,9 +84,6 @@ import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadLaunchResult
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
-import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressAction
-import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressOutcome
-import dev.sk2andy.materialbrowser.browser.actions.LinkLongPressRules
 import dev.sk2andy.materialbrowser.browser.actions.PendingDownloadChoice
 import dev.sk2andy.materialbrowser.browser.actions.WebContentActionState
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
@@ -215,8 +212,6 @@ import dev.sk2andy.materialbrowser.data.HistoryClearRequest
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayout
-import dev.sk2andy.materialbrowser.data.LinkPeekActionLayoutRules
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
 import dev.sk2andy.materialbrowser.data.PendingCandyTrailRedaction
@@ -544,6 +539,8 @@ class BrowserController(
     var isHttpPasswordAutofillEnabled by mutableStateOf(false)
         private set
     var isFavoriteLaunchAnimationEnabled by mutableStateOf(true)
+        private set
+    internal var favoriteAnimationSpeed by mutableStateOf(FavoriteAnimationSpeed.Default)
         private set
     var isOpenHomeOnStartupEnabled by mutableStateOf(false)
         private set
@@ -1906,6 +1903,7 @@ class BrowserController(
         isStartupAnimationEnabled = store.loadStartupAnimationEnabled()
         isHttpPasswordAutofillEnabled = store.loadHttpPasswordAutofillEnabled()
         isFavoriteLaunchAnimationEnabled = store.loadFavoriteLaunchAnimationEnabled()
+        favoriteAnimationSpeed = store.loadFavoriteAnimationSpeed()
         isOpenHomeOnStartupEnabled = store.loadOpenHomeOnStartupEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
         isDeveloperOptionsUnlocked = store.loadDeveloperOptionsUnlocked()
@@ -4985,7 +4983,7 @@ class BrowserController(
     private fun handleWebContentLongPress(target: WebContentTarget, tabId: String) {
         val outcome = LinkLongPressRules.outcome(
             action = linkLongPressAction,
-            target = target,
+            hasLinkTarget = target.linkUrl != null,
             canOpenInPrivate = canOpenLinkInPrivate,
         )
         contentActions.requestLongPressActionHaptic()
@@ -6731,6 +6729,12 @@ class BrowserController(
         if (isFavoriteLaunchAnimationEnabled == enabled) return
         isFavoriteLaunchAnimationEnabled = enabled
         store.saveFavoriteLaunchAnimationEnabled(enabled)
+    }
+
+    fun updateFavoriteAnimationSpeed(speed: FavoriteAnimationSpeed) {
+        if (favoriteAnimationSpeed == speed) return
+        favoriteAnimationSpeed = speed
+        store.saveFavoriteAnimationSpeed(speed)
     }
 
     fun updateOpenHomeOnStartupEnabled(enabled: Boolean) {
@@ -8599,8 +8603,7 @@ class BrowserController(
         if (developerSettings.forceSafeAreaFallback) 0 else currentSafeAreaTopInsetPx()
 
     private fun usesNativeSafeArea(tabId: String): Boolean =
-        isSafeAreaForced(tabId) ||
-            isActiveFirefoxExtensionOptionsPage(tabId)
+        isSafeAreaForced(tabId) || isActiveFirefoxExtensionOptionsPage(tabId)
 
     private fun isActiveFirefoxExtensionOptionsPage(tabId: String): Boolean {
         val chrome = firefoxExtensionOptionsTabs[tabId] ?: return false

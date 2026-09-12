@@ -16,7 +16,15 @@ for (const manifest of [chromium, firefox]) {
   assert.equal(manifest.options_ui?.open_in_tab, true);
   assert.equal(manifest.action?.default_popup, undefined);
   assert.deepEqual(manifest.permissions, ["alarms", "storage"]);
-  assert.deepEqual(manifest.optional_permissions, ["tabs", "bookmarks", "tabGroups"]);
+  assert.deepEqual(manifest.optional_permissions, ["tabs", "tabGroups"]);
+  assert.equal(manifest.optional_permissions.includes("bookmarks"), false);
+  assert.deepEqual(manifest.optional_host_permissions, [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "http://[::1]/*",
+  ]);
+  assert.equal(manifest.homepage_url, "https://sk2andy.github.io/candy-browser/");
   assert.equal(JSON.stringify(manifest).includes("Candy Hosted"), false);
   assert.equal(manifest.content_security_policy.extension_pages.includes("'unsafe-eval'"), false);
   assert.equal(manifest.content_security_policy.extension_pages.includes("http:"), false);
@@ -27,4 +35,5 @@ assert.deepEqual(firefox.background.scripts, ["background.js"]);
 assert.equal(firefox.background.service_worker, undefined);
 assert.equal(firefox.browser_specific_settings.gecko.strict_min_version, "140.0");
 assert.ok(firefox.browser_specific_settings.gecko.data_collection_permissions);
+assert.deepEqual(firefox.browser_specific_settings.gecko.data_collection_permissions.optional, ["browsingActivity"]);
 process.stdout.write("Chromium and Firefox manifests valid.\n");

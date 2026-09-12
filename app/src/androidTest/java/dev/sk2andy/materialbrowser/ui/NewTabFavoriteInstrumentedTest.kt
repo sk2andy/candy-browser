@@ -207,6 +207,7 @@ class NewTabFavoriteInstrumentedTest {
         composeRule.runOnIdle {
             clearSession()
             BrowserSessionStore(composeRule.activity).apply {
+                saveFavoriteLaunchAnimationEnabled(false)
                 saveFavorites(listOf(favorite))
                 saveHistory(
                     listOf(

@@ -1,7 +1,7 @@
-package dev.sk2andy.materialbrowser.browser.actions
+package dev.sk2andy.materialbrowser.browser
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class LinkLongPressActionTest {
     @Test

@@ -123,6 +123,38 @@ class BrowserSessionControllerTest {
     }
 
     @Test
+    fun `duplicate tab loads copied address through newly attached engine session`() {
+        val controller = BrowserSessionController()
+        val source = FakeBrowserEngineSessionPort(tabId = "tab-1")
+        controller.attach(source)
+        controller.onEngineEvent(
+            BrowserEngineEvent(
+                tabId = source.tabId,
+                type = BrowserEngineEventType.NavigationCommitted,
+                address = "https://example.com/article",
+                title = "Article",
+                canGoBack = true,
+                canGoForward = false,
+                failureDescription = null,
+            ),
+        )
+        source.commands.clear()
+
+        val state = controller.dispatchTabs(
+            intent = BrowserTabsIntent.DuplicateTab,
+            tabId = source.tabId,
+        )
+        val duplicate = FakeBrowserEngineSessionPort(tabId = state.selectedTabId)
+
+        assertTrue(controller.attach(duplicate))
+        assertTrue(source.commands.isEmpty())
+        assertEquals(
+            listOf(BrowserEngineCommands.load("https://example.com/article")),
+            duplicate.commands,
+        )
+    }
+
+    @Test
     fun `state-only engine event refreshes history without changing loading`() {
         val controller = BrowserSessionController()
         val session = FakeBrowserEngineSessionPort(tabId = "tab-1")

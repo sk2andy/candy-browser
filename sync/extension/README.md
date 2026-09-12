@@ -20,15 +20,15 @@ local E2EE keys, and the desired sync scopes.
 | Apply Android edits to the matching desktop synced profile | Implemented |
 | Chromium service worker | Implemented |
 | Firefox non-persistent event page | Implemented |
-| Optional tabs, bookmarks, and tab-groups permissions | Implemented |
+| Optional tabs and tab-groups permissions | Implemented |
 | Bookmark and group merge | Not yet part of this vertical slice |
 | Additional device through passphrase recovery | Implemented |
 | Direct device pairing without a passphrase | Not yet part of this vertical slice |
 
 Group assignments for existing tabs are already included in the encrypted tab
 snapshot. Dedicated bookmark sync will follow with UUID mapping, an apply
-journal, and tombstones; the Options Page already reserves its selection and
-permission lifecycle.
+journal, and tombstones. Its disabled Options Page row reserves the product
+direction, but neither browser build declares bookmark access before the feature exists.
 
 ## Local development
 
@@ -86,11 +86,10 @@ Firefox:
 P-256 public key and fingerprint, and capabilities. The server password exists only
 during setup in the Options Page context. The E2EE passphrase is never part of a request.
 
-HTTPS is the default remote transport. A non-loopback HTTP endpoint is accepted only after its
-unauthenticated discovery document reports `allowHttp: true`, which the server emits only with
-`CANDY_SYNC_ALLOW_HTTP=true`. The extension performs discovery before every authenticated sync
-session. HTTP remains vulnerable to credential/token interception and should be limited to a
-trusted development LAN.
+HTTPS is required for remote endpoints in the browser packages. Localhost HTTP remains available
+for same-device development. The protocol client still validates the server's `allowHttp` discovery
+flag before any authenticated remote-HTTP request, but the store manifests do not grant remote HTTP
+host access and the Options Page rejects that configuration.
 
 ## Protocol v2 realtime path
 
@@ -118,7 +117,8 @@ the server does not advertise the complete v2 feature set.
 ## Permission lifecycle
 
 - `storage` and `alarms` are baseline permissions.
-- `tabs`, `bookmarks`, and `tabGroups` are requested only after selection.
+- `tabs` and `tabGroups` are requested only after selection.
+- Bookmark access is not declared while bookmark synchronization remains unavailable.
 - Endpoint access is requested through direct user action as the exact origin
   subset of the optional host patterns.
 - `permissions.contains`, `onAdded`, and `onRemoved` determine effective state.
@@ -129,6 +129,13 @@ the server does not advertise the complete v2 feature set.
   pruned when eligible tabs close.
 - Loading transitions retain that UUID and prefer a syncable `pendingUrl`; only a
   committed excluded destination emits `close`.
+
+Entering an HTTP endpoint shows an inline transport warning. Localhost HTTP remains available for
+same-device development; remote HTTP is blocked because it cannot protect enrollment credentials
+or device tokens in transit.
+
+The public project website lives at <https://sk2andy.github.io/candy-browser/> and its English
+privacy policy at <https://sk2andy.github.io/candy-browser/privacy/>.
 
 ## Status
 

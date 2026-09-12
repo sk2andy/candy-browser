@@ -111,6 +111,8 @@ internal fun CandySettingsHome(
     onSearxngInstanceUrlChanged: (String) -> Unit,
     tabOverviewMode: TabOverviewMode,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
+    tabListStartsAtBottom: Boolean,
+    onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     translationProvider: PageTranslationProvider,
     onTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     toppings: List<BrowserViewportTopping>,
@@ -151,6 +153,8 @@ internal fun CandySettingsHome(
             SettingsDestination.TabsAndGestures -> CandyTabsAndGesturesSettingsPage(
                 tabOverviewMode = tabOverviewMode,
                 onTabOverviewModeChanged = onTabOverviewModeChanged,
+                tabListStartsAtBottom = tabListStartsAtBottom,
+                onTabListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
                 onBack = { destination = SettingsDestination.Home },
             )
 

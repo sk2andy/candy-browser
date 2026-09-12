@@ -16,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
@@ -158,6 +159,42 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(BrowserSettingsTestTags.FavoriteLaunchAnimation).performClick()
 
         assertFalse(enabled)
+    }
+
+    @Test
+    fun favoriteAnimationSpeedChoiceUpdatesSetting() {
+        var speed by mutableStateOf(FavoriteAnimationSpeed.Normal)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    favoriteAnimationSpeed = speed,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onFavoriteAnimationSpeedChanged = { speed = it },
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.FavoriteAnimationSpeed)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_favorite_animation_speed_fast),
+        ).performClick()
+
+        assertEquals(FavoriteAnimationSpeed.Fast, speed)
     }
 
     @Test

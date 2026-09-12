@@ -93,6 +93,8 @@ internal fun CandyAppearanceSettingsPage(onBack: () -> Unit) {
 internal fun CandyTabsAndGesturesSettingsPage(
     tabOverviewMode: TabOverviewMode,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
+    tabListStartsAtBottom: Boolean,
+    onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     SettingsPage(
@@ -104,12 +106,11 @@ internal fun CandyTabsAndGesturesSettingsPage(
         Spacer(Modifier.height(8.dp))
         TabOverviewSettings(
             mode = tabOverviewMode,
-            listStartsAtBottom = false,
+            listStartsAtBottom = tabListStartsAtBottom,
             strings = candyTabOverviewStrings,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             onModeChanged = onTabOverviewModeChanged,
-            onListStartsAtBottomChanged = {},
-            listStartsAtBottomAvailable = false,
+            onListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
         )
         Spacer(Modifier.height(2.dp))
         SettingsSwitch(

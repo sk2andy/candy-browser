@@ -417,8 +417,12 @@
     <string name="settings_http_password_autofill_warning">HTTP envia nomes de utilizador e palavras-passe sem encriptação de transporte. Quem intercetar a ligação pode lê-los.</string>
     <string name="settings_startup_animation_title">Animação de arranque</string>
     <string name="settings_startup_animation_subtitle">Mostra a animação do Candy ao iniciar normalmente. Desative para abrir imediatamente a barra de endereço.</string>
-    <string name="settings_favorite_launch_animation_title">Animação ao abrir favoritos</string>
-    <string name="settings_favorite_launch_animation_subtitle">Envia o favorito por um redemoinho Candy colorido antes de o abrir.</string>
+    <string name="settings_favorite_launch_animation_title">Animações dos favoritos</string>
+    <string name="settings_favorite_launch_animation_subtitle">Transforma as formas e envia o favorito escolhido por um redemoinho Candy colorido.</string>
+    <string name="settings_favorite_animation_speed_title">Velocidade da animação</string>
+    <string name="settings_favorite_animation_speed_relaxed">Suave</string>
+    <string name="settings_favorite_animation_speed_normal">Normal</string>
+    <string name="settings_favorite_animation_speed_fast">Rápida</string>
     <string name="settings_favorite_bookmark_import_title">Importar HTML de marcadores</string>
     <string name="settings_favorite_bookmark_import_summary">Adiciona aos Favoritos marcadores exportados de outro navegador.</string>
     <plurals name="favorite_bookmark_import_success">
