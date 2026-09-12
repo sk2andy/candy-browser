@@ -108,7 +108,7 @@ class BrowserControllerProfilesInstrumentedTest {
     }
 
     @Test
-    fun duplicateSelectedTabKeepsProfileAndRespectsCapacity() {
+    fun duplicateSelectedTabKeepsProfileBeyondFiftyTabs() {
         activityRule.scenario.onActivity { activity ->
             val profiles = profiles()
             resetAndSeed(activity, profiles, profiles.last().id)
@@ -125,14 +125,17 @@ class BrowserControllerProfilesInstrumentedTest {
             assertFalse(duplicate.isIncognito)
             assertEquals(duplicateId, controller.selectedTabId)
 
-            repeat(MAX_TABS - controller.tabs.size) { index ->
+            repeat(51 - controller.tabs.size) { index ->
                 controller.createTab("https://capacity.example/$index")
             }
-            val selectedAtCapacity = controller.selectedTabId
+            val selectedUrlBeyondFifty = controller.selectedTab.url
+            val duplicateBeyondFiftyId = requireNotNull(controller.duplicateSelectedTab())
+            val duplicateBeyondFifty = controller.activeTabs.first { it.id == duplicateBeyondFiftyId }
 
-            assertNull(controller.duplicateSelectedTab())
-            assertEquals(MAX_TABS, controller.tabs.size)
-            assertEquals(selectedAtCapacity, controller.selectedTabId)
+            assertEquals(52, controller.tabs.size)
+            assertEquals(duplicateBeyondFiftyId, controller.selectedTabId)
+            assertEquals(profiles.last().id, duplicateBeyondFifty.profileId)
+            assertEquals(selectedUrlBeyondFifty, duplicateBeyondFifty.url)
         }
     }
 

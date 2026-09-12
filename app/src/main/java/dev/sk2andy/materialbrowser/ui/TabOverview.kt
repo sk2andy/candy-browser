@@ -84,6 +84,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -188,13 +189,19 @@ internal fun TabOverview(
     val overviewWallpaper = backgroundWallpaper.takeUnless {
         controller.selectedTab.isIncognito
     }
+    var dismissingTabId by remember { mutableStateOf<String?>(null) }
     val overviewTabs = controller.activeTabs
+    // Keep pager count, keys, and content on one snapshot. Dismissal retains it until motion ends.
+    val heroPagerTabs = remember { mutableStateOf(overviewTabs) }
+    SideEffect {
+        if (dismissingTabId == null) heroPagerTabs.value = overviewTabs
+    }
     val initialPage = remember {
         overviewTabs.indexOfFirst { it.id == controller.selectedTabId }.coerceAtLeast(0)
     }
     val pagerState = rememberPagerState(
         initialPage = initialPage,
-        pageCount = { controller.activeTabs.size },
+        pageCount = { heroPagerTabs.value.size },
     )
     val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = initialPage)
     val listState = rememberLazyListState(
@@ -226,7 +233,6 @@ internal fun TabOverview(
     var heroStarted by remember { mutableStateOf(false) }
     var heroCompleted by remember { mutableStateOf(false) }
     var heroVisible by remember { mutableStateOf(true) }
-    var dismissingTabId by remember { mutableStateOf<String?>(null) }
     var exitHero by remember { mutableStateOf<TabExitHero?>(null) }
     val currentOnExitHeroVisibilityChanged by rememberUpdatedState(
         onExitHeroVisibilityChanged,
@@ -1046,7 +1052,7 @@ internal fun TabOverview(
             when (controller.tabOverviewMode) {
                 TabOverviewMode.Hero -> TabOverviewHeroPager(
                     pagerState = pagerState,
-                    tabs = controller.activeTabs,
+                    tabs = heroPagerTabs.value,
                     initialTabId = initialTabId,
                     tabCardWidth = tabCardWidth,
                     cardAspectRatio = coverflowCardLayout.aspectRatio,
