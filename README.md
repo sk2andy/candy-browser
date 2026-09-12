@@ -5,8 +5,9 @@
 <h1 align="center">Candy Browser</h1>
 
 <p align="center">
+  <strong>Firefox extensions on Android, powered by GeckoView.</strong><br>
   A gesture-first browser with selectable GeckoView and Android System WebView engines,
-  Firefox WebExtensions, an iOS WKWebView/Liquid Glass target, and local privacy tools.
+  an iOS WKWebView/Liquid Glass target, and local privacy tools.
 </p>
 
 <p align="center">
@@ -18,12 +19,23 @@
 </p>
 
 <p align="center">
-  <a href="https://sk2andy.github.io/candy-browser/"><strong>Website</strong></a>
+  <a href="https://sk2andy.github.io/candy-browser/"><strong>GitHub Pages website</strong></a>
   ·
   <a href="https://sk2andy.github.io/candy-browser/privacy/">Privacy</a>
   ·
   <a href="https://github.com/sk2andy/candy-browser/releases">Releases</a>
 </p>
+
+## 🎉 Firefox extensions on Android
+
+Candy uses GeckoView by default and supports Mozilla-signed Firefox extensions directly inside the
+Android app. A fresh Gecko profile comes with **uBlock Origin** and
+**I still don't care about cookies**, while additional compatible extensions can be installed and
+managed from Candy's browser settings.
+
+Extension actions, popups, options, permissions, updates, and enable/disable controls stay inside
+Candy's browser chrome. See [Platform engines](docs/browsing/platform-engines.md#android-gecko-and-extension-invariants)
+for the supported GeckoView integration and current compatibility boundaries.
 
 <p align="center">
   <a href="https://buymeacoffee.com/sk2andy"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" alt="Buy me a coffee"></a>
