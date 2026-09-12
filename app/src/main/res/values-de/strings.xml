@@ -1098,6 +1098,14 @@
     <string name="developer_options_diagnostics_copied">Diagnosestatus kopiert</string>
     <string name="developer_options_presentations_section">Präsentationen</string>
     <string name="developer_options_experiments_section">Experimentelle Funktionen</string>
+    <string name="developer_options_performance_section">Performance</string>
+    <string name="developer_options_scroll_dispatch_mode">Scroll-Aktualisierung der Browserleiste</string>
+    <string name="developer_options_scroll_dispatch_mode_summary">„Optimiert“ startet mit 60 Hz und wechselt nur bei anhaltender Auslastung des Hauptthreads auf 30 oder 15 Hz. Feste Modi passen sich nicht an.</string>
+    <string name="developer_options_scroll_dispatch_optimized">Optimiert</string>
+    <string name="developer_options_scroll_dispatch_120_hz">Fest 120 Hz</string>
+    <string name="developer_options_scroll_dispatch_60_hz">Fest 60 Hz</string>
+    <string name="developer_options_scroll_dispatch_30_hz">Fest 30 Hz</string>
+    <string name="developer_options_scroll_dispatch_15_hz">Fest 15 Hz</string>
     <string name="developer_options_show_onboarding">Gesten-Einführung anzeigen</string>
     <string name="developer_options_show_onboarding_summary">Startet die Gesten-Einführung erneut, ohne ihren Abschlussstatus zurückzusetzen.</string>
     <string name="developer_options_show_release_notes">„Was ist neu?“ anzeigen</string>

@@ -191,9 +191,12 @@
   session; browser blur is a sibling chrome effect and does not require a TextureView copy. The
   static status-bar overlay remains outside the renderer and keeps system icons legible.
 - Read page-scroll metrics through the engine port. The optional `BrowserScrollBar` observes them
-  at up to 60 Hz without replacing the 15 Hz pill-collapse scroll path and is absent in
+  at up to 60 Hz without replacing the independently rate-limited pill-collapse scroll path and is absent in
   fullscreen/video-only mode. Gecko's device-pixel-scaled document metrics update only the scrollbar;
   they never enter the renderer-coordinate pill-collapse direction reducer.
+- The pill-collapse dispatcher defaults to optimized mode: 60 updates per second, stepping down to
+  30 and then 15 only after sustained slow UI frames measured while scrolling. Developer options
+  can instead select fixed 120, 60, 30 or 15 Hz caps. The adaptive tier is session-only and is not persisted.
 - Keep page touch streams and native fling physics in GeckoView. Compose parents must not cancel
   an active page gesture while arbitrating AndroidView input. No Chromium-specific reverse-fling
   workaround runs in the Gecko renderer. Android window-focus loss, engine deactivation and view

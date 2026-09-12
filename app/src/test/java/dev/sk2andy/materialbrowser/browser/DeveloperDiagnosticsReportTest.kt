@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser
 
+import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,6 +23,8 @@ class DeveloperDiagnosticsReportTest {
                 externalPreviewActive = false,
                 inputDiagnosticsEnabled = true,
                 developerSettings = DeveloperSettings(
+                    browserChromeScrollDispatchMode =
+                        BrowserChromeScrollDispatchMode.Fixed60Hz,
                     safeAreaLayoutQuietPeriodMillis = 250,
                     safeAreaRequiredFailureCount = 4,
                     forceSafeAreaFallback = true,
@@ -43,6 +46,7 @@ class DeveloperDiagnosticsReportTest {
             Fullscreen active: Yes
             External preview active: No
             Input diagnostics enabled: Yes
+            Browser chrome scroll dispatch: fixed_60_hz
             Safe-area layout quiet period: 250 ms
             Safe-area required failures: 4
             Native safe-area fallback forced: Yes
@@ -87,6 +91,7 @@ class DeveloperDiagnosticsReportTest {
             Fullscreen active: No
             External preview active: Yes
             Input diagnostics enabled: No
+            Browser chrome scroll dispatch: optimized
             Safe-area layout quiet period: 400 ms
             Safe-area required failures: 3
             Native safe-area fallback forced: No

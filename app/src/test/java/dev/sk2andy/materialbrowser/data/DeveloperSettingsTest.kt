@@ -8,9 +8,29 @@ class DeveloperSettingsTest {
     fun `defaults preserve the stabilized safe area fallback`() {
         val settings = DeveloperSettings()
 
+        assertEquals(
+            BrowserChromeScrollDispatchMode.Optimized,
+            settings.browserChromeScrollDispatchMode,
+        )
         assertEquals(400, settings.safeAreaLayoutQuietPeriodMillis)
         assertEquals(3, settings.safeAreaRequiredFailureCount)
         assertEquals(false, settings.forceSafeAreaFallback)
+    }
+
+    @Test
+    fun `scroll dispatch mode uses stable ids and rejects unknown values`() {
+        assertEquals(
+            BrowserChromeScrollDispatchMode.Fixed120Hz,
+            BrowserChromeScrollDispatchMode.fromStableId("fixed_120_hz"),
+        )
+        assertEquals(
+            BrowserChromeScrollDispatchMode.Optimized,
+            BrowserChromeScrollDispatchMode.fromStableId("unknown"),
+        )
+        assertEquals(
+            BrowserChromeScrollDispatchMode.Optimized,
+            BrowserChromeScrollDispatchMode.fromStableId(null),
+        )
     }
 
     @Test

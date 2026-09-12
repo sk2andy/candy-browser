@@ -96,8 +96,10 @@ Camera and microphone permissions remain separate and continue through Candy's p
   Firefox extension `tabs`, `webNavigation`, CSS injection and script injection scoped to the
   same tab that Candy's shared chrome presents.
 - GeckoView `ScrollDelegate` events feed the pure,
-  tab-scoped address-pill rule through a latest-value dispatcher capped at 15 browser-chrome updates
-  per second. Only the selected tab's current renderer may update chrome;
+  tab-scoped address-pill rule through a latest-value dispatcher. Its optimized mode starts at 60
+  browser-chrome updates per second and steps down to 30, then 15, after sustained slow UI frames;
+  fixed 120, 60, 30 and 15 Hz caps remain available in developer options. Only the selected
+  tab's current renderer may update chrome;
   document-generation tags discard a callback queued before navigation, document top expands
   immediately, direction changes reset travel, and each tab retains its own
   compact state while background, replaced and closed sessions are ignored.

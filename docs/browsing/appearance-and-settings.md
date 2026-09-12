@@ -173,7 +173,9 @@ Frosted exposes three persisted controls while selected:
   overlay thumb appears during scrolling, maps direct dragging back to the owning engine, and fades
   after interaction. System WebView suppresses its built-in indicator while the overlay owns this
   affordance. Scrollbar position refreshes are capped at 60 Hz while unrelated browser-chrome scroll
-  reactions remain capped at 15 Hz. The overlay stays outside fullscreen and video-only presentation.
+  reactions use an optimized 60 Hz cap that can step down to 30 and 15 after sustained slow UI
+  frames; developer options can select fixed 120, 60, 30 or 15 Hz instead. The overlay stays
+  outside fullscreen and video-only presentation.
 - Page translation provider is global and persists across regular and private browsing. Translation
   itself remains an explicit page action; no source URL or translated content is stored separately.
 - **Prevent automatic video playback** defaults on and is applied to every existing and newly

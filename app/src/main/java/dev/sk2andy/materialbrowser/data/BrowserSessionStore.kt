@@ -967,6 +967,9 @@ class BrowserSessionStore internal constructor(
     }
 
     fun loadDeveloperSettings(): DeveloperSettings = DeveloperSettings(
+        browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.fromStableId(
+            preferences.getString(KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE, null),
+        ),
         safeAreaLayoutQuietPeriodMillis = loadBoundedInt(
             key = KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
             defaultValue = DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
@@ -988,6 +991,10 @@ class BrowserSessionStore internal constructor(
     fun saveDeveloperSettings(settings: DeveloperSettings) {
         val normalized = settings.normalized()
         preferences.edit()
+            .putString(
+                KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE,
+                normalized.browserChromeScrollDispatchMode.stableId,
+            )
             .putInt(
                 KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
                 normalized.safeAreaLayoutQuietPeriodMillis,
@@ -1259,6 +1266,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_OPEN_HOME_ON_STARTUP_ENABLED = "open_home_on_startup_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
+        const val KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE =
+            "developer_browser_chrome_scroll_dispatch_mode"
         const val KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS =
             "developer_safe_area_layout_quiet_period_millis"
         const val KEY_DEVELOPER_SAFE_AREA_REQUIRED_FAILURE_COUNT =
