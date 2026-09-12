@@ -100,6 +100,34 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun existingGeckoViewReceivesUpdatedBackdropCaptureRequirement() {
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val browserController = BrowserController(activity)
+            controller = browserController
+            val host = FrameLayout(activity)
+            activity.addContentView(host, matchParentLayoutParams())
+            val session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+
+            browserController.attachSelectedBrowserEngineView(
+                container = host,
+                backdropCaptureEnabled = false,
+            )
+            browserController.attachSelectedBrowserEngineView(
+                container = host,
+                backdropCaptureEnabled = true,
+            )
+
+            assertEquals(listOf(false, true), session.backdropCaptureRequirements)
+            assertEquals(1, session.createCount)
+        }
+    }
+
+    @Test
     fun fullscreenPresentationPreventsSecondGeckoViewForAnotherHost() {
         composeRule.runOnIdle {
             val activity = composeRule.activity
@@ -510,6 +538,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     ) : AndroidBrowserEngineSessionPort {
         val commands = mutableListOf<BrowserEngineCommand>()
         val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
+        val backdropCaptureRequirements = mutableListOf<Boolean>()
         var createCount = 0
             private set
         var createdView: View? = null
@@ -517,6 +546,10 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         private var attachDispatched = false
         private var detachDispatched = false
         private var releaseDispatched = false
+
+        override fun setBackdropCaptureEnabled(enabled: Boolean) {
+            backdropCaptureRequirements += enabled
+        }
 
         override fun createView(context: Context): View {
             check(createdView == null) { "Gecko session already has a bound View" }

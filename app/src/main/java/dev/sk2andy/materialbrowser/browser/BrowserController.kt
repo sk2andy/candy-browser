@@ -350,6 +350,12 @@ private data class GeckoViewBinding(
     val view: View,
 )
 
+private data class PendingGeckoViewAttach(
+    val token: Any,
+    val onContentPresented: ((String) -> Unit)?,
+    val backdropCaptureEnabled: Boolean,
+)
+
 internal data class BrowserActivityResultIdentity(
     val tabId: String,
     val session: AndroidBrowserEngineSessionPort,
@@ -811,7 +817,8 @@ class BrowserController(
     private val geckoViewBindings = mutableMapOf<FrameLayout, GeckoViewBinding>()
     private val geckoViewMutationHosts = mutableSetOf<FrameLayout>()
     private val geckoViewSessionsBeingReleased = mutableSetOf<AndroidBrowserEngineSessionPort>()
-    private val pendingGeckoViewAttachRetries = mutableMapOf<FrameLayout, Any>()
+    private val pendingGeckoViewAttachRetries =
+        mutableMapOf<FrameLayout, PendingGeckoViewAttach>()
     private var isGeckoViewBindingMutationInProgress = false
     private val browserEngineSessionFactory: AndroidBrowserEngineFactory by lazy(
         LazyThreadSafetyMode.NONE,
@@ -2070,13 +2077,18 @@ class BrowserController(
 
     fun attachSelectedBrowserEngineView(
         container: FrameLayout,
+        backdropCaptureEnabled: Boolean = false,
         onContentPresented: ((String) -> Unit)? = null,
     ): View? {
         if (browsingDataClearPending) {
             container.removeAllViews()
             return null
         }
-        return attachSelectedGeckoView(container, onContentPresented)
+        return attachSelectedGeckoView(
+            container = container,
+            onContentPresented = onContentPresented,
+            backdropCaptureEnabled = backdropCaptureEnabled,
+        )
     }
 
     internal fun requestSelectedBrowserEngineFocus(): Boolean {
@@ -2125,6 +2137,7 @@ class BrowserController(
     private fun attachSelectedGeckoView(
         container: FrameLayout,
         onContentPresented: ((String) -> Unit)?,
+        backdropCaptureEnabled: Boolean,
     ): View? {
         val selectedSessionIsBeingReleased =
             browserEngineSessions[selectedTabId] in geckoViewSessionsBeingReleased
@@ -2133,7 +2146,11 @@ class BrowserController(
                 !isGeckoViewBindingMutationInProgress ||
                 container !in geckoViewMutationHosts
             ) {
-                scheduleGeckoViewAttachRetry(container, onContentPresented)
+                scheduleGeckoViewAttachRetry(
+                    container = container,
+                    onContentPresented = onContentPresented,
+                    backdropCaptureEnabled = backdropCaptureEnabled,
+                )
             }
             val binding = geckoViewBindings[container]
             return binding?.view?.takeIf { view ->
@@ -2143,7 +2160,11 @@ class BrowserController(
         isGeckoViewBindingMutationInProgress = true
         geckoViewMutationHosts += container
         return try {
-            attachSelectedGeckoViewOnce(container, onContentPresented)
+            attachSelectedGeckoViewOnce(
+                container = container,
+                onContentPresented = onContentPresented,
+                backdropCaptureEnabled = backdropCaptureEnabled,
+            )
         } finally {
             geckoViewMutationHosts.clear()
             isGeckoViewBindingMutationInProgress = false
@@ -2153,15 +2174,27 @@ class BrowserController(
     private fun scheduleGeckoViewAttachRetry(
         container: FrameLayout,
         onContentPresented: ((String) -> Unit)?,
+        backdropCaptureEnabled: Boolean,
     ) {
-        if (pendingGeckoViewAttachRetries.containsKey(container)) return
-        val retryToken = Any()
-        pendingGeckoViewAttachRetries[container] = retryToken
+        val pending = pendingGeckoViewAttachRetries[container]
+        val retryToken = pending?.token ?: Any()
+        pendingGeckoViewAttachRetries[container] = PendingGeckoViewAttach(
+            token = retryToken,
+            onContentPresented = onContentPresented,
+            backdropCaptureEnabled = backdropCaptureEnabled,
+        )
+        if (pending != null) return
         container.post {
-            if (pendingGeckoViewAttachRetries[container] !== retryToken) return@post
+            val request = pendingGeckoViewAttachRetries[container]
+                ?.takeIf { candidate -> candidate.token === retryToken }
+                ?: return@post
             pendingGeckoViewAttachRetries.remove(container)
             if (!destroyed && container.isAttachedToWindow) {
-                attachSelectedGeckoView(container, onContentPresented)
+                attachSelectedGeckoView(
+                    container = container,
+                    onContentPresented = request.onContentPresented,
+                    backdropCaptureEnabled = request.backdropCaptureEnabled,
+                )
             }
         }
     }
@@ -2169,6 +2202,7 @@ class BrowserController(
     private fun attachSelectedGeckoViewOnce(
         container: FrameLayout,
         onContentPresented: ((String) -> Unit)?,
+        backdropCaptureEnabled: Boolean,
     ): View? {
         fun awaitContent(binding: GeckoViewBinding) {
             if (onContentPresented == null) return
@@ -2186,6 +2220,10 @@ class BrowserController(
         }
 
         val current = geckoViewBindings[container]
+        current
+            ?.takeIf { binding -> binding.tabId == selectedTabId }
+            ?.session
+            ?.setBackdropCaptureEnabled(backdropCaptureEnabled)
         if (current?.tabId == selectedTabId && current.view.parent === container) {
             awaitContent(current)
             return current.view
@@ -2251,6 +2289,7 @@ class BrowserController(
         container.removeAllViews()
         val tabId = selectedTabId
         val engineSession = browserEngineSessionFor(tabId)
+        engineSession.setBackdropCaptureEnabled(backdropCaptureEnabled)
         val transferable = geckoViewBindings.entries.firstOrNull { (host, binding) ->
             host !== container &&
                 binding.tabId == tabId &&
@@ -2920,11 +2959,15 @@ class BrowserController(
         }
     }
 
-    fun attachExternalLinkPreview(container: FrameLayout) {
+    fun attachExternalLinkPreview(
+        container: FrameLayout,
+        backdropCaptureEnabled: Boolean = false,
+    ) {
         val runtime = externalLinkPreviewRuntime ?: run {
             container.removeAllViews()
             return
         }
+        runtime.geckoBinding.session.setBackdropCaptureEnabled(backdropCaptureEnabled)
         val view = runtime.binding.view
         if (view.parent === container && container.childCount == 1) return
         (view.parent as? ViewGroup)?.removeView(view)

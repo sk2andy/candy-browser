@@ -264,6 +264,9 @@ internal interface GeckoBrowserSession {
     /** Binds Gecko's session delegates to Candy's stable tab identity. */
     fun bindExtensionTab(tabId: String, generation: Long) = Unit
 
+    /** Uses a capture-compatible renderer only while Candy chrome needs backdrop blur. */
+    fun setBackdropCaptureEnabled(enabled: Boolean) = Unit
+
     /** Creates and binds the one View currently rendering this session. */
     fun createView(context: Context): View
 
