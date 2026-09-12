@@ -44,6 +44,7 @@ internal object AppUpdateRules {
         currentVersionName: String,
         release: GitHubReleaseMetadata,
         channel: AppReleaseChannel = AppReleaseChannel.Standard,
+        supportedAbis: List<String> = emptyList(),
     ): AvailableAppUpdate? {
         if (release.draft || release.prerelease) return null
         val currentVersion = AppVersion.parse(currentVersionName) ?: return null
@@ -51,18 +52,40 @@ internal object AppUpdateRules {
         if (releaseVersion <= currentVersion) return null
 
         val normalizedTag = release.tagName.removePrefix("v")
-        val expectedFileName = "CandyBrowser-v$normalizedTag-${channel.assetSuffix}.apk"
-        val asset = release.assets.singleOrNull { candidate ->
-            candidate.name == expectedFileName &&
-                candidate.contentType == AvailableAppUpdate.APK_MIME_TYPE &&
-                isExpectedDownloadUrl(candidate.downloadUrl, normalizedTag, expectedFileName)
-        } ?: return null
+        val expectedFileNames = buildList {
+            if (channel == AppReleaseChannel.Standard && "arm64-v8a" in supportedAbis) {
+                add("CandyBrowser-v$normalizedTag-arm64-v8a-release.apk")
+            }
+            add("CandyBrowser-v$normalizedTag-${channel.assetSuffix}.apk")
+        }
+        val asset = selectExpectedAsset(
+            assets = release.assets,
+            expectedFileNames = expectedFileNames,
+            versionName = normalizedTag,
+        ) ?: return null
 
         return AvailableAppUpdate(
             versionName = normalizedTag,
             downloadUrl = asset.downloadUrl,
             fileName = asset.name,
         )
+    }
+
+    private fun selectExpectedAsset(
+        assets: List<GitHubReleaseAsset>,
+        expectedFileNames: List<String>,
+        versionName: String,
+    ): GitHubReleaseAsset? {
+        for (expectedFileName in expectedFileNames) {
+            val namedAssets = assets.filter { candidate -> candidate.name == expectedFileName }
+            if (namedAssets.isEmpty()) continue
+            if (namedAssets.size != 1) return null
+            val asset = namedAssets.single()
+            if (asset.contentType != AvailableAppUpdate.APK_MIME_TYPE) return null
+            if (!isExpectedDownloadUrl(asset.downloadUrl, versionName, expectedFileName)) return null
+            return asset
+        }
+        return null
     }
 
     private fun isExpectedDownloadUrl(

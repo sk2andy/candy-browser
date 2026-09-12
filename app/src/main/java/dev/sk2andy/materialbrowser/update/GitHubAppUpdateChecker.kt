@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.update
 
+import android.os.Build
 import android.util.JsonReader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +25,7 @@ internal class GitHubAppUpdateChecker {
                     currentVersionName = currentVersionName,
                     release = release,
                     channel = channel,
+                    supportedAbis = Build.SUPPORTED_ABIS.asList(),
                 )
             } catch (cancellation: CancellationException) {
                 throw cancellation
