@@ -10,13 +10,16 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.printToString
+import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoToppingHostState
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -32,6 +35,7 @@ import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -147,6 +151,77 @@ class GeckoTabOverviewHandoffInstrumentedTest {
                     message = "Live Gecko viewport moved after the preview handoff",
                     boundaryTolerancePx = PIXEL_STABLE_BOUNDARY_TOLERANCE_PX,
                 )
+            }
+        }
+    }
+
+    @Test
+    fun restoredDismissAnchorAttachesGeckoOnlyAfterOverviewCloses() {
+        val remainingTab = BrowserTab(
+            id = "restored-remaining",
+            lastAccessedAt = 1L,
+            title = "Remaining",
+            url = "https://remaining.example/",
+        )
+        val dismissedTab = BrowserTab(
+            id = "restored-dismissed",
+            lastAccessedAt = 2L,
+            title = "Dismissed",
+            url = "https://dismissed.example/",
+        )
+        assertTrue(
+            BrowserSessionStore(context).saveTabsImmediately(
+                tabs = listOf(remainingTab, dismissedTab),
+                selectedTabId = dismissedTab.id,
+            ),
+        )
+        awaitGeckoRuntimeReadiness()
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            composeRule.waitForIdle()
+            awaitCondition(scenario) { controller ->
+                controller.selectedTabId == dismissedTab.id &&
+                    dismissedTab.id in controller.residentTabIdsForTesting() &&
+                    remainingTab.id !in controller.residentTabIdsForTesting()
+            }
+
+            composeRule.onNodeWithTag(AddressBarTestTags.TabButton).performClick()
+            composeRule.waitUntil(TIMEOUT_MILLIS) {
+                runCatching {
+                    composeRule.onNodeWithTag(TabOverviewChromeTestTags.Root)
+                        .fetchSemanticsNode()
+                }.isSuccess
+            }
+            composeRule
+                .onNodeWithTag(SnoozeTestTags.overviewTab(dismissedTab.id))
+                .performTouchInput { swipeUp(durationMillis = 240L) }
+            composeRule.waitUntil(TIMEOUT_MILLIS) {
+                var dismissed = false
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    dismissed = controller.selectedTabId == remainingTab.id &&
+                        controller.activeTabs.none { tab -> tab.id == dismissedTab.id }
+                }
+                dismissed
+            }
+            repeat(3) {
+                composeRule.mainClock.advanceTimeByFrame()
+                composeRule.waitForIdle()
+            }
+            scenario.onActivity { activity ->
+                assertFalse(
+                    "Restored anchor attached Gecko while overview was visible",
+                    remainingTab.id in activity.browserControllerForTesting()
+                        .residentTabIdsForTesting(),
+                )
+            }
+
+            composeRule
+                .onNodeWithTag(SnoozeTestTags.overviewTab(remainingTab.id))
+                .performClick()
+            awaitNodeGone(TabOverviewChromeTestTags.Root)
+            awaitCondition(scenario) { controller ->
+                remainingTab.id in controller.residentTabIdsForTesting()
             }
         }
     }

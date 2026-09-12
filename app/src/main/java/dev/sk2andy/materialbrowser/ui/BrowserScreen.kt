@@ -804,11 +804,9 @@ internal fun BrowserScreen(
             controller.submitAddress(suggestion.url)
         } else {
             val targetHandoff = TabHandoff(
-                tabId = target.id,
+                tab = target,
                 preview = controller.previews[target.id].takeUnless { target.isIncognito },
-                title = target.title,
                 favicon = controller.favicons[target.id],
-                isIncognito = target.isIncognito,
                 previewTopInsetPx = controller.previewTopInsetPx(target.id),
             )
             if (controller.switchToOpenTab(target.id)) {
@@ -922,11 +920,16 @@ internal fun BrowserScreen(
             tabHandoff = null
             return@LaunchedEffect
         }
-        if (tabOverviewVisible) return@LaunchedEffect
-        if (selectedTab.url == BLANK_URL) {
-            withFrameNanos { }
-        } else if (liveFrameTabId != handoff.tabId) {
+        if (!TabHandoffRules.shouldRevealLiveContent(
+                handoff = handoff,
+                tabOverviewVisible = tabOverviewVisible,
+                liveFrameTabId = liveFrameTabId,
+            )
+        ) {
             return@LaunchedEffect
+        }
+        if (handoff.tab.url == BLANK_URL) {
+            withFrameNanos { }
         }
         tabHandoffAlpha.animateTo(
             targetValue = 0f,
@@ -1393,6 +1396,20 @@ internal fun BrowserScreen(
             )
         }
 
+        fun selectOverviewTab(tabId: String, forceHandoff: Boolean) {
+            val target = controller.activeTabs.firstOrNull { tab -> tab.id == tabId }
+            if (target != null && (forceHandoff || target.id != controller.selectedTabId)) {
+                liveFrameTabId = null
+                tabHandoff = TabHandoff(
+                    tab = target,
+                    preview = controller.previews[target.id].takeUnless { target.isIncognito },
+                    favicon = controller.favicons[target.id],
+                    previewTopInsetPx = controller.previewTopInsetPx(target.id),
+                )
+            }
+            controller.selectTab(tabId)
+        }
+
         CompositionLocalProvider(LocalProfileWallpaper provides profileWallpaperRuntime) {
             TabOverview(
                 controller = controller,
@@ -1400,23 +1417,11 @@ internal fun BrowserScreen(
                 visible = tabOverviewVisible,
                 bottomBarTopPx = bottomBarTopPx,
                 onClose = closeTabOverview,
-                onSelect = {
-                    val target = controller.activeTabs.firstOrNull { tab -> tab.id == it }
-                    if (target != null && target.id != controller.selectedTabId) {
-                        liveFrameTabId = null
-                        tabHandoff = TabHandoff(
-                            tabId = target.id,
-                            preview = controller.previews[target.id]
-                                .takeUnless { target.isIncognito },
-                            title = target.title,
-                            favicon = controller.favicons[target.id],
-                            isIncognito = target.isIncognito,
-                            previewTopInsetPx = controller.previewTopInsetPx(target.id),
-                        )
-                        controller.selectTab(target.id)
-                    } else {
-                        controller.selectTab(it)
-                    }
+                onSelect = { tabId ->
+                    selectOverviewTab(tabId = tabId, forceHandoff = false)
+                },
+                onSelectDismissAnchor = { tabId ->
+                    selectOverviewTab(tabId = tabId, forceHandoff = true)
                 },
                 onNewTab = {
                     val previousTabId = controller.selectedTabId

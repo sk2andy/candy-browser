@@ -168,6 +168,7 @@ internal fun TabOverview(
     bottomBarTopPx: FloatState,
     onClose: () -> Unit,
     onSelect: (String) -> Unit,
+    onSelectDismissAnchor: (String) -> Unit = onSelect,
     onNewTab: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenSyncSettings: () -> Unit = onOpenSettings,
@@ -349,6 +350,16 @@ internal fun TabOverview(
             } finally {
                 updateExitHero(null)
             }
+        }
+    }
+
+    fun closeCompactTab(tab: BrowserTab, emitHaptic: Boolean) {
+        if (!TabDeletionRules.canDelete(tab)) return
+        val wasSelected = tab.id == controller.selectedTabId
+        if (emitHaptic) rootView.performConfirmHaptic()
+        controller.closeTab(tab.id)
+        if (wasSelected && controller.selectedTabId != tab.id) {
+            onSelectDismissAnchor(controller.selectedTabId)
         }
     }
 
@@ -1116,7 +1127,7 @@ internal fun TabOverview(
                             dismissingTabId = tabId
                         }
                     },
-                    onSelectDismissAnchor = onSelect,
+                    onSelectDismissAnchor = onSelectDismissAnchor,
                     onSelectTab = controller::selectTab,
                     onCloseTab = controller::closeTab,
                     onCloseOverview = onClose,
@@ -1271,12 +1282,7 @@ internal fun TabOverview(
                         if (tabCardBounds[tab.id] == bounds) tabCardBounds.remove(tab.id)
                     },
                     onSelect = { tab, bounds -> startExitHero(tab, bounds, 22.dp) },
-                    onCloseTab = { tab ->
-                        if (TabDeletionRules.canDelete(tab)) {
-                            rootView.performConfirmHaptic()
-                            controller.closeTab(tab.id)
-                        }
-                    },
+                    onCloseTab = { tab -> closeCompactTab(tab, emitHaptic = true) },
                     onSwipeDismissStart = { tab ->
                         if (dismissingTabId == null) {
                             dismissingTabId = tab.id
@@ -1290,11 +1296,7 @@ internal fun TabOverview(
                             dismissingTabId = null
                         }
                     },
-                    onSwipeDismiss = { tab ->
-                        if (TabDeletionRules.canDelete(tab)) {
-                            controller.closeTab(tab.id)
-                        }
-                    },
+                    onSwipeDismiss = { tab -> closeCompactTab(tab, emitHaptic = false) },
                     gridTestTag = TabOverviewChromeTestTags.Grid,
                     tabTestTag = { tab -> SnoozeTestTags.overviewTab(tab.id) },
                     modifier = Modifier
@@ -1366,12 +1368,7 @@ internal fun TabOverview(
                         if (tabReorderBounds[tab.id] == bounds) tabReorderBounds.remove(tab.id)
                     },
                     onSelect = { tab, bounds -> startExitHero(tab, bounds, 22.dp) },
-                    onCloseTab = { tab ->
-                        if (TabDeletionRules.canDelete(tab)) {
-                            rootView.performConfirmHaptic()
-                            controller.closeTab(tab.id)
-                        }
-                    },
+                    onCloseTab = { tab -> closeCompactTab(tab, emitHaptic = true) },
                     listTestTag = TabOverviewChromeTestTags.List,
                     tabTestTag = { tab -> SnoozeTestTags.overviewTab(tab.id) },
                     modifier = Modifier

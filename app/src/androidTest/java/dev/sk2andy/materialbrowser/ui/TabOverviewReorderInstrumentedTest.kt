@@ -827,6 +827,14 @@ class TabOverviewReorderInstrumentedTest {
     }
 
     @Test
+    fun gridSelectedCloseRoutesReplacementThroughSelection() =
+        verifySelectedCloseRoutesReplacement(TabOverviewMode.Grid)
+
+    @Test
+    fun listSelectedCloseRoutesReplacementThroughSelection() =
+        verifySelectedCloseRoutesReplacement(TabOverviewMode.List)
+
+    @Test
     fun gridNeighborPreviewFadesInBeforeEntryHeroCompletes() {
         lateinit var browserController: BrowserController
         lateinit var neighborTabId: String
@@ -1196,6 +1204,45 @@ class TabOverviewReorderInstrumentedTest {
                 )
             }
         }
+    }
+
+    private fun verifySelectedCloseRoutesReplacement(mode: TabOverviewMode) {
+        lateinit var browserController: BrowserController
+        lateinit var remainingTabId: String
+        lateinit var closedTabId: String
+        var selectedTabId: String? = null
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            remainingTabId = browserController.selectedTabId
+            closedTabId = requireNotNull(
+                browserController.createBackgroundTab(
+                    "https://selected-close-${mode.wireValue}.example",
+                ),
+            )
+            browserController.selectTab(closedTabId)
+            browserController.updateTabOverviewMode(mode)
+        }
+        setOverviewContent(
+            browserController = browserController,
+            onSelect = { selectedTabId = it },
+        )
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithTag(
+                SnoozeTestTags.overviewClose(closedTabId),
+                useUnmergedTree = true,
+            )
+            .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 12_000L) {
+            browserController.activeTabs.none { it.id == closedTabId } &&
+                selectedTabId == remainingTabId
+        }
+        assertEquals(remainingTabId, browserController.selectedTabId)
+        assertEquals(remainingTabId, selectedTabId)
     }
 
     private fun clearSession() {

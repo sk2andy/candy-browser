@@ -505,15 +505,15 @@ internal fun BrowserViewport(
     }
 
     handoff?.let { currentHandoff ->
-        val handoffTab = controller.activeTabs.firstOrNull { it.id == currentHandoff.tabId }
         TabHandoffOverlay(
             handoff = currentHandoff,
-            tab = handoffTab,
             favorites = controller.favorites,
             favoriteFavicons = controller.favoriteFavicons,
-            alpha = if (
-                !tabOverviewVisible &&
-                (liveFrameTabId == currentHandoff.tabId || handoffTab?.url == BLANK_URL)
+            alpha = if (TabHandoffRules.shouldRevealLiveContent(
+                    handoff = currentHandoff,
+                    tabOverviewVisible = tabOverviewVisible,
+                    liveFrameTabId = liveFrameTabId,
+                )
             ) {
                 handoffAlpha
             } else {
@@ -582,18 +582,20 @@ private fun ActiveBrowserEngineView(
                     tint = statusBarTint,
                     visible = showStatusBarOverlay,
                 )
-                val hostState = hostView.tag as BrowserEngineViewHostState
-                val attachedView = controller.attachSelectedBrowserEngineView(
-                    container = hostState.container,
-                    onContentPresented = currentOnLiveFrame,
-                )
-                if (attachedView != null) {
-                    hostState.bind(
-                        tabId = selectedTabId,
-                        revision = engineViewRevision,
-                        view = attachedView,
-                    ) {
-                        currentOnLiveFrame(it)
+                if (visible) {
+                    val hostState = hostView.tag as BrowserEngineViewHostState
+                    val attachedView = controller.attachSelectedBrowserEngineView(
+                        container = hostState.container,
+                        onContentPresented = currentOnLiveFrame,
+                    )
+                    if (attachedView != null) {
+                        hostState.bind(
+                            tabId = selectedTabId,
+                            revision = engineViewRevision,
+                            view = attachedView,
+                        ) {
+                            currentOnLiveFrame(it)
+                        }
                     }
                 }
             },
@@ -701,7 +703,6 @@ private class BrowserEngineViewHostState(val container: FrameLayout) {
 @Composable
 private fun TabHandoffOverlay(
     handoff: TabHandoff,
-    tab: BrowserTab?,
     favorites: List<FavoriteEntry>,
     favoriteFavicons: Map<String, Bitmap>,
     alpha: Float,
@@ -714,25 +715,16 @@ private fun TabHandoffOverlay(
             .graphicsLayer { this.alpha = alpha }
             .background(MaterialTheme.colorScheme.surface),
     ) {
-        if (tab != null) {
-            FullscreenTabPreviewContent(
-                tab = tab,
-                preview = handoff.preview,
-                favicon = handoff.favicon,
-                favorites = favorites,
-                favoriteFavicons = favoriteFavicons,
-                rootHeightPx = rootHeightPx,
-                previewTopInsetPx = handoff.previewTopInsetPx,
-                bottomBarTopPx = bottomBarTopPx,
-            )
-        } else if (handoff.isIncognito) {
-            IncognitoTabPlaceholder()
-        } else {
-            TabPreviewPlaceholder(
-                title = handoff.title.ifBlank { stringResource(R.string.new_tab_title) },
-                favicon = handoff.favicon,
-            )
-        }
+        FullscreenTabPreviewContent(
+            tab = handoff.tab,
+            preview = handoff.preview,
+            favicon = handoff.favicon,
+            favorites = favorites,
+            favoriteFavicons = favoriteFavicons,
+            rootHeightPx = rootHeightPx,
+            previewTopInsetPx = handoff.previewTopInsetPx,
+            bottomBarTopPx = bottomBarTopPx,
+        )
     }
 }
 
