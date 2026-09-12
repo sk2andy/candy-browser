@@ -38,4 +38,6 @@ val BrowserTab.isFreshBlankTab: Boolean
         httpStatusCode == null
 
 const val BLANK_URL = "about:blank"
-const val MAX_TABS = 50
+
+/** Product tab count is unbounded; this is only the collection API's technical ceiling. */
+const val MAX_TABS = Int.MAX_VALUE

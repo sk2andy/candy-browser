@@ -117,10 +117,10 @@ class BrowserControllerRootBackInstrumentedTest {
     }
 
     @Test
-    fun newTabNavigationReportsFailureAtTabLimit() {
+    fun newTabNavigationSucceedsBeyondFiftyTabs() {
         activityRule.scenario.onActivity { activity ->
             val browserController = freshController(activity)
-            repeat(MAX_TABS - browserController.tabs.size) {
+            repeat(50) {
                 browserController.createTab()
             }
             val selectedTabId = browserController.selectedTabId
@@ -130,9 +130,13 @@ class BrowserControllerRootBackInstrumentedTest {
                 inNewTab = true,
             )
 
-            assertFalse(opened)
-            assertEquals(selectedTabId, browserController.selectedTabId)
-            assertEquals(MAX_TABS, browserController.tabs.size)
+            assertTrue(opened)
+            assertFalse(selectedTabId == browserController.selectedTabId)
+            assertEquals(52, browserController.tabs.size)
+            assertEquals(
+                "https://example.com/from-another-app",
+                browserController.selectedTab.url,
+            )
         }
     }
 

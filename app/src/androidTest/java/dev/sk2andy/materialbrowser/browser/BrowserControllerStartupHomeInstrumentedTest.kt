@@ -60,9 +60,9 @@ class BrowserControllerStartupHomeInstrumentedTest {
     }
 
     @Test
-    fun startupHomeKeepsSelectionWhenTabLimitIsReached() {
+    fun startupHomeOpensBeyondFiftyRestoredTabs() {
         activityRule.scenario.onActivity { activity ->
-            val restoredTabs = List(MAX_TABS) { index ->
+            val restoredTabs = List(51) { index ->
                 BrowserTab(
                     id = "restored-$index",
                     lastAccessedAt = index.toLong() + 1L,
@@ -76,11 +76,11 @@ class BrowserControllerStartupHomeInstrumentedTest {
             )
             val browserController = BrowserController(activity).also { controller = it }
 
-            assertFalse(browserController.openNormalHome())
+            assertTrue(browserController.openNormalHome())
 
-            assertEquals(MAX_TABS, browserController.activeTabs.size)
-            assertEquals(selectedTab.id, browserController.selectedTabId)
-            assertEquals(selectedTab.url, browserController.selectedTab.url)
+            assertEquals(52, browserController.activeTabs.size)
+            assertFalse(selectedTab.id == browserController.selectedTabId)
+            assertTrue(browserController.selectedTab.isFreshBlankTab)
         }
     }
 }

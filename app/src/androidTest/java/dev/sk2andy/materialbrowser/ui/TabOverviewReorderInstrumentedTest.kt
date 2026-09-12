@@ -75,6 +75,101 @@ class TabOverviewReorderInstrumentedTest {
     )
 
     @Test
+    fun addingTabFromVisibleHeroOverviewDoesNotCrash() {
+        lateinit var browserController: BrowserController
+        lateinit var newTabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            browserController.updateTabOverviewMode(TabOverviewMode.Hero)
+        }
+        setOverviewContent(
+            browserController = browserController,
+            onNewTab = { newTabId = browserController.createTab() },
+        )
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.NewTab).performClick()
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(2, browserController.activeTabs.size)
+        }
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(newTabId)).assertExists()
+    }
+
+    @Test
+    fun dismissingSelectedHeroTabKeepsRemainingPreviewStable() {
+        lateinit var browserController: BrowserController
+        lateinit var dismissedTabId: String
+        lateinit var remainingTabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            remainingTabId = requireNotNull(
+                browserController.createBackgroundTab("https://remaining-preview.example"),
+            )
+            dismissedTabId = requireNotNull(
+                browserController.createBackgroundTab("https://dismissed-preview.example"),
+            )
+            browserController.previews[remainingTabId] = solidPreview(
+                android.graphics.Color.GREEN,
+            )
+            browserController.previews[dismissedTabId] = solidPreview(
+                android.graphics.Color.RED,
+            )
+            browserController.selectTab(dismissedTabId)
+            browserController.updateTabOverviewMode(TabOverviewMode.Hero)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitUntil(timeoutMillis = 12_000L) {
+            runCatching {
+                composeRule
+                    .onNodeWithTag(SnoozeTestTags.overviewTab(dismissedTabId))
+                    .fetchSemanticsNode()
+            }.isSuccess
+        }
+
+        val dismissedCard = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(dismissedTabId))
+            .assertIsDisplayed()
+        val stableSample = dismissedCard.fetchSemanticsNode().boundsInRoot.center
+        composeRule.mainClock.autoAdvance = false
+        dismissedCard.performTouchInput {
+            down(center)
+            moveBy(Offset(0f, -height.toFloat()), delayMillis = 240L)
+            up()
+        }
+
+        var checkedFrames = 0
+        repeat(50) {
+            composeRule.mainClock.advanceTimeByFrame()
+            if (browserController.activeTabs.none { tab -> tab.id == dismissedTabId }) {
+                val pixel = composeRule.onRoot().captureToImage().toPixelMap()[
+                    stableSample.x.toInt(),
+                    stableSample.y.toInt(),
+                ]
+                assertTrue(
+                    "Remaining preview flickered after dismiss: $pixel",
+                    pixel.green > 0.7f && pixel.red < 0.3f && pixel.blue < 0.3f,
+                )
+                checkedFrames += 1
+            }
+        }
+        assertTrue("Dismiss transition never reached tab removal", checkedFrames > 0)
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(dismissedTabId)).assertDoesNotExist()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(remainingTabId)).assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals(remainingTabId, browserController.selectedTabId)
+        }
+    }
+
+    @Test
     fun heroStackCollapseExpandOpensConfiguredFolder() {
         lateinit var browserController: BrowserController
         lateinit var selectedTabId: String
@@ -915,6 +1010,7 @@ class TabOverviewReorderInstrumentedTest {
         visible: () -> Boolean = { true },
         onEntryHeroCompleted: () -> Unit = {},
         onOpenSettings: () -> Unit = {},
+        onNewTab: () -> Unit = {},
         onExitHeroVisibilityChanged: (Boolean) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -926,7 +1022,7 @@ class TabOverviewReorderInstrumentedTest {
                     bottomBarTopPx = bottomBarTop,
                     onClose = {},
                     onSelect = {},
-                    onNewTab = {},
+                    onNewTab = onNewTab,
                     onOpenSettings = onOpenSettings,
                     destinationChromeVisible = true,
                     onEntryHeroStarted = {},

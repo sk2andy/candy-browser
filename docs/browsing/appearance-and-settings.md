@@ -94,9 +94,8 @@ Frosted exposes three persisted controls while selected:
   open.
 - Open home page on startup is global and disabled by default. When enabled, normal cold and warm
   launcher opens select a fresh blank tab while keeping restored tabs. An existing fresh regular
-  blank tab in the active profile is reused. At the tab limit, the current tab remains unchanged.
-  External links, launcher shortcuts, Site Capsules, and activity recreation keep their own
-  destinations.
+  blank tab in the active profile is reused. External links, launcher shortcuts, Site Capsules, and
+  activity recreation keep their own destinations.
 - Unknown stored values fall back per field; one corrupt value does not discard valid choices.
 - AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.
