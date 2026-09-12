@@ -883,6 +883,7 @@ private class GeckoViewBrowserSession(
     private var scrollListener: BrowserEngineScrollListener? = null
 
     private var boundView: CandyGeckoView? = null
+    private var backdropCaptureEnabled = false
     private val contentPresentationGate = GeckoContentPresentationGate()
     private var activeMediaSession: MediaSession? = null
     private var videoAutoplayBlocked = false
@@ -2248,10 +2249,18 @@ private class GeckoViewBrowserSession(
     }
 
     @UiThread
+    override fun setBackdropCaptureEnabled(enabled: Boolean) {
+        if (backdropCaptureEnabled == enabled) return
+        backdropCaptureEnabled = enabled
+        boundView?.setBackdropCaptureEnabled(enabled)
+    }
+
+    @UiThread
     override fun createView(context: Context): View {
         check(!closed) { "Cannot bind a closed Gecko session" }
         check(boundView == null) { "Gecko session already has a bound View" }
         return CandyGeckoView(context).also { view ->
+            view.setBackdropCaptureEnabled(backdropCaptureEnabled)
             view.configureAutofill(isPrivate)
             AndroidCredentialPromptHost.activityContext(context)?.let { activityContext ->
                 view.setActivityContextDelegate { activityContext }
@@ -2746,6 +2755,10 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         configureEngineView(engineView)
     }
 
+    fun setBackdropCaptureEnabled(enabled: Boolean) {
+        engineView.setBackdropCaptureEnabled(enabled)
+    }
+
     fun setActivityContextDelegate(delegate: GeckoView.ActivityContextDelegate?) {
         activityContextDelegate = delegate
         engineView.setActivityContextDelegate(delegate)
@@ -2832,9 +2845,18 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 }
 
 private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBridge(context) {
+    private var backdropCaptureEnabled = false
     private var gestureState = GeckoContentGestureState()
     private var latestTouchEvent: MotionEvent? = null
     private var rendererSafeAreaOverride: GeckoViewInsets? = null
+
+    fun setBackdropCaptureEnabled(enabled: Boolean) {
+        if (backdropCaptureEnabled == enabled) return
+        backdropCaptureEnabled = enabled
+        setViewBackend(
+            if (enabled) GeckoView.BACKEND_TEXTURE_VIEW else GeckoView.BACKEND_SURFACE_VIEW,
+        )
+    }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (

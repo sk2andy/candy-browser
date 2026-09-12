@@ -239,7 +239,7 @@ private fun ExternalLinkPreviewViewport(
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
-    val browserContentBlurEnabled = browserChromeSurfaceTokens().backdropBlurEnabled
+    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled()
     val density = LocalDensity.current
     val geometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
@@ -261,7 +261,10 @@ private fun ExternalLinkPreviewViewport(
                     visible = true,
                 )
                 if (controller.externalLinkPreviewState?.isContentReady == true) {
-                    controller.attachExternalLinkPreview(host.contentContainer)
+                    controller.attachExternalLinkPreview(
+                        container = host.contentContainer,
+                        backdropCaptureEnabled = browserContentBlurEnabled,
+                    )
                 } else {
                     controller.detachExternalLinkPreview(host.contentContainer)
                 }
@@ -550,7 +553,7 @@ private fun ActiveBrowserEngineView(
     onBlurTargetReleased: (BlurTarget) -> Unit,
     contentObscured: Boolean,
 ) {
-    val browserContentBlurEnabled = browserChromeSurfaceTokens().backdropBlurEnabled
+    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled()
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
@@ -587,6 +590,7 @@ private fun ActiveBrowserEngineView(
                     val attachedView = controller.attachSelectedBrowserEngineView(
                         container = hostState.container,
                         onContentPresented = currentOnLiveFrame,
+                        backdropCaptureEnabled = browserContentBlurEnabled,
                     )
                     if (attachedView != null) {
                         hostState.bind(

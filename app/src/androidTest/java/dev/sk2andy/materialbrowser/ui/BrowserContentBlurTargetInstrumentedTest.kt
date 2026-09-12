@@ -127,6 +127,33 @@ class BrowserContentBlurTargetInstrumentedTest {
     }
 
     @Test
+    fun addressBarOnlyTransparencyStillProvidesBackdropTarget() {
+        val attached = AtomicBoolean(false)
+
+        composeRule.setContent {
+            MaterialBrowserTheme(
+                settings = AppearanceSettings(
+                    surfaceStyle = BrowserSurfaceStyle.Frosted,
+                    frostedTransparencyPercent = 0,
+                    frostedAddressBarTransparencyPercent = 50,
+                ),
+            ) {
+                BrowserContentBlurTarget(
+                    enabled = true,
+                    onTargetAttached = { attached.set(true) },
+                    onTargetReleased = {},
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Box(Modifier.fillMaxSize())
+                }
+            }
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) { attached.get() }
+        assertTrue(attached.get())
+    }
+
+    @Test
     fun outgoingBlankSourceCannotReleaseNewWebSourceDuringHandoff() {
         var blankVisible by mutableStateOf(true)
         val currentTarget = AtomicReference<BlurTarget?>()

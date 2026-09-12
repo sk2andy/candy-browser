@@ -121,8 +121,12 @@ Camera and microphone permissions remain separate and continue through Candy's p
   The explicit per-site **Force safe area** override moves every edge into native margins.
   Fullscreen remains truly edge to edge, while Compose safe-drawing hosts clear duplicate renderer
   insets.
-  Candy keeps GeckoView's default SurfaceView backend so page frames go directly to Android's
-  compositor instead of being copied through a TextureView.
+  Candy keeps GeckoView's default `SurfaceView` backend while browser chrome does not need backdrop
+  capture, so normal page frames go directly to Android's compositor. When Frosted chrome has both
+  non-zero blur and transparency, the selected or external-preview Gecko session switches to
+  `TextureView`; this keeps page pixels in Candy's window so `BlurView` can capture them and the
+  transparent Android navigation bar can composite page content behind its gesture region. Turning
+  backdrop capture off restores `SurfaceView`.
 - The optional draggable scrollbar reads bounded document metrics from Candy's authenticated,
   top-frame Gecko content bridge; GeckoView's Android view scrollbar metrics describe only the
   compositor host and are not a document-height API. The same overlay writes absolute offsets through

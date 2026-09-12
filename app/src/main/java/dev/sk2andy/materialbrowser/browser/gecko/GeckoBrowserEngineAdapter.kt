@@ -28,6 +28,8 @@ import org.mozilla.geckoview.GeckoSession
 
 /** Android view-host edge kept separate from the engine-neutral shared session port. */
 internal interface BrowserEngineViewPort {
+    fun setBackdropCaptureEnabled(enabled: Boolean) = Unit
+
     fun createView(context: Context): View
 
     fun awaitContentPresented(listener: () -> Unit)
@@ -377,6 +379,11 @@ internal class GeckoBrowserEngineSessionAdapter(
     override fun createView(context: Context): View {
         check(!closed) { "Cannot bind a closed browser engine session" }
         return session.createView(context)
+    }
+
+    @UiThread
+    override fun setBackdropCaptureEnabled(enabled: Boolean) {
+        if (!closed) session.setBackdropCaptureEnabled(enabled)
     }
 
     @UiThread

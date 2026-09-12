@@ -6,6 +6,7 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.SurfaceView
+import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.graphics.Insets
@@ -20,7 +21,9 @@ import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteFixtureServer
 import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteMatrix
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
 import org.junit.After
@@ -107,6 +110,66 @@ class GeckoEdgeToEdgeInstrumentedTest {
                 assertScreenTop(surfaceView, expectedTop = 0)
                 assertTrue(
                     "GeckoView must use SurfaceView to avoid copying every page frame",
+                    view.hasSurfaceView(),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun frostedGeckoSwitchesToCaptureCompatibleTextureViewAcrossNavigationBar() {
+        ActivityScenario.launch<MainActivity>(
+            Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
+        ).use { scenario ->
+            awaitViewReady(scenario)
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                controller.updateAppearanceSettings(
+                    AppearanceSettings(
+                        surfaceStyle = BrowserSurfaceStyle.Frosted,
+                        frostedTransparencyPercent = 0,
+                        frostedAddressBarTransparencyPercent = 50,
+                    ),
+                )
+                controller.onWindowInsetsChanged(
+                    WindowInsetsCompat.Builder()
+                        .setInsets(
+                            WindowInsetsCompat.Type.statusBars(),
+                            Insets.of(0, STATUS_BAR_INSET_PX, 0, 0),
+                        )
+                        .setInsets(
+                            WindowInsetsCompat.Type.navigationBars(),
+                            Insets.of(0, 0, 0, NAVIGATION_BAR_INSET_PX),
+                        )
+                        .build(),
+                )
+            }
+            awaitViewReady(scenario, expectBackdropCapture = true)
+            instrumentation.waitForIdleSync()
+
+            scenario.onActivity { activity ->
+                val view = requireNotNull(
+                    activity.browserControllerForTesting().selectedGeckoViewForTesting(),
+                )
+                val textureView = requireNotNull(view.findTextureView())
+                assertTrue(
+                    "Frosted GeckoView must avoid a separate compositor surface",
+                    !view.hasSurfaceView(),
+                )
+                assertWindowTop(textureView, expectedTop = 0)
+                assertWindowBottom(textureView, expectedBottom = activity.window.decorView.height)
+                activity.browserControllerForTesting().updateAppearanceSettings(
+                    AppearanceSettings(),
+                )
+            }
+            awaitViewReady(scenario)
+
+            scenario.onActivity { activity ->
+                val view = requireNotNull(
+                    activity.browserControllerForTesting().selectedGeckoViewForTesting(),
+                )
+                assertTrue(
+                    "Non-frosted GeckoView must restore the direct compositor surface",
                     view.hasSurfaceView(),
                 )
             }
@@ -303,7 +366,10 @@ class GeckoEdgeToEdgeInstrumentedTest {
         }
     }
 
-    private fun awaitViewReady(scenario: ActivityScenario<MainActivity>) {
+    private fun awaitViewReady(
+        scenario: ActivityScenario<MainActivity>,
+        expectBackdropCapture: Boolean = false,
+    ) {
         val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
         while (SystemClock.elapsedRealtime() < deadline) {
             instrumentation.waitForIdleSync()
@@ -315,13 +381,24 @@ class GeckoEdgeToEdgeInstrumentedTest {
                         view.isAttachedToWindow &&
                             view.width > 0 &&
                             view.height > 0 &&
-                            view.hasSurfaceView()
+                            if (expectBackdropCapture) {
+                                view.findTextureView()?.isAvailable == true
+                            } else {
+                                view.hasSurfaceView()
+                            }
                     } == true
             }
             if (ready) return
             SystemClock.sleep(POLL_MILLIS)
         }
-        assertTrue("Gecko SurfaceView did not become ready", false)
+        assertTrue(
+            if (expectBackdropCapture) {
+                "Gecko TextureView did not become ready"
+            } else {
+                "Gecko SurfaceView did not become ready"
+            },
+            false,
+        )
     }
 
     private fun awaitSelectedTabTitle(
@@ -427,6 +504,14 @@ class GeckoEdgeToEdgeInstrumentedTest {
         is SurfaceView -> this
         is ViewGroup -> (0 until childCount).firstNotNullOfOrNull { index ->
             getChildAt(index).findSurfaceView()
+        }
+        else -> null
+    }
+
+    private fun View.findTextureView(): TextureView? = when (this) {
+        is TextureView -> this
+        is ViewGroup -> (0 until childCount).firstNotNullOfOrNull { index ->
+            getChildAt(index).findTextureView()
         }
         else -> null
     }

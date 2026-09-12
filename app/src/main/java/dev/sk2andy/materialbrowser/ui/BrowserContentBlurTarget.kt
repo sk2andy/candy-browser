@@ -11,8 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.viewinterop.AndroidView
+import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
+
+@Composable
+internal fun browserContentBackdropCaptureEnabled(): Boolean =
+    browserChromeSurfaceTokens().backdropBlurEnabled ||
+        browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar).backdropBlurEnabled
 
 @Composable
 internal fun BrowserContentBlurTarget(
@@ -22,7 +28,7 @@ internal fun BrowserContentBlurTarget(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    if (!browserChromeSurfaceTokens().backdropBlurEnabled) {
+    if (!browserContentBackdropCaptureEnabled()) {
         Box(modifier = modifier) { content() }
         return
     }
