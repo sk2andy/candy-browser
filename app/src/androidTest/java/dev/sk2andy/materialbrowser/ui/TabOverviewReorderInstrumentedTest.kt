@@ -177,6 +177,7 @@ class TabOverviewReorderInstrumentedTest {
         lateinit var remainingTabId: String
         lateinit var dismissedTabId: String
         val pagerObservations = mutableListOf<HeroPagerSnapshotObservation>()
+        var dismissalAnchorTabId: String? = null
         composeRule.runOnIdle {
             clearSession()
             val initialController = BrowserController(composeRule.activity)
@@ -225,6 +226,10 @@ class TabOverviewReorderInstrumentedTest {
         setOverviewContent(
             browserController = browserController,
             onHeroPagerSnapshotObserved = pagerObservations::add,
+            onSelect = { tabId ->
+                dismissalAnchorTabId = tabId
+                browserController.selectTab(tabId)
+            },
         )
         composeRule.waitForIdle()
 
@@ -311,6 +316,7 @@ class TabOverviewReorderInstrumentedTest {
                 listOf(remainingTabId),
                 browserController.activeTabs.map(BrowserTab::id),
             )
+            assertEquals(remainingTabId, dismissalAnchorTabId)
             assertEquals(remainingTabId, browserController.selectedTabId)
         }
     }
@@ -1158,6 +1164,7 @@ class TabOverviewReorderInstrumentedTest {
         onOpenSettings: () -> Unit = {},
         onNewTab: () -> Unit = {},
         onHeroPagerSnapshotObserved: ((HeroPagerSnapshotObservation) -> Unit)? = null,
+        onSelect: (String) -> Unit = {},
         onExitHeroVisibilityChanged: (Boolean) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -1168,7 +1175,7 @@ class TabOverviewReorderInstrumentedTest {
                     visible = visible(),
                     bottomBarTopPx = bottomBarTop,
                     onClose = {},
-                    onSelect = {},
+                    onSelect = onSelect,
                     onNewTab = onNewTab,
                     onOpenSettings = onOpenSettings,
                     destinationChromeVisible = true,
