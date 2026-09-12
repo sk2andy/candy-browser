@@ -897,6 +897,7 @@ class BrowserController(
     private var syncObservation: AutoCloseable? = null
     private val locallyPendingSyncCandyIds = mutableSetOf<String>()
     private val pendingSyncNavigationRunnables = mutableMapOf<String, Runnable>()
+    private val pendingLocalSyncNavigationUrls = mutableMapOf<String, String>()
     private val remoteSyncNavigationUrls = mutableMapOf<String, String>()
     private val supersededRemoteSyncNavigationUrls = mutableMapOf<String, MutableSet<String>>()
     private val syncRefreshRunnable = object : Runnable {
@@ -3549,6 +3550,7 @@ class BrowserController(
                 httpStatusCode = null,
             )
         }
+        markLocalSyncNavigationPending(tabId, target)
         if (target == BLANK_URL) {
             closeBrowserEngineSession(tabId)
         } else if (existingSession == null) {
@@ -8795,6 +8797,7 @@ class BrowserController(
                         httpStatusCode = null,
                     )
                 }
+                markLocalSyncNavigationPending(event.tabId, event.address)
             }
             BrowserEngineEventType.NavigationCommitted -> {
                 event.address?.let { address -> pageUrls[event.tabId] = address }
@@ -8828,6 +8831,7 @@ class BrowserController(
                 persist()
             }
             BrowserEngineEventType.NavigationFailed -> {
+                pendingLocalSyncNavigationUrls.remove(event.tabId)
                 clearRemoteSyncNavigationTracking(event.tabId)
                 connectivityMonitor.refresh()
                 updateTab(event.tabId) { tab ->
@@ -8869,6 +8873,7 @@ class BrowserController(
                     val previousUrl = BrowserUriPolicy.normalizeHttpUrl(currentTab.url)
                     val changedUrl = event.address?.let(BrowserUriPolicy::normalizeHttpUrl)
                     if (changedUrl != null && changedUrl != previousUrl) {
+                        markLocalSyncNavigationPending(event.tabId, changedUrl)
                         scheduleSyncedTabNavigation(event.tabId)
                     }
                     persist()
@@ -8876,6 +8881,7 @@ class BrowserController(
             }
             BrowserEngineEventType.Crashed -> {
                 cancelPendingGeckoPreviewCapture(event.tabId)
+                pendingLocalSyncNavigationUrls.remove(event.tabId)
                 clearRemoteSyncNavigationTracking(event.tabId)
                 if (geckoMediaPresentation?.tabId == event.tabId) {
                     clearGeckoMediaPresentation()
@@ -8901,6 +8907,7 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.Closed -> {
+                pendingLocalSyncNavigationUrls.remove(event.tabId)
                 clearRemoteSyncNavigationTracking(event.tabId)
                 if (geckoMediaPresentation?.tabId == event.tabId) {
                     clearGeckoMediaPresentation()
@@ -10639,6 +10646,7 @@ class BrowserController(
     private fun syncProtectedRuntimeTabIds(): Set<String> = buildSet {
         addAll(activeFederatedLoginFlowTabIds())
         addAll(transientPopupTabIds)
+        addAll(pendingLocalSyncNavigationUrls.keys)
         pendingPopupNavigations.forEach { (popupTabId, pending) ->
             add(popupTabId)
             add(pending.openerTabId)
@@ -10677,6 +10685,19 @@ class BrowserController(
         val remoteById = state.profiles
             .filterNot { it.deviceId == currentDeviceId }
             .associateBy(SyncProfile::deviceId)
+        pendingLocalSyncNavigationUrls.entries.removeAll { (tabId, expectedUrl) ->
+            val tab = tabs.firstOrNull { candidate -> candidate.id == tabId }
+                ?: return@removeAll true
+            val candyId = tab.syncCandyId ?: return@removeAll true
+            val targetDeviceId = profileForId(tab.profileId)?.syncedDeviceId
+                ?: currentDeviceId.takeIf { tab.profileId == boundProfileId }
+                ?: return@removeAll true
+            state.profiles.firstOrNull { profile -> profile.deviceId == targetDeviceId }
+                ?.tabs
+                ?.firstOrNull { remoteTab -> remoteTab.candyId == candyId }
+                ?.url
+                ?.let(BrowserUriPolicy::normalizeHttpUrl) == expectedUrl
+        }
         locallyPendingSyncCandyIds.removeAll { candyId ->
             state.profiles.any { profile -> profile.tabs.any { it.candyId == candyId } }
         }
@@ -10819,6 +10840,20 @@ class BrowserController(
     private fun markSyncedTabPending(tab: BrowserTab) {
         if (isSessionEphemeralTab(tab.id)) return
         tab.syncCandyId?.let(locallyPendingSyncCandyIds::add)
+    }
+
+    private fun markLocalSyncNavigationPending(tabId: String, url: String?) {
+        val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return
+        if (
+            tab.isIncognito ||
+            isSessionEphemeralTab(tabId) ||
+            !isSyncTargetProfile(tab.profileId)
+        ) {
+            return
+        }
+        val safeUrl = url?.let(BrowserUriPolicy::normalizeHttpUrl) ?: return
+        if (remoteSyncNavigationUrls[tabId] == safeUrl) return
+        pendingLocalSyncNavigationUrls[tabId] = safeUrl
     }
 
     private fun prepareSyncedTabHydration(navigation: SyncedTabNavigation): String? {
@@ -11115,6 +11150,7 @@ class BrowserController(
         geckoSessionStateStore.delete(tabId)
         webViewStateRepository.delete(tabId)
         pendingSyncNavigationRunnables.remove(tabId)?.let(mainHandler::removeCallbacks)
+        pendingLocalSyncNavigationUrls.remove(tabId)
         clearRemoteSyncNavigationTracking(tabId)
         tabs.firstOrNull { it.id == tabId }?.syncCandyId?.let(locallyPendingSyncCandyIds::remove)
         clearPermissionActivity(tabId)

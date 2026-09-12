@@ -174,6 +174,48 @@ class BrowserControllerSyncInstrumentedTest {
     }
 
     @Test
+    fun localNavigationIsNotReplacedByStaleLinkedSyncState() {
+        createController()
+        applyState(syncState())
+        lateinit var localCandyId: String
+        activityRule.scenario.onActivity { activity ->
+            val browserController = requireNotNull(controller)
+            localCandyId = requireNotNull(browserController.selectedTabForTesting().syncCandyId)
+            installSelectedEngine(activity, browserController)
+            browserController.submitAddress(URL_A)
+        }
+        completeNavigation(URL_A, "Page A")
+        applyState(syncState(localTab = tab(URL_A, localCandyId)))
+        SystemClock.sleep(DEBOUNCE_SETTLE_MILLIS)
+        mutations.clear()
+
+        activityRule.scenario.onActivity { _ ->
+            requireNotNull(controller).submitAddress(URL_B)
+        }
+        applyState(syncState(localTab = tab(URL_A, localCandyId)))
+        activityRule.scenario.onActivity { _ ->
+            assertEquals(URL_B, requireNotNull(controller).selectedTabForTesting().url)
+        }
+        assertEquals(URL_B, requireNotNull(engineSession).lastLoadUrl())
+
+        completeNavigation(URL_B, "Page B")
+        applyState(syncState(localTab = tab(URL_A, localCandyId)))
+
+        activityRule.scenario.onActivity { _ ->
+            assertEquals(URL_B, requireNotNull(controller).selectedTabForTesting().url)
+        }
+        assertEquals(URL_B, requireNotNull(engineSession).lastLoadUrl())
+        assertTrue(awaitMutation(URL_B) is SyncPendingMutation.Navigate)
+
+        applyState(syncState(localTab = tab(URL_B, localCandyId)))
+        applyState(syncState(localTab = tab(URL_REMOTE, localCandyId)))
+        activityRule.scenario.onActivity { _ ->
+            assertEquals(URL_REMOTE, requireNotNull(controller).selectedTabForTesting().url)
+        }
+        assertEquals(URL_REMOTE, requireNotNull(engineSession).lastLoadUrl())
+    }
+
+    @Test
     fun newerRemoteNavigationRejectsSupersededGeckoCommit() {
         createController()
         applyState(syncState(remoteUrl = URL_SUPERSEDED))
@@ -288,6 +330,7 @@ class BrowserControllerSyncInstrumentedTest {
     private fun syncState(
         remoteUrl: String? = null,
         remoteRevision: Long = 0,
+        localTab: SyncTab? = null,
     ): SyncRepositoryState = SyncRepositoryState(
         settings = SyncConnectionSettings(
             endpoint = "https://sync.example",
@@ -299,7 +342,7 @@ class BrowserControllerSyncInstrumentedTest {
         ),
         status = SyncStatus.Ready,
         profiles = buildList {
-            add(profile(ANDROID_ID, emptyList()))
+            add(profile(ANDROID_ID, listOfNotNull(localTab)))
             remoteUrl?.let { url -> add(profile(DESKTOP_ID, listOf(tab(url)), remoteRevision)) }
         },
         pendingCount = 0,
@@ -321,8 +364,11 @@ class BrowserControllerSyncInstrumentedTest {
         lastSeenAt = NOW,
     )
 
-    private fun tab(url: String) = SyncTab(
-        candyId = REMOTE_CANDY_ID,
+    private fun tab(
+        url: String,
+        candyId: String = REMOTE_CANDY_ID,
+    ) = SyncTab(
+        candyId = candyId,
         windowId = 0,
         index = 0,
         groupId = null,
