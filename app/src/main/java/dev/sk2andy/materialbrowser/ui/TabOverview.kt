@@ -1116,7 +1116,7 @@ internal fun TabOverview(
                             dismissingTabId = tabId
                         }
                     },
-                    onSelectDismissAnchor = controller::selectTab,
+                    onSelectDismissAnchor = onSelect,
                     onSelectTab = controller::selectTab,
                     onCloseTab = controller::closeTab,
                     onCloseOverview = onClose,
