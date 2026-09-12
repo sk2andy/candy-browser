@@ -322,13 +322,11 @@ internal fun BoxScope.BrowserAddressChrome(
                 tabHandoffAlpha.snapTo(1f)
                 onTabHandoffChanged(
                     TabHandoff(
-                        tabId = targetTab.id,
+                        tab = targetTab,
                         preview = controller.previews[targetTab.id].takeUnless {
                             targetTab.isIncognito
                         },
-                        title = targetTab.title,
                         favicon = controller.favicons[targetTab.id],
-                        isIncognito = targetTab.isIncognito,
                         previewTopInsetPx = controller.previewTopInsetPx(targetTab.id),
                     ),
                 )

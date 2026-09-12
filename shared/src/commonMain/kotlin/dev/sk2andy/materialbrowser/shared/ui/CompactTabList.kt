@@ -228,7 +228,9 @@ private fun CompactListTabItem(
                     IconButton(
                         onClick = onClose,
                         enabled = interactionsEnabled,
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag(visuals.closeTestTag),
                     ) {
                         Icon(
                             Icons.Default.Close,
