@@ -32,6 +32,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.data.TabPreviewRepository
+import dev.sk2andy.materialbrowser.data.TabPreviewStore
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.After
@@ -165,6 +167,150 @@ class TabOverviewReorderInstrumentedTest {
         composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(dismissedTabId)).assertDoesNotExist()
         composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(remainingTabId)).assertIsDisplayed()
         composeRule.runOnIdle {
+            assertEquals(remainingTabId, browserController.selectedTabId)
+        }
+    }
+
+    @Test
+    fun dismissingRestoredSelectedHeroTabKeepsRemainingPreviewStable() {
+        lateinit var browserController: BrowserController
+        lateinit var remainingTabId: String
+        lateinit var dismissedTabId: String
+        val pagerObservations = mutableListOf<HeroPagerSnapshotObservation>()
+        composeRule.runOnIdle {
+            clearSession()
+            val initialController = BrowserController(composeRule.activity)
+            controller = initialController
+            val blankTabId = initialController.selectedTabId
+            remainingTabId = requireNotNull(
+                initialController.createBackgroundTab("https://restored-remaining.example"),
+            )
+            dismissedTabId = requireNotNull(
+                initialController.createBackgroundTab("https://restored-dismissed.example"),
+            )
+            initialController.closeTab(blankTabId)
+            initialController.selectTab(dismissedTabId)
+            assertEquals(
+                listOf(remainingTabId, dismissedTabId),
+                initialController.activeTabs.map(BrowserTab::id),
+            )
+
+            assertTrue(TabPreviewRepository.get(composeRule.activity).flush())
+            val remainingPreview = solidPreview(android.graphics.Color.GREEN)
+            val dismissedPreview = solidPreview(android.graphics.Color.RED)
+            val previewStore = TabPreviewStore(composeRule.activity)
+            assertTrue(previewStore.save(remainingTabId, remainingPreview))
+            assertTrue(previewStore.save(dismissedTabId, dismissedPreview))
+            remainingPreview.recycle()
+            dismissedPreview.recycle()
+            assertTrue(
+                BrowserSessionStore(composeRule.activity).saveTabsImmediately(
+                    tabs = initialController.activeTabs,
+                    selectedTabId = dismissedTabId,
+                ),
+            )
+
+            initialController.destroy()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            browserController.updateTabOverviewMode(TabOverviewMode.Hero)
+        }
+        composeRule.waitUntil(timeoutMillis = 12_000L) {
+            browserController.activeTabs.map(BrowserTab::id) ==
+                listOf(remainingTabId, dismissedTabId) &&
+                browserController.selectedTabId == dismissedTabId &&
+                browserController.previews[remainingTabId] != null &&
+                browserController.previews[dismissedTabId] != null
+        }
+        setOverviewContent(
+            browserController = browserController,
+            onHeroPagerSnapshotObserved = pagerObservations::add,
+        )
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertTrue(
+                "Initial restored pager snapshot was not observed: $pagerObservations",
+                pagerObservations.any { observation ->
+                    observation.pageCount == 2 &&
+                        observation.tabIds == listOf(remainingTabId, dismissedTabId) &&
+                        observation.currentPage == 1
+                },
+            )
+        }
+
+        val dismissedCard = composeRule
+            .onNodeWithTag(SnoozeTestTags.overviewTab(dismissedTabId))
+            .assertIsDisplayed()
+        val stableSample = dismissedCard.fetchSemanticsNode().boundsInRoot.center
+        val initialPixel = composeRule.onRoot().captureToImage().toPixelMap()[
+            stableSample.x.toInt(),
+            stableSample.y.toInt(),
+        ]
+        assertTrue(
+            "Restored dismissed preview was not red: $initialPixel",
+            initialPixel.red > 0.7f && initialPixel.green < 0.3f && initialPixel.blue < 0.3f,
+        )
+
+        composeRule.mainClock.autoAdvance = false
+        dismissedCard.performTouchInput {
+            down(center)
+            moveBy(Offset(0f, -height.toFloat()), delayMillis = 240L)
+            up()
+        }
+
+        var sawRemainingSelection = false
+        var checkedSelectedFrames = 0
+        var checkedFramesAfterRemoval = 0
+        repeat(60) { frame ->
+            composeRule.mainClock.advanceTimeByFrame()
+            if (browserController.selectedTabId == remainingTabId) {
+                sawRemainingSelection = true
+                val pixel = composeRule.onRoot().captureToImage().toPixelMap()[
+                    stableSample.x.toInt(),
+                    stableSample.y.toInt(),
+                ]
+                val isRemainingPreview = pixel.green > 0.7f &&
+                    pixel.red < 0.3f &&
+                    pixel.blue < 0.3f
+                assertTrue(
+                    "Restored remaining preview flickered at frame $frame: $pixel",
+                    isRemainingPreview,
+                )
+                checkedSelectedFrames += 1
+                if (browserController.activeTabs.none { tab -> tab.id == dismissedTabId }) {
+                    checkedFramesAfterRemoval += 1
+                }
+            }
+        }
+        assertTrue("Restored remaining tab was never selected", sawRemainingSelection)
+        assertTrue("No selected restored-preview frames were checked", checkedSelectedFrames > 0)
+        assertTrue(
+            "Dismiss transition never reached restored tab removal",
+            checkedFramesAfterRemoval > 0,
+        )
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(dismissedTabId)).assertDoesNotExist()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(remainingTabId)).assertIsDisplayed()
+        composeRule.runOnIdle {
+            val mismatches = pagerObservations.filter { observation ->
+                observation.pageCount != observation.tabIds.size
+            }
+            assertTrue("Pager count and content diverged: $mismatches", mismatches.isEmpty())
+            assertTrue(
+                "Final restored pager snapshot was not observed: $pagerObservations",
+                pagerObservations.any { observation ->
+                    observation.pageCount == 1 &&
+                        observation.tabIds == listOf(remainingTabId) &&
+                        observation.currentPage == 0
+                },
+            )
+            assertEquals(
+                listOf(remainingTabId),
+                browserController.activeTabs.map(BrowserTab::id),
+            )
             assertEquals(remainingTabId, browserController.selectedTabId)
         }
     }
@@ -1011,6 +1157,7 @@ class TabOverviewReorderInstrumentedTest {
         onEntryHeroCompleted: () -> Unit = {},
         onOpenSettings: () -> Unit = {},
         onNewTab: () -> Unit = {},
+        onHeroPagerSnapshotObserved: ((HeroPagerSnapshotObservation) -> Unit)? = null,
         onExitHeroVisibilityChanged: (Boolean) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -1038,17 +1185,21 @@ class TabOverviewReorderInstrumentedTest {
                     onToggleFavoriteTab = {},
                     onAddSiteCapsule = {},
                     onSnoozeTab = {},
+                    onHeroPagerSnapshotObserved = onHeroPagerSnapshotObserved,
                 )
             }
         }
     }
 
     private fun clearSession() {
-        composeRule.activity
+        val activity = composeRule.activity
+        activity
             .getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit()
+        TabPreviewRepository.get(activity).clear()
+        check(TabPreviewRepository.get(activity).flush())
     }
 
     private fun solidPreview(color: Int): Bitmap =
