@@ -46,6 +46,32 @@ class ExternalAppLauncherInstrumentedTest {
     }
 
     @Test
+    fun googlePlayLinksTargetPlayStoreWithoutGenericResolutionFlags() {
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            launcher.openWebUrlExternally(PLAY_STORE_URL),
+        )
+
+        val launchedIntent = requireNotNull(context.lastIntent)
+        assertEquals(Intent.ACTION_VIEW, launchedIntent.action)
+        assertEquals(PLAY_STORE_URL, launchedIntent.dataString)
+        assertEquals("com.android.vending", launchedIntent.`package`)
+        assertTrue(launchedIntent.categories.orEmpty().contains(Intent.CATEGORY_BROWSABLE))
+        assertEquals(0, launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER)
+        assertEquals(0, launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT)
+    }
+
+    @Test
+    fun googlePlayLinkWithoutPlayStoreFallsBackToCurrentWebView() {
+        context.launchFailure = ActivityNotFoundException()
+
+        assertEquals(
+            ExternalLaunchResult.Unsupported,
+            launcher.openWebUrlExternally(PLAY_STORE_URL),
+        )
+    }
+
+    @Test
     fun retriesAgainstCurrentInstalledAppsWithoutCachingHandlers() {
         context.launchFailure = ActivityNotFoundException()
         assertEquals(
@@ -88,5 +114,10 @@ class ExternalAppLauncherInstrumentedTest {
             lastIntent = Intent(intent)
             launchFailure?.let { throw it }
         }
+    }
+
+    private companion object {
+        const val PLAY_STORE_URL =
+            "https://play.google.com/store/apps/details?id=com.outtiefive.phantomshell"
     }
 }

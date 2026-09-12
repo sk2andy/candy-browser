@@ -52,6 +52,35 @@ class BrowserUriPolicyTest {
     }
 
     @Test
+    fun `Google Play store URLs use dedicated app handoff`() {
+        assertTrue(
+            GooglePlayAppLinkRules.shouldOpenInPlayStore(
+                "https://play.google.com/store/apps/details?id=com.example.app",
+            ),
+        )
+        assertTrue(
+            GooglePlayAppLinkRules.shouldOpenInPlayStore(
+                "https://PLAY.GOOGLE.COM/store/apps/collection/editors_choice",
+            ),
+        )
+    }
+
+    @Test
+    fun `Google Play app handoff rejects lookalikes and unsupported pages`() {
+        assertFalse(
+            GooglePlayAppLinkRules.shouldOpenInPlayStore(
+                "https://play.google.com.example/store/apps/details?id=com.example.app",
+            ),
+        )
+        assertFalse(
+            GooglePlayAppLinkRules.shouldOpenInPlayStore(
+                "http://play.google.com/store/apps/details?id=com.example.app",
+            ),
+        )
+        assertFalse(GooglePlayAppLinkRules.shouldOpenInPlayStore("https://play.google.com/about"))
+    }
+
+    @Test
     fun `external navigation accepts user driven web and special scheme links`() {
         assertTrue(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(

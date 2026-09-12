@@ -18,6 +18,11 @@ class ExternalAppLauncher(private val context: Context) {
             ?: return ExternalLaunchResult.Unsupported
         val target = Intent(Intent.ACTION_VIEW, Uri.parse(normalized))
             .addCategory(Intent.CATEGORY_BROWSABLE)
+        if (GooglePlayAppLinkRules.shouldOpenInPlayStore(normalized)) {
+            target.setPackage(GOOGLE_PLAY_PACKAGE)
+            return launchDirect(target, fallbackUrl = null)
+        }
+        target
             .addFlags(
                 Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER or
                     Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT,
@@ -78,4 +83,8 @@ class ExternalAppLauncher(private val context: Context) {
         BrowserUriPolicy.normalizeHttpUrl(url)
             ?.let(ExternalLaunchResult::OpenInBrowser)
             ?: ExternalLaunchResult.Unsupported
+
+    private companion object {
+        const val GOOGLE_PLAY_PACKAGE = "com.android.vending"
+    }
 }

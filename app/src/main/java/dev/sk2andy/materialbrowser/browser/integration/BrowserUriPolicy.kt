@@ -54,6 +54,20 @@ object BrowserUriPolicy {
     private const val MAX_EXTERNAL_URI_LENGTH = 32_768
 }
 
+/** Identifies Google Play URLs that Android documents for direct Play Store handoff. */
+internal object GooglePlayAppLinkRules {
+    fun shouldOpenInPlayStore(url: String?): Boolean {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        val uri = runCatching { URI(safeUrl) }.getOrNull() ?: return false
+        return uri.scheme.equals("https", ignoreCase = true) &&
+            uri.host.equals(PLAY_HOST, ignoreCase = true) &&
+            uri.rawPath?.startsWith(STORE_PATH_PREFIX) == true
+    }
+
+    private const val PLAY_HOST = "play.google.com"
+    private const val STORE_PATH_PREFIX = "/store/"
+}
+
 /** Limits automatic app handoffs to user-driven links and their main-frame redirect chains. */
 object ExternalNavigationPolicy {
     fun isUserNavigationGrantActive(
