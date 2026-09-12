@@ -100,6 +100,39 @@ async function identityFor(tabId: number, create: boolean): Promise<string | und
   return candyId;
 }
 
+function isMissingTabError(error: unknown, tabId: number): boolean {
+  if (!(error instanceof Error)) return false;
+  return [
+    `No tab with id: ${tabId}.`,
+    `No tab with id: ${tabId}`,
+    `Invalid tab ID: ${tabId}.`,
+    `Invalid tab ID: ${tabId}`,
+  ].includes(error.message);
+}
+
+async function applyToExistingTab(tabId: number, operation: () => Promise<unknown>): Promise<boolean> {
+  try {
+    await operation();
+    return true;
+  } catch (error) {
+    if (!isMissingTabError(error, tabId)) throw error;
+    return false;
+  }
+}
+
+async function forgetTabIdentity(tabId: number, expectedCandyId: string): Promise<void> {
+  const identities = await loadTabIdentities();
+  const key = String(tabId);
+  if (identities[key] !== expectedCandyId) return;
+  const { [key]: _removed, ...next } = identities;
+  await saveTabIdentities(next);
+}
+
+async function rememberTabIdentity(tabId: number, candyId: string): Promise<void> {
+  const identities = await loadTabIdentities();
+  await saveTabIdentities({ ...identities, [String(tabId)]: candyId });
+}
+
 export async function mutationForCreatedTab(tab: chrome.tabs.Tab): Promise<TabMutationDraft | null> {
   const candidate = tabUrl(tab);
   if (tab.id == null || tab.incognito || !candidate) return null;
@@ -170,39 +203,55 @@ export async function applyTabMutation(mutation: TabMutation): Promise<number | 
     case "open": {
       const desired = mutation.tab;
       if (tabId !== undefined) {
-        await api.tabs.update(tabId, { url: desired.url, pinned: desired.pinned });
-        await api.tabs.move(tabId, { index: desired.index });
-        return tabId;
+        const applied = await applyToExistingTab(tabId, async () => {
+          await api.tabs.update(tabId, { url: desired.url, pinned: desired.pinned });
+          await api.tabs.move(tabId, { index: desired.index });
+        });
+        if (applied) return tabId;
+        await forgetTabIdentity(tabId, desired.candyId);
       }
       const created = await api.tabs.create({ url: desired.url, pinned: desired.pinned, active: false, index: desired.index });
       if (created.id == null || created.incognito) throw new Error("Browser did not create a normal tab");
-      await saveTabIdentities({ ...identities, [String(created.id)]: desired.candyId });
+      await rememberTabIdentity(created.id, desired.candyId);
       return created.id;
     }
-    case "navigate":
-      if (tabId !== undefined) {
-        const tab = await api.tabs.get(tabId);
-        if (!tabAlreadyTargetsUrl(tab, mutation.url)) {
-          await api.tabs.update(tabId, { url: mutation.url });
-        }
+    case "navigate": {
+      if (tabId === undefined) return null;
+      let tab: chrome.tabs.Tab | undefined;
+      const found = await applyToExistingTab(tabId, async () => { tab = await api.tabs.get(tabId); });
+      if (!found) {
+        await forgetTabIdentity(tabId, mutation.candyId);
+        return null;
       }
-      return tabId ?? null;
+      if (tabAlreadyTargetsUrl(tab!, mutation.url)) return tabId;
+      const applied = await applyToExistingTab(tabId, () =>
+        api.tabs.update(tabId, { url: mutation.url }));
+      if (!applied) await forgetTabIdentity(tabId, mutation.candyId);
+      return applied ? tabId : null;
+    }
     case "close":
       if (tabId !== undefined) {
-        await api.tabs.remove(tabId);
-        const { [String(tabId)]: _removed, ...next } = identities;
-        await saveTabIdentities(next);
+        const applied = await applyToExistingTab(tabId, () => api.tabs.remove(tabId));
+        await forgetTabIdentity(tabId, mutation.candyId);
+        return applied ? tabId : null;
       }
-      return tabId ?? null;
+      return null;
     case "reorder":
       for (let index = 0; index < mutation.orderedCandyIds.length; index += 1) {
         const desiredId = mutation.orderedCandyIds[index]!;
         const browserEntry = Object.entries(identities).find(([, id]) => id === desiredId);
-        if (browserEntry) await api.tabs.move(Number(browserEntry[0]), { index });
+        if (browserEntry) {
+          const browserTabId = Number(browserEntry[0]);
+          const applied = await applyToExistingTab(browserTabId, () => api.tabs.move(browserTabId, { index }));
+          if (!applied) await forgetTabIdentity(browserTabId, desiredId);
+        }
       }
       return null;
-    case "set-pinned":
-      if (tabId !== undefined) await api.tabs.update(tabId, { pinned: mutation.pinned });
-      return tabId ?? null;
+    case "set-pinned": {
+      if (tabId === undefined) return null;
+      const applied = await applyToExistingTab(tabId, () => api.tabs.update(tabId, { pinned: mutation.pinned }));
+      if (!applied) await forgetTabIdentity(tabId, mutation.candyId);
+      return applied ? tabId : null;
+    }
   }
 }

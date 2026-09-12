@@ -267,14 +267,16 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             val session = ReentrantAttachSession(
                 tabId = browserController.selectedTabId,
                 onFirstAttach = {
-                    browserController.attachSelectedBrowserEngineView(destinationHost) {
-                        staleContentCallbackCount++
-                    }
+                    browserController.attachSelectedBrowserEngineView(
+                        container = destinationHost,
+                        onContentPresented = { staleContentCallbackCount++ },
+                    )
                 },
                 onFirstDetach = {
-                    browserController.attachSelectedBrowserEngineView(destinationHost) {
-                        currentContentCallbackCount++
-                    }
+                    browserController.attachSelectedBrowserEngineView(
+                        container = destinationHost,
+                        onContentPresented = { currentContentCallbackCount++ },
+                    )
                 },
                 presentContentImmediately = true,
             )

@@ -133,9 +133,11 @@ does not create a new logical tab. A syncable `pendingUrl` takes precedence whil
 loading, and transient blank or internal states retain the existing identity until the browser
 reports a committed destination. A remote navigation whose normalized URL already matches the
 desktop tab's current or pending URL updates logical sync state without calling the browser's URL
-update API, so title-only reconciliation cannot reload or autoplay an existing page. Reconciliation
-creates, updates, pins, moves, and removes only eligible HTTP(S) tabs; incognito, internal,
-local-file, and unmanaged tabs are preserved.
+update API, so title-only reconciliation cannot reload or autoplay an existing page. During
+protocol-v2 mutation application, browser tab IDs reported missing are removed from the identity
+map without blocking pull-cursor advancement or queued uploads; unrelated browser API failures
+remain visible. Reconciliation creates, updates, pins, moves, and removes only eligible HTTP(S)
+tabs; incognito, internal, local-file, and unmanaged tabs are preserved.
 
 ## Protocol v2 encryption and delivery
 
