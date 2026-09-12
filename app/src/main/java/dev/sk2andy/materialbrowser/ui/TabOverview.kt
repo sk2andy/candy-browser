@@ -154,6 +154,12 @@ import kotlinx.coroutines.flow.first
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
+internal data class HeroPagerSnapshotObservation(
+    val pageCount: Int,
+    val tabIds: List<String>,
+    val currentPage: Int,
+)
+
 @Composable
 internal fun TabOverview(
     controller: BrowserController,
@@ -180,6 +186,7 @@ internal fun TabOverview(
     onToggleFavoriteTab: (String) -> Unit,
     onAddSiteCapsule: (String) -> Unit,
     onSnoozeTab: (String) -> Unit,
+    onHeroPagerSnapshotObserved: ((HeroPagerSnapshotObservation) -> Unit)? = null,
 ) {
     val rootView = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -191,18 +198,27 @@ internal fun TabOverview(
     }
     var dismissingTabId by remember { mutableStateOf<String?>(null) }
     val overviewTabs = controller.activeTabs
-    // Keep pager count, keys, and content on one snapshot. Dismissal retains it until motion ends.
-    val heroPagerTabs = remember { mutableStateOf(overviewTabs) }
-    SideEffect {
-        if (dismissingTabId == null) heroPagerTabs.value = overviewTabs
-    }
+    var frozenHeroPagerTabs by remember { mutableStateOf<List<BrowserTab>?>(null) }
+    val pagerTabs = frozenHeroPagerTabs ?: overviewTabs
     val initialPage = remember {
         overviewTabs.indexOfFirst { it.id == controller.selectedTabId }.coerceAtLeast(0)
     }
     val pagerState = rememberPagerState(
         initialPage = initialPage,
-        pageCount = { heroPagerTabs.value.size },
+        pageCount = { pagerTabs.size },
     )
+    // Test hook for the count/content invariant behind the restored-session flicker regression.
+    if (onHeroPagerSnapshotObserved != null) {
+        SideEffect {
+            onHeroPagerSnapshotObserved(
+                HeroPagerSnapshotObservation(
+                    pageCount = pagerState.pageCount,
+                    tabIds = pagerTabs.map(BrowserTab::id),
+                    currentPage = pagerState.currentPage,
+                ),
+            )
+        }
+    }
     val gridState = rememberLazyGridState(initialFirstVisibleItemIndex = initialPage)
     val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = if (controller.tabListStartsAtBottom) {
@@ -1052,7 +1068,7 @@ internal fun TabOverview(
             when (controller.tabOverviewMode) {
                 TabOverviewMode.Hero -> TabOverviewHeroPager(
                     pagerState = pagerState,
-                    tabs = heroPagerTabs.value,
+                    tabs = pagerTabs,
                     initialTabId = initialTabId,
                     tabCardWidth = tabCardWidth,
                     cardAspectRatio = coverflowCardLayout.aspectRatio,
@@ -1091,7 +1107,15 @@ internal fun TabOverview(
                     operationScope = overviewScope,
                     currentTabs = { controller.activeTabs },
                     selectedTabId = { controller.selectedTabId },
-                    onDismissingTabChanged = { dismissingTabId = it },
+                    onDismissingTabChanged = { tabId ->
+                        if (tabId == null) {
+                            frozenHeroPagerTabs = null
+                            dismissingTabId = null
+                        } else {
+                            frozenHeroPagerTabs = pagerTabs
+                            dismissingTabId = tabId
+                        }
+                    },
                     onSelectDismissAnchor = controller::selectTab,
                     onSelectTab = controller::selectTab,
                     onCloseTab = controller::closeTab,
