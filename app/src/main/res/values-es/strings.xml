@@ -165,6 +165,12 @@
     <string name="favorite_added_confirmation">Añadido a favoritos</string>
     <string name="favorite_removed_confirmation">Eliminado de favoritos</string>
     <string name="action_undo">Deshacer</string>
+    <string name="tab_closed">Pestaña cerrada</string>
+    <string name="downloads_pause">Pausar</string>
+    <string name="downloads_resume">Continuar</string>
+    <string name="downloads_control_failed">No se pudo actualizar la descarga</string>
+    <string name="settings_closed_tab_undo_title">Restaurar pestaña cerrada</string>
+    <string name="settings_closed_tab_undo_summary">Ofrecer Deshacer durante 3 segundos después de cerrar una pestaña.</string>
     <string name="action_open_external_app">Abrir en una aplicación externa</string>
     <string name="action_summarize_with_assistant">Resumir con el asistente</string>
     <string name="assistant_summary_prompt">Resume el siguiente sitio web en español.</string>

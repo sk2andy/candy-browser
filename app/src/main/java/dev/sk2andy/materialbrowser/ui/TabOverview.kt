@@ -357,7 +357,7 @@ internal fun TabOverview(
         if (!TabDeletionRules.canDelete(tab)) return
         val wasSelected = tab.id == controller.selectedTabId
         if (emitHaptic) rootView.performConfirmHaptic()
-        controller.closeTab(tab.id)
+        controller.closeTabFromUser(tab.id)
         if (wasSelected && controller.selectedTabId != tab.id) {
             onSelectDismissAnchor(controller.selectedTabId)
         }
@@ -1129,7 +1129,7 @@ internal fun TabOverview(
                     },
                     onSelectDismissAnchor = onSelectDismissAnchor,
                     onSelectTab = controller::selectTab,
-                    onCloseTab = controller::closeTab,
+                    onCloseTab = controller::closeTabFromUser,
                     onCloseOverview = onClose,
                     onStartExitHero = ::startExitHero,
                     onCardBounds = { tab, bounds, isInitialCard ->

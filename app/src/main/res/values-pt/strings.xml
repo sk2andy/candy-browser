@@ -165,6 +165,12 @@
     <string name="favorite_added_confirmation">Adicionado aos favoritos</string>
     <string name="favorite_removed_confirmation">Removido dos favoritos</string>
     <string name="action_undo">Desfazer</string>
+    <string name="tab_closed">Aba fechada</string>
+    <string name="downloads_pause">Pausar</string>
+    <string name="downloads_resume">Continuar</string>
+    <string name="downloads_control_failed">Não foi possível atualizar o download</string>
+    <string name="settings_closed_tab_undo_title">Restaurar aba fechada</string>
+    <string name="settings_closed_tab_undo_summary">Oferecer Desfazer por 3 segundos após fechar uma aba.</string>
     <string name="action_open_external_app">Abrir numa aplicação externa</string>
     <string name="action_summarize_with_assistant">Resumir com o assistente</string>
     <string name="assistant_summary_prompt">Resume o seguinte site em português.</string>

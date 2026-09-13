@@ -25,7 +25,6 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import org.json.JSONObject
 
 /** Resolves renderer-owned `blob:` downloads and streams them into scoped storage. */
@@ -81,7 +80,7 @@ internal class SystemWebViewBlobDownloadTransfer(
             dispatch { listener.onFailed(GeckoDownloadFailure.InvalidRequest) }
             return null
         }
-        val id = NEXT_ID.getAndUpdate { value -> if (value == Int.MAX_VALUE) 1 else value + 1 }
+        val id = DownloadRuntimeRegistry.nextTransferId()
         val operation = Operation(
             id = id,
             blobUrl = blobUrl,
@@ -271,6 +270,7 @@ internal class SystemWebViewBlobDownloadTransfer(
             mediaStoreId = runCatching {
                 android.content.ContentUris.parseId(entry.uri)
             }.getOrNull(),
+            cancel = { cancel(operation.id, GeckoDownloadFailure.Cancelled) },
         )
         dispatch { operation.listener.onStarted(start) }
         notifier.started(start)
@@ -364,7 +364,6 @@ internal class SystemWebViewBlobDownloadTransfer(
     }
 
     private companion object {
-        val NEXT_ID = AtomicInteger(1)
         const val BRIDGE_NAME = "CandySystemBlobDownloadBridge"
         const val MAX_CHUNK_BYTES = 24 * 1_024
         const val MAX_DOWNLOAD_BYTES = 1_073_741_824L

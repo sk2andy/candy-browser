@@ -1314,7 +1314,7 @@ class MainActivity : AppCompatActivity() {
                     false
                 } else {
                     val previousTabId = browserController.selectedTabId
-                    browserController.closeTab(browserController.selectedTabId)
+                    browserController.closeTabFromUser(browserController.selectedTabId)
                     if (browserController.selectedTabId != previousTabId) {
                         hardwareTabChangeRequestId++
                     }

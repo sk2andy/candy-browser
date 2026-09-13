@@ -49,6 +49,17 @@ internal class DownloadRepository(
         else -> mediaStoreUri(entry.id)
     }
 
+    fun cancel(entry: DownloadEntry): Boolean = runCatching {
+        val current = snapshot().firstOrNull { it.id == entry.id && it.status.isActive }
+            ?: return false
+        if (current.id >= 0L) manager.remove(current.id) == 1
+        else DownloadRuntimeRegistry.cancel(current.id)
+    }.getOrDefault(false)
+
+    fun togglePause(entry: DownloadEntry): Boolean = runCatching {
+        DownloadRuntimeRegistry.togglePause(entry.id)
+    }.getOrDefault(false)
+
     private fun querySystemDownloads(): List<DownloadEntry> = runCatching {
         manager.query(DownloadManager.Query())?.use { cursor ->
             buildList {

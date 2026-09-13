@@ -39,6 +39,7 @@ internal object TabSettingsTestTags {
     const val ResidentTabLimit = "tab_settings_resident_limit"
     const val ListStartsAtBottom = "tab_settings_list_starts_at_bottom"
     const val AutomaticSorting = "tab_settings_automatic_sorting"
+    const val ClosedTabUndo = "tab_settings_closed_tab_undo"
     const val AddressBarDocking = "tab_settings_address_bar_docking"
     const val LinkLongPressAction = "tab_settings_link_long_press_action"
 }
@@ -51,6 +52,7 @@ internal fun TabsAndGesturesSettingsPage(
     tabStackFolderMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
     automaticTabSortingEnabled: Boolean,
+    isClosedTabUndoEnabled: Boolean = false,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isAddressBarDockingEnabled: Boolean,
@@ -61,6 +63,7 @@ internal fun TabsAndGesturesSettingsPage(
     onTabStackFolderModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
+    onClosedTabUndoEnabledChanged: (Boolean) -> Unit = {},
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
@@ -132,6 +135,14 @@ internal fun TabsAndGesturesSettingsPage(
             checked = automaticTabSortingEnabled,
             onCheckedChange = onAutomaticTabSortingEnabledChanged,
             modifier = Modifier.testTag(TabSettingsTestTags.AutomaticSorting),
+        )
+        Spacer(Modifier.height(2.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_closed_tab_undo_title),
+            subtitle = stringResource(R.string.settings_closed_tab_undo_summary),
+            checked = isClosedTabUndoEnabled,
+            onCheckedChange = onClosedTabUndoEnabledChanged,
+            modifier = Modifier.testTag(TabSettingsTestTags.ClosedTabUndo),
         )
         SettingsPageSpacer()
         Surface(

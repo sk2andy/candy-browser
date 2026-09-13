@@ -13,6 +13,8 @@ internal data class DownloadEntry(
     val total: Long,
     val lastModified: Long,
     val mime: String,
+    val supportsPause: Boolean = false,
+    val supportsCancel: Boolean = id >= 0L,
 )
 
 internal enum class DownloadStatus(val isActive: Boolean) {

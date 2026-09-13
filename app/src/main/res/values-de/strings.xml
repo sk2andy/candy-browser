@@ -165,6 +165,9 @@
     <string name="favorite_added_confirmation">Zu Favoriten hinzugefügt</string>
     <string name="favorite_removed_confirmation">Aus Favoriten entfernt</string>
     <string name="action_undo">Rückgängig</string>
+    <string name="tab_closed">Tab geschlossen</string>
+    <string name="settings_closed_tab_undo_title">Geschlossenen Tab wiederherstellen</string>
+    <string name="settings_closed_tab_undo_summary">Nach dem Schließen eines Tabs 3 Sekunden lang Rückgängig anbieten.</string>
     <string name="action_open_external_app">In externer App öffnen</string>
     <string name="action_summarize_with_assistant">Mit Assistent zusammenfassen</string>
     <string name="assistant_summary_prompt">Fasse die folgende Website auf Deutsch zusammen.</string>
@@ -555,6 +558,9 @@
     <string name="downloads_clear_title">Fertige Downloads aufräumen?</string>
     <string name="downloads_clear_message">Dadurch werden alle abgeschlossenen und fehlgeschlagenen Download-Dateien dauerhaft gelöscht. Laufende Downloads bleiben erhalten.</string>
     <string name="downloads_clear_failed">Downloads konnten nicht aufgeräumt werden</string>
+    <string name="downloads_pause">Pausieren</string>
+    <string name="downloads_resume">Fortsetzen</string>
+    <string name="downloads_control_failed">Download konnte nicht geändert werden</string>
     <string name="downloads_open_failed">Keine App kann diesen Download öffnen</string>
     <string name="downloads_status_pending">Wartet · %1$s</string>
     <string name="downloads_status_running">Wird geladen · %1$s</string>

@@ -28,7 +28,8 @@ import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import org.mozilla.geckoview.GeckoWebExecutor
 import org.mozilla.geckoview.WebRequest
 import org.mozilla.geckoview.WebResponse
@@ -168,12 +169,14 @@ internal class GeckoDownloadTransferManager(
     ) {
         @Volatile var response: WebResponse? = null
         @Volatile var entry: GeckoDownloadStreamEntry? = null
+        val pauseLock = ReentrantLock()
+        val pauseChanged = pauseLock.newCondition()
+        var paused = false
     }
 
     private val io = Executors.newCachedThreadPool { runnable ->
         Thread(runnable, "candy-gecko-download").apply { isDaemon = true }
     }
-    private val nextId = AtomicInteger(1)
     private val operations = ConcurrentHashMap<Int, Operation>()
     private val closed = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -187,7 +190,7 @@ internal class GeckoDownloadTransferManager(
             dispatch { listener.onFailed(GeckoDownloadFailure.InvalidRequest) }
             return null
         }
-        val id = nextId.getAndUpdate { value -> if (value == Int.MAX_VALUE) 1 else value + 1 }
+        val id = DownloadRuntimeRegistry.nextTransferId()
         val operation = Operation(transfer.owner.sessionKey)
         operations[id] = operation
         val flags = transfer.fetchFlags or if (transfer.owner.isPrivate) {
@@ -230,7 +233,7 @@ internal class GeckoDownloadTransferManager(
             dispatch { listener.onFailed(GeckoDownloadFailure.InvalidRequest) }
             return null
         }
-        val id = nextId.getAndUpdate { value -> if (value == Int.MAX_VALUE) 1 else value + 1 }
+        val id = DownloadRuntimeRegistry.nextTransferId()
         val operation = Operation(owner.sessionKey)
         operations[id] = operation
         receiveResponse(
@@ -322,6 +325,9 @@ internal class GeckoDownloadTransferManager(
                 total = started.totalBytes,
                 startedAt = started.startedAtMillis,
                 mediaStoreId = runCatching { ContentUris.parseId(entry.uri) }.getOrNull(),
+                cancel = { cancel(id, operation, listener) },
+                pause = { setPaused(id, operation, paused = true) },
+                resume = { setPaused(id, operation, paused = false) },
             )
             dispatch { listener.onStarted(started) }
             notifier.started(started)
@@ -343,6 +349,11 @@ internal class GeckoDownloadTransferManager(
                 entry.output.use { output ->
                     val buffer = ByteArray(COPY_BUFFER_BYTES)
                     while (true) {
+                        operation.pauseLock.withLock {
+                            while (operation.paused && !operation.cancelled.get()) {
+                                operation.pauseChanged.await()
+                            }
+                        }
                         if (operation.cancelled.get()) throw DownloadCancelledException()
                         val count = input.read(buffer)
                         if (count < 0) break
@@ -397,6 +408,7 @@ internal class GeckoDownloadTransferManager(
         synchronized(operation) {
             if (!operation.terminal.compareAndSet(false, true)) return
             operation.cancelled.set(true)
+            operation.pauseLock.withLock { operation.pauseChanged.signalAll() }
             runCatching { operation.response?.body?.close() }
             runCatching { operation.entry?.abort() }
             operations.remove(id, operation)
@@ -409,6 +421,17 @@ internal class GeckoDownloadTransferManager(
             listener?.let { target -> dispatch { target.onFailed(GeckoDownloadFailure.Cancelled) } }
         }
     }
+
+    private fun setPaused(id: Int, operation: Operation, paused: Boolean): Boolean =
+        synchronized(operation) {
+            if (operation.terminal.get()) return false
+            operation.pauseLock.withLock {
+                operation.paused = paused
+                operation.pauseChanged.signalAll()
+            }
+            DownloadRuntimeRegistry.paused(id, paused, System.currentTimeMillis())
+            true
+        }
 
     private fun fail(
         id: Int,

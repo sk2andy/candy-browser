@@ -165,6 +165,12 @@
     <string name="favorite_added_confirmation">Ajouté aux favoris</string>
     <string name="favorite_removed_confirmation">Retiré des favoris</string>
     <string name="action_undo">Annuler</string>
+    <string name="tab_closed">Onglet fermé</string>
+    <string name="downloads_pause">Pause</string>
+    <string name="downloads_resume">Reprendre</string>
+    <string name="downloads_control_failed">Impossible de mettre à jour le téléchargement</string>
+    <string name="settings_closed_tab_undo_title">Restaurer un onglet fermé</string>
+    <string name="settings_closed_tab_undo_summary">Proposer Annuler pendant 3 secondes après la fermeture d’un onglet.</string>
     <string name="action_open_external_app">Ouvrir dans une application externe</string>
     <string name="action_summarize_with_assistant">Résumer avec l’assistant</string>
     <string name="assistant_summary_prompt">Résume le site web suivant en français.</string>

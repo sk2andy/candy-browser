@@ -173,6 +173,9 @@
     <string name="favorite_added_confirmation">Added to favorites</string>
     <string name="favorite_removed_confirmation">Removed from favorites</string>
     <string name="action_undo">Undo</string>
+    <string name="tab_closed">Tab closed</string>
+    <string name="settings_closed_tab_undo_title">Undo closed tab</string>
+    <string name="settings_closed_tab_undo_summary">Offer Undo for 3 seconds after closing a tab.</string>
     <string name="action_open_external_app">Open in external app</string>
     <string name="action_summarize_with_assistant">Summarize with Assistant</string>
     <string name="assistant_summary_prompt">Summarize the following website in English.</string>
@@ -578,6 +581,9 @@
     <string name="downloads_clear_title">Clear finished downloads?</string>
     <string name="downloads_clear_message">This permanently deletes all completed and failed download files. Active downloads stay.</string>
     <string name="downloads_clear_failed">Downloads could not be cleared</string>
+    <string name="downloads_pause">Pause</string>
+    <string name="downloads_resume">Resume</string>
+    <string name="downloads_control_failed">Download could not be updated</string>
     <string name="downloads_open_failed">No app can open this download</string>
     <string name="downloads_status_pending">Pending · %1$s</string>
     <string name="downloads_status_running">Downloading · %1$s</string>

@@ -216,6 +216,62 @@ class BrowserControllerSyncInstrumentedTest {
     }
 
     @Test
+    fun fastLinkedTabUndoPublishesOpenDespiteStaleSyncState() {
+        createController()
+        applyState(syncState(localTab = tab(URL_A)))
+        lateinit var restoredTabId: String
+        activityRule.scenario.onActivity { _ ->
+            val browserController = requireNotNull(controller)
+            val localTab = browserController.tabs.first { it.url == URL_A }
+            restoredTabId = localTab.id
+            browserController.selectTab(localTab.id)
+            browserController.updateClosedTabUndoEnabled(true)
+            mutations.clear()
+
+            // Keep close and undo in one main-thread turn: the cached sync state still has this tab.
+            browserController.closeTabFromUser(localTab.id)
+            val token = requireNotNull(browserController.closedTabUndoOffer)
+            assertTrue(browserController.undoClosedTab(token))
+
+            val tabMutations = mutations.filter {
+                it is SyncPendingMutation.Close || it is SyncPendingMutation.Open
+            }
+            assertEquals(2, tabMutations.size)
+            val close = tabMutations[0] as SyncPendingMutation.Close
+            val open = tabMutations[1] as SyncPendingMutation.Open
+            assertEquals(ANDROID_ID, close.targetDeviceId)
+            assertEquals(REMOTE_CANDY_ID, close.candyId)
+            assertEquals(ANDROID_ID, open.targetDeviceId)
+            assertEquals(REMOTE_CANDY_ID, open.tab.candyId)
+            assertEquals(URL_A, open.tab.url)
+            assertEquals("Page A", open.tab.title)
+            assertEquals(localTab.id, browserController.selectedTabForTesting().id)
+
+            // Hold completion callbacks while older refresh and optimistic close states arrive.
+            browserController.applySyncRepositoryStateForTesting(syncState(localTab = tab(URL_A)))
+            browserController.applySyncRepositoryStateForTesting(syncState())
+            val restoredTab = browserController.tabs.first { it.id == restoredTabId }
+            assertEquals(REMOTE_CANDY_ID, restoredTab.syncCandyId)
+            assertEquals(URL_A, restoredTab.url)
+        }
+
+        // After completion and the reopen snapshot, later remote deletion must work normally.
+        var remoteDeletionApplied = false
+        repeat(POLL_ATTEMPTS) {
+            if (remoteDeletionApplied) return@repeat
+            applyState(syncState(localTab = tab(URL_A)))
+            applyState(syncState())
+            activityRule.scenario.onActivity { _ ->
+                remoteDeletionApplied = requireNotNull(controller).tabs.none {
+                    it.id == restoredTabId
+                }
+            }
+            if (!remoteDeletionApplied) SystemClock.sleep(POLL_MILLIS)
+        }
+        assertTrue(remoteDeletionApplied)
+    }
+
+    @Test
     fun newerRemoteNavigationRejectsSupersededGeckoCommit() {
         createController()
         applyState(syncState(remoteUrl = URL_SUPERSEDED))

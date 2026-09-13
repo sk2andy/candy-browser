@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.data.DownloadRuntimeRegistry
+import dev.sk2andy.materialbrowser.data.DownloadStatus
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.ServerSocket
@@ -279,6 +280,127 @@ class GeckoDownloadTransferInstrumentedTest {
         assertFalse(aborted.get())
         assertNull(failure.get())
         manager.close()
+    }
+
+    @Test
+    fun pausesOriginalResponseBeforeCopyThenResumesWithoutRefetch() {
+        val bodyRead = CountDownLatch(1)
+        val completed = CountDownLatch(1)
+        val started = AtomicReference<GeckoDownloadTransferStart>()
+        val savedBytes = ByteArrayOutputStream()
+        val body = object : ByteArrayInputStream("paused-body".encodeToByteArray()) {
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                bodyRead.countDown()
+                return super.read(buffer, offset, length)
+            }
+        }
+        val entry = object : GeckoDownloadStreamEntry {
+            override val uri = android.net.Uri.parse("content://media/external/downloads/45")
+            override val output = savedBytes
+            override fun commit() = Unit
+            override fun abort() = Unit
+            override fun close() = Unit
+        }
+        val managerRef = AtomicReference<GeckoDownloadTransferManager>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val manager = GeckoDownloadTransferManager(
+                context = context,
+                executor = testExecutor(),
+                sink = object : GeckoDownloadStreamSink {
+                    override fun open(fileName: String, mimeType: String): GeckoDownloadStreamEntry = entry
+                },
+            )
+            managerRef.set(manager)
+            manager.startResponse(
+                owner = GeckoDownloadOwner("test-profile", isPrivate = true, sessionKey = this),
+                response = WebResponse.Builder("https://example.com/paused.bin")
+                    .statusCode(200)
+                    .header("Content-Type", "application/octet-stream")
+                    .body(body)
+                    .build(),
+                referrer = null,
+                listener = object : GeckoDownloadTransferListener {
+                    override fun onStarted(start: GeckoDownloadTransferStart) {
+                        started.set(start)
+                        assertTrue(DownloadRuntimeRegistry.togglePause(-46L))
+                    }
+
+                    override fun onComplete(bytesReceived: Long) {
+                        completed.countDown()
+                    }
+                },
+            )
+        }
+        val manager = requireNotNull(managerRef.get())
+        try {
+            assertNotNull(started.get())
+            assertEquals(DownloadStatus.Paused, DownloadRuntimeRegistry.snapshot().single { it.id == -46L }.status)
+            assertFalse("paused response was read", bodyRead.await(100, TimeUnit.MILLISECONDS))
+            assertTrue(DownloadRuntimeRegistry.togglePause(-46L))
+            assertTrue("resumed transfer did not complete", completed.await(10, TimeUnit.SECONDS))
+            assertArrayEquals("paused-body".encodeToByteArray(), savedBytes.toByteArray())
+        } finally {
+            manager.close()
+        }
+    }
+
+    @Test
+    fun cancelsPausedResponseAndDeletesIncompleteSink() {
+        val failed = CountDownLatch(1)
+        val aborted = AtomicBoolean(false)
+        val failure = AtomicReference<GeckoDownloadFailure>()
+        val entry = object : GeckoDownloadStreamEntry {
+            override val uri = android.net.Uri.parse("content://media/external/downloads/46")
+            override val output = ByteArrayOutputStream()
+            override fun commit() = error("Cancelled transfer must not commit")
+            override fun abort() {
+                aborted.set(true)
+            }
+            override fun close() = abort()
+        }
+        val managerRef = AtomicReference<GeckoDownloadTransferManager>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val manager = GeckoDownloadTransferManager(
+                context = context,
+                executor = testExecutor(),
+                sink = object : GeckoDownloadStreamSink {
+                    override fun open(fileName: String, mimeType: String): GeckoDownloadStreamEntry = entry
+                },
+            )
+            managerRef.set(manager)
+            manager.startResponse(
+                owner = GeckoDownloadOwner("test-profile", isPrivate = false, sessionKey = this),
+                response = WebResponse.Builder("https://example.com/cancel-paused.bin")
+                    .statusCode(200)
+                    .header("Content-Type", "application/octet-stream")
+                    .body(ByteArrayInputStream("cancel".encodeToByteArray()))
+                    .build(),
+                referrer = null,
+                listener = object : GeckoDownloadTransferListener {
+                    override fun onStarted(start: GeckoDownloadTransferStart) {
+                        assertTrue(DownloadRuntimeRegistry.togglePause(-47L))
+                    }
+
+                    override fun onFailed(reason: GeckoDownloadFailure) {
+                        failure.set(reason)
+                        failed.countDown()
+                    }
+                },
+            )
+        }
+        val manager = requireNotNull(managerRef.get())
+        try {
+            assertTrue(DownloadRuntimeRegistry.cancel(-47L))
+            assertTrue("cancel callback missing", failed.await(10, TimeUnit.SECONDS))
+            assertEquals(GeckoDownloadFailure.Cancelled, failure.get())
+            assertTrue(aborted.get())
+            assertFalse(DownloadRuntimeRegistry.togglePause(-47L))
+            val cancelled = DownloadRuntimeRegistry.snapshot().single { it.id == -47L }
+            assertEquals(DownloadStatus.Cancelled, cancelled.status)
+            DownloadRuntimeRegistry.clear(listOf(cancelled.id))
+        } finally {
+            manager.close()
+        }
     }
 
     @Test

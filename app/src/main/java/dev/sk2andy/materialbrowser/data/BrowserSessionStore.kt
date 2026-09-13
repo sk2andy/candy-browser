@@ -782,6 +782,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_AUTOMATIC_TAB_SORTING_ENABLED, enabled).apply()
     }
 
+    fun loadClosedTabUndoEnabled(): Boolean =
+        preferences.getBoolean(KEY_CLOSED_TAB_UNDO_ENABLED, false)
+
+    fun saveClosedTabUndoEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_CLOSED_TAB_UNDO_ENABLED, enabled).apply()
+    }
+
     fun loadAddressBarDocked(): Boolean =
         runCatching { preferences.getBoolean(KEY_ADDRESS_BAR_DOCKED, false) }.getOrDefault(false)
 
@@ -1247,6 +1254,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_TAB_STACK_FOLDER_MODE = "tab_stack_folder_mode"
         const val KEY_TAB_LIST_STARTS_AT_BOTTOM = "tab_list_starts_at_bottom"
         const val KEY_AUTOMATIC_TAB_SORTING_ENABLED = "automatic_tab_sorting_enabled"
+        const val KEY_CLOSED_TAB_UNDO_ENABLED = "closed_tab_undo_enabled"
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"
         const val KEY_ADDRESS_BAR_DOCK_EDGE = "address_bar_dock_edge"
         const val KEY_ADDRESS_BAR_DOCK_VERTICAL_FRACTION =

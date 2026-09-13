@@ -357,7 +357,7 @@ internal fun BoxScope.BrowserAddressChrome(
             onAddressEditorDismiss()
             controller.openFindInPage()
         },
-        onCloseTab = { controller.closeTab(selectedTab.id) },
+        onCloseTab = { controller.closeTabFromUser(selectedTab.id) },
         onToggleIncognito = {
             if (controller.setBlankTabIncognito(enabled = !selectedTab.isIncognito)) {
                 rootView.performConfirmHaptic()

@@ -1,8 +1,21 @@
 package dev.sk2andy.materialbrowser.data
 
+import java.util.concurrent.atomic.AtomicInteger
+
 /** Process-only progress for Gecko rows while MediaStore keeps them hidden as pending. */
 internal object DownloadRuntimeRegistry {
+    private val nextId = AtomicInteger(1)
     private val entries = linkedMapOf<Int, DownloadEntry>()
+    private data class Controls(
+        val cancel: () -> Unit,
+        val pause: (() -> Boolean)?,
+        val resume: (() -> Boolean)?,
+    )
+    private val controls = linkedMapOf<Int, Controls>()
+
+    fun nextTransferId(): Int = nextId.getAndUpdate { value ->
+        if (value == Int.MAX_VALUE) 1 else value + 1
+    }
 
     @Synchronized
     fun started(
@@ -13,6 +26,9 @@ internal object DownloadRuntimeRegistry {
         total: Long,
         startedAt: Long,
         mediaStoreId: Long? = null,
+        cancel: (() -> Unit)? = null,
+        pause: (() -> Boolean)? = null,
+        resume: (() -> Boolean)? = null,
     ) {
         entries[id] = DownloadEntry(
             id = mediaStoreId?.let(DownloadEntryIds::encodeMediaStoreId) ?: encodeRuntimeId(id),
@@ -23,7 +39,10 @@ internal object DownloadRuntimeRegistry {
             total = total,
             lastModified = startedAt,
             mime = mime,
+            supportsPause = pause != null && resume != null,
+            supportsCancel = cancel != null,
         )
+        if (cancel != null) controls[id] = Controls(cancel, pause, resume)
     }
 
     @Synchronized
@@ -39,6 +58,7 @@ internal object DownloadRuntimeRegistry {
     @Synchronized
     fun completed(id: Int) {
         entries.remove(id)
+        controls.remove(id)
     }
 
     @Synchronized
@@ -48,6 +68,36 @@ internal object DownloadRuntimeRegistry {
             status = if (cancelled) DownloadStatus.Cancelled else DownloadStatus.Failed,
             lastModified = updatedAt,
         )
+        controls.remove(id)
+    }
+
+    @Synchronized
+    fun paused(id: Int, paused: Boolean, updatedAt: Long) {
+        val current = entries[id]?.takeIf { it.status.isActive } ?: return
+        entries[id] = current.copy(
+            status = if (paused) DownloadStatus.Paused else DownloadStatus.Running,
+            lastModified = updatedAt,
+        )
+    }
+
+    fun cancel(entryId: Long): Boolean {
+        val control = synchronized(this) {
+            entries.entries.firstOrNull { (_, entry) -> entry.id == entryId && entry.status.isActive }
+                ?.key?.let(controls::get)
+        } ?: return false
+        control.cancel()
+        return true
+    }
+
+    fun togglePause(entryId: Long): Boolean {
+        val action = synchronized(this) {
+            val (id, entry) = entries.entries.firstOrNull { (_, entry) ->
+                entry.id == entryId && entry.status.isActive
+            } ?: return false
+            val control = controls[id] ?: return false
+            if (entry.status == DownloadStatus.Paused) control.resume else control.pause
+        } ?: return false
+        return action()
     }
 
     @Synchronized
@@ -55,6 +105,7 @@ internal object DownloadRuntimeRegistry {
 
     @Synchronized
     fun clear(ids: Collection<Long>) {
+        entries.entries.filter { (_, entry) -> entry.id in ids }.forEach { (id, _) -> controls.remove(id) }
         entries.entries.removeAll { (_, entry) -> entry.id in ids }
     }
 

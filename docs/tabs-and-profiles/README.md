@@ -18,6 +18,7 @@
 | Surface | Tests |
 | --- | --- |
 | Pure tab rules | `data/Tab*Test`, `BrowserTabTest`, `BrowserSessionResidencyRulesTest` |
+| Manual tab-close undo | `ClosedTabUndoRulesTest`, `BrowserControllerClosedTabUndoInstrumentedTest`, `TabSettingsScreenInstrumentedTest` |
 | Profiles and storage assignment | `BrowserProfileRulesTest`, `BrowserTabsControllerTest`, `BrowserSessionControllerTest`, `GeckoProfileStorageRulesTest`, `BrowserControllerProfilesInstrumentedTest`, `ProfileCreationFlowInstrumentedTest` |
 | Profile wallpapers | `ProfileWallpaperRulesTest`, `ProfileWallpaperStoreInstrumentedTest`, `BrowserControllerProfileWallpaperInstrumentedTest`, `ProfileWallpaperEditorContractInstrumentedTest`, `ProfileWallpaperEditorScreenInstrumentedTest` |
 | Previews | `TabPreview*Test`, `TabPreviewRefreshInstrumentedTest` |
