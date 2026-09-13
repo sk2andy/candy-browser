@@ -182,23 +182,25 @@
   `viewport-fit=cover` declaration does not guarantee use of `env(safe-area-inset-top)`.
   The document-start compatibility inset protects normal flow and top-positioned content.
   Top-anchored fixed, sticky, absolute, and focused containers are shifted once into the safe area.
-  A passive animation-frame-bounded scroll check handles newly stuck headers without recomputing
-  established offsets. Owned offsets survive temporary hide/show, but
+  A passive animation-frame-bounded scroll check refreshes only already-owned sticky headers while
+  scrolling; candidate discovery and broader layout recovery wait until scrolling settles. Owned
+  offsets survive temporary hide/show, but
   are cleared when a visible element returns to normal flow. Persistent layout conflicts suspend
   timer retries until a later DOM change or user interaction resumes recovery before switching only
   the top edge into a navigation-scoped native fallback margin. The explicit
   per-site **Force safe area** override still moves every edge into native safe-area margins.
   Fullscreen keeps the renderer edge to edge.
-  GeckoView keeps its default SurfaceView backend so frames reach Android's compositor directly.
+  GeckoView keeps its default SurfaceView backend when no backdrop capture is needed, so frames
+  reach Android's compositor directly. Frosted chrome with non-zero blur and transparency switches
+  the renderer to TextureView for live page capture; turning blur off restores SurfaceView.
   PiP, clipping and tab motion preserve the same browser host, GeckoView, surface, display and
-  session; browser blur is a sibling chrome effect and does not require a TextureView copy. The
-  static status-bar overlay remains outside the renderer and keeps system icons legible.
+  session. The static status-bar overlay remains outside the renderer and keeps system icons legible.
 - Read page-scroll metrics through the engine port. The optional `BrowserScrollBar` observes them
   at up to 60 Hz without replacing the independently rate-limited pill-collapse scroll path and is absent in
   fullscreen/video-only mode. Gecko's device-pixel-scaled document metrics update only the scrollbar;
   they never enter the renderer-coordinate pill-collapse direction reducer.
-- The pill-collapse dispatcher defaults to optimized mode: 60 updates per second, stepping down to
-  30 and then 15 only after sustained slow UI frames measured while scrolling. Developer options
+- The pill-collapse dispatcher defaults to optimized mode: 30 updates per second, stepping down to
+  15 only after sustained slow UI frames measured while scrolling. Developer options
   can instead select fixed 120, 60, 30 or 15 Hz caps. The adaptive tier is session-only and is not persisted.
 - Keep page touch streams and native fling physics in GeckoView. Compose parents must not cancel
   an active page gesture while arbitrating AndroidView input. No Chromium-specific reverse-fling

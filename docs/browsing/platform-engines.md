@@ -96,8 +96,8 @@ Camera and microphone permissions remain separate and continue through Candy's p
   Firefox extension `tabs`, `webNavigation`, CSS injection and script injection scoped to the
   same tab that Candy's shared chrome presents.
 - GeckoView `ScrollDelegate` events feed the pure,
-  tab-scoped address-pill rule through a latest-value dispatcher. Its optimized mode starts at 60
-  browser-chrome updates per second and steps down to 30, then 15, after sustained slow UI frames;
+  tab-scoped address-pill rule through a latest-value dispatcher. Its optimized mode starts at 30
+  browser-chrome updates per second and steps down to 15 after sustained slow UI frames;
   fixed 120, 60, 30 and 15 Hz caps remain available in developer options. Only the selected
   tab's current renderer may update chrome;
   document-generation tags discard a callback queued before navigation, document top expands
@@ -129,6 +129,13 @@ Camera and microphone permissions remain separate and continue through Candy's p
   `TextureView`; this keeps page pixels in Candy's window so `BlurView` can capture them and the
   transparent Android navigation bar can composite page content behind its gesture region. Turning
   backdrop capture off restores `SurfaceView`.
+- Candy's safe-area compatibility script keeps scroll-time work proportional to the small set of
+  sticky elements it already owns. Broad hit-testing, Shadow DOM discovery and layout recovery run
+  after scrolling settles or on an explicit interaction, never once per fling frame. Shadow DOM
+  traversal uses point queries; observers cover open roots encountered on relevant visible paths.
+  System WebView also observes newly attached open roots through a lifecycle-scoped shadow hook;
+  Gecko's isolated content-script world does not hook page-owned prototypes. Neither path scans
+  every descendant in a growing feed.
 - The optional draggable scrollbar reads bounded document metrics from Candy's authenticated,
   top-frame Gecko content bridge; GeckoView's Android view scrollbar metrics describe only the
   compositor host and are not a document-height API. The same overlay writes absolute offsets through

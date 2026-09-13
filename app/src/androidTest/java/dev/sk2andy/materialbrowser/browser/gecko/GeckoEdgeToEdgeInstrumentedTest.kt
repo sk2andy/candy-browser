@@ -26,6 +26,7 @@ import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
+import eightbitlab.com.blurview.BlurTarget
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -152,6 +153,10 @@ class GeckoEdgeToEdgeInstrumentedTest {
                     activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                 )
                 val textureView = requireNotNull(view.findTextureView())
+                assertTrue(
+                    "Frosted GeckoView must provide page pixels to its live blur target",
+                    view.parent is BlurTarget,
+                )
                 assertTrue(
                     "Frosted GeckoView must avoid a separate compositor surface",
                     !view.hasSurfaceView(),

@@ -121,8 +121,8 @@ class WebContentTopInsetScriptTest {
     @Test
     fun `site hide and show transitions retain established fixed offsets`() {
         val refresh = WebContentTopInsetScript.installScript
-            .substringAfter("const refreshOwnedOffsets = (cssPixels) =>")
-            .substringBefore("const isBackdrop")
+            .substringAfter("const refreshOffsetElements = (elements, cssPixels) =>")
+            .substringBefore("const refreshKnownOffsets")
 
         assertTrue(refresh.contains("Keep an established offset"))
         assertTrue(refresh.contains("clearOwnedOffset(element)"))
@@ -157,8 +157,13 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("{ passive: true }"))
         assertTrue(WebContentTopInsetScript.installScript.contains("capture: true"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.position !== 'sticky'"))
+        assertTrue(scrollListener.contains("refreshKnownStickyElements"))
         assertTrue(
-            scrollListener.indexOf("protectStickyTopAnchors") <
+            scrollListener.indexOf("refreshKnownStickyElements") <
+                scrollListener.indexOf("scrollVerificationTimer = globalThis.setTimeout"),
+        )
+        assertTrue(
+            scrollListener.indexOf("protectStickyTopAnchors") >
                 scrollListener.indexOf("scrollVerificationTimer = globalThis.setTimeout"),
         )
     }
@@ -169,9 +174,34 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("element.shadowRoot"))
         assertTrue(WebContentTopInsetScript.installScript.contains("parentElementOrShadowHost"))
         assertTrue(WebContentTopInsetScript.installScript.contains("ownedOffsetElements"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("observeOpenShadowRoots"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("observeOpenShadowRoot"))
         assertTrue(WebContentTopInsetScript.installScript.contains("observedShadowRoots"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("shadowHitTestCache"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("observeDiscoveredShadowRoot"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("attachShadowHook"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("attachShadowHookActive = false"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("restoreAttachShadowHook"))
+        assertFalse(
+            WebContentTopInsetScript.installScript.contains("scope.querySelectorAll?.('*')"),
+        )
+    }
+
+    @Test
+    fun `scroll and feed mutations defer broad layout recovery`() {
+        val scrollListener = WebContentTopInsetScript.installScript
+            .substringAfter("const windowScrollListener = () =>")
+            .substringBefore("const protectInteractionTarget")
+        val mutationObserver = WebContentTopInsetScript.installScript
+            .substringAfter("observer = new MutationObserver((records) =>")
+            .substringBefore("observer.observe(root, observerOptions)")
+
+        assertFalse(scrollListener.substringBefore("scrollVerificationTimer = globalThis.setTimeout")
+            .contains("protectStickyTopAnchors"))
+        assertTrue(scrollListener.contains("refreshKnownStickyElements"))
+        assertTrue(scrollListener.contains("protectStickyTopAnchors"))
+        assertFalse(mutationObserver.contains("scheduleImmediateLayoutCheck"))
+        assertTrue(mutationObserver.contains("refreshKnownOffsets"))
+        assertTrue(mutationObserver.contains("refreshKnownStickyElements"))
+        assertTrue(mutationObserver.contains("scheduleDeferredLayoutCheck(true)"))
     }
 
     @Test

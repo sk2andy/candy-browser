@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewOutlineProvider
@@ -30,6 +31,21 @@ internal object BrowserChromeSurfaceTestTags {
 private data class AndroidCandyChromeBackdropSource(
     val blurTarget: BlurTarget,
 ) : CandyChromeBackdropSource
+
+private class BrowserChromeBlurView(context: Context) : BlurView(context) {
+    private var appliedBlurRadiusPx = Float.NaN
+
+    fun updateAppearance(blurRadiusPx: Float, cornerRadiusPx: Float, overlayColor: Int) {
+        (background as? GradientDrawable)?.let { drawable ->
+            if (drawable.cornerRadius != cornerRadiusPx) drawable.cornerRadius = cornerRadiusPx
+        }
+        if (appliedBlurRadiusPx != blurRadiusPx) {
+            setBlurRadius(blurRadiusPx)
+            appliedBlurRadiusPx = blurRadiusPx
+        }
+        setOverlayColor(overlayColor)
+    }
+}
 
 internal fun BlurTarget?.asCandyChromeBackdropSource(): CandyChromeBackdropSource? =
     this?.let(::AndroidCandyChromeBackdropSource)
@@ -63,7 +79,7 @@ internal object AndroidCandyChromeSurfaceRenderer : CandyChromeSurfaceRenderer {
                     key(blurTarget) {
                         AndroidView(
                             factory = { context ->
-                                BlurView(context).apply {
+                                BrowserChromeBlurView(context).apply {
                                     importantForAccessibility =
                                         View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                                     isClickable = false
@@ -75,16 +91,14 @@ internal object AndroidCandyChromeSurfaceRenderer : CandyChromeSurfaceRenderer {
                                     outlineProvider = ViewOutlineProvider.BACKGROUND
                                     clipToOutline = true
                                     setupWith(blurTarget, 1f, true)
-                                        .setBlurRadius(tokens.blurRadiusPx)
-                                        .setOverlayColor(containerColor.toArgb())
                                 }
                             },
                             update = { blurView ->
-                                (blurView.background as? GradientDrawable)?.cornerRadius =
-                                    blurCornerRadiusPx
-                                blurView
-                                    .setBlurRadius(tokens.blurRadiusPx)
-                                    .setOverlayColor(containerColor.toArgb())
+                                blurView.updateAppearance(
+                                    blurRadiusPx = tokens.blurRadiusPx,
+                                    cornerRadiusPx = blurCornerRadiusPx,
+                                    overlayColor = containerColor.toArgb(),
+                                )
                             },
                             onRelease = { blurView -> blurView.setBlurAutoUpdate(false) },
                             modifier = Modifier

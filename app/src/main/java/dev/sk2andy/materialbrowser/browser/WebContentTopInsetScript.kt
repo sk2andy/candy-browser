@@ -53,8 +53,7 @@ internal object WebContentTopInsetScript {
               let scrollVerificationTimer = 0;
               let scrollVerificationFailures = 0;
               let scrollVerificationPolicyKey = null;
-              let shadowHitTestCache = new WeakMap();
-              let shadowHitTestCacheResetFrame = 0;
+              let observeDiscoveredShadowRoot = () => {};
               const currentPolicyKey = () => {
                 const generation = Number(
                   globalThis.$bridgeName?.navigationGeneration?.(),
@@ -201,21 +200,6 @@ internal object WebContentTopInsetScript {
                 }
                 return false;
               };
-              const cachedShadowElements = (scope) => {
-                const cached = shadowHitTestCache.get(scope);
-                if (cached) return cached;
-                const elements = Array.from(scope.querySelectorAll?.('*') || []).map(
-                  (element) => ({ element, rect: element.getBoundingClientRect() }),
-                );
-                shadowHitTestCache.set(scope, elements);
-                if (!shadowHitTestCacheResetFrame) {
-                  shadowHitTestCacheResetFrame = globalThis.requestAnimationFrame(() => {
-                    shadowHitTestCacheResetFrame = 0;
-                    shadowHitTestCache = new WeakMap();
-                  });
-                }
-                return elements;
-              };
               const deepElementsFromPoint = (x, y) => {
                 const layers = [];
                 const visitedRoots = new Set();
@@ -224,22 +208,15 @@ internal object WebContentTopInsetScript {
                   visitedRoots.add(scope);
                   const hitElements = typeof scope.elementsFromPoint === 'function'
                     ? Array.from(scope.elementsFromPoint(x, y))
-                    : [];
-                  const hasScopedHit = hitElements.some(
-                    (element) => element.getRootNode?.() === scope,
-                  );
-                  const queriedElements = scope === document || hasScopedHit
-                    ? []
-                    : cachedShadowElements(scope).filter(({ rect }) => {
-                      return rect.left <= x && rect.right >= x &&
-                        rect.top <= y && rect.bottom >= y;
-                    }).map(({ element }) => element);
-                  const scopedElements = [...hitElements, ...queriedElements];
-                  layers.push(scopedElements);
-                  const shadowRoot = scopedElements
+                    : typeof scope.elementFromPoint === 'function'
+                      ? [scope.elementFromPoint(x, y)].filter(Boolean)
+                      : [];
+                  layers.push(hitElements);
+                  const shadowRoot = hitElements
                     .map((element) => element.shadowRoot)
                     .find((candidate) => candidate && !visitedRoots.has(candidate));
                   if (!shadowRoot) break;
+                  observeDiscoveredShadowRoot(shadowRoot);
                   scope = shadowRoot;
                 }
                 const elements = [];
@@ -285,11 +262,8 @@ internal object WebContentTopInsetScript {
                 }
                 return absoluteCandidate;
               };
-              const refreshOwnedStickyElements = (cssPixels) => {
-                for (const element of new Set([
-                  ...ownedStickyElements,
-                  ...document.querySelectorAll(stickySelector),
-                ])) {
+              const refreshStickyElements = (elements, cssPixels) => {
+                for (const element of elements) {
                   if (!element.isConnected) {
                     clearOwnedSticky(element);
                     continue;
@@ -308,6 +282,18 @@ internal object WebContentTopInsetScript {
                   }
                   applyStickyTopAnchor(element, originalTop, cssPixels);
                 }
+              };
+              const refreshKnownStickyElements = (cssPixels) => {
+                refreshStickyElements(Array.from(ownedStickyElements), cssPixels);
+              };
+              const refreshOwnedStickyElements = (cssPixels) => {
+                refreshStickyElements(
+                  new Set([
+                    ...ownedStickyElements,
+                    ...document.querySelectorAll(stickySelector),
+                  ]),
+                  cssPixels,
+                );
               };
               const stickyScrollportTop = (element, root) => {
                 for (
@@ -685,12 +671,9 @@ internal object WebContentTopInsetScript {
                   ));
                 });
               };
-              const refreshOwnedOffsets = (cssPixels) => {
+              const refreshOffsetElements = (elements, cssPixels) => {
                 const plans = [];
-                for (const element of new Set([
-                  ...ownedOffsetElements,
-                  ...document.querySelectorAll(offsetSelector),
-                ])) {
+                for (const element of elements) {
                   if (!element.isConnected) {
                     clearOwnedOffset(element);
                     continue;
@@ -713,6 +696,18 @@ internal object WebContentTopInsetScript {
                 }
                 return plans.every(Boolean) &&
                   applyLocalOffsetPlans(plans);
+              };
+              const refreshKnownOffsets = (cssPixels) => {
+                return refreshOffsetElements(Array.from(ownedOffsetElements), cssPixels);
+              };
+              const refreshOwnedOffsets = (cssPixels) => {
+                return refreshOffsetElements(
+                  new Set([
+                    ...ownedOffsetElements,
+                    ...document.querySelectorAll(offsetSelector),
+                  ]),
+                  cssPixels,
+                );
               };
               const isBackdrop = (element, candidates) => {
                 const style = getComputedStyle(element);
@@ -981,13 +976,24 @@ internal object WebContentTopInsetScript {
                   ) || 0;
                   if (!root || physicalPixels <= 0) return;
                   const density = Number(globalThis.devicePixelRatio) || 1;
-                  protectStickyTopAnchors(root, physicalPixels / density, false);
+                  // APZ must keep content-main-thread work bounded while fling frames paint.
+                  // Candidate discovery can force style/layout across large Shadow DOM feeds, so
+                  // only refresh the small set that Candy already owns until scrolling settles.
+                  refreshKnownStickyElements(physicalPixels / density);
                 });
                 scrollVerificationTimer = globalThis.setTimeout(
                   () => {
                     scrollVerificationTimer = 0;
                     scrollLayoutCheckFrame = globalThis.requestAnimationFrame(() => {
                       scrollLayoutCheckFrame = 0;
+                      const root = document.documentElement;
+                      const physicalPixels = Number(
+                        globalThis.$bridgeName?.topInsetPx?.(),
+                      ) || 0;
+                      if (root && physicalPixels > 0) {
+                        const density = Number(globalThis.devicePixelRatio) || 1;
+                        protectStickyTopAnchors(root, physicalPixels / density);
+                      }
                       protectLateTopInset();
                       scrollVerificationTimer = globalThis.setTimeout(
                         verifyLateTopInset,
@@ -1265,6 +1271,7 @@ internal object WebContentTopInsetScript {
                   previousState.dispose();
                 } else {
                   previousState?.observer?.disconnect();
+                  previousState?.restoreAttachShadowHook?.();
                   globalThis.clearTimeout(previousState?.interactionLayoutCheckTimer);
                   previousState?.stabilizationCheckTimers?.forEach(globalThis.clearTimeout);
                   previousState?.interactionEvents?.forEach((eventName) => {
@@ -1301,33 +1308,58 @@ internal object WebContentTopInsetScript {
                 };
                 const observedShadowRoots = new WeakSet();
                 let observer = null;
-                const observeOpenShadowRoots = (scope) => {
-                  const elements = [
-                    ...(scope instanceof Element ? [scope] : []),
-                    ...Array.from(scope.querySelectorAll?.('*') || []),
-                  ];
-                  elements.forEach((element) => {
-                    const shadowRoot = element.shadowRoot;
-                    if (!shadowRoot || observedShadowRoots.has(shadowRoot)) return;
-                    observedShadowRoots.add(shadowRoot);
-                    observer.observe(shadowRoot, observerOptions);
-                    observeOpenShadowRoots(shadowRoot);
-                  });
+                const observeOpenShadowRoot = (shadowRoot) => {
+                  if (!shadowRoot || shadowRoot.mode !== 'open' ||
+                      observedShadowRoots.has(shadowRoot)) return;
+                  observedShadowRoots.add(shadowRoot);
+                  observer.observe(shadowRoot, observerOptions);
                 };
+                observeDiscoveredShadowRoot = observeOpenShadowRoot;
                 observer = new MutationObserver((records) => {
+                  if (!attachShadowHookActive) return;
                   records.forEach((record) => {
                     record.addedNodes?.forEach((node) => {
-                      if (node instanceof Element) observeOpenShadowRoots(node);
+                      if (node instanceof Element) observeOpenShadowRoot(node.shadowRoot);
                     });
                   });
                   if (records.some(isRelevantLayoutMutation)) {
                     resumeLayoutRecovery();
-                    scheduleImmediateLayoutCheck();
+                    const physicalPixels = Number(
+                      globalThis.$bridgeName?.topInsetPx?.(),
+                    ) || 0;
+                    if (physicalPixels > 0) {
+                      const density = Number(globalThis.devicePixelRatio) || 1;
+                      refreshKnownOffsets(physicalPixels / density);
+                      refreshKnownStickyElements(physicalPixels / density);
+                    }
+                    // DOM-heavy feeds mutate class/style and append cards while scrolling.
+                    // Debounce recovery until layout is quiet instead of forcing two layouts in
+                    // the next animation frames. Focus/input paths retain immediate protection.
                     scheduleDeferredLayoutCheck(true);
                   }
                 });
+                const originalAttachShadow = Element.prototype.attachShadow;
+                let attachShadowHookActive = true;
+                const attachShadowHook = function(options) {
+                  const shadowRoot = Reflect.apply(originalAttachShadow, this, [options]);
+                  if (attachShadowHookActive) observeOpenShadowRoot(shadowRoot);
+                  return shadowRoot;
+                };
+                try {
+                  Element.prototype.attachShadow = attachShadowHook;
+                } catch (_error) {
+                  // Point discovery still observes visible open roots when prototypes are locked.
+                }
+                const restoreAttachShadowHook = () => {
+                  attachShadowHookActive = false;
+                  if (Element.prototype.attachShadow !== attachShadowHook) return;
+                  try {
+                    Element.prototype.attachShadow = originalAttachShadow;
+                  } catch (_error) {
+                    // A locked prototype is outside Candy's ownership.
+                  }
+                };
                 observer.observe(root, observerOptions);
-                observeOpenShadowRoots(root);
                 const interactionEvents = [
                   'click',
                   'change',
@@ -1372,6 +1404,7 @@ internal object WebContentTopInsetScript {
                   windowScrollListener,
                   domContentLoadedListener,
                   windowLoadListener,
+                  restoreAttachShadowHook,
                   ownedOffsetElements,
                   ownedTranslateStates,
                   ownedStickyElements,
@@ -1380,15 +1413,14 @@ internal object WebContentTopInsetScript {
                 };
                 runtimeState.dispose = () => {
                   observer.disconnect();
+                  restoreAttachShadowHook();
                   globalThis.clearTimeout(deferredLayoutCheckTimer);
                   deferredLayoutCheckTimer = 0;
                   globalThis.cancelAnimationFrame(immediateLayoutCheckFrame);
                   immediateLayoutCheckFrame = 0;
                   globalThis.cancelAnimationFrame(scrollLayoutCheckFrame);
                   scrollLayoutCheckFrame = 0;
-                  globalThis.cancelAnimationFrame(shadowHitTestCacheResetFrame);
-                  shadowHitTestCacheResetFrame = 0;
-                  shadowHitTestCache = new WeakMap();
+                  observeDiscoveredShadowRoot = () => {};
                   globalThis.clearTimeout(scrollVerificationTimer);
                   scrollVerificationTimer = 0;
                   runtimeState.stabilizationCheckTimers.forEach(globalThis.clearTimeout);

@@ -643,6 +643,60 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
+    fun shadowRootAttachedAfterInstallTriggersTopProtection() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(fallbackReceived, layoutQuietPeriodMillis = 100),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 200vh; }
+                  #app { display: block; width: 100%; height: 64px; margin-top: 200vh; }
+                </style></head><body><div id="app"></div><main>Content</main></body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+        evaluate(
+            view,
+            "globalThis.__siteAttachShadow = Element.prototype.attachShadow; " +
+                "Element.prototype.attachShadow = function(options) { " +
+                "return Reflect.apply(globalThis.__siteAttachShadow, this, [options]); }",
+        )
+        evaluate(view, WebContentTopInsetScript.installScript)
+        evaluate(
+            view,
+            "document.querySelector('#app').attachShadow({ mode: 'open' })",
+        )
+        SystemClock.sleep(SHADOW_HOOK_STABILIZATION_MILLIS)
+        evaluate(
+            view,
+            "document.querySelector('#app').shadowRoot.innerHTML = " +
+                "'<header id=\"shadow-header\" " +
+                "style=\"position:fixed;inset:0 0 auto 0;height:64px;background:white\">" +
+                "Reddit</header>'",
+        )
+
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        val requiredTop = TOP_INSET_PX / density
+        val headerTop = awaitElementTop(
+            view,
+            "document.querySelector('#app').shadowRoot" +
+                ".querySelector('#shadow-header').getBoundingClientRect().top",
+            requiredTop - CSS_PIXEL_TOLERANCE,
+        )
+
+        assertTrue(
+            "Dynamically attached ShadowRoot header remained under status bar: " +
+                "top=$headerTop expected=$requiredTop",
+            headerTop >= requiredTop - CSS_PIXEL_TOLERANCE,
+        )
+        assertFalse(
+            "Dynamically attached ShadowRoot required native fallback",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+    }
+
+    @Test
     fun nestedScrollContainerProtectsHeaderWhenItBecomesSticky() {
         val fallbackReceived = CountDownLatch(1)
         val view = loadPage(
@@ -918,6 +972,7 @@ class WebContentTopInsetScriptInstrumentedTest {
         const val VIEWPORT_HEIGHT_PX = 1_920
         const val STALE_TIMER_WINDOW_MILLIS = 600L
         const val SCROLL_REGRESSION_WINDOW_MILLIS = 600L
+        const val SHADOW_HOOK_STABILIZATION_MILLIS = 5_200L
         const val PAGE_TIMEOUT_SECONDS = 5L
     }
 }

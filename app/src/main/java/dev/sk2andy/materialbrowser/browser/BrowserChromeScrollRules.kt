@@ -113,7 +113,7 @@ internal data class BrowserChromeScrollDispatchRateState(
     val consecutiveLateDispatches: Int = 0,
 ) {
     companion object {
-        const val OPTIMIZED_MAXIMUM_DISPATCHES_PER_SECOND = 60L
+        const val OPTIMIZED_MAXIMUM_DISPATCHES_PER_SECOND = 30L
     }
 }
 
@@ -150,7 +150,7 @@ internal object BrowserChromeScrollDispatchRateRules {
         }
         return state.copy(
             optimizedDispatchesPerSecond = when (state.optimizedDispatchesPerSecond) {
-                60L -> 30L
+                30L -> 15L
                 else -> 15L
             },
             consecutiveLateDispatches = 0,

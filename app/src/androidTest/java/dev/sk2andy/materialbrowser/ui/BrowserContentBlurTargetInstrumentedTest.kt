@@ -12,8 +12,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
@@ -72,12 +75,17 @@ class BrowserContentBlurTargetInstrumentedTest {
     @Test
     fun composeContentProvidesBackdropAndReleasesItWhenDisabled() {
         var enabled by mutableStateOf(true)
+        var sourceColor by mutableStateOf(Color.Red)
+        var blurPercent by mutableStateOf(50)
         val attached = AtomicReference<BlurTarget?>()
         val released = AtomicReference<BlurTarget?>()
 
         composeRule.setContent {
             MaterialBrowserTheme(
-                settings = AppearanceSettings(surfaceStyle = BrowserSurfaceStyle.Frosted),
+                settings = AppearanceSettings(
+                    surfaceStyle = BrowserSurfaceStyle.Frosted,
+                    frostedBlurPercent = blurPercent,
+                ),
             ) {
                 var target by remember { mutableStateOf<BlurTarget?>(null) }
                 Box(Modifier.fillMaxSize()) {
@@ -96,7 +104,7 @@ class BrowserContentBlurTargetInstrumentedTest {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.primary)
+                                .background(sourceColor)
                                 .testTag(SOURCE_TAG),
                         )
                     }
@@ -118,6 +126,21 @@ class BrowserContentBlurTargetInstrumentedTest {
         composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
             .assertIsDisplayed()
         val activeTarget = attached.get()
+        val initialPixels = composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
+            .captureToImage().toPixelMap()
+        val initialColor = initialPixels[initialPixels.width / 2, initialPixels.height * 3 / 4]
+        assertTrue("Live blur must show the red source", initialColor.red > initialColor.blue)
+
+        composeRule.runOnIdle {
+            sourceColor = Color.Blue
+            blurPercent = 85
+        }
+        composeRule.waitForIdle()
+        val updatedPixels = composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
+            .captureToImage().toPixelMap()
+        val updatedColor = updatedPixels[updatedPixels.width / 2, updatedPixels.height * 3 / 4]
+        assertTrue("Live blur must follow the changed blue source", updatedColor.blue > updatedColor.red)
+        assertSame(activeTarget, attached.get())
 
         composeRule.runOnIdle { enabled = false }
         composeRule.onNodeWithTag(SOURCE_TAG).assertIsDisplayed()

@@ -182,33 +182,21 @@ class BrowserChromeScrollRulesTest {
     }
 
     @Test
-    fun `optimized mode steps from 60 to 30 to 15 after sustained lateness`() {
+    fun `optimized mode steps from 30 to 15 after sustained lateness`() {
         var state = BrowserChromeScrollDispatchRateState()
-        val lateAt60Hz = BrowserEngineScrollDispatchTiming(
-            requestedDelayMillis = 17L,
-            latenessMillis = 8L,
+        val lateAt30Hz = BrowserEngineScrollDispatchTiming(
+            requestedDelayMillis = 34L,
+            latenessMillis = 16L,
         )
         repeat(BrowserChromeScrollDispatchRateRules.LATE_DISPATCHES_BEFORE_DOWNGRADE - 1) {
-            state = BrowserChromeScrollDispatchRateRules.recordTiming(state, lateAt60Hz)
+            state = BrowserChromeScrollDispatchRateRules.recordTiming(state, lateAt30Hz)
         }
-        assertEquals(
-            60L,
-            BrowserChromeScrollDispatchRateRules.maximumDispatchesPerSecond(state),
-        )
-
-        state = BrowserChromeScrollDispatchRateRules.recordTiming(state, lateAt60Hz)
         assertEquals(
             30L,
             BrowserChromeScrollDispatchRateRules.maximumDispatchesPerSecond(state),
         )
 
-        val lateAt30Hz = BrowserEngineScrollDispatchTiming(
-            requestedDelayMillis = 34L,
-            latenessMillis = 16L,
-        )
-        repeat(BrowserChromeScrollDispatchRateRules.LATE_DISPATCHES_BEFORE_DOWNGRADE) {
-            state = BrowserChromeScrollDispatchRateRules.recordTiming(state, lateAt30Hz)
-        }
+        state = BrowserChromeScrollDispatchRateRules.recordTiming(state, lateAt30Hz)
         assertEquals(
             15L,
             BrowserChromeScrollDispatchRateRules.maximumDispatchesPerSecond(state),
@@ -219,8 +207,8 @@ class BrowserChromeScrollRulesTest {
     fun `optimized mode requires consecutive missed intervals`() {
         var state = BrowserChromeScrollDispatchRateState()
         val late = BrowserEngineScrollDispatchTiming(
-            requestedDelayMillis = 17L,
-            latenessMillis = 8L,
+            requestedDelayMillis = 34L,
+            latenessMillis = 16L,
         )
         repeat(BrowserChromeScrollDispatchRateRules.LATE_DISPATCHES_BEFORE_DOWNGRADE - 1) {
             state = BrowserChromeScrollDispatchRateRules.recordTiming(state, late)
@@ -230,7 +218,7 @@ class BrowserChromeScrollRulesTest {
             state,
             BrowserEngineScrollDispatchTiming(
                 requestedDelayMillis = 0L,
-                latenessMillis = 7L,
+                latenessMillis = 15L,
             ),
         )
 
@@ -271,12 +259,12 @@ class BrowserChromeScrollRulesTest {
         val controller = BrowserChromeScrollDispatchRateController { selection }
         val late = BrowserEngineScrollDispatchTiming(
             requestedDelayMillis = 0L,
-            latenessMillis = 8L,
+            latenessMillis = 50L,
         )
         repeat(BrowserChromeScrollDispatchRateRules.LATE_DISPATCHES_BEFORE_DOWNGRADE) {
             controller.recordTiming(late)
         }
-        assertEquals(30L, controller.maximumDispatchesPerSecond())
+        assertEquals(15L, controller.maximumDispatchesPerSecond())
 
         selection = BrowserChromeScrollDispatchModeSelection(
             mode = BrowserChromeScrollDispatchMode.Fixed15Hz,
@@ -286,7 +274,7 @@ class BrowserChromeScrollRulesTest {
             mode = BrowserChromeScrollDispatchMode.Optimized,
             revision = 2L,
         )
-        assertEquals(60L, controller.maximumDispatchesPerSecond())
+        assertEquals(30L, controller.maximumDispatchesPerSecond())
     }
 
     @Test
@@ -309,14 +297,6 @@ class BrowserChromeScrollRulesTest {
         )
 
         repeat(BrowserChromeScrollDispatchRateRules.LATE_DISPATCHES_BEFORE_DOWNGRADE + 1) {
-            monitor.onScrollChanged()
-            nowMillis += 25L
-            frameTimeNanos += 25_000_000L
-            scheduledFrames.removeFirst().invoke(frameTimeNanos)
-        }
-        assertEquals(30L, controller.maximumDispatchesPerSecond())
-
-        repeat(BrowserChromeScrollDispatchRateRules.LATE_DISPATCHES_BEFORE_DOWNGRADE) {
             monitor.onScrollChanged()
             nowMillis += 50L
             frameTimeNanos += 50_000_000L
@@ -351,7 +331,7 @@ class BrowserChromeScrollRulesTest {
             scheduledFrames.removeFirst().invoke(frameTimeNanos)
         }
 
-        assertEquals(60L, controller.maximumDispatchesPerSecond())
+        assertEquals(30L, controller.maximumDispatchesPerSecond())
     }
 
     @Test
@@ -373,25 +353,25 @@ class BrowserChromeScrollRulesTest {
             onMonitoringStopped = controller::resetPressure,
         )
 
-        repeat(BrowserChromeScrollDispatchRateRules.LATE_DISPATCHES_BEFORE_DOWNGRADE) {
+        repeat(BrowserChromeScrollDispatchRateRules.LATE_DISPATCHES_BEFORE_DOWNGRADE - 1) {
             monitor.onScrollChanged()
-            nowMillis += 25L
-            frameTimeNanos += 25_000_000L
+            nowMillis += 50L
+            frameTimeNanos += 50_000_000L
             scheduledFrames.removeFirst().invoke(frameTimeNanos)
         }
-        assertEquals(60L, controller.maximumDispatchesPerSecond())
+        assertEquals(30L, controller.maximumDispatchesPerSecond())
 
         nowMillis += 251L
         frameTimeNanos += 251_000_000L
         scheduledFrames.removeFirst().invoke(frameTimeNanos)
         monitor.onScrollChanged()
         repeat(2) {
-            nowMillis += 25L
-            frameTimeNanos += 25_000_000L
+            nowMillis += 50L
+            frameTimeNanos += 50_000_000L
             scheduledFrames.removeFirst().invoke(frameTimeNanos)
         }
 
-        assertEquals(60L, controller.maximumDispatchesPerSecond())
+        assertEquals(30L, controller.maximumDispatchesPerSecond())
     }
 
     @Test
