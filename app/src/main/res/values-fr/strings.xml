@@ -215,6 +215,7 @@
     <string name="update_available_title">Mise à jour disponible</string>
     <string name="update_available_message">Candy Browser %1$s est disponible. Télécharger l’APK signé depuis GitHub ? Une fois le téléchargement terminé, ouvrez-le pour qu’Android vérifie et installe la mise à jour.</string>
     <string name="action_download_update">Télécharger la mise à jour</string>
+    <string name="action_view_release_notes">Notes de version</string>
     <string name="action_later">Plus tard</string>
 
     <!-- Commandes d’adresse -->

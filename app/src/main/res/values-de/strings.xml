@@ -212,6 +212,7 @@
     <string name="update_available_title">Update verfügbar</string>
     <string name="update_available_message">Candy Browser %1$s ist verfügbar. Signierte APK von GitHub herunterladen? Öffne sie nach dem Download, damit Android das Update prüfen und installieren kann.</string>
     <string name="action_download_update">Update herunterladen</string>
+    <string name="action_view_release_notes">Release Notes</string>
     <string name="action_later">Später</string>
 
     <!-- Adress-Commands -->

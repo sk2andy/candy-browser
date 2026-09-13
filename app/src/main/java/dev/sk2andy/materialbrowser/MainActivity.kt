@@ -645,6 +645,9 @@ class MainActivity : AppCompatActivity() {
                         !releaseNotesVisible &&
                         !splashVisible &&
                         !videoOnlyPresentation,
+                    onOpenReleaseNotes = { url ->
+                        browserController.openUrl(url, inNewTab = true)
+                    },
                 )
                 if (appDataExportWarningVisible) {
                     AppDataExportWarningDialog(

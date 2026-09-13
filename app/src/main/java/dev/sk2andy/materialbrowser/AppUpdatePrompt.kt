@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser
 
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -25,6 +26,7 @@ import dev.sk2andy.materialbrowser.update.GitHubAppUpdateChecker
 internal fun AppUpdatePrompt(
     context: Context,
     visible: Boolean,
+    onOpenReleaseNotes: (String) -> Boolean,
 ) {
     var updateCheckCompleted by rememberSaveable { mutableStateOf(false) }
     var availableUpdateVersion by rememberSaveable { mutableStateOf<String?>(null) }
@@ -61,6 +63,9 @@ internal fun AppUpdatePrompt(
         AppUpdateDialog(
             update = availableUpdate,
             onDismiss = { dismissed = true },
+            onOpenReleaseNotes = {
+                if (onOpenReleaseNotes(availableUpdate.releaseNotesUrl)) dismissed = true
+            },
             onDownload = {
                 val result = downloadManager.enqueue(
                     BrowserDownloadRequest(
@@ -91,21 +96,27 @@ internal fun AppUpdatePrompt(
 }
 
 @Composable
-private fun AppUpdateDialog(
+internal fun AppUpdateDialog(
     update: AvailableAppUpdate,
     onDismiss: () -> Unit,
     onDownload: () -> Unit,
+    onOpenReleaseNotes: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.update_available_title)) },
         text = {
-            Text(
-                stringResource(
-                    R.string.update_available_message,
-                    update.versionName,
-                ),
-            )
+            Column {
+                Text(
+                    stringResource(
+                        R.string.update_available_message,
+                        update.versionName,
+                    ),
+                )
+                TextButton(onClick = onOpenReleaseNotes) {
+                    Text(stringResource(R.string.action_view_release_notes))
+                }
+            }
         },
         confirmButton = {
             Button(onClick = onDownload) {

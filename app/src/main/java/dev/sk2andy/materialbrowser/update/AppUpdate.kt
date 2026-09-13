@@ -7,6 +7,9 @@ data class AvailableAppUpdate(
     val downloadUrl: String,
     val fileName: String,
 ) {
+    val releaseNotesUrl: String
+        get() = "https://github.com/sk2andy/candy-browser/releases/tag/v$versionName"
+
     companion object {
         const val APK_MIME_TYPE = "application/vnd.android.package-archive"
     }
