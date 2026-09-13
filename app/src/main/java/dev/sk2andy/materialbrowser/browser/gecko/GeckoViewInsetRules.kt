@@ -27,6 +27,7 @@ internal object GeckoViewInsetRules {
         forceNativeTopSafeArea: Boolean,
         isFullscreenContent: Boolean,
         isInsideSafeDrawingHost: Boolean,
+        useNativeCssSafeArea: Boolean = true,
     ): GeckoViewInsetLayout = if (isInsideSafeDrawingHost) {
         GeckoViewInsetLayout(
             margins = GeckoViewInsets.Zero,
@@ -61,8 +62,12 @@ internal object GeckoViewInsetRules {
         } else {
             GeckoViewInsetLayout(
                 margins = GeckoViewInsets.Zero,
-                rendererSafeAreaOverride = normalizedSafeArea.copy(top = 0),
-                scrollableTopInsetPx = normalizedSafeArea.top,
+                rendererSafeAreaOverride = if (useNativeCssSafeArea) {
+                    normalizedSafeArea
+                } else {
+                    normalizedSafeArea.copy(top = 0)
+                },
+                scrollableTopInsetPx = if (useNativeCssSafeArea) 0 else normalizedSafeArea.top,
             )
         }
     }

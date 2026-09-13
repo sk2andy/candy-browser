@@ -993,6 +993,46 @@ class BrowserSessionStore internal constructor(
             KEY_DEVELOPER_FORCE_SAFE_AREA_FALLBACK,
             false,
         ),
+        geckoSafeAreaSettings = GeckoSafeAreaSettings(
+            enabled = loadBoolean(KEY_GECKO_SAFE_AREA_ENABLED, true),
+            recheckAddedElements = loadBoolean(KEY_GECKO_SAFE_AREA_RECHECK_ADDED_ELEMENTS, true),
+            recheckChangedElements = loadBoolean(KEY_GECKO_SAFE_AREA_RECHECK_CHANGED_ELEMENTS, true),
+            requireInteractionForUpdates = loadBoolean(
+                KEY_GECKO_SAFE_AREA_REQUIRE_INTERACTION_FOR_UPDATES,
+                true,
+            ),
+            recheckOnResize = loadBoolean(KEY_GECKO_SAFE_AREA_RECHECK_ON_RESIZE, true),
+            interactionWindowMillis = loadBoundedInt(
+                key = KEY_GECKO_SAFE_AREA_INTERACTION_WINDOW_MILLIS,
+                defaultValue = GeckoSafeAreaSettings.DEFAULT_INTERACTION_WINDOW_MILLIS,
+                range = GeckoSafeAreaSettings.MIN_INTERACTION_WINDOW_MILLIS..
+                    GeckoSafeAreaSettings.MAX_INTERACTION_WINDOW_MILLIS,
+            ),
+            mutationDebounceMillis = loadBoundedInt(
+                key = KEY_GECKO_SAFE_AREA_MUTATION_DEBOUNCE_MILLIS,
+                defaultValue = GeckoSafeAreaSettings.DEFAULT_MUTATION_DEBOUNCE_MILLIS,
+                range = GeckoSafeAreaSettings.MIN_MUTATION_DEBOUNCE_MILLIS..
+                    GeckoSafeAreaSettings.MAX_MUTATION_DEBOUNCE_MILLIS,
+            ),
+            maxElementsPerBatch = loadBoundedInt(
+                key = KEY_GECKO_SAFE_AREA_MAX_ELEMENTS_PER_BATCH,
+                defaultValue = GeckoSafeAreaSettings.DEFAULT_MAX_ELEMENTS_PER_BATCH,
+                range = GeckoSafeAreaSettings.MIN_MAX_ELEMENTS_PER_BATCH..
+                    GeckoSafeAreaSettings.MAX_MAX_ELEMENTS_PER_BATCH,
+            ),
+            maxBatchDurationMillis = loadBoundedInt(
+                key = KEY_GECKO_SAFE_AREA_MAX_BATCH_DURATION_MILLIS,
+                defaultValue = GeckoSafeAreaSettings.DEFAULT_MAX_BATCH_DURATION_MILLIS,
+                range = GeckoSafeAreaSettings.MIN_MAX_BATCH_DURATION_MILLIS..
+                    GeckoSafeAreaSettings.MAX_MAX_BATCH_DURATION_MILLIS,
+            ),
+            maxInitialElements = loadBoundedInt(
+                key = KEY_GECKO_SAFE_AREA_MAX_INITIAL_ELEMENTS,
+                defaultValue = GeckoSafeAreaSettings.DEFAULT_MAX_INITIAL_ELEMENTS,
+                range = GeckoSafeAreaSettings.MIN_MAX_INITIAL_ELEMENTS..
+                    GeckoSafeAreaSettings.MAX_MAX_INITIAL_ELEMENTS,
+            ),
+        ),
     ).normalized()
 
     fun saveDeveloperSettings(settings: DeveloperSettings) {
@@ -1013,6 +1053,43 @@ class BrowserSessionStore internal constructor(
             .putBoolean(
                 KEY_DEVELOPER_FORCE_SAFE_AREA_FALLBACK,
                 normalized.forceSafeAreaFallback,
+            )
+            .putBoolean(KEY_GECKO_SAFE_AREA_ENABLED, normalized.geckoSafeAreaSettings.enabled)
+            .putBoolean(
+                KEY_GECKO_SAFE_AREA_RECHECK_ADDED_ELEMENTS,
+                normalized.geckoSafeAreaSettings.recheckAddedElements,
+            )
+            .putBoolean(
+                KEY_GECKO_SAFE_AREA_RECHECK_CHANGED_ELEMENTS,
+                normalized.geckoSafeAreaSettings.recheckChangedElements,
+            )
+            .putBoolean(
+                KEY_GECKO_SAFE_AREA_REQUIRE_INTERACTION_FOR_UPDATES,
+                normalized.geckoSafeAreaSettings.requireInteractionForUpdates,
+            )
+            .putBoolean(
+                KEY_GECKO_SAFE_AREA_RECHECK_ON_RESIZE,
+                normalized.geckoSafeAreaSettings.recheckOnResize,
+            )
+            .putInt(
+                KEY_GECKO_SAFE_AREA_INTERACTION_WINDOW_MILLIS,
+                normalized.geckoSafeAreaSettings.interactionWindowMillis,
+            )
+            .putInt(
+                KEY_GECKO_SAFE_AREA_MUTATION_DEBOUNCE_MILLIS,
+                normalized.geckoSafeAreaSettings.mutationDebounceMillis,
+            )
+            .putInt(
+                KEY_GECKO_SAFE_AREA_MAX_ELEMENTS_PER_BATCH,
+                normalized.geckoSafeAreaSettings.maxElementsPerBatch,
+            )
+            .putInt(
+                KEY_GECKO_SAFE_AREA_MAX_BATCH_DURATION_MILLIS,
+                normalized.geckoSafeAreaSettings.maxBatchDurationMillis,
+            )
+            .putInt(
+                KEY_GECKO_SAFE_AREA_MAX_INITIAL_ELEMENTS,
+                normalized.geckoSafeAreaSettings.maxInitialElements,
             )
             .apply()
     }
@@ -1105,6 +1182,9 @@ class BrowserSessionStore internal constructor(
             .putInt(KEY_FROSTED_BLUR_PERCENT, normalized.frostedBlurPercent)
             .apply()
     }
+
+    private fun loadBoolean(key: String, defaultValue: Boolean): Boolean =
+        runCatching { preferences.getBoolean(key, defaultValue) }.getOrDefault(defaultValue)
 
     private fun loadBoundedInt(
         key: String,
@@ -1282,6 +1362,21 @@ class BrowserSessionStore internal constructor(
             "developer_safe_area_required_failure_count"
         const val KEY_DEVELOPER_FORCE_SAFE_AREA_FALLBACK =
             "developer_force_safe_area_fallback"
+        const val KEY_GECKO_SAFE_AREA_ENABLED = "gecko_safe_area_enabled"
+        const val KEY_GECKO_SAFE_AREA_RECHECK_ADDED_ELEMENTS = "gecko_safe_area_recheck_added_elements"
+        const val KEY_GECKO_SAFE_AREA_RECHECK_CHANGED_ELEMENTS =
+            "gecko_safe_area_recheck_changed_elements"
+        const val KEY_GECKO_SAFE_AREA_REQUIRE_INTERACTION_FOR_UPDATES =
+            "gecko_safe_area_require_interaction_for_updates"
+        const val KEY_GECKO_SAFE_AREA_RECHECK_ON_RESIZE = "gecko_safe_area_recheck_on_resize"
+        const val KEY_GECKO_SAFE_AREA_INTERACTION_WINDOW_MILLIS =
+            "gecko_safe_area_interaction_window_millis"
+        const val KEY_GECKO_SAFE_AREA_MUTATION_DEBOUNCE_MILLIS =
+            "gecko_safe_area_mutation_debounce_millis"
+        const val KEY_GECKO_SAFE_AREA_MAX_ELEMENTS_PER_BATCH = "gecko_safe_area_max_elements_per_batch"
+        const val KEY_GECKO_SAFE_AREA_MAX_BATCH_DURATION_MILLIS =
+            "gecko_safe_area_max_batch_duration_millis"
+        const val KEY_GECKO_SAFE_AREA_MAX_INITIAL_ELEMENTS = "gecko_safe_area_max_initial_elements"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_WEBRTC_PROTECTION_MODE = "webrtc_protection_mode"
         const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"

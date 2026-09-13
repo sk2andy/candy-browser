@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
+import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
@@ -43,6 +44,17 @@ internal object DeveloperOptionsTestTags {
     const val ShowOnboarding = "developer_options_show_onboarding"
     const val ShowReleaseNotes = "developer_options_show_release_notes"
     const val Reset = "developer_options_reset"
+    const val GeckoSafeAreaEnabled = "developer_options_gecko_safe_area_enabled"
+    const val GeckoRecheckAddedElements = "developer_options_gecko_recheck_added_elements"
+    const val GeckoRecheckChangedElements = "developer_options_gecko_recheck_changed_elements"
+    const val GeckoRequireInteraction = "developer_options_gecko_require_interaction"
+    const val GeckoRecheckOnResize = "developer_options_gecko_recheck_on_resize"
+    const val GeckoInteractionWindow = "developer_options_gecko_interaction_window"
+    const val GeckoMutationDebounce = "developer_options_gecko_mutation_debounce"
+    const val GeckoMaxElementsPerBatch = "developer_options_gecko_max_elements_per_batch"
+    const val GeckoMaxBatchDuration = "developer_options_gecko_max_batch_duration"
+    const val GeckoMaxInitialElements = "developer_options_gecko_max_initial_elements"
+    const val GeckoReset = "developer_options_gecko_reset"
 }
 
 @Composable
@@ -231,6 +243,13 @@ internal fun DeveloperOptionsSettingsPage(
         ) {
             Text(stringResource(R.string.developer_options_reset_safe_area))
         }
+        Spacer(Modifier.height(18.dp))
+        GeckoSafeAreaSettingsSection(
+            settings = settings.geckoSafeAreaSettings,
+            onSettingsChanged = { geckoSettings ->
+                onSettingsChanged(settings.copy(geckoSafeAreaSettings = geckoSettings.normalized()))
+            },
+        )
     }
     if (httpAutofillConfirmationVisible) {
         AlertDialog(
@@ -253,6 +272,154 @@ internal fun DeveloperOptionsSettingsPage(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun GeckoSafeAreaSettingsSection(
+    settings: GeckoSafeAreaSettings,
+    onSettingsChanged: (GeckoSafeAreaSettings) -> Unit,
+) {
+    Column {
+        SettingsSectionTitle(stringResource(R.string.developer_options_gecko_safe_area_section))
+        Text(
+            text = stringResource(R.string.developer_options_gecko_safe_area_summary),
+            modifier = Modifier.padding(top = 6.dp, bottom = 12.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SettingsSwitch(
+            title = stringResource(R.string.developer_options_gecko_safe_area_enabled),
+            subtitle = stringResource(R.string.developer_options_gecko_safe_area_enabled_summary),
+            checked = settings.enabled,
+            onCheckedChange = { onSettingsChanged(settings.copy(enabled = it)) },
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoSafeAreaEnabled),
+        )
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.developer_options_gecko_recheck_added_elements),
+            subtitle = stringResource(R.string.developer_options_gecko_recheck_added_elements_summary),
+            checked = settings.recheckAddedElements,
+            enabled = settings.enabled,
+            onCheckedChange = { onSettingsChanged(settings.copy(recheckAddedElements = it)) },
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckAddedElements),
+        )
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.developer_options_gecko_recheck_changed_elements),
+            subtitle = stringResource(R.string.developer_options_gecko_recheck_changed_elements_summary),
+            checked = settings.recheckChangedElements,
+            enabled = settings.enabled,
+            onCheckedChange = { onSettingsChanged(settings.copy(recheckChangedElements = it)) },
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckChangedElements),
+        )
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.developer_options_gecko_require_interaction),
+            subtitle = stringResource(R.string.developer_options_gecko_require_interaction_summary),
+            checked = settings.requireInteractionForUpdates,
+            enabled = settings.enabled,
+            onCheckedChange = { onSettingsChanged(settings.copy(requireInteractionForUpdates = it)) },
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRequireInteraction),
+        )
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.developer_options_gecko_recheck_on_resize),
+            subtitle = stringResource(R.string.developer_options_gecko_recheck_on_resize_summary),
+            checked = settings.recheckOnResize,
+            enabled = settings.enabled,
+            onCheckedChange = { onSettingsChanged(settings.copy(recheckOnResize = it)) },
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckOnResize),
+        )
+        SettingsPageSpacer()
+        DeveloperSettingsSlider(
+            title = stringResource(R.string.developer_options_gecko_interaction_window),
+            summary = stringResource(R.string.developer_options_gecko_interaction_window_summary),
+            valueLabel = stringResource(
+                R.string.developer_options_milliseconds_value,
+                settings.interactionWindowMillis,
+            ),
+            value = settings.interactionWindowMillis,
+            range = GeckoSafeAreaSettings.MIN_INTERACTION_WINDOW_MILLIS..
+                GeckoSafeAreaSettings.MAX_INTERACTION_WINDOW_MILLIS,
+            step = GeckoSafeAreaSettings.INTERACTION_WINDOW_STEP_MILLIS,
+            testTag = DeveloperOptionsTestTags.GeckoInteractionWindow,
+            enabled = settings.enabled,
+            onValueChanged = { onSettingsChanged(settings.copy(interactionWindowMillis = it)) },
+        )
+        SettingsPageSpacer()
+        DeveloperSettingsSlider(
+            title = stringResource(R.string.developer_options_gecko_mutation_debounce),
+            summary = stringResource(R.string.developer_options_gecko_mutation_debounce_summary),
+            valueLabel = stringResource(
+                R.string.developer_options_milliseconds_value,
+                settings.mutationDebounceMillis,
+            ),
+            value = settings.mutationDebounceMillis,
+            range = GeckoSafeAreaSettings.MIN_MUTATION_DEBOUNCE_MILLIS..
+                GeckoSafeAreaSettings.MAX_MUTATION_DEBOUNCE_MILLIS,
+            step = GeckoSafeAreaSettings.MUTATION_DEBOUNCE_STEP_MILLIS,
+            testTag = DeveloperOptionsTestTags.GeckoMutationDebounce,
+            enabled = settings.enabled,
+            onValueChanged = { onSettingsChanged(settings.copy(mutationDebounceMillis = it)) },
+        )
+        SettingsPageSpacer()
+        DeveloperSettingsSlider(
+            title = stringResource(R.string.developer_options_gecko_max_elements_per_batch),
+            summary = stringResource(R.string.developer_options_gecko_max_elements_per_batch_summary),
+            valueLabel = pluralStringResource(
+                R.plurals.developer_options_gecko_elements_value,
+                settings.maxElementsPerBatch,
+                settings.maxElementsPerBatch,
+            ),
+            value = settings.maxElementsPerBatch,
+            range = GeckoSafeAreaSettings.MIN_MAX_ELEMENTS_PER_BATCH..
+                GeckoSafeAreaSettings.MAX_MAX_ELEMENTS_PER_BATCH,
+            step = GeckoSafeAreaSettings.MAX_ELEMENTS_PER_BATCH_STEP,
+            testTag = DeveloperOptionsTestTags.GeckoMaxElementsPerBatch,
+            enabled = settings.enabled,
+            onValueChanged = { onSettingsChanged(settings.copy(maxElementsPerBatch = it)) },
+        )
+        SettingsPageSpacer()
+        DeveloperSettingsSlider(
+            title = stringResource(R.string.developer_options_gecko_max_batch_duration),
+            summary = stringResource(R.string.developer_options_gecko_max_batch_duration_summary),
+            valueLabel = stringResource(
+                R.string.developer_options_milliseconds_value,
+                settings.maxBatchDurationMillis,
+            ),
+            value = settings.maxBatchDurationMillis,
+            range = GeckoSafeAreaSettings.MIN_MAX_BATCH_DURATION_MILLIS..
+                GeckoSafeAreaSettings.MAX_MAX_BATCH_DURATION_MILLIS,
+            step = GeckoSafeAreaSettings.MAX_BATCH_DURATION_STEP_MILLIS,
+            testTag = DeveloperOptionsTestTags.GeckoMaxBatchDuration,
+            enabled = settings.enabled,
+            onValueChanged = { onSettingsChanged(settings.copy(maxBatchDurationMillis = it)) },
+        )
+        SettingsPageSpacer()
+        DeveloperSettingsSlider(
+            title = stringResource(R.string.developer_options_gecko_max_initial_elements),
+            summary = stringResource(R.string.developer_options_gecko_max_initial_elements_summary),
+            valueLabel = pluralStringResource(
+                R.plurals.developer_options_gecko_elements_value,
+                settings.maxInitialElements,
+                settings.maxInitialElements,
+            ),
+            value = settings.maxInitialElements,
+            range = GeckoSafeAreaSettings.MIN_MAX_INITIAL_ELEMENTS..
+                GeckoSafeAreaSettings.MAX_MAX_INITIAL_ELEMENTS,
+            step = GeckoSafeAreaSettings.MAX_INITIAL_ELEMENTS_STEP,
+            testTag = DeveloperOptionsTestTags.GeckoMaxInitialElements,
+            enabled = settings.enabled,
+            onValueChanged = { onSettingsChanged(settings.copy(maxInitialElements = it)) },
+        )
+        TextButton(
+            onClick = { onSettingsChanged(settings.withDefaults()) },
+            enabled = !settings.hasDefaultSettings,
+            modifier = Modifier.align(Alignment.End).testTag(DeveloperOptionsTestTags.GeckoReset),
+        ) {
+            Text(stringResource(R.string.developer_options_gecko_reset))
+        }
     }
 }
 
@@ -320,6 +487,7 @@ private fun DeveloperSettingsSlider(
     range: IntRange,
     step: Int,
     testTag: String,
+    enabled: Boolean = true,
     onValueChanged: (Int) -> Unit,
 ) {
     Surface(
@@ -346,6 +514,7 @@ private fun DeveloperSettingsSlider(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Slider(
+                enabled = enabled,
                 value = value.toFloat(),
                 onValueChange = { candidate ->
                     val snapped = range.first +

@@ -119,7 +119,19 @@ class GeckoEdgeToEdgeInstrumentedTest {
 
     @Test
     fun frostedGeckoSwitchesToCaptureCompatibleTextureViewAcrossNavigationBar() {
-        EdgeToEdgeSiteFixtureServer().use { server ->
+        val fixtureTitle = "Gecko backdrop fixture"
+        EdgeToEdgeSiteFixtureServer {
+            """
+                <!doctype html>
+                <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+                <title>$fixtureTitle</title>
+                <style>
+                  html, body { margin: 0; min-height: 2000px; background: #336699; }
+                  body { padding-top: env(safe-area-inset-top); }
+                </style>
+                <main>Backdrop capture</main>
+            """.trimIndent()
+        }.use { server ->
             val tab = BrowserTab(
                 id = "gecko-frosted-edge-to-edge-fixture",
                 lastAccessedAt = System.currentTimeMillis(),
@@ -133,7 +145,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
                 awaitViewReady(scenario)
                 awaitSelectedTabTitle(
                     scenario,
-                    EdgeToEdgeSiteMatrix.readyTitle(EdgeToEdgeSiteMatrix.allSites.first()),
+                    fixtureTitle,
                 )
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()

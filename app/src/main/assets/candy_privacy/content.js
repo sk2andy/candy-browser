@@ -410,5 +410,11 @@ browser.runtime.onMessage.addListener((message) => {
   if (self === top && message.type === "reader-extract") {
     return Promise.resolve(extractCandyReaderPayload());
   }
+  if (self === top && message.type === "dom-probe" &&
+      globalThis.CandyContentTopInset?.domDiagnosticsEnabled?.() === true &&
+      globalThis.CandyContentTopInset.policyRevision() === message.revision &&
+      globalThis.CandyContentTopInset.navigationGeneration() === message.navigationGeneration) {
+    return Promise.resolve(globalThis.CandyDomProbe.sample());
+  }
   return undefined;
 });

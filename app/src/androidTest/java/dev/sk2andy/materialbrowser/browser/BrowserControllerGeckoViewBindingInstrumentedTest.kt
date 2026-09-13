@@ -24,11 +24,14 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
+import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
+import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +43,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     private var controller: BrowserController? = null
+    private var originalEngineKind: AndroidBrowserEngineKind? = null
 
     @Test
     fun developerSafeAreaFallbackForcesNativePreviewInset() {
@@ -68,7 +72,15 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     @After
     fun tearDown() {
-        composeRule.runOnIdle { controller?.destroy() }
+        composeRule.runOnIdle {
+            try {
+                controller?.destroy()
+            } finally {
+                originalEngineKind?.let { kind ->
+                    assertTrue(BrowserSessionStore(composeRule.activity).saveAndroidBrowserEngineKind(kind))
+                }
+            }
+        }
     }
 
     @Test
@@ -301,7 +313,11 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     @Test
     fun safeAreaFallbackUpdatesPolicyWithoutReloadingCurrentNavigation() {
         composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
             val browserController = BrowserController(composeRule.activity)
+            assertTrue(browserController.usesGeckoEngine)
             controller = browserController
             val tabId = browserController.selectedTabId
             val session = ReentrantAttachSession(
@@ -309,6 +325,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 onFirstAttach = {},
             )
             browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateDeveloperSettings(DeveloperSettings())
             browserController.onWindowInsetsChanged(
                 WindowInsetsCompat.Builder()
                     .setInsets(
@@ -328,6 +345,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     failureDescription = null,
                 ),
             )
+            assertEquals(0, session.privacyPolicies.last().topInsetPx)
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
             session.commands.clear()
             session.privacyPolicies.clear()
 
@@ -349,6 +368,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             )
             assertEquals(1, session.privacyPolicies.size)
             assertEquals(0, session.privacyPolicies.single().topInsetPx)
+            assertEquals(0, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
 
             browserController.dispatchSelectedGeckoPrivacyEventForTesting(
                 GeckoPrivacyEvent(
@@ -368,6 +388,10 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 DeveloperSettings(
                     safeAreaLayoutQuietPeriodMillis = 250,
                     safeAreaRequiredFailureCount = 4,
+                    geckoSafeAreaSettings = GeckoSafeAreaSettings(
+                        recheckChangedElements = false,
+                        mutationDebounceMillis = 250,
+                    ),
                 ),
             )
             assertEquals(
@@ -381,6 +405,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 session.privacyPolicies.single().safeAreaLayoutQuietPeriodMillis,
             )
             assertEquals(4, session.privacyPolicies.single().safeAreaRequiredFailureCount)
+            assertEquals(250, session.privacyPolicies.single().geckoSafeAreaSettings.mutationDebounceMillis)
+            assertEquals(false, session.privacyPolicies.single().geckoSafeAreaSettings.recheckChangedElements)
             session.privacyPolicies.clear()
 
             browserController.dispatchGeckoEngineEventForTesting(
@@ -394,7 +420,10 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     failureDescription = null,
                 ),
             )
-            assertEquals(96, session.privacyPolicies.last().topInsetPx)
+            assertEquals(0, session.privacyPolicies.last().topInsetPx)
+            assertEquals(2, session.privacyPolicies.size)
+            assertEquals(0, session.privacyPolicies.first().cssSafeAreaTopInsetPx)
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
             session.privacyPolicies.clear()
             browserController.dispatchSelectedGeckoPrivacyEventForTesting(
                 GeckoPrivacyEvent(
@@ -408,6 +437,72 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 ),
             )
             assertEquals(emptyList<GeckoPrivacyPolicy>(), session.privacyPolicies)
+        }
+    }
+
+    @Test
+    fun staleFallbackRestorationCannotClearNewerNavigationFallback() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateDeveloperSettings(DeveloperSettings())
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
+                    .build(),
+            )
+            fun navigate(path: String) {
+                browserController.dispatchGeckoEngineEventForTesting(
+                    BrowserEngineEvent(
+                        tabId = tabId,
+                        type = BrowserEngineEventType.NavigationStarted,
+                        address = "https://www.google.com/$path",
+                        title = null,
+                        canGoBack = false,
+                        canGoForward = false,
+                        failureDescription = null,
+                    ),
+                )
+            }
+            fun fallback(generation: Int) {
+                browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                    GeckoPrivacyEvent(
+                        requestUrl = "",
+                        pageUrl = "https://www.google.com/",
+                        ruleId = null,
+                        wasBlocked = false,
+                        isBuiltIn = false,
+                        isCompatibilityObservation = false,
+                        safeAreaFallbackNavigationGeneration = generation,
+                    ),
+                )
+            }
+
+            navigate("first")
+            fallback(1)
+            session.deferPolicyReadyCallbacks = true
+            navigate("second")
+            val obsoleteReady = session.policyReadyCallbacks.single()
+            navigate("third")
+            session.privacyPolicies.clear()
+            obsoleteReady()
+            assertTrue(session.privacyPolicies.isEmpty())
+
+            session.policyReadyCallbacks.last()()
+            assertEquals(96, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+            session.deferPolicyReadyCallbacks = false
+            session.privacyPolicies.clear()
+            fallback(3)
+            assertEquals(0, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+            session.privacyPolicies.clear()
+            obsoleteReady()
+            assertTrue(session.privacyPolicies.isEmpty())
         }
     }
 
@@ -540,6 +635,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     ) : AndroidBrowserEngineSessionPort {
         val commands = mutableListOf<BrowserEngineCommand>()
         val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
+        var deferPolicyReadyCallbacks = false
+        val policyReadyCallbacks = mutableListOf<() -> Unit>()
         val backdropCaptureRequirements = mutableListOf<Boolean>()
         var createCount = 0
             private set
@@ -637,7 +734,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             onReady: () -> Unit,
         ) {
             privacyPolicies += policy
-            onReady()
+            if (deferPolicyReadyCallbacks) policyReadyCallbacks += onReady else onReady()
         }
     }
 }

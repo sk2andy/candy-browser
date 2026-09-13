@@ -58,6 +58,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.json.JSONObject
 import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.Autocomplete
 import org.mozilla.geckoview.CandyGeckoViewSafeAreaBridge
@@ -924,6 +925,7 @@ private class GeckoViewBrowserSession(
     init {
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
             GeckoPerformanceDiagnostics.registerSession(session, isPrivate)
+            GeckoDomDiagnostics.registerSession(session, isPrivate)
         }
         session.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onFirstComposite(session: GeckoSession) {
@@ -1013,6 +1015,7 @@ private class GeckoViewBrowserSession(
                 uri: String?,
                 error: WebRequestError,
             ): GeckoResult<String>? {
+                invalidateDomProbe()
                 updateState { current ->
                     current.copy(
                         failureDescription = GECKO_NAVIGATION_FAILURE,
@@ -1082,6 +1085,7 @@ private class GeckoViewBrowserSession(
                 hasUserGesture: Boolean,
             ) {
                 if (privacyHost.isBootstrapNavigation(session, url)) return
+                invalidateDomProbe()
                 currentPageUrl = url
                 val cookieBehaviorChanged = cookieBehavior.update(
                     owner = cookieBehaviorOwner,
@@ -1715,6 +1719,7 @@ private class GeckoViewBrowserSession(
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
                 if (privacyHost.isBootstrapNavigation(session, url)) return
+                invalidateDomProbe()
                 currentPageUrl = url
                 invalidateCredentialPrompts(recreateHost = true)
                 activeMediaSession = null
@@ -1778,6 +1783,32 @@ private class GeckoViewBrowserSession(
             },
             onFailure = ::failPrivacyGate,
         )
+        if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
+            GeckoDomDiagnostics.bindProbe(session, cancel = privacyBinding::cancelDomProbe) { onResult ->
+                val view = boundView
+                if (closed || !active || isPrivate || extensionIdentity == null || view == null || state.isLoading || state.crashed) {
+                    onResult(null)
+                } else {
+                    val native = view.domDiagnosticInsets()
+                    privacyBinding.probeDom { payload ->
+                        val stable = view === boundView && native.toString() == view.domDiagnosticInsets().toString()
+                        val result = payload?.takeIf { stable }?.let { raw ->
+                            runCatching {
+                                JSONObject(raw).put("native", native).toString()
+                            }.getOrNull()
+                        }
+                        onResult(result)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun invalidateDomProbe() {
+        if (!BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) return
+        GeckoDomDiagnostics.navigationChanged(session)
+        // Navigation delegates can run during initial host binding; cancel after it exists.
+        if (privacyBound) privacyBinding.cancelDomProbe()
     }
 
     override fun setStateListener(listener: GeckoBrowserSessionStateListener?) {
@@ -2243,6 +2274,10 @@ private class GeckoViewBrowserSession(
         session.setActive(active)
         extensionController.setTabActive(session, active)
         this.active = active
+        if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
+            GeckoDomDiagnostics.setActive(session, active && extensionIdentity != null)
+            if (!active) privacyBinding.cancelDomProbe()
+        }
         invalidateCredentialPrompts(recreateHost = active)
         if (active) extensionRuntime.onSelectedChromeSessionChanged()
         val cookieBehaviorChanged = cookieBehavior.update(
@@ -2264,6 +2299,10 @@ private class GeckoViewBrowserSession(
             generation = generation,
         )
         extensionIdentity = identity
+        if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
+            GeckoDomDiagnostics.navigationChanged(session)
+            GeckoDomDiagnostics.setActive(session, active)
+        }
         extensionRuntime.attachChromeSession(session, identity)
     }
 
@@ -2316,6 +2355,7 @@ private class GeckoViewBrowserSession(
     override fun releaseView(view: View) {
         val geckoView = view as? CandyGeckoView ?: return
         if (geckoView !== boundView) return
+        invalidateDomProbe()
         // Clear ownership before releaseSession or prompt cancellation can synchronously re-enter
         // Compose and ask the controller to attach this session again.
         boundView = null
@@ -2587,6 +2627,7 @@ private class GeckoViewBrowserSession(
     override fun close() {
         if (closed) return
         closed = true
+        if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) GeckoDomDiagnostics.unregisterSession(session)
         if (active) extensionController.setTabActive(session, false)
         downloadTransfers.cancelOwner(session)
         extensionRuntime.detachChromeSession(session)
@@ -2682,12 +2723,15 @@ private class GeckoViewBrowserSession(
         listener?.onStateChanged(state)
     }
 
-    private fun onContentProcessTerminated() = updateState { current ->
-        current.copy(
-            isLoading = false,
-            lastNavigationSucceeded = false,
-            crashed = true,
-        )
+    private fun onContentProcessTerminated() {
+        invalidateDomProbe()
+        updateState { current ->
+            current.copy(
+                isLoading = false,
+                lastNavigationSucceeded = false,
+                crashed = true,
+            )
+        }
     }
 
     private fun preparePreviewBitmap(
@@ -2761,6 +2805,7 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         scrollableTopInsetPx = 0,
     )
     private var windowInsets: WindowInsetsCompat? = null
+    private var domDiagnosticGeneration = 0L
     private val engineView = createEngineView()
 
     init {
@@ -2798,6 +2843,20 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 
     fun capturePixels(): GeckoResult<Bitmap> = engineView.captureContentPixels()
 
+    fun domDiagnosticInsets(): JSONObject = JSONObject().apply {
+        put("generation", domDiagnosticGeneration)
+        val safeArea = insetLayout.rendererSafeAreaOverride
+        put("topPx", safeArea?.top ?: JSONObject.NULL)
+        put("bottomPx", safeArea?.bottom ?: JSONObject.NULL)
+        put("leftPx", safeArea?.left ?: JSONObject.NULL)
+        put("rightPx", safeArea?.right ?: JSONObject.NULL)
+        put("marginTopPx", insetLayout.margins.top)
+        put("marginBottomPx", insetLayout.margins.bottom)
+        put("viewWidthPx", width)
+        put("viewHeightPx", height)
+        put("density", resources.displayMetrics.density.toDouble())
+    }
+
     fun cancelActiveTouch(): Boolean = engineView.cancelActiveTouch()
 
     fun requestEngineFocus(): Boolean = engineView.requestFocus()
@@ -2819,9 +2878,17 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         layout: GeckoViewInsetLayout,
         windowInsets: WindowInsetsCompat,
     ) {
+        if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS &&
+            (insetLayout != layout || this.windowInsets != windowInsets)
+        ) domDiagnosticGeneration++
         insetLayout = layout
         this.windowInsets = windowInsets
         applyInsets(engineView)
+    }
+
+    override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight)
+        if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) domDiagnosticGeneration++
     }
 
     private fun createEngineView(): CandyGeckoEngineView =

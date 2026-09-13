@@ -19,6 +19,10 @@ internal interface GeckoPrivacyBinding {
 
     fun extractPageForReader(onResult: (String?) -> Unit)
 
+    fun probeDom(onResult: (String?) -> Unit)
+
+    fun cancelDomProbe()
+
     fun scrollMetrics(): BrowserEngineScrollMetrics?
 
     fun setPictureInPicturePlaybackExpected(expected: Boolean)
@@ -44,6 +48,7 @@ internal class GeckoViewPrivacyHostRuntime(
         var readerRequestId: Long? = null,
         var readerResult: ((String?) -> Unit)? = null,
         var readerTimeout: Runnable? = null,
+        val domProbe: GeckoDomProbeRequest,
         var pictureInPicturePlaybackExpected: Boolean = false,
         var scrollMetrics: BrowserEngineScrollMetrics? = null,
         val onScrollMetrics: (BrowserEngineScrollMetrics) -> Unit,
@@ -153,6 +158,7 @@ internal class GeckoViewPrivacyHostRuntime(
         val binding = Binding(
             token = token,
             session = session,
+            domProbe = GeckoDomProbeRequest(mainHandler),
             sink = sink,
             onScrollMetrics = onScrollMetrics,
             onMainFrameResponse = onMainFrameResponse,
@@ -201,6 +207,26 @@ internal class GeckoViewPrivacyHostRuntime(
 
             override fun scrollMetrics(): BrowserEngineScrollMetrics? = binding.scrollMetrics
 
+            override fun probeDom(onResult: (String?) -> Unit) {
+                val currentPort = port
+                if (!BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS || session.settings.usePrivateMode ||
+                    bindings[token] !== binding || currentPort == null || failureDescription != null ||
+                    !binding.handshake.isCurrentPolicyAcknowledged
+                ) {
+                    onResult(null)
+                    return
+                }
+                binding.domProbe.start(
+                    token = token,
+                    revision = binding.handshake.publishedRevision,
+                    navigationGeneration = binding.policy.navigationGeneration.toLong(),
+                    post = currentPort::postMessage,
+                    onResult = onResult,
+                )
+            }
+
+            override fun cancelDomProbe() = binding.domProbe.cancel()
+
             override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
                 binding.pictureInPicturePlaybackExpected = expected
                 runWhenReady(binding) {
@@ -221,6 +247,7 @@ internal class GeckoViewPrivacyHostRuntime(
 
             override fun close() {
                 bindings.remove(token)
+                binding.domProbe.cancel()
                 if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS && bindings.isEmpty()) {
                     GeckoPerformanceDiagnostics.removeStateListener(performanceDiagnosticsStateListener)
                     GeckoPerformanceDiagnostics.removeGapListener(performanceDiagnosticsGapListener)
@@ -297,6 +324,7 @@ internal class GeckoViewPrivacyHostRuntime(
         onReady: (() -> Unit)? = null,
     ) {
         if (bindings[binding.token] !== binding) return
+        binding.domProbe.cancel()
         val readerResult = clearReaderRequest(binding)
         binding.policy = policy
         binding.scrollMetrics = null
@@ -305,6 +333,7 @@ internal class GeckoViewPrivacyHostRuntime(
         refreshTimeout(binding)
         port?.postMessage(
             policy.toMessage(binding.token, binding.handshake.publishedRevision)
+                .put("domDiagnosticsEnabled", BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS && !binding.session.settings.usePrivateMode)
                 .put(
                     "performanceDiagnosticsEnabled",
                     BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS &&
@@ -366,6 +395,15 @@ internal class GeckoViewPrivacyHostRuntime(
             "safe-area-fallback" -> acceptSafeAreaFallback(value)
             "scroll-metrics" -> acceptScrollMetrics(value)
             "reader-result" -> acceptReaderResult(value)
+            "dom-probe-result" -> {
+                if (!BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) return
+                val binding = bindings[value.optString("token")] ?: return
+                if (binding.session.settings.usePrivateMode ||
+                    binding.handshake.publishedRevision != value.optLong("revision", -1) ||
+                    binding.policy.navigationGeneration != value.optInt("navigationGeneration", -1)
+                ) return
+                binding.domProbe.accept(value)
+            }
             "failed" -> fail(IllegalStateException(value.optString("reason", "Privacy host failed")))
         }
     }
@@ -631,6 +669,7 @@ internal class GeckoViewPrivacyHostRuntime(
         initializationCallbacks.clear()
         callbacks.forEach { callback -> callback(false) }
         val readerResults = bindings.values.mapNotNull { binding ->
+            binding.domProbe.cancel()
             cancelTimeout(binding)
             val readerResult = clearReaderRequest(binding)
             binding.policyReadyCallbacks.clear()
@@ -724,6 +763,10 @@ private fun closedBinding(): GeckoPrivacyBinding = object : GeckoPrivacyBinding 
     override fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit) = Unit
 
     override fun extractPageForReader(onResult: (String?) -> Unit) = onResult(null)
+
+    override fun probeDom(onResult: (String?) -> Unit) = onResult(null)
+
+    override fun cancelDomProbe() = Unit
 
     override fun scrollMetrics(): BrowserEngineScrollMetrics? = null
 

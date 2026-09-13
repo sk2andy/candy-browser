@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Candy Privacy Host",
-  "version": "1.5.9",
+  "version": "1.5.11",
   "browser_specific_settings": {
     "gecko": {
       "id": "candy-privacy-host@sk2andy.dev"
@@ -13,13 +13,13 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content_top_inset_bridge.js", "content_top_inset.js"],
+      "js": ["content_top_inset_bridge.js", "content_top_inset.js", "content_safe_area.js"],
       "run_at": "document_start",
       "all_frames": false
     },
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "js": ["dom_probe.js", "content.js"],
       "run_at": "document_start",
       "all_frames": true
     }

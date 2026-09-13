@@ -498,6 +498,102 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun geckoSafeAreaSettingsRoundTripAllGlobalFields() {
+        val store = BrowserSessionStore(context)
+        val settings = DeveloperSettings(
+            browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.Fixed15Hz,
+            safeAreaLayoutQuietPeriodMillis = 250,
+            safeAreaRequiredFailureCount = 4,
+            forceSafeAreaFallback = true,
+            geckoSafeAreaSettings = GeckoSafeAreaSettings(
+                enabled = false,
+                recheckAddedElements = false,
+                recheckChangedElements = false,
+                requireInteractionForUpdates = false,
+                recheckOnResize = false,
+                interactionWindowMillis = 1_600,
+                mutationDebounceMillis = 250,
+                maxElementsPerBatch = 32,
+                maxBatchDurationMillis = 6,
+                maxInitialElements = 1_024,
+            ),
+        )
+
+        store.saveDeveloperSettings(settings)
+
+        assertEquals(settings, BrowserSessionStore(context).loadDeveloperSettings())
+    }
+
+    @Test
+    fun geckoSafeAreaSettingsNormalizeBeforeSavingAndAfterLoading() {
+        val store = BrowserSessionStore(context)
+        val settings = DeveloperSettings(
+            geckoSafeAreaSettings = GeckoSafeAreaSettings(
+                enabled = false,
+                interactionWindowMillis = 1_234,
+                mutationDebounceMillis = 278,
+                maxElementsPerBatch = Int.MAX_VALUE,
+                maxBatchDurationMillis = Int.MIN_VALUE,
+                maxInitialElements = 777,
+            ),
+        )
+        store.saveDeveloperSettings(settings)
+
+        assertEquals(settings.normalized(), store.loadDeveloperSettings())
+        assertEquals(1_200, preferences.getInt("gecko_safe_area_interaction_window_millis", 0))
+        assertEquals(300, preferences.getInt("gecko_safe_area_mutation_debounce_millis", 0))
+        assertEquals(64, preferences.getInt("gecko_safe_area_max_elements_per_batch", 0))
+        assertEquals(1, preferences.getInt("gecko_safe_area_max_batch_duration_millis", 0))
+        assertEquals(768, preferences.getInt("gecko_safe_area_max_initial_elements", 0))
+
+        preferences.edit()
+            .putInt("gecko_safe_area_interaction_window_millis", 150)
+            .putInt("gecko_safe_area_mutation_debounce_millis", 75)
+            .putInt("gecko_safe_area_max_elements_per_batch", 6)
+            .putInt("gecko_safe_area_max_initial_elements", 96)
+            .commit()
+
+        assertEquals(
+            settings.normalized().copy(
+                geckoSafeAreaSettings = settings.geckoSafeAreaSettings.normalized().copy(
+                    interactionWindowMillis = 200,
+                    mutationDebounceMillis = 100,
+                    maxElementsPerBatch = 8,
+                    maxInitialElements = 128,
+                ),
+            ),
+            store.loadDeveloperSettings(),
+        )
+    }
+
+    @Test
+    fun corruptGeckoSafeAreaSettingsFallBackIndependently() {
+        preferences.edit()
+            .putBoolean("developer_force_safe_area_fallback", true)
+            .putInt("developer_safe_area_layout_quiet_period_millis", 250)
+            .putString("gecko_safe_area_enabled", "invalid")
+            .putBoolean("gecko_safe_area_recheck_added_elements", false)
+            .putString("gecko_safe_area_recheck_changed_elements", "invalid")
+            .putString("gecko_safe_area_require_interaction_for_updates", "invalid")
+            .putString("gecko_safe_area_recheck_on_resize", "invalid")
+            .putString("gecko_safe_area_interaction_window_millis", "invalid")
+            .putString("gecko_safe_area_mutation_debounce_millis", "invalid")
+            .putString("gecko_safe_area_max_elements_per_batch", "invalid")
+            .putString("gecko_safe_area_max_batch_duration_millis", "invalid")
+            .putString("gecko_safe_area_max_initial_elements", "invalid")
+            .commit()
+
+        assertEquals(
+            DeveloperSettings(
+                safeAreaLayoutQuietPeriodMillis = 250,
+                forceSafeAreaFallback = true,
+                geckoSafeAreaSettings = GeckoSafeAreaSettings(recheckAddedElements = false),
+            ),
+            BrowserSessionStore(context).loadDeveloperSettings(),
+        )
+    }
+
+    @Test
     fun developerLayoutQuietPeriodIsRestoredOnItsStepGrid() {
         preferences.edit()
             .putInt("developer_safe_area_layout_quiet_period_millis", 123)

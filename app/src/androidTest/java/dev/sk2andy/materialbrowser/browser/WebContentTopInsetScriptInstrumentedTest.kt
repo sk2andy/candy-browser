@@ -326,6 +326,58 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
+    fun customElementReactionCannotLeaveReparentedNodeInReadCache() {
+        val view = loadPage(
+            bridge = TopInsetBridge(CountDownLatch(1)),
+            html = """
+                <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+                <style>html,body{margin:0}main{height:500vh}</style></head><body><main>
+                <div id="old-parent"><candy-read-probe id="probe">Probe</candy-read-probe></div>
+                <div id="new-parent"></div></main></body></html>
+            """.trimIndent(),
+        )
+        evaluate(
+            view,
+            """
+                customElements.define('candy-read-probe', class extends HTMLElement {
+                  static get observedAttributes() { return ['data-test-reparent']; }
+                  attributeChangedCallback() {
+                    const reads = globalThis.__testInsetReads;
+                    globalThis.__callbackParent = reads.parentElementOrShadowHost(this).id;
+                    document.querySelector('#new-parent').appendChild(this);
+                    globalThis.__callbackReturned = true;
+                  }
+                });
+            """.trimIndent(),
+        )
+        val testScript = WebContentTopInsetScript.installScript.substringBeforeLast("})();") +
+            """
+                globalThis.__testInsetReads = {
+                  withLayoutReadCache, parentElementOrShadowHost, setOwnedAttribute,
+                };
+                })();
+            """.trimIndent()
+        evaluate(view, testScript)
+        evaluate(
+            view,
+            """
+                globalThis.__readChecks = {};
+                __testInsetReads.withLayoutReadCache(() => {
+                  const element = document.querySelector('#probe');
+                  __readChecks.oldParent = __testInsetReads.parentElementOrShadowHost(element).id;
+                  __testInsetReads.setOwnedAttribute(element, 'data-test-reparent', 'true');
+                  __readChecks.synchronousCallback = globalThis.__callbackReturned === true;
+                  __readChecks.freshParent = __testInsetReads.parentElementOrShadowHost(element).id;
+                });
+            """.trimIndent(),
+        )
+        assertEquals("\"old-parent\"", evaluate(view, "__readChecks.oldParent"))
+        assertEquals("\"old-parent\"", evaluate(view, "__callbackParent"))
+        assertEquals("true", evaluate(view, "__readChecks.synchronousCallback"))
+        assertEquals("\"new-parent\"", evaluate(view, "__readChecks.freshParent"))
+    }
+
+    @Test
     fun ancestorFeedInsertionRepairsInFrameWithoutMutationCallbackGeometry() {
         val fallbackReceived = CountDownLatch(1)
         val view = loadPage(
@@ -354,10 +406,16 @@ class WebContentTopInsetScriptInstrumentedTest {
                 const originalMark = performance.mark.bind(performance);
                 performance.mark = (name, ...options) => {
                   if (name === 'Candy.SafeArea.Mutations.start') __ownedGeometry.mutationActive = true;
-                  if (name === 'Candy.SafeArea.Mutations.end') __ownedGeometry.mutationActive = false;
                   if (name === 'Candy.SafeArea.KnownOffsets.start') __ownedGeometry.knownRefreshes++;
                   if (name === 'Candy.SafeArea.OwnedMutationFrame.start') __ownedGeometry.frames++;
                   return originalMark(name, ...options);
+                };
+                const originalMeasure = performance.measure.bind(performance);
+                performance.measure = (name, ...options) => {
+                  try { return originalMeasure(name, ...options); }
+                  finally {
+                    if (name === 'Candy.SafeArea.Mutations') __ownedGeometry.mutationActive = false;
+                  }
                 };
                 const trigger = document.createElement('div');
                 trigger.className = 'trigger';
@@ -448,9 +506,15 @@ class WebContentTopInsetScriptInstrumentedTest {
                 const originalMark = performance.mark.bind(performance);
                 performance.mark = (name, ...options) => {
                   if (name === 'Candy.SafeArea.KnownOffsets.start') __feedGeometry.knownOffsetActive = true;
-                  if (name === 'Candy.SafeArea.KnownOffsets.end') __feedGeometry.knownOffsetActive = false;
                   if (name === 'Candy.SafeArea.Mutations.start') __feedGeometry.mutations++;
                   return originalMark(name, ...options);
+                };
+                const originalMeasure = performance.measure.bind(performance);
+                performance.measure = (name, ...options) => {
+                  try { return originalMeasure(name, ...options); }
+                  finally {
+                    if (name === 'Candy.SafeArea.KnownOffsets') __feedGeometry.knownOffsetActive = false;
+                  }
                 };
                 (async () => {
                   const leaf = document.querySelector('#leaf');

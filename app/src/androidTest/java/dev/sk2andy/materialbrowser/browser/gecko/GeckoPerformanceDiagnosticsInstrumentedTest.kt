@@ -65,6 +65,10 @@ class GeckoPerformanceDiagnosticsInstrumentedTest {
 
         assertTrue(command.exceptionOrNull() is SecurityException)
         assertTrue(read.exceptionOrNull() is SecurityException)
+        val probe = runCatching { context.contentResolver.call(uri, "dom-probe", null, null) }
+        val probeRead = runCatching { context.contentResolver.call(uri, "dom-probe-status", null, null) }
+        assertTrue(probe.exceptionOrNull() is SecurityException)
+        assertTrue(probeRead.exceptionOrNull() is SecurityException)
     }
 
     @Test

@@ -21,22 +21,29 @@ function performanceFixture() {
   const entries = new Set();
   const published = [];
   const marks = [];
+  const spans = [];
+  const timestamps = new Map();
+  let now = 0;
   let calls = 0;
   return {
     entries,
     published,
     marks,
+    spans,
+    advance(milliseconds) { now += milliseconds; },
     get calls() { return calls; },
     api: {
-      mark(name) { calls++; entries.add(name); marks.push(name); },
+      mark(name) { calls++; entries.add(name); timestamps.set(name, now); marks.push(name); },
       measure(name, start, end) {
         calls++;
         assert.ok(entries.has(start));
-        assert.ok(entries.has(end));
+        if (end !== undefined) assert.ok(entries.has(end));
+        spans.push({ name, start: timestamps.get(start),
+          end: end === undefined ? now : timestamps.get(end) });
         entries.add(name);
         published.push(name);
       },
-      clearMarks(name) { calls++; entries.delete(name); },
+      clearMarks(name) { calls++; entries.delete(name); timestamps.delete(name); },
       clearMeasures(name) { calls++; entries.delete(name); },
     },
   };
@@ -91,6 +98,27 @@ test('Gradle template substitutions retain a valid complete Gecko script', () =>
   assert.ok(!generatedScript.includes("${'$'}"));
 });
 
+test('native-only Gecko installs no DOM repair hooks, observers, timers or geometry reads', async () => {
+  const harness = bridgeHarness(performanceFixture().api);
+  // Drain the bridge's independent initial policy request before instrumenting repair calls.
+  await Promise.resolve();
+  harness.applyPolicy({ type: 'content-policy', ready: true, revision: 1, topInsetPx: 144 });
+  assert.equal(harness.CandyContentTopInset.nativeSafeAreaOnly(), true);
+  assert.equal(harness.CandyContentTopInset.topInsetPx(), 144);
+  harness.document = new Proxy({}, {
+    get() { throw new Error('Native-only Gecko must not touch the DOM repair surface'); },
+  });
+  harness.MutationObserver = class {
+    constructor() { throw new Error('Native-only Gecko must not install a repair observer'); }
+  };
+  harness.setTimeout = () => { throw new Error('Native-only Gecko must not schedule repair'); };
+  harness.requestAnimationFrame = () => { throw new Error('Native-only Gecko must not schedule repair'); };
+  vm.runInContext(generatedScript, harness);
+  assert.equal(harness.__candyReconcileContentTopInset, undefined);
+  assert.equal(harness.__candyReconfigureContentTopInset, undefined);
+  assert.equal(harness.__candyBrowserContentTopInset, undefined);
+});
+
 test('disabled safe-area diagnostics call no performance API', () => {
   const fixture = performanceFixture();
   const harness = safeAreaHarness(false, fixture.api);
@@ -107,6 +135,33 @@ test('enabled safe-area discovery publishes static labels and clears its own ent
   assert.equal(fixture.published.length, 1000);
   assert.ok(fixture.published.every((name) => name === 'Candy.SafeArea.PointDiscovery'));
   assert.deepEqual([...fixture.entries], ['website-owned-marker']);
+});
+
+test('safe-area duration includes the complete native query with one mark and four timing calls', () => {
+  const fixture = performanceFixture();
+  const harness = safeAreaHarness(true, fixture.api, {
+    elementsFromPoint() { fixture.advance(37); return []; },
+  });
+  harness.discover(10, 10);
+  assert.deepEqual(fixture.spans, [{ name: 'Candy.SafeArea.PointDiscovery', start: 0, end: 37 }]);
+  assert.deepEqual(fixture.marks, ['Candy.SafeArea.PointDiscovery.start']);
+  assert.equal(fixture.calls, 4);
+  assert.equal(fixture.entries.size, 0);
+});
+
+test('scroll publication retains its full duration with the same one-mark timing primitive', () => {
+  const fixture = performanceFixture();
+  const harness = bridgeHarness(fixture.api);
+  Object.defineProperty(harness.document.documentElement, 'scrollHeight', {
+    get() { fixture.advance(19); return 2000; },
+  });
+  harness.applyPolicy({ type: 'content-policy', ready: true, revision: 1,
+    scrollMetricsEnabled: true, performanceDiagnosticsEnabled: true });
+  harness.publishScrollMetrics();
+  assert.deepEqual(fixture.spans, [{ name: 'Candy.ScrollMetrics.Publish', start: 0, end: 19 }]);
+  assert.deepEqual(fixture.marks, ['Candy.ScrollMetrics.Publish.start']);
+  assert.equal(fixture.calls, 4);
+  assert.equal(fixture.entries.size, 0);
 });
 
 test('DOM exceptions still propagate and measurement entries clear in finally', () => {
@@ -172,6 +227,43 @@ test('background content policy does not coerce truthy diagnostic input', () => 
     assert.equal(context.contentPolicy({ performanceDiagnosticsEnabled: value })
       .performanceDiagnosticsEnabled, false);
   }
+});
+
+test('Gecko CSS configuration is bounded, hot-applied and independent of the dormant legacy inset', () => {
+  const harness = bridgeHarness(performanceFixture().api);
+  let configurations = 0;
+  harness.__candyConfigureCssSafeArea = () => configurations++;
+  assert.equal(harness.CandyContentTopInset.cssSafeAreaConfiguration().ready, false);
+  harness.applyPolicy({
+    type: 'content-policy', ready: true, revision: 3, navigationGeneration: 8,
+    topInsetPx: 0, cssSafeAreaTopInsetPx: 172, geckoSafeAreaEnabled: true,
+    recheckAddedElements: true, recheckChangedElements: true, recheckOnResize: true,
+    requireInteractionForUpdates: false,
+    interactionWindowMillis: Number.MAX_SAFE_INTEGER,
+    mutationDebounceMillis: -100,
+    maxElementsPerBatch: 1000, maxBatchDurationMillis: 0, maxInitialElements: '512',
+  });
+  const config = harness.CandyContentTopInset.cssSafeAreaConfiguration();
+  assert.equal(config.ready, true);
+  assert.equal(config.enabled, true);
+  assert.equal(config.cssSafeAreaTopInsetPx, 172);
+  assert.equal(config.topInsetPx, 0);
+  assert.equal(config.navigationGeneration, 8);
+  assert.equal(config.revision, 3);
+  assert.equal(config.requireInteractionForUpdates, false);
+  assert.equal(config.interactionWindowMillis, 5000);
+  assert.equal(config.mutationDebounceMillis, 50);
+  assert.equal(config.maxElementsPerBatch, 64);
+  assert.equal(config.maxBatchDurationMillis, 1);
+  assert.equal(config.maxInitialElements, 512);
+  assert.equal(harness.CandyContentTopInset.nativeSafeAreaOnly(), true);
+  config.enabled = false;
+  assert.equal(harness.CandyContentTopInset.cssSafeAreaConfiguration().enabled, true);
+  harness.applyPolicy({ type: 'content-policy', ready: true, revision: 2, geckoSafeAreaEnabled: false });
+  assert.equal(configurations, 1);
+  harness.applyPolicy({ type: 'content-policy', ready: true, revision: 4, geckoSafeAreaEnabled: false });
+  assert.equal(configurations, 2);
+  assert.equal(harness.CandyContentTopInset.cssSafeAreaConfiguration().enabled, false);
 });
 
 test('diagnostic state messages require current revision without triggering reconciliation', () => {

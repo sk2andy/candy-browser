@@ -5,7 +5,23 @@ import org.junit.Test
 
 class GeckoViewInsetRulesTest {
     @Test
-    fun `document owns top while renderer keeps other safe area edges`() {
+    fun `system webview retains document top inset and other renderer edges`() {
+        val layout = GeckoViewInsetRules.resolve(
+            safeArea = GeckoViewInsets(left = 8, top = 72, right = 6, bottom = 48),
+            forceNativeSafeArea = false,
+            forceNativeTopSafeArea = false,
+            isFullscreenContent = false,
+            isInsideSafeDrawingHost = false,
+            useNativeCssSafeArea = false,
+        )
+
+        assertEquals(GeckoViewInsets.Zero, layout.margins)
+        assertEquals(GeckoViewInsets(left = 8, top = 0, right = 6, bottom = 48), layout.rendererSafeAreaOverride)
+        assertEquals(72, layout.scrollableTopInsetPx)
+    }
+
+    @Test
+    fun `native safe area reaches renderer without margins or document correction`() {
         val safeArea = GeckoViewInsets(left = 8, top = 96, right = 6, bottom = 34)
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
@@ -16,8 +32,8 @@ class GeckoViewInsetRulesTest {
         )
 
         assertEquals(GeckoViewInsets.Zero, layout.margins)
-        assertEquals(safeArea.copy(top = 0), layout.rendererSafeAreaOverride)
-        assertEquals(safeArea.top, layout.scrollableTopInsetPx)
+        assertEquals(safeArea, layout.rendererSafeAreaOverride)
+        assertEquals(0, layout.scrollableTopInsetPx)
     }
 
     @Test
@@ -35,10 +51,10 @@ class GeckoViewInsetRulesTest {
             layout.margins,
         )
         assertEquals(
-            GeckoViewInsets(left = 0, top = 0, right = 0, bottom = 34),
+            GeckoViewInsets(left = 0, top = 72, right = 0, bottom = 34),
             layout.rendererSafeAreaOverride,
         )
-        assertEquals(72, layout.scrollableTopInsetPx)
+        assertEquals(0, layout.scrollableTopInsetPx)
     }
 
     @Test
@@ -56,10 +72,10 @@ class GeckoViewInsetRulesTest {
             layout.margins,
         )
         assertEquals(
-            GeckoViewInsets(left = 0, top = 0, right = 0, bottom = 48),
+            GeckoViewInsets(left = 0, top = 72, right = 0, bottom = 48),
             layout.rendererSafeAreaOverride,
         )
-        assertEquals(72, layout.scrollableTopInsetPx)
+        assertEquals(0, layout.scrollableTopInsetPx)
     }
 
     @Test

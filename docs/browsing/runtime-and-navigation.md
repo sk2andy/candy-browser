@@ -11,7 +11,8 @@
 | Compose root | Read controller state, own transient screen state and route browser surfaces | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt) |
 | Compose surfaces | Host engine/preview content, native page-error/offline presentation, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`PageErrorFeedback.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/PageErrorFeedback.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
 | Policies | Resolve input, URLs, settings, media, file chooser and external routes | [`browser/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/) |
-| Safe-area mutation repair | Keep related attributes, owned-subtree and stylesheet/meta changes immediate; coalesce ancestor feed insertions into an animation frame; defer unrelated opaque feed changes to full quiet owned-layout revalidation before verification | `WebContentTopInsetScript` |
+| Gecko CSS safe-area protection | Bounded load classification, one-time CSS anchors, configurable relevant mutation/interaction gates; scroll cancels work without geometry reads | `GeckoSafeAreaSettings`, `content_safe_area.js` |
+| System WebView safe-area mutation repair | Keep related attributes, owned-subtree and stylesheet/meta changes immediate; coalesce ancestor feed insertions into an animation frame; defer unrelated opaque feed changes to full quiet owned-layout revalidation before verification | `WebContentTopInsetScript` |
 
 ## Navigation paths
 
@@ -178,8 +179,15 @@
   traversal. Never replay a committed navigation or convert POST to GET. Reload matching open tabs
   only when the user explicitly changes the domain preference.
 - Keep the engine view's measured frame stable at the full window while pages scroll.
-  `GeckoViewInsetRules` forwards side and navigation safe areas to the renderer without adding
-  native margins. Candy owns the status-bar and cutout top edge for every normal page because a
+  `GeckoViewInsetRules` forwards all native safe areas to CSS, including the top edge, without
+  native margins. Normal Gecko tabs and Link Peek disable the legacy document repair at the
+  Gecko-only bridge before installing any of its observers or hooks. Gecko's separate bounded CSS
+  layer classifies suitable body flow and viewport-bound top anchors, then applies CSS `max()` safe
+  area protection once. It does not repeatedly measure correctly protected headers while scrolling.
+  Only authorized relevant mutations and configured resize/configuration changes reclassify.
+  Unknown layouts retain verified emergency native top fallback rather than speculative CSS changes.
+  Fullscreen and Compose safe-drawing hosts retain their duplicate-inset exclusions.
+  System WebView retains shared document repair: Candy owns its status-bar and cutout top edge because a
   `viewport-fit=cover` declaration does not guarantee use of `env(safe-area-inset-top)`.
   The document-start compatibility inset protects normal flow and top-positioned content.
   Top-anchored fixed, sticky, absolute, and focused containers are shifted once into the safe area.
@@ -187,9 +195,24 @@
   an owned inline top override inside open Shadow DOM. They need no style/rectangle reads or CSS
   rewrites during scrolling. Semantic author/ancestor changes explicitly revalidate and restore
   author inline values and priorities; unrelated feed additions do not rewrite these anchors.
-  A passive animation-frame-bounded scroll check refreshes only already-owned nested or moving
-  sticky headers while scrolling; candidate discovery and broader layout recovery wait until
-  scrolling settles. Owned
+  A passive animation-frame-bounded scroll check refreshes a separate set of already-owned nested or moving
+  sticky headers while scrolling. CSS-owned headers do not enter that iteration. An empty JS set schedules
+  no known-header frame except for a synchronous scroll during an owned DOM write, which can precede
+  registration of a new JS anchor. Candidate discovery and broader layout recovery wait until
+  both scrolling and relevant DOM changes have been quiet for the configured interval. Each scroll
+  replaces the pending recovery execution identity; no old geometry resumes. Only the dirty cause,
+  discovery authorization and latest DOM deadline survive. One recovery request replaces redundant
+  scroll-quiet protection. Cancelled callbacks, including already-queued timers and frames, reject
+  their old identity. Independent emergency verification survives a skipped or throwing recovery
+  pass, reopening discovery only if that pass did not complete; a successful clean result does not
+  force a redundant verification scan. It cannot override a newer DOM request, scroll, root or policy.
+  Newly added subtrees have a separate bounded, style-first frame path so fixed controls inside
+  offscreen wrappers do not wait through continuous scrolling. That path visits only added jobs,
+  never drains a large attribute backlog or declares global protection complete. Reinserted
+  attribute jobs become added-eligible without rewinding their identity cursor. Scroll replaces
+  execution state but keeps a queued wakeup, which resolves the latest state with fresh reads;
+  interrupted candidates retain only identity for retry. Reconfiguration/disposal invalidate the
+  wakeup. Disabled insets and exceptions cannot spin an unconsumed backlog through frames. Owned
   offsets survive temporary hide/show, but
   are cleared when a visible element returns to normal flow. Persistent layout conflicts suspend
   timer retries until a later DOM change or user interaction resumes recovery before switching only
@@ -201,10 +224,19 @@
   the renderer to TextureView for live page capture; turning blur off restores SurfaceView.
   PiP, clipping and tab motion preserve the same browser host, GeckoView, surface, display and
   session. The static status-bar overlay remains outside the renderer and keeps system icons legible.
-- Safe-area read caches are scoped to one synchronous layout-read epoch and invalidated by actual
-  Candy writes. Stable reconciliations reuse known candidates, while quiet scroll, relevant DOM
+- System WebView's shared safe-area read caches, including Light-/Shadow-DOM parent paths and null parents, are scoped to
+  one synchronous layout-read epoch and invalidated before and after actual Candy writes. Post-write
+  invalidation also clears reads made by synchronous author/custom-element reactions, even when a
+  setter throws. Collections are allocated only on their first actual read, not on invalidation;
+  getters return their local result and publish only into the unchanged epoch/collection. Reentrant
+  reads cannot overwrite a newer cache, including the first viewport read. No parent path survives a task or yield.
+  The full synchronous mutation callback shares this lazy epoch across record classification and
+  immediate repair; unrelated classification alone reads no viewport geometry. Stable reconciliations
+  reuse known candidates, while quiet scroll, relevant DOM
   changes, interaction/resize and startup stabilization reopen discovery. Owned CSS/attributes are
   changed only when necessary; JS sticky anchors stay sequential to preserve nested scrollport geometry.
+  Sticky revalidation clears ownership and reads fresh position before resolving author top; headers
+  that stopped being sticky release their ownership without resolving top.
   Never skip
   an unknown subtree based only on its wrapper rectangle: a fixed child can lie in the protected top
   strip even when its parent is offscreen.
@@ -221,14 +253,34 @@
   document/policy identity, reads current insets, and is cancelled on disposal/reconfiguration; pending
   work and exceptions are not safety
   proofs; navigation/policy changes revalidate and disposal clears this volatile state.
-  Added/changed subtrees get bounded early candidate registration; dense
+  Added/changed subtrees get bounded early candidate registration through alternating Added and
+  Attribute lanes. Recent-new/FIFO turns preserve older cursor progress; recurring changes coalesce
+  one fresh follow-up instead of repeatedly restarting a large feed. Removed/reparented cursors
+  require a fresh pass too. The best-effort global 256-root cap admits the first job of either lane;
+  overflow cannot establish CSS safety. Traversal bookkeeping and bounded completion transitions
+  share the cooperative time budget. Queue completion does not replace full fresh coverage; dense
   verification yields between fresh read epochs, while known CSS sticky anchors remain read-free
   during scrolling. Cancelled work is not successful verification and never consumes a fallback
   failure confirmation.
   Retain only a rotating grid cursor and seed/raster-turn scheduling hint across cancelled author/scroll epochs, not old layout
   reads or proof coverage. First-row common seeds and trailing-row raster priority reduce late-control
   latency; all points still require fresh verification before success. Root/policy/inset/density and
-  viewport changes discard the hint. Synchronous sticky discovery remains a separate measured cost.
+  viewport changes discard the hint. Sticky discovery shares the portioned dense scan instead of
+  running a separate synchronous grid. A just-below-inset row anchors initially unstuck headers;
+  its probes delay, never discard, common first-row seeds. Dense progress slots are preserved.
+  Registration crosses absolute descendants and Shadow hosts while keeping a fixed descendant as a
+  positioning barrier. Stable CSS-sticky registration needs no rectangle; nested/moving repair stays
+  sequential. A positive result requires fresh dense and extra-row coverage, not registration alone.
+  Initial sticky anchoring reuses existing background hits without extra queries; nested/moving
+  anchors retain sequential geometry. Cancellation of queued discovery cannot undo that anchor. Hidden positioned elements
+  skip rectangle reads. Task-local viewport dimensions are read lazily; style-only mutation checks
+  request none. Reconcile captures dimensions before owned writes and reuses them through those
+  writes only; every new task that needs dimensions reads fresh values. Style/element/hit-test caches still invalidate
+  on actual writes and never survive yields.
+  Offset planning resolves CSS height only for tall fixed panels that need box-extras calculations;
+  ordinary headers and controls use their already-read rectangle without that additional CSSOM query.
+  Packet validation is budgeted but a slow atomic viewport read still permits one discovery point,
+  preventing zero-progress rescheduling. Four milliseconds remains a cooperative, not hard, limit.
   Early JS protection accepts only an exact identity transform on the fixed candidate itself;
   ancestor transforms and author motion remain conservative. It does not relax CSS sticky ownership
   or remove author transforms/stacking contexts.
@@ -245,6 +297,33 @@
   detachment are terminal boundaries: if the platform omitted a final touch event, Candy sends one
   synthetic `ACTION_CANCEL` to Gecko before rejecting background content-menu callbacks.
 - Add pure policy beside the owning package; leave `BrowserController` as integration wiring.
+
+## Gecko CSS safe-area controls
+
+Developer options contain a separate **Gecko edge-to-edge** section. Changes are normalized,
+stored as global configuration without page/private state, and pushed to live session policies.
+They do not change Android renderer margins, the native CSS inset contract, System WebView repair,
+autoplay or live blur. Disabling the layer restores still-owned inline CSS; author overrides win.
+The existing **Safe-area fallback** section and per-site **Force safe area** remain separate.
+
+| Control | Default | Range / effect |
+| --- | --- | --- |
+| CSS protection | On | Disable one-time CSS classification and its observer, not native insets |
+| Recheck added elements | On | Only bounded new subtrees |
+| Recheck changed elements | On | Relevant class/style/visibility/open changes, including existing menus |
+| Require user interaction | On | Click, typing or drop authorizes relevant updates; scrolling clears authorization |
+| Recheck on resize | On | Viewport changes may reclassify; normal scroll does not |
+| Interaction window | 1000 ms | 100–5000 ms, steps of 100 ms |
+| Mutation debounce | 150 ms | 50–1000 ms, steps of 50 ms |
+| Elements per batch | 16 | 4–64, steps of 4 |
+| Cooperative batch target | 4 ms | 1–8 ms; a single native style/geometry query can overshoot |
+| DOM classification cap | 512 elements | 64–2048, steps of 64; shared initial cap and cap per later subtree, not an exhaustive DOM safety proof |
+
+Sticky eligibility uses the declared top anchor and containing-block path, not only the current
+rectangle: a header initially below the viewport can still receive its CSS anchor before sticking.
+An element simply being near the status bar is insufficient. Nested scrollers, transformed
+containing blocks, tall panels and otherwise unsupported layouts require bounded overlap validation
+before the retained emergency fallback. No scroll event starts a new discovery or validation pass.
 
 ## TLS trust channels
 

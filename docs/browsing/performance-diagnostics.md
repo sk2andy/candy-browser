@@ -9,13 +9,38 @@
 | Activation | Never automatic; ADB shell starts a capture after Gecko runtime exists |
 | Private browsing | Any open private Gecko session rejects capture; opening one cancels the entire capture and removes unpublished/exported files |
 | Asynchronous completion | Generation check prevents canceled or stale results becoming readable |
-| Local storage | One gzip JSON in app cache, no network upload; old diagnostic files removed on process initialization and before each capture |
-| Limits | Automatic stop after 120 seconds; reject compressed profiles over 64 MiB |
+| Profiler storage | One gzip JSON in app cache, no network upload; old diagnostic files removed on process initialization and before each capture |
+| Profiler limits | Automatic stop after 120 seconds; reject compressed profiles over 64 MiB |
 | Export access | Fixed read-only content URI, explicit Android `DUMP` permission on every provider operation; ordinary apps cannot read/control captures |
 | Sensitive data | Gecko stacks/profiles can contain normal-page URLs; treat exports as sensitive and share only after inspection |
 | Behavior | Live Blur, autoplay settings, rendering backend and Gecko style-thread count remain unchanged |
 
 ## Evidence ownership
+
+### Manual native-inset DOM probe
+
+| Boundary | Contract |
+| --- | --- |
+| Request | Diagnostic builds only; same DUMP-gated provider, fixed `dom-probe` command without arguments, code or selectors |
+| Target | Exactly one active regular Gecko session with an attached view and a settled document; ambiguity rejects the request |
+| Privacy/lifecycle | Any private Gecko session blocks and erases the memory-only result; navigation, deactivation or closure invalidates pending and ready results |
+| Payload | Native allowlist: finite numeric env/viewport/geometry values, fixed tag/position enums and booleans; at most16 candidates,24 KiB; no page text, URLs, IDs, classes or arbitrary stylesheet content |
+| Sampling | One explicit snapshot; a hidden fixed contained measurement node reads computed `env()` padding and is removed in `finally`; no observers or scroll work |
+| Request identity | Start returns `queued` and `domCommandId`, never an old payload. Poll until that command ID is accepted and `domResultId` matches it; `busy` rejects an overlapping command |
+| Native consistency | Native insets/view generation is captured before dispatch and rechecked after response; changed insets or view size reject the result, rather than mixing two configurations |
+| Interpretation | Positive env values prove delivery, not author header/body adoption. Computed-style/rectangle reads can flush layout; this is not an unaffected CPU or checkerboard measurement |
+| Layout | The probe itself adds no repair; normal Gecko CSS protection and retained fallback keep their independent configuration |
+
+```sh
+adb -s SERIAL shell content call --uri content://dev.sk2andy.materialbrowser.performance --method dom-probe
+adb -s SERIAL shell content call --uri content://dev.sk2andy.materialbrowser.performance --method dom-probe-status
+# Require the returned domCommandId to be accepted, domResultId to match it, and domStatus=ready.
+# domPayload is the bounded JSON snapshot. discard erases it.
+```
+
+`accepted=true` means the command was queued, not that a probe succeeded. The result is never
+written to app storage or uploaded. An explicit snapshot can affect author mutation observers;
+do not compare scroll performance during sampling.
 
 | Signal | Question it answers | Limitation |
 | --- | --- | --- |
@@ -30,8 +55,13 @@
 | Blur-off red flag | Sustained hardware `Capture` or controller `Draw` while configuration coverage is 1 and requested-configuration count is 0 | Verify the settled Clear interval, not merely one teardown frame; counts describe current composed chrome intent, not stale persisted preferences |
 | Android `Candy.Blur.PreDrawObserved` | BlurView pre-draw phase occurred | Observation marker only, not the duration of the library's private geometry-update listener |
 | Android `Candy.Gecko.*` | Touch/scroll callbacks, document metrics, insets, backend changes, paint milestones and media-session states | Paint milestones are not per-frame; media-session events do not describe every page video |
-| DOM `Candy.SafeArea.*` | Reconcile, point discovery/chunks, known sticky/offset updates, quiet protection/verification and mutation work | Diagnostics add no scans/observers; protection's bounded priority registration and conservative verification remain actual work |
-| Mutation/known-offset attribution | Compare `Mutations`, `OwnedMutationFrame` and `KnownOffsets` spans with GeckoMain `Element.getBoundingClientRect` and pending style/layout-flush stacks | Feed mutation callbacks defer global owned-layout rereads until quiet; direct owned/ancestor/descendant or stylesheet/meta repair coalesces in the next before-paint frame. Background tabs can pause animation frames; the frame can still force layout. Inclusive spans and sample counts are not exclusive CPU totals |
+| Gecko DOM `Candy.SafeArea.Css.*` | Bounded CSS classification batches, metadata-only mutations and unsupported-overlap verification | Normal scroll performs no geometry queries; mutations remain interaction-gated by default. These inclusive spans are not exclusive CPU time or a full-DOM protection proof |
+| System WebView DOM `Candy.SafeArea.*` | Reconcile, point discovery/chunks, known sticky/offset updates, quiet protection/verification and mutation work | Sticky bootstrap shares DiscoveryChunk with dense discovery; known nested/moving repair remains synchronous. Diagnostics add no scans/observers; full fresh coverage remains required |
+| DOM timing overhead | One start mark and a two-argument `performance.measure(name, startMark)` publish the full synchronous phase through the current timestamp | Same phase names and native work coverage; only redundant end marks/cleanup are removed. Four timing API calls per successful phase, all costs remain included in CPU attribution |
+| Mutation/known-offset attribution | Compare `Mutations`, `OwnedMutationImmediate`, `OwnedMutationFrame` and `KnownOffsets` spans with GeckoMain `Element.getBoundingClientRect` and pending style/layout-flush stacks | Unrelated feed work waits for quiet; direct related attributes, stylesheet/meta changes and child mutations inside owned headers retain immediate repair. Ancestor feed insertion coalesces in a frame. Background tabs can pause animation frames; a frame can still force layout. Inclusive spans and sample counts are not exclusive CPU totals |
+| DOM ancestor-path attribution | Compare sampled `parentElementOrShadowHost` and candidate/collision traversal stacks under matched input | The full synchronous mutation callback shares one lazy read epoch across record classification and immediate repair; actual writes clear before and after author reactions, and callback completion/exception releases the epoch. Collections allocate on first read, not every write invalidation; local-result publication guards prevent reentrant cache pollution. This reduces allocation/getter overhead without reading the viewport during style-only classification, changing fresh layout requirements or delaying header repair; it does not remove native author-top flush costs |
+| Priority/collision query costs | Compare `nextPriorityElement` and compact-wide peer checks under matched native input | Added and attribute roots alternate bounded task slots; each lane alternates recent new roots with FIFO cursor progress. Repeated changes retain the cursor and coalesce a fresh follow-up instead of restarting at the root. Completion transitions and traversal bookkeeping share the cooperative time budget. Invisible compact peers skip rectangle queries, but visible ancestors and existing geometry boundaries remain eligible |
+| Prompt additions while scrolling | `Candy.SafeArea.AddedPriority` counts bounded added-only frame packets | New controls cannot wait through continuous scroll. Large attribute backlogs remain for quiet discovery; scroll replaces execution state without starving the queued wakeup. Fresh reads and candidate identity retries are not a global protection proof. Cooperative 4-ms/eight-element budgets cannot interrupt one atomic native query |
 | DOM `Candy.ScrollMetrics.Publish` | Existing scroll-metric publication cost | UserTiming entries use fixed names and are cleared immediately after measurement |
 | Concurrent Perfetto | CPU scheduling, frame timelines and native spans alongside the Gecko profile | Native spans appear only while an app trace and diagnostic capture are both active |
 

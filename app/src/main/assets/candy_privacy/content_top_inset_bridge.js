@@ -7,6 +7,18 @@ const state = {
   revision: 0,
   scrollMetricsEnabled: false,
   performanceDiagnosticsEnabled: false,
+  domDiagnosticsEnabled: false,
+  cssSafeAreaTopInsetPx: 0,
+  enabled: false,
+  recheckAddedElements: false,
+  recheckChangedElements: false,
+  requireInteractionForUpdates: true,
+  recheckOnResize: false,
+  interactionWindowMillis: 1000,
+  mutationDebounceMillis: 150,
+  maxElementsPerBatch: 16,
+  maxBatchDurationMillis: 4,
+  maxInitialElements: 512,
   safeAreaLayoutQuietPeriodMillis: 400,
   safeAreaRequiredFailureCount: 3,
 };
@@ -57,15 +69,14 @@ function beginCandyPerformancePhase(name) {
 
 function endCandyPerformancePhase(name, started) {
   if (!started) return;
+  const mark = `${name}.start`;
   try {
-    globalThis.performance.mark(`${name}.end`);
-    globalThis.performance.measure(name, `${name}.start`, `${name}.end`);
+    // The legacy two-argument overload ends at the current timestamp.
+    globalThis.performance.measure(name, mark);
   } catch (_error) {
     // Profiling must not change scroll metrics or page protection.
   } finally {
-    for (const mark of [`${name}.start`, `${name}.end`]) {
-      try { globalThis.performance.clearMarks(mark); } catch (_error) {}
-    }
+    try { globalThis.performance.clearMarks(mark); } catch (_error) {}
     try { globalThis.performance.clearMeasures(name); } catch (_error) {}
   }
 }
@@ -116,14 +127,35 @@ function applyPolicy(policy) {
     Math.max(0, policy.navigationGeneration) : 0;
   state.scrollMetricsEnabled = policy.scrollMetricsEnabled === true;
   state.performanceDiagnosticsEnabled = policy.performanceDiagnosticsEnabled === true;
+  state.domDiagnosticsEnabled = policy.domDiagnosticsEnabled === true;
+  state.cssSafeAreaTopInsetPx = Number.isSafeInteger(policy.cssSafeAreaTopInsetPx) ?
+    Math.max(0, policy.cssSafeAreaTopInsetPx) : 0;
+  state.enabled = policy.geckoSafeAreaEnabled === true;
+  state.recheckAddedElements = policy.recheckAddedElements === true;
+  state.recheckChangedElements = policy.recheckChangedElements === true;
+  state.requireInteractionForUpdates = policy.requireInteractionForUpdates !== false;
+  state.recheckOnResize = policy.recheckOnResize === true;
+  state.interactionWindowMillis = boundedSafeAreaInteger(policy.interactionWindowMillis, 100, 5000, 1000);
+  state.mutationDebounceMillis = boundedSafeAreaInteger(policy.mutationDebounceMillis, 50, 1000, 150);
+  state.maxElementsPerBatch = boundedSafeAreaInteger(policy.maxElementsPerBatch, 4, 64, 16);
+  state.maxBatchDurationMillis = boundedSafeAreaInteger(policy.maxBatchDurationMillis, 1, 8, 4);
+  state.maxInitialElements = boundedSafeAreaInteger(policy.maxInitialElements, 64, 2048, 512);
   state.safeAreaLayoutQuietPeriodMillis = safeAreaLayoutQuietPeriodMillis;
   state.safeAreaRequiredFailureCount = safeAreaRequiredFailureCount;
   if (safeAreaSettingsChanged) globalThis.__candyReconfigureContentTopInset?.();
   else globalThis.__candyReconcileContentTopInset?.();
+  globalThis.__candyConfigureCssSafeArea?.();
   scheduleScrollMetrics();
 }
 
+function boundedSafeAreaInteger(value, minimum, maximum, fallback) {
+  return Number.isSafeInteger(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback;
+}
+
 globalThis.CandyContentTopInset = Object.freeze({
+  // Gecko uses its bounded CSS layer; retain shared DOM repair only for System WebView.
+  nativeSafeAreaOnly: () => true,
+  cssSafeAreaConfiguration: () => ({ ...state, ready: policyReady }),
   topInsetPx: () => state.topInsetPx,
   viewportCoverAllowed: () => true,
   navigationGeneration: () => state.navigationGeneration,
@@ -131,6 +163,7 @@ globalThis.CandyContentTopInset = Object.freeze({
   safeAreaLayoutQuietPeriodMillis: () => state.safeAreaLayoutQuietPeriodMillis,
   safeAreaRequiredFailureCount: () => state.safeAreaRequiredFailureCount,
   performanceDiagnosticsEnabled: () => state.performanceDiagnosticsEnabled,
+  domDiagnosticsEnabled: () => state.domDiagnosticsEnabled,
   fallbackToNative: (navigationGeneration, revision) => {
     if (
       navigationGeneration !== state.navigationGeneration ||

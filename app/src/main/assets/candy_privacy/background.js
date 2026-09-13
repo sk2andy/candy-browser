@@ -66,10 +66,23 @@ function contentPolicy(policy) {
     ready: Boolean(policy),
     revision: Number.isSafeInteger(policy?.revision) ? Math.max(0, policy.revision) : 0,
     topInsetPx: Number.isSafeInteger(policy?.topInsetPx) ? Math.max(0, policy.topInsetPx) : 0,
+    cssSafeAreaTopInsetPx: Number.isSafeInteger(policy?.cssSafeAreaTopInsetPx) ?
+      Math.max(0, policy.cssSafeAreaTopInsetPx) : 0,
+    geckoSafeAreaEnabled: policy?.geckoSafeAreaEnabled === true,
+    recheckAddedElements: policy?.recheckAddedElements === true,
+    recheckChangedElements: policy?.recheckChangedElements === true,
+    requireInteractionForUpdates: policy?.requireInteractionForUpdates !== false,
+    recheckOnResize: policy?.recheckOnResize === true,
+    interactionWindowMillis: boundedSafeAreaInteger(policy?.interactionWindowMillis, 100, 5000, 1000),
+    mutationDebounceMillis: boundedSafeAreaInteger(policy?.mutationDebounceMillis, 50, 1000, 150),
+    maxElementsPerBatch: boundedSafeAreaInteger(policy?.maxElementsPerBatch, 4, 64, 16),
+    maxBatchDurationMillis: boundedSafeAreaInteger(policy?.maxBatchDurationMillis, 1, 8, 4),
+    maxInitialElements: boundedSafeAreaInteger(policy?.maxInitialElements, 64, 2048, 512),
     navigationGeneration: Number.isSafeInteger(policy?.navigationGeneration) ?
       Math.max(0, policy.navigationGeneration) : 0,
     scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
     performanceDiagnosticsEnabled: policy?.performanceDiagnosticsEnabled === true,
+    domDiagnosticsEnabled: policy?.domDiagnosticsEnabled === true,
     safeAreaLayoutQuietPeriodMillis:
       Number.isSafeInteger(policy?.safeAreaLayoutQuietPeriodMillis) ?
         Math.min(800, Math.max(100, policy.safeAreaLayoutQuietPeriodMillis)) : 400,
@@ -77,6 +90,10 @@ function contentPolicy(policy) {
       Number.isSafeInteger(policy?.safeAreaRequiredFailureCount) ?
         Math.min(5, Math.max(2, policy.safeAreaRequiredFailureCount)) : 3,
   };
+}
+
+function boundedSafeAreaInteger(value, minimum, maximum, fallback) {
+  return Number.isSafeInteger(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback;
 }
 
 function publishContentPolicy(token, policy) {
@@ -338,6 +355,29 @@ function extractReader(message) {
   );
 }
 
+function probeDom(message) {
+  const policy = policiesByToken.get(message.token);
+  if (policy?.domDiagnosticsEnabled !== true || policy.revision !== message.revision ||
+      policy.navigationGeneration !== message.navigationGeneration ||
+      !Number.isSafeInteger(message.requestId)) return;
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) return;
+  const postResult = (payload) => {
+    const current = policiesByToken.get(message.token);
+    if (!nativePort || current?.domDiagnosticsEnabled !== true ||
+        current.revision !== message.revision || current.navigationGeneration !== message.navigationGeneration ||
+        tokenByTab.get(tabEntry[0]) !== message.token) return;
+    nativePort.postMessage({
+      type: "dom-probe-result", protocolVersion: PROTOCOL_VERSION,
+      token: message.token, revision: message.revision, requestId: message.requestId,
+      navigationGeneration: message.navigationGeneration, payload,
+    });
+  };
+  browser.tabs.sendMessage(tabEntry[0], {
+    type: "dom-probe", revision: message.revision, navigationGeneration: message.navigationGeneration,
+  }, { frameId: 0 }).then(postResult, () => postResult(null));
+}
+
 function updatePictureInPicturePlayback(message) {
   const policy = policiesByToken.get(message.token);
   if (!policy || policy.revision !== message.revision || typeof message.expected !== "boolean") {
@@ -468,6 +508,8 @@ function connectNative() {
       for (const [tabId, token] of tokenByTab) if (token === message.token) tokenByTab.delete(tabId);
     } else if (message.type === "reader-extract" && typeof message.token === "string") {
       extractReader(message);
+    } else if (message.type === "dom-probe" && typeof message.token === "string") {
+      probeDom(message);
     } else if (
       message.type === "picture-in-picture-playback" &&
       typeof message.token === "string"
