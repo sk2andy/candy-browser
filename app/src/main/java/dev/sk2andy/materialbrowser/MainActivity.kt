@@ -991,7 +991,9 @@ class MainActivity : AppCompatActivity() {
         val previousNightConfiguration = appliedNightConfiguration
         super.onConfigurationChanged(newConfig)
         if (appDataTransferActive) return
-        appliedNightConfiguration = newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        // AppCompat may reapply a local override through nested configuration callbacks.
+        appliedNightConfiguration = resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK
         if (
             previousNightConfiguration != Configuration.UI_MODE_NIGHT_UNDEFINED &&
             previousNightConfiguration != appliedNightConfiguration &&

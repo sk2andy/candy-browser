@@ -215,6 +215,9 @@ internal class GeckoViewRuntimeHandle private constructor(
     }
 
     @VisibleForTesting
+    fun preferredColorSchemeForTesting(): Int = runtime.settings.preferredColorScheme
+
+    @VisibleForTesting
     fun webAuthnActivityDelegateForTesting(): GeckoRuntime.ActivityDelegate? =
         runtime.activityDelegate
 

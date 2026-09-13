@@ -118,6 +118,10 @@ Frosted exposes three persisted controls while selected:
   Android theme while carrying navigation and document state through an in-memory-only handoff,
   including for private tabs. Neither path replaces the browser controller or persists private
   state. An open Link Peek closes before its ephemeral preview is released.
+- Night-change detection reads the effective Activity resources after AppCompat processes the
+  configuration. AppCompat can dispatch nested callbacks when an app appearance override differs
+  from the system; caching the incoming system value would hide a later return to System and leave
+  Gecko's website media query on the previous light or dark mode.
 - System WebView algorithmic darkening is off by default. The optional **Force dark mode on
   websites** setting allows System WebView to recolor sites without their own dark theme while the
   effective app appearance is dark. GeckoView has no equivalent API, so the control is disabled for
