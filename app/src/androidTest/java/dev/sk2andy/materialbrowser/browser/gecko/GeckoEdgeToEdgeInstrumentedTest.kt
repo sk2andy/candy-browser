@@ -119,64 +119,77 @@ class GeckoEdgeToEdgeInstrumentedTest {
 
     @Test
     fun frostedGeckoSwitchesToCaptureCompatibleTextureViewAcrossNavigationBar() {
-        ActivityScenario.launch<MainActivity>(
-            Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
-        ).use { scenario ->
-            awaitViewReady(scenario)
-            scenario.onActivity { activity ->
-                val controller = activity.browserControllerForTesting()
-                controller.updateAppearanceSettings(
-                    AppearanceSettings(
-                        surfaceStyle = BrowserSurfaceStyle.Frosted,
-                        frostedTransparencyPercent = 0,
-                        frostedAddressBarTransparencyPercent = 50,
-                    ),
-                )
-                controller.onWindowInsetsChanged(
-                    WindowInsetsCompat.Builder()
-                        .setInsets(
-                            WindowInsetsCompat.Type.statusBars(),
-                            Insets.of(0, STATUS_BAR_INSET_PX, 0, 0),
-                        )
-                        .setInsets(
-                            WindowInsetsCompat.Type.navigationBars(),
-                            Insets.of(0, 0, 0, NAVIGATION_BAR_INSET_PX),
-                        )
-                        .build(),
-                )
-            }
-            awaitViewReady(scenario, expectBackdropCapture = true)
-            instrumentation.waitForIdleSync()
+        EdgeToEdgeSiteFixtureServer().use { server ->
+            val tab = BrowserTab(
+                id = "gecko-frosted-edge-to-edge-fixture",
+                lastAccessedAt = System.currentTimeMillis(),
+                url = server.url,
+            )
+            assertTrue(store.saveTabsImmediately(listOf(tab), tab.id))
 
-            scenario.onActivity { activity ->
-                val view = requireNotNull(
-                    activity.browserControllerForTesting().selectedGeckoViewForTesting(),
+            ActivityScenario.launch<MainActivity>(
+                Intent(context, MainActivity::class.java).setAction(TEST_ACTIVITY_ACTION),
+            ).use { scenario ->
+                awaitViewReady(scenario)
+                awaitSelectedTabTitle(
+                    scenario,
+                    EdgeToEdgeSiteMatrix.readyTitle(EdgeToEdgeSiteMatrix.allSites.first()),
                 )
-                val textureView = requireNotNull(view.findTextureView())
-                assertTrue(
-                    "Frosted GeckoView must provide page pixels to its live blur target",
-                    view.parent is BlurTarget,
-                )
-                assertTrue(
-                    "Frosted GeckoView must avoid a separate compositor surface",
-                    !view.hasSurfaceView(),
-                )
-                assertWindowTop(textureView, expectedTop = 0)
-                assertWindowBottom(textureView, expectedBottom = activity.window.decorView.height)
-                activity.browserControllerForTesting().updateAppearanceSettings(
-                    AppearanceSettings(),
-                )
-            }
-            awaitViewReady(scenario)
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    controller.updateAppearanceSettings(
+                        AppearanceSettings(
+                            surfaceStyle = BrowserSurfaceStyle.Frosted,
+                            frostedTransparencyPercent = 0,
+                            frostedAddressBarTransparencyPercent = 50,
+                        ),
+                    )
+                    controller.onWindowInsetsChanged(
+                        WindowInsetsCompat.Builder()
+                            .setInsets(
+                                WindowInsetsCompat.Type.statusBars(),
+                                Insets.of(0, STATUS_BAR_INSET_PX, 0, 0),
+                            )
+                            .setInsets(
+                                WindowInsetsCompat.Type.navigationBars(),
+                                Insets.of(0, 0, 0, NAVIGATION_BAR_INSET_PX),
+                            )
+                            .build(),
+                    )
+                }
+                awaitViewReady(scenario, expectBackdropCapture = true)
+                instrumentation.waitForIdleSync()
 
-            scenario.onActivity { activity ->
-                val view = requireNotNull(
-                    activity.browserControllerForTesting().selectedGeckoViewForTesting(),
-                )
-                assertTrue(
-                    "Non-frosted GeckoView must restore the direct compositor surface",
-                    view.hasSurfaceView(),
-                )
+                scenario.onActivity { activity ->
+                    val view = requireNotNull(
+                        activity.browserControllerForTesting().selectedGeckoViewForTesting(),
+                    )
+                    val textureView = requireNotNull(view.findTextureView())
+                    assertTrue(
+                        "Frosted GeckoView must provide page pixels to its live blur target",
+                        view.parent is BlurTarget,
+                    )
+                    assertTrue(
+                        "Frosted GeckoView must avoid a separate compositor surface",
+                        !view.hasSurfaceView(),
+                    )
+                    assertWindowTop(textureView, expectedTop = 0)
+                    assertWindowBottom(textureView, expectedBottom = activity.window.decorView.height)
+                    activity.browserControllerForTesting().updateAppearanceSettings(
+                        AppearanceSettings(),
+                    )
+                }
+                awaitViewReady(scenario)
+
+                scenario.onActivity { activity ->
+                    val view = requireNotNull(
+                        activity.browserControllerForTesting().selectedGeckoViewForTesting(),
+                    )
+                    assertTrue(
+                        "Non-frosted GeckoView must restore the direct compositor surface",
+                        view.hasSurfaceView(),
+                    )
+                }
             }
         }
     }

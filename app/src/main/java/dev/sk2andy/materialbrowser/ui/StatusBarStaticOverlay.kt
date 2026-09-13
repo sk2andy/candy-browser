@@ -16,7 +16,7 @@ internal class StatusBarStaticOverlayHost(
     browserContentBlurEnabled: Boolean = false,
 ) : FrameLayout(context) {
     val contentContainer: FrameLayout = if (browserContentBlurEnabled) {
-        BlurTarget(context)
+        BrowserChromeBlurTarget(context).apply { captureEnabled = true }
     } else {
         FrameLayout(context)
     }

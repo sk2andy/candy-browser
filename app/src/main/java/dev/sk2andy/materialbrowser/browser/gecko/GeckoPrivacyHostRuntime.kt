@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
@@ -50,6 +51,34 @@ internal class GeckoViewPrivacyHostRuntime(
     )
 
     private val bindings = linkedMapOf<String, Binding>()
+    private val performanceDiagnosticsStateListener: () -> Unit = {
+        mainHandler.post {
+            bindings.values.toList().forEach { binding ->
+                if (!binding.session.settings.usePrivateMode) {
+                    runWhenReady(binding) { publishPerformanceDiagnosticsState(binding) }
+                }
+            }
+        }
+    }
+    private val performanceDiagnosticsGapListener: () -> Unit = {
+        mainHandler.post {
+            if (GeckoPerformanceDiagnostics.isRecording) {
+                bindings.values.toList().forEach { binding ->
+                    if (!binding.session.settings.usePrivateMode &&
+                        binding.handshake.publishedRevision >= 1
+                    ) {
+                        port?.postMessage(
+                            JSONObject()
+                                .put("type", "performance-diagnostics-gap")
+                                .put("protocolVersion", CandyPrivacyHostContract.PROTOCOL_VERSION)
+                                .put("token", binding.token)
+                                .put("revision", binding.handshake.publishedRevision),
+                        )
+                    }
+                }
+            }
+        }
+    }
     private val pendingUntilReady = mutableListOf<() -> Unit>()
     private val initializationCallbacks = mutableListOf<(Boolean) -> Unit>()
     private var extension: WebExtension? = null
@@ -136,6 +165,10 @@ internal class GeckoViewPrivacyHostRuntime(
             binding.failed?.invoke(description)
             return closedBinding()
         }
+        if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS && bindings.size == 1) {
+            GeckoPerformanceDiagnostics.addStateListener(performanceDiagnosticsStateListener)
+            GeckoPerformanceDiagnostics.addGapListener(performanceDiagnosticsGapListener)
+        }
         runWhenReady(binding) {
             if (bindings[token] !== binding) return@runWhenReady
             val installed = extension ?: return@runWhenReady
@@ -188,6 +221,10 @@ internal class GeckoViewPrivacyHostRuntime(
 
             override fun close() {
                 bindings.remove(token)
+                if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS && bindings.isEmpty()) {
+                    GeckoPerformanceDiagnostics.removeStateListener(performanceDiagnosticsStateListener)
+                    GeckoPerformanceDiagnostics.removeGapListener(performanceDiagnosticsGapListener)
+                }
                 cancelTimeout(binding)
                 val readerResult = clearReaderRequest(binding)
                 binding.policyReadyCallbacks.clear()
@@ -267,7 +304,13 @@ internal class GeckoViewPrivacyHostRuntime(
         onReady?.let(binding.policyReadyCallbacks::add)
         refreshTimeout(binding)
         port?.postMessage(
-            policy.toMessage(binding.token, binding.handshake.publishedRevision),
+            policy.toMessage(binding.token, binding.handshake.publishedRevision)
+                .put(
+                    "performanceDiagnosticsEnabled",
+                    BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS &&
+                        GeckoPerformanceDiagnostics.isRecording &&
+                        !binding.session.settings.usePrivateMode,
+                ),
         )
         readerResult?.invoke(null)
     }
@@ -299,6 +342,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 binding.handshake = transition.state
                 if (transition.startBootstrap) startBootstrap(binding)
                 if (binding.handshake.isCurrentPolicyAcknowledged) {
+                    publishPerformanceDiagnosticsState(binding)
                     val callbacks = binding.policyReadyCallbacks.toList()
                     binding.policyReadyCallbacks.clear()
                     callbacks.forEach { callback -> callback() }
@@ -324,6 +368,23 @@ internal class GeckoViewPrivacyHostRuntime(
             "reader-result" -> acceptReaderResult(value)
             "failed" -> fail(IllegalStateException(value.optString("reason", "Privacy host failed")))
         }
+    }
+
+    private fun publishPerformanceDiagnosticsState(binding: Binding) {
+        if (!BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) return
+        if (bindings[binding.token] !== binding || binding.handshake.publishedRevision < 1) return
+        port?.postMessage(
+            JSONObject()
+                .put("type", "performance-diagnostics-state")
+                .put("protocolVersion", CandyPrivacyHostContract.PROTOCOL_VERSION)
+                .put("token", binding.token)
+                .put("revision", binding.handshake.publishedRevision)
+                .put(
+                    "performanceDiagnosticsEnabled",
+                    GeckoPerformanceDiagnostics.isRecording &&
+                        !binding.session.settings.usePrivateMode,
+                ),
+        )
     }
 
     private fun requestReaderExtraction(
@@ -562,6 +623,10 @@ internal class GeckoViewPrivacyHostRuntime(
             ?.take(MAX_FAILURE_DESCRIPTION_CHARS)
             ?: PRIVACY_FAILURE_DESCRIPTION
         failureDescription = description
+        if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
+            GeckoPerformanceDiagnostics.removeStateListener(performanceDiagnosticsStateListener)
+            GeckoPerformanceDiagnostics.removeGapListener(performanceDiagnosticsGapListener)
+        }
         val callbacks = initializationCallbacks.toList()
         initializationCallbacks.clear()
         callbacks.forEach { callback -> callback(false) }

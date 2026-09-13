@@ -83,11 +83,22 @@ internal object EdgeToEdgeSiteMatrix {
                   const cases = [$cases];
                   const results = [];
                   const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+                  const candyPolicyReady = () => {
+                    const rootInset = Number.parseFloat(
+                      document.documentElement.style.getPropertyValue(
+                        '--candy-browser-content-top-inset'
+                      )
+                    ) || 0;
+                    if (rootInset > 0) return true;
+                    const header = document.querySelector('#header.safe-area');
+                    return header && Number.parseFloat(getComputedStyle(header).paddingTop) > 0;
+                  };
                   const settleCandyLayout = async () => {
+                    // Gecko's isolated extension globals are not visible to this page script.
+                    // Wait for observable DOM policy, including genuine engine safe-area padding.
                     for (
                       let attempt = 0;
-                      attempt < 120 &&
-                        typeof globalThis.__candyReconcileContentTopInset !== 'function';
+                      attempt < 120 && !candyPolicyReady();
                       attempt++
                     ) {
                       await frame();
@@ -171,6 +182,7 @@ internal object EdgeToEdgeSiteMatrix {
                     for (const site of cases) {
                       renderSite(site);
                       const search = document.querySelector('#search');
+                      document.title = 'Preparing Candy site matrix: ' + site.name + ' initial layout';
                       await settleCandyLayout();
                       const candyTopInset = Number.parseFloat(
                         document.documentElement.style.getPropertyValue(
@@ -184,8 +196,10 @@ internal object EdgeToEdgeSiteMatrix {
                         '--candy-browser-owned-top-inset-offset'
                       );
                       if (site.name === 'Vimeo') {
+                        document.title = 'Preparing Candy site matrix: ' + site.name + ' hidden layout';
                         header.style.display = 'none';
                         await settleCandyLayout();
+                        document.title = 'Preparing Candy site matrix: ' + site.name + ' restored layout';
                         header.style.display = '';
                         await settleCandyLayout();
                       }
@@ -195,16 +209,19 @@ internal object EdgeToEdgeSiteMatrix {
                       const offsetStableAcrossVisibilityChange = site.name !== 'Vimeo' ||
                         ownedOffsetBeforeVisibilityChange === ownedOffsetAfterVisibilityChange;
                       scrollTo(0, 480);
+                      document.title = 'Preparing Candy site matrix: ' + site.name + ' scroll down';
                       const immediateTopWhileScrolled = document.querySelector('#header')
                         .getBoundingClientRect().top;
                       await settleScrollLayout(site);
                       const topWhileScrolled = document.querySelector('#header')
                         .getBoundingClientRect().top;
                       scrollTo(0, 0);
+                      document.title = 'Preparing Candy site matrix: ' + site.name + ' scroll back';
                       await settleScrollLayout(site);
                       const afterScrollTop = document.querySelector('#header')
                         .getBoundingClientRect().top;
                       if (site.focusedSearch) {
+                        document.title = 'Preparing Candy site matrix: ' + site.name + ' focused search';
                         search.focus({ preventScroll: true });
                         search.dispatchEvent(new FocusEvent('focus'));
                         search.dispatchEvent(new InputEvent('input', {
@@ -230,6 +247,7 @@ internal object EdgeToEdgeSiteMatrix {
                       const protectedStickyTop = protectedElement.style.getPropertyValue(
                         '--candy-browser-owned-sticky-top'
                       );
+                      const computedStickyTop = Number.parseFloat(getComputedStyle(protectedElement).top);
                       const safeAreaPaddingTop = Number.parseFloat(
                         getComputedStyle(document.querySelector('#header')).paddingTop
                       ) || 0;
@@ -248,7 +266,9 @@ internal object EdgeToEdgeSiteMatrix {
                         protectedOwned === 'true' &&
                         protectedOffset.endsWith('px') ||
                         protectedStickyOwned === 'true' &&
-                        protectedStickyTop.endsWith('px');
+                        protectedStickyTop.length > 0 &&
+                        CSS.supports('top', protectedStickyTop) &&
+                        Number.isFinite(computedStickyTop);
                       const requiredTop = usesEngineSafeArea ? 0 : candyTopInset;
                       results.push({
                         name: site.name,
@@ -261,6 +281,7 @@ internal object EdgeToEdgeSiteMatrix {
                         protectedOffset,
                         protectedStickyOwned,
                         protectedStickyTop,
+                        computedStickyTop,
                         safeAreaPaddingTop,
                         focused,
                         candyTopInset,
@@ -299,7 +320,9 @@ internal object EdgeToEdgeSiteMatrix {
                   };
                   const focusedProfile = decodeURIComponent(location.hash.slice(1));
                   if (!focusedProfile || !globalThis.__candyShowFocusedSearchProfile(focusedProfile)) {
-                    run();
+                    run().catch((error) => {
+                      document.title = 'Candy site matrix exception: ' + String(error);
+                    });
                   }
                 })();
               </script>
@@ -329,7 +352,9 @@ internal object EdgeToEdgeSiteMatrix {
         replace("\\", "\\\\").replace("'", "\\'").let { "'$it'" }
 }
 
-internal class EdgeToEdgeSiteFixtureServer : Closeable {
+internal class EdgeToEdgeSiteFixtureServer(
+    private val requestHandler: ((String) -> String?)? = null,
+) : Closeable {
     private val server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
     private val thread = Thread(::serve, "edge-to-edge-site-matrix").apply {
         isDaemon = true
@@ -337,6 +362,8 @@ internal class EdgeToEdgeSiteFixtureServer : Closeable {
     }
     val documentRequestCount = AtomicInteger()
     val url = siteUrl(EdgeToEdgeSiteMatrix.allSites.first())
+
+    fun fixtureUrl(path: String): String = "http://127.0.0.1:${server.localPort}$path"
 
     fun siteUrl(site: EdgeToEdgeSiteMatrix.Site): String =
         "http://127.0.0.1:${server.localPort}/site-matrix?site=" +
@@ -364,7 +391,7 @@ internal class EdgeToEdgeSiteFixtureServer : Closeable {
                     val site = EdgeToEdgeSiteMatrix.allSites.firstOrNull { candidate ->
                         candidate.name == requestedName
                     } ?: EdgeToEdgeSiteMatrix.allSites.first()
-                    val body = EdgeToEdgeSiteMatrix.html(site).toByteArray()
+                    val body = (requestHandler?.invoke(requestTarget) ?: EdgeToEdgeSiteMatrix.html(site)).toByteArray()
                     connection.getOutputStream().apply {
                         write("HTTP/1.1 200 OK\r\n".toByteArray())
                         write("Content-Type: text/html; charset=utf-8\r\n".toByteArray())

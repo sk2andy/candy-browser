@@ -40,7 +40,8 @@ internal fun BrowserContentBlurTarget(
 
     AndroidView(
         factory = { context ->
-            BlurTarget(context).apply {
+            BrowserChromeBlurTarget(context).apply {
+                captureEnabled = enabled
                 addView(
                     ComposeView(context).apply {
                         setParentCompositionContext(parentComposition)
@@ -57,6 +58,7 @@ internal fun BrowserContentBlurTarget(
             }
         },
         update = { target ->
+            target.captureEnabled = enabled
             (target.getChildAt(0) as? ComposeView)
                 ?.setParentCompositionContext(parentComposition)
             if (enabled) {
@@ -66,6 +68,7 @@ internal fun BrowserContentBlurTarget(
             }
         },
         onRelease = { target ->
+            target.captureEnabled = false
             currentOnTargetReleased.value(target)
             (target.getChildAt(0) as? ComposeView)?.disposeComposition()
             target.removeAllViews()

@@ -69,6 +69,7 @@ function contentPolicy(policy) {
     navigationGeneration: Number.isSafeInteger(policy?.navigationGeneration) ?
       Math.max(0, policy.navigationGeneration) : 0,
     scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
+    performanceDiagnosticsEnabled: policy?.performanceDiagnosticsEnabled === true,
     safeAreaLayoutQuietPeriodMillis:
       Number.isSafeInteger(policy?.safeAreaLayoutQuietPeriodMillis) ?
         Math.min(800, Math.max(100, policy.safeAreaLayoutQuietPeriodMillis)) : 400,
@@ -82,6 +83,33 @@ function publishContentPolicy(token, policy) {
   const tabEntry = Array.from(tokenByTab.entries()).find(([, value]) => value === token);
   if (!tabEntry) return;
   browser.tabs.sendMessage(tabEntry[0], contentPolicy(policy)).catch(() => {});
+}
+
+function publishPerformanceDiagnosticsState(message) {
+  const policy = policiesByToken.get(message.token);
+  if (!policy || message.revision !== policy.revision) return;
+  const enabled = message.performanceDiagnosticsEnabled === true;
+  if (policy.performanceDiagnosticsEnabled === enabled) return;
+  policiesByToken.set(message.token, { ...policy, performanceDiagnosticsEnabled: enabled });
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) return;
+  browser.tabs.sendMessage(tabEntry[0], {
+    type: "performance-diagnostics-state",
+    revision: policy.revision,
+    performanceDiagnosticsEnabled: enabled,
+  }).catch(() => {});
+}
+
+function publishPerformanceDiagnosticsGap(message) {
+  const policy = policiesByToken.get(message.token);
+  if (!policy || message.revision !== policy.revision ||
+      policy.performanceDiagnosticsEnabled !== true) return;
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) return;
+  browser.tabs.sendMessage(tabEntry[0], {
+    type: "performance-diagnostics-gap",
+    revision: policy.revision,
+  }).catch(() => {});
 }
 
 function scheduleContentPolicy(tabId) {
@@ -387,6 +415,10 @@ function connectNative() {
           });
         }
       });
+    } else if (message.type === "performance-diagnostics-state") {
+      publishPerformanceDiagnosticsState(message);
+    } else if (message.type === "performance-diagnostics-gap") {
+      publishPerformanceDiagnosticsGap(message);
     } else if (
       message.type === "policy" &&
       typeof message.token === "string" &&

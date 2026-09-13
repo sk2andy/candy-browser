@@ -6,6 +6,23 @@ import org.junit.Test
 
 class WebContentTopInsetScriptTest {
     @Test
+    fun `performance phases are opt in static and cleared after publication`() {
+        val script = WebContentTopInsetScript.installScript
+
+        assertTrue(script.contains("performanceDiagnosticsEnabled?.() !== true"))
+        assertTrue(script.contains("Candy.SafeArea.Reconcile"))
+        assertTrue(script.contains("Candy.SafeArea.PointDiscovery"))
+        assertTrue(script.contains("Candy.SafeArea.KnownSticky"))
+        assertTrue(script.contains("Candy.SafeArea.KnownOffsets"))
+        assertTrue(script.contains("Candy.SafeArea.QuietVerification"))
+        assertTrue(script.contains("Candy.SafeArea.Mutations"))
+        assertTrue(script.contains("performance.clearMarks(mark)"))
+        assertTrue(script.contains("performance.clearMeasures(name)"))
+        assertFalse(script.contains("performance.clearMarks()"))
+        assertFalse(script.contains("performance.clearMeasures()"))
+    }
+
+    @Test
     fun `script converts the Android inset to CSS pixels`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("physicalPixels / density"))
         assertTrue(WebContentTopInsetScript.installScript.contains("devicePixelRatio"))
@@ -81,7 +98,7 @@ class WebContentTopInsetScriptTest {
         assertTrue(WebContentTopInsetScript.installScript.contains("isVisiblePositionedElement"))
         assertTrue(WebContentTopInsetScript.installScript.contains("style.opacity"))
         assertTrue(WebContentTopInsetScript.installScript.contains("'translate'"))
-        assertTrue(WebContentTopInsetScript.installScript.contains("`0 var("))
+        assertTrue(WebContentTopInsetScript.installScript.contains("`0px var("))
         assertTrue(WebContentTopInsetScript.installScript.contains("position === 'fixed'"))
         assertTrue(WebContentTopInsetScript.installScript.contains("absoluteCandidate"))
         assertTrue(WebContentTopInsetScript.installScript.contains("panelMaxHeight"))
@@ -199,9 +216,19 @@ class WebContentTopInsetScriptTest {
         assertTrue(scrollListener.contains("refreshKnownStickyElements"))
         assertTrue(scrollListener.contains("protectStickyTopAnchors"))
         assertFalse(mutationObserver.contains("scheduleImmediateLayoutCheck"))
-        assertTrue(mutationObserver.contains("refreshKnownOffsets"))
-        assertTrue(mutationObserver.contains("refreshKnownStickyElements"))
+        assertTrue(mutationObserver.contains("pendingOwnedLayoutMutation = true"))
+        assertTrue(mutationObserver.contains("records.some(mutationTouchesOwnedLayout)"))
+        assertTrue(mutationObserver.contains("scheduleOwnedMutationLayoutCheck"))
+        assertTrue(mutationObserver.contains("records.some(mutationNeedsImmediateOwnedLayout)"))
+        assertTrue(mutationObserver.contains("flushPendingOwnedLayoutMutation(physicalPixels / density)"))
         assertTrue(mutationObserver.contains("scheduleDeferredLayoutCheck(true)"))
+
+        val pendingFlush = WebContentTopInsetScript.installScript
+            .substringAfter("const flushPendingOwnedLayoutMutation =")
+            .substringBefore("const refreshOwnedOffsets")
+        assertTrue(pendingFlush.contains("revalidateOwnedStickyAnchors(cssPixels)"))
+        assertTrue(pendingFlush.contains("refreshKnownOffsets(cssPixels)"))
+        assertTrue(pendingFlush.contains("refreshKnownStickyElements(cssPixels)"))
     }
 
     @Test

@@ -129,13 +129,44 @@ Camera and microphone permissions remain separate and continue through Candy's p
   `TextureView`; this keeps page pixels in Candy's window so `BlurView` can capture them and the
   transparent Android navigation bar can composite page content behind its gesture region. Turning
   backdrop capture off restores `SurfaceView`.
-- Candy's safe-area compatibility script keeps scroll-time work proportional to the small set of
-  sticky elements it already owns. Broad hit-testing, Shadow DOM discovery and layout recovery run
+- Candy's safe-area compatibility script gives stable viewport-sticky elements a CSS `max()` top
+  anchor with owned inline styling for Shadow DOM. Window scrolling does not read their geometry
+  or rewrite their styling; relevant semantic mutations, viewport changes and policy reconfiguration
+  revalidate author positioning. Nested scrollports and moving anchors retain sequential JS repair.
+  Scroll-time JS work remains proportional to the small set of non-CSS sticky elements it already
+  owns. Broad hit-testing, Shadow DOM discovery and layout recovery run
   after scrolling settles or on an explicit interaction, never once per fling frame. Shadow DOM
   traversal uses point queries; observers cover open roots encountered on relevant visible paths.
   System WebView also observes newly attached open roots through a lifecycle-scoped shadow hook;
-  Gecko's isolated content-script world does not hook page-owned prototypes. Neither path scans
-  every descendant in a growing feed.
+  Gecko's isolated content-script world does not hook page-owned prototypes. New or semantically
+  changed subtrees receive a bounded, style-only priority walk; normal-flow nodes need no rectangle
+  or ancestor scans. This is early protection, not a replacement for conservative top-strip verification.
+- Safe-area discovery shares computed-style, geometry and point-query reads only within one
+  synchronous read epoch. Actual Candy layout writes invalidate the epoch; unchanged owned CSS
+  values/attributes are not rewritten. Sticky anchors remain sequential because an ancestor's
+  update can move a nested scrollport before its child's geometry is read.
+  Stable reconciliations reuse the existing candidate set; quiet scroll, relevant DOM changes,
+  explicit interaction, resize and startup stabilization reopen discovery. Unknown containers and
+  Shadow DOM changes remain conservative so viewport-fixed descendants cannot be skipped based
+  on an offscreen parent rectangle. No new automatic native-inset fallback is introduced.
+- Dense top-strip protection and late verification yield between packets of at most eight points,
+  stopping after an approximately four-millisecond read budget. A single native hit-test can exceed
+  that budget; it is not a hard task-time guarantee. Pending/cancelled discovery does not count as
+  a confirmed layout failure. Only element identities and cursors cross task boundaries; changed
+  navigation, policy, viewport, scrolling or author layout invalidate partial geometry. Tiny stable
+  fixed controls can be protected earlier through fresh collision-checked priority validation.
+  That JS path may accept an exact identity transform on the fixed element itself (such as
+  `translateZ(0)`), without changing the author's transform or stacking context. Transformed ancestors,
+  scaling, rotation, perspective and motion remain conservative; CSS sticky classification does not
+  inherit this exception.
+  Common header/control seeds retain the first inset row; the rotating dense grid prioritizes its
+  trailing row so small controls at the lower status-bar boundary are not always last. Its scheduling
+  cursor and seed/raster turn survive cancelled scroll/author-layout epochs, but no geometry, negative result or completed
+  coverage does. Root, policy, inset, density and viewport/grid changes reset that hint. Continued
+  discovery still needs actual task slots after synchronous sticky/priority work; even a one-hit
+  window must alternate seeds and raster instead of restarting the same seed forever. Cancellation alone
+  is never evidence of a performance win or safe layout.
+  Sticky discovery, collision checks and exceptional targeted-flow repair remain separate costs.
 - The optional draggable scrollbar reads bounded document metrics from Candy's authenticated,
   top-frame Gecko content bridge; GeckoView's Android view scrollbar metrics describe only the
   compositor host and are not a document-height API. The same overlay writes absolute offsets through

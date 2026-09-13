@@ -11,6 +11,7 @@
 | Compose root | Read controller state, own transient screen state and route browser surfaces | [`BrowserScreen.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserScreen.kt) |
 | Compose surfaces | Host engine/preview content, native page-error/offline presentation, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`PageErrorFeedback.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/PageErrorFeedback.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
 | Policies | Resolve input, URLs, settings, media, file chooser and external routes | [`browser/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/) |
+| Safe-area mutation repair | Keep related attributes, owned-subtree and stylesheet/meta changes immediate; coalesce ancestor feed insertions into an animation frame; defer unrelated opaque feed changes to full quiet owned-layout revalidation before verification | `WebContentTopInsetScript` |
 
 ## Navigation paths
 
@@ -182,8 +183,13 @@
   `viewport-fit=cover` declaration does not guarantee use of `env(safe-area-inset-top)`.
   The document-start compatibility inset protects normal flow and top-positioned content.
   Top-anchored fixed, sticky, absolute, and focused containers are shifted once into the safe area.
-  A passive animation-frame-bounded scroll check refreshes only already-owned sticky headers while
-  scrolling; candidate discovery and broader layout recovery wait until scrolling settles. Owned
+  Stable viewport-sticky headers use an inherited CSS `max(originalTop, topInset)` anchor, including
+  an owned inline top override inside open Shadow DOM. They need no style/rectangle reads or CSS
+  rewrites during scrolling. Semantic author/ancestor changes explicitly revalidate and restore
+  author inline values and priorities; unrelated feed additions do not rewrite these anchors.
+  A passive animation-frame-bounded scroll check refreshes only already-owned nested or moving
+  sticky headers while scrolling; candidate discovery and broader layout recovery wait until
+  scrolling settles. Owned
   offsets survive temporary hide/show, but
   are cleared when a visible element returns to normal flow. Persistent layout conflicts suspend
   timer retries until a later DOM change or user interaction resumes recovery before switching only
@@ -195,6 +201,37 @@
   the renderer to TextureView for live page capture; turning blur off restores SurfaceView.
   PiP, clipping and tab motion preserve the same browser host, GeckoView, surface, display and
   session. The static status-bar overlay remains outside the renderer and keeps system icons legible.
+- Safe-area read caches are scoped to one synchronous layout-read epoch and invalidated by actual
+  Candy writes. Stable reconciliations reuse known candidates, while quiet scroll, relevant DOM
+  changes, interaction/resize and startup stabilization reopen discovery. Owned CSS/attributes are
+  changed only when necessary; JS sticky anchors stay sequential to preserve nested scrollport geometry.
+  Never skip
+  an unknown subtree based only on its wrapper rectangle: a fixed child can lie in the protected top
+  strip even when its parent is offscreen.
+- A leaf addition outside the top strip is not a general CSS safety proof: structural selectors or
+  `:has()` can reposition an older element elsewhere. Relevant author mutations therefore reopen
+  conservative discovery. Unrelated feed mutations mark all owned layout pending without synchronous
+  rectangle/style reads or CSS-sticky rewrites; quiet reconciliation/protection/verification fully
+  revalidates it before any positive result. Related attributes, mutations inside an owned subtree,
+  stylesheet and meta changes retain immediate fresh repair: an author animation-frame callback can
+  change a header after that frame's callback list is fixed. Ancestor feed insertions coalesce into
+  an animation-frame repair. This is not a universal same-paint guarantee for structural CSS such as
+  `:has()`; mutation inside an author frame can delay that repair until the following frame.
+  Focus/input and initial-install protection remain immediate. The repair frame checks
+  document/policy identity, reads current insets, and is cancelled on disposal/reconfiguration; pending
+  work and exceptions are not safety
+  proofs; navigation/policy changes revalidate and disposal clears this volatile state.
+  Added/changed subtrees get bounded early candidate registration; dense
+  verification yields between fresh read epochs, while known CSS sticky anchors remain read-free
+  during scrolling. Cancelled work is not successful verification and never consumes a fallback
+  failure confirmation.
+  Retain only a rotating grid cursor and seed/raster-turn scheduling hint across cancelled author/scroll epochs, not old layout
+  reads or proof coverage. First-row common seeds and trailing-row raster priority reduce late-control
+  latency; all points still require fresh verification before success. Root/policy/inset/density and
+  viewport changes discard the hint. Synchronous sticky discovery remains a separate measured cost.
+  Early JS protection accepts only an exact identity transform on the fixed candidate itself;
+  ancestor transforms and author motion remain conservative. It does not relax CSS sticky ownership
+  or remove author transforms/stacking contexts.
 - Read page-scroll metrics through the engine port. The optional `BrowserScrollBar` observes them
   at up to 60 Hz without replacing the independently rate-limited pill-collapse scroll path and is absent in
   fullscreen/video-only mode. Gecko's device-pixel-scaled document metrics update only the scrollbar;

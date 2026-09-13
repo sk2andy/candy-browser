@@ -70,6 +70,8 @@ class BrowserContentBlurTargetInstrumentedTest {
             browserContentBlurEnabled = true,
         )
         assertSame(frostedHost.contentContainer, frostedHost.blurTarget)
+        assertTrue(frostedHost.blurTarget is BrowserChromeBlurTarget)
+        assertTrue((frostedHost.blurTarget as BrowserChromeBlurTarget).captureEnabled)
     }
 
     @Test
@@ -126,6 +128,9 @@ class BrowserContentBlurTargetInstrumentedTest {
         composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
             .assertIsDisplayed()
         val activeTarget = attached.get()
+        assertTrue(activeTarget is BrowserChromeBlurTarget)
+        val tracedTarget = activeTarget as BrowserChromeBlurTarget
+        assertTrue(tracedTarget.captureEnabled)
         val initialPixels = composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
             .captureToImage().toPixelMap()
         val initialColor = initialPixels[initialPixels.width / 2, initialPixels.height * 3 / 4]
@@ -147,6 +152,7 @@ class BrowserContentBlurTargetInstrumentedTest {
         composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur)
             .assertDoesNotExist()
         assertSame(activeTarget, released.get())
+        assertTrue(!tracedTarget.captureEnabled)
     }
 
     @Test
@@ -174,6 +180,58 @@ class BrowserContentBlurTargetInstrumentedTest {
 
         composeRule.waitUntil(timeoutMillis = 5_000L) { attached.get() }
         assertTrue(attached.get())
+    }
+
+    @Test
+    fun clearFrostedClearDetachesCaptureAndRestoresOrdinaryContent() {
+        var style by mutableStateOf(BrowserSurfaceStyle.Clear)
+        val attached = AtomicReference<BlurTarget?>()
+        val released = AtomicReference<BlurTarget?>()
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = AppearanceSettings(surfaceStyle = style)) {
+                var target by remember { mutableStateOf<BlurTarget?>(null) }
+                Box(Modifier.fillMaxSize()) {
+                    BrowserContentBlurTarget(
+                        enabled = true,
+                        onTargetAttached = {
+                            attached.set(it)
+                            target = it
+                        },
+                        onTargetReleased = {
+                            released.set(it)
+                            if (target === it) target = null
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        Box(Modifier.fillMaxSize().background(Color.Red).testTag(SOURCE_TAG))
+                    }
+                    CandyChromeSurface(
+                        backdropSource = target.asCandyChromeBackdropSource(),
+                        tokens = browserChromeSurfaceTokens(),
+                        modifier = Modifier.size(160.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
+                    ) {
+                        Text("Chrome")
+                    }
+                }
+            }
+        }
+        composeRule.onNodeWithTag(SOURCE_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur).assertDoesNotExist()
+        assertTrue(attached.get() == null)
+
+        composeRule.runOnIdle { style = BrowserSurfaceStyle.Frosted }
+        composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur).assertIsDisplayed()
+        val source = attached.get() as BrowserChromeBlurTarget
+        assertTrue(source.isAttachedToWindow && source.captureEnabled)
+
+        composeRule.runOnIdle { style = BrowserSurfaceStyle.Clear }
+        composeRule.onNodeWithTag(SOURCE_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur).assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertSame(source, released.get())
+            assertTrue(!source.isAttachedToWindow && !source.captureEnabled)
+        }
     }
 
     @Test
