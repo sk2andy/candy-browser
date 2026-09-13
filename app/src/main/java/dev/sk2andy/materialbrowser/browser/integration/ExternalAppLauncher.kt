@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.browser.integration
 
-import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -59,16 +58,27 @@ class ExternalAppLauncher(private val context: Context) {
         val fallbackUrl = parsed.getStringExtra("browser_fallback_url")
         val data = parsed.data ?: return fallback(fallbackUrl)
         val scheme = data.scheme?.lowercase()
-        if (!BrowserUriPolicy.canOpenExternally(scheme)) return fallback(fallbackUrl)
+        val isWebLink = scheme == "http" || scheme == "https"
+        if (isWebLink) {
+            if (BrowserUriPolicy.normalizeHttpUrl(data.toString()) == null) return fallback(fallbackUrl)
+        } else if (!BrowserUriPolicy.canOpenExternally(scheme)) {
+            return fallback(fallbackUrl)
+        }
+        if (parsed.`package` == context.packageName) return fallback(fallbackUrl)
 
         val safeIntent = Intent(Intent.ACTION_VIEW, data)
             .addCategory(Intent.CATEGORY_BROWSABLE)
             .apply { parsed.`package`?.let(::setPackage) }
+        if (isWebLink) {
+            safeIntent.addFlags(
+                Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER or Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT,
+            )
+        }
         return launchDirect(safeIntent, fallbackUrl)
     }
 
     private fun launchDirect(target: Intent, fallbackUrl: String?): ExternalLaunchResult {
-        if (context !is Activity) target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
             context.startActivity(target)
             ExternalLaunchResult.Launched

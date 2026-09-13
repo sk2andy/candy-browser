@@ -18,7 +18,7 @@
 | --- | --- | --- |
 | External keyboard or mouse | `MainActivity` → `BrowserHardwareInputRules` → controller | Consume documented browser chords and auxiliary Back/Forward buttons; hand unmatched hardware keys to the selected engine unless browser chrome owns the IME; keep pointer wheels on normal Android dispatch and normalize only non-pointer vertical wheel reports before using the engine's relative-scroll fallback |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
-| Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. An incoming `ACTION_VIEW` app link first gets one direct non-browser-default handoff attempt; shared URLs stay in Candy. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the existing immediate-tab path remains unchanged. Root Back returns to the calling app. |
+| Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. Incoming URLs stay in Candy without automatically handing the initial URL or its redirects back to another app; a subsequent user tap can authorize a handoff. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the immediate-tab path remains. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep a tapped same-site HTTP(S) redirector in the engine so its server redirect can resolve; route documented `play.google.com/store/` links explicitly to Google Play with web fallback; offer other cross-site targets and the remaining bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank engine page |
@@ -78,9 +78,16 @@
   restores the opener instead of an identity-provider page.
 - Resolve external intents on every permitted handoff attempt so apps installed while Candy remains
   open are immediately eligible. Show handoff feedback only after Android accepts the external launch.
-- Offer an incoming `ACTION_VIEW` URL directly to its verified non-browser default before starting
-  Gecko. If Android rejects that handoff, preserve the same URL and bounded initial-navigation grant
-  through the existing preview or regular-tab web fallback. Shared `ACTION_SEND` URLs stay in Candy.
+- Honor Android's selection of Candy for incoming `ACTION_VIEW` and `ACTION_SEND` URLs. Neither
+  the initial URL nor its automatic redirect chain receives an external-navigation grant; this prevents
+  the calling app from returning the same link to Candy indefinitely. A subsequent user tap in the
+  preview or regular tab follows the normal bounded external-navigation policy.
+- Launch external activities with `FLAG_ACTIVITY_NEW_TASK` even from an Activity so standard-mode
+  app activities use their own task affinity rather than joining Candy's Recents entry. Rebuild
+  `intent://` requests with only `ACTION_VIEW`, browsable data, and the requested external package;
+  discard supplied components, selectors, extras, and flags. Valid HTTP(S) intent data can reach the
+  named app before its validated browser fallback, with non-browser/default-handler requirements;
+  Candy's own package and unsafe/internal schemes remain ineligible.
 - Offer user-tapped HTTP(S) links to Android only when a direct non-browser default handler can
   receive them. Requiring both a default and a non-browser handler prevents browser/chooser loops;
   unavailable or ambiguous app links continue in the current engine session. A same-registrable-site
@@ -327,5 +334,5 @@ WebView request state.
 | Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |
 | Edge-to-edge window, safe web viewport, focused search, and representative site layouts | `SystemWebViewEdgeToEdgeInstrumentedTest` and `GeckoEdgeToEdgeInstrumentedTest` run deterministic layout profiles derived from YouTube, Google, ESPN, NYTimes, CNN, Reddit, Facebook, IKEA, GitHub, Discord, Instagram, TapTap, Vimeo, Wikipedia, Stack Overflow, and DuckDuckGo on API 34+; the TapTap profile asserts safety immediately in the scroll task so delayed post-scroll repair cannot mask a jumping sticky header; live sites remain manual/nightly smoke targets rather than merge gates |
 | Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
-| Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `BrowserIntentFilterInstrumentedTest`, plus `MainActivityExternalBackInstrumentedTest` when lifecycle matters |
+| Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `ExternalAppLauncherInstrumentedTest`, and `MainActivityIncomingNavigationInstrumentedTest` for cold/warm incoming links, initial redirects, and subsequent tapped handoffs |
 | Distribution and TLS channels | `./gradlew testFullDebugUnitTest testFossDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFossDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |

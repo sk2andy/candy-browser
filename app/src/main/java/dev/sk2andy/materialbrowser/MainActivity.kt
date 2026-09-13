@@ -1251,17 +1251,9 @@ class MainActivity : AppCompatActivity() {
         if (intent.action == Intent.ACTION_MAIN) browserController.leaveSiteCapsule()
         incomingRequest?.let { request ->
             if (
-                intent.action == Intent.ACTION_VIEW &&
-                browserController.openIncomingAppLink(request.url)
-            ) {
-                incomingBrowserNavigationRequestId++
-                return
-            }
-            if (
                 browserController.isExternalLinkPreviewEnabled &&
                 browserController.openExternalLinkPreview(
                     url = request.url,
-                    allowInitialAppHandoff = true,
                 )
             ) {
                 incomingBrowserNavigationRequestId++
@@ -1272,7 +1264,6 @@ class MainActivity : AppCompatActivity() {
                 !browserController.openUrl(
                     url = request.url,
                     inNewTab = true,
-                    authorizeInitialExternalNavigation = true,
                 )
             ) return
             externalLaunchTabId = browserController.selectedTabId

@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.integration
 
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
@@ -8,6 +9,7 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -106,6 +108,93 @@ class ExternalAppLauncherInstrumentedTest {
         )
     }
 
+    @Test
+    fun activityHandoffsUseExternalTasksForWebSpecialSchemeAndIntentLinks() {
+        lateinit var activity: RecordingActivity
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { activity = RecordingActivity() }
+        val activityLauncher = ExternalAppLauncher(activity)
+        val requests = listOf(
+            "https://example.com/article",
+            PLAY_STORE_URL,
+            "candy-app://callback",
+            "intent://callback#Intent;scheme=candy-app;package=example.app;end",
+        )
+        for (request in requests) {
+            val result = if (request.startsWith("https:")) {
+                activityLauncher.openWebUrlExternally(request)
+            } else {
+                activityLauncher.open(Uri.parse(request))
+            }
+            assertEquals(request, ExternalLaunchResult.Launched, result)
+            assertTrue(
+                request,
+                requireNotNull(activity.lastIntent).flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0,
+            )
+        }
+    }
+
+    @Test
+    fun namedHttpsIntentTriesInstalledAppBeforePlayStoreFallback() {
+        assertEquals(ExternalLaunchResult.Launched, launcher.open(Uri.parse(TWITCH_INTENT)))
+
+        val launchedIntent = requireNotNull(context.lastIntent)
+        assertEquals("https://www.twitch.tv/candy", launchedIntent.dataString)
+        assertEquals("tv.twitch.android.app", launchedIntent.`package`)
+        assertEquals(Intent.ACTION_VIEW, launchedIntent.action)
+        assertNull(launchedIntent.component)
+        assertNull(launchedIntent.selector)
+        assertNull(launchedIntent.extras)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0)
+        assertEquals(0, launchedIntent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    @Test
+    fun missingNamedHttpsHandlerUsesValidatedStoreFallback() {
+        context.launchFailure = ActivityNotFoundException()
+        assertEquals(
+            ExternalLaunchResult.OpenInBrowser(PLAY_STORE_URL),
+            launcher.open(Uri.parse(TWITCH_INTENT)),
+        )
+        assertEquals("tv.twitch.android.app", requireNotNull(context.lastIntent).`package`)
+    }
+
+    @Test
+    fun unscopedHttpIntentStillRequiresNonBrowserDefault() {
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            launcher.open(Uri.parse("intent://example.com/article#Intent;scheme=http;end")),
+        )
+        val launchedIntent = requireNotNull(context.lastIntent)
+        assertNull(launchedIntent.`package`)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0)
+    }
+
+    @Test
+    fun malformedWebInternalSchemeAndOwnPackageIntentsNeverLaunch() {
+        val rejected = listOf(
+            "intent://user@example.com/article#Intent;scheme=https;package=example.app;end",
+            "intent://example.com/article#Intent;scheme=file;package=example.app;end",
+            "intent://example.com/article#Intent;scheme=https;package=${context.packageName};end",
+        )
+        for (request in rejected) {
+            assertEquals(request, ExternalLaunchResult.Unsupported, launcher.open(Uri.parse(request)))
+            assertNull(request, context.lastIntent)
+        }
+    }
+
+    private class RecordingActivity : Activity() {
+        var lastIntent: Intent? = null
+
+        override fun getPackageName(): String =
+            InstrumentationRegistry.getInstrumentation().targetContext.packageName
+
+        override fun startActivity(intent: Intent) {
+            lastIntent = Intent(intent)
+        }
+    }
+
     private class RecordingContext(base: Context) : ContextWrapper(base) {
         var launchFailure: RuntimeException? = null
         var lastIntent: Intent? = null
@@ -119,5 +208,11 @@ class ExternalAppLauncherInstrumentedTest {
     private companion object {
         const val PLAY_STORE_URL =
             "https://play.google.com/store/apps/details?id=com.outtiefive.phantomshell"
+        const val TWITCH_INTENT =
+            "intent://www.twitch.tv/candy#Intent;scheme=https;package=tv.twitch.android.app;" +
+                "action=android.intent.action.SEND;component=tv.twitch.android.app/.Ignored;" +
+                "launchFlags=0x1;S.untrusted=value;" +
+                "S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails" +
+                "%3Fid%3Dcom.outtiefive.phantomshell;end"
     }
 }

@@ -5262,12 +5262,6 @@ class BrowserController(
         }
     }
 
-    fun openIncomingAppLink(url: String): Boolean {
-        if (externalApps.openWebUrlExternally(url) != ExternalLaunchResult.Launched) return false
-        showExternalAppOpenedToast()
-        return true
-    }
-
     fun summarizeSelectedPageWithAssistant() = summarizePageWithAssistant(selectedTabId)
 
     fun summarizePageWithAssistant(tabId: String) {
