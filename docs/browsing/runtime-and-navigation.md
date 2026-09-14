@@ -56,6 +56,15 @@
   the keyboard; this avoids OEM `adjustResize` implementations leaving a black keyboard-sized area
   after the IME closes. Tab overview requests portrait only on compact screens; tablets and other
   `sw600dp` windows preserve their current orientation.
+- Forward effective window insets directly to each attached Gecko display through
+  `GeckoDisplay.windowInsetsChanged`; dispatching them to the child Android view does not reach
+  GeckoView's root-only keyboard listener. Replay them after session/view attachment. Gecko owns
+  focused-input scrolling. Reserve the keyboard's bottom inset in the inner GeckoView's native
+  margins so its rendering surface and visual viewport shrink, including in full immersive mode
+  while Candy's outer host remains full height. Combine keyboard and native safe-area bottom
+  margins with their maximum; a Compose safe-drawing host already owns keyboard space.
+  Address editing and Find in page retain chrome-owned
+  IME suppression, so their keyboards do not resize the underlying website.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Keep the external-app return marker memory-only and scoped to the tab opened by the latest accepted
   `ACTION_VIEW` or `ACTION_SEND`. Engine history consumes Back first. A root tab with an active opener

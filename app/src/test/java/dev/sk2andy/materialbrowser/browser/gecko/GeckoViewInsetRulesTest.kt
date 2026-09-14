@@ -5,6 +5,70 @@ import org.junit.Test
 
 class GeckoViewInsetRulesTest {
     @Test
+    fun `keyboard reserves native surface space while renderer retains safe area`() {
+        val safeArea = GeckoViewInsets(left = 8, top = 72, right = 6, bottom = 48)
+        val layout = GeckoViewInsetRules.resolve(
+            safeArea = safeArea,
+            forceNativeSafeArea = false,
+            forceNativeTopSafeArea = false,
+            isFullscreenContent = false,
+            isInsideSafeDrawingHost = false,
+            keyboardBottomInsetPx = 600,
+        )
+
+        assertEquals(GeckoViewInsets(0, 0, 0, 600), layout.margins)
+        assertEquals(safeArea.copy(bottom = 0), layout.rendererSafeAreaOverride)
+    }
+
+    @Test
+    fun `keyboard and forced native bottom safe area overlap rather than add`() {
+        val safeArea = GeckoViewInsets(left = 8, top = 72, right = 6, bottom = 48)
+        for ((keyboardInset, expectedBottom) in listOf(600 to 600, 0 to 48, -10 to 48)) {
+            val layout = GeckoViewInsetRules.resolve(
+                safeArea = safeArea,
+                forceNativeSafeArea = true,
+                forceNativeTopSafeArea = false,
+                isFullscreenContent = false,
+                isInsideSafeDrawingHost = false,
+                keyboardBottomInsetPx = keyboardInset,
+            )
+
+            assertEquals(GeckoViewInsets(8, 72, 6, expectedBottom), layout.margins)
+            assertEquals(GeckoViewInsets.Zero, layout.rendererSafeAreaOverride)
+        }
+    }
+
+    @Test
+    fun `fullscreen still reserves keyboard space for focused content`() {
+        val layout = GeckoViewInsetRules.resolve(
+            safeArea = GeckoViewInsets(0, 72, 0, 48),
+            forceNativeSafeArea = true,
+            forceNativeTopSafeArea = false,
+            isFullscreenContent = true,
+            isInsideSafeDrawingHost = false,
+            keyboardBottomInsetPx = 600,
+        )
+
+        assertEquals(GeckoViewInsets(0, 0, 0, 600), layout.margins)
+        assertEquals(GeckoViewInsets(0, 72, 0, 0), layout.rendererSafeAreaOverride)
+    }
+
+    @Test
+    fun `safe drawing host already owns keyboard space`() {
+        val layout = GeckoViewInsetRules.resolve(
+            safeArea = GeckoViewInsets(0, 72, 0, 48),
+            forceNativeSafeArea = false,
+            forceNativeTopSafeArea = false,
+            isFullscreenContent = false,
+            isInsideSafeDrawingHost = true,
+            keyboardBottomInsetPx = 600,
+        )
+
+        assertEquals(GeckoViewInsets.Zero, layout.margins)
+        assertEquals(GeckoViewInsets.Zero, layout.rendererSafeAreaOverride)
+    }
+
+    @Test
     fun `system webview retains document top inset and other renderer edges`() {
         val layout = GeckoViewInsetRules.resolve(
             safeArea = GeckoViewInsets(left = 8, top = 72, right = 6, bottom = 48),

@@ -2833,7 +2833,7 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 
     fun setSession(session: GeckoSession) {
         engineView.setSession(session)
-        engineView.dispatchRendererSafeAreaAfterSessionAttach()
+        engineView.dispatchInsetsAfterSessionAttach()
     }
 
     fun releaseSession(): GeckoSession? {
@@ -2911,7 +2911,7 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
                 setMargins(margins.left, margins.top, margins.right, margins.bottom)
             },
         )
-        windowInsets?.let { insets -> ViewCompat.dispatchApplyWindowInsets(view, insets) }
+        windowInsets?.let(view::updateWindowInsets)
         view.updateRendererSafeAreaOverride(insetLayout.rendererSafeAreaOverride)
     }
 
@@ -2929,7 +2929,7 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
                     view.layoutParams = layoutParams
                 }
             }
-            windowInsets?.let { insets -> ViewCompat.dispatchApplyWindowInsets(view, insets) }
+            windowInsets?.let(view::updateWindowInsets)
             view.updateRendererSafeAreaOverride(insetLayout.rendererSafeAreaOverride)
         }
     }
@@ -2940,6 +2940,7 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
     private var gestureState = GeckoContentGestureState()
     private var latestTouchEvent: MotionEvent? = null
     private var rendererSafeAreaOverride: GeckoViewInsets? = null
+    private var windowInsets: WindowInsetsCompat? = null
 
     fun setBackdropCaptureEnabled(enabled: Boolean) {
         if (backdropCaptureEnabled == enabled) return
@@ -3017,12 +3018,21 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
         dispatchRendererSafeAreaOverride()
     }
 
-    fun dispatchRendererSafeAreaAfterSessionAttach() {
-        post(::dispatchRendererSafeAreaOverride)
+    fun updateWindowInsets(insets: WindowInsetsCompat) {
+        windowInsets = insets
+        dispatchCandyWindowInsets(insets)
+    }
+
+    fun dispatchInsetsAfterSessionAttach() {
+        post {
+            windowInsets?.let(::dispatchCandyWindowInsets)
+            dispatchRendererSafeAreaOverride()
+        }
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        windowInsets?.let(::dispatchCandyWindowInsets)
         dispatchRendererSafeAreaOverride()
     }
 

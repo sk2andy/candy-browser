@@ -3583,6 +3583,11 @@ class BrowserController(
             isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
                 (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
             useNativeCssSafeArea = usesGeckoEngine,
+            keyboardBottomInsetPx = if (usesGeckoEngine) {
+                effectiveInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            } else {
+                0
+            },
         )
         (view.layoutParams as? FrameLayout.LayoutParams)?.let { layoutParams ->
             if (
@@ -3596,7 +3601,7 @@ class BrowserController(
             }
         }
         // The outer host always fills the edge-to-edge window. Its inner GeckoView either receives
-        // GeckoView 155's current root safe area or native margins for Candy's explicit override.
+        // GeckoView 155's current root safe area or native margins for the keyboard/site override.
         (view as? GeckoViewInsetHost)?.updateInsets(layout, effectiveInsets)
     }
 
