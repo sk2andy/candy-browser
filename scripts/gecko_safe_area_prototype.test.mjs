@@ -9,10 +9,26 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false } = {}) 
   let clock = 0; let timerId = 0; let observer;
   const timers = new Map(); const listeners = new Map(); const mutations = []; const registrations = [];
   const reads = { style: 0, rect: 0, selector: 0 }; let writes = 0;
+  let ruleWrites = 0;
+  const normalize = (value) => normalizePixels && /^[+-]?[\d.]+px$/.test(value) ? `${Number(Number(value.slice(0, -2)).toFixed(4))}px` : value;
+  const sheets = [];
+  function ruleStyle() {
+    const values = new Map();
+    return { getPropertyValue: (name) => values.get(name)?.value || '',
+      setProperty: (name, value, priority) => { values.set(name, { value: normalize(value), priority }); ruleWrites++; } };
+  }
   class Element {
     constructor(position = 'static', top = 'auto', tag = 'div') {
       this.localName = tag; this.parentElement = null; this.children = [];
       this.isConnected = true; this.computed = { position, top }; this.properties = new Map();
+      this.attributes = new Map();
+      if (tag === 'style') {
+        this.sheet = { cssRules: [],
+          insertRule: (selector, index) => {
+            this.sheet.cssRules.splice(index, 0, { selectorText: selector, style: ruleStyle() }); return index;
+          }, deleteRule: (index) => this.sheet.cssRules.splice(index, 1) };
+        sheets.push(this);
+      }
       this.style = {
         getPropertyValue: (name) => this.properties.get(name)?.value || '',
         getPropertyPriority: (name) => this.properties.get(name)?.priority || '',
@@ -32,6 +48,12 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false } = {}) 
       };
     }
     append(element) { this.children.push(element); element.parentElement = this; return element; }
+    appendChild(element) { return this.append(element); }
+    remove() {
+      const siblings = this.parentElement?.children;
+      if (siblings) siblings.splice(siblings.indexOf(this), 1);
+      this.parentElement = null; this.isConnected = false;
+    }
     contains(element) {
       for (let current = element; current; current = current.parentElement) if (current === this) return true;
       return false;
@@ -41,7 +63,9 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false } = {}) 
       const siblings = this.parentElement?.children || [];
       return siblings[siblings.indexOf(this) + 1] || null;
     }
-    getAttribute(name) { return name === 'style' && this.properties.size ? JSON.stringify([...this.properties]) : null; }
+    getAttribute(name) { return name === 'style' ? (this.properties.size ? JSON.stringify([...this.properties]) : null) : this.attributes.get(name) ?? null; }
+    setAttribute(name, value) { this.attributes.set(name, value); }
+    removeAttribute(name) { this.attributes.delete(name); }
     getBoundingClientRect() { reads.rect++; return { top: 0, left: 0, width: 360, height: 40, right: 360, bottom: 40 }; }
   }
   const root = new Element('static', 'auto', 'html');
@@ -50,6 +74,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false } = {}) 
     recheckAddedElements: true, recheckChangedElements: true, recheckOnResize: true,
     interactionWindowMillis: 1000, mutationDebounceMillis: 150, maxElementsPerBatch: 16, maxInitialElements: 512 };
   const document = { documentElement: root, body, readyState: 'complete',
+    createElement: (tag) => new Element('static', 'auto', tag),
     querySelector: (selector) => {
       reads.selector++;
       assert.ok(['header', 'nav', '[role="banner"]'].includes(selector), 'Only bounded semantic fallback queries are expected');
@@ -66,15 +91,29 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false } = {}) 
       listeners.set(`document:${type}`, callback); registrations.push({ target: 'document', type, options });
     },
   };
+  function computed(element) {
+    const result = { display: 'block', visibility: 'visible', paddingTop: '0px', ...element.computed };
+    for (const [name, camel] of [['top', 'top'], ['padding-top', 'paddingTop']]) {
+      const inline = element.properties.get(name);
+      if (inline) result[camel] = inline.value;
+      if (inline?.priority === 'important' || element.authorImportant?.[name]) continue;
+      for (const sheet of sheets.filter((node) => node.isConnected)) {
+        for (const rule of sheet.sheet.cssRules) {
+          const match = /\[([^=]+)="([^"]+)"\]/.exec(rule.selectorText);
+          const value = rule.style.getPropertyValue(name);
+          if (match && element.getAttribute(match[1]) === match[2] && value) result[camel] = value;
+        }
+      }
+    }
+    return result;
+  }
   const windowProxy = {};
   const context = vm.createContext({ Element, document, self: windowProxy, top: windowProxy,
     devicePixelRatio: density,
     CandyContentTopInset: { cssSafeAreaConfiguration: () => ({ ...config }) },
     getComputedStyle: (element) => {
       reads.style++;
-      return { display: 'block', visibility: 'visible', paddingTop: '0px', ...element.computed,
-        ...(element.style.getPropertyValue('top') ? { top: element.style.getPropertyValue('top') } : {}),
-        ...(element.style.getPropertyValue('padding-top') ? { paddingTop: element.style.getPropertyValue('padding-top') } : {}) };
+      return computed(element);
     },
     performance: { now: () => clock },
     setTimeout: (callback, delay = 0) => {
@@ -100,7 +139,8 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false } = {}) 
     }
     assert.fail('Prototype work or own-style mutation loop did not terminate');
   };
-  return { body, context, config, reads, timers, registrations, flush, writes: () => writes,
+  return { body, context, config, reads, timers, registrations, flush, computed, sheets,
+    writes: () => writes, ruleWrites: () => ruleWrites,
     element: (position, top, tag) => body.append(new Element(position, top, tag)),
     start(drain = true) { vm.runInContext(source, context); if (drain) flush(); },
     configure(next) { Object.assign(config, next); context.__candyConfigureCssSafeArea(); flush(); },
@@ -114,144 +154,120 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false } = {}) 
   };
 }
 
-test('body is protected once; fixed/sticky add inset once to full numeric px at or below inset without padding', () => {
-  const f = fixture(); const nodes = [];
+test('persistent body and finite fixed/sticky rules do not accumulate on authorized rechecks', () => {
+  const f = fixture(); f.body.style.setProperty('padding-top', '4px');
+  const nodes = [];
   for (const position of ['fixed', 'sticky']) {
-    for (const top of ['0px', '8px', 'auto', '-8px', '-1px', '32px', '48px', '10%', 'calc(8px + 2px)', '8px-junk']) {
+    for (const top of ['0px', '8px', '-8px', '-1px', '32px', '80px', 'auto', '10%', 'calc(8px + 2px)', '8px-junk']) {
       const element = f.element(position, top); element.style.setProperty('padding-top', '7px');
       nodes.push({ element, top });
     }
   }
+  const relative = f.element('relative', '80px');
   f.start();
-  assert.equal(f.body.style.getPropertyValue('padding-top'), '32px');
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.body.style.getPropertyValue('padding-top'), '4px', 'Body author inline is untouched');
   for (const { element, top } of nodes) {
-    const expected = ['0px', '8px', '-8px', '-1px', '32px'].includes(top) ? `${Number.parseFloat(top) + 32}px` : '';
-    assert.equal(element.style.getPropertyValue('top'), expected, top);
-    assert.equal(element.style.getPropertyValue('padding-top'), '7px');
+    const expected = /^[+-]?[\d.]+px$/.test(top) ? `${Number.parseFloat(top) + 32}px` : top;
+    assert.equal(f.computed(element).top, expected, top);
+    assert.equal(element.style.getPropertyValue('top'), '', 'No inline top writes');
+    assert.equal(f.computed(element).paddingTop, '7px');
   }
-  f.configure({ revision: 2 });
-  assert.equal(f.body.style.getPropertyValue('padding-top'), '32px');
-  for (const { element, top } of nodes) {
-    const expected = ['0px', '8px', '-8px', '-1px', '32px'].includes(top) ? `${Number.parseFloat(top) + 32}px` : '';
-    f.event('click'); f.mutate(element, 'class'); f.mutate(element, 'style'); f.flush();
-    f.event('resize'); f.flush();
-    assert.equal(element.style.getPropertyValue('top'), expected, `No accumulation after mutation/resize: ${top}`);
-  }
-  const stickyZero = nodes.find(({ element, top }) => element.computed.position === 'sticky' && top === '0px').element;
-  const ownedStyleReads = f.reads.style;
+  assert.equal(f.computed(relative).top, '80px');
+  const sticky = nodes[10].element;
+  const before = { reads: f.reads.style, writes: f.writes(), rules: f.ruleWrites() };
   for (let repeat = 0; repeat < 100; repeat++) {
-    f.event('click'); f.mutate(stickyZero, 'class'); f.mutate(stickyZero, 'style'); f.flush();
-    assert.equal(stickyZero.style.getPropertyValue('top'), '32px');
+    f.event('click'); f.mutate(sticky, 'class'); f.mutate(sticky, 'style'); f.flush();
   }
-  assert.equal(f.reads.style, ownedStyleReads, 'Retained owned leaf skips computed-style reads');
-  for (let repeat = 0; repeat < 100; repeat++) {
-    f.event('resize'); f.flush(); assert.equal(stickyZero.style.getPropertyValue('top'), '32px');
-  }
-  const safe = fixture(); safe.body.style.setProperty('padding-top', '40px'); safe.start();
-  assert.equal(safe.body.style.getPropertyValue('padding-top'), '40px');
+  assert.deepEqual({ reads: f.reads.style, writes: f.writes(), rules: f.ruleWrites() }, before);
+  for (let repeat = 0; repeat < 100; repeat++) { f.event('resize'); f.flush(); }
+  assert.equal(f.computed(sticky).top, '32px');
+  const larger = fixture(); larger.body.style.setProperty('padding-top', '40px'); larger.start();
+  larger.body.style.setProperty('padding-top', '0px'); larger.flush();
+  assert.equal(larger.computed(larger.body).paddingTop, '40px', 'Larger captured body padding persists');
+  const fractional = fixture({ density: 3, nativeTop: 137, normalizePixels: true });
+  const equal = fractional.element('fixed', '45.6667px');
+  const above = fractional.element('sticky', '45.6678px'); fractional.start();
+  assert.equal(fractional.computed(equal).top, '91.3334px');
+  assert.equal(fractional.computed(above).top, '91.3345px');
+  assert.equal(f.reads.rect, 0);
+});
+
+test('passive normal resets stay protected without repairs; important authors and cleanup keep latest styles', () => {
+  const f = fixture({ density: 2.608695652173913, nativeTop: 136, normalizePixels: true });
+  f.body.style.setProperty('padding-top', '4px');
+  const fixed = f.element('fixed', '8px'); fixed.style.setProperty('top', '8px');
+  const sticky = f.element('sticky', '80px');
+  const important = f.element('fixed', '2px'); important.style.setProperty('top', '2px', 'important');
+  const stronger = f.element('fixed', '3px'); stronger.authorImportant = { top: true };
+  f.start();
+  assert.equal(f.computed(fixed).top, '60.1333px');
+  assert.equal(f.computed(sticky).top, '132.1333px');
+  assert.equal(f.computed(important).top, '2px', 'Inline important is an explicit boundary');
+  assert.equal(f.computed(stronger).top, '3px', 'Stronger author important can win');
+  fixed.style.setProperty('top', '0px'); sticky.style.setProperty('top', '0px');
+  f.body.style.setProperty('padding-top', '0px');
+  const before = { reads: { ...f.reads }, writes: f.writes(), rules: f.ruleWrites() };
+  f.flush();
+  assert.deepEqual({ reads: { ...f.reads }, writes: f.writes(), rules: f.ruleWrites() }, before, 'Passive callback does no style reads or writes');
+  assert.equal(f.computed(fixed).top, '60.1333px');
+  assert.equal(f.computed(sticky).top, '132.1333px');
+  assert.equal(f.computed(f.body).paddingTop, '52.1333px');
+  assert.equal(fixed.style.getPropertyValue('top'), '0px');
+  sticky.style.setProperty('top', '19px', 'important'); f.flush();
+  assert.equal(f.computed(sticky).top, '19px');
+  f.configure({ cssSafeAreaTopInsetPx: 48 });
+  assert.equal(f.computed(fixed).top, '18.4px', 'Old sheet removed before latest author top is captured');
+  assert.equal(f.computed(sticky).top, '19px');
+  const pending = f.element('fixed', '0px'); f.event('click'); f.mutate(pending, 'class');
+  f.configure({ enabled: false });
+  assert.equal(f.computed(fixed).top, '0px');
+  assert.equal(f.computed(sticky).top, '19px');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+  assert.equal(f.computed(pending).top, '0px');
+  assert.equal(f.sheets.filter((sheet) => sheet.isConnected).length, 0);
+  assert.equal(f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'), '');
+  assert.ok([f.body, fixed, sticky, important].every((element) => element.attributes.size === 0));
+});
+
+test('readiness, reserved late semantic seed, trusted discovery and nested scroll cancellation stay bounded', () => {
   const ready = fixture(); const root = ready.context.document.documentElement;
   ready.context.document.documentElement = null; ready.context.document.body = null; ready.start();
   ready.context.document.documentElement = root; ready.context.document.body = ready.body;
   const header = ready.element('fixed', '0px'); ready.event('DOMContentLoaded'); ready.flush();
-  assert.equal(ready.body.style.getPropertyValue('padding-top'), '32px');
-  assert.equal(header.style.getPropertyValue('top'), '32px');
-  const fullQueue = fixture(); const roots = Array.from({ length: 16 }, () => fullQueue.element('fixed', '0px'));
-  fullQueue.start(false); fullQueue.event('click');
-  for (const node of roots) fullQueue.mutate(node, 'class');
-  fullQueue.flush();
-  assert.ok(roots.every((node) => node.style.getPropertyValue('top') === '32px'), 'Full queue must not corrupt another root job');
-  const late = fixture();
-  for (let index = 0; index < 600; index++) late.element('static', 'auto');
-  const wrapper = late.element('sticky', '0px');
-  const semantic = late.element('static', 'auto', 'header');
-  late.body.children.splice(late.body.children.indexOf(semantic), 1); wrapper.append(semantic);
-  late.start();
-  assert.equal(wrapper.style.getPropertyValue('top'), '32px', 'First semantic header seeds its late sticky ancestor beyond the body cap');
-  assert.equal(late.reads.selector, 1, 'One initial semantic query, not a page-wide selector loop');
-  assert.equal(late.reads.rect, 0);
-  late.event('scroll'); late.flush();
-  assert.equal(wrapper.style.getPropertyValue('top'), '32px');
+  assert.equal(ready.computed(header).top, '32px');
+  const full = fixture(); const roots = Array.from({ length: 16 }, () => full.element('fixed', '0px'));
+  full.start(false); full.event('click'); for (const node of roots) full.mutate(node, 'class'); full.flush();
+  assert.ok(roots.every((node) => full.computed(node).top === '32px'));
   const streamed = fixture(); streamed.context.document.readyState = 'loading';
   for (let index = 0; index < 600; index++) streamed.element('static', 'auto');
-  const earlierNav = streamed.element('sticky', '0px', 'nav'); earlierNav.hidden = true;
-  const fallbackWrapper = streamed.element('sticky', '0px');
+  const nav = streamed.element('sticky', '0px', 'nav'); nav.hidden = true;
+  const fallback = streamed.element('sticky', '0px');
   const fallbackHeader = streamed.element('static', 'auto', 'header');
-  streamed.body.children.splice(streamed.body.children.indexOf(fallbackHeader), 1); fallbackWrapper.append(fallbackHeader);
-  streamed.start();
-  assert.equal(streamed.body.style.getPropertyValue('padding-top'), '32px');
-  assert.equal(streamed.reads.selector, 0, 'Parser-loading owned Body must not consume the semantic seed');
+  streamed.body.children.splice(streamed.body.children.indexOf(fallbackHeader), 1); fallback.append(fallbackHeader);
+  streamed.start(); assert.equal(streamed.reads.selector, 0);
   streamed.context.document.readyState = 'interactive'; streamed.event('DOMContentLoaded'); streamed.flush();
-  assert.equal(streamed.reads.selector, 0, 'Parser-ready fallback must not consume the semantic seed');
-  streamed.body.children.splice(streamed.body.children.indexOf(fallbackWrapper), 1);
-  fallbackWrapper.isConnected = false; fallbackHeader.isConnected = false;
-  const finalWrapper = streamed.element('sticky', '0px');
-  const finalHeader = streamed.element('static', 'auto', 'header');
-  streamed.body.children.splice(streamed.body.children.indexOf(finalHeader), 1); finalWrapper.append(finalHeader);
+  assert.equal(streamed.reads.selector, 0);
+  fallback.remove(); fallbackHeader.isConnected = false;
+  const wrapper = streamed.element('sticky', '0px');
+  const semantic = streamed.element('static', 'auto', 'header');
+  streamed.body.children.splice(streamed.body.children.indexOf(semantic), 1); wrapper.append(semantic);
   streamed.context.document.readyState = 'complete'; streamed.event('load', 'window'); streamed.flush();
-  assert.equal(finalWrapper.style.getPropertyValue('top'), '32px', 'Load-complete replacement is seeded despite already-owned Body');
-  assert.equal(earlierNav.style.getPropertyValue('top'), '', 'Header is preferred even when a hidden NAV appears earlier');
-  assert.equal(fallbackWrapper.style.getPropertyValue('top'), '');
-  assert.equal(streamed.reads.selector, 1, 'Preferred header needs only one initial query');
-  assert.equal(streamed.reads.rect, 0);
-  streamed.event('load', 'window'); streamed.flush();
-  assert.equal(streamed.reads.selector, 1, 'Retained semantic seed is not polled on later load events');
-  const fractional = fixture({ density: 3, nativeTop: 137, normalizePixels: true });
-  const roundedEqual = fractional.element('fixed', '45.6667px');
-  const beyondTolerance = fractional.element('sticky', '45.6678px');
-  fractional.start();
-  assert.equal(roundedEqual.style.getPropertyValue('top'), '91.3334px', 'Rounded-up computed equal is eligible');
-  assert.equal(beyondTolerance.style.getPropertyValue('top'), '', 'More than 0.001px above inset is not eligible');
-  fractional.configure({ enabled: false });
-  assert.equal(roundedEqual.style.getPropertyValue('top'), '');
-});
-
-test('trusted class/style/hidden changes repair positioning without own-style loops or scroll work', () => {
-  const f = fixture(); const element = f.element('static', 'auto'); f.start();
-  Object.assign(element.computed, { position: 'fixed', top: '0px' });
-  f.mutate(element, 'class'); f.flush();
-  assert.equal(element.style.getPropertyValue('top'), '', 'No repair window before trusted interaction');
-  f.event('click'); f.mutate(element, 'class'); f.flush();
-  assert.equal(element.style.getPropertyValue('top'), '32px');
-  const added = f.element('sticky', '8px'); f.added(added); f.flush();
-  assert.equal(added.style.getPropertyValue('top'), '40px');
-  const resized = f.element('static', 'auto'); resized.computed.position = 'fixed'; resized.computed.top = '0px';
-  f.event('resize'); f.flush();
-  assert.equal(resized.style.getPropertyValue('top'), '32px', 'Enabled resize recheck works with unchanged policy');
-  f.configure({ recheckOnResize: false, revision: 2 });
-  const noResize = f.element('fixed', '0px'); f.event('resize'); f.flush();
-  assert.equal(noResize.style.getPropertyValue('top'), '', 'Disabled resize recheck remains inert');
-  const before = { reads: { ...f.reads }, writes: f.writes() };
-  const capturedScroll = f.registrations.find((entry) => entry.target === 'document' && entry.type === 'scroll');
-  assert.equal(capturedScroll.options.capture, true); assert.equal(capturedScroll.options.passive, true);
+  assert.equal(streamed.computed(wrapper).top, '32px');
+  assert.equal(streamed.computed(nav).top, '0px');
+  assert.equal(streamed.reads.selector, 1); assert.equal(streamed.reads.rect, 0);
+  streamed.event('load', 'window'); streamed.flush(); assert.equal(streamed.reads.selector, 1);
+  const f = fixture(); const late = f.element('static', 'auto'); f.start();
+  Object.assign(late.computed, { position: 'fixed', top: '0px' });
+  f.mutate(late, 'class'); f.flush(); assert.equal(f.computed(late).top, '0px');
+  f.event('click'); f.mutate(late, 'class'); f.flush(); assert.equal(f.computed(late).top, '32px');
+  const added = f.element('sticky', '8px'); f.added(added); f.flush(); assert.equal(f.computed(added).top, '40px');
+  const resized = f.element('fixed', '80px'); f.event('resize'); f.flush(); assert.equal(f.computed(resized).top, '112px');
+  f.configure({ recheckOnResize: false }); const noResize = f.element('fixed', '0px');
+  f.event('resize'); f.flush(); assert.equal(f.computed(noResize).top, '0px');
+  const before = { reads: { ...f.reads }, writes: f.writes(), rules: f.ruleWrites() };
+  const capture = f.registrations.find((entry) => entry.target === 'document' && entry.type === 'scroll');
+  assert.equal(capture.options.capture, true); assert.equal(capture.options.passive, true);
   for (const target of ['document', 'window']) { f.event('scroll', target); f.flush(); }
-  assert.deepEqual({ reads: { ...f.reads }, writes: f.writes() }, before);
-  for (const attribute of ['style', 'hidden']) { f.event('click'); f.mutate(element, attribute); f.flush(); }
-  assert.equal(element.style.getPropertyValue('top'), '32px');
-});
-
-test('disable cancels pending work and restores originals unless authors changed them; inset changes do not accumulate', () => {
-  const f = fixture(); f.body.style.setProperty('padding-top', '4px');
-  const restored = f.element('fixed', '2px'); restored.style.setProperty('top', '2px', 'important');
-  const authored = f.element('sticky', '0px'); f.start();
-  f.configure({ cssSafeAreaTopInsetPx: 48, revision: 2 });
-  assert.equal(f.body.style.getPropertyValue('padding-top'), '16px');
-  assert.equal(restored.style.getPropertyValue('top'), '18px');
-  authored.style.setProperty('top', '19px');
-  const pending = f.element('fixed', '0px'); f.event('click'); f.mutate(pending, 'class');
-  f.configure({ enabled: false, revision: 3 });
-  assert.equal(f.body.style.getPropertyValue('padding-top'), '4px');
-  assert.equal(restored.style.getPropertyValue('top'), '2px');
-  assert.equal(restored.style.getPropertyPriority('top'), 'important');
-  assert.equal(authored.style.getPropertyValue('top'), '19px');
-  assert.equal(pending.style.getPropertyValue('top'), '');
-  assert.equal(f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'), '');
-  const normalized = fixture({ density: 2.608695652173913, nativeTop: 136, normalizePixels: true });
-  normalized.body.style.setProperty('padding-top', '4px');
-  const normalizedTop = normalized.element('fixed', '2px'); normalizedTop.style.setProperty('top', '2px');
-  normalized.start();
-  assert.equal(normalized.body.style.getPropertyValue('padding-top'), '52.1333px');
-  assert.equal(normalizedTop.style.getPropertyValue('top'), '54.1333px');
-  normalized.configure({ enabled: false, revision: 2 });
-  assert.equal(normalized.body.style.getPropertyValue('padding-top'), '4px', 'Canonical CSSOM value remains owned for cleanup');
-  assert.equal(normalizedTop.style.getPropertyValue('top'), '2px');
+  assert.deepEqual({ reads: { ...f.reads }, writes: f.writes(), rules: f.ruleWrites() }, before);
 });

@@ -5,6 +5,12 @@
   if (globalThis.self !== globalThis.top) return;
   const owned = new Map();
   const ownWrites = new WeakMap();
+  const rules = new Map();
+  const markerPrefix = `data-candy-safe-area-${Math.random().toString(36).slice(2)}`;
+  let layerEpoch = 0;
+  let markerName = "";
+  let markerId = 0;
+  let layer = null;
   let configuration = null;
   let configurationKey = "";
   let inset = 0;
@@ -68,9 +74,50 @@
   }
 
   function restore(element, entries) {
+    if (!Array.isArray(entries)) {
+      if (element.getAttribute(entries.attribute) === entries.id) {
+        if (entries.original === null) element.removeAttribute(entries.attribute);
+        else element.setAttribute(entries.attribute, entries.original);
+      }
+      return;
+    }
     for (const entry of entries) {
       if (stillOwned(element, entry)) write(element, entry.name, entry.value, entry.priority);
     }
+  }
+
+  function releaseRule(element) {
+    const entry = rules.get(element);
+    if (!entry) return;
+    const index = Array.from(layer?.sheet?.cssRules || []).indexOf(entry.rule);
+    if (index >= 0) layer.sheet.deleteRule(index);
+    rules.delete(element);
+    restore(element, entry);
+  }
+
+  // Author origin: normal inline resets lose to these rules; inline !important can win.
+  function applyRule(element, name, value) {
+    // Author removal/tampering is not repaired; a new configuration creates a new layer.
+    if (layer && !layer.isConnected) return;
+    let entry = rules.get(element);
+    if (entry && element.getAttribute(entry.attribute) !== entry.id) {
+      releaseRule(element);
+      entry = null;
+    }
+    if (!entry) {
+      if (rules.size >= configuration.maxInitialElements || markerId >= configuration.maxInitialElements) return;
+      if (!layer) {
+        layer = document.createElement("style");
+        document.documentElement.appendChild(layer);
+        if (!layer.sheet) { layer.remove(); layer = null; return; }
+      }
+      const id = String(++markerId);
+      const index = layer.sheet.insertRule(`:root [${markerName}="${id}"] {}`, layer.sheet.cssRules.length);
+      entry = { attribute: markerName, id, original: element.getAttribute(markerName), rule: layer.sheet.cssRules[index] };
+      rules.set(element, entry);
+      element.setAttribute(markerName, id);
+    }
+    if (!entry.rule.style.getPropertyValue(name)) entry.rule.style.setProperty(name, value, "important");
   }
 
   function cancel() {
@@ -92,6 +139,7 @@
   }
 
   function enqueue(root, initial = false, shallow = false) {
+    if (root instanceof Element && !root.isConnected) releaseRule(root);
     if (!(root instanceof Element) || !root.isConnected ||
         jobs.some((job) => job.root === root && job.shallow === shallow)) return;
     if (jobs.length >= 16) return;
@@ -120,12 +168,14 @@
   }
 
   function classify(element, style) {
-    const entry = owned.get(element)?.find((current) => current.name === "top");
-    if (entry && stillOwned(element, entry)) return;
+    const entry = rules.get(element);
+    if (entry && layer?.isConnected && element.getAttribute(entry.attribute) === entry.id &&
+        entry.rule.style.getPropertyValue("top")) return;
+    if (entry && (!layer?.isConnected || element.getAttribute(entry.attribute) !== entry.id)) releaseRule(element);
     style ??= getComputedStyle(element);
     if (style.position !== "fixed" && style.position !== "sticky") return;
     const top = pixels(style.top);
-    if (top !== null && top <= inset + 0.001) apply(element, "top", `${top + inset}px`);
+    if (top !== null) applyRule(element, "top", `${top + inset}px`);
   }
 
   function work() {
@@ -146,7 +196,7 @@
           apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
           const style = getComputedStyle(document.body);
           const padding = pixels(style.paddingTop);
-          if (padding !== null && padding < inset) apply(document.body, "padding-top", `${inset}px`);
+          if (padding !== null) applyRule(document.body, "padding-top", `${Math.max(padding, inset)}px`);
           classify(document.body, style);
           seedSemanticHeader();
           const job = enqueue(document.body, true);
@@ -164,6 +214,7 @@
       if (!job.next || !job.remaining || !job.root.isConnected ||
           (!job.initial && configuration.requireInteractionForUpdates &&
             (interactionUntil <= 0 || performance.now() > interactionUntil))) {
+        if (!job.root.isConnected) releaseRule(job.root);
         jobs.shift();
         continue;
       }
@@ -172,6 +223,7 @@
       job.remaining--;
       count++;
       if (element.isConnected && job.root.contains(element)) classify(element);
+      else if (!element.isConnected) releaseRule(element);
     }
     schedule();
   }
@@ -187,7 +239,9 @@
             own.after === (record.target.getAttribute("style") || "") && own.before.has(record.oldValue || "")) continue;
         enqueue(record.target);
       } else if (record.type === "childList" && configuration.recheckAddedElements) {
-        for (let child = 0; child < Math.min(record.addedNodes.length, 16); child++) enqueue(record.addedNodes[child]);
+        for (let child = 0; child < Math.min(record.addedNodes.length, 16); child++) {
+          if (record.addedNodes[child] !== layer) enqueue(record.addedNodes[child]);
+        }
       }
     }
     schedule(configuration.mutationDebounceMillis);
@@ -224,6 +278,13 @@
     cancel();
     observer?.disconnect();
     observer = null;
+    // Remove protection before any fresh computed-style read for the next inset.
+    layer?.remove();
+    layer = null;
+    cleanup.push(...rules);
+    rules.clear();
+    markerName = `${markerPrefix}-${++layerEpoch}`;
+    markerId = 0;
     cleanup.push(...owned);
     owned.clear();
     configuration = next;

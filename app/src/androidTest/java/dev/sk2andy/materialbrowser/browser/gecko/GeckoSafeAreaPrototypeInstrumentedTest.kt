@@ -29,7 +29,7 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     @Test
-    fun additiveTopIsAppliedOnceAndRestoredWithoutShrinkingNativeViewport() {
+    fun persistentTopSurvivesPassiveNormalInlineResetAndReleasesAuthorValues() {
         val title = AtomicReference<String?>(null)
         val settled = AtomicBoolean(false)
         EdgeToEdgeSiteFixtureServer { HTML }.use { server ->
@@ -67,14 +67,35 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                     val protected = awaitReport(title) {
                         abs(it.getDouble("fixed") - it.getDouble("env") - 8) < 0.02 &&
                             abs(it.getDouble("sticky") - it.getDouble("env")) < 0.02 &&
-                            abs(it.getDouble("equal") - 2 * it.getDouble("env")) < 0.02
+                            abs(it.getDouble("equal") - 2 * it.getDouble("env")) < 0.02 &&
+                            abs(it.getDouble("above") - it.getDouble("env") - 80) < 0.02 &&
+                            abs(it.getDouble("reset") - it.getDouble("env") - 8) < 0.02 &&
+                            abs(it.getDouble("boundary") - it.getDouble("env") - 8) < 0.02 &&
+                            !it.getBoolean("resetDone")
                     }
                     assertEquals(NATIVE_TOP_PX.toDouble(), protected.getDouble("env") * protected.getDouble("density"), 0.5)
                     assertEquals(protected.getDouble("env"), protected.getDouble("body"), 0.02)
+                    assertEquals(0, protected.getInt("topStyleChanges"))
+                    assertEquals(0, protected.getInt("inlineTopCount"))
+                    assertEquals("4px", protected.getString("bodyInline"))
+                    val passive = awaitReport(title) { it.getBoolean("resetDone") && it.getInt("topStyleChanges") == 3 }
+                    assertEquals(0, passive.getInt("trustedClicks"))
+                    assertEquals("0px", passive.getString("resetInline"))
+                    assertEquals("", passive.getString("resetPriority"))
+                    assertEquals("0px", passive.getString("stickyInline"))
+                    assertEquals("0px", passive.getString("bodyInline"))
+                    assertEquals(protected.getDouble("reset"), passive.getDouble("reset"), 0.02)
+                    assertEquals(protected.getDouble("sticky"), passive.getDouble("sticky"), 0.02)
+                    assertEquals(protected.getDouble("body"), passive.getDouble("body"), 0.02)
+                    assertEquals(19.0, passive.getDouble("boundary"), 0.02)
+                    assertEquals("important", passive.getString("boundaryPriority"))
                     scenario.onActivity { session.scrollToVerticalOffset(600) }
                     val scrolled = awaitReport(title) { it.getDouble("scroll") > 80 }
                     assertEquals(protected.getDouble("sticky"), scrolled.getDouble("sticky"), 0.02)
                     assertEquals(protected.getDouble("fixed"), scrolled.getDouble("fixed"), 0.02)
+                    assertEquals(protected.getDouble("above"), scrolled.getDouble("above"), 0.02)
+                    assertEquals(protected.getDouble("reset"), scrolled.getDouble("reset"), 0.02)
+                    assertEquals(3, scrolled.getInt("topStyleChanges"))
                     assertEquals(scrolled.getDouble("env"), scrolled.getDouble("stickyY"), 0.5)
                     scenario.onActivity { activity ->
                         listOf(view, (view as ViewGroup).getChildAt(0)).forEach { surface ->
@@ -89,9 +110,13 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                     }
                     updatePolicy(policy.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(enabled = false)))
                     val restored = awaitReport(title) {
-                        abs(it.getDouble("body") - 4) < 0.02 && abs(it.getDouble("fixed") - 8) < 0.02 &&
-                            abs(it.getDouble("sticky")) < 0.02 && abs(it.getDouble("equal") - it.getDouble("env")) < 0.02
+                        abs(it.getDouble("body")) < 0.02 && abs(it.getDouble("fixed") - 8) < 0.02 &&
+                            abs(it.getDouble("sticky")) < 0.02 && abs(it.getDouble("equal") - it.getDouble("env")) < 0.02 &&
+                            abs(it.getDouble("above") - 80) < 0.02 && abs(it.getDouble("reset")) < 0.02 &&
+                            abs(it.getDouble("boundary") - 19) < 0.02
                     }
+                    assertEquals(3, restored.getInt("topStyleChanges"))
+                    assertEquals("important", restored.getString("boundaryPriority"))
                     assertEquals(initial.getDouble("height"), restored.getDouble("height"), 0.5)
                 } finally {
                     scenario.onActivity {
@@ -141,17 +166,48 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
             <style>
               html,body { margin:0; } #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
               #fixed { position:fixed; top:8px; left:0; height:20px; } #equal { position:fixed; top:env(safe-area-inset-top); left:80px; }
+              #above { position:fixed; top:80px; left:160px; }
+              #reset, #boundary { position:fixed; top:8px; left:220px; }
               #sticky { position:sticky; top:0px; height:30px; } #tail { height:2400px; }
             </style>
             <body style="padding-top:4px"><div id="probe"></div><div id="fixed">Fixed</div>
-            <div id="equal">Equal</div>${"<div></div>".repeat(600)}
+            <div id="equal">Equal</div><div id="above">Above inset</div><div id="reset">Passive reset</div>
+            <div id="boundary">Inline important boundary</div>${"<div></div>".repeat(600)}
             <div id="sticky"><header>Late static header inside sticky wrapper</header></div><div id="tail">Tail</div></body>
             <script>
+              const anchors = ['fixed','equal','above','sticky','reset','boundary'].map(id => document.getElementById(id));
+              const previousTop = new Map(anchors.map(element => [element, element.style.top]));
+              let topStyleChanges = 0, resetDone = false, resetScheduled = false, trustedClicks = 0;
+              document.addEventListener('click', event => { if (event.isTrusted) trustedClicks++; });
+              new MutationObserver(records => {
+                for (const record of records) {
+                  if (!previousTop.has(record.target)) continue;
+                  const current = record.target.style.top;
+                  if (previousTop.get(record.target) !== current) topStyleChanges++;
+                  previousTop.set(record.target, current);
+                }
+              }).observe(document.body, {attributes:true, attributeFilter:['style'], subtree:true});
               const report = () => {
                 const number = (id, property) => parseFloat(getComputedStyle(document.getElementById(id))[property]);
+                const env = number('probe','paddingTop');
+                if (!resetScheduled && env > 0 && Math.abs(number('reset','top') - env - 8) < .02 &&
+                    Math.abs(number('sticky','top') - env) < .02 && Math.abs(number('above','top') - env - 80) < .02) {
+                  resetScheduled = true;
+                  setTimeout(() => {
+                    document.getElementById('reset').style.setProperty('top','0px');
+                    document.getElementById('sticky').style.setProperty('top','0px');
+                    document.body.style.setProperty('padding-top','0px');
+                    document.getElementById('boundary').style.setProperty('top','19px','important');
+                    resetDone = true;
+                  }, 1500);
+                }
                 document.title = '${REPORT_PREFIX}' + JSON.stringify({env:number('probe','paddingTop'), density:devicePixelRatio,
                   body:parseFloat(getComputedStyle(document.body).paddingTop), fixed:number('fixed','top'),
-                  equal:number('equal','top'), sticky:number('sticky','top'), stickyY:document.getElementById('sticky').getBoundingClientRect().top,
+                  equal:number('equal','top'), above:number('above','top'), sticky:number('sticky','top'), stickyY:document.getElementById('sticky').getBoundingClientRect().top,
+                  reset:number('reset','top'), boundary:number('boundary','top'), resetDone, trustedClicks, topStyleChanges,
+                  inlineTopCount:anchors.filter(element => element.style.top).length, bodyInline:document.body.style.paddingTop,
+                  resetInline:document.getElementById('reset').style.top, resetPriority:document.getElementById('reset').style.getPropertyPriority('top'),
+                  stickyInline:document.getElementById('sticky').style.top, boundaryPriority:document.getElementById('boundary').style.getPropertyPriority('top'),
                   scroll:scrollY, height:innerHeight, loaded:document.readyState === 'complete'});
               };
               setInterval(report,100); report();

@@ -318,19 +318,38 @@ together. This prototype is not a compatibility claim for the layouts described 
 | Rule | Prototype behavior |
 | --- | --- |
 | Inset source | Existing native policy inset divided by device-pixel ratio, exposed as `--candy-safe-area-inset-top` |
-| Normal page flow | Body top padding is raised to at least the inset; larger existing padding is preserved |
-| Fixed / sticky | A finite resolved `top` in CSS pixels less than or equal to the inset receives `originalTop + inset` once; 0.001 px comparison tolerance handles CSSOM rounding; no positioned-element padding is added |
-| Retained anchors | Already-owned top declarations are checked before reading computed style and never receive another addition on mutation/resize |
-| Other top values | Literal `auto`, unresolved and numeric values greater than the inset are not changed; negative and equal-to-inset numeric values are included by the prototype's explicit `<=` rule |
+| Normal page flow | A per-document stylesheet raises body top padding to at least the inset; larger initial padding is preserved |
+| Fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
+| Retained anchors | Existing rule identities are checked before reading computed style; normal author inline resets do not remove the rule or add another inset |
+| Other top values | Literal `auto` and unresolved values are not changed; all finite resolved CSS-pixel values, including negative and above-inset tops, are included |
 | Initial discovery | One bounded body traversal plus a single semantic seed after full document load; first `header` preferred, `nav` then `[role="banner"]` used only as fallbacks (at most three fixed queries); at most eight shallow header/ancestor checks are reserved from the initial traversal cap and prioritized in the same worker |
 | Later discovery | Configured added/changed subtrees after trusted click/drop, plus the bounded event-target subtree; existing owned changes remain |
 | Scroll | Cancels pending work; does not start style/geometry reads or repair |
 | Settings | Existing enable, mutation, interaction, batch and resize controls remain the tuning surface |
 | Native / privacy | Full-window renderer, native inset delivery, existing fallback bridge and private-session boundaries remain unchanged |
 
+This iteration tests approach A: persistent author-origin CSS, not periodic mutation repair. Each
+document owns one stylesheet and bounded element markers. Rules persist while that document and
+their matching elements remain; disable/configuration changes remove the prototype's rules and
+markers without restoring over the page's newer inline top or padding. Existing discovery gates
+remain: an unrelated replacement element is not automatically protected merely because its
+predecessor was protected. No 500-ms background DOM scan is introduced.
+
+The stylesheet uses `!important`, which overrides normal inline declarations, but author inline
+`!important` and stronger competing author-important selectors can still win. This is not a
+user-origin stylesheet or a universal cascade guarantee. Initial classification still happens after
+content becomes available; this change targets subsequent resets, not first-paint flicker.
+Removing or editing the prototype's own stylesheet or markers is outside this persistence guarantee;
+normal header style resets are the regression target. Responsive author top/padding changes remain
+masked while the corresponding captured rule wins, until protection is disabled or reconfigured.
+
 `top` has the CSS initial value `auto`, not zero. CSSOM `getComputedStyle()` may return a resolved
 used pixel value for a positioned visible box; the prototype filters the returned value, not author
 stylesheet declarations. It does not scan stylesheets to reconstruct declarations.
+
+Removing the top threshold deliberately widens this experimental rule: a lower or bottom-anchored
+fixed box can also move if CSSOM resolves its top into pixels. This is not a universal layout-safety
+proof, and the existing bounded discovery cap still applies.
 
 Known limitations are intentionally left for manual testing: iframe contents, absolute descendants,
 nested positioning/scrolling containers, full-height fixed panels, larger DOMs beyond the traversal
@@ -344,7 +363,7 @@ Manual feedback on the previous clamp-based prototype (2026-09-14):
 | Sites / issue | Feedback / verification |
 | --- | --- |
 | Google, Wikipedia, GitHub, CNN, Hackernews, Reddit, eBay, Kleinanzeigen, taptap.io, amazon.de | No errors reported in the tested states; not a complete state-matrix acceptance claim |
-| Vinted | Previously sticky `top: 0` header scrolled behind the status bar. Final additive Release smoke (host 1.5.25) on a dedicated API 35 emulator kept header `top` and `y` at the 52.1333 px inset after one swipe; broader manual acceptance remains pending |
+| Vinted | Sticky `top: 0` header can still be missed at initial load: host 1.5.25 passed one dedicated API 35 Release swipe, but the broader-rule host 1.5.26 missed the header on its tested load. Arithmetic and focused Gecko tests pass; real-site initial-load reliability and exact cause remain unresolved |
 | Load timing | Strong flicker from post-load CSS changes; explicitly deferred until after this header-rule fix |
 
 ### Existing classifier and controls
