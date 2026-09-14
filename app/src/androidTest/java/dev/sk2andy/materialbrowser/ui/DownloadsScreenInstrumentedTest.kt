@@ -105,6 +105,35 @@ class DownloadsScreenInstrumentedTest {
         assertEquals(listOf(completed, failed), cleared.get())
     }
 
+    @Test
+    fun activeRowsOfferOnlySupportedControlsAndDispatchActions() {
+        val cancelled = AtomicReference<DownloadEntry>()
+        val toggled = AtomicReference<DownloadEntry>()
+        val system = entry(id = 1, name = "system.bin", status = DownloadStatus.Running)
+        val gecko = entry(id = -2, name = "gecko.bin", status = DownloadStatus.Paused)
+            .copy(supportsPause = true, supportsCancel = true)
+        val done = entry(id = 3, name = "done.bin", status = DownloadStatus.Successful)
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = AppearanceSettings()) {
+                DownloadsScreen(
+                    downloads = listOf(system, gecko, done),
+                    onClearFinished = {},
+                    onOpenDownload = {},
+                    onBack = {},
+                    onCancelDownload = cancelled::set,
+                    onTogglePauseDownload = toggled::set,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DownloadsScreenTestTags.pause(system.id)).assertDoesNotExist()
+        composeRule.onNodeWithTag(DownloadsScreenTestTags.cancel(system.id)).performClick()
+        assertEquals(system, cancelled.get())
+        composeRule.onNodeWithTag(DownloadsScreenTestTags.pause(gecko.id)).performClick()
+        assertEquals(gecko, toggled.get())
+        composeRule.onNodeWithTag(DownloadsScreenTestTags.cancel(done.id)).assertDoesNotExist()
+    }
+
     private fun entry(
         id: Long,
         name: String,

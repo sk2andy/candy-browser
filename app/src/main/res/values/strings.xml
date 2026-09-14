@@ -173,6 +173,9 @@
     <string name="favorite_added_confirmation">Added to favorites</string>
     <string name="favorite_removed_confirmation">Removed from favorites</string>
     <string name="action_undo">Undo</string>
+    <string name="tab_closed">Tab closed</string>
+    <string name="settings_closed_tab_undo_title">Undo closed tab</string>
+    <string name="settings_closed_tab_undo_summary">Offer Undo for 3 seconds after closing a tab.</string>
     <string name="action_open_external_app">Open in external app</string>
     <string name="action_summarize_with_assistant">Summarize with Assistant</string>
     <string name="assistant_summary_prompt">Summarize the following website in English.</string>
@@ -226,6 +229,7 @@
     <string name="update_available_title">Update available</string>
     <string name="update_available_message">Candy Browser %1$s is available. Download the signed APK from GitHub? When the download finishes, open it to let Android verify and install the update.</string>
     <string name="action_download_update">Download update</string>
+    <string name="action_view_release_notes">Release notes</string>
     <string name="action_later">Later</string>
 
     <!-- Address commands -->
@@ -578,6 +582,9 @@
     <string name="downloads_clear_title">Clear finished downloads?</string>
     <string name="downloads_clear_message">This permanently deletes all completed and failed download files. Active downloads stay.</string>
     <string name="downloads_clear_failed">Downloads could not be cleared</string>
+    <string name="downloads_pause">Pause</string>
+    <string name="downloads_resume">Resume</string>
+    <string name="downloads_control_failed">Download could not be updated</string>
     <string name="downloads_open_failed">No app can open this download</string>
     <string name="downloads_status_pending">Pending · %1$s</string>
     <string name="downloads_status_running">Downloading · %1$s</string>
@@ -1126,6 +1133,33 @@
     <string name="developer_options_show_release_notes">Show What’s New</string>
     <string name="developer_options_show_release_notes_summary">Opens the release notes bundled with this app version again.</string>
     <string name="developer_options_safe_area_section">Safe area fallback</string>
+    <string name="developer_options_gecko_safe_area_section">Gecko edge-to-edge</string>
+    <string name="developer_options_gecko_safe_area_summary">Tune Gecko’s CSS safe-area corrections and mutation checks. These settings do not change System WebView or the native safe-area fallback.</string>
+    <string name="developer_options_gecko_safe_area_enabled">CSS safe-area correction</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Turn off Candy’s Gecko CSS corrections and observers. Native edge-to-edge rendering, CSS env() values, and explicit or emergency fallback remain available.</string>
+    <string name="developer_options_gecko_recheck_added_elements">Check added elements</string>
+    <string name="developer_options_gecko_recheck_added_elements_summary">Check newly inserted elements for CSS safe-area corrections within the update budget.</string>
+    <string name="developer_options_gecko_recheck_changed_elements">Check changed elements</string>
+    <string name="developer_options_gecko_recheck_changed_elements_summary">Recheck elements after relevant attribute or style changes.</string>
+    <string name="developer_options_gecko_require_interaction">Require interaction for updates</string>
+    <string name="developer_options_gecko_require_interaction_summary">Allow mutation updates only after a tap, click, or keyboard interaction. Scrolling alone does not open the update window.</string>
+    <string name="developer_options_gecko_recheck_on_resize">Check after resizing</string>
+    <string name="developer_options_gecko_recheck_on_resize_summary">Recheck CSS corrections when the viewport size changes.</string>
+    <string name="developer_options_gecko_interaction_window">Interaction window</string>
+    <string name="developer_options_gecko_interaction_window_summary">How long an interaction allows mutation updates when the interaction gate is enabled.</string>
+    <string name="developer_options_gecko_mutation_debounce">Mutation delay</string>
+    <string name="developer_options_gecko_mutation_debounce_summary">Collect page changes for this long before processing the next update.</string>
+    <string name="developer_options_gecko_max_elements_per_batch">Elements per batch</string>
+    <string name="developer_options_gecko_max_elements_per_batch_summary">Maximum elements checked in one batch. Remaining work continues in later batches.</string>
+    <string name="developer_options_gecko_max_batch_duration">Batch time budget</string>
+    <string name="developer_options_gecko_max_batch_duration_summary">Stop a batch after this budget. A single element check can exceed the budget.</string>
+    <string name="developer_options_gecko_max_initial_elements">DOM classification limit</string>
+    <string name="developer_options_gecko_max_initial_elements_summary">Limit the initial document check and each later new or changed subtree to this many elements.</string>
+    <string name="developer_options_gecko_reset">Reset Gecko edge-to-edge defaults</string>
+    <plurals name="developer_options_gecko_elements_value">
+        <item quantity="one">%1$d element</item>
+        <item quantity="other">%1$d elements</item>
+    </plurals>
     <string name="developer_options_safe_area_summary">Tune how Candy confirms that a website cannot safely use the scrollable top inset.</string>
     <string name="developer_options_force_safe_area_fallback">Force native safe-area fallback</string>
     <string name="developer_options_force_safe_area_fallback_summary">Uses native top insets on every page instead of Candy’s scrollable document inset.</string>

@@ -29,6 +29,9 @@ data class PendingDownloadChoice(
     val request: BrowserDownloadRequest,
     val apps: List<ExternalDownloadManagerApp>,
     val isIncognito: Boolean,
+    val builtInDownload: (() -> DownloadActionResult?)? = null,
+    val releaseResponse: (() -> Unit)? = null,
+    val isSourceCurrent: (() -> Boolean)? = null,
 )
 
 sealed interface ExternalDownloadLaunchResult {

@@ -97,6 +97,24 @@ class DownloadRepositoryInstrumentedTest {
     }
 
     @Test
+    fun cancelsPendingSystemDownloadButRejectsTerminalSnapshot() {
+        val manager = context.getSystemService(DownloadManager::class.java)
+        val name = "candy-cancel-${UUID.randomUUID()}.bin"
+        val id = manager.enqueue(
+            DownloadManager.Request(Uri.parse("https://downloads.example.invalid/$name"))
+                .setTitle(name)
+                .setAllowedNetworkTypes(0),
+        )
+        managerIds += id
+        val entry = repository.snapshot().single { it.id == id }
+
+        assertTrue(repository.cancel(entry))
+        assertFalse(repository.snapshot().any { it.id == id })
+        assertFalse(repository.cancel(entry))
+        managerIds.remove(id)
+    }
+
+    @Test
     fun readsLiveGeckoProgressFromProcessRegistry() {
         DownloadRuntimeRegistry.started(
             id = 42,

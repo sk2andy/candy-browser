@@ -7,6 +7,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.CaptchaCompatibilityRules
 import dev.sk2andy.materialbrowser.browser.FederatedLoginRules
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
+import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -67,6 +68,8 @@ internal data class GeckoPrivacyPolicy(
     val topInsetPx: Int = 0,
     val navigationGeneration: Int = 0,
     val scrollMetricsEnabled: Boolean = false,
+    val cssSafeAreaTopInsetPx: Int = 0,
+    val geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
     val safeAreaLayoutQuietPeriodMillis: Int =
         DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
     val safeAreaRequiredFailureCount: Int =
@@ -98,6 +101,8 @@ internal object GeckoPrivacyPolicyRules {
         topInsetPx: Int = 0,
         navigationGeneration: Int = 0,
         scrollMetricsEnabled: Boolean = false,
+        cssSafeAreaTopInsetPx: Int = 0,
+        geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
         safeAreaLayoutQuietPeriodMillis: Int =
             DeveloperSettings.DEFAULT_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
         safeAreaRequiredFailureCount: Int =
@@ -117,6 +122,8 @@ internal object GeckoPrivacyPolicyRules {
             topInsetPx = topInsetPx.coerceAtLeast(0),
             navigationGeneration = navigationGeneration.coerceAtLeast(0),
             scrollMetricsEnabled = scrollMetricsEnabled,
+            cssSafeAreaTopInsetPx = cssSafeAreaTopInsetPx.coerceAtLeast(0),
+            geckoSafeAreaSettings = geckoSafeAreaSettings.normalized(),
             safeAreaLayoutQuietPeriodMillis =
                 developerSettings.safeAreaLayoutQuietPeriodMillis,
             safeAreaRequiredFailureCount = developerSettings.safeAreaRequiredFailureCount,
@@ -150,6 +157,17 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("topInsetPx", topInsetPx)
     .put("navigationGeneration", navigationGeneration)
     .put("scrollMetricsEnabled", scrollMetricsEnabled)
+    .put("cssSafeAreaTopInsetPx", cssSafeAreaTopInsetPx)
+    .put("geckoSafeAreaEnabled", geckoSafeAreaSettings.enabled)
+    .put("recheckAddedElements", geckoSafeAreaSettings.recheckAddedElements)
+    .put("recheckChangedElements", geckoSafeAreaSettings.recheckChangedElements)
+    .put("requireInteractionForUpdates", geckoSafeAreaSettings.requireInteractionForUpdates)
+    .put("recheckOnResize", geckoSafeAreaSettings.recheckOnResize)
+    .put("interactionWindowMillis", geckoSafeAreaSettings.interactionWindowMillis)
+    .put("mutationDebounceMillis", geckoSafeAreaSettings.mutationDebounceMillis)
+    .put("maxElementsPerBatch", geckoSafeAreaSettings.maxElementsPerBatch)
+    .put("maxBatchDurationMillis", geckoSafeAreaSettings.maxBatchDurationMillis)
+    .put("maxInitialElements", geckoSafeAreaSettings.maxInitialElements)
     .put("safeAreaLayoutQuietPeriodMillis", safeAreaLayoutQuietPeriodMillis)
     .put("safeAreaRequiredFailureCount", safeAreaRequiredFailureCount)
     .put(

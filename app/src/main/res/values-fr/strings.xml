@@ -165,6 +165,12 @@
     <string name="favorite_added_confirmation">Ajouté aux favoris</string>
     <string name="favorite_removed_confirmation">Retiré des favoris</string>
     <string name="action_undo">Annuler</string>
+    <string name="tab_closed">Onglet fermé</string>
+    <string name="downloads_pause">Pause</string>
+    <string name="downloads_resume">Reprendre</string>
+    <string name="downloads_control_failed">Impossible de mettre à jour le téléchargement</string>
+    <string name="settings_closed_tab_undo_title">Restaurer un onglet fermé</string>
+    <string name="settings_closed_tab_undo_summary">Proposer Annuler pendant 3 secondes après la fermeture d’un onglet.</string>
     <string name="action_open_external_app">Ouvrir dans une application externe</string>
     <string name="action_summarize_with_assistant">Résumer avec l’assistant</string>
     <string name="assistant_summary_prompt">Résume le site web suivant en français.</string>
@@ -209,6 +215,7 @@
     <string name="update_available_title">Mise à jour disponible</string>
     <string name="update_available_message">Candy Browser %1$s est disponible. Télécharger l’APK signé depuis GitHub ? Une fois le téléchargement terminé, ouvrez-le pour qu’Android vérifie et installe la mise à jour.</string>
     <string name="action_download_update">Télécharger la mise à jour</string>
+    <string name="action_view_release_notes">Notes de version</string>
     <string name="action_later">Plus tard</string>
 
     <!-- Commandes d’adresse -->
@@ -1118,6 +1125,33 @@
     <string name="developer_options_force_safe_area_fallback">Forcer le repli natif de la zone sûre</string>
     <string name="developer_options_force_safe_area_fallback_summary">Utilise les marges supérieures natives sur chaque page au lieu de la marge de document défilable de Candy.</string>
     <string name="developer_options_safe_area_section">Repli de la zone sûre</string>
+    <string name="developer_options_gecko_safe_area_section">Gecko bord à bord</string>
+    <string name="developer_options_gecko_safe_area_summary">Ajustez les corrections CSS de la zone sûre et les vérifications des mutations de Gecko. Ces réglages ne modifient ni System WebView ni le repli natif de la zone sûre.</string>
+    <string name="developer_options_gecko_safe_area_enabled">Correction CSS de la zone sûre</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Désactivez les corrections CSS et les observateurs Gecko de Candy. Le rendu natif bord à bord, les valeurs CSS env() et le repli explicite ou d’urgence restent disponibles.</string>
+    <string name="developer_options_gecko_recheck_added_elements">Vérifier les éléments ajoutés</string>
+    <string name="developer_options_gecko_recheck_added_elements_summary">Vérifiez les corrections CSS de la zone sûre pour les nouveaux éléments dans les limites du budget de mise à jour.</string>
+    <string name="developer_options_gecko_recheck_changed_elements">Vérifier les éléments modifiés</string>
+    <string name="developer_options_gecko_recheck_changed_elements_summary">Revérifiez les éléments après des changements pertinents de leurs attributs ou styles.</string>
+    <string name="developer_options_gecko_require_interaction">Exiger une interaction pour les mises à jour</string>
+    <string name="developer_options_gecko_require_interaction_summary">Autorisez les mises à jour liées aux mutations uniquement après un toucher, un clic ou une interaction au clavier. Le défilement seul n’ouvre pas la fenêtre de mise à jour.</string>
+    <string name="developer_options_gecko_recheck_on_resize">Vérifier après un redimensionnement</string>
+    <string name="developer_options_gecko_recheck_on_resize_summary">Revérifiez les corrections CSS lorsque la taille de la zone visible change.</string>
+    <string name="developer_options_gecko_interaction_window">Fenêtre d’interaction</string>
+    <string name="developer_options_gecko_interaction_window_summary">Durée pendant laquelle une interaction autorise les mises à jour liées aux mutations lorsque cette condition est activée.</string>
+    <string name="developer_options_gecko_mutation_debounce">Délai des mutations</string>
+    <string name="developer_options_gecko_mutation_debounce_summary">Regroupez les changements de la page pendant cette durée avant de traiter la prochaine mise à jour.</string>
+    <string name="developer_options_gecko_max_elements_per_batch">Éléments par lot</string>
+    <string name="developer_options_gecko_max_elements_per_batch_summary">Nombre maximal d’éléments vérifiés par lot. Le travail restant se poursuit dans les lots suivants.</string>
+    <string name="developer_options_gecko_max_batch_duration">Budget de temps par lot</string>
+    <string name="developer_options_gecko_max_batch_duration_summary">Arrêtez un lot après ce budget. La vérification d’un seul élément peut dépasser cette durée.</string>
+    <string name="developer_options_gecko_max_initial_elements">Limite de classification du DOM</string>
+    <string name="developer_options_gecko_max_initial_elements_summary">Limitez à ce nombre d’éléments la vérification initiale du document et chaque sous-arbre ajouté ou modifié par la suite.</string>
+    <string name="developer_options_gecko_reset">Rétablir les réglages bord à bord de Gecko</string>
+    <plurals name="developer_options_gecko_elements_value">
+        <item quantity="one">%1$d élément</item>
+        <item quantity="other">%1$d éléments</item>
+    </plurals>
     <string name="developer_options_safe_area_summary">Règle la manière dont Candy confirme qu’un site ne peut pas utiliser la marge supérieure défilante.</string>
     <string name="developer_options_layout_quiet_period">Stabilité de la mise en page</string>
     <string name="developer_options_layout_quiet_period_summary">Attente après la dernière modification de mise en page avant chaque vérification.</string>

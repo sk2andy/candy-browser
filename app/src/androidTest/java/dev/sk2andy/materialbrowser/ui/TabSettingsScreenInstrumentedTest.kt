@@ -39,6 +39,45 @@ class TabSettingsScreenInstrumentedTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
+    fun closedTabUndoSettingReflectsStateAndInvokesCallback() {
+        var enabled by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsAndGesturesSettingsPage(
+                    inactiveTabLifetime = InactiveTabLifetime.Never,
+                    residentTabLimit = 10,
+                    tabOverviewMode = TabOverviewMode.Grid,
+                    tabStackFolderMode = TabOverviewMode.Grid,
+                    tabListStartsAtBottom = false,
+                    automaticTabSortingEnabled = false,
+                    isClosedTabUndoEnabled = enabled,
+                    dismissResistancePercent = 40,
+                    profilesEnabled = true,
+                    isAddressBarDockingEnabled = true,
+                    onInactiveTabLifetimeChanged = {},
+                    onResidentTabLimitChanged = {},
+                    onTabOverviewModeChanged = {},
+                    onTabStackFolderModeChanged = {},
+                    onTabListStartsAtBottomChanged = {},
+                    onAutomaticTabSortingEnabledChanged = {},
+                    onClosedTabUndoEnabledChanged = { enabled = it },
+                    onDismissResistancePercentChanged = {},
+                    onProfilesEnabledChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
+                    onAddressBarActions = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TabSettingsTestTags.ClosedTabUndo)
+            .performScrollTo().performClick()
+        composeRule.runOnIdle { assertTrue(enabled) }
+        composeRule.onNodeWithTag(TabSettingsTestTags.ClosedTabUndo).performClick()
+        composeRule.runOnIdle { assertFalse(enabled) }
+    }
+
+    @Test
     fun bottomStartIsAvailableForGridAndListOnly() {
         var mode by mutableStateOf(TabOverviewMode.Grid)
         composeRule.setContent {
@@ -69,7 +108,10 @@ class TabSettingsScreenInstrumentedTest {
         }
 
         composeRule.onNodeWithTag(TabSettingsTestTags.ListStartsAtBottom).assertIsEnabled()
-        composeRule.onNodeWithText(context.getString(R.string.tab_overview_mode_grid))
+        composeRule.onNode(
+            hasText(context.getString(R.string.settings_tab_overview_mode)) and
+                hasText(context.getString(R.string.tab_overview_mode_grid)),
+        )
             .performClick()
         composeRule.onNodeWithText(context.getString(R.string.tab_overview_mode_list))
             .performClick()

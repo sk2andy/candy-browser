@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
+import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -10,6 +11,66 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CandyPrivacyHostContractTest {
+    @Test
+    fun `bounded css safe area settings normalize independently from legacy inset`() {
+        val policy = GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
+            pageHost = null,
+            pausedHosts = emptySet(),
+            hideCookieConsent = false,
+            cookieBannerRemovalDisabled = false,
+            blockThirdPartyCookies = true,
+            allowThirdPartyCookiesForSite = false,
+            cssSafeAreaTopInsetPx = -1,
+            geckoSafeAreaSettings = GeckoSafeAreaSettings(
+                enabled = false,
+                maxElementsPerBatch = Int.MAX_VALUE,
+                mutationDebounceMillis = -1,
+                interactionWindowMillis = 151,
+            ),
+        )
+
+        assertEquals(0, policy.topInsetPx)
+        assertEquals(0, policy.cssSafeAreaTopInsetPx)
+        assertFalse(policy.geckoSafeAreaSettings.enabled)
+        assertEquals(64, policy.geckoSafeAreaSettings.maxElementsPerBatch)
+        assertEquals(50, policy.geckoSafeAreaSettings.mutationDebounceMillis)
+        assertEquals(200, policy.geckoSafeAreaSettings.interactionWindowMillis)
+        assertEquals(400, policy.safeAreaLayoutQuietPeriodMillis)
+        assertEquals(3, policy.safeAreaRequiredFailureCount)
+    }
+
+    @Test
+    fun `css safe area options cross the authenticated policy as bounded flat fields`() {
+        val settings = GeckoSafeAreaSettings(
+            recheckAddedElements = false,
+            recheckChangedElements = false,
+            requireInteractionForUpdates = false,
+            recheckOnResize = false,
+            interactionWindowMillis = 2000,
+            mutationDebounceMillis = 250,
+            maxElementsPerBatch = 24,
+            maxBatchDurationMillis = 6,
+            maxInitialElements = 768,
+        )
+        val message = GeckoPrivacyPolicy.Disabled.copy(
+            cssSafeAreaTopInsetPx = 172,
+            geckoSafeAreaSettings = settings,
+        ).toMessage(token = "session-token", revision = 9)
+
+        assertEquals(0, message.getInt("topInsetPx"))
+        assertEquals(172, message.getInt("cssSafeAreaTopInsetPx"))
+        assertTrue(message.getBoolean("geckoSafeAreaEnabled"))
+        assertFalse(message.getBoolean("recheckAddedElements"))
+        assertFalse(message.getBoolean("recheckChangedElements"))
+        assertFalse(message.getBoolean("requireInteractionForUpdates"))
+        assertFalse(message.getBoolean("recheckOnResize"))
+        assertEquals(2000, message.getInt("interactionWindowMillis"))
+        assertEquals(250, message.getInt("mutationDebounceMillis"))
+        assertEquals(24, message.getInt("maxElementsPerBatch"))
+        assertEquals(6, message.getInt("maxBatchDurationMillis"))
+        assertEquals(768, message.getInt("maxInitialElements"))
+    }
+
     @Test
     fun `extension owned ad filtering keeps only Candy cookie defaults`() {
         val policy = GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(

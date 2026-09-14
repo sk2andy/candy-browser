@@ -645,6 +645,9 @@ class MainActivity : AppCompatActivity() {
                         !releaseNotesVisible &&
                         !splashVisible &&
                         !videoOnlyPresentation,
+                    onOpenReleaseNotes = { url ->
+                        browserController.openUrl(url, inNewTab = true)
+                    },
                 )
                 if (appDataExportWarningVisible) {
                     AppDataExportWarningDialog(
@@ -1307,7 +1310,7 @@ class MainActivity : AppCompatActivity() {
                     false
                 } else {
                     val previousTabId = browserController.selectedTabId
-                    browserController.closeTab(browserController.selectedTabId)
+                    browserController.closeTabFromUser(browserController.selectedTabId)
                     if (browserController.selectedTabId != previousTabId) {
                         hardwareTabChangeRequestId++
                     }

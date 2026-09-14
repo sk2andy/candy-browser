@@ -27,44 +27,61 @@ internal object GeckoViewInsetRules {
         forceNativeTopSafeArea: Boolean,
         isFullscreenContent: Boolean,
         isInsideSafeDrawingHost: Boolean,
-    ): GeckoViewInsetLayout = if (isInsideSafeDrawingHost) {
-        GeckoViewInsetLayout(
-            margins = GeckoViewInsets.Zero,
-            rendererSafeAreaOverride = GeckoViewInsets.Zero,
-            scrollableTopInsetPx = 0,
-        )
-    } else if (isFullscreenContent) {
-        GeckoViewInsetLayout(
-            margins = GeckoViewInsets.Zero,
-            rendererSafeAreaOverride = null,
-            scrollableTopInsetPx = 0,
-        )
-    } else {
-        val normalizedSafeArea = safeArea.coerceAtLeastZero()
-        if (forceNativeSafeArea) {
+        useNativeCssSafeArea: Boolean = true,
+        keyboardBottomInsetPx: Int = 0,
+    ): GeckoViewInsetLayout {
+        val layout = if (isInsideSafeDrawingHost) {
             GeckoViewInsetLayout(
-                margins = normalizedSafeArea,
+                margins = GeckoViewInsets.Zero,
                 rendererSafeAreaOverride = GeckoViewInsets.Zero,
                 scrollableTopInsetPx = 0,
             )
-        } else if (forceNativeTopSafeArea) {
+        } else if (isFullscreenContent) {
             GeckoViewInsetLayout(
-                margins = GeckoViewInsets(
-                    left = 0,
-                    top = normalizedSafeArea.top,
-                    right = 0,
-                    bottom = 0,
-                ),
-                rendererSafeAreaOverride = normalizedSafeArea.copy(top = 0),
+                margins = GeckoViewInsets.Zero,
+                rendererSafeAreaOverride = null,
                 scrollableTopInsetPx = 0,
             )
         } else {
-            GeckoViewInsetLayout(
-                margins = GeckoViewInsets.Zero,
-                rendererSafeAreaOverride = normalizedSafeArea.copy(top = 0),
-                scrollableTopInsetPx = normalizedSafeArea.top,
-            )
+            val normalizedSafeArea = safeArea.coerceAtLeastZero()
+            if (forceNativeSafeArea) {
+                GeckoViewInsetLayout(
+                    margins = normalizedSafeArea,
+                    rendererSafeAreaOverride = GeckoViewInsets.Zero,
+                    scrollableTopInsetPx = 0,
+                )
+            } else if (forceNativeTopSafeArea) {
+                GeckoViewInsetLayout(
+                    margins = GeckoViewInsets(
+                        left = 0,
+                        top = normalizedSafeArea.top,
+                        right = 0,
+                        bottom = 0,
+                    ),
+                    rendererSafeAreaOverride = normalizedSafeArea.copy(top = 0),
+                    scrollableTopInsetPx = 0,
+                )
+            } else {
+                GeckoViewInsetLayout(
+                    margins = GeckoViewInsets.Zero,
+                    rendererSafeAreaOverride = if (useNativeCssSafeArea) {
+                        normalizedSafeArea
+                    } else {
+                        normalizedSafeArea.copy(top = 0)
+                    },
+                    scrollableTopInsetPx = if (useNativeCssSafeArea) 0 else normalizedSafeArea.top,
+                )
+            }
         }
+        val keyboardBottomInset = keyboardBottomInsetPx.coerceAtLeast(0)
+        if (isInsideSafeDrawingHost || keyboardBottomInset == 0) return layout
+        return layout.copy(
+            margins = layout.margins.copy(
+                bottom = maxOf(layout.margins.bottom, keyboardBottomInset),
+            ),
+            rendererSafeAreaOverride = (layout.rendererSafeAreaOverride ?: safeArea.coerceAtLeastZero())
+                .copy(bottom = 0),
+        )
     }
 }
 

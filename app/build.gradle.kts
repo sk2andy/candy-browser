@@ -165,6 +165,9 @@ val releaseAbi = providers.gradleProperty("candy.releaseAbi").map { value ->
 val compressNativeLibs = providers.gradleProperty("candy.compressNativeLibs")
     .map(String::toBooleanStrict)
     .orElse(false)
+val performanceDiagnostics = providers.gradleProperty("candy.performanceDiagnostics")
+    .map(String::toBooleanStrict)
+    .orElse(false)
 
 android {
     namespace = "dev.sk2andy.materialbrowser"
@@ -182,6 +185,13 @@ android {
         buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
         buildConfigField("boolean", "FOSS_DISTRIBUTION", "false")
         buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
+        buildConfigField(
+            "boolean",
+            "ENABLE_PERFORMANCE_DIAGNOSTICS",
+            performanceDiagnostics.get().toString(),
+        )
+        manifestPlaceholders["performanceDiagnosticsEnabled"] =
+            performanceDiagnostics.get().toString()
         buildConfigField("String", "RELEASE_NOTES_VERSION", "\"${candyVersionName.get()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

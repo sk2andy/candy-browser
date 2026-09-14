@@ -27,6 +27,10 @@ class AppUpdateRulesTest {
 
         assertEquals("0.9", update?.versionName)
         assertEquals("CandyBrowser-v0.9-release.apk", update?.fileName)
+        assertEquals(
+            "https://github.com/sk2andy/candy-browser/releases/tag/v0.9",
+            update?.releaseNotesUrl,
+        )
     }
 
     @Test

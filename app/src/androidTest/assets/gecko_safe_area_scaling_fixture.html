@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Preparing Candy scaling fixture</title>
+  <style>
+    html, body { margin: 0; background: #213547; }
+    #fixed-header { position: fixed; inset: 0 0 auto 0; height: 56px; background: #e7edf5; z-index: 20; }
+    #sticky-section { position: relative; }
+    #lead { height: 1800px; background: linear-gradient(#213547, #37566c); }
+    #late-sticky { position: sticky; top: 0; height: 48px; background: #94b7c7; z-index: 10; }
+    #feed-host { display: block; }
+    #offscreen-wrapper { margin-top: 300vh; }
+    #tiny-control { position: fixed; top: 0; left: 50%; width: 12px; height: 12px; padding: 0; box-sizing: border-box; z-index: 30; }
+  </style>
+  <script>
+    (() => {
+      const parameters = new URLSearchParams(location.search);
+      const requestedScale = Number(parameters.get('scale'));
+      const scale = [256, 1024, 4096].includes(requestedScale) ? requestedScale : 256;
+      const requestedSteps = Number(parameters.get('steps'));
+      const scrollSteps = [24, 96, 192].includes(requestedSteps) ? requestedSteps : 24;
+      const requestedStepMs = Number(parameters.get('stepMs'));
+      const stepMs = parameters.has('stepMs') && Number.isFinite(requestedStepMs)
+        ? Math.max(100, Math.min(1000, Math.round(requestedStepMs))) : 550;
+      const phaseNames = [
+        'Candy.SafeArea.Reconcile', 'Candy.SafeArea.PointDiscovery',
+        'Candy.SafeArea.KnownOffsets', 'Candy.SafeArea.KnownSticky',
+        'Candy.SafeArea.Mutations', 'Candy.SafeArea.QuietProtection',
+        'Candy.SafeArea.QuietVerification', 'Candy.ScrollMetrics.Publish',
+      ];
+      const phases = Object.fromEntries(phaseNames.map((name) => [name, { count: 0, totalMs: 0, maxMs: 0 }]));
+      let collecting = false;
+      let userTimingAvailable = false;
+      let observer = null;
+      if (typeof PerformanceObserver === 'function') {
+        observer = new PerformanceObserver((list) => {
+          if (!collecting) return;
+          for (const entry of list.getEntries()) {
+            const phase = phases[entry.name];
+            if (entry.entryType !== 'measure' || !phase) continue;
+            phase.count++;
+            phase.totalMs += entry.duration;
+            phase.maxMs = Math.max(phase.maxMs, entry.duration);
+          }
+        });
+        observer.observe({ entryTypes: ['measure'] });
+        userTimingAvailable = true;
+      }
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+      const requiredInset = () => Number.parseFloat(document.documentElement.style.getPropertyValue(
+        '--candy-browser-content-top-inset',
+      )) || 0;
+      const round = (value) => Math.round(value * 1000) / 1000;
+      let running = false;
+      let feed = null;
+      let retainedFeedElements = 0;
+      let nonleafAdditions = 0;
+      let virtualizedRemovals = 0;
+      let initialRetainedFeedElements = 0;
+      const createCard = (index) => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        const heading = document.createElement('div');
+        heading.className = 'heading';
+        const label = document.createElement('h2');
+        label.textContent = 'Retained card ' + index;
+        const badge = document.createElement('span');
+        badge.textContent = '●';
+        heading.append(label, badge);
+        const section = document.createElement('section');
+        const row = document.createElement('div');
+        const text = document.createElement('p');
+        text.textContent = 'Fixed local content. No network images, videos or autoplay.';
+        const action = document.createElement('button');
+        action.textContent = 'Open';
+        row.append(text, action);
+        section.appendChild(row);
+        card.append(heading, section);
+        card.__fixtureElements = 8;
+        return card;
+      };
+      const publish = async (report) => {
+        document.title = report.passed ? 'Candy scaling done: ' + scale : 'Candy scaling failed: ' + scale;
+        globalThis.__candyScalingReport = report;
+        await fetch('/safe-area-scaling/report?scale=' + scale + '&data=' + encodeURIComponent(JSON.stringify(report)), {
+          cache: 'no-store',
+        });
+      };
+      const run = async () => {
+        if (running || !feed) return;
+        running = true;
+        // Exclude the existing document-start stabilization passes from measured scroll work.
+        await delay(6000);
+        observer?.takeRecords();
+        collecting = true;
+        const startedAt = performance.now();
+        const report = {
+          scale, initialRetainedFeedElements, retainedFeedElements,
+          requestedScrollSteps: scrollSteps, stepMs, completedScrollSteps: 0,
+          nonleafAdditions: 0, virtualizedRemovals: 0,
+          protectedInsetMissing: 0, fixedHeaderFailures: 0,
+          activeStickySamples: 0, inactiveStickySamples: 0, stickyHeaderFailures: 0,
+          tinyControlSamples: 0, tinyControlFailures: 0,
+          minFixedMarginCssPx: null, minStickyMarginCssPx: null, minControlMarginCssPx: null,
+          userTimingAvailable, phases,
+        };
+        const sample = () => {
+          const inset = requiredInset();
+          if (inset <= 0) report.protectedInsetMissing++;
+          const fixedMargin = document.querySelector('#fixed-header').getBoundingClientRect().top - inset;
+          report.minFixedMarginCssPx = Math.min(report.minFixedMarginCssPx ?? Infinity, fixedMargin);
+          if (fixedMargin < -0.5 || fixedMargin > 0.5) report.fixedHeaderFailures++;
+          const stickyRect = document.querySelector('#late-sticky').getBoundingClientRect();
+          const sectionBottom = document.querySelector('#sticky-section').getBoundingClientRect().bottom;
+          // A sticky header must leave with its containing block, not remain viewport-fixed.
+          const stickyCanAnchor = sectionBottom >= inset + stickyRect.height - 0.5;
+          if (scrollY > 1850 && stickyRect.top <= inset + 1 && stickyCanAnchor) {
+            report.activeStickySamples++;
+            const margin = stickyRect.top - inset;
+            report.minStickyMarginCssPx = Math.min(report.minStickyMarginCssPx ?? Infinity, margin);
+            if (margin < -0.5) report.stickyHeaderFailures++;
+          } else {
+            report.inactiveStickySamples++;
+          }
+          const control = document.querySelector('#tiny-control');
+          if (control) {
+            report.tinyControlSamples++;
+            const margin = control.getBoundingClientRect().top - inset;
+            report.minControlMarginCssPx = Math.min(report.minControlMarginCssPx ?? Infinity, margin);
+            if (margin < 7.5) report.tinyControlFailures++;
+          }
+        };
+        try {
+          for (let step = 0; step < report.requestedScrollSteps; step++) {
+            if (step % 4 === 0) {
+              const group = document.createElement('div');
+              group.className = 'group';
+              group.appendChild(createCard(scale + step));
+              group.__fixtureElements = 9;
+              feed.appendChild(group);
+              retainedFeedElements += 9;
+              nonleafAdditions++;
+            }
+            if (step % 4 === 2) {
+              const removed = feed.firstElementChild;
+              retainedFeedElements -= removed.__fixtureElements;
+              removed.remove();
+              virtualizedRemovals++;
+            }
+            if (step === 4) {
+              const wrapper = document.createElement('div');
+              wrapper.id = 'offscreen-wrapper';
+              const control = document.createElement('button');
+              control.id = 'tiny-control';
+              control.setAttribute('aria-label', 'Tiny fixed control');
+              wrapper.appendChild(control);
+              document.body.appendChild(wrapper);
+            }
+            const maximumOffset = Math.max(2000, document.documentElement.scrollHeight - innerHeight - 100);
+            const cycle = Math.floor(step / 2);
+            const offset = step % 2 === 0
+              ? (cycle % 3 === 0 ? 0 : 1900)
+              : maximumOffset * (0.35 + (cycle % 4) * 0.2);
+            scrollTo(0, offset);
+            await delay(stepMs);
+            for (let pass = 0; pass < 4; pass++) await frame();
+            sample();
+            report.completedScrollSteps++;
+          }
+          scrollTo(0, 0);
+          await delay(1100);
+          await frame();
+          sample();
+          report.nonleafAdditions = nonleafAdditions;
+          report.virtualizedRemovals = virtualizedRemovals;
+          report.retainedFeedElements = retainedFeedElements;
+          report.scrollElapsedMs = round(performance.now() - startedAt);
+          report.candyMeasuresObserved = phaseNames.reduce((sum, name) => sum + phases[name].count, 0);
+          report.diagnosticsCovered = phases['Candy.SafeArea.Reconcile'].count > 0 &&
+            phases['Candy.SafeArea.PointDiscovery'].count > 0;
+          for (const phase of Object.values(phases)) {
+            phase.totalMs = round(phase.totalMs);
+            phase.maxMs = round(phase.maxMs);
+          }
+          for (const name of ['minFixedMarginCssPx', 'minStickyMarginCssPx', 'minControlMarginCssPx']) {
+            if (report[name] !== null) report[name] = round(report[name]);
+          }
+          report.passed = report.completedScrollSteps === report.requestedScrollSteps &&
+            report.protectedInsetMissing === 0 && report.fixedHeaderFailures === 0 &&
+            report.activeStickySamples > 0 && report.stickyHeaderFailures === 0 &&
+            report.tinyControlSamples > 0 && report.tinyControlFailures === 0;
+          collecting = false;
+          observer?.disconnect();
+          await publish(report);
+        } catch (_error) {
+          collecting = false;
+          observer?.disconnect();
+          report.errorCode = 'fixture_exception';
+          report.passed = false;
+          await publish(report);
+        }
+      };
+      document.addEventListener('DOMContentLoaded', async () => {
+        const host = document.querySelector('#feed-host');
+        const shadow = host.attachShadow({ mode: 'open' });
+        shadow.innerHTML = '<style>.card{box-sizing:border-box;height:76px;margin:4px;background:#b7cedb;overflow:hidden}.heading{display:flex;gap:8px}.heading h2,p{margin:0;font-size:12px}.card.alternate{background:#85a4ba}</style><div id="cards"></div>';
+        feed = shadow.querySelector('#cards');
+        const cards = document.createDocumentFragment();
+        for (let index = 0; index < scale / 8; index++) cards.appendChild(createCard(index));
+        feed.appendChild(cards);
+        retainedFeedElements = scale;
+        initialRetainedFeedElements = retainedFeedElements;
+        for (let attempt = 0; attempt < 600 && requiredInset() <= 0; attempt++) await delay(50);
+        document.title = 'Candy scaling ready: ' + scale;
+        if (parameters.get('run') === '1' || location.hash === '#run') run();
+      }, { once: true });
+      addEventListener('hashchange', () => { if (location.hash === '#run') run(); });
+    })();
+  </script>
+</head>
+<body>
+  <header id="fixed-header"><button>Fixed header</button></header>
+  <section id="sticky-section">
+    <div id="lead"></div><header id="late-sticky">Offscreen sticky header</header>
+    <div id="feed-host"></div>
+  </section>
+</body>
+</html>

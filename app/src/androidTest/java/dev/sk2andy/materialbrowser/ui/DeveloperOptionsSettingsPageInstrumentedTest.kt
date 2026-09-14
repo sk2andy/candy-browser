@@ -22,6 +22,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
+import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -186,6 +187,181 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
         ).performClick()
 
         assertTrue(enabled)
+    }
+
+    @Test
+    fun geckoMutationSwitchesUpdateIndependentlyFromNativeFallback() {
+        val original = DeveloperSettings(
+            browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.Fixed30Hz,
+            safeAreaLayoutQuietPeriodMillis = 250,
+            safeAreaRequiredFailureCount = 4,
+            forceSafeAreaFallback = true,
+        )
+        var settings by mutableStateOf(original)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        listOf(
+            DeveloperOptionsTestTags.GeckoRecheckAddedElements,
+            DeveloperOptionsTestTags.GeckoRecheckChangedElements,
+            DeveloperOptionsTestTags.GeckoRequireInteraction,
+            DeveloperOptionsTestTags.GeckoRecheckOnResize,
+        ).forEach { tag ->
+            composeRule.onNodeWithTag(tag).performScrollTo().performClick()
+        }
+
+        assertEquals(
+            original.copy(
+                geckoSafeAreaSettings = GeckoSafeAreaSettings(
+                    recheckAddedElements = false,
+                    recheckChangedElements = false,
+                    requireInteractionForUpdates = false,
+                    recheckOnResize = false,
+                ),
+            ),
+            settings,
+        )
+    }
+
+    @Test
+    fun geckoBudgetsUpdateAndResetWithoutChangingOtherDeveloperSettings() {
+        val original = DeveloperSettings(
+            browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.Fixed15Hz,
+            safeAreaLayoutQuietPeriodMillis = 250,
+            safeAreaRequiredFailureCount = 4,
+            forceSafeAreaFallback = true,
+        )
+        var settings by mutableStateOf(original)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        listOf(
+            DeveloperOptionsTestTags.GeckoInteractionWindow to 1_600f,
+            DeveloperOptionsTestTags.GeckoMutationDebounce to 250f,
+            DeveloperOptionsTestTags.GeckoMaxElementsPerBatch to 32f,
+            DeveloperOptionsTestTags.GeckoMaxBatchDuration to 6f,
+            DeveloperOptionsTestTags.GeckoMaxInitialElements to 1_024f,
+        ).forEach { (tag, value) ->
+            composeRule.onNodeWithTag(tag)
+                .performScrollTo()
+                .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
+                    setProgress(value)
+                }
+        }
+
+        assertEquals(
+            original.copy(
+                geckoSafeAreaSettings = GeckoSafeAreaSettings(
+                    interactionWindowMillis = 1_600,
+                    mutationDebounceMillis = 250,
+                    maxElementsPerBatch = 32,
+                    maxBatchDurationMillis = 6,
+                    maxInitialElements = 1_024,
+                ),
+            ),
+            settings,
+        )
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoReset)
+            .performScrollTo()
+            .assertIsEnabled()
+            .performClick()
+        assertEquals(original, settings)
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoReset).assertIsNotEnabled()
+    }
+
+    @Test
+    fun disablingGeckoCorrectionDisablesOnlyItsChildControlsAndResetReenablesIt() {
+        val original = DeveloperSettings(forceSafeAreaFallback = true)
+        var settings by mutableStateOf(original)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoSafeAreaEnabled)
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(
+            original.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(enabled = false)),
+            settings,
+        )
+        listOf(
+            DeveloperOptionsTestTags.GeckoRecheckAddedElements,
+            DeveloperOptionsTestTags.GeckoRecheckChangedElements,
+            DeveloperOptionsTestTags.GeckoRequireInteraction,
+            DeveloperOptionsTestTags.GeckoRecheckOnResize,
+            DeveloperOptionsTestTags.GeckoInteractionWindow,
+            DeveloperOptionsTestTags.GeckoMutationDebounce,
+            DeveloperOptionsTestTags.GeckoMaxElementsPerBatch,
+            DeveloperOptionsTestTags.GeckoMaxBatchDuration,
+            DeveloperOptionsTestTags.GeckoMaxInitialElements,
+        ).forEach { tag ->
+            composeRule.onNodeWithTag(tag).performScrollTo().assertIsNotEnabled()
+        }
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.LayoutQuietPeriod)
+            .performScrollTo()
+            .assertIsEnabled()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ForceSafeAreaFallback)
+            .performScrollTo()
+            .assertIsEnabled()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoSafeAreaEnabled)
+            .performScrollTo()
+            .assertIsEnabled()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoReset)
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(original, settings)
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoRecheckAddedElements)
+            .performScrollTo()
+            .assertIsEnabled()
+    }
+
+    @Test
+    fun nativeFallbackResetPreservesGeckoCorrectionSettings() {
+        val geckoSettings = GeckoSafeAreaSettings(enabled = false, maxElementsPerBatch = 32)
+        var settings by mutableStateOf(
+            DeveloperSettings(
+                safeAreaLayoutQuietPeriodMillis = 250,
+                forceSafeAreaFallback = true,
+                geckoSafeAreaSettings = geckoSettings,
+            ),
+        )
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.Reset)
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(DeveloperSettings(geckoSafeAreaSettings = geckoSettings), settings)
     }
 
     @Test

@@ -122,6 +122,11 @@
         </intent>
     </queries>
 
+    <permission
+        android:name="${applicationId}.permission.PROFILER_INTERNAL"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="${applicationId}.permission.PROFILER_INTERNAL" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -135,6 +140,13 @@
         android:theme="@style/Theme.MaterialBrowser"
         tools:targetApi="s"
         tools:ignore="CredManMissingDal">
+        <profileable android:shell="${performanceDiagnosticsEnabled}" />
+        <provider
+            android:name=".browser.gecko.GeckoPerformanceDiagnosticsProvider"
+            android:authorities="${applicationId}.performance"
+            android:enabled="${performanceDiagnosticsEnabled}"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|uiMode"

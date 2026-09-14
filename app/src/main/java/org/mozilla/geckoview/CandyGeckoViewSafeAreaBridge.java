@@ -1,6 +1,7 @@
 package org.mozilla.geckoview;
 
 import android.content.Context;
+import androidx.core.view.WindowInsetsCompat;
 
 /**
  * Exposes an explicit safe-area override for Candy-owned native and Compose safe-area hosts.
@@ -27,6 +28,18 @@ public abstract class CandyGeckoViewSafeAreaBridge extends GeckoView {
         GeckoDisplay display = session != null ? session.getDisplay() : null;
         if (display != null) {
             display.safeAreaInsetsChanged(top, right, bottom, left);
+        }
+    }
+
+    /**
+     * Forwards Candy's effective IME insets to this display. Dispatching insets to the child view
+     * does not invoke GeckoView's keyboard listener, which is registered on the Activity root.
+     */
+    protected final void dispatchCandyWindowInsets(WindowInsetsCompat insets) {
+        GeckoSession session = getSession();
+        GeckoDisplay display = session != null ? session.getDisplay() : null;
+        if (display != null) {
+            display.windowInsetsChanged(insets);
         }
     }
 }

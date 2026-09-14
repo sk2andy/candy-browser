@@ -54,6 +54,8 @@ class DownloadsActivity : ComponentActivity() {
                     onClearFinished = ::clearFinished,
                     onOpenDownload = ::openDownload,
                     onBack = ::finish,
+                    onCancelDownload = { entry -> updateDownload { repository.cancel(entry) } },
+                    onTogglePauseDownload = { entry -> updateDownload { repository.togglePause(entry) } },
                 )
             }
         }
@@ -113,6 +115,17 @@ class DownloadsActivity : ComponentActivity() {
             )
         }.onFailure {
             Toast.makeText(this, R.string.downloads_open_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateDownload(action: () -> Boolean) {
+        lifecycleScope.launch {
+            val updated = withContext(Dispatchers.IO) { action() }
+            reload()
+            if (!updated) {
+                Toast.makeText(this@DownloadsActivity, R.string.downloads_control_failed, Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
     }
 }

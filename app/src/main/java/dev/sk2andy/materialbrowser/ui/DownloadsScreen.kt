@@ -71,6 +71,8 @@ internal fun DownloadsScreen(
     onClearFinished: (List<DownloadEntry>) -> Unit,
     onOpenDownload: (DownloadEntry) -> Unit,
     onBack: () -> Unit,
+    onCancelDownload: (DownloadEntry) -> Unit = {},
+    onTogglePauseDownload: (DownloadEntry) -> Unit = {},
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
@@ -177,6 +179,8 @@ internal fun DownloadsScreen(
                             Formatter.formatShortFileSize(context, total)
                         },
                         onOpen = { onOpenDownload(entry) },
+                        onCancel = { onCancelDownload(entry) },
+                        onTogglePause = { onTogglePauseDownload(entry) },
                     )
                 }
             }
@@ -218,6 +222,8 @@ private fun DownloadRow(
     bytes: String,
     total: String?,
     onOpen: () -> Unit,
+    onCancel: () -> Unit,
+    onTogglePause: () -> Unit,
 ) {
     val progress = DownloadHistoryRules.progress(entry)
     val statusColor = downloadStatusColor(entry.status)
@@ -268,6 +274,32 @@ private fun DownloadRow(
                 )
             },
         )
+        if (entry.status.isActive && (entry.supportsPause || entry.supportsCancel)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                if (entry.supportsPause) {
+                    TextButton(
+                        onClick = onTogglePause,
+                        modifier = Modifier.testTag(DownloadsScreenTestTags.pause(entry.id)),
+                    ) {
+                        Text(stringResource(
+                            if (entry.status == DownloadStatus.Paused) R.string.downloads_resume
+                            else R.string.downloads_pause,
+                        ))
+                    }
+                }
+                if (entry.supportsCancel) {
+                    TextButton(
+                        onClick = onCancel,
+                        modifier = Modifier.testTag(DownloadsScreenTestTags.cancel(entry.id)),
+                    ) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            }
+        }
         if (entry.status.isActive) {
             if (progress == null) {
                 LinearWavyProgressIndicator(
@@ -357,4 +389,8 @@ internal object DownloadsScreenTestTags {
     fun download(id: Long): String = "downloads_entry:$id"
 
     fun progress(id: Long): String = "downloads_progress:$id"
+
+    fun cancel(id: Long): String = "downloads_cancel:$id"
+
+    fun pause(id: Long): String = "downloads_pause:$id"
 }
