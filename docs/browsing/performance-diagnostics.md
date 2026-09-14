@@ -55,6 +55,8 @@ sources; `cssLateSourceCount` includes replacement identities first registered b
 `cssRulesApplied` is the current committed selector-protection count. Visit/error/unsupported/budget
 and cancellation counts accumulate within a configuration epoch and reset when that epoch changes.
 An unsupported count can represent a skipped source as well as a skipped grouping rule.
+The static known-site Amazon rule is not included in `cssRulesApplied`; zero scanned selector rules
+therefore does not mean that this header lacks its independently seeded protection.
 
 | Signal | Question it answers | Limitation |
 | --- | --- | --- |

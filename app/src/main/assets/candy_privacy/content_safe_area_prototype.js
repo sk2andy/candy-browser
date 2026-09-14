@@ -6,6 +6,10 @@
   const owned = new Map();
   const ownWrites = new WeakMap();
   const rules = new Map();
+  const hostname = typeof globalThis.location?.hostname === "string" ? globalThis.location.hostname.toLowerCase().replace(/\.$/, "") : "";
+  const knownTopSelectors = hostname === "amazon.de" || hostname.endsWith(".amazon.de") ?
+    [":root #btf-sub-nav-top-navigation-bar.persistent-header"] : [];
+  const knownTopMatcher = knownTopSelectors.join(", ");
   const markerPrefix = `data-candy-safe-area-${Math.random().toString(36).slice(2)}`;
   let layerEpoch = 0;
   let markerName = "";
@@ -120,14 +124,19 @@
   function ensureLayer() {
     if (layer) return layer.isConnected ? layer.sheet : null;
     layer = document.createElement("style");
+    layer.textContent = knownTopSelectors.map((selector) =>
+      `${selector} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`).join("\n");
     document.documentElement.appendChild(layer);
     if (!layer.sheet) { layer.remove(); layer = null; return null; }
     return layer.sheet;
   }
 
   function selectorOwns(element) {
-    if (!selectorMatcher) return false;
-    try { return element.matches(selectorMatcher); }
+    if (!selectorMatcher && !knownTopMatcher) return false;
+    try {
+      if (knownTopMatcher && element.matches(knownTopMatcher)) return true;
+      return !!selectorMatcher && element.matches(selectorMatcher);
+    }
     catch { return false; }
   }
 
@@ -226,7 +235,7 @@
       const [selector, candidate] = next.value;
       const previous = build.result.get(selector);
       if (!candidate.important && previous?.important) return;
-      if (!previous && (build.result.size >= Math.min(cssLimits.selectors, configuration.maxInitialElements - Math.max(1, rules.size)) ||
+      if (!previous && (build.result.size >= Math.min(cssLimits.selectors, configuration.maxInitialElements - Math.max(1, rules.size) - knownTopSelectors.length) ||
           build.matcherLength + selector.length + 2 > 32768)) { cssCounts.capped++; return; }
       if (!previous) build.matcherLength += selector.length + 2;
       // Map order follows the last applicable declaration's source order.

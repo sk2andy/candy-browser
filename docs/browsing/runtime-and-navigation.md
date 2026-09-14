@@ -390,6 +390,17 @@ keyframes, CSS nesting, split position/top declarations and non-pixel top expres
 Inaccessible cross-origin `cssRules` are skipped without fetching a second copy of page CSS.
 Direct `insertRule`/`deleteRule`/`replace`/`replaceSync` edits without DOM source events, adopted
 stylesheets and shadow-tree sources are not monitored; no page-world API hooks are installed.
+
+The maintained known-site rule set currently contains one Amazon.de exception:
+`:root #btf-sub-nav-top-navigation-bar.persistent-header` receives
+`top: calc(0px + var(--candy-safe-area-inset-top)) !important` in the early owned layer.
+Only amazon.de and its subdomains match. The rule protects the observed zero-top header as soon as
+its class activates, regardless of external stylesheet accessibility or inline normal resets;
+`:root` raises specificity above the observed author-important selector. It reserves one rule
+slot, prevents duplicate element-top protection and follows the same enable/inset/cleanup lifecycle.
+There is no extra observer, network request, scroll scan or separate per-site setting.
+Source-discovery, opaque-CSS and LINK-race experiments are not included in this smaller follow-up.
+
 Same-block declarations
 are candidates, not a general proof of the final cascade; inline-important and other stronger
 rules remain boundaries. Real Amazon CDN accessibility and product-state coverage require separate
