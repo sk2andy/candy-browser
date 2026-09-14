@@ -452,6 +452,21 @@ workflow uses `assembleFullRelease`, `assembleFossRelease`, and `assembleFullUse
 outputs use the standard, `.foss`, and `.ca` application IDs and matching launcher identities. A
 separate workflow signs and publishes the FOSS output from explicitly allowlisted release tags.
 
+For current edge-to-edge experiments, use the separate **Candy Edge** package consistently:
+
+```bash
+./gradlew lintFullLocalRelease assembleFullLocalRelease \
+  -Pcandy.localReleaseApplicationIdSuffix=.edge \
+  '-Pcandy.localReleaseAppLabel=Candy Edge' \
+  -Pcandy.performanceDiagnostics=true
+```
+
+This signed, minified APK installs as `dev.sk2andy.materialbrowser.edge`, without replacing standard
+Candy or sharing its app data. Its diagnostic authority is
+`content://dev.sk2andy.materialbrowser.edge.performance`; launch the component
+`dev.sk2andy.materialbrowser.edge/dev.sk2andy.materialbrowser.MainActivity`. Keep production release
+identities unchanged. Device commands must use the explicitly selected serial.
+
 ### GitHub releases
 
 The manual `Release Android APK` workflow tests the selected source revision, builds the FOSS flavor,

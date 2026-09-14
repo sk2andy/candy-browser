@@ -309,6 +309,46 @@
 
 ## Gecko CSS safe-area controls
 
+### Current Candy Edge prototype
+
+The current experimental host manifest selects `content_safe_area_prototype.js` instead of the
+larger `content_safe_area.js` classifier. The latter remains available in source; both must not run
+together. This prototype is not a compatibility claim for the layouts described below.
+
+| Rule | Prototype behavior |
+| --- | --- |
+| Inset source | Existing native policy inset divided by device-pixel ratio, exposed as `--candy-safe-area-inset-top` |
+| Normal page flow | Body top padding is raised to at least the inset; larger existing padding is preserved |
+| Fixed / sticky | A finite resolved `top` in CSS pixels less than or equal to the inset receives `originalTop + inset` once; 0.001 px comparison tolerance handles CSSOM rounding; no positioned-element padding is added |
+| Retained anchors | Already-owned top declarations are checked before reading computed style and never receive another addition on mutation/resize |
+| Other top values | Literal `auto`, unresolved and numeric values greater than the inset are not changed; negative and equal-to-inset numeric values are included by the prototype's explicit `<=` rule |
+| Initial discovery | One bounded body traversal plus a single semantic seed after full document load; first `header` preferred, `nav` then `[role="banner"]` used only as fallbacks (at most three fixed queries); at most eight shallow header/ancestor checks are reserved from the initial traversal cap and prioritized in the same worker |
+| Later discovery | Configured added/changed subtrees after trusted click/drop, plus the bounded event-target subtree; existing owned changes remain |
+| Scroll | Cancels pending work; does not start style/geometry reads or repair |
+| Settings | Existing enable, mutation, interaction, batch and resize controls remain the tuning surface |
+| Native / privacy | Full-window renderer, native inset delivery, existing fallback bridge and private-session boundaries remain unchanged |
+
+`top` has the CSS initial value `auto`, not zero. CSSOM `getComputedStyle()` may return a resolved
+used pixel value for a positioned visible box; the prototype filters the returned value, not author
+stylesheet declarations. It does not scan stylesheets to reconstruct declarations.
+
+Known limitations are intentionally left for manual testing: iframe contents, absolute descendants,
+nested positioning/scrolling containers, full-height fixed panels, larger DOMs beyond the traversal
+cap, and stylesheet changes affecting elements outside the admitted subtree. The prototype does not
+run the old classifier's footprint verification or automatically infer when emergency fallback is
+needed. Existing explicit/native fallback paths remain available; no new native top margin is added.
+Site-specific exceptions are not part of this first prototype.
+
+Manual feedback on the previous clamp-based prototype (2026-09-14):
+
+| Sites / issue | Feedback / verification |
+| --- | --- |
+| Google, Wikipedia, GitHub, CNN, Hackernews, Reddit, eBay, Kleinanzeigen, taptap.io, amazon.de | No errors reported in the tested states; not a complete state-matrix acceptance claim |
+| Vinted | Previously sticky `top: 0` header scrolled behind the status bar. Final additive Release smoke (host 1.5.25) on a dedicated API 35 emulator kept header `top` and `y` at the 52.1333 px inset after one swipe; broader manual acceptance remains pending |
+| Load timing | Strong flicker from post-load CSS changes; explicitly deferred until after this header-rule fix |
+
+### Existing classifier and controls
+
 Developer options contain a separate **Gecko edge-to-edge** section. Changes are normalized,
 stored as global configuration without page/private state, and pushed to live session policies.
 They do not change Android renderer margins, the native CSS inset contract, System WebView repair,
