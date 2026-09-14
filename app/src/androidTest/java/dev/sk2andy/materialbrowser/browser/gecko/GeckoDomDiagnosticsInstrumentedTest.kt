@@ -90,6 +90,210 @@ class GeckoDomDiagnosticsInstrumentedTest {
     }
 
     @Test
+    fun manualHitAndMutationMetadataStayBoundedAndDropAuthorValues() {
+        val geometry = JSONObject().put("tag", "BUTTON").put("pointerEvents", "none").put("inert", "true")
+        val diagnostics = JSONObject().put("lastEligibleMutationKind", "attributes")
+            .put("lastQueuedMutationRootKind", "semantic-control")
+        val keys = listOf(
+            "eligibleAttributeRecordCount", "eligibleAdditionRecordCount", "acceptedImmediateMutationCount",
+            "queuedMutationRootCount", "queuedSemanticRootCount",
+        )
+        for (key in keys) diagnostics.put(key, 65535)
+        val raw = JSONObject().put("version", 1).put("env", JSONObject()).put("viewport", JSONObject())
+            .put("html", geometry).put("candidates", JSONArray().put(geometry)).put("topRightCandidateIndex", 0)
+            .put("cssSafeAreaDiagnostics", diagnostics)
+        val valid = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+        assertEquals(0, valid.getInt("topRightCandidateIndex"))
+        assertEquals("none", valid.getJSONObject("html").getString("pointerEvents"))
+        assertFalse(valid.getJSONObject("html").getBoolean("inert"))
+        for (key in keys) assertEquals(65535, valid.getJSONObject("cssSafeAreaDiagnostics").getInt(key))
+        assertEquals("attributes", valid.getJSONObject("cssSafeAreaDiagnostics").getString("lastEligibleMutationKind"))
+        for (invalid in listOf(-1, 0.5, "0", 65536, 1e200)) {
+            raw.put("topRightCandidateIndex", invalid)
+            for (key in keys) diagnostics.put(key, invalid)
+            diagnostics.put("lastEligibleMutationKind", "secret-author-label")
+            diagnostics.put("lastQueuedMutationRootKind", "secret-author-root")
+            geometry.put("pointerEvents", "secret-author-pointer")
+            val normalized = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+            assertTrue(normalized.isNull("topRightCandidateIndex"))
+            for (key in keys) assertTrue(normalized.getJSONObject("cssSafeAreaDiagnostics").isNull(key))
+            assertFalse(normalized.toString().contains("secret-author"))
+        }
+    }
+
+    @Test
+    fun stylesheetSourceCountersStayBoundedAndExcludePageMetadata() {
+        val keys = listOf(
+            "cssSourceCount", "cssLateSourceCount", "cssRulesVisited", "cssRulesApplied",
+            "cssSecurityErrors", "cssUnsupportedRules", "cssBudgetHits", "cssScrollCancellations",
+        )
+        val diagnostics = JSONObject().put("stylesheetUrl", "secret-author-url")
+            .put("selector", "secret-author-selector").put("cssText", "secret-author-css")
+        val raw = JSONObject().put("version", 1).put("env", JSONObject()).put("viewport", JSONObject())
+            .put("html", JSONObject()).put("candidates", JSONArray()).put("cssSafeAreaDiagnostics", diagnostics)
+        for (value in listOf(0, 65535)) {
+            for (key in keys) diagnostics.put(key, value)
+            val normalized = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+            assertFalse(normalized.toString().contains("secret-author"))
+            for (key in keys) assertEquals(value, normalized.getJSONObject("cssSafeAreaDiagnostics").getInt(key))
+        }
+        for (invalid in listOf(-1, 0.5, "0", 65536, 1e200, JSONObject.NULL)) {
+            for (key in keys) diagnostics.put(key, invalid)
+            val normalized = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+            assertFalse(normalized.toString().contains("secret-author"))
+            for (key in keys) assertTrue(normalized.getJSONObject("cssSafeAreaDiagnostics").isNull(key))
+        }
+        for (key in keys) diagnostics.remove(key)
+        val normalized = requireNotNull(GeckoDomProbePayload.sanitize(raw))
+        assertTrue(normalized.length <= GeckoDomDiagnosticsRules.MAX_PAYLOAD_CHARS)
+        for (key in keys) assertTrue(JSONObject(normalized).getJSONObject("cssSafeAreaDiagnostics").isNull(key))
+    }
+
+    @Test
+    fun ownerDiscoveryMetadataAllowsOnlyFixedFocusLabelsAndBoundedCounts() {
+        val diagnostics = JSONObject().put("author", "secret-author-value")
+        val keys = listOf("visitedSemanticCount", "discoveryRectCount", "ownerQueuedCount")
+        val raw = JSONObject().put("version", 1).put("env", JSONObject()).put("viewport", JSONObject())
+            .put("html", JSONObject()).put("candidates", JSONArray()).put("cssSafeAreaDiagnostics", diagnostics)
+        assertFalse(JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw))).has("activeElementTag"))
+        for (tag in listOf("HTML", "BODY", "HEADER", "NAV", "MAIN", "DIV", "BUTTON", "A", "FORM", "INPUT", "SPAN", "IFRAME", "TEXTAREA", "SELECT", "NONE", "OTHER")) {
+            raw.put("activeElementTag", tag)
+            assertEquals(tag, JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw))).getString("activeElementTag"))
+        }
+        raw.put("activeElementTag", "secret-author-custom-tag")
+        for (relation in listOf("not-semantic", "unrelated", "related")) {
+            diagnostics.put("lastMutationFocusRelation", relation)
+            for (key in keys) diagnostics.put(key, 65535)
+            val valid = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+            assertEquals("other", valid.getString("activeElementTag"))
+            assertFalse(valid.toString().contains("secret-author"))
+            assertEquals(relation, valid.getJSONObject("cssSafeAreaDiagnostics").getString("lastMutationFocusRelation"))
+            for (key in keys) assertEquals(65535, valid.getJSONObject("cssSafeAreaDiagnostics").getInt(key))
+        }
+        diagnostics.put("lastMutationFocusRelation", "secret-author-relation")
+        for (invalid in listOf(-1, 0.5, "0", 65536, 1e200, JSONObject.NULL)) {
+            for (key in keys) diagnostics.put(key, invalid)
+            val normalized = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+            assertFalse(normalized.toString().contains("secret-author"))
+            assertEquals("other", normalized.getJSONObject("cssSafeAreaDiagnostics").getString("lastMutationFocusRelation"))
+            for (key in keys) assertTrue(normalized.getJSONObject("cssSafeAreaDiagnostics").isNull(key))
+        }
+    }
+
+    @Test
+    fun footprintDiagnosticsKeepFixedReasonsAndIndependentAttemptLimits() {
+        val limits = listOf("lastFootprintNodeCount" to 513, "lastFootprintStyleCount" to 65, "lastFootprintControlCount" to 32)
+        val diagnostics = JSONObject().put("author", JSONObject().put("text", "secret-author-value"))
+        val raw = JSONObject().put("version", 1).put("env", JSONObject()).put("viewport", JSONObject())
+            .put("html", JSONObject()).put("candidates", JSONArray()).put("cssSafeAreaDiagnostics", diagnostics)
+        for (reason in listOf("not-scanned", "complete", "opaque-panel", "time-budget", "node-budget", "style-budget", "opaque-descendant", "closed-shadow", "center-unproven", "footprint-budget")) {
+            diagnostics.put("lastFootprintRejectionReason", reason)
+            for ((key, maximum) in limits) diagnostics.put(key, maximum)
+            val valid = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+            assertFalse(valid.toString().contains("secret-author"))
+            val normalized = valid.getJSONObject("cssSafeAreaDiagnostics")
+            assertEquals(reason, normalized.getString("lastFootprintRejectionReason"))
+            for ((key, maximum) in limits) assertEquals(maximum, normalized.getInt(key))
+        }
+        diagnostics.put("lastFootprintRejectionReason", "secret-author-custom-reason")
+        for ((key, maximum) in limits) {
+            diagnostics.put(key, 0)
+            assertEquals(0, JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+                .getJSONObject("cssSafeAreaDiagnostics").getInt(key))
+            for (invalid in listOf(-1, 0.5, "0", maximum + 1, 1e200, JSONObject.NULL)) {
+                diagnostics.put(key, invalid)
+                val normalized = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+                assertFalse(normalized.toString().contains("secret-author"))
+                assertEquals("other", normalized.getJSONObject("cssSafeAreaDiagnostics").getString("lastFootprintRejectionReason"))
+                assertTrue(normalized.getJSONObject("cssSafeAreaDiagnostics").isNull(key))
+            }
+            diagnostics.remove(key)
+        }
+        val old = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw))).getJSONObject("cssSafeAreaDiagnostics")
+        for ((key, _) in limits) assertTrue(old.isNull(key))
+        assertTrue(requireNotNull(GeckoDomProbePayload.sanitize(raw)).length <= GeckoDomDiagnosticsRules.MAX_PAYLOAD_CHARS)
+    }
+
+    @Test
+    fun optionalDiagnosticsDropAuthorMetadataAndStrictlyNormalizeEnumsNumbersAndBooleans() {
+        val geometry = JSONObject().put("tag", "IFRAME").put("position", "secret-author-position")
+            .put("overflowX", "secret-author-overflow").put("overflowY", "clip")
+            .put("x", "NaN").put("y", 1e200).put("width", 10_000_000).put("height", "12")
+            .put("hasMovingEffects", "true").put("hasContainingBlockEffects", true)
+            .put("hasAnimationEffects", "true").put("hasTransitionEffects", true)
+            .put("transitionPropertyKind", "secret-author-property")
+            .put("src", "secret-author-url").put("text", "secret-author-text")
+        val raw = JSONObject().put("version", 1).put("env", JSONObject()).put("viewport", JSONObject())
+            .put("html", geometry).put("candidates", JSONArray()).put("flowStart", JSONArray().put(geometry))
+            .put("readyState", "secret-author-ready")
+            .put("cssSafeArea", JSONObject().put("available", true).put("ready", "true").put("enabled", true)
+                .put("insetPx", "156").put("author", "secret-author-config"))
+            .put("cssSafeAreaDiagnostics", JSONObject().put("active", "true").put("initialized", true)
+                .put("ownedCount", 1025).put("unknownCount", 1.5).put("firstAtMillis", -1)
+                .put("pendingJobCount", 33).put("dirtyRootCount", "1").put("interactionActive", "true")
+                .put("immediateMutationPending", true)
+                .put("positionedClassifyCount", 65536).put("lastPositionedDecision", "secret-author-guard")
+                .put("firstReadyState", "secret-author-state").put("lastBodyDecision", "applied")
+                .put("lastPanelDecision", "secret-author-decision").put("lastAbsoluteDecision", "owner-guard-rejected"))
+        val result = JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw)))
+        assertFalse(result.toString().contains("secret-author"))
+        assertEquals("other", result.getString("readyState"))
+        val flow = result.getJSONArray("flowStart").getJSONObject(0)
+        assertEquals("IFRAME", flow.getString("tag"))
+        assertEquals("other", flow.getString("overflowX"))
+        assertEquals("clip", flow.getString("overflowY"))
+        assertTrue(flow.isNull("x"))
+        assertTrue(flow.isNull("y"))
+        assertTrue(flow.isNull("height"))
+        assertEquals(10_000_000.0, flow.getDouble("width"), 0.0)
+        assertFalse(flow.getBoolean("hasMovingEffects"))
+        assertTrue(flow.getBoolean("hasContainingBlockEffects"))
+        assertFalse(flow.getBoolean("hasAnimationEffects"))
+        assertTrue(flow.getBoolean("hasTransitionEffects"))
+        assertEquals("other", flow.getString("transitionPropertyKind"))
+        val configuration = result.getJSONObject("cssSafeArea")
+        assertFalse(configuration.getBoolean("ready"))
+        assertTrue(configuration.isNull("insetPx"))
+        val diagnostics = result.getJSONObject("cssSafeAreaDiagnostics")
+        assertFalse(diagnostics.getBoolean("active"))
+        assertTrue(diagnostics.getBoolean("initialized"))
+        for (key in listOf("ownedCount", "unknownCount", "firstAtMillis", "pendingJobCount", "dirtyRootCount")) {
+            assertTrue(diagnostics.isNull(key))
+        }
+        assertFalse(diagnostics.getBoolean("interactionActive"))
+        assertTrue(diagnostics.getBoolean("immediateMutationPending"))
+        assertTrue(diagnostics.isNull("positionedClassifyCount"))
+        assertEquals("other", diagnostics.getString("lastPositionedDecision"))
+        assertEquals("other", diagnostics.getString("lastPanelDecision"))
+        assertEquals("applied", diagnostics.getString("lastBodyDecision"))
+    }
+
+    @Test
+    fun optionalFlowShapeBoundsAndConfigurationInsetKeepVersionOnePayloadCap() {
+        val raw = JSONObject().put("version", 1).put("env", JSONObject()).put("viewport", JSONObject())
+            .put("html", JSONObject()).put("candidates", JSONArray())
+        assertTrue(JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw))).isNull("flowStart"))
+        raw.put("cssSafeArea", JSONObject().put("insetPx", 10_000))
+        raw.put("flowStart", JSONArray().apply { repeat(8) { put(JSONObject().put("tag", "SELECT")) } })
+        assertEquals(8, JSONObject(requireNotNull(GeckoDomProbePayload.sanitize(raw))).getJSONArray("flowStart").length())
+        raw.put("flowStart", JSONArray().apply { repeat(9) { put(JSONObject()) } })
+        assertNull(GeckoDomProbePayload.sanitize(raw))
+        raw.put("flowStart", JSONArray().put("secret-not-geometry"))
+        assertNull(GeckoDomProbePayload.sanitize(raw))
+        raw.put("flowStart", "secret-not-array")
+        assertNull(GeckoDomProbePayload.sanitize(raw))
+        raw.put("flowStart", JSONArray()).put("cssSafeArea", "secret-not-object")
+        assertNull(GeckoDomProbePayload.sanitize(raw))
+        raw.put("cssSafeArea", JSONObject().put("insetPx", 10_001)).put("secret", "x".repeat(25 * 1024))
+        val sanitized = requireNotNull(GeckoDomProbePayload.sanitize(raw))
+        assertTrue(sanitized.length <= GeckoDomDiagnosticsRules.MAX_PAYLOAD_CHARS)
+        assertTrue(JSONObject(sanitized).getJSONObject("cssSafeArea").isNull("insetPx"))
+        assertFalse(JSONObject(sanitized).has("secret"))
+        raw.put("version", 2)
+        assertNull(GeckoDomProbePayload.sanitize(raw))
+    }
+
+    @Test
     fun manualProbeReadsRealGeckoEnvWithoutMovingUnawareHeader() {
         val settled = AtomicBoolean(false)
         val authorInset = AtomicReference<Double?>(null)

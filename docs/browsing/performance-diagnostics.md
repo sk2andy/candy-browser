@@ -25,6 +25,7 @@
 | Target | Exactly one active regular Gecko session with an attached view and a settled document; ambiguity rejects the request |
 | Privacy/lifecycle | Any private Gecko session blocks and erases the memory-only result; navigation, deactivation or closure invalidates pending and ready results |
 | Payload | Native allowlist: finite numeric env/viewport/geometry values, fixed tag/position enums and booleans; at most16 candidates,24 KiB; no page text, URLs, IDs, classes or arbitrary stylesheet content |
+| Candy Edge CSS-source diagnosis | Optional aggregate counts for registered/late sources, visited/applied rules, security errors, unsupported rules, budget hits and scroll cancellations; no URLs, selectors or CSS text, no extra style/geometry reads |
 | Sampling | One explicit snapshot; a hidden fixed contained measurement node reads computed `env()` padding and is removed in `finally`; no observers or scroll work |
 | Request identity | Start returns `queued` and `domCommandId`, never an old payload. Poll until that command ID is accepted and `domResultId` matches it; `busy` rejects an overlapping command |
 | Native consistency | Native insets/view generation is captured before dispatch and rechecked after response; changed insets or view size reject the result, rather than mixing two configurations |
@@ -41,6 +42,19 @@ adb -s SERIAL shell content call --uri content://dev.sk2andy.materialbrowser.per
 `accepted=true` means the command was queued, not that a probe succeeded. The result is never
 written to app storage or uploaded. An explicit snapshot can affect author mutation observers;
 do not compare scroll performance during sampling.
+
+The Candy Edge prototype uses the same opt-in manual sampler for eight fixed CSS-source counters:
+`cssSourceCount`, `cssLateSourceCount`, `cssRulesVisited`, `cssRulesApplied`, `cssSecurityErrors`,
+`cssUnsupportedRules`, `cssBudgetHits` and `cssScrollCancellations`. Values saturate at 65,535;
+invalid or missing values normalize to null at the native boundary. These distinguish skipped or
+incomplete CSS processing from successful rule admission, not live-site layout acceptance or CPU
+percentages. The sampler reads counters only; it does not start a source scan or repair.
+
+`cssSourceCount` is the registered stylesheet-identity count, including unreadable/unsupported
+sources; `cssLateSourceCount` includes replacement identities first registered by source events.
+`cssRulesApplied` is the current committed selector-protection count. Visit/error/unsupported/budget
+and cancellation counts accumulate within a configuration epoch and reset when that epoch changes.
+An unsupported count can represent a skipped source as well as a skipped grouping rule.
 
 | Signal | Question it answers | Limitation |
 | --- | --- | --- |

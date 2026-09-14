@@ -320,20 +320,80 @@ together. This prototype is not a compatibility claim for the layouts described 
 | Inset source | Existing native policy inset divided by device-pixel ratio, exposed as `--candy-safe-area-inset-top` |
 | Normal page flow | A per-document stylesheet raises body top padding to at least the inset; larger initial padding is preserved |
 | Fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
+| Predeclared selectors | Initial and event-driven CSS-source scans protect full selectors with literal `fixed`/`sticky` and a finite pixel `top` in the same CSS declaration block, even before any element matches that state |
+| Selector ownership | Elements matching a protected selector do not receive a second element-level top addition; body padding and unmatched element protection remain separate |
 | Retained anchors | Existing rule identities are checked before reading computed style; normal author inline resets do not remove the rule or add another inset |
 | Other top values | Literal `auto` and unresolved values are not changed; all finite resolved CSS-pixel values, including negative and above-inset tops, are included |
-| Initial discovery | One bounded body traversal plus a single semantic seed after full document load; first `header` preferred, `nav` then `[role="banner"]` used only as fallbacks (at most three fixed queries); at most eight shallow header/ancestor checks are reserved from the initial traversal cap and prioritized in the same worker |
-| Later discovery | Configured added/changed subtrees after trusted click/drop, plus the bounded event-target subtree; existing owned changes remain |
+| Initial discovery | Protect the first available body without waiting for the worker; one bounded body traversal plus a single semantic seed when the DOM becomes interactive, without waiting for all subresources; first `header` preferred, `nav` then `[role="banner"]` used only as fallbacks (at most three fixed queries); at most eight shallow header/ancestor checks are reserved from the initial traversal cap |
+| Later discovery | DOM subtrees retain trusted click/drop gates; newly loaded links, style insertion/text changes and source attributes use a separate CSS queue without an interaction requirement |
 | Scroll | Cancels pending work; does not start style/geometry reads or repair |
-| Settings | Existing enable, mutation, interaction, batch and resize controls remain the tuning surface |
+| Settings | Existing enable, DOM mutation/interaction, batch and resize controls remain; CSS sources reuse worker batch/time limits with fixed prototype source limits; only post-load sources use the 500-ms cooldown |
 | Native / privacy | Full-window renderer, native inset delivery, existing fallback bridge and private-session boundaries remain unchanged |
 
 This iteration tests approach A: persistent author-origin CSS, not periodic mutation repair. Each
-document owns one stylesheet and bounded element markers. Rules persist while that document and
+document owns separate element and selector stylesheets and bounded element markers. Rules persist while that document and
 their matching elements remain; disable/configuration changes remove the prototype's rules and
 markers without restoring over the page's newer inline top or padding. Existing discovery gates
 remain: an unrelated replacement element is not automatically protected merely because its
 predecessor was protected. No 500-ms background DOM scan is introduced.
+
+The selector experiment protects predeclared class-driven states: when scrolling adds a persistent
+header class, Gecko applies the matching CSS rule without a new Candy style/geometry measurement.
+New elements matching an admitted selector also inherit protection without discovery. The initial
+CSS scan and any bounded reconciliation alternate with element discovery in the same cooperative worker;
+ordinary scroll does not initiate scanning or selector classification.
+
+The initial body rule is published synchronously when an active policy and body are available,
+including the parser's first body insertion. Body protection created while loading has one
+synchronous author-padding refresh when the DOM becomes interactive; only its own padding
+declaration is temporarily removed for that read and immediately replaced with the greater of
+author padding and the inset. This preserves larger author padding without a yielded unprotected
+frame. It is not a guarantee against layout shifts caused by later author CSS or delayed native
+policy delivery, and does not introduce recurring body measurements.
+
+The CSS-source queue registers at most 128 stylesheet identities, visits at most 4,096 rules per
+source version, and caps the configuration epoch at 65,536 rule visits, 4,096 source events and
+131,072 cooperative CSS work steps. Unsupported entries consume these budgets. It admits at
+most 256 distinct selectors, at most 2,048 characters per selector and 32,768 characters in the
+combined ownership matcher. The configured total protection-rule cap also applies. Source top
+importance is retained when choosing between eligible rules with exactly the same selector;
+accepted protection declarations themselves are important. Element and selector rules share the
+configured protection cap, with one slot reserved for body protection. Body protection is processed
+before the initial CSS queue. Exhausted budgets or scroll cancellation can leave coverage partial;
+scrolling never resumes the scan.
+
+Initial sources come from `document.styleSheets`; source insertions/removals, text changes and
+`href`/`rel`/`media`/`disabled` attributes enqueue only the affected source. Link `load` events
+capture newly available sheets. Sources recognized before full load are queued immediately;
+initial discovery also shortens a previously delayed pending deadline. Post-load sources are
+deduplicated and wait 500 ms from their first queued event; further changes do not indefinitely
+postpone that deadline. There is no
+periodic polling or background full-DOM repair. Changes arriving without CSS-source events do not
+start this queue merely because a positioned element changes class while scrolling.
+
+Captured source candidates are combined in current stylesheet order. A replacement selector sheet
+is built with inactive media; only a completed replacement becomes active. Canceled staging work
+does not remove the last committed protection. Source updates replace captured top values, never
+read Candy-adjusted computed tops or repeatedly add the inset. Candy's own active/staging sources
+are excluded from ingestion. The existing manual probe can export aggregate source counters only;
+it does not trigger processing or add style/geometry reads.
+
+Validated selector rules are also stored as the staging style element's text before activation.
+Gecko rebuilds a style element's sheet after media-attribute changes or detach/rebind; empty text
+would discard CSSOM-only insertions. Persisting canonical text retains the rules during this swap,
+and committed rule references are refreshed. This adds bounded text preparation/parsing, not
+scroll-driven work. Original Page Source remains distinct from the live injected style element.
+
+Only plain loaded stylesheets and ordinary complete selector rules are admitted in this first
+iteration. Grouping contexts (`@media`, `@supports`, `@layer`), nontrivial sheet media, imports,
+keyframes, CSS nesting, split position/top declarations and non-pixel top expressions are skipped.
+Inaccessible cross-origin `cssRules` are skipped without fetching a second copy of page CSS.
+Direct `insertRule`/`deleteRule`/`replace`/`replaceSync` edits without DOM source events, adopted
+stylesheets and shadow-tree sources are not monitored; no page-world API hooks are installed.
+Same-block declarations
+are candidates, not a general proof of the final cascade; inline-important and other stronger
+rules remain boundaries. Real Amazon CDN accessibility and product-state coverage require separate
+manual verification, not inference from the synthetic class-switch regression.
 
 The stylesheet uses `!important`, which overrides normal inline declarations, but author inline
 `!important` and stronger competing author-important selectors can still win. This is not a
@@ -341,11 +401,13 @@ user-origin stylesheet or a universal cascade guarantee. Initial classification 
 content becomes available; this change targets subsequent resets, not first-paint flicker.
 Removing or editing the prototype's own stylesheet or markers is outside this persistence guarantee;
 normal header style resets are the regression target. Responsive author top/padding changes remain
-masked while the corresponding captured rule wins, until protection is disabled or reconfigured.
+masked while the corresponding captured rule wins, until its source version is updated or protection
+is disabled/reconfigured; element-level captures retain their existing ownership behavior.
 
 `top` has the CSS initial value `auto`, not zero. CSSOM `getComputedStyle()` may return a resolved
 used pixel value for a positioned visible box; the prototype filters the returned value, not author
-stylesheet declarations. It does not scan stylesheets to reconstruct declarations.
+stylesheet declarations. The bounded selector scan reads explicit declaration pairs only; it does
+not reconstruct the cascade of arbitrary split declarations.
 
 Removing the top threshold deliberately widens this experimental rule: a lower or bottom-anchored
 fixed box can also move if CSSOM resolves its top into pixels. This is not a universal layout-safety
@@ -353,7 +415,7 @@ proof, and the existing bounded discovery cap still applies.
 
 Known limitations are intentionally left for manual testing: iframe contents, absolute descendants,
 nested positioning/scrolling containers, full-height fixed panels, larger DOMs beyond the traversal
-cap, and stylesheet changes affecting elements outside the admitted subtree. The prototype does not
+cap, and unsupported stylesheet changes affecting elements outside the admitted subtree. The prototype does not
 run the old classifier's footprint verification or automatically infer when emergency fallback is
 needed. Existing explicit/native fallback paths remain available; no new native top margin is added.
 Site-specific exceptions are not part of this first prototype.

@@ -392,9 +392,10 @@ internal class EdgeToEdgeSiteFixtureServer(
                         candidate.name == requestedName
                     } ?: EdgeToEdgeSiteMatrix.allSites.first()
                     val body = (requestHandler?.invoke(requestTarget) ?: EdgeToEdgeSiteMatrix.html(site)).toByteArray()
+                    val contentType = if (requestTarget.substringBefore('?').endsWith(".css")) "text/css" else "text/html"
                     connection.getOutputStream().apply {
                         write("HTTP/1.1 200 OK\r\n".toByteArray())
-                        write("Content-Type: text/html; charset=utf-8\r\n".toByteArray())
+                        write("Content-Type: $contentType; charset=utf-8\r\n".toByteArray())
                         write("Cache-Control: no-store\r\n".toByteArray())
                         write("Content-Length: ${body.size}\r\n".toByteArray())
                         write("Connection: close\r\n\r\n".toByteArray())
