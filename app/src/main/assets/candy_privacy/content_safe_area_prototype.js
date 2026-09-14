@@ -48,6 +48,7 @@
   let semanticSeeded = false;
   let initialDomSeeded = false;
   let protectedBody = null;
+  let redditFlowProtected = false;
   let refreshBodyAtReady = false;
   let cssTurn = true;
 
@@ -134,6 +135,7 @@
   }
 
   function selectorOwns(element) {
+    if (globalThis.CandyRedditSafeArea?.owns(element)) return true;
     if (!selectorMatcher && !knownTopMatcher) return false;
     try {
       if (knownTopMatcher && element.matches(knownTopMatcher)) return true;
@@ -156,6 +158,7 @@
   }
 
   function queueSource(sheet, owner = sheet?.ownerNode, delayed = true) {
+    if (globalThis.CandyRedditSafeArea?.ownsSource(owner)) return;
     if (!sheet || sheet === layer?.sheet || sheet === selectorLayer?.sheet ||
         sheet === selectorBuild?.staging?.sheet || owner === layer || owner === selectorLayer || owner === selectorBuild?.staging) return;
     if (sourceEvents >= cssLimits.lifetimeEvents || cssCounts.rules >= cssLimits.lifetimeRules) { cssCounts.capped++; return; }
@@ -199,7 +202,8 @@
   }
 
   function isOwnSource(node) {
-    return node === layer || node === selectorLayer || node === selectorBuild?.staging ||
+    return globalThis.CandyRedditSafeArea?.ownsSource(node) ||
+      node === layer || node === selectorLayer || node === selectorBuild?.staging ||
       layer?.contains(node) || selectorLayer?.contains(node) || selectorBuild?.staging?.contains(node);
   }
 
@@ -451,7 +455,8 @@
     if (!configuration?.active || cleanup.length || !document.body || !document.documentElement) return;
     bodyPending = false;
     apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
-    if (refreshBodyAtReady && document.readyState !== "loading") {
+    const flowProtected = globalThis.CandyRedditSafeArea?.flowProtected() === true;
+    if ((refreshBodyAtReady && document.readyState !== "loading") || flowProtected !== redditFlowProtected) {
       // Do not measure our early padding as author padding. Remove/read/republish
       // in this same task, so later parser CSS is preserved without a paint gap.
       rules.get(document.body)?.rule.style.removeProperty("padding-top");
@@ -459,7 +464,8 @@
     }
     const style = getComputedStyle(document.body);
     const padding = pixels(style.paddingTop);
-    if (padding !== null) applyRule(document.body, "padding-top", `${Math.max(padding, inset)}px`);
+    if (padding !== null) applyRule(document.body, "padding-top", `${flowProtected ? padding : Math.max(padding, inset)}px`);
+    redditFlowProtected = flowProtected;
     classify(document.body, style);
     protectedBody = document.body;
     if (document.readyState === "loading") refreshBodyAtReady = true;
@@ -512,6 +518,16 @@
     if (document.body && protectedBody !== document.body) {
       bodyPending = true;
       protectBody(); // One bounded body operation before the next paint, not a subtree scan.
+    }
+    if (globalThis.CandyRedditSafeArea) {
+      let remaining = 16;
+      for (let index = 0; index < Math.min(records.length, 64) && remaining > 0; index++) {
+        const record = records[index];
+        if (record.type !== "childList") continue;
+        for (let child = 0; child < record.addedNodes.length && remaining-- > 0; child++) {
+          globalThis.CandyRedditSafeArea.added(record.addedNodes[child]);
+        }
+      }
     }
     // Source events are independent of the trusted DOM-discovery interaction window.
     let remaining = 64;
@@ -618,6 +634,7 @@
     semanticSeeded = false;
     initialDomSeeded = false;
     protectedBody = null;
+    redditFlowProtected = false;
     refreshBodyAtReady = false;
     cssTurn = true;
     if (next.active && !cleanup.length && document.documentElement) {
@@ -626,6 +643,12 @@
     }
     startSelectorScan();
     observe();
+    globalThis.CandyRedditSafeArea?.configure(next.active, () => {
+      if (!configuration?.active) return;
+      bodyPending = true;
+      protectBody();
+      schedule();
+    });
     schedule();
   }
 
@@ -647,6 +670,7 @@
 
   globalThis.__candyConfigureCssSafeArea = configure;
   document.addEventListener("DOMContentLoaded", () => {
+    globalThis.CandyRedditSafeArea?.sync();
     observe();
     startSelectorScan();
     if (configuration?.active && (protectedBody !== document.body || refreshBodyAtReady)) {
@@ -661,7 +685,7 @@
   document.addEventListener("load", (event) => {
     if (configuration?.active && event.target?.localName === "link") { sourceNode(event.target); schedule(); }
   }, true);
-  globalThis.addEventListener("load", () => { startSelectorScan(); seedInitialDom(); seedSemanticHeader(); schedule(); }, { once: true });
+  globalThis.addEventListener("load", () => { globalThis.CandyRedditSafeArea?.sync(); startSelectorScan(); seedInitialDom(); seedSemanticHeader(); schedule(); }, { once: true });
   document.addEventListener("scroll", scroll, { capture: true, passive: true });
   globalThis.addEventListener("scroll", scroll, { passive: true });
   globalThis.addEventListener("resize", () => { if (configuration?.recheckOnResize) configure(true); }, { passive: true });

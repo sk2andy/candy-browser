@@ -329,6 +329,7 @@ together. This prototype is not a compatibility claim for the layouts described 
 | Scroll | Cancels pending work; does not start style/geometry reads or repair |
 | Settings | Existing enable, DOM mutation/interaction, batch and resize controls remain; CSS sources reuse worker batch/time limits with fixed prototype source limits; only post-load sources use the 500-ms cooldown |
 | Native / privacy | Full-window renderer, native inset delivery, existing fallback bridge and private-session boundaries remain unchanged |
+| Reddit component exception | `content_safe_area_reddit.js` supplies scoped app-flow/header rules in the document and observed open component roots; scroll-state attributes are matched by CSS, not JavaScript repair |
 
 This iteration tests approach A: persistent author-origin CSS, not periodic mutation repair. Each
 document owns separate element and selector stylesheets and bounded element markers. Rules persist while that document and
@@ -407,6 +408,37 @@ The stylesheet exists before a later focus changes the container from static to 
 selector matching supplies protection without a delayed Candy repair. Normal static search layout
 is not offset by this state rule. The rule reserves a slot and skips duplicate element protection,
 using the same enable/inset/cleanup lifecycle. Other Google layout variants are not inferred.
+
+For reddit.com and its subdomains, `content_safe_area_reddit.js` owns one stylesheet per relevant
+scope: document rules are restricted to `shreddit-app`; open app roots receive local rules and
+open `reddit-header-small` roots receive host-relative rules. The app gets its author
+`--page-y-padding` plus the inset as top padding, rather than adding the inset later at
+`.main-container`. Fixed `reddit-header-small` gets inset top; the `.relative` variant subtracts
+the author page-padding reserve from its top offset. Its internal `header` gets inset top padding
+only while the host has `hidden-by-scroll`. Observed Reddit layouts put the target nodes in light
+DOM despite owning additional open shadow roots, so document and shadow scopes remain distinct.
+The app-level flow reserve also moves the normal-flow subreddit banner below the header;
+no additional banner margin duplicates this reserve. A live r/pcmasterrace fixed-header layout
+confirmed unchanged first-content position and a normally scrolling banner. A live home-page
+relative-header variant with zero author page-padding retained the same safe header position.
+Absolute banners and relative headers with nonzero author page-padding remain manual checks.
+
+When an actual protected app exists, the prototype retains author body padding
+without adding another Candy body inset, including before `.main-container` appears. If app coverage
+disappears, general body-inset protection returns. Each handoff removes only Candy's body-padding
+declaration before reading and
+republishing in the same task; no cumulative inset is captured. Known Reddit header hosts also
+skip generic element-top addition, and the helper's styles are excluded from CSS-source ingestion.
+
+Initial/configuration, DOM-ready/load and custom-element-definition events synchronize only the
+named components. Direct child-list observers on component roots and their immediate containers
+coalesce structural changes; no attributes or feed-wide subtree observation is installed by the
+helper. `hidden-by-scroll` uses ordinary selector matching, with no Candy scroll callback or
+computed-style/geometry read. Limits are eight owned sheets, sixteen direct observers and 256
+coalesced structural tasks per enable epoch; named selector queries are not an exhaustive DOM
+budget proof. Closed roots, deeply nested unobserved replacements and roots attached without a
+definition/structural event remain limitations. Disable removes only the helper's styles, observers
+and pending task. There is no page-world `attachShadow` hook, polling or network request.
 
 Same-block declarations
 are candidates, not a general proof of the final cascade; inline-important and other stronger

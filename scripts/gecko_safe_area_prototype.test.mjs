@@ -243,6 +243,26 @@ test('known Google focus CSS is seeded before activation and removed when disabl
   }
 });
 
+test('Reddit app ownership replaces body inset without losing author padding', () => {
+  const f = fixture();
+  f.body.computed.paddingTop = '4px';
+  let flow = false; let changed;
+  f.context.CandyRedditSafeArea = {
+    owns: () => false, ownsSource: () => false, added: () => {}, sync: () => {},
+    flowProtected: () => flow,
+    configure: (active, callback) => { changed = callback; flow = active; callback(); },
+  };
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '4px', 'Do not add both body and Reddit container insets');
+  flow = false; changed(); f.flush();
+  assert.equal(f.computed(f.body).paddingTop, '32px', 'Restore general body inset when Reddit flow disappears');
+  flow = true; changed(); f.flush();
+  assert.equal(f.computed(f.body).paddingTop, '4px', 'Never measure retained Candy padding as author padding');
+  const before = { ...f.reads };
+  f.event('scroll');
+  assert.deepEqual(f.reads, before);
+});
+
 test('persistent body and finite fixed/sticky rules do not accumulate on authorized rechecks', () => {
   const f = fixture(); f.body.style.setProperty('padding-top', '4px');
   const nodes = [];
