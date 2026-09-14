@@ -391,7 +391,7 @@ Inaccessible cross-origin `cssRules` are skipped without fetching a second copy 
 Direct `insertRule`/`deleteRule`/`replace`/`replaceSync` edits without DOM source events, adopted
 stylesheets and shadow-tree sources are not monitored; no page-world API hooks are installed.
 
-The maintained known-site rule set currently contains one Amazon.de exception:
+The maintained known-site rule set contains an Amazon.de exception:
 `:root #btf-sub-nav-top-navigation-bar.persistent-header` receives
 `top: calc(0px + var(--candy-safe-area-inset-top)) !important` in the early owned layer.
 Only amazon.de and its subdomains match. The rule protects the observed zero-top header as soon as
@@ -401,6 +401,13 @@ slot, prevents duplicate element-top protection and follows the same enable/inse
 There is no extra observer, network request, scroll scan or separate per-site setting.
 Source-discovery, opaque-CSS and LINK-race experiments are not included in this smaller follow-up.
 
+For google.com/google.de and their subdomains, the observed expanded-search state
+`:root #tsf .A7Yvie.emcav` receives the same early important zero-top-plus-inset rule.
+The stylesheet exists before a later focus changes the container from static to fixed; browser
+selector matching supplies protection without a delayed Candy repair. Normal static search layout
+is not offset by this state rule. The rule reserves a slot and skips duplicate element protection,
+using the same enable/inset/cleanup lifecycle. Other Google layout variants are not inferred.
+
 Same-block declarations
 are candidates, not a general proof of the final cascade; inline-important and other stronger
 rules remain boundaries. Real Amazon CDN accessibility and product-state coverage require separate
@@ -408,8 +415,9 @@ manual verification, not inference from the synthetic class-switch regression.
 
 The stylesheet uses `!important`, which overrides normal inline declarations, but author inline
 `!important` and stronger competing author-important selectors can still win. This is not a
-user-origin stylesheet or a universal cascade guarantee. Initial classification still happens after
-content becomes available; this change targets subsequent resets, not first-paint flicker.
+user-origin stylesheet or a universal cascade guarantee. Generic initial classification still happens
+after content becomes available. Known state rules are seeded in advance of later state changes;
+they do not guarantee protection before native inset configuration is ready on the first page paint.
 Removing or editing the prototype's own stylesheet or markers is outside this persistence guarantee;
 normal header style resets are the regression target. Responsive author top/padding changes remain
 masked while the corresponding captured rule wins, until its source version is updated or protection

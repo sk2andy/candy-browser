@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('../app/src/main/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
 
-function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparseStyles = false, prototypeSource = source } = {}) {
+function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '' } = {}) {
   let clock = 0; let timerId = 0; let observer;
   const timers = new Map(); const listeners = new Map(); const mutations = []; const registrations = [];
   const reads = { style: 0, rect: 0, selector: 0 }; let writes = 0;
@@ -157,6 +157,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
   }
   const windowProxy = {};
   const context = vm.createContext({ Element, document, self: windowProxy, top: windowProxy,
+    location: { hostname },
     devicePixelRatio: density,
     CandyContentTopInset: { cssSafeAreaConfiguration: () => ({ ...config }), domDiagnosticsEnabled: () => true },
     getComputedStyle: (element) => {
@@ -221,6 +222,26 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     diagnostics: () => context.CandyCssSafeAreaDiagnostics.sample(),
   };
 }
+
+test('known Google focus CSS is seeded before activation and removed when disabled', () => {
+  for (const hostname of ['www.google.com', 'google.de', 'www.google.de.']) {
+    const f = fixture({ hostname, reparseStyles: true });
+    f.start(false);
+    const layer = f.sheets.find((node) => node.textContent.includes(':root #tsf .A7Yvie.emcav'));
+    assert.ok(layer?.isConnected, 'Google state rule must exist before delayed classification');
+    assert.match(layer.textContent, /top: calc\(0px \+ var\(--candy-safe-area-inset-top\)\) !important/);
+    const before = { ...f.reads };
+    f.event('scroll');
+    assert.deepEqual(f.reads, before, 'Scrolling must not add style or geometry reads');
+    f.configure({ enabled: false });
+    assert.equal(layer.isConnected, false);
+  }
+  for (const hostname of ['google.com.example.org', 'notgoogle.de', 'example.org']) {
+    const f = fixture({ hostname });
+    f.start(false);
+    assert.equal(f.sheets.some((node) => node.textContent.includes('.A7Yvie.emcav')), false);
+  }
+});
 
 test('persistent body and finite fixed/sticky rules do not accumulate on authorized rechecks', () => {
   const f = fixture(); f.body.style.setProperty('padding-top', '4px');
