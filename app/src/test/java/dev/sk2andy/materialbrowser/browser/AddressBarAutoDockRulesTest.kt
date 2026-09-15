@@ -8,24 +8,21 @@ import org.junit.Test
 
 class AddressBarAutoDockRulesTest {
     @Test
-    fun `page ime opening requests a fresh probe`() {
+    fun `visible page ime requests a fresh probe`() {
         assertTrue(
-            AddressBarAutoDockRules.shouldProbeAfterImeChange(
-                wasImeVisible = false,
+            AddressBarAutoDockRules.shouldProbeForImeState(
                 isImeVisible = true,
                 browserChromeOwnsIme = false,
             ),
         )
         assertFalse(
-            AddressBarAutoDockRules.shouldProbeAfterImeChange(
-                wasImeVisible = true,
-                isImeVisible = true,
+            AddressBarAutoDockRules.shouldProbeForImeState(
+                isImeVisible = false,
                 browserChromeOwnsIme = false,
             ),
         )
         assertFalse(
-            AddressBarAutoDockRules.shouldProbeAfterImeChange(
-                wasImeVisible = false,
+            AddressBarAutoDockRules.shouldProbeForImeState(
                 isImeVisible = true,
                 browserChromeOwnsIme = true,
             ),

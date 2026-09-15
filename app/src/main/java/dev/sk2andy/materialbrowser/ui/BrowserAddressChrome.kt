@@ -7,6 +7,7 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.view.HapticFeedbackConstants
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -16,7 +17,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -139,6 +142,18 @@ internal fun BoxScope.BrowserAddressChrome(
         controller.blockerSettings.hideCookieConsent &&
         !selectedSiteState.isPaused
     val permissionActivityVisible = controller.hasPermissionActivity(selectedTab.id)
+    val imeBottomPx = WindowInsets.ime.getBottom(density)
+    val fullWindowHeightPx = context
+        .getSystemService(WindowManager::class.java)
+        .currentWindowMetrics
+        .bounds
+        .height()
+    val visibleViewportHeightPx = AddressBarInsetRules.visibleViewportHeightPx(
+        rootHeightPx = browserHeightPx.toInt(),
+        fullWindowHeightPx = fullWindowHeightPx,
+        rootBottomInWindowPx = browserRootBottomInWindowPx,
+        imeBottomPx = imeBottomPx,
+    )
     if (addressEditorVisible && !showInteractiveBlankStart) {
         AddressEditorBackdrop(
             showStartContent = selectedTab.url == BLANK_URL,
@@ -181,7 +196,7 @@ internal fun BoxScope.BrowserAddressChrome(
         autoDockGeometryAvailable,
         addressBarBoundsInRoot,
         browserWidthPx,
-        browserHeightPx,
+        visibleViewportHeightPx,
     ) {
         val bounds = addressBarBoundsInRoot
         if (autoDockGeometryAvailable && bounds != null) {
@@ -191,7 +206,7 @@ internal fun BoxScope.BrowserAddressChrome(
                 rightPx = bounds.right,
                 bottomPx = bounds.bottom,
                 viewportWidthPx = browserWidthPx,
-                viewportHeightPx = browserHeightPx,
+                viewportHeightPx = visibleViewportHeightPx.toFloat(),
             )
         } else {
             controller.clearAddressBarBoundsInViewport()

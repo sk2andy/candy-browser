@@ -83,6 +83,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     .setVisible(WindowInsetsCompat.Type.ime(), false)
                     .build(),
             )
+            browserController.setBrowserChromeOwnsIme(true)
 
             assertFalse(browserController.isAddressBarDocked)
 
@@ -95,12 +96,30 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     .setVisible(WindowInsetsCompat.Type.ime(), true)
                     .build(),
             )
+            browserController.setBrowserChromeOwnsIme(false)
+            browserController.setAddressBarBoundsInViewport(
+                leftPx = 50f,
+                topPx = 700f,
+                rightPx = 950f,
+                bottomPx = 800f,
+                viewportWidthPx = 1_000f,
+                viewportHeightPx = 1_000f,
+            )
         }
 
         composeRule.waitUntil(timeoutMillis = 5_000L) {
             session.textInputOcclusionProbeCount == 1
         }
         composeRule.runOnIdle {
+            assertEquals(
+                BrowserViewportRect(
+                    leftFraction = 0.05f,
+                    topFraction = 0.7f,
+                    rightFraction = 0.95f,
+                    bottomFraction = 0.8f,
+                ),
+                session.lastTextInputOcclusionViewportRect,
+            )
             assertTrue(requireNotNull(controller).isAddressBarDocked)
             requireNotNull(controller).updateAddressBarDocked(false)
         }
@@ -707,6 +726,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         @Volatile
         var textInputOcclusionProbeCount = 0
             private set
+        @Volatile
+        var lastTextInputOcclusionViewportRect: BrowserViewportRect? = null
+            private set
         private var attachDispatched = false
         private var detachDispatched = false
         private var releaseDispatched = false
@@ -798,6 +820,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             onComplete: (Boolean) -> Unit,
         ) {
             textInputOcclusionProbeCount++
+            lastTextInputOcclusionViewportRect = viewportRect
             onComplete(textInputOccluded)
         }
 

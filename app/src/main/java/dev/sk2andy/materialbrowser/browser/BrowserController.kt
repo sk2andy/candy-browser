@@ -2458,13 +2458,16 @@ class BrowserController(
         val previousInsets = lastWindowInsets
         lastWindowInsets = insets
         if (
-            AddressBarAutoDockRules.shouldProbeAfterImeChange(
-                wasImeVisible = previousInsets?.isVisible(WindowInsetsCompat.Type.ime()) == true,
+            AddressBarAutoDockRules.shouldProbeForImeState(
                 isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime()),
                 browserChromeOwnsIme = browserChromeOwnsIme,
             )
         ) {
-            scheduleAddressBarAutoDockProbe(selectedTab.id, selectedTab.url)
+            scheduleAddressBarAutoDockProbe(
+                tabId = selectedTab.id,
+                url = selectedTab.url,
+                requiresPageIme = true,
+            )
         }
         if (
             browserChromeOwnsIme &&
@@ -2487,6 +2490,15 @@ class BrowserController(
     fun setBrowserChromeOwnsIme(ownsIme: Boolean) {
         if (browserChromeOwnsIme == ownsIme) return
         browserChromeOwnsIme = ownsIme
+        if (ownsIme) {
+            cancelAddressBarAutoDockProbe()
+        } else if (isPageImeVisible()) {
+            scheduleAddressBarAutoDockProbe(
+                tabId = selectedTab.id,
+                url = selectedTab.url,
+                requiresPageIme = true,
+            )
+        }
         val insets = lastWindowInsets ?: return
         dispatchWindowInsetsToAttachedEngineViews(insets)
     }
@@ -7576,7 +7588,7 @@ class BrowserController(
         viewportWidthPx: Float,
         viewportHeightPx: Float,
     ) {
-        addressBarViewportRect = AddressBarAutoDockRules.viewportRect(
+        val updatedRect = AddressBarAutoDockRules.viewportRect(
             leftPx = leftPx,
             topPx = topPx,
             rightPx = rightPx,
@@ -7584,6 +7596,15 @@ class BrowserController(
             viewportWidthPx = viewportWidthPx,
             viewportHeightPx = viewportHeightPx,
         )
+        if (addressBarViewportRect == updatedRect) return
+        addressBarViewportRect = updatedRect
+        if (isPageImeVisible()) {
+            scheduleAddressBarAutoDockProbe(
+                tabId = selectedTab.id,
+                url = selectedTab.url,
+                requiresPageIme = true,
+            )
+        }
     }
 
     fun clearAddressBarBoundsInViewport() {
@@ -9720,7 +9741,11 @@ class BrowserController(
         engineViewRevision++
     }
 
-    private fun scheduleAddressBarAutoDockProbe(tabId: String, url: String) {
+    private fun scheduleAddressBarAutoDockProbe(
+        tabId: String,
+        url: String,
+        requiresPageIme: Boolean = false,
+    ) {
         if (selectedTabId != tabId) return
         val expectedUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
         val session = browserEngineSessions[tabId] ?: return
@@ -9731,6 +9756,7 @@ class BrowserController(
             pendingAddressBarAutoDockTabId = null
             val viewportRect = addressBarViewportRect
             if (
+                (requiresPageIme && !isPageImeVisible()) ||
                 !AddressBarAutoDockRules.shouldProbe(
                     dockingEnabled = isAddressBarDockingEnabled,
                     addressBarDocked = isAddressBarDocked,
@@ -9744,6 +9770,7 @@ class BrowserController(
                 return@Runnable
             }
             session.probeTextInputOcclusion(requireNotNull(viewportRect)) { occluded ->
+                if (requiresPageIme && !isPageImeVisible()) return@probeTextInputOcclusion
                 val currentUrl = tabs.firstOrNull { tab -> tab.id == tabId }
                     ?.url
                     ?.let(BrowserUriPolicy::normalizeHttpUrl)
@@ -9777,6 +9804,11 @@ class BrowserController(
         pendingAddressBarAutoDockProbe = null
         pendingAddressBarAutoDockTabId = null
     }
+
+    private fun isPageImeVisible(): Boolean = AddressBarAutoDockRules.shouldProbeForImeState(
+        isImeVisible = lastWindowInsets?.isVisible(WindowInsetsCompat.Type.ime()) == true,
+        browserChromeOwnsIme = browserChromeOwnsIme,
+    )
 
     private fun handlePageTranslationEngineEvent(event: BrowserEngineEvent) {
         val attempt = pageTranslationAttempts[event.tabId] ?: return
