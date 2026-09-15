@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.MutableState
@@ -167,6 +168,38 @@ internal fun BoxScope.BrowserAddressChrome(
     )
     val effectiveAddressBarDockPlacement = controller.addressBarDockPlacement
         .takeIf { addressBarDockingAvailable && !linkPeekAddressBarExpanded }
+    var addressBarBoundsInRoot by remember { mutableStateOf<Rect?>(null) }
+    val autoDockGeometryAvailable = addressBarDockingAvailable &&
+        effectiveAddressBarDockPlacement == null &&
+        !addressEditorVisible &&
+        !settingsVisible &&
+        !tabOverviewOpening &&
+        !tabOverviewVisible &&
+        !linkPeekAddressBarExpanded &&
+        commandFeedback == null
+    LaunchedEffect(
+        autoDockGeometryAvailable,
+        addressBarBoundsInRoot,
+        browserWidthPx,
+        browserHeightPx,
+    ) {
+        val bounds = addressBarBoundsInRoot
+        if (autoDockGeometryAvailable && bounds != null) {
+            controller.setAddressBarBoundsInViewport(
+                leftPx = bounds.left,
+                topPx = bounds.top,
+                rightPx = bounds.right,
+                bottomPx = bounds.bottom,
+                viewportWidthPx = browserWidthPx,
+                viewportHeightPx = browserHeightPx,
+            )
+        } else {
+            controller.clearAddressBarBoundsInViewport()
+        }
+    }
+    DisposableEffect(controller) {
+        onDispose(controller::clearAddressBarBoundsInViewport)
+    }
     BrowserBottomBar(
         tab = selectedTab,
         pageTranslationProvider = controller.pageTranslationProvider,
@@ -457,7 +490,8 @@ internal fun BoxScope.BrowserAddressChrome(
         onOpenCandyTrail = onOpenCandyTrail,
         onSnooze = onSnooze,
         onAddSiteCapsule = onAddSiteCapsule,
-        onBarPositioned = { topInRootPx, topInWindowPx ->
+        onBarPositioned = { boundsInRoot, topInWindowPx ->
+            addressBarBoundsInRoot = boundsInRoot
             if (
                 effectiveAddressBarDockPlacement != null &&
                 !addressEditorVisible &&
@@ -466,7 +500,7 @@ internal fun BoxScope.BrowserAddressChrome(
                 bottomBarTopPx.floatValue = Float.NaN
                 controller.setPreviewContentBottomInWindowPx(0)
             } else {
-                bottomBarTopPx.floatValue = topInRootPx
+                bottomBarTopPx.floatValue = boundsInRoot.top
                 controller.setPreviewContentBottomInWindowPx(topInWindowPx)
             }
         },

@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineNavigationTarget
 import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
@@ -297,6 +298,12 @@ internal interface GeckoBrowserSession {
 
     /** Extracts bounded article JSON through Candy's internal Gecko content-script bridge. */
     fun extractPageForReader(onComplete: (String?) -> Unit)
+
+    /** Checks one committed document for a text editor hidden by browser chrome. */
+    fun probeTextInputOcclusion(
+        viewportRect: BrowserViewportRect,
+        onComplete: (Boolean) -> Unit,
+    ) = onComplete(false)
 
     /** Opens Gecko's Android print flow for the current document. */
     fun printPage(): Boolean

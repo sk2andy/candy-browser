@@ -218,7 +218,7 @@ internal fun BrowserBottomBar(
     onOverviewGestureProgress: (Float) -> Unit,
     onOverviewGestureStarted: () -> Unit,
     onOverviewGestureCancelled: () -> Unit,
-    onBarPositioned: (topInRootPx: Float, topInWindowPx: Int) -> Unit,
+    onBarPositioned: (boundsInRoot: Rect, topInWindowPx: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val docked = dockState.placement != null
@@ -405,8 +405,9 @@ internal fun BrowserBottomBar(
                         },
                     )
                     .onGloballyPositioned { coordinates ->
+                        val boundsInRoot = coordinates.boundsInRoot()
                         onBarPositioned(
-                            coordinates.boundsInRoot().top,
+                            boundsInRoot,
                             coordinates.boundsInWindow().top.roundToInt(),
                         )
                     }

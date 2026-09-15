@@ -5,6 +5,7 @@ import android.os.Looper
 import android.util.Log
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import java.util.UUID
@@ -18,6 +19,11 @@ internal interface GeckoPrivacyBinding {
     fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit = {})
 
     fun extractPageForReader(onResult: (String?) -> Unit)
+
+    fun probeTextInputOcclusion(
+        viewportRect: BrowserViewportRect,
+        onResult: (Boolean) -> Unit,
+    )
 
     fun probeDom(onResult: (String?) -> Unit)
 
@@ -49,6 +55,7 @@ internal class GeckoViewPrivacyHostRuntime(
         var readerResult: ((String?) -> Unit)? = null,
         var readerTimeout: Runnable? = null,
         val domProbe: GeckoDomProbeRequest,
+        val textInputOcclusionProbe: GeckoTextInputOcclusionRequest,
         var pictureInPicturePlaybackExpected: Boolean = false,
         var scrollMetrics: BrowserEngineScrollMetrics? = null,
         val onScrollMetrics: (BrowserEngineScrollMetrics) -> Unit,
@@ -159,6 +166,7 @@ internal class GeckoViewPrivacyHostRuntime(
             token = token,
             session = session,
             domProbe = GeckoDomProbeRequest(mainHandler),
+            textInputOcclusionProbe = GeckoTextInputOcclusionRequest(mainHandler),
             sink = sink,
             onScrollMetrics = onScrollMetrics,
             onMainFrameResponse = onMainFrameResponse,
@@ -207,6 +215,28 @@ internal class GeckoViewPrivacyHostRuntime(
 
             override fun scrollMetrics(): BrowserEngineScrollMetrics? = binding.scrollMetrics
 
+            override fun probeTextInputOcclusion(
+                viewportRect: BrowserViewportRect,
+                onResult: (Boolean) -> Unit,
+            ) {
+                if (
+                    bindings[token] !== binding ||
+                    failureDescription != null
+                ) {
+                    onResult(false)
+                    return
+                }
+                runWhenReady(binding) {
+                    if (binding.handshake.isCurrentPolicyAcknowledged) {
+                        requestTextInputOcclusion(binding, viewportRect, onResult)
+                    } else {
+                        binding.policyReadyCallbacks += {
+                            requestTextInputOcclusion(binding, viewportRect, onResult)
+                        }
+                    }
+                }
+            }
+
             override fun probeDom(onResult: (String?) -> Unit) {
                 val currentPort = port
                 if (!BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS || session.settings.usePrivateMode ||
@@ -248,6 +278,7 @@ internal class GeckoViewPrivacyHostRuntime(
             override fun close() {
                 bindings.remove(token)
                 binding.domProbe.cancel()
+                binding.textInputOcclusionProbe.cancel()
                 if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS && bindings.isEmpty()) {
                     GeckoPerformanceDiagnostics.removeStateListener(performanceDiagnosticsStateListener)
                     GeckoPerformanceDiagnostics.removeGapListener(performanceDiagnosticsGapListener)
@@ -325,6 +356,7 @@ internal class GeckoViewPrivacyHostRuntime(
     ) {
         if (bindings[binding.token] !== binding) return
         binding.domProbe.cancel()
+        binding.textInputOcclusionProbe.cancel()
         val readerResult = clearReaderRequest(binding)
         binding.policy = policy
         binding.scrollMetrics = null
@@ -395,6 +427,17 @@ internal class GeckoViewPrivacyHostRuntime(
             "safe-area-fallback" -> acceptSafeAreaFallback(value)
             "scroll-metrics" -> acceptScrollMetrics(value)
             "reader-result" -> acceptReaderResult(value)
+            "text-input-occlusion-result" -> {
+                val binding = bindings[value.optString("token")] ?: return
+                if (
+                    binding.handshake.publishedRevision != value.optLong("revision", -1) ||
+                    binding.policy.navigationGeneration !=
+                    value.optInt("navigationGeneration", -1)
+                ) {
+                    return
+                }
+                binding.textInputOcclusionProbe.accept(value)
+            }
             "dom-probe-result" -> {
                 if (!BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) return
                 val binding = bindings[value.optString("token")] ?: return
@@ -459,6 +502,30 @@ internal class GeckoViewPrivacyHostRuntime(
         }.exceptionOrNull()?.let { clearReaderRequest(binding) }
         previousResult?.invoke(null)
         failedResult?.invoke(null)
+    }
+
+    private fun requestTextInputOcclusion(
+        binding: Binding,
+        viewportRect: BrowserViewportRect,
+        onResult: (Boolean) -> Unit,
+    ) {
+        val connectedPort = port
+        if (
+            bindings[binding.token] !== binding ||
+            connectedPort == null ||
+            !binding.handshake.isCurrentPolicyAcknowledged
+        ) {
+            onResult(false)
+            return
+        }
+        binding.textInputOcclusionProbe.start(
+            token = binding.token,
+            revision = binding.handshake.publishedRevision,
+            navigationGeneration = binding.policy.navigationGeneration,
+            viewportRect = viewportRect,
+            post = connectedPort::postMessage,
+            onResult = onResult,
+        )
     }
 
     private fun acceptReaderResult(value: JSONObject) {
@@ -670,6 +737,7 @@ internal class GeckoViewPrivacyHostRuntime(
         callbacks.forEach { callback -> callback(false) }
         val readerResults = bindings.values.mapNotNull { binding ->
             binding.domProbe.cancel()
+            binding.textInputOcclusionProbe.cancel()
             cancelTimeout(binding)
             val readerResult = clearReaderRequest(binding)
             binding.policyReadyCallbacks.clear()
@@ -763,6 +831,11 @@ private fun closedBinding(): GeckoPrivacyBinding = object : GeckoPrivacyBinding 
     override fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit) = Unit
 
     override fun extractPageForReader(onResult: (String?) -> Unit) = onResult(null)
+
+    override fun probeTextInputOcclusion(
+        viewportRect: BrowserViewportRect,
+        onResult: (Boolean) -> Unit,
+    ) = onResult(false)
 
     override fun probeDom(onResult: (String?) -> Unit) = onResult(null)
 
