@@ -5,6 +5,32 @@ import org.junit.Test
 
 class AddressBarInsetRulesTest {
     @Test
+    fun `full-height root exposes viewport above IME`() {
+        assertEquals(
+            1_500,
+            AddressBarInsetRules.visibleViewportHeightPx(
+                rootHeightPx = 2_400,
+                fullWindowHeightPx = 2_400,
+                rootBottomInWindowPx = 2_400,
+                imeBottomPx = 900,
+            ),
+        )
+    }
+
+    @Test
+    fun `IME-resized root keeps its existing visible height`() {
+        assertEquals(
+            1_500,
+            AddressBarInsetRules.visibleViewportHeightPx(
+                rootHeightPx = 1_500,
+                fullWindowHeightPx = 2_400,
+                rootBottomInWindowPx = 1_500,
+                imeBottomPx = 900,
+            ),
+        )
+    }
+
+    @Test
     fun `full-height root applies complete IME inset`() {
         assertEquals(
             900,

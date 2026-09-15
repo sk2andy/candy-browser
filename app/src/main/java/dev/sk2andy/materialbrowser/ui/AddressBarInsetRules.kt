@@ -6,6 +6,22 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 
 internal object AddressBarInsetRules {
+    fun visibleViewportHeightPx(
+        rootHeightPx: Int,
+        fullWindowHeightPx: Int,
+        rootBottomInWindowPx: Int,
+        imeBottomPx: Int,
+    ): Int {
+        if (rootHeightPx <= 0) return 0
+        val unappliedImeInsetPx = bottomPaddingPx(
+            fullWindowHeightPx = fullWindowHeightPx,
+            rootBottomInWindowPx = rootBottomInWindowPx,
+            imeBottomPx = imeBottomPx,
+            navigationBottomPx = 0,
+        )
+        return (rootHeightPx - unappliedImeInsetPx).coerceAtLeast(0)
+    }
+
     fun bottomPaddingPx(
         fullWindowHeightPx: Int,
         rootBottomInWindowPx: Int,
