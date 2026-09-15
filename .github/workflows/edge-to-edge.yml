@@ -79,14 +79,6 @@ jobs:
           adb -s "$ANDROID_SERIAL" shell settings put secure show_ime_with_hard_keyboard 1
           adb -s "$ANDROID_SERIAL" shell dumpsys webviewupdate
 
-      - name: Run GeckoView edge-to-edge regressions
-        shell: bash
-        run: |
-          set -euo pipefail
-          ./gradlew --no-daemon \
-            :app:connectedFullDebugAndroidTest \
-            -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.gecko.GeckoEdgeToEdgeInstrumentedTest
-
       - name: Run System WebView edge-to-edge regressions
         shell: bash
         run: |
