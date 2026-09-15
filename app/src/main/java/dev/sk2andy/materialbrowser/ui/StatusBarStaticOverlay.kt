@@ -14,6 +14,7 @@ import kotlin.math.roundToInt
 internal class StatusBarStaticOverlayHost(
     context: Context,
     browserContentBlurEnabled: Boolean = false,
+    pullToRefreshEnabled: Boolean = false,
 ) : FrameLayout(context) {
     val contentContainer: FrameLayout = if (browserContentBlurEnabled) {
         BrowserChromeBlurTarget(context).apply { captureEnabled = true }
@@ -22,6 +23,11 @@ internal class StatusBarStaticOverlayHost(
     }
     val blurTarget: BlurTarget?
         get() = contentContainer as? BlurTarget
+    private val pullToRefreshLayout = if (pullToRefreshEnabled) {
+        BrowserPullToRefreshLayout(context, contentContainer)
+    } else {
+        null
+    }
     private val overlayView = StatusBarStaticOverlayView(context).apply {
         tag = StatusBarStaticOverlayTestTags.Overlay
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
@@ -31,12 +37,30 @@ internal class StatusBarStaticOverlayHost(
 
     init {
         addView(
-            contentContainer,
+            pullToRefreshLayout ?: contentContainer,
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT),
         )
         addView(
             overlayView,
             LayoutParams(LayoutParams.MATCH_PARENT, 0),
+        )
+    }
+
+    fun updatePullToRefresh(
+        enabled: Boolean,
+        refreshing: Boolean,
+        indicatorColor: Int,
+        indicatorContainerColor: Int,
+        canChildScrollUp: () -> Boolean,
+        onRefresh: () -> Boolean,
+    ) {
+        pullToRefreshLayout?.update(
+            enabled = enabled,
+            refreshing = refreshing,
+            indicatorColor = indicatorColor,
+            indicatorContainerColor = indicatorContainerColor,
+            canChildScrollUp = canChildScrollUp,
+            onRefresh = onRefresh,
         )
     }
 

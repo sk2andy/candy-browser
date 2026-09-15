@@ -36,6 +36,7 @@
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
 | Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
+| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture only for a visible, idle web page whose engine-reported document offset is at the top; keep blank, obscured, Find-in-page, overview and video-only surfaces out of the gesture path |
 
 ## Invariants
 
@@ -119,6 +120,11 @@
   permissions, authentication and web prompts to the exact session plus navigation generation.
   Navigation, tab replacement, backgrounding and destruction cancel pending delivery exactly once.
 - Keep private tab state memory-only and skip remote suggestions for private input.
+- Keep pull-to-refresh state transient and scoped to the selected engine view. Gecko scroll metrics stay
+  enabled only for the selected tab, or for every tab when Candy's page scrollbar needs them, so both
+  browser engines use the same top-of-document admission rule without background-tab scroll IPC.
+  Missing metrics fail closed. Normal navigation does not show the pull indicator, and the existing menu
+  reload remains the accessible non-gesture action.
 - Treat Android connectivity as a process-local observable effect. A default network counts as online
   only with both `NET_CAPABILITY_INTERNET` and `NET_CAPABILITY_VALIDATED`; close the registered callback
   with `BrowserController`. Do not issue Candy-owned probe requests or replace an already usable page
@@ -624,6 +630,7 @@ WebView request state.
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |
+| Pull to refresh | `BrowserPullGestureRulesTest`, `BrowserPullToRefreshRulesTest`, and `BrowserPullToRefreshLayoutInstrumentedTest` on an API 34+ emulator |
 | Edge-to-edge window, safe web viewport, focused search, and representative site layouts | `SystemWebViewEdgeToEdgeInstrumentedTest` and `GeckoEdgeToEdgeInstrumentedTest` run deterministic layout profiles derived from YouTube, Google, ESPN, NYTimes, CNN, Reddit, Facebook, IKEA, GitHub, Discord, Instagram, TapTap, Vimeo, Wikipedia, Stack Overflow, and DuckDuckGo on API 34+; the TapTap profile asserts safety immediately in the scroll task so delayed post-scroll repair cannot mask a jumping sticky header; live sites remain manual/nightly smoke targets rather than merge gates |
 | Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `BrowserIntentFilterInstrumentedTest`, plus `MainActivityExternalBackInstrumentedTest` when lifecycle matters |
