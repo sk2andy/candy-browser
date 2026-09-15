@@ -70,6 +70,7 @@ fun SharedProfileActionsSheet(
     onCustomizeWallpaper: ((ProfileWallpaperTarget) -> Unit)?,
     onDelete: (() -> Unit)?,
     onIsolationChange: (Boolean) -> Unit,
+    additionalContent: (@Composable () -> Unit)? = null,
     onDismiss: () -> Unit,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
 ) {
@@ -81,6 +82,7 @@ fun SharedProfileActionsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
         ) {
@@ -129,6 +131,7 @@ fun SharedProfileActionsSheet(
                 enabled = isolationSupported,
                 onCheckedChange = onIsolationChange,
             )
+            additionalContent?.invoke()
             if (canDelete && onDelete != null) {
                 TextButton(
                     onClick = onDelete,

@@ -423,6 +423,11 @@ class BrowserController(
     private val onFullImmersiveModeChanged: (Boolean) -> Unit = {},
     private val onMediaStateChanged: () -> Unit = {},
     private val onBrowserEngineChangeRequested: (AndroidBrowserEngineKind) -> Unit = {},
+    private val profileProtectionSupported: () -> Boolean = { false },
+    private val authenticateProfile: (
+        ProfileAuthenticationPurpose,
+        (Boolean) -> Unit,
+    ) -> Unit = { _, onResult -> onResult(false) },
     private val externalApps: ExternalAppLauncher = ExternalAppLauncher(activity),
 ) {
     val browserEngineKind: AndroidBrowserEngineKind =
@@ -496,6 +501,20 @@ class BrowserController(
         private set
     var profilesEnabled by mutableStateOf(true)
         private set
+    var isProfileProtectionSupported by mutableStateOf(profileProtectionSupported())
+        private set
+    var lockedProfileIds by mutableStateOf<Set<String>>(emptySet())
+        private set
+    val isActiveProfileLocked: Boolean
+        get() = activeProfileId in lockedProfileIds
+    val hasProtectedProfiles: Boolean
+        get() = localBrowserProfiles.any { it.protection != null }
+    val canLeaveLockedProfile: Boolean
+        get() = isActiveProfileLocked && profiles.any { profile ->
+            profile.id != activeProfileId && profile.id !in lockedProfileIds
+        }
+    private var profileAuthenticationInFlight = false
+    private var profileLockGeneration = 0L
     var blockerSettings by mutableStateOf(BlockerSettings())
         private set
     var inactiveTabLifetime by mutableStateOf(InactiveTabLifetime.Never)
@@ -680,7 +699,11 @@ class BrowserController(
         }
 
     internal val systemMediaState: BrowserMediaState?
-        get() = geckoSystemMediaState()
+        get() = geckoSystemMediaState()?.takeUnless { media ->
+            tabs.firstOrNull { tab -> tab.id == media.tabId }
+                ?.profileId
+                ?.let(lockedProfileIds::contains) == true
+        }
 
     @VisibleForTesting
     internal fun reportSelectedGeckoMediaStateForTesting(state: GeckoMediaSessionState) {
@@ -1995,6 +2018,11 @@ class BrowserController(
         isDefaultBrowser = DefaultBrowserRole.isHeld(activity)
         val (restoredProfiles, restoredActiveProfileId) = store.loadProfiles()
         profiles += restoredProfiles.take(MAX_PROFILES)
+        lockedProfileIds = profiles.asSequence()
+            .filter { profile ->
+                profile.protection != null && !ProfileProtectionSession.isUnlocked(profile.id)
+            }
+            .mapTo(linkedSetOf(), BrowserProfile::id)
         val restoredProfileIds = profiles.mapTo(mutableSetOf(), BrowserProfile::id)
         siteCapsules += siteCapsuleStore.load()
             .filter { capsule -> capsule.profileId in restoredProfileIds }
@@ -2139,7 +2167,7 @@ class BrowserController(
         backdropCaptureEnabled: Boolean = false,
         onContentPresented: ((String) -> Unit)? = null,
     ): View? {
-        if (browsingDataClearPending) {
+        if (browsingDataClearPending || isActiveProfileLocked) {
             container.removeAllViews()
             return null
         }
@@ -2574,7 +2602,12 @@ class BrowserController(
         val tab = tabs.firstOrNull { it.id == tabId } ?: return clearGeckoMediaPresentation()
         geckoMediaPresentation?.minimizedByUser = false
         fullscreenVideoInsideSafeDrawingHost = false
-        if (tab.profileId != activeProfileId && !selectProfile(tab.profileId)) return
+        if (tab.profileId != activeProfileId || tab.profileId in lockedProfileIds) {
+            requestProfileSelection(tab.profileId) { selected ->
+                if (selected) expandFullscreenVideo()
+            }
+            return
+        }
         selectTab(tab.id)
         publishFullscreenVideoState()
     }
@@ -2984,7 +3017,33 @@ class BrowserController(
         return false
     }
 
-    fun commitExternalLinkPreview(sessionId: Long): ExternalLinkPreviewCommitResult {
+    fun commitExternalLinkPreview(
+        sessionId: Long,
+        onComplete: (ExternalLinkPreviewCommitResult) -> Unit,
+    ) {
+        val state = externalLinkPreviewState?.takeIf { it.sessionId == sessionId }
+            ?: return onComplete(ExternalLinkPreviewCommitResult.MissingPreview)
+        val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
+            profiles = localBrowserProfiles,
+            profilesEnabled = profilesEnabled,
+            requestedProfileId = state.targetProfileId,
+            activeProfileId = activeProfileId,
+        ) ?: return onComplete(ExternalLinkPreviewCommitResult.MissingPreview)
+        if (targetProfileId in lockedProfileIds ||
+            profilesEnabled && targetProfileId != activeProfileId
+        ) {
+            requestProfileSelection(targetProfileId) { selected ->
+                onComplete(
+                    if (selected) commitExternalLinkPreviewNow(sessionId)
+                    else ExternalLinkPreviewCommitResult.MissingPreview,
+                )
+            }
+        } else {
+            onComplete(commitExternalLinkPreviewNow(sessionId))
+        }
+    }
+
+    private fun commitExternalLinkPreviewNow(sessionId: Long): ExternalLinkPreviewCommitResult {
         val state = externalLinkPreviewState?.takeIf { it.sessionId == sessionId }
             ?: return ExternalLinkPreviewCommitResult.MissingPreview
         pruneStaleTabs()
@@ -3000,8 +3059,10 @@ class BrowserController(
             requestedProfileId = state.targetProfileId,
             activeProfileId = activeProfileId,
         ) ?: return ExternalLinkPreviewCommitResult.MissingPreview
-        if (profilesEnabled && targetProfileId != activeProfileId) {
-            selectProfile(targetProfileId)
+        if (targetProfileId in lockedProfileIds ||
+            profilesEnabled && targetProfileId != activeProfileId
+        ) {
+            return ExternalLinkPreviewCommitResult.MissingPreview
         }
         val previousTabId = selectedTabId
         val tabId = createTab(
@@ -3722,13 +3783,26 @@ class BrowserController(
         return true
     }
 
-    fun openHistoryEntry(url: String, profileId: String): Boolean {
-        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+    fun openHistoryEntry(
+        url: String,
+        profileId: String,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return onComplete(false)
         val targetProfileId = profileId.takeIf { id -> profiles.any { it.id == id } }
-            ?: return false
-        if (profilesEnabled && targetProfileId != activeProfileId) {
-            selectProfile(targetProfileId)
+            ?: return onComplete(false)
+        if (targetProfileId in lockedProfileIds ||
+            profilesEnabled && targetProfileId != activeProfileId
+        ) {
+            requestProfileSelection(targetProfileId) { selected ->
+                onComplete(selected && openHistoryEntryNow(safeUrl))
+            }
+        } else {
+            onComplete(openHistoryEntryNow(safeUrl))
         }
+    }
+
+    private fun openHistoryEntryNow(safeUrl: String): Boolean {
         if (selectedTab.isIncognito) {
             createTab(initialUrl = safeUrl, isIncognito = false)
         } else {
@@ -3809,7 +3883,12 @@ class BrowserController(
     fun openSiteCapsule(capsuleId: String, navigateToStart: Boolean = true): Boolean {
         val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return false
         if (profiles.none { it.id == capsule.profileId }) return false
-        if (activeProfileId != capsule.profileId && !selectProfile(capsule.profileId)) return false
+        if (activeProfileId != capsule.profileId || capsule.profileId in lockedProfileIds) {
+            requestProfileSelection(capsule.profileId) { selected ->
+                if (selected) openSiteCapsule(capsuleId, navigateToStart)
+            }
+            return true
+        }
         val rememberedTab = capsuleTabIds[capsule.id]
             ?.let { tabId -> activeTabs.firstOrNull { it.id == tabId && !it.isIncognito } }
         val matchingSelectedTab = selectedTab.takeIf { tab ->
@@ -3843,7 +3922,12 @@ class BrowserController(
         ) {
             return false
         }
-        if (activeProfileId != capsule.profileId && !selectProfile(capsule.profileId)) return false
+        if (activeProfileId != capsule.profileId || capsule.profileId in lockedProfileIds) {
+            requestProfileSelection(capsule.profileId) { selected ->
+                if (selected) restoreSiteCapsule(capsuleId, tabId)
+            }
+            return true
+        }
         if (selectedTabId != targetTab.id) selectTab(targetTab.id)
         activeCapsuleId = capsule.id
         activeCapsuleTabId = targetTab.id
@@ -3916,6 +4000,10 @@ class BrowserController(
         customIcon: Bitmap? = null,
     ): CapsuleSaveResult {
         val existing = draft.id?.let { id -> siteCapsules.firstOrNull { it.id == id } }
+        if (
+            draft.profileId in lockedProfileIds ||
+            existing?.profileId in lockedProfileIds
+        ) return CapsuleSaveResult.Invalid
         if (existing == null && !SiteCapsuleRules.canCreate(siteCapsules.size)) {
             return CapsuleSaveResult.LimitReached
         }
@@ -4019,6 +4107,7 @@ class BrowserController(
 
     fun deleteSiteCapsule(capsuleId: String, deleteDedicatedProfileConfirmed: Boolean): Boolean {
         val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return false
+        if (capsule.profileId in lockedProfileIds) return false
         val remaining = siteCapsules.filterNot { it.id == capsuleId }
         val plan = CapsuleDeletionRules.plan(
             capsule = capsule,
@@ -4044,6 +4133,10 @@ class BrowserController(
             onComplete(false)
             return
         }
+        if (capsule.profileId in lockedProfileIds) {
+            onComplete(false)
+            return
+        }
         val plan = CapsuleDeletionRules.plan(
             capsule = capsule,
             remainingCapsules = siteCapsules.filterNot { it.id == capsuleId },
@@ -4063,6 +4156,7 @@ class BrowserController(
 
     private fun finishSiteCapsuleDeletion(capsuleId: String): Boolean {
         val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return false
+        if (capsule.profileId in lockedProfileIds) return false
         val remaining = siteCapsules.filterNot { it.id == capsuleId }
         if (activeCapsuleId == capsuleId) leaveSiteCapsule()
         capsuleTabIds.remove(capsuleId)
@@ -4074,11 +4168,17 @@ class BrowserController(
         return true
     }
 
-    fun siteCapsuleSourceIcon(capsuleId: String): Bitmap? =
-        siteCapsuleIconStore.loadSource(capsuleId)
+    fun siteCapsuleSourceIcon(capsuleId: String): Bitmap? {
+        val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return null
+        if (capsule.profileId in lockedProfileIds) return null
+        return siteCapsuleIconStore.loadSource(capsuleId)
+    }
 
-    fun siteCapsuleCustomIcon(capsuleId: String): Bitmap? =
-        siteCapsuleIconStore.loadCustom(capsuleId)
+    fun siteCapsuleCustomIcon(capsuleId: String): Bitmap? {
+        val capsule = siteCapsules.firstOrNull { it.id == capsuleId } ?: return null
+        if (capsule.profileId in lockedProfileIds) return null
+        return siteCapsuleIconStore.loadCustom(capsuleId)
+    }
 
     fun siteCapsuleRenderedIcon(capsuleId: String): Bitmap? = siteCapsuleIconStore.load(capsuleId)
 
@@ -4482,12 +4582,17 @@ class BrowserController(
             closeTab(tab.id)
             return
         }
+        if (tab.profileId != activeProfileId || tab.profileId in lockedProfileIds) {
+            requestProfileSelection(tab.profileId) { selected ->
+                if (selected) openBlockedPopup(token)
+            }
+            return
+        }
         blockedPopupOffer = null
         transientPopupTabIds.remove(tab.id)
         if (!FederatedLoginRules.isProviderNavigation(offer.targetUrl)) {
             federatedLoginCompatibilityTabIds.remove(tab.id)
         }
-        if (tab.profileId != activeProfileId && profilesEnabled) selectProfile(tab.profileId)
         updateTab(tab.id) { current ->
             current.copy(
                 url = offer.targetUrl,
@@ -4625,6 +4730,79 @@ class BrowserController(
     fun selectProfile(profileId: String): Boolean {
         if (!profilesEnabled) return false
         if (profileId == activeProfileId || profiles.none { it.id == profileId }) return false
+        if (profileId in lockedProfileIds) return false
+        return selectProfileNow(profileId)
+    }
+
+    fun requestProfileSelection(profileId: String, onComplete: (Boolean) -> Unit): Boolean {
+        if (destroyed) return false
+        if (profiles.none { profile -> profile.id == profileId }) {
+            mainHandler.post { if (!destroyed) onComplete(false) }
+            return true
+        }
+        if (profileId == activeProfileId) {
+            if (!isActiveProfileLocked) {
+                mainHandler.post { if (!destroyed) onComplete(true) }
+            } else {
+                if (!isProfileProtectionSupported || profileAuthenticationInFlight) {
+                    mainHandler.post { if (!destroyed) onComplete(false) }
+                    return true
+                }
+                requestProfileAuthentication(ProfileAuthenticationPurpose.Unlock) { authenticated ->
+                    if (authenticated) unlockProfile(profileId)
+                    onComplete(authenticated)
+                }
+            }
+            return true
+        }
+        if (!profilesEnabled) {
+            mainHandler.post { if (!destroyed) onComplete(false) }
+            return true
+        }
+        if (profileId !in lockedProfileIds) {
+            val selected = selectProfileNow(profileId)
+            mainHandler.post { if (!destroyed) onComplete(selected) }
+            return true
+        }
+        if (!isProfileProtectionSupported || profileAuthenticationInFlight) {
+            mainHandler.post { if (!destroyed) onComplete(false) }
+            return true
+        }
+        requestProfileAuthentication(ProfileAuthenticationPurpose.Unlock) { authenticated ->
+            if (!authenticated) {
+                onComplete(false)
+                return@requestProfileAuthentication
+            }
+            unlockProfile(profileId)
+            onComplete(selectProfileNow(profileId))
+        }
+        return true
+    }
+
+    fun requestProfileAccess(profileId: String, onComplete: (Boolean) -> Unit): Boolean {
+        if (destroyed) return false
+        if (profiles.none { profile -> profile.id == profileId }) {
+            mainHandler.post { if (!destroyed) onComplete(false) }
+            return true
+        }
+        if (profileId !in lockedProfileIds) {
+            mainHandler.post { if (!destroyed) onComplete(true) }
+            return true
+        }
+        requestProfileAuthentication(ProfileAuthenticationPurpose.Unlock) { authenticated ->
+            if (!authenticated || profiles.none { profile -> profile.id == profileId }) {
+                onComplete(false)
+                return@requestProfileAuthentication
+            }
+            unlockProfile(profileId)
+            onComplete(profileId !in lockedProfileIds)
+        }
+        return true
+    }
+
+    private fun selectProfileNow(profileId: String): Boolean {
+        if (!profilesEnabled) return false
+        if (profileId == activeProfileId || profiles.none { it.id == profileId }) return false
         dismissClosedTabUndo()
         val previousTabId = selectedTabId
         clearPermissionActivity(previousTabId)
@@ -4645,7 +4823,111 @@ class BrowserController(
         return true
     }
 
+    fun retryActiveProfileAuthentication() {
+        if (!isActiveProfileLocked) return
+        requestProfileAuthentication(ProfileAuthenticationPurpose.Unlock) { authenticated ->
+            if (authenticated) unlockProfile(activeProfileId)
+        }
+    }
+
+    fun leaveLockedProfile(): Boolean {
+        if (!isActiveProfileLocked) return false
+        val targetProfileId = profiles.firstOrNull { profile ->
+            profile.id != activeProfileId && profile.id !in lockedProfileIds
+        }?.id ?: return false
+        if (!profilesEnabled) {
+            profilesEnabled = true
+            store.saveProfilesEnabled(true)
+        }
+        return selectProfileNow(targetProfileId)
+    }
+
+    fun updateProfileProtection(
+        profileId: String,
+        protection: ProfileProtection?,
+        onComplete: (Boolean) -> Unit = {},
+    ) {
+        val index = profiles.indexOfFirst { profile -> profile.id == profileId }
+        if (index < 0) {
+            onComplete(false)
+            return
+        }
+        val current = profiles[index]
+        val candidate = BrowserProfileRules.updateProtection(
+            profile = current,
+            protection = protection,
+            protectionSupported = isProfileProtectionSupported,
+        )
+        if (candidate == null) {
+            onComplete(false)
+            return
+        }
+        requestProfileAuthentication(ProfileAuthenticationPurpose.Configure) { authenticated ->
+            if (!authenticated) {
+                onComplete(false)
+                return@requestProfileAuthentication
+            }
+            val currentIndex = profiles.indexOfFirst { profile -> profile.id == profileId }
+            if (currentIndex < 0 || profiles[currentIndex] != current || destroyed) {
+                onComplete(false)
+                return@requestProfileAuthentication
+            }
+            profiles[currentIndex] = candidate
+            if (candidate.protection == null) {
+                lockedProfileIds -= profileId
+                ProfileProtectionSession.forget(profileId)
+            } else {
+                unlockProfile(profileId)
+            }
+            persist()
+            onComplete(true)
+        }
+    }
+
+    fun authenticateProtectedProfilesForExport(onComplete: (Boolean) -> Unit) {
+        if (!hasProtectedProfiles) {
+            onComplete(true)
+            return
+        }
+        requestProfileAuthentication(ProfileAuthenticationPurpose.Export, onComplete)
+    }
+
+    private fun requestProfileAuthentication(
+        purpose: ProfileAuthenticationPurpose,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        if (!isProfileProtectionSupported || profileAuthenticationInFlight || destroyed) {
+            onComplete(false)
+            return
+        }
+        profileAuthenticationInFlight = true
+        val lockGeneration = profileLockGeneration
+        authenticateProfile(purpose) { authenticated ->
+            profileAuthenticationInFlight = false
+            onComplete(
+                authenticated && !destroyed && lockGeneration == profileLockGeneration,
+            )
+        }
+    }
+
+    private fun unlockProfile(profileId: String) {
+        val isProtected = profiles.any { profile ->
+            profile.id == profileId && profile.protection != null
+        }
+        if (!isProtected) return
+        ProfileProtectionSession.unlock(profileId)
+        lockedProfileIds -= profileId
+        engineViewRevision++
+        if (profileId == activeProfileId && isActivityResumed) {
+            if (externalLinkPreviewState == null) {
+                browserEngineSessions[selectedTabId]?.setActive(true)
+            }
+            externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(true)
+        }
+    }
+
     fun updateProfileEmoji(profileId: String, emoji: String): Boolean {
+        if (profileId in lockedProfileIds) return false
         val index = profiles.indexOfFirst { it.id == profileId }
         if (index < 0) return false
         val updatedProfile = BrowserProfileRules.updateEmoji(
@@ -4662,7 +4944,7 @@ class BrowserController(
         wallpaperTarget: ProfileWallpaperTarget,
         wallpaper: ProfileWallpaper?,
     ): Boolean {
-        if (isSyncedProfile(profileId)) return false
+        if (isSyncedProfile(profileId) || profileId in lockedProfileIds) return false
         val index = profiles.indexOfFirst { it.id == profileId }
         if (index < 0) return false
         profiles[index] = profiles[index].withWallpaper(
@@ -4762,6 +5044,7 @@ class BrowserController(
     }
 
     fun setProfileIsolation(profileId: String, enabled: Boolean): Boolean {
+        if (profileId in lockedProfileIds) return false
         val index = profiles.indexOfFirst { it.id == profileId }
         if (index < 0) return false
         val updatedProfile = BrowserProfileRules.updateIsolation(
@@ -4795,6 +5078,7 @@ class BrowserController(
             localProfiles.size <= 1 ||
             isSyncedProfile(profileId) ||
             isBoundSyncProfile(profileId) ||
+            profileId in lockedProfileIds ||
             profiles.none { it.id == profileId }
         ) {
             onComplete(false)
@@ -4820,7 +5104,12 @@ class BrowserController(
         excludedCapsuleId: String?,
         recallAlreadyDeleted: Boolean,
     ): Boolean {
-        if (localProfiles.size <= 1 || isSyncedProfile(profileId) || isBoundSyncProfile(profileId)) {
+        if (
+            localProfiles.size <= 1 ||
+            isSyncedProfile(profileId) ||
+            isBoundSyncProfile(profileId) ||
+            profileId in lockedProfileIds
+        ) {
             return false
         }
         val profileIndex = profiles.indexOfFirst { it.id == profileId }
@@ -4923,6 +5212,8 @@ class BrowserController(
 
         }
         profiles.removeAt(profileIndex)
+        lockedProfileIds -= profileId
+        ProfileProtectionSession.forget(profileId)
         profileWallpaperExecutor.execute { profileWallpaperStore.delete(profileId) }
         val profileTrailRedactions = store.loadPendingCandyTrailRedactions().filter { redaction ->
             redaction.tabIds.any(removedProfileTrailTabIds::contains)
@@ -5796,7 +6087,17 @@ class BrowserController(
 
     fun openSnoozedWakeTab(tabId: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId && !it.isIncognito } ?: return false
-        if (tab.profileId != activeProfileId && !selectProfile(tab.profileId)) return false
+        if (tab.profileId != activeProfileId || tab.profileId in lockedProfileIds) {
+            requestProfileSelection(tab.profileId) { selected ->
+                if (selected) openSnoozedWakeTabNow(tabId)
+            }
+            return true
+        }
+        return openSnoozedWakeTabNow(tabId)
+    }
+
+    private fun openSnoozedWakeTabNow(tabId: String): Boolean {
+        if (activeTabs.none { tab -> tab.id == tabId && !tab.isIncognito }) return false
         selectTab(tabId)
         return selectedTabId == tabId
     }
@@ -7222,7 +7523,7 @@ class BrowserController(
         dismissClosedTabUndo()
         if (!enabled) {
             val firstProfileId = profiles.first().id
-            if (activeProfileId != firstProfileId) selectProfile(firstProfileId)
+            if (activeProfileId != firstProfileId && !selectProfile(firstProfileId)) return
         }
         profilesEnabled = enabled
         store.saveProfilesEnabled(enabled)
@@ -7884,13 +8185,16 @@ class BrowserController(
         pruneStaleTabs(nowMillis, persistChanges = false)
         touchTab(selectedTabId, nowMillis)
         persist()
-        if (externalLinkPreviewState == null) {
-            browserEngineSessions[selectedTabId]?.setActive(true)
+        if (!isActiveProfileLocked) {
+            if (externalLinkPreviewState == null) {
+                browserEngineSessions[selectedTabId]?.setActive(true)
+            }
+            externalLinkPreviewRuntime?.geckoBinding
+                ?.takeIf { binding -> binding.view.isAttachedToWindow }
+                ?.session
+                ?.setActive(true)
         }
-        externalLinkPreviewRuntime?.geckoBinding
-            ?.takeIf { binding -> binding.view.isAttachedToWindow }
-            ?.session
-            ?.setActive(true)
+        if (isActiveProfileLocked) retryActiveProfileAuthentication()
     }
 
     fun onStart() {
@@ -7951,6 +8255,20 @@ class BrowserController(
         browserEngineSessions.forEach(::persistBrowserEngineSessionState)
     }
 
+    fun onAppBackgrounded(nowElapsedRealtime: Long = SystemClock.elapsedRealtime()) {
+        profileLockGeneration++
+        ProfileProtectionSession.markBackgrounded(nowElapsedRealtime)
+        lockProtectedProfiles { protection ->
+            protection.lockTrigger == ProfileLockTrigger.AppBackgrounded
+        }
+    }
+
+    fun onAppForegrounded(nowElapsedRealtime: Long = SystemClock.elapsedRealtime()) {
+        isProfileProtectionSupported = profileProtectionSupported()
+        lockProfilesAfterBackground(nowElapsedRealtime)
+        if (isActivityResumed && isActiveProfileLocked) retryActiveProfileAuthentication()
+    }
+
     private fun stopPictureInPictureMedia() {
         val ownerSession = activeMediaCommandSession()
         ownerSession?.setPictureInPicturePlaybackExpected(false)
@@ -7966,7 +8284,12 @@ class BrowserController(
         clearGeckoMediaPresentation()
     }
 
-    fun destroy() {
+    fun destroy(lockClosedProfiles: Boolean = false) {
+        if (lockClosedProfiles) {
+            lockProtectedProfiles { protection ->
+                protection.lockTrigger == ProfileLockTrigger.AppClosed
+            }
+        }
         cancelAddressBarAutoDockProbe()
         val downloadChoices = listOfNotNull(pendingDownloadChoice) + queuedDownloadChoices.toList()
         pendingDownloadChoice = null
@@ -10384,7 +10707,11 @@ class BrowserController(
             if (destroyed || tabs.none { tab -> tab.id == candidate.popupTabId }) return@post
             transientPopupTabIds.remove(candidate.popupTabId)
             val child = tabs.first { tab -> tab.id == candidate.popupTabId }
-            if (child.profileId != activeProfileId && profilesEnabled) selectProfile(child.profileId)
+            if (child.profileId != activeProfileId && profilesEnabled &&
+                !selectProfile(child.profileId)
+            ) {
+                return@post
+            }
             selectTab(candidate.popupTabId)
             val opener = tabs.firstOrNull { tab -> tab.id == candidate.openerTabId }
             if (opener?.isPinned == true) {
@@ -11158,6 +11485,48 @@ class BrowserController(
         savePersistentFilterRules()
     }
 
+    private fun lockProfilesAfterBackground(nowElapsedRealtime: Long) {
+        val elapsed = ProfileProtectionSession.consumeBackgroundElapsed(nowElapsedRealtime)
+            ?: return
+        lockProtectedProfiles { protection ->
+            ProfileProtectionRules.shouldLockAfterBackground(
+                protection = protection,
+                elapsedBackgroundMillis = elapsed,
+            )
+        }
+    }
+
+    private fun lockProtectedProfiles(shouldLock: (ProfileProtection) -> Boolean) {
+        val profileIds = profiles.asSequence()
+            .filter { profile -> profile.protection?.let(shouldLock) == true }
+            .mapTo(linkedSetOf(), BrowserProfile::id)
+        if (profileIds.isEmpty()) return
+        ProfileProtectionSession.lock(profileIds)
+        lockedProfileIds += profileIds
+        tabs.asSequence()
+            .filter { tab -> tab.profileId in profileIds }
+            .mapNotNull { tab -> browserEngineSessions[tab.id] }
+            .forEach { session -> session.executeMediaCommand(GeckoMediaCommand.Pause) }
+        geckoMediaPresentation
+            ?.takeIf { presentation ->
+                tabs.firstOrNull { tab -> tab.id == presentation.tabId }
+                    ?.profileId
+                    ?.let(profileIds::contains) == true
+            }
+            ?.let { clearGeckoMediaPresentation() }
+        if (activeProfileId in profileIds) {
+            geckoViewBindings
+                .filterValues { binding -> binding.tabId == selectedTabId }
+                .keys
+                .toList()
+                .forEach(::detachBrowserEngineView)
+            browserEngineSessions[selectedTabId]?.setActive(false)
+            externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
+            engineViewRevision++
+        }
+        notifyMediaStateChanged()
+    }
+
     private fun <T> MutableList<T>.replaceWith(values: List<T>) {
         clear()
         addAll(values)
@@ -11246,7 +11615,7 @@ class BrowserController(
             profile.isSynced && profile.syncedDeviceId !in remoteById
         }
         if (removedProfiles.any { it.id == activeProfileId }) {
-            selectProfile(localProfiles.first().id)
+            selectProfileNow(localProfiles.first().id)
         }
         val removedProfileIds = removedProfiles.mapTo(hashSetOf(), BrowserProfile::id)
         tabs.filter { it.profileId in removedProfileIds }
@@ -11323,7 +11692,7 @@ class BrowserController(
                 updateSelectedTabId(replacement.id)
                 rememberSelectedTab(activeProfileId, replacement.id)
             } else {
-                selectProfile(localProfiles.first().id)
+                selectProfileNow(localProfiles.first().id)
             }
         }
         persist()

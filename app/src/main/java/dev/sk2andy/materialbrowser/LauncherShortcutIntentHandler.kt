@@ -33,31 +33,47 @@ internal class LauncherShortcutIntentHandler(
             false
         }
         if (target == LauncherShortcutTarget.OpenApp) return true
+        if (target is LauncherShortcutTarget.Profile) {
+            browserController.requestProfileSelection(target.profileId) { selected ->
+                if (selected) {
+                    browserController.leaveSiteCapsule()
+                    reportCompleted(target)
+                }
+            }
+            return true
+        }
+        if (target is LauncherShortcutTarget.NewTabInProfile) {
+            createTabInProfile(target.profileId) { completed ->
+                if (completed) reportCompleted(target)
+            }
+            return true
+        }
         val completed = when (target) {
             LauncherShortcutTarget.OpenApp -> error("OpenApp handled above")
             LauncherShortcutTarget.NewTab -> createTab(isIncognito = false)
-            LauncherShortcutTarget.NewPrivateTab -> createPrivateTab(
-                fallbackToFirstLocalProfile = true,
-            )
-            LauncherShortcutTarget.NewPrivateTabInCurrentProfile -> createPrivateTab(
-                fallbackToFirstLocalProfile = false,
-            )
-            is LauncherShortcutTarget.Profile -> {
-                val selected = target.profileId == browserController.activeProfileId ||
-                    browserController.selectProfile(target.profileId)
-                if (selected) browserController.leaveSiteCapsule()
-                selected
+            LauncherShortcutTarget.NewPrivateTab,
+            LauncherShortcutTarget.NewPrivateTabInCurrentProfile,
+            -> {
+                createPrivateTab(
+                    fallbackToFirstLocalProfile =
+                        target == LauncherShortcutTarget.NewPrivateTab,
+                ) { privateTabCreated ->
+                    if (privateTabCreated) reportCompleted(target)
+                }
+                return true
             }
-            is LauncherShortcutTarget.NewTabInProfile -> createTabInProfile(target.profileId)
+            is LauncherShortcutTarget.Profile,
+            is LauncherShortcutTarget.NewTabInProfile,
+            -> error("Profile targets handled above")
         }
-        if (completed) {
-            publisher.reportUsed(target)
-            onNavigationRequested()
-        }
+        if (completed) reportCompleted(target)
         return true
     }
 
-    private fun createPrivateTab(fallbackToFirstLocalProfile: Boolean): Boolean {
+    private fun createPrivateTab(
+        fallbackToFirstLocalProfile: Boolean,
+        onComplete: (Boolean) -> Unit,
+    ) {
         val targetProfileId = LauncherShortcutRules.privateTargetProfileId(
             profiles = browserController.profiles.toList(),
             activeProfileId = browserController.activeProfileId,
@@ -70,7 +86,8 @@ internal class LauncherShortcutIntentHandler(
                 R.string.toast_incognito_unsupported,
                 Toast.LENGTH_SHORT,
             ).show()
-            return false
+            onComplete(false)
+            return
         }
         if (!browserController.prepareTabCreation(targetProfileId)) {
             Toast.makeText(
@@ -78,37 +95,55 @@ internal class LauncherShortcutIntentHandler(
                 context.getString(R.string.toast_tab_limit_reached, MAX_TABS),
                 Toast.LENGTH_SHORT,
             ).show()
-            return false
+            onComplete(false)
+            return
         }
-        if (
-            targetProfileId != browserController.activeProfileId &&
-            !browserController.selectProfile(targetProfileId)
+        if (targetProfileId != browserController.activeProfileId ||
+            targetProfileId in browserController.lockedProfileIds
         ) {
-            return false
+            browserController.requestProfileSelection(targetProfileId) { selected ->
+                onComplete(selected && createTab(isIncognito = true))
+            }
+        } else {
+            onComplete(createTab(isIncognito = true))
         }
-        return createTab(isIncognito = true)
     }
 
-    private fun createTabInProfile(profileId: String): Boolean {
+    private fun createTabInProfile(profileId: String, onComplete: (Boolean) -> Unit) {
         if (!browserController.prepareTabCreation()) {
             Toast.makeText(
                 context,
                 context.getString(R.string.toast_tab_limit_reached, MAX_TABS),
                 Toast.LENGTH_SHORT,
             ).show()
-            return false
+            onComplete(false)
+            return
         }
         val targetHasTab = browserController.tabs.any { tab -> tab.profileId == profileId }
-        if (profileId != browserController.activeProfileId) {
-            if (!browserController.selectProfile(profileId)) return false
-            if (!targetHasTab) {
-                browserController.leaveSiteCapsule()
-                onAddressEditorRequested()
-                return true
+        if (profileId != browserController.activeProfileId ||
+            profileId in browserController.lockedProfileIds
+        ) {
+            browserController.requestProfileSelection(profileId) { selected ->
+                if (!selected) {
+                    onComplete(false)
+                } else if (!targetHasTab) {
+                    browserController.leaveSiteCapsule()
+                    onAddressEditorRequested()
+                    onComplete(true)
+                } else {
+                    browserController.leaveSiteCapsule()
+                    onComplete(createTab(isIncognito = false))
+                }
             }
+            return
         }
         browserController.leaveSiteCapsule()
-        return createTab(isIncognito = false)
+        onComplete(createTab(isIncognito = false))
+    }
+
+    private fun reportCompleted(target: LauncherShortcutTarget) {
+        publisher.reportUsed(target)
+        onNavigationRequested()
     }
 
     private fun createTab(isIncognito: Boolean): Boolean {

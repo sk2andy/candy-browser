@@ -5,6 +5,7 @@ data class BrowserProfile(
     val emoji: String,
     val selectedTabId: String? = null,
     val isolationEnabled: Boolean = false,
+    val protection: ProfileProtection? = null,
     val syncedDeviceId: String? = null,
     val syncedDisplayName: String? = null,
     val syncedIconCatalogId: String? = null,
@@ -14,6 +15,23 @@ data class BrowserProfile(
     val newTabWallpaper: ProfileWallpaper? = null,
     val tabSwitcherWallpaper: ProfileWallpaper? = null,
 )
+
+data class ProfileProtection(
+    val lockTrigger: ProfileLockTrigger,
+    val cooldownMinutes: Int = ProfileProtectionRules.DEFAULT_COOLDOWN_MINUTES,
+)
+
+enum class ProfileLockTrigger(val wireValue: String) {
+    AppBackgrounded("app_backgrounded"),
+    AppClosed("app_closed"),
+    Cooldown("cooldown"),
+    ;
+
+    companion object {
+        fun fromWireValue(value: String?): ProfileLockTrigger? =
+            entries.firstOrNull { it.wireValue == value }
+    }
+}
 
 data class ProfileWallpaper(
     val zoom: Float = 1f,

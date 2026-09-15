@@ -69,4 +69,65 @@ class BrowserProfileRulesTest {
             ),
         )
     }
+
+    @Test
+    fun `profile protection is local supported and bounded`() {
+        val profile = BrowserProfile(id = "work", emoji = "💼")
+
+        val protected = BrowserProfileRules.updateProtection(
+            profile = profile,
+            protection = ProfileProtection(
+                lockTrigger = ProfileLockTrigger.Cooldown,
+                cooldownMinutes = 10_000,
+            ),
+            protectionSupported = true,
+        )
+
+        assertEquals(
+            ProfileProtectionRules.MAX_COOLDOWN_MINUTES,
+            protected?.protection?.cooldownMinutes,
+        )
+        assertNull(
+            BrowserProfileRules.updateProtection(
+                profile = profile,
+                protection = ProfileProtection(ProfileLockTrigger.AppClosed),
+                protectionSupported = false,
+            ),
+        )
+        assertNull(
+            BrowserProfileRules.updateProtection(
+                profile = profile.copy(syncedDeviceId = "phone"),
+                protection = ProfileProtection(ProfileLockTrigger.AppClosed),
+                protectionSupported = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `lock timing distinguishes background close and cooldown`() {
+        assertTrue(
+            ProfileProtectionRules.shouldLockAfterBackground(
+                ProfileProtection(ProfileLockTrigger.AppBackgrounded),
+                elapsedBackgroundMillis = 0L,
+            ),
+        )
+        assertFalse(
+            ProfileProtectionRules.shouldLockAfterBackground(
+                ProfileProtection(ProfileLockTrigger.AppClosed),
+                elapsedBackgroundMillis = Long.MAX_VALUE,
+            ),
+        )
+        assertFalse(
+            ProfileProtectionRules.shouldLockAfterBackground(
+                ProfileProtection(ProfileLockTrigger.Cooldown, cooldownMinutes = 3),
+                elapsedBackgroundMillis = 179_999L,
+            ),
+        )
+        assertTrue(
+            ProfileProtectionRules.shouldLockAfterBackground(
+                ProfileProtection(ProfileLockTrigger.Cooldown, cooldownMinutes = 3),
+                elapsedBackgroundMillis = 180_000L,
+            ),
+        )
+    }
 }

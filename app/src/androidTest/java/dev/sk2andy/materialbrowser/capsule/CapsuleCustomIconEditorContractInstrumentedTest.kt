@@ -18,7 +18,10 @@ class CapsuleCustomIconEditorContractInstrumentedTest {
     @Test
     fun boundedIconRoundTripsThroughExplicitEditorActivity() {
         val icon = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888)
-        val requestIntent = contract.createIntent(context, icon)
+        val requestIntent = contract.createIntent(
+            context,
+            CapsuleCustomIconEditorRequest(icon, setOf("work")),
+        )
         val restored = requireNotNull(
             CapsuleCustomIconEditorContract.currentIconFrom(requestIntent),
         )
@@ -31,6 +34,10 @@ class CapsuleCustomIconEditorContractInstrumentedTest {
 
         assertEquals(CapsuleCustomIconEditorActivity::class.java.name, requestIntent.component?.className)
         assertEquals(192, restored.width)
+        assertEquals(
+            setOf("work"),
+            CapsuleCustomIconEditorContract.protectedProfileIdsFrom(requestIntent),
+        )
         assertEquals(192, result.height)
         assertNull(
             contract.parseResult(

@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Process
+import android.provider.DocumentsContract
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.KeyboardShortcutGroup
@@ -43,7 +44,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.ViewCompat
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserActivityResultIdentity
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputAction
@@ -51,13 +57,12 @@ import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputRules
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareKey
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareKeyStroke
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
+import dev.sk2andy.materialbrowser.browser.BrowserMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.BrowserMouseButton
-import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
+import dev.sk2andy.materialbrowser.browser.ProfileBiometricAuthenticator
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
-import dev.sk2andy.materialbrowser.browser.BrowserMediaSystemSession
-import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
@@ -92,6 +97,7 @@ import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.FirefoxExtensionManagerOverlay
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
+import dev.sk2andy.materialbrowser.ui.ProfileLockedOverlay
 import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import kotlinx.coroutines.Dispatchers
@@ -112,6 +118,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var favoriteBookmarksImporter: FavoriteBookmarksImporter
     private lateinit var launcherShortcutIntentHandler: LauncherShortcutIntentHandler
     private lateinit var geckoWebAuthnActivityDelegate: GeckoWebAuthnActivityDelegate
+    private lateinit var profileBiometricAuthenticator: ProfileBiometricAuthenticator
+    private val profileProcessLifecycleObserver = object : DefaultLifecycleObserver {
+        override fun onStart(owner: LifecycleOwner) {
+            if (::browserController.isInitialized) browserController.onAppForegrounded()
+        }
+
+        override fun onStop(owner: LifecycleOwner) {
+            if (::browserController.isInitialized) browserController.onAppBackgrounded()
+        }
+    }
     private val launcherShortcutPublisher by lazy {
         LauncherShortcutPublisher(applicationContext)
     }
@@ -175,7 +191,14 @@ class MainActivity : AppCompatActivity() {
     private val appDataExportLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri ->
-        if (uri != null && ::browserController.isInitialized) startAppDataExport(uri)
+        if (uri == null || !::browserController.isInitialized) return@registerForActivityResult
+        browserController.authenticateProtectedProfilesForExport { authenticated ->
+            if (authenticated) {
+                startAppDataExport(uri)
+            } else {
+                runCatching { DocumentsContract.deleteDocument(contentResolver, uri) }
+            }
+        }
     }
     private val appDataImportLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -192,8 +215,8 @@ class MainActivity : AppCompatActivity() {
         )
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
         HistoryActivityContract.navigationRequestFrom(result.data)?.let { request ->
-            if (browserController.openHistoryEntry(request.url, request.profileId)) {
-                incomingBrowserNavigationRequestId++
+            browserController.openHistoryEntry(request.url, request.profileId) { opened ->
+                if (opened) incomingBrowserNavigationRequestId++
             }
         }
     }
@@ -295,6 +318,7 @@ class MainActivity : AppCompatActivity() {
                 delegate = geckoWebAuthnActivityDelegate,
             )
         }
+        profileBiometricAuthenticator = ProfileBiometricAuthenticator(this)
         browserController = BrowserController(
             activity = this,
             requestRuntimePermissions = { permissions ->
@@ -322,7 +346,10 @@ class MainActivity : AppCompatActivity() {
             onBrowserEngineChangeRequested = {
                 BrowserEngineProcessRestart.restart(this)
             },
+            profileProtectionSupported = { profileBiometricAuthenticator.isAvailable },
+            authenticateProfile = profileBiometricAuthenticator::authenticate,
         )
+        ProcessLifecycleOwner.get().lifecycle.addObserver(profileProcessLifecycleObserver)
         pictureInPictureController = MainActivityPictureInPictureController(
             activity = this,
             browserController = browserController,
@@ -402,6 +429,10 @@ class MainActivity : AppCompatActivity() {
             SideEffect {
                 applyAppearanceNightMode(appearanceSettings.appearanceMode)
                 applyAppearanceSystemBars(appearanceDark)
+                val activeProfileProtected = browserController.localBrowserProfiles
+                    .firstOrNull { profile -> profile.id == browserController.activeProfileId }
+                    ?.protection != null
+                setRecentsScreenshotEnabled(!activeProfileProtected)
             }
             CandyTheme(settings = appearanceSettings) {
                 val launcherShortcutState = LauncherShortcutRules.state(
@@ -636,6 +667,7 @@ class MainActivity : AppCompatActivity() {
                 )
                 if (appDataExportWarningVisible) {
                     AppDataExportWarningDialog(
+                        hasProtectedProfiles = browserController.hasProtectedProfiles,
                         onDismiss = { appDataExportWarningVisible = false },
                         onConfirm = {
                             appDataExportWarningVisible = false
@@ -661,6 +693,20 @@ class MainActivity : AppCompatActivity() {
                                 )
                             }
                         },
+                    )
+                }
+                if (browserController.isActiveProfileLocked) {
+                    ProfileLockedOverlay(
+                        profileEmoji = browserController.localBrowserProfiles
+                            .firstOrNull { profile ->
+                                profile.id == browserController.activeProfileId
+                            }
+                            ?.emoji
+                            .orEmpty(),
+                        unlockAvailable = browserController.isProfileProtectionSupported,
+                        canSwitchProfile = browserController.canLeaveLockedProfile,
+                        onUnlock = browserController::retryActiveProfileAuthentication,
+                        onSwitchProfile = { browserController.leaveLockedProfile() },
                     )
                 }
             }
@@ -1020,7 +1066,10 @@ class MainActivity : AppCompatActivity() {
         }
         if (::pictureInPictureController.isInitialized) pictureInPictureController.onDestroy()
         if (::castSessionController.isInitialized) castSessionController.release()
-        if (::browserController.isInitialized) browserController.destroy()
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(profileProcessLifecycleObserver)
+        if (::browserController.isInitialized) {
+            browserController.destroy(lockClosedProfiles = !isChangingConfigurations)
+        }
         if (::browserMediaSystemSession.isInitialized) browserMediaSystemSession.release()
         super.onDestroy()
     }

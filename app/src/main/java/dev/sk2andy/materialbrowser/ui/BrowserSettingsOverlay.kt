@@ -194,7 +194,8 @@ internal fun BrowserSettingsOverlay(
             isDefaultBrowser = controller.isDefaultBrowser,
             isUserScriptSupported = controller.isUserScriptSupported,
             siteCapsules = controller.siteCapsules.filter {
-                it.profileId in visibleProfileIds
+                it.profileId in visibleProfileIds &&
+                    it.profileId !in controller.lockedProfileIds
             },
             userScripts = controller.userScripts.map { script ->
                 UserscriptUiItem(

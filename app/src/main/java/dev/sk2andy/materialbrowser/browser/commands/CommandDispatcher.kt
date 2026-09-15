@@ -8,7 +8,7 @@ interface CommandActions {
     fun setSelectedTabPinned(isPinned: Boolean): Boolean
     fun closeDuplicateTabs(confirmedTabIds: List<String>): Int
     fun moveSelectedTabToProfile(profileId: String): Boolean
-    fun switchProfile(profileId: String): Boolean
+    fun switchProfile(profileId: String, onComplete: (Boolean) -> Unit): Boolean
     fun createTab(isIncognito: Boolean): Boolean
     fun openSettings(): Boolean
 }
@@ -88,11 +88,20 @@ object CommandDispatcher {
             BrowserCommandKind.SwitchProfile -> {
                 val profileId = command.targetProfileId
                     ?: return CommandDispatchOutcome.Rejected(command.kind)
-                outcome(
-                    command,
-                    actions.switchProfile(profileId),
-                    CommandResult.ProfileSwitched(command.targetProfileLabel),
-                )
+                val started = actions.switchProfile(profileId) { completed ->
+                    onPendingOutcome(
+                        outcome(
+                            command,
+                            completed,
+                            CommandResult.ProfileSwitched(command.targetProfileLabel),
+                        ),
+                    )
+                }
+                if (started) {
+                    CommandDispatchOutcome.Pending(command.kind)
+                } else {
+                    CommandDispatchOutcome.Rejected(command.kind)
+                }
             }
             BrowserCommandKind.NewRegularTab -> outcome(
                 command,

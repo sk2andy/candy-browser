@@ -20,6 +20,7 @@
 | --- | --- | --- |
 | Tabs and selection | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Exclude incognito and live federated-login popup tabs; fall back to most recently accessed persistent tab |
 | Profile wallpapers | `BrowserSessionStore`, `ProfileWallpaperStore` | Persist separate bounded crop/zoom metadata and Candy-owned, size-bounded image files for the new-tab and tab-switcher slots. Keep the active new-tab image in memory and load the switcher image only while its overview is used. |
+| Biometric profile protection | `BrowserSessionStore`, `ProfileProtectionSession`, `BrowserController` | Persist only each local profile's bounded lock policy. Successful unlock state and monotonic background timing remain process-memory only. Full app background uses `ProcessLifecycleOwner`, so internal Candy activities and configuration changes do not consume cooldown. Every new process starts protected profiles locked. No separate private-tab policy is added; synced profiles never receive this policy. |
 | Overview ordering preferences | `BrowserSessionStore` / iOS `UserDefaults` adapter | Persist compact-overview bottom anchoring on both platforms and automatic recent-use sorting on Android; both default off |
 | Tab-close undo preference | `BrowserSessionStore` | Android persists only the opt-in boolean, default off. Closed-tab tokens, private URLs and private Trails are never persisted. |
 | Startup home preference | `BrowserSessionStore` | Defaults off; regular launcher opens can add and select a blank tab without discarding restored tabs |
@@ -65,3 +66,6 @@
   both slots before its original file is removed.
 - Never reassign history when deleting a profile; delete that profile's rows. Private tabs never
   enter history, and address suggestions only consume history for the selected tab's profile.
+- Keep biometric protection fail-closed across process death. Do not attach or activate the selected
+  engine view while its profile is locked. Hide profile-owned History and Snooze projections, pause
+  its media, clear published media metadata, and never describe this access gate as file encryption.

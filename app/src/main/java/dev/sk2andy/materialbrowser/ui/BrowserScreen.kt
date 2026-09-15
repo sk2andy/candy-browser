@@ -179,6 +179,7 @@ internal fun BrowserScreen(
     launcherAddressEditorRequestId: Int = 0,
     hardwareTabChangeRequestId: Int = 0,
 ) {
+    if (controller.isActiveProfileLocked) return
     val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
         onTabOverviewPortraitLockChanged,
     )
@@ -320,7 +321,7 @@ internal fun BrowserScreen(
     }
     val visibleProfileIds = visibleProfiles.mapTo(hashSetOf(), BrowserProfile::id)
     val visibleSnoozedTabs = controller.snoozedTabs.filter {
-        it.tab.profileId in visibleProfileIds
+        it.tab.profileId in visibleProfileIds && it.tab.profileId !in controller.lockedProfileIds
     }
     LaunchedEffect(
         controller.contentActions.isLinkPeekVisible,
@@ -393,7 +394,7 @@ internal fun BrowserScreen(
             customIcon = submission.customIcon,
         )
         if (controller.activeProfileId != previousProfileId) {
-            controller.selectProfile(previousProfileId)
+            controller.requestProfileSelection(previousProfileId) {}
         }
         val message = when (result) {
             CapsuleSaveResult.PinRequested -> R.string.capsule_pin_requested
@@ -456,7 +457,9 @@ internal fun BrowserScreen(
                 sourceTabId = sourceTab?.id,
                 sourceTitle = sourceTitle,
                 sourceUrl = sourceUrl,
-                profiles = visibleProfiles,
+                profiles = visibleProfiles.filterNot { profile ->
+                    profile.id in controller.lockedProfileIds
+                },
                 activeProfileId = controller.activeProfileId.takeIf { id ->
                     visibleProfiles.any { it.id == id }
                 } ?: visibleProfiles.first().id,
@@ -716,7 +719,10 @@ internal fun BrowserScreen(
             controller.closeDuplicateTabs(confirmedTabIds)
         override fun moveSelectedTabToProfile(profileId: String): Boolean =
             controller.moveTabToProfile(controller.selectedTabId, profileId)
-        override fun switchProfile(profileId: String): Boolean = controller.selectProfile(profileId)
+        override fun switchProfile(
+            profileId: String,
+            onComplete: (Boolean) -> Unit,
+        ): Boolean = controller.requestProfileSelection(profileId, onComplete)
         override fun createTab(isIncognito: Boolean): Boolean = createTabAndConfirm(
             isIncognito = isIncognito,
             emitHaptic = false,
