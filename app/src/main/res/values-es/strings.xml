@@ -1164,4 +1164,17 @@
         <item quantity="one">%1$d comprobación fallida</item>
         <item quantity="other">%1$d comprobaciones fallidas</item>
     </plurals>
+    <string name="settings_menu_actions_title">Acciones del menú</string>
+    <string name="settings_menu_actions_summary">Elige dónde aparece cada acción</string>
+    <string name="settings_menu_actions_intro">Elige para cada acción si aparece en el menú de la pestaña, en el selector de pestañas, en ambos o en ninguno.</string>
+    <string name="settings_menu_section_toolbar">Barra de herramientas</string>
+    <string name="settings_menu_section_extensions">Extensiones</string>
+    <string name="settings_menu_section_candy">Candy</string>
+    <string name="settings_menu_section_tab_switcher">Selector de pestañas</string>
+    <string name="settings_menu_location_nowhere">En ninguno</string>
+    <string name="settings_menu_location_tab">En la pestaña</string>
+    <string name="settings_menu_location_tab_switcher">Selector de pestañas</string>
+    <string name="settings_menu_location_both">En ambos</string>
+    <string name="settings_menu_entry_topping_commands">Comandos de toppings</string>
+    <string name="settings_menu_entry_firefox_page_actions">Acciones de extensiones de Firefox</string>
 </resources>

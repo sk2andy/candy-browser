@@ -39,6 +39,10 @@ import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.SnoozedTab
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -537,6 +541,34 @@ class SnoozeScreensInstrumentedTest {
         composeRule.onNodeWithTag(SnoozeTestTags.Dialog).assertDoesNotExist()
     }
 
+    @Test
+    fun tabActionVisibilityHidesConfiguredRowsAndGroups() {
+        val layout = listOf(
+            BrowserMenuEntry.Favorite,
+            BrowserMenuEntry.CandyTrail,
+            BrowserMenuEntry.CloseAllTabs,
+        ).fold(BrowserMenuLayout.Default) { current, entry ->
+            BrowserMenuLayoutRules.update(current, entry, BrowserMenuLocation.Nowhere)
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TestTabActionsMenu(
+                    tab = BrowserTab(
+                        id = "tab",
+                        lastAccessedAt = 1L,
+                        url = "https://example.com",
+                    ),
+                    menuLayout = layout,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TabActionsMenuTestTags.Favorite).assertDoesNotExist()
+        composeRule.onNodeWithTag(TabActionsMenuTestTags.Pin).assertExists()
+        composeRule.onNodeWithTag(TabActionsMenuTestTags.Trail).assertDoesNotExist()
+        composeRule.onNodeWithTag(TabActionsMenuTestTags.CloseAllTabs).assertDoesNotExist()
+    }
+
     @Composable
     private fun TestTabActionsMenu(
         tab: BrowserTab?,
@@ -545,6 +577,7 @@ class SnoozeScreensInstrumentedTest {
         onTogglePinned: () -> Unit = {},
         onSnooze: () -> Unit = {},
         onCloseAllTabs: () -> Unit = {},
+        menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     ) {
         TabActionsFloatingMenu(
             tab = tab,
@@ -567,6 +600,7 @@ class SnoozeScreensInstrumentedTest {
             onSnooze = onSnooze,
             onCloseAllTabs = onCloseAllTabs,
             onDismiss = {},
+            menuLayout = menuLayout,
         )
     }
 }

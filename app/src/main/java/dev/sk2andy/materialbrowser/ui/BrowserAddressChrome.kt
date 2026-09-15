@@ -461,6 +461,7 @@ internal fun BoxScope.BrowserAddressChrome(
             onOpenHistory()
         },
         firefoxExtensionActions = controller.firefoxExtensionActions,
+        menuLayout = controller.browserMenuLayout,
         onFirefoxExtensionAction = { actionKey ->
             onAddressEditorDismiss()
             controller.clickFirefoxExtensionAction(actionKey)

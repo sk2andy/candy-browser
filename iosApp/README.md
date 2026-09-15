@@ -90,6 +90,10 @@ forward, reload/stop, favorite/pin, new tab, duplicate tab, close tab and tabs l
 projected from shared `BrowserFeatureMenuRules`. Both the count button and a dominant 56-point upward drag open the same
 overview. A horizontal address-bar swipe selects the adjacent tab after 24% viewport
 travel, or after 24 points at 900 points/second. Address editing suppresses both gestures.
+The shared menu-layout model also controls both Apple menu surfaces. iOS persists only its stable
+entry/location string map in `UserDefaults`; shared rules reject unknown or unsupported placements and
+restore each entry's existing default. Changes from shared Settings update the native tab menu and the
+shared tab-switcher action menu immediately.
 
 On iOS 26+, one stable native `UIGlassEffect(style: .clear)` backdrop changes geometry between the
 address bar and menu. The menu's scroll content is a non-lazy, animation-free foreground above that
@@ -214,9 +218,15 @@ xcrun swiftc \
   iosApp/Tests/BrowserFavoritesRulesTests.swift \
   -o /tmp/candy-ios-favorites-rules-tests
 /tmp/candy-ios-favorites-rules-tests
+
+xcrun swiftc \
+  iosApp/CandyIos/BrowserMenuLayoutPreference.swift \
+  iosApp/Tests/BrowserMenuLayoutPreferenceTests.swift \
+  -o /tmp/candy-ios-menu-layout-preference-tests
+/tmp/candy-ios-menu-layout-preference-tests
 ```
 
-The seven platform-edge executables above are the current iOS standalone test
+The eight platform-edge executables above are the current iOS standalone test
 gate. Run them all from the repository root with:
 
 ```bash
@@ -228,4 +238,5 @@ xcrun swiftc iosApp/CandyIos/ToppingValueRules.swift iosApp/Tests/ToppingValueRu
 xcrun swiftc iosApp/CandyIos/BrowserTranslationProviderPreference.swift iosApp/Tests/BrowserTranslationProviderPreferenceTests.swift -o /tmp/candy-ios-translation-provider-tests && /tmp/candy-ios-translation-provider-tests
 xcrun swiftc iosApp/CandyIos/LiquidGlassPresentationRules.swift iosApp/Tests/LiquidGlassPresentationRulesTests.swift -o /tmp/candy-ios-liquid-glass-tests && /tmp/candy-ios-liquid-glass-tests
 xcrun swiftc iosApp/CandyIos/BrowserFavoritesRules.swift iosApp/Tests/BrowserFavoritesRulesTests.swift -o /tmp/candy-ios-favorites-rules-tests && /tmp/candy-ios-favorites-rules-tests
+xcrun swiftc iosApp/CandyIos/BrowserMenuLayoutPreference.swift iosApp/Tests/BrowserMenuLayoutPreferenceTests.swift -o /tmp/candy-ios-menu-layout-preference-tests && /tmp/candy-ios-menu-layout-preference-tests
 ```

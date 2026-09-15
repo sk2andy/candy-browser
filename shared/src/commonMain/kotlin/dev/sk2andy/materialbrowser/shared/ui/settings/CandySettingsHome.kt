@@ -25,6 +25,9 @@ import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.shared.ui.BrowserViewportTopping
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.ui.SettingsDestination
 
 internal object CandySettingsRouteRules {
@@ -32,6 +35,7 @@ internal object CandySettingsRouteRules {
         destination == SettingsDestination.Appearance ||
             destination == SettingsDestination.Search ||
             destination == SettingsDestination.TabsAndGestures ||
+            destination == SettingsDestination.MenuActions ||
             destination == SettingsDestination.Browser ||
             destination == SettingsDestination.Userscripts ||
             destination == SettingsDestination.Sync
@@ -115,6 +119,9 @@ internal fun CandySettingsHome(
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     translationProvider: PageTranslationProvider,
     onTranslationProviderChanged: (PageTranslationProvider) -> Unit,
+    menuLayout: BrowserMenuLayout,
+    menuConfigurableEntries: List<BrowserMenuEntry>,
+    onBrowserMenuLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
     toppings: List<BrowserViewportTopping>,
     onSaveTopping: (id: String?, source: String) -> Unit,
     toppingSource: (id: String) -> String?,
@@ -155,7 +162,15 @@ internal fun CandySettingsHome(
                 onTabOverviewModeChanged = onTabOverviewModeChanged,
                 tabListStartsAtBottom = tabListStartsAtBottom,
                 onTabListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
+                onMenuActions = { destination = SettingsDestination.MenuActions },
                 onBack = { destination = SettingsDestination.Home },
+            )
+
+            SettingsDestination.MenuActions -> CandyBrowserMenuSettingsPage(
+                layout = menuLayout,
+                availableEntries = menuConfigurableEntries,
+                onLocationChanged = onBrowserMenuLocationChanged,
+                onBack = { destination = SettingsDestination.TabsAndGestures },
             )
 
             SettingsDestination.Browser -> CandyBrowserSettingsPage(

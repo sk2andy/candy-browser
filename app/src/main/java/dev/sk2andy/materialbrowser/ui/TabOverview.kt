@@ -2025,6 +2025,7 @@ internal fun TabOverview(
                 tabActionsTabId = null
                 controller.clickFirefoxExtensionAction(actionKey)
             },
+            menuLayout = controller.browserMenuLayout,
         )
 
         val stackEditorTab = tabStackEditorTabId?.let { tabId ->

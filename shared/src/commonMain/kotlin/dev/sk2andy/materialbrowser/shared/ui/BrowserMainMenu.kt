@@ -442,6 +442,9 @@ private fun BrowserMainMenuContent(
 ) {
     val colors = MaterialTheme.colorScheme
     val groupedItems = snapshot.items.groupBy(BrowserFeatureMenuItem::section)
+    val toolbarItems = groupedItems[BrowserFeatureMenuSection.Toolbar].orEmpty()
+    val pageItems = groupedItems[BrowserFeatureMenuSection.Page].orEmpty()
+    val candyItems = groupedItems[BrowserFeatureMenuSection.Candy].orEmpty()
     Column(modifier = modifier) {
         if (effects.style.showHeader) {
             Text(
@@ -459,31 +462,35 @@ private fun BrowserMainMenuContent(
             )
             Spacer(Modifier.height(10.dp))
         }
-        BrowserMainMenuToolbar(
-            items = groupedItems[BrowserFeatureMenuSection.Toolbar].orEmpty(),
-            compact = compactToolbar,
-            resources = resources,
-            effects = effects,
-            onClick = onCommand,
-        )
+        if (toolbarItems.isNotEmpty()) {
+            BrowserMainMenuToolbar(
+                items = toolbarItems,
+                compact = compactToolbar,
+                resources = resources,
+                effects = effects,
+                onClick = onCommand,
+            )
+        }
 
-        BrowserMainMenuSectionTitle(
-            title = resources.sectionTitle(BrowserFeatureMenuSection.Page),
-            topPadding = 12,
-            effects = effects,
-        )
-        BrowserMainMenuItemGroup(
-            items = groupedItems[BrowserFeatureMenuSection.Page].orEmpty(),
-            resources = resources,
-            effects = effects,
-            snoozedTabCount = snapshot.snoozedTabCount,
-            firstItemShape = firstItemShape,
-            innerCorners = innerCorners,
-            lastItemShape = lastItemShape,
-            onCommand = onCommand,
-            onToggle = onToggle,
-            modifier = Modifier.testTag(BrowserMainMenuTestTags.PageGroup),
-        )
+        if (pageItems.isNotEmpty()) {
+            BrowserMainMenuSectionTitle(
+                title = resources.sectionTitle(BrowserFeatureMenuSection.Page),
+                topPadding = 12,
+                effects = effects,
+            )
+            BrowserMainMenuItemGroup(
+                items = pageItems,
+                resources = resources,
+                effects = effects,
+                snoozedTabCount = snapshot.snoozedTabCount,
+                firstItemShape = firstItemShape,
+                innerCorners = innerCorners,
+                lastItemShape = lastItemShape,
+                onCommand = onCommand,
+                onToggle = onToggle,
+                modifier = Modifier.testTag(BrowserMainMenuTestTags.PageGroup),
+            )
+        }
 
         val toppingItems = groupedItems[BrowserFeatureMenuSection.Toppings].orEmpty()
         if (toppingItems.isNotEmpty()) {
@@ -506,21 +513,23 @@ private fun BrowserMainMenuContent(
             )
         }
 
-        Spacer(Modifier.height(8.dp))
-        BrowserMainMenuItemGroup(
-            items = groupedItems[BrowserFeatureMenuSection.Candy].orEmpty(),
-            resources = resources,
-            effects = effects,
-            snoozedTabCount = snapshot.snoozedTabCount,
-            firstItemShape = firstItemShape,
-            innerCorners = innerCorners,
-            lastItemShape = lastItemShape,
-            onCommand = onCommand,
-            onToggle = onToggle,
-            containerColor = colors.tertiaryContainer,
-            contentColor = colors.onTertiaryContainer,
-            modifier = Modifier.testTag(BrowserMainMenuTestTags.CandyGroup),
-        )
+        if (candyItems.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            BrowserMainMenuItemGroup(
+                items = candyItems,
+                resources = resources,
+                effects = effects,
+                snoozedTabCount = snapshot.snoozedTabCount,
+                firstItemShape = firstItemShape,
+                innerCorners = innerCorners,
+                lastItemShape = lastItemShape,
+                onCommand = onCommand,
+                onToggle = onToggle,
+                containerColor = colors.tertiaryContainer,
+                contentColor = colors.onTertiaryContainer,
+                modifier = Modifier.testTag(BrowserMainMenuTestTags.CandyGroup),
+            )
+        }
 
         extensionContent(onExtensionCommit)
 

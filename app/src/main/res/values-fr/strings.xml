@@ -1164,4 +1164,17 @@
         <item quantity="one">%1$d vérification échouée</item>
         <item quantity="other">%1$d vérifications échouées</item>
     </plurals>
+    <string name="settings_menu_actions_title">Actions du menu</string>
+    <string name="settings_menu_actions_summary">Choisissez où chaque action apparaît</string>
+    <string name="settings_menu_actions_intro">Pour chaque action, choisissez si elle apparaît dans le menu de l’onglet, dans le sélecteur d’onglets, dans les deux ou nulle part.</string>
+    <string name="settings_menu_section_toolbar">Barre d’outils</string>
+    <string name="settings_menu_section_extensions">Extensions</string>
+    <string name="settings_menu_section_candy">Candy</string>
+    <string name="settings_menu_section_tab_switcher">Sélecteur d’onglets</string>
+    <string name="settings_menu_location_nowhere">Nulle part</string>
+    <string name="settings_menu_location_tab">Dans l’onglet</string>
+    <string name="settings_menu_location_tab_switcher">Sélecteur d’onglets</string>
+    <string name="settings_menu_location_both">Dans les deux</string>
+    <string name="settings_menu_entry_topping_commands">Commandes des toppings</string>
+    <string name="settings_menu_entry_firefox_page_actions">Actions des extensions Firefox</string>
 </resources>

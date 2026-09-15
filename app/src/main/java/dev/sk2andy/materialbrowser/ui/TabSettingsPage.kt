@@ -70,6 +70,7 @@ internal fun TabsAndGesturesSettingsPage(
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
     onLinkPeekActions: () -> Unit = {},
     onAddressBarActions: () -> Unit,
+    onMenuActions: () -> Unit = {},
     onBack: () -> Unit,
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
@@ -248,6 +249,13 @@ internal fun TabsAndGesturesSettingsPage(
             title = stringResource(R.string.settings_address_bar_actions_title),
             subtitle = stringResource(R.string.settings_address_bar_actions_summary),
             onClick = onAddressBarActions,
+        )
+        Spacer(Modifier.height(2.dp))
+        SettingsLink(
+            icon = ImageVector.vectorResource(R.drawable.ic_visibility),
+            title = stringResource(R.string.settings_menu_actions_title),
+            subtitle = stringResource(R.string.settings_menu_actions_summary),
+            onClick = onMenuActions,
         )
         Spacer(Modifier.height(2.dp))
         SettingsSwitch(

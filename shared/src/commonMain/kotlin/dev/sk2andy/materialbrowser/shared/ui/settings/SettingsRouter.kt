@@ -36,6 +36,8 @@ fun SettingsRouter(
                     targetState == SettingsDestination.Userscripts ||
                     initialState == SettingsDestination.AddressBarActions &&
                     targetState == SettingsDestination.TabsAndGestures ||
+                    initialState == SettingsDestination.MenuActions &&
+                    targetState == SettingsDestination.TabsAndGestures ||
                     initialState == SettingsDestination.LinkPeekActions &&
                     targetState == SettingsDestination.TabsAndGestures
                 ) {

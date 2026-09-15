@@ -173,6 +173,7 @@ internal fun BrowserSettingsOverlay(
             activeProfileId = controller.activeProfileId,
             tabCount = controller.activeTabs.size,
             addressBarActionLayout = controller.addressBarActionLayout,
+            browserMenuLayout = controller.browserMenuLayout,
             isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
             isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
             isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
@@ -243,6 +244,7 @@ internal fun BrowserSettingsOverlay(
             onDismissResistancePercentChanged = controller::updateDismissResistancePercent,
             onProfilesEnabledChanged = controller::updateProfilesEnabled,
             onAddressBarActionLayoutChanged = controller::updateAddressBarActionLayout,
+            onBrowserMenuLocationChanged = controller::updateBrowserMenuLocation,
             onAddressBarDockingEnabledChanged =
                 controller::updateAddressBarDockingEnabled,
             onExternalLinkPreviewEnabledChanged =

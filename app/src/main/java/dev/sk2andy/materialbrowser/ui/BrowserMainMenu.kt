@@ -31,6 +31,10 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuState
 import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuSurface
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuEffects
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuContainerRole
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuResources
@@ -255,6 +259,7 @@ internal fun BrowserMainMenu(
     onDownloads: () -> Unit = {},
     onHistory: () -> Unit,
     firefoxExtensionActions: List<GeckoExtensionActionState> = emptyList(),
+    menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit = {},
     onSettings: () -> Unit,
 ) {
@@ -291,7 +296,11 @@ internal fun BrowserMainMenu(
         overflowPageActions = overflowAddressBarActions.mapNotNull(AddressBarAction::sharedMenuAction),
         toppingCommands = userScriptMenuCommands.map(UserScriptMenuCommand::sharedMenuCommand),
     )
-    val items = BrowserFeatureMenuRules.items(state = menuState)
+    val items = BrowserMenuLayoutRules.visibleItems(
+        items = BrowserFeatureMenuRules.items(state = menuState),
+        layout = menuLayout,
+        surface = BrowserMenuSurface.Tab,
+    )
     val extensionSnapshot = firefoxExtensionActions.toList()
     var presentedExtensionActions by remember { mutableStateOf(extensionSnapshot) }
     if (expanded && presentedExtensionActions != extensionSnapshot) {
@@ -306,13 +315,23 @@ internal fun BrowserMainMenu(
         screenSize = DpSize(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp),
         resources = AndroidBrowserMainMenuResources,
         effects = rememberAndroidBrowserMainMenuEffects(backdropSource),
-        extensionContent = { commit ->
-            FirefoxExtensionMenuSection(
-                actions = presentedExtensionActions,
-                onAction = { actionKey ->
-                    commit { onFirefoxExtensionAction(actionKey) }
-                },
+        extensionContent = if (
+            BrowserMenuLayoutRules.isVisible(
+                menuLayout,
+                BrowserMenuEntry.FirefoxPageActions,
+                BrowserMenuSurface.Tab,
             )
+        ) {
+            { commit ->
+                FirefoxExtensionMenuSection(
+                    actions = presentedExtensionActions,
+                    onAction = { actionKey ->
+                        commit { onFirefoxExtensionAction(actionKey) }
+                    },
+                )
+            }
+        } else {
+            {}
         },
         onAction = { item ->
             when (item.action) {

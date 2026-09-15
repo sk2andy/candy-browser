@@ -35,6 +35,7 @@
 		A20000000000000000000027 /* IosSyncTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000002E /* IosSyncTransport.swift */; };
 		A20000000000000000000028 /* IosSyncPlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000002F /* IosSyncPlatform.swift */; };
 		F4A000000000000000000001 /* BrowserFavoritesRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A000000000000000000002 /* BrowserFavoritesRules.swift */; };
+		B50000000000000000000001 /* BrowserMenuLayoutPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = B50000000000000000000002 /* BrowserMenuLayoutPreference.swift */; };
 		A20000000000000000000010 /* blocked_hosts.txt in Resources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000018 /* blocked_hosts.txt */; };
 		A20000000000000000000011 /* easylist_blocked_hosts.txt in Resources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000019 /* easylist_blocked_hosts.txt */; };
 		A20000000000000000000012 /* hagezi_blocked_hosts.txt in Resources */ = {isa = PBXBuildFile; fileRef = A3000000000000000000001A /* hagezi_blocked_hosts.txt */; };
@@ -80,6 +81,7 @@
 		A3000000000000000000002E /* IosSyncTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IosSyncTransport.swift; sourceTree = "<group>"; };
 		A3000000000000000000002F /* IosSyncPlatform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IosSyncPlatform.swift; sourceTree = "<group>"; };
 		F4A000000000000000000002 /* BrowserFavoritesRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserFavoritesRules.swift; sourceTree = "<group>"; };
+		B50000000000000000000002 /* BrowserMenuLayoutPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserMenuLayoutPreference.swift; sourceTree = "<group>"; };
 		A30000000000000000000018 /* blocked_hosts.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = blocked_hosts.txt; sourceTree = "<group>"; };
 		A30000000000000000000019 /* easylist_blocked_hosts.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = easylist_blocked_hosts.txt; sourceTree = "<group>"; };
 		A3000000000000000000001A /* hagezi_blocked_hosts.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = hagezi_blocked_hosts.txt; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 				A3000000000000000000002E /* IosSyncTransport.swift */,
 				A3000000000000000000002F /* IosSyncPlatform.swift */,
 				F4A000000000000000000002 /* BrowserFavoritesRules.swift */,
+				B50000000000000000000002 /* BrowserMenuLayoutPreference.swift */,
 				A30000000000000000000006 /* Info.plist */,
 			);
 			path = CandyIos;
@@ -307,6 +310,7 @@
 				A20000000000000000000027 /* IosSyncTransport.swift in Sources */,
 				A20000000000000000000028 /* IosSyncPlatform.swift in Sources */,
 				F4A000000000000000000001 /* BrowserFavoritesRules.swift in Sources */,
+				B50000000000000000000001 /* BrowserMenuLayoutPreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

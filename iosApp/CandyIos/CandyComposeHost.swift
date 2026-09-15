@@ -139,6 +139,8 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             searchEngine: browser.searchEngine,
             searxngInstanceUrl: browser.searxngInstanceUrl,
             translationProvider: browser.translationProvider,
+            menuLayout: browser.menuLayout,
+            menuConfigurableEntries: browser.menuConfigurableEntries,
             toppings: browser.toppings.map(\.sharedViewportTopping),
             reader: browser.readerSnapshot,
             candyTrail: candyTrailSnapshot,
@@ -217,6 +219,8 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
                     searchEngine: browser.searchEngine,
                     searxngInstanceUrl: browser.searxngInstanceUrl,
                     translationProvider: browser.translationProvider,
+                    menuLayout: browser.menuLayout,
+                    menuConfigurableEntries: browser.menuConfigurableEntries,
                     toppings: browser.toppings.map(\.sharedViewportTopping),
                     reader: browser.readerSnapshot,
                     candyTrail: CandyComposeControllerHost.candyTrailSnapshot(browser: browser),
@@ -363,6 +367,13 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
 
         func changeTranslationProvider(provider: PageTranslationProvider) {
             browser.updateTranslationProvider(provider)
+        }
+
+        func changeBrowserMenuLocation(
+            entry: BrowserMenuEntry,
+            location: BrowserMenuLocation
+        ) {
+            browser.changeBrowserMenuLocation(entry: entry, location: location)
         }
 
         func saveTopping(id: String?, source: String) {

@@ -1029,6 +1029,8 @@ internal fun BrowserScreen(
                         SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
                         SettingsDestination.AddressBarActions ->
                             SettingsDestination.TabsAndGestures
+                        SettingsDestination.MenuActions ->
+                            SettingsDestination.TabsAndGestures
                         SettingsDestination.LinkPeekActions ->
                             SettingsDestination.TabsAndGestures
                         else -> SettingsDestination.Home
