@@ -22,7 +22,7 @@
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. Incoming URLs stay in Candy without automatically handing the initial URL or its redirects back to another app; a subsequent user tap can authorize a handoff. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the immediate-tab path remains. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
-| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep a tapped same-site HTTP(S) redirector in the engine so its server redirect can resolve; route documented `play.google.com/store/` links explicitly to Google Play with web fallback; offer other cross-site targets and the remaining bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
+| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep a tapped same-site HTTP(S) redirector in the engine so its server redirect can resolve; route documented `play.google.com/store/` links explicitly to Google Play with web fallback; offer other cross-site targets and the remaining bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; restore the validated source history entry after a redirected app handoff; reopen an immediately returned same-site web link in its source Candy tab or existing external preview instead of creating another navigation surface; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank engine page |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → transient Gecko session | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
@@ -105,6 +105,12 @@
   unavailable or ambiguous app links continue in the current engine session. A same-registrable-site
   redirector such as a search result's intermediate URL also stays in that session; its bounded
   user-navigation grant remains available to the cross-site server redirect that follows.
+- Remember the normalized source URL before that redirect chain. After Android accepts a redirected
+  app handoff, go Back only when the same engine session still exposes that exact URL as its previous
+  history entry; this removes a rendered `302 Moved` intermediary without reloading or skipping the
+  source document. Keep one short-lived, memory-only record of the handed-off target and source surface.
+  If the receiving app immediately returns the same registrable-site web link to Candy, consume that
+  record once and continue in the source tab or existing preview instead of creating another preview.
 - Route documented HTTPS `play.google.com/store/` links directly to `com.android.vending` without
   generic app-link resolution flags. If Google Play is unavailable or rejects the launch, let the
   originating engine session continue the normalized HTTPS request as Candy's browser fallback.
@@ -573,11 +579,16 @@ before the retained emergency fallback. No scroll event starts a new discovery o
   memory-only. A profile grant is persisted for the exact host and applies to matching regular tabs.
   Private tabs never expose or persist the profile grant. Privacy X-Ray shows the resulting cookie
   policy and provides a host-scoped action to revoke the grant.
-- A detected cross-site Cloudflare, Google reCAPTCHA/Enterprise, or hCaptcha client first produces
-  the same Snackbar-to-dialog consent flow. Detection requires HTTPS plus a recognized provider host
-  and path; lookalike, first-party, malformed, and generic vendor requests do not prompt. CAPTCHA
-  grants use the same exact-host tab/profile/private boundaries, but affect only third-party-cookie
-  policy. They never enable federated-login user-agent or popup compatibility.
+- A main-frame HTTPS response carrying the exact case-insensitive `cf-mitigated: challenge` signal
+  enters the same Snackbar-to-dialog consent flow as embedded CAPTCHA clients. A tab-scoped grant is
+  memory-only for the exact current tab and page host, then reloads; the profile choice remains an
+  explicit persistent decision. An external-link preview carrying this signal moves into a normal
+  tab first so the same consent flow owns the exception. Embedded Cloudflare Turnstile, Google
+  reCAPTCHA/Enterprise, and hCaptcha clients keep this consent flow. Their detection requires HTTPS
+  plus a recognized provider host and path; lookalike,
+  first-party, malformed, and generic vendor requests do not receive compatibility.
+  CAPTCHA grants affect only third-party-cookie policy. They never enable federated-login user-agent
+  or popup compatibility.
 - Federated-login popup exceptions require all three conditions: a user gesture, an active grant on
   the opener site, and a recognized HTTPS provider authentication path. The compatibility identity
   used for the provider user agent is removed when the popup leaves the provider. Its separate

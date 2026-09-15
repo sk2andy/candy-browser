@@ -135,6 +135,10 @@ class ExternalAppLauncherInstrumentedTest {
 
     @Test
     fun namedHttpsIntentTriesInstalledAppBeforePlayStoreFallback() {
+        assertEquals(
+            "https://www.twitch.tv/candy",
+            launcher.webTargetUrl(Uri.parse(TWITCH_INTENT)),
+        )
         assertEquals(ExternalLaunchResult.Launched, launcher.open(Uri.parse(TWITCH_INTENT)))
 
         val launchedIntent = requireNotNull(context.lastIntent)

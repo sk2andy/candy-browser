@@ -73,6 +73,7 @@ import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
 import dev.sk2andy.materialbrowser.browser.integration.FavoritesActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
+import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserRequestKind
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
@@ -1286,6 +1287,13 @@ class MainActivity : AppCompatActivity() {
         }
         if (intent.action == Intent.ACTION_MAIN) browserController.leaveSiteCapsule()
         incomingRequest?.let { request ->
+            if (
+                request.kind == IncomingBrowserRequestKind.View &&
+                browserController.openReturnedExternalAppLink(request.url)
+            ) {
+                incomingBrowserNavigationRequestId++
+                return
+            }
             if (
                 browserController.isExternalLinkPreviewEnabled &&
                 browserController.openExternalLinkPreview(
