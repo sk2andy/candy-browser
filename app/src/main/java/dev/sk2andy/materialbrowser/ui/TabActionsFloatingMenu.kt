@@ -23,6 +23,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuAction
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.ui.TabActionsMenuEffects
 import dev.sk2andy.materialbrowser.shared.ui.TabActionsMenuState
 import dev.sk2andy.materialbrowser.shared.ui.TabActionsProfile
@@ -59,6 +60,7 @@ internal fun TabActionsFloatingMenu(
     onDismiss: () -> Unit,
     extensionActions: List<GeckoExtensionActionState> = emptyList(),
     onExtensionAction: (GeckoExtensionActionKey) -> Unit = {},
+    menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
 ) {
     BackHandler(enabled = tab != null, onBack = onDismiss)
     val configuration = LocalConfiguration.current
@@ -88,6 +90,7 @@ internal fun TabActionsFloatingMenu(
             profiles = profiles
                 .filter { profile -> profile.id != presentedTab.profileId }
                 .map { profile -> TabActionsProfile(profile.id, profile.emoji) },
+            menuLayout = menuLayout,
         )
     }
     val chromeTokens = browserChromeSurfaceTokens().copy(

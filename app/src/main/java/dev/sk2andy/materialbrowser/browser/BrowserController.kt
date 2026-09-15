@@ -264,6 +264,10 @@ import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.recall.RecallExtractionIdentity
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import dev.sk2andy.materialbrowser.recall.RecallRules
@@ -548,6 +552,8 @@ class BrowserController(
     var isExternalLinkPreviewEnabled by mutableStateOf(false)
         private set
     var addressBarActionLayout by mutableStateOf(AddressBarActionLayout.Default)
+        private set
+    var browserMenuLayout by mutableStateOf(BrowserMenuLayout.Default)
         private set
     var linkPeekActionLayout by mutableStateOf(LinkPeekActionLayout.Default)
         private set
@@ -1934,6 +1940,7 @@ class BrowserController(
         pageTranslationProvider = store.loadPageTranslationProvider()
         linkLongPressAction = store.loadLinkLongPressAction()
         linkPeekActionLayout = store.loadLinkPeekActionLayout()
+        browserMenuLayout = store.loadBrowserMenuLayout()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
         isRecallEnabled = store.loadRecallEnabled()
         historyRecordingMode = historyRepository.recordingMode()
@@ -6957,6 +6964,16 @@ class BrowserController(
         if (addressBarActionLayout == normalized) return
         addressBarActionLayout = normalized
         store.saveAddressBarActionLayout(normalized)
+    }
+
+    fun updateBrowserMenuLocation(
+        entry: BrowserMenuEntry,
+        location: BrowserMenuLocation,
+    ) {
+        val updated = BrowserMenuLayoutRules.update(browserMenuLayout, entry, location)
+        if (updated == browserMenuLayout) return
+        browserMenuLayout = updated
+        store.saveBrowserMenuLayout(updated)
     }
 
     fun updateLinkPeekActionLayout(layout: LinkPeekActionLayout) {

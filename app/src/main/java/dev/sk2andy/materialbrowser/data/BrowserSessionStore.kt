@@ -29,6 +29,8 @@ import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
 import dev.sk2andy.materialbrowser.sync.SyncTabRules
 import org.json.JSONArray
 import org.json.JSONObject
@@ -916,6 +918,25 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_ADDRESS_BAR_ACTION_LAYOUT, root.toString()).apply()
     }
 
+    fun loadBrowserMenuLayout(): BrowserMenuLayout {
+        val stored = preferences.getString(KEY_BROWSER_MENU_LAYOUT, null)
+            ?: return BrowserMenuLayout.Default
+        return runCatching {
+            val root = JSONObject(stored)
+            BrowserMenuLayoutRules.fromWireValues(
+                root.keys().asSequence().associateWith { key -> root.optString(key) },
+            )
+        }.getOrDefault(BrowserMenuLayout.Default)
+    }
+
+    fun saveBrowserMenuLayout(layout: BrowserMenuLayout) {
+        val root = JSONObject()
+        BrowserMenuLayoutRules.toWireValues(layout).forEach { (entry, location) ->
+            root.put(entry, location)
+        }
+        preferences.edit().putString(KEY_BROWSER_MENU_LAYOUT, root.toString()).apply()
+    }
+
     fun loadFullImmersiveModeEnabled(): Boolean =
         preferences.getBoolean(KEY_FULL_IMMERSIVE_MODE_ENABLED, false)
 
@@ -1344,6 +1365,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
         const val KEY_LINK_PEEK_ACTION_LAYOUT = "link_peek_action_layout"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"
+        const val KEY_BROWSER_MENU_LAYOUT = "browser_menu_layout"
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
         const val KEY_STARTUP_ANIMATION_ENABLED = "startup_animation_enabled"

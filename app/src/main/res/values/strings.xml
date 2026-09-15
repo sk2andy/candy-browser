@@ -1174,4 +1174,17 @@
         <item quantity="one">%1$d failed check</item>
         <item quantity="other">%1$d failed checks</item>
     </plurals>
+    <string name="settings_menu_actions_title">Menu actions</string>
+    <string name="settings_menu_actions_summary">Choose which actions appear in the tab and tab switcher menus.</string>
+    <string name="settings_menu_actions_intro">Choose where each action appears. Context-specific actions only offer locations where they work.</string>
+    <string name="settings_menu_section_toolbar">Toolbar</string>
+    <string name="settings_menu_section_extensions">Extensions</string>
+    <string name="settings_menu_section_candy">Candy</string>
+    <string name="settings_menu_section_tab_switcher">Tab switcher</string>
+    <string name="settings_menu_location_nowhere">Nowhere</string>
+    <string name="settings_menu_location_tab">Tab menu</string>
+    <string name="settings_menu_location_tab_switcher">Tab switcher menu</string>
+    <string name="settings_menu_location_both">Both menus</string>
+    <string name="settings_menu_entry_topping_commands">Topping commands</string>
+    <string name="settings_menu_entry_firefox_page_actions">Firefox page actions</string>
 </resources>

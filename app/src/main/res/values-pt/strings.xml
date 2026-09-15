@@ -1164,4 +1164,17 @@
         <item quantity="one">%1$d verificação falhada</item>
         <item quantity="other">%1$d verificações falhadas</item>
     </plurals>
+    <string name="settings_menu_actions_title">Ações do menu</string>
+    <string name="settings_menu_actions_summary">Escolha onde cada ação aparece</string>
+    <string name="settings_menu_actions_intro">Para cada ação, escolha se aparece no menu do separador, no seletor de separadores, em ambos ou em nenhum.</string>
+    <string name="settings_menu_section_toolbar">Barra de ferramentas</string>
+    <string name="settings_menu_section_extensions">Extensões</string>
+    <string name="settings_menu_section_candy">Candy</string>
+    <string name="settings_menu_section_tab_switcher">Seletor de separadores</string>
+    <string name="settings_menu_location_nowhere">Em nenhum</string>
+    <string name="settings_menu_location_tab">No separador</string>
+    <string name="settings_menu_location_tab_switcher">Seletor de separadores</string>
+    <string name="settings_menu_location_both">Em ambos</string>
+    <string name="settings_menu_entry_topping_commands">Comandos de toppings</string>
+    <string name="settings_menu_entry_firefox_page_actions">Ações das extensões do Firefox</string>
 </resources>

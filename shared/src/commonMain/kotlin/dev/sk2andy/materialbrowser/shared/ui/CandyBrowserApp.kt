@@ -124,6 +124,9 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuItem
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuItemKind
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuLabelKey
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
 import dev.sk2andy.materialbrowser.shared.ui.settings.CandySettingsHome
@@ -182,6 +185,8 @@ data class BrowserViewportSnapshot(
     val searchEngine: SearchEngine = SearchEngine.Google,
     val searxngInstanceUrl: String = "",
     val translationProvider: PageTranslationProvider = PageTranslationProvider.Yandex,
+    val menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
+    val menuConfigurableEntries: List<BrowserMenuEntry> = BrowserMenuEntry.entries,
     val toppings: List<BrowserViewportTopping> = emptyList(),
     val reader: BrowserReaderSnapshot? = null,
     val candyTrail: BrowserCandyTrailSnapshot? = null,
@@ -256,6 +261,11 @@ interface BrowserViewportActionSink : SyncSettingsActionSink {
     fun changeSearxngInstanceUrl(value: String)
 
     fun changeTranslationProvider(provider: PageTranslationProvider)
+
+    fun changeBrowserMenuLocation(
+        entry: BrowserMenuEntry,
+        location: BrowserMenuLocation,
+    )
 
     fun saveTopping(
         id: String?,
@@ -367,6 +377,9 @@ fun CandyBrowserApp(
                 onTabListStartsAtBottomChanged = actionSink::changeTabListStartsAtBottom,
                 translationProvider = snapshot.translationProvider,
                 onTranslationProviderChanged = actionSink::changeTranslationProvider,
+                menuLayout = snapshot.menuLayout,
+                menuConfigurableEntries = snapshot.menuConfigurableEntries,
+                onBrowserMenuLocationChanged = actionSink::changeBrowserMenuLocation,
                 toppings = snapshot.toppings,
                 onSaveTopping = actionSink::saveTopping,
                 toppingSource = actionSink::toppingSource,
@@ -1101,6 +1114,7 @@ private fun CandyTabOverview(
                 canSnooze = false,
                 canCloseAllTabs = false,
                 hasPinnedTabs = snapshot.tabs.any(BrowserViewportTab::isPinned),
+                menuLayout = snapshot.menuLayout,
             )
         },
         screenSize = screenSize,

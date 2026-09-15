@@ -60,6 +60,19 @@ The parked compact pill remains intentionally action-free. When address input ta
 width, configured actions retain the existing horizontal fade/shrink transition and return when the
 editor closes.
 
+## Configurable menu actions
+
+| Concern | Source | Rule |
+| --- | --- | --- |
+| Shared catalog and placement | [`BrowserMenuLayout.kt`](../../shared/src/commonMain/kotlin/dev/sk2andy/materialbrowser/shared/browser/BrowserMenuLayout.kt) | Every static action and each dynamic action group has one stable ID. Entries supported by both menus allow **Nowhere**, **Tab menu**, **Tab switcher menu**, or **Both menus**. Context-bound entries expose only **Nowhere** and their working surface. Reload/stop and address-bar park/dock share one setting each. |
+| Shared settings UI | [`BrowserMenuSettingsPage.kt`](../../shared/src/commonMain/kotlin/dev/sk2andy/materialbrowser/shared/ui/settings/BrowserMenuSettingsPage.kt) | Tabs & gestures opens one grouped editor on Android and iOS. Topping commands, Firefox page actions, profile movement and Candy Stacks are configured as stable groups rather than transient command IDs. Platforms omit entries whose backend is unavailable. |
+| Runtime filtering | Shared `BrowserMainMenu.kt` and `TabActionsMenu.kt`; Android `ui/BrowserMainMenu.kt` and `ui/TabActionsFloatingMenu.kt` | Filtering happens before a menu section is rendered. Empty toolbar, page, Candy and browser groups leave no empty heading or row container. Temporarily displaced address-bar actions remain adaptive and are filtered only when they actually overflow into the tab menu. |
+| Persistence | Android `BrowserSessionStore`; iOS `BrowserMenuLayoutPreference` | A global, non-profile preference stores stable entry/location strings. Missing data preserves the previous menu layout; unknown, malformed or unsupported values fail back to each entry's default. No tab URL, private state or dynamic extension/Topping identifier enters this preference. |
+
+Default layout preserves prior surfaces. Existing shared actions such as favorite, pin, share and
+Candy Trail remain in both menus; tab-only browser/navigation actions and switcher-only profile,
+stack and close-all actions remain where they were until the user changes them.
+
 ## Find in page
 
 | Layer | Source | Boundary |

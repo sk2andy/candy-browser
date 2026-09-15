@@ -49,6 +49,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
     @Published private(set) var searchEngine: SearchEngine
     @Published private(set) var searxngInstanceUrl: String
     @Published private(set) var translationProvider: PageTranslationProvider
+    @Published private(set) var menuLayout: BrowserMenuLayout
     @Published private(set) var menuItems: [BrowserFeatureMenuItem] = []
     @Published private(set) var favoriteItems: [BrowserFavoriteItem] = []
     @Published private(set) var pendingFavoriteRemoval: BrowserFavoriteRemoval?
@@ -67,6 +68,27 @@ final class BrowserViewModel: NSObject, ObservableObject {
     @Published private(set) var syncState: SyncRepositoryState
     let profileIconEmojis: [String]
     let syncIconCatalog: SyncDeviceIconCatalog
+    let menuConfigurableEntries: [BrowserMenuEntry] = [
+        .back,
+        .forward,
+        .reload,
+        .favorite,
+        .pin,
+        .showtabs,
+        .newtab,
+        .closetab,
+        .duplicatetab,
+        .reader,
+        .translate,
+        .findinpage,
+        .share,
+        .openexternal,
+        .print,
+        .toppingcommands,
+        .candytrail,
+        .openfavorites,
+        .opensettings,
+    ]
 
     var activeWebView: WKWebView {
         guard let session = sessions[selectedTabId] else {
@@ -130,6 +152,9 @@ final class BrowserViewModel: NSObject, ObservableObject {
                 from: preferences
             )
         )
+        let initialMenuLayout = BrowserMenuLayoutRules.shared.fromWireValues(
+            values: BrowserMenuLayoutPreference.loadWireValues(from: preferences)
+        )
         let initialState = sessionController.state
         guard let initialTab = initialState.tabs.first(
             where: { $0.id == initialState.selectedTabId }
@@ -170,6 +195,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
         translationProvider = PageTranslationProvider.companion.fromStableId(
             stableId: BrowserTranslationProviderPreference.loadStableId(from: preferences)
         )
+        menuLayout = initialMenuLayout
 
         super.init()
 
@@ -316,6 +342,28 @@ final class BrowserViewModel: NSObject, ObservableObject {
 
     func dismissSettings() {
         isSettingsVisible = false
+    }
+
+    func changeBrowserMenuLocation(
+        entry: BrowserMenuEntry,
+        location: BrowserMenuLocation
+    ) {
+        let updated = BrowserMenuLayoutRules.shared.update(
+            layout: menuLayout,
+            entry: entry,
+            location: location
+        )
+        menuLayout = updated
+        BrowserMenuLayoutPreference.save(
+            wireValues: BrowserMenuLayoutRules.shared.toWireValues(layout: updated),
+            to: preferences
+        )
+        guard let selectedTab = sessionController.state.tabs.first(
+            where: { $0.id == selectedTabId }
+        ) else {
+            return
+        }
+        menuItems = featureMenuItems(for: selectedTab)
     }
 
     func showFavorites() {
@@ -1295,12 +1343,17 @@ final class BrowserViewModel: NSObject, ObservableObject {
                 )
             }
         )
-        return BrowserFeatureMenuRules.shared.items(
+        let items = BrowserFeatureMenuRules.shared.items(
             state: state,
             capabilities: BrowserFeatureMenuCapabilities(supportsFirefoxExtensions: false)
         ).filter { item in
             isImplementedFeatureAction(item.action)
         }
+        return BrowserMenuLayoutRules.shared.visibleItems(
+            items: items,
+            layout: menuLayout,
+            surface: .tab
+        )
     }
 
     private func isImplementedFeatureAction(_ action: BrowserFeatureMenuAction) -> Bool {

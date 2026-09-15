@@ -23,6 +23,10 @@ import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1415,5 +1419,39 @@ class BrowserSessionStoreInstrumentedTest {
         assertEquals(true, store.loadExternalLinkPreviewEnabled())
         store.saveExternalLinkPreviewEnabled(false)
         assertEquals(false, store.loadExternalLinkPreviewEnabled())
+    }
+
+    @Test
+    fun browserMenuLayoutDefaultsAndRoundTripsStableLocations() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(BrowserMenuLayout.Default, store.loadBrowserMenuLayout())
+        val layout = BrowserMenuLayoutRules.update(
+            BrowserMenuLayoutRules.update(
+                BrowserMenuLayout.Default,
+                BrowserMenuEntry.Share,
+                BrowserMenuLocation.Tab,
+            ),
+            BrowserMenuEntry.CloseAllTabs,
+            BrowserMenuLocation.Nowhere,
+        )
+        store.saveBrowserMenuLayout(layout)
+
+        val restored = store.loadBrowserMenuLayout()
+        assertEquals(
+            BrowserMenuLocation.Tab,
+            BrowserMenuLayoutRules.location(restored, BrowserMenuEntry.Share),
+        )
+        assertEquals(
+            BrowserMenuLocation.Nowhere,
+            BrowserMenuLayoutRules.location(restored, BrowserMenuEntry.CloseAllTabs),
+        )
+    }
+
+    @Test
+    fun corruptBrowserMenuLayoutFallsBackToDefaults() {
+        preferences.edit().putString(BrowserSessionStore.KEY_BROWSER_MENU_LAYOUT, "not-json").commit()
+
+        assertEquals(BrowserMenuLayout.Default, BrowserSessionStore(context).loadBrowserMenuLayout())
     }
 }

@@ -29,6 +29,9 @@ import dev.sk2andy.materialbrowser.browser.LinkPeekAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRouter
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
@@ -66,6 +69,7 @@ internal fun SettingsScreen(
     activeProfileId: String,
     tabCount: Int,
     addressBarActionLayout: AddressBarActionLayout,
+    browserMenuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     isAddressBarDockingEnabled: Boolean,
     isExternalLinkPreviewEnabled: Boolean = false,
     isFullImmersiveModeEnabled: Boolean,
@@ -116,6 +120,7 @@ internal fun SettingsScreen(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarActionLayoutChanged: (AddressBarActionLayout) -> Unit,
+    onBrowserMenuLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit = { _, _ -> },
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
@@ -216,6 +221,9 @@ internal fun SettingsScreen(
                     onAddressBarActions = {
                         onDestinationChanged(SettingsDestination.AddressBarActions)
                     },
+                    onMenuActions = {
+                        onDestinationChanged(SettingsDestination.MenuActions)
+                    },
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 
@@ -245,6 +253,14 @@ internal fun SettingsScreen(
                         actionLabel = actionLabels::getValue,
                     )
                 }
+
+                SettingsDestination.MenuActions -> BrowserMenuSettingsPage(
+                    layout = browserMenuLayout,
+                    onLocationChanged = onBrowserMenuLocationChanged,
+                    onBack = {
+                        onDestinationChanged(SettingsDestination.TabsAndGestures)
+                    },
+                )
 
                 SettingsDestination.LinkPeekActions -> {
                     val actionLabels = LinkPeekAction.entries.associateWith { action ->

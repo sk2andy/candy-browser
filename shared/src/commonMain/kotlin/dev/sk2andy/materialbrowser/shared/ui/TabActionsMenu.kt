@@ -61,6 +61,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuAction
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuSurface
 
 object TabActionsMenuMotion {
     const val ENTER_DURATION_MILLIS = 120
@@ -126,6 +130,7 @@ data class TabActionsMenuState(
     val canCloseAllTabs: Boolean,
     val hasPinnedTabs: Boolean,
     val profiles: List<TabActionsProfile> = emptyList(),
+    val menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
 )
 
 interface TabActionsMenuResources {
@@ -317,6 +322,33 @@ fun TabActionsMenuContent(
         bottomEnd = outerCorners.bottomEnd,
         bottomStart = outerCorners.bottomStart,
     )
+    fun isVisible(entry: BrowserMenuEntry): Boolean = BrowserMenuLayoutRules.isVisible(
+        layout = state.menuLayout,
+        entry = entry,
+        surface = BrowserMenuSurface.TabSwitcher,
+    )
+    val toolbarEntries = listOf(
+        BrowserMenuEntry.Favorite,
+        BrowserMenuEntry.Pin,
+    ).filter(::isVisible)
+    val pageEntries = listOf(
+        BrowserMenuEntry.Share,
+        BrowserMenuEntry.OpenExternal,
+        BrowserMenuEntry.Print,
+        BrowserMenuEntry.DomainMute,
+    ).filter(::isVisible)
+    val candyEntries = listOf(
+        BrowserMenuEntry.CandyTrail,
+        BrowserMenuEntry.AddSiteCapsule,
+        BrowserMenuEntry.Summarize,
+        BrowserMenuEntry.Snooze,
+    ).filter(::isVisible)
+    fun itemShape(index: Int, lastIndex: Int): Shape = when {
+        lastIndex == 0 -> outerCorners
+        index == 0 -> firstItemShape
+        index == lastIndex -> lastItemShape
+        else -> innerCorners
+    }
     Column(modifier = modifier) {
         Text(
             text = resources.text(TabActionsMenuLabel.Title),
@@ -331,183 +363,219 @@ fun TabActionsMenuContent(
             style = MaterialTheme.typography.labelMedium,
             color = colors.onSurfaceVariant,
         )
-        Spacer(Modifier.height(10.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(TabActionsMenuTestTags.Toolbar),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            BrowserMenuToolbarAction(
-                label = resources.text(TabActionsMenuLabel.Favorite),
-                icon = {
-                    resources.icon(
-                        BrowserFeatureMenuAction.ToggleFavorite,
-                        state.isFavorite,
-                        Modifier.size(22.dp),
-                    )
-                },
-                accessibilityLabel = resources.text(
-                    if (state.isFavorite) {
-                        TabActionsMenuLabel.RemoveFavorite
-                    } else {
-                        TabActionsMenuLabel.AddFavorite
-                    },
-                ),
-                enabled = state.canToggleFavorite,
-                selected = state.isFavorite,
-                horizontalContent = !compactToolbar,
-                onClick = onToggleFavorite,
+        if (toolbarEntries.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .testTag(TabActionsMenuTestTags.Favorite),
-                containerColor = effects.containerColor(
-                    if (state.isFavorite) colors.primaryContainer else colors.surfaceContainerHighest,
-                ),
-            )
-            BrowserMenuToolbarAction(
-                label = resources.text(
-                    if (state.isPinned) TabActionsMenuLabel.UnpinTab else TabActionsMenuLabel.PinTab,
-                ),
-                icon = {
-                    resources.icon(
-                        BrowserFeatureMenuAction.TogglePinned,
-                        state.isPinned,
-                        Modifier.size(22.dp),
+                    .fillMaxWidth()
+                    .testTag(TabActionsMenuTestTags.Toolbar),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (BrowserMenuEntry.Favorite in toolbarEntries) {
+                    BrowserMenuToolbarAction(
+                        label = resources.text(TabActionsMenuLabel.Favorite),
+                        icon = {
+                            resources.icon(
+                                BrowserFeatureMenuAction.ToggleFavorite,
+                                state.isFavorite,
+                                Modifier.size(22.dp),
+                            )
+                        },
+                        accessibilityLabel = resources.text(
+                            if (state.isFavorite) {
+                                TabActionsMenuLabel.RemoveFavorite
+                            } else {
+                                TabActionsMenuLabel.AddFavorite
+                            },
+                        ),
+                        enabled = state.canToggleFavorite,
+                        selected = state.isFavorite,
+                        horizontalContent = !compactToolbar,
+                        onClick = onToggleFavorite,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(TabActionsMenuTestTags.Favorite),
+                        containerColor = effects.containerColor(
+                            if (state.isFavorite) {
+                                colors.primaryContainer
+                            } else {
+                                colors.surfaceContainerHighest
+                            },
+                        ),
                     )
-                },
-                accessibilityLabel = resources.text(
-                    if (state.isPinned) TabActionsMenuLabel.UnpinTab else TabActionsMenuLabel.PinTab,
-                ),
-                selected = state.isPinned,
-                horizontalContent = !compactToolbar,
-                onClick = onTogglePinned,
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag(TabActionsMenuTestTags.Pin),
-                containerColor = effects.containerColor(
-                    if (state.isPinned) colors.primaryContainer else colors.surfaceContainerHighest,
-                ),
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = resources.text(TabActionsMenuLabel.PageGroup),
-            modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
-            color = colors.primary,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Column(
-            modifier = Modifier.testTag(TabActionsMenuTestTags.PageGroup),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            TabActionsRow(
-                label = TabActionsMenuLabel.Share,
-                action = BrowserFeatureMenuAction.Share,
-                enabled = state.canUsePageActions,
-                shape = firstItemShape,
-                resources = resources,
-                effects = effects,
-                onAction = onAction,
-            )
-            TabActionsRow(
-                label = TabActionsMenuLabel.OpenExternal,
-                action = BrowserFeatureMenuAction.OpenExternal,
-                enabled = state.canUsePageActions,
-                shape = innerCorners,
-                resources = resources,
-                effects = effects,
-                onAction = onAction,
-            )
-            TabActionsRow(
-                label = TabActionsMenuLabel.Print,
-                action = BrowserFeatureMenuAction.Print,
-                enabled = state.canUsePageActions,
-                shape = innerCorners,
-                resources = resources,
-                effects = effects,
-                onAction = onAction,
-            )
-            BrowserMenuIconToggleItem(
-                label = resources.text(TabActionsMenuLabel.MuteDomain),
-                icon = {
-                    resources.icon(
-                        BrowserFeatureMenuAction.ToggleDomainMute,
-                        state.isDomainMuted,
-                        Modifier.size(20.dp),
+                }
+                if (BrowserMenuEntry.Pin in toolbarEntries) {
+                    BrowserMenuToolbarAction(
+                        label = resources.text(
+                            if (state.isPinned) {
+                                TabActionsMenuLabel.UnpinTab
+                            } else {
+                                TabActionsMenuLabel.PinTab
+                            },
+                        ),
+                        icon = {
+                            resources.icon(
+                                BrowserFeatureMenuAction.TogglePinned,
+                                state.isPinned,
+                                Modifier.size(22.dp),
+                            )
+                        },
+                        accessibilityLabel = resources.text(
+                            if (state.isPinned) {
+                                TabActionsMenuLabel.UnpinTab
+                            } else {
+                                TabActionsMenuLabel.PinTab
+                            },
+                        ),
+                        selected = state.isPinned,
+                        horizontalContent = !compactToolbar,
+                        onClick = onTogglePinned,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(TabActionsMenuTestTags.Pin),
+                        containerColor = effects.containerColor(
+                            if (state.isPinned) {
+                                colors.primaryContainer
+                            } else {
+                                colors.surfaceContainerHighest
+                            },
+                        ),
                     )
-                },
-                checked = state.isDomainMuted,
-                enabled = state.canToggleDomainMute,
-                onCheckedChange = onDomainMutedChange,
-                modifier = Modifier.testTag(TabActionsMenuTestTags.DomainMute),
-                shape = lastItemShape,
-                containerColor = effects.containerColor(colors.surfaceContainer),
-            )
+                }
+            }
         }
 
-        extensionContent()
-
-        Spacer(Modifier.height(8.dp))
-        Column(
-            modifier = Modifier.testTag(TabActionsMenuTestTags.CandyGroup),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            TabActionsRow(
-                label = TabActionsMenuLabel.CandyTrail,
-                action = BrowserFeatureMenuAction.OpenCandyTrail,
-                enabled = state.canOpenCandyTrail,
-                shape = firstItemShape,
-                resources = resources,
-                effects = effects,
-                containerColor = colors.tertiaryContainer,
-                contentColor = colors.onTertiaryContainer,
-                modifier = Modifier.testTag(TabActionsMenuTestTags.Trail),
-                onAction = onAction,
+        if (pageEntries.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = resources.text(TabActionsMenuLabel.PageGroup),
+                modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = colors.primary,
+                fontWeight = FontWeight.SemiBold,
             )
-            TabActionsRow(
-                label = TabActionsMenuLabel.AddSiteCapsule,
-                action = BrowserFeatureMenuAction.AddSiteCapsule,
-                enabled = state.canAddSiteCapsule,
-                shape = innerCorners,
-                resources = resources,
-                effects = effects,
-                containerColor = colors.tertiaryContainer,
-                contentColor = colors.onTertiaryContainer,
-                onAction = onAction,
-            )
-            TabActionsRow(
-                label = TabActionsMenuLabel.Summarize,
-                action = BrowserFeatureMenuAction.Summarize,
-                enabled = state.canSummarize,
-                shape = innerCorners,
-                resources = resources,
-                effects = effects,
-                containerColor = colors.tertiaryContainer,
-                contentColor = colors.onTertiaryContainer,
-                onAction = onAction,
-            )
-            TabActionsRow(
-                label = TabActionsMenuLabel.Snooze,
-                action = BrowserFeatureMenuAction.SnoozeTab,
-                enabled = state.canSnooze,
-                shape = lastItemShape,
-                resources = resources,
-                effects = effects,
-                containerColor = colors.tertiaryContainer,
-                contentColor = colors.onTertiaryContainer,
-                supportingText = if (state.canSnooze) {
-                    null
-                } else {
-                    resources.text(TabActionsMenuLabel.SnoozeUnavailablePrivate)
-                },
-                modifier = Modifier.testTag(TabActionsMenuTestTags.Snooze),
-                onAction = onAction,
-            )
+            Column(
+                modifier = Modifier.testTag(TabActionsMenuTestTags.PageGroup),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                pageEntries.forEachIndexed { index, entry ->
+                    val shape = itemShape(index, pageEntries.lastIndex)
+                    when (entry) {
+                        BrowserMenuEntry.Share -> TabActionsRow(
+                            label = TabActionsMenuLabel.Share,
+                            action = BrowserFeatureMenuAction.Share,
+                            enabled = state.canUsePageActions,
+                            shape = shape,
+                            resources = resources,
+                            effects = effects,
+                            onAction = onAction,
+                        )
+                        BrowserMenuEntry.OpenExternal -> TabActionsRow(
+                            label = TabActionsMenuLabel.OpenExternal,
+                            action = BrowserFeatureMenuAction.OpenExternal,
+                            enabled = state.canUsePageActions,
+                            shape = shape,
+                            resources = resources,
+                            effects = effects,
+                            onAction = onAction,
+                        )
+                        BrowserMenuEntry.Print -> TabActionsRow(
+                            label = TabActionsMenuLabel.Print,
+                            action = BrowserFeatureMenuAction.Print,
+                            enabled = state.canUsePageActions,
+                            shape = shape,
+                            resources = resources,
+                            effects = effects,
+                            onAction = onAction,
+                        )
+                        BrowserMenuEntry.DomainMute -> BrowserMenuIconToggleItem(
+                            label = resources.text(TabActionsMenuLabel.MuteDomain),
+                            icon = {
+                                resources.icon(
+                                    BrowserFeatureMenuAction.ToggleDomainMute,
+                                    state.isDomainMuted,
+                                    Modifier.size(20.dp),
+                                )
+                            },
+                            checked = state.isDomainMuted,
+                            enabled = state.canToggleDomainMute,
+                            onCheckedChange = onDomainMutedChange,
+                            modifier = Modifier.testTag(TabActionsMenuTestTags.DomainMute),
+                            shape = shape,
+                            containerColor = effects.containerColor(colors.surfaceContainer),
+                        )
+                        else -> Unit
+                    }
+                }
+            }
         }
-        if (state.profiles.isNotEmpty()) {
+
+        if (isVisible(BrowserMenuEntry.FirefoxPageActions)) extensionContent()
+
+        if (candyEntries.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Column(
+                modifier = Modifier.testTag(TabActionsMenuTestTags.CandyGroup),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                candyEntries.forEachIndexed { index, entry ->
+                    val label: TabActionsMenuLabel
+                    val action: BrowserFeatureMenuAction
+                    val enabled: Boolean
+                    val testModifier: Modifier
+                    val supportingText: String?
+                    when (entry) {
+                        BrowserMenuEntry.CandyTrail -> {
+                            label = TabActionsMenuLabel.CandyTrail
+                            action = BrowserFeatureMenuAction.OpenCandyTrail
+                            enabled = state.canOpenCandyTrail
+                            testModifier = Modifier.testTag(TabActionsMenuTestTags.Trail)
+                            supportingText = null
+                        }
+                        BrowserMenuEntry.AddSiteCapsule -> {
+                            label = TabActionsMenuLabel.AddSiteCapsule
+                            action = BrowserFeatureMenuAction.AddSiteCapsule
+                            enabled = state.canAddSiteCapsule
+                            testModifier = Modifier
+                            supportingText = null
+                        }
+                        BrowserMenuEntry.Summarize -> {
+                            label = TabActionsMenuLabel.Summarize
+                            action = BrowserFeatureMenuAction.Summarize
+                            enabled = state.canSummarize
+                            testModifier = Modifier
+                            supportingText = null
+                        }
+                        BrowserMenuEntry.Snooze -> {
+                            label = TabActionsMenuLabel.Snooze
+                            action = BrowserFeatureMenuAction.SnoozeTab
+                            enabled = state.canSnooze
+                            testModifier = Modifier.testTag(TabActionsMenuTestTags.Snooze)
+                            supportingText = if (state.canSnooze) {
+                                null
+                            } else {
+                                resources.text(TabActionsMenuLabel.SnoozeUnavailablePrivate)
+                            }
+                        }
+                        else -> return@forEachIndexed
+                    }
+                    TabActionsRow(
+                        label = label,
+                        action = action,
+                        enabled = enabled,
+                        shape = itemShape(index, candyEntries.lastIndex),
+                        resources = resources,
+                        effects = effects,
+                        containerColor = colors.tertiaryContainer,
+                        contentColor = colors.onTertiaryContainer,
+                        supportingText = supportingText,
+                        modifier = testModifier,
+                        onAction = onAction,
+                    )
+                }
+            }
+        }
+        if (state.profiles.isNotEmpty() && isVisible(BrowserMenuEntry.MoveToProfile)) {
             Spacer(Modifier.height(12.dp))
             Text(
                 resources.text(TabActionsMenuLabel.MoveToProfile),
@@ -541,29 +609,31 @@ fun TabActionsMenuContent(
                 }
             }
         }
-        profileContent()
-        Spacer(Modifier.height(8.dp))
-        BrowserMenuRow(
-            label = resources.text(TabActionsMenuLabel.CloseAllTabs),
-            icon = {
-                resources.icon(
-                    BrowserFeatureMenuAction.CloseTab,
-                    false,
-                    Modifier.size(20.dp),
-                )
-            },
-            enabled = state.canCloseAllTabs,
-            shape = outerCorners,
-            containerColor = effects.containerColor(colors.errorContainer),
-            contentColor = colors.onErrorContainer,
-            supportingText = if (state.hasPinnedTabs) {
-                resources.text(TabActionsMenuLabel.CloseAllTabsPinnedSupportingText)
-            } else {
-                null
-            },
-            modifier = Modifier.testTag(TabActionsMenuTestTags.CloseAllTabs),
-            onClick = onCloseAllTabs,
-        )
+        if (isVisible(BrowserMenuEntry.TabStacks)) profileContent()
+        if (isVisible(BrowserMenuEntry.CloseAllTabs)) {
+            Spacer(Modifier.height(8.dp))
+            BrowserMenuRow(
+                label = resources.text(TabActionsMenuLabel.CloseAllTabs),
+                icon = {
+                    resources.icon(
+                        BrowserFeatureMenuAction.CloseTab,
+                        false,
+                        Modifier.size(20.dp),
+                    )
+                },
+                enabled = state.canCloseAllTabs,
+                shape = outerCorners,
+                containerColor = effects.containerColor(colors.errorContainer),
+                contentColor = colors.onErrorContainer,
+                supportingText = if (state.hasPinnedTabs) {
+                    resources.text(TabActionsMenuLabel.CloseAllTabsPinnedSupportingText)
+                } else {
+                    null
+                },
+                modifier = Modifier.testTag(TabActionsMenuTestTags.CloseAllTabs),
+                onClick = onCloseAllTabs,
+            )
+        }
     }
 }
 

@@ -95,6 +95,7 @@ import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.ui.AddressBarFieldContent
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
@@ -178,6 +179,7 @@ internal fun ExpandedBottomBarContent(
     onDownloads: () -> Unit,
     onHistory: () -> Unit,
     firefoxExtensionActions: List<GeckoExtensionActionState>,
+    menuLayout: BrowserMenuLayout,
     onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
@@ -552,6 +554,7 @@ internal fun ExpandedBottomBarContent(
                                 onDownloads = onDownloads,
                                 onHistory = onHistory,
                                 firefoxExtensionActions = firefoxExtensionActions,
+                                menuLayout = menuLayout,
                                 onFirefoxExtensionAction = onFirefoxExtensionAction,
                                 onSettings = onSettings,
                             )

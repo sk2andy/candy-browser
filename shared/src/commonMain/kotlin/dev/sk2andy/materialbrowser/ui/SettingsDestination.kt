@@ -5,6 +5,7 @@ enum class SettingsDestination {
     Search,
     TabsAndGestures,
     AddressBarActions,
+    MenuActions,
     LinkPeekActions,
     Appearance,
     Browser,

@@ -1159,4 +1159,17 @@
         <item quantity="one">%1$d fehlgeschlagene Prüfung</item>
         <item quantity="other">%1$d fehlgeschlagene Prüfungen</item>
     </plurals>
+    <string name="settings_menu_actions_title">Menü-Aktionen</string>
+    <string name="settings_menu_actions_summary">Festlegen, welche Aktionen im Tab- und Tab-Switcher-Menü erscheinen.</string>
+    <string name="settings_menu_actions_intro">Lege für jede Aktion fest, wo sie erscheint. Kontextgebundene Aktionen bieten nur Orte an, an denen sie funktionieren.</string>
+    <string name="settings_menu_section_toolbar">Werkzeugleiste</string>
+    <string name="settings_menu_section_extensions">Erweiterungen</string>
+    <string name="settings_menu_section_candy">Candy</string>
+    <string name="settings_menu_section_tab_switcher">Tab-Switcher</string>
+    <string name="settings_menu_location_nowhere">Nirgends</string>
+    <string name="settings_menu_location_tab">Tab-Menü</string>
+    <string name="settings_menu_location_tab_switcher">Tab-Switcher-Menü</string>
+    <string name="settings_menu_location_both">Beide Menüs</string>
+    <string name="settings_menu_entry_topping_commands">Topping-Befehle</string>
+    <string name="settings_menu_entry_firefox_page_actions">Firefox-Seitenaktionen</string>
 </resources>
