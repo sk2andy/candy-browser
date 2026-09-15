@@ -584,6 +584,8 @@ class BrowserController(
         private set
     var isStartupAnimationEnabled by mutableStateOf(true)
         private set
+    var startupAddressFocusMode by mutableStateOf(StartupAddressFocusMode.Default)
+        private set
     var isHttpPasswordAutofillEnabled by mutableStateOf(false)
         private set
     var isFavoriteLaunchAnimationEnabled by mutableStateOf(true)
@@ -1992,6 +1994,7 @@ class BrowserController(
         addressBarActionLayout = store.loadAddressBarActionLayout()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         isStartupAnimationEnabled = store.loadStartupAnimationEnabled()
+        startupAddressFocusMode = store.loadStartupAddressFocusMode()
         isHttpPasswordAutofillEnabled = store.loadHttpPasswordAutofillEnabled()
         isFavoriteLaunchAnimationEnabled = store.loadFavoriteLaunchAnimationEnabled()
         favoriteAnimationSpeed = store.loadFavoriteAnimationSpeed()
@@ -2454,6 +2457,15 @@ class BrowserController(
     fun onWindowInsetsChanged(insets: WindowInsetsCompat) {
         val previousInsets = lastWindowInsets
         lastWindowInsets = insets
+        if (
+            AddressBarAutoDockRules.shouldProbeAfterImeChange(
+                wasImeVisible = previousInsets?.isVisible(WindowInsetsCompat.Type.ime()) == true,
+                isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime()),
+                browserChromeOwnsIme = browserChromeOwnsIme,
+            )
+        ) {
+            scheduleAddressBarAutoDockProbe(selectedTab.id, selectedTab.url)
+        }
         if (
             browserChromeOwnsIme &&
             previousInsets != null &&
@@ -7295,6 +7307,12 @@ class BrowserController(
         if (isStartupAnimationEnabled == enabled) return
         isStartupAnimationEnabled = enabled
         store.saveStartupAnimationEnabled(enabled)
+    }
+
+    fun updateStartupAddressFocusMode(mode: StartupAddressFocusMode) {
+        if (startupAddressFocusMode == mode) return
+        startupAddressFocusMode = mode
+        store.saveStartupAddressFocusMode(mode)
     }
 
     fun updateHttpPasswordAutofillEnabled(enabled: Boolean) {

@@ -418,6 +418,7 @@ class MainActivity : AppCompatActivity() {
             isColdStart = savedInstanceState == null,
             isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
             isStartupAnimationEnabled = browserController.isStartupAnimationEnabled,
+            startupAddressFocusMode = browserController.startupAddressFocusMode,
             isOnboardingRequired = onboardingRequired,
             isReleaseNotesRequired = releaseNotesRequired,
         )
@@ -465,6 +466,9 @@ class MainActivity : AppCompatActivity() {
                     if (splashVisible) {
                         delay(SPLASH_DURATION_MILLIS)
                         splashVisible = false
+                        if (startupPresentation.openAddressEditor) {
+                            launcherAddressEditorRequestId++
+                        }
                     }
                 }
                 LaunchedEffect(launcherShortcutState) {
@@ -587,7 +591,8 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             null
                         },
-                        openAddressEditorOnLaunch = startupPresentation.openAddressEditor,
+                        openAddressEditorOnLaunch = startupPresentation.openAddressEditor &&
+                            !startupPresentation.showSplash,
                         launcherAddressEditorRequestId = launcherAddressEditorRequestId,
                         hardwareTabChangeRequestId = hardwareTabChangeRequestId,
                     )
@@ -735,6 +740,7 @@ class MainActivity : AppCompatActivity() {
             StartupPresentationRules.shouldOpenAddressEditor(
                 isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
                 isStartupAnimationEnabled = browserController.isStartupAnimationEnabled,
+                startupAddressFocusMode = browserController.startupAddressFocusMode,
                 isOnboardingRequired = onboardingVisible,
                 isReleaseNotesRequired = releaseNotesVisible,
             )

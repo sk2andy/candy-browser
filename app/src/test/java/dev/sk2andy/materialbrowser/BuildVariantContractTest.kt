@@ -18,12 +18,14 @@ class BuildVariantContractTest {
     @Test
     fun `distribution capabilities match flavor`() {
         val expectedFoss = when (BuildConfig.FLAVOR) {
-            "full" -> false
+            "full", "systemwebview" -> false
             "foss" -> true
             else -> error("Unknown flavor: ${BuildConfig.FLAVOR}")
         }
+        val expectedSystemWebViewOnly = BuildConfig.FLAVOR == "systemwebview"
 
         assertEquals(expectedFoss, BuildConfig.FOSS_DISTRIBUTION)
+        assertEquals(expectedSystemWebViewOnly, BuildConfig.SYSTEM_WEBVIEW_ONLY)
     }
 
     @Test
@@ -31,6 +33,7 @@ class BuildVariantContractTest {
         val flavorSuffix = when (BuildConfig.FLAVOR) {
             "full" -> ""
             "foss" -> ".foss"
+            "systemwebview" -> ".systemwebview"
             else -> error("Unknown flavor: ${BuildConfig.FLAVOR}")
         }
         val buildTypeSuffix = when (BuildConfig.BUILD_TYPE) {

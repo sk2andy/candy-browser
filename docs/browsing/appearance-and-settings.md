@@ -30,6 +30,7 @@
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
 | Startup animation | Off, on | On |
+| Address focus on launch | When startup animation is off, every launch, never | When startup animation is off |
 | Open home page on startup | Off, on | Off |
 | Long-press link action | Link Peek, copy, share, download, regular foreground/background tab, private foreground/background tab | Link Peek |
 | Candy Recall | Off, on | Off |
@@ -89,9 +90,12 @@ Frosted exposes three persisted controls while selected:
 
 - Appearance settings are global and persist across normal and private browsing.
 - Startup animation is global and enabled by default. Disabling it skips Candy's custom animation
-  on a cold launcher start and opens the address editor immediately on cold and warm launcher
-  starts. External launches, activity recreation, and first-run onboarding do not force the editor
-  open.
+  on a cold launcher start. Address focus on launch is global and preserves the previous behavior
+  by default: cold and warm launcher starts open the address editor only while the startup animation
+  is disabled. Users can instead focus it on every launcher start (after the animation on cold
+  starts) or never focus it automatically. External launches, activity recreation, first-run
+  onboarding, and release notes do not force the editor open. Explicit address-bar taps, hardware
+  focus actions, and new-tab actions still focus the editor in every mode.
 - Open home page on startup is global and disabled by default. When enabled, normal cold and warm
   launcher opens select a fresh blank tab while keeping restored tabs. An existing fresh regular
   blank tab in the active profile is reused. External links, launcher shortcuts, Site Capsules, and

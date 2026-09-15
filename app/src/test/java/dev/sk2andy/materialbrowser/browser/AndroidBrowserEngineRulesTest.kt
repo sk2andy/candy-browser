@@ -15,6 +15,29 @@ class AndroidBrowserEngineRulesTest {
     }
 
     @Test
+    fun `system WebView-only build ignores persisted Gecko selection`() {
+        assertEquals(
+            AndroidBrowserEngineKind.SystemWebView,
+            AndroidBrowserEngineRules.persistedKind(
+                stableId = AndroidBrowserEngineKind.GeckoView.stableId,
+                systemWebViewOnly = true,
+            ),
+        )
+        assertFalse(
+            AndroidBrowserEngineRules.canSelect(
+                kind = AndroidBrowserEngineKind.GeckoView,
+                systemWebViewOnly = true,
+            ),
+        )
+        assertTrue(
+            AndroidBrowserEngineRules.canSelect(
+                kind = AndroidBrowserEngineKind.SystemWebView,
+                systemWebViewOnly = true,
+            ),
+        )
+    }
+
+    @Test
     fun `system WebView exposes toppings without Firefox extensions`() {
         val capabilities = AndroidBrowserEngineRules.capabilities(
             AndroidBrowserEngineKind.SystemWebView,

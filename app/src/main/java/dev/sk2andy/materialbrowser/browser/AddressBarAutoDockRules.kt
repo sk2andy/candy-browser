@@ -8,6 +8,12 @@ internal data class BrowserViewportRect(
 )
 
 internal object AddressBarAutoDockRules {
+    fun shouldProbeAfterImeChange(
+        wasImeVisible: Boolean,
+        isImeVisible: Boolean,
+        browserChromeOwnsIme: Boolean,
+    ): Boolean = !browserChromeOwnsIme && !wasImeVisible && isImeVisible
+
     fun viewportRect(
         leftPx: Float,
         topPx: Float,

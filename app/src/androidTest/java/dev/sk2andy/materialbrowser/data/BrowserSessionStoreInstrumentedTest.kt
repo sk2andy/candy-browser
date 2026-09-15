@@ -18,6 +18,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
@@ -305,6 +306,27 @@ class BrowserSessionStoreInstrumentedTest {
 
         store.saveStartupAnimationEnabled(true)
         assertTrue(store.loadStartupAnimationEnabled())
+    }
+
+    @Test
+    fun startupAddressFocusModeDefaultsToCurrentBehaviorAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(
+            StartupAddressFocusMode.WhenStartupAnimationDisabled,
+            store.loadStartupAddressFocusMode(),
+        )
+
+        store.saveStartupAddressFocusMode(StartupAddressFocusMode.Always)
+        assertEquals(StartupAddressFocusMode.Always, store.loadStartupAddressFocusMode())
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_STARTUP_ADDRESS_FOCUS_MODE, "unknown")
+            .commit()
+        assertEquals(
+            StartupAddressFocusMode.WhenStartupAnimationDisabled,
+            store.loadStartupAddressFocusMode(),
+        )
     }
 
     @Test

@@ -178,6 +178,7 @@ internal fun BrowserSettingsOverlay(
             isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
             isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
             isStartupAnimationEnabled = controller.isStartupAnimationEnabled,
+            startupAddressFocusMode = controller.startupAddressFocusMode,
             isHttpPasswordAutofillEnabled = controller.isHttpPasswordAutofillEnabled,
             isHttpPasswordAutofillSupported = controller.isHttpPasswordAutofillSupported,
             isFavoriteLaunchAnimationEnabled =
@@ -254,6 +255,8 @@ internal fun BrowserSettingsOverlay(
                 controller::updateFullImmersiveModeEnabled,
             onStartupAnimationEnabledChanged =
                 controller::updateStartupAnimationEnabled,
+            onStartupAddressFocusModeChanged =
+                controller::updateStartupAddressFocusMode,
             onHttpPasswordAutofillEnabledChanged =
                 controller::updateHttpPasswordAutofillEnabled,
             onFavoriteLaunchAnimationEnabledChanged =

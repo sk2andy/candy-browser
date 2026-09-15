@@ -16,6 +16,28 @@ class AppUpdateRulesTest {
             AppReleaseChannel.UserCa,
             AppReleaseChannel.forUserCertificateTrust(enabled = true),
         )
+        assertEquals(
+            AppReleaseChannel.SystemWebView,
+            AppReleaseChannel.forBuild(
+                systemWebViewOnly = true,
+                trustsUserCertificates = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `keeps System WebView installs on System WebView release channel`() {
+        val standardAsset = asset("v0.9", suffix = "release")
+        val systemWebViewAsset = asset("v0.9", suffix = "systemwebview-release")
+
+        val update = AppUpdateRules.findAvailableUpdate(
+            currentVersionName = "0.8",
+            release = release("v0.9", assets = listOf(standardAsset, systemWebViewAsset)),
+            channel = AppReleaseChannel.SystemWebView,
+            supportedAbis = listOf("arm64-v8a"),
+        )
+
+        assertEquals("CandyBrowser-v0.9-systemwebview-release.apk", update?.fileName)
     }
 
     @Test
