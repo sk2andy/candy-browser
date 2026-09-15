@@ -95,6 +95,8 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
@@ -189,7 +191,8 @@ internal fun BrowserBottomBar(
     onFavorites: () -> Unit,
     onDownloads: () -> Unit,
     onHistory: () -> Unit,
-    onOpenFirefoxExtensions: (() -> Unit)?,
+    firefoxExtensionActions: List<GeckoExtensionActionState>,
+    onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     permissionActivityVisible: Boolean,
@@ -215,7 +218,7 @@ internal fun BrowserBottomBar(
     onOverviewGestureProgress: (Float) -> Unit,
     onOverviewGestureStarted: () -> Unit,
     onOverviewGestureCancelled: () -> Unit,
-    onBarPositioned: (topInRootPx: Float, topInWindowPx: Int) -> Unit,
+    onBarPositioned: (boundsInRoot: Rect, topInWindowPx: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val docked = dockState.placement != null
@@ -402,8 +405,9 @@ internal fun BrowserBottomBar(
                         },
                     )
                     .onGloballyPositioned { coordinates ->
+                        val boundsInRoot = coordinates.boundsInRoot()
                         onBarPositioned(
-                            coordinates.boundsInRoot().top,
+                            boundsInRoot,
                             coordinates.boundsInWindow().top.roundToInt(),
                         )
                     }
@@ -561,7 +565,8 @@ internal fun BrowserBottomBar(
                                 onFavorites = onFavorites,
                                 onDownloads = onDownloads,
                                 onHistory = onHistory,
-                                onOpenFirefoxExtensions = onOpenFirefoxExtensions,
+                                firefoxExtensionActions = firefoxExtensionActions,
+                                onFirefoxExtensionAction = onFirefoxExtensionAction,
                                 onSettings = onSettings,
                                 onPrivacyXRay = onPrivacyXRay,
                                 permissionActivityVisible = permissionActivityVisible,

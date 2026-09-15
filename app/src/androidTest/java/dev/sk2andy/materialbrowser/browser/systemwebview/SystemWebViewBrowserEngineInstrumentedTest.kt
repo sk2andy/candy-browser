@@ -12,8 +12,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.PageTranslationContentOutcome
 import dev.sk2andy.materialbrowser.browser.PageTranslationRecoveryRules
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionScript
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -248,6 +250,51 @@ class SystemWebViewBrowserEngineInstrumentedTest {
         assertEquals(PageTranslationContentOutcome.Visible, extractContentOutcome(webView))
     }
 
+    @Test
+    fun textInputOcclusionProbeRequiresVisibleEditorAndDocumentBottom() {
+        lateinit var browserController: BrowserController
+        lateinit var webView: WebView
+        composeRule.runOnIdle {
+            val created = createControllerWithView()
+            browserController = created.first
+            webView = created.second
+            controller = browserController
+            webView.loadDataWithBaseURL(
+                "https://input-probe.test/",
+                """
+                    <html>
+                      <head><title>Input probe ready</title></head>
+                      <body style="margin:0;height:100vh">
+                        <div id="editor"></div>
+                        <script>
+                          const root = document.getElementById('editor').attachShadow({mode:'open'});
+                          root.innerHTML = '<textarea style="position:fixed;left:10%;right:10%;bottom:20px;height:80px"></textarea>';
+                        </script>
+                      </body>
+                    </html>
+                """.trimIndent(),
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "Input probe ready"
+        }
+        assertTrue(evaluateTextInputOcclusion(webView))
+
+        composeRule.runOnIdle {
+            webView.evaluateJavascript(
+                "document.body.style.height='200vh';document.title='Scrollable input probe';",
+                null,
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "Scrollable input probe"
+        }
+        assertFalse(evaluateTextInputOcclusion(webView))
+    }
+
     private fun extractContentOutcome(webView: WebView): PageTranslationContentOutcome {
         val result = AtomicReference<String?>()
         val completed = CountDownLatch(1)
@@ -259,6 +306,28 @@ class SystemWebViewBrowserEngineInstrumentedTest {
         }
         assertTrue(completed.await(5, TimeUnit.SECONDS))
         return PageTranslationRecoveryRules.contentOutcome(result.get())
+    }
+
+    private fun evaluateTextInputOcclusion(webView: WebView): Boolean {
+        val result = AtomicReference<String?>()
+        val completed = CountDownLatch(1)
+        composeRule.runOnIdle {
+            webView.evaluateJavascript(
+                TextInputOcclusionScript.javascript(
+                    BrowserViewportRect(
+                        leftFraction = 0.05f,
+                        topFraction = 0.8f,
+                        rightFraction = 0.95f,
+                        bottomFraction = 0.98f,
+                    ),
+                ),
+            ) { value ->
+                result.set(value)
+                completed.countDown()
+            }
+        }
+        assertTrue(completed.await(5, TimeUnit.SECONDS))
+        return result.get() == "true"
     }
 
     private fun createControllerWithView(): Pair<BrowserController, WebView> {

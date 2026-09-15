@@ -378,6 +378,43 @@ function probeDom(message) {
   }, { frameId: 0 }).then(postResult, () => postResult(null));
 }
 
+function normalizedViewportRect(value) {
+  const values = [value?.left, value?.top, value?.right, value?.bottom];
+  if (!values.every(Number.isFinite) || value.left < 0 || value.top < 0 ||
+      value.right > 1 || value.bottom > 1 ||
+      value.right <= value.left || value.bottom <= value.top) return null;
+  return { left: value.left, top: value.top, right: value.right, bottom: value.bottom };
+}
+
+function probeTextInputOcclusion(message) {
+  const policy = policiesByToken.get(message.token);
+  const viewportRect = normalizedViewportRect(message.viewportRect);
+  if (!policy || policy.revision !== message.revision ||
+      policy.navigationGeneration !== message.navigationGeneration ||
+      !Number.isSafeInteger(message.requestId) || !viewportRect) return;
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) return;
+  const postResult = (occluded) => {
+    const current = policiesByToken.get(message.token);
+    if (!nativePort || current?.revision !== message.revision ||
+        current.navigationGeneration !== message.navigationGeneration ||
+        tokenByTab.get(tabEntry[0]) !== message.token) return;
+    nativePort.postMessage({
+      type: "text-input-occlusion-result",
+      protocolVersion: PROTOCOL_VERSION,
+      token: message.token,
+      revision: message.revision,
+      navigationGeneration: message.navigationGeneration,
+      requestId: message.requestId,
+      occluded: occluded === true,
+    });
+  };
+  browser.tabs.sendMessage(tabEntry[0], {
+    type: "text-input-occlusion-probe",
+    viewportRect,
+  }, { frameId: 0 }).then(postResult, () => postResult(false));
+}
+
 function updatePictureInPicturePlayback(message) {
   const policy = policiesByToken.get(message.token);
   if (!policy || policy.revision !== message.revision || typeof message.expected !== "boolean") {
@@ -508,6 +545,11 @@ function connectNative() {
       for (const [tabId, token] of tokenByTab) if (token === message.token) tokenByTab.delete(tabId);
     } else if (message.type === "reader-extract" && typeof message.token === "string") {
       extractReader(message);
+    } else if (
+      message.type === "text-input-occlusion-probe" &&
+      typeof message.token === "string"
+    ) {
+      probeTextInputOcclusion(message);
     } else if (message.type === "dom-probe" && typeof message.token === "string") {
       probeDom(message);
     } else if (

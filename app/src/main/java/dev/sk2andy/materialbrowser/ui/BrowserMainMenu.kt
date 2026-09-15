@@ -4,6 +4,10 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -16,10 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuAction
-import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuCapabilities
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuItem
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuLabelKey
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuRules
@@ -249,7 +254,8 @@ internal fun BrowserMainMenu(
     onFavorites: () -> Unit = {},
     onDownloads: () -> Unit = {},
     onHistory: () -> Unit,
-    onOpenFirefoxExtensions: (() -> Unit)? = null,
+    firefoxExtensionActions: List<GeckoExtensionActionState> = emptyList(),
+    onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit = {},
     onSettings: () -> Unit,
 ) {
     val configuration = LocalConfiguration.current
@@ -285,12 +291,12 @@ internal fun BrowserMainMenu(
         overflowPageActions = overflowAddressBarActions.mapNotNull(AddressBarAction::sharedMenuAction),
         toppingCommands = userScriptMenuCommands.map(UserScriptMenuCommand::sharedMenuCommand),
     )
-    val items = BrowserFeatureMenuRules.items(
-        state = menuState,
-        capabilities = BrowserFeatureMenuCapabilities(
-            supportsFirefoxExtensions = onOpenFirefoxExtensions != null,
-        ),
-    )
+    val items = BrowserFeatureMenuRules.items(state = menuState)
+    val extensionSnapshot = firefoxExtensionActions.toList()
+    var presentedExtensionActions by remember { mutableStateOf(extensionSnapshot) }
+    if (expanded && presentedExtensionActions != extensionSnapshot) {
+        presentedExtensionActions = extensionSnapshot
+    }
     SharedBrowserMainMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
@@ -300,6 +306,14 @@ internal fun BrowserMainMenu(
         screenSize = DpSize(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp),
         resources = AndroidBrowserMainMenuResources,
         effects = rememberAndroidBrowserMainMenuEffects(backdropSource),
+        extensionContent = { commit ->
+            FirefoxExtensionMenuSection(
+                actions = presentedExtensionActions,
+                onAction = { actionKey ->
+                    commit { onFirefoxExtensionAction(actionKey) }
+                },
+            )
+        },
         onAction = { item ->
             when (item.action) {
                 BrowserFeatureMenuAction.Back -> onBack()
@@ -343,8 +357,7 @@ internal fun BrowserMainMenu(
                 BrowserFeatureMenuAction.OpenFavorites -> onFavorites()
                 BrowserFeatureMenuAction.OpenDownloads -> onDownloads()
                 BrowserFeatureMenuAction.OpenHistory -> onHistory()
-                BrowserFeatureMenuAction.OpenFirefoxExtensions ->
-                    onOpenFirefoxExtensions?.invoke()
+                BrowserFeatureMenuAction.OpenFirefoxExtensions -> Unit
                 BrowserFeatureMenuAction.OpenSettings -> onSettings()
                 BrowserFeatureMenuAction.InvokeToppingCommand -> {
                     userScriptMenuCommands.firstOrNull { command ->

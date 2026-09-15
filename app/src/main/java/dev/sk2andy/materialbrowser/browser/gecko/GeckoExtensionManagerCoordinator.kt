@@ -15,17 +15,10 @@ internal enum class GeckoExtensionManagerMessage {
     ActionFailed,
 }
 
-internal enum class GeckoExtensionManagerPresentation {
-    Management,
-    Options,
-}
-
 internal data class GeckoExtensionManagerState(
     val snapshot: GeckoExtensionSnapshot = GeckoExtensionSnapshot(emptyList()),
     val managementContext: GeckoExtensionManagementContext =
         GeckoExtensionManagementContext(profileId = DEFAULT_PROFILE_ID, isPrivate = false),
-    val presentation: GeckoExtensionManagerPresentation =
-        GeckoExtensionManagerPresentation.Management,
     val busy: Boolean = false,
     val message: GeckoExtensionManagerMessage? = null,
     val permissionRequest: GeckoExtensionPermissionRequest? = null,
@@ -59,11 +52,7 @@ internal class GeckoExtensionManagerCoordinator(
     var state by mutableStateOf(GeckoExtensionManagerState())
         private set
 
-    fun open(
-        context: GeckoExtensionManagementContext,
-        presentation: GeckoExtensionManagerPresentation =
-            GeckoExtensionManagerPresentation.Management,
-    ): Job? {
+    fun open(context: GeckoExtensionManagementContext): Job? {
         visible = false
         stateGeneration++
         denyPendingPermission()
@@ -71,7 +60,6 @@ internal class GeckoExtensionManagerCoordinator(
         state = state.copy(
             snapshot = GeckoExtensionSnapshot(emptyList()),
             managementContext = context,
-            presentation = presentation,
             busy = false,
             message = null,
             permissionRequest = null,
@@ -86,8 +74,7 @@ internal class GeckoExtensionManagerCoordinator(
     ): Job? {
         if (
             !visible ||
-            !state.canManage ||
-            state.presentation != GeckoExtensionManagerPresentation.Options
+            !state.canManage
         ) {
             return null
         }

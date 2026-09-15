@@ -23,7 +23,9 @@ import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -370,6 +372,41 @@ class TabOverviewReorderInstrumentedTest {
         composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(stackedTabId)).assertIsDisplayed()
         composeRule.onNodeWithTag(TabOverviewChromeTestTags.More).performClick()
         composeRule.onNodeWithTag(SnoozeTestTags.TabActions).assertIsDisplayed()
+    }
+
+    @Test
+    fun overflowMenuCreatesStack() {
+        lateinit var browserController: BrowserController
+        lateinit var selectedTabId: String
+        lateinit var secondTabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            selectedTabId = browserController.selectedTabId
+            secondTabId = requireNotNull(
+                browserController.createBackgroundTab("https://stack-candidate.example"),
+            )
+            browserController.updateTabOverviewMode(TabOverviewMode.List)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.More).performClick()
+        composeRule.onNodeWithTag(TabStackTestTags.Create)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(TabStackTestTags.Dialog).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.Name).performTextInput("Research")
+        composeRule.onNodeWithTag(TabStackTestTags.candidate(secondTabId)).performClick()
+        composeRule.onNodeWithTag(TabStackTestTags.DialogConfirm).performClick()
+
+        composeRule.runOnIdle {
+            val stack = browserController.activeTabStacks.single()
+            assertEquals("Research", stack.name)
+            assertEquals(setOf(selectedTabId, secondTabId), stack.tabIds.toSet())
+        }
+        composeRule.onNodeWithTag(TabStackTestTags.Dialog).assertDoesNotExist()
     }
 
     @Test

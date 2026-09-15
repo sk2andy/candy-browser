@@ -9,6 +9,7 @@ import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
@@ -146,6 +147,11 @@ internal interface AndroidBrowserEngineSessionPort :
     fun historyUrlAtOffset(offset: Int): String?
 
     fun extractPageForReader(onComplete: (String?) -> Unit)
+
+    fun probeTextInputOcclusion(
+        viewportRect: BrowserViewportRect,
+        onComplete: (Boolean) -> Unit,
+    ) = onComplete(false)
 
     fun updatePrivacyPolicy(
         policy: GeckoPrivacyPolicy,
@@ -591,6 +597,17 @@ internal class GeckoBrowserEngineSessionAdapter(
             return
         }
         session.extractPageForReader(onComplete)
+    }
+
+    override fun probeTextInputOcclusion(
+        viewportRect: BrowserViewportRect,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        if (closed) {
+            onComplete(false)
+            return
+        }
+        session.probeTextInputOcclusion(viewportRect, onComplete)
     }
 
     @UiThread

@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -224,6 +225,7 @@ fun BrowserMainMenu(
     effects: BrowserMainMenuEffects = DefaultBrowserMainMenuEffects,
     morphAnchorSize: DpSize? = null,
     morphProgress: Float? = null,
+    extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
     val style = effects.style
@@ -323,12 +325,14 @@ fun BrowserMainMenu(
     LaunchedEffect(expanded, popupVisible) {
         effects.popupState(expanded, popupVisible)
     }
-    fun dismissThen(item: BrowserFeatureMenuItem) {
+    fun commit(action: () -> Unit) {
         if (!expanded || actionCommitted) return
         actionCommitted = true
         onDismissRequest()
-        onAction(item)
+        action()
     }
+
+    fun dismissThen(item: BrowserFeatureMenuItem) = commit { onAction(item) }
 
     if (popupVisible) {
         val currentMorphProgress = morphProgress ?: exitProgress.value
@@ -407,6 +411,8 @@ fun BrowserMainMenu(
                     lastItemShape = lastItemShape,
                     onCommand = ::dismissThen,
                     onToggle = onAction,
+                    extensionContent = extensionContent,
+                    onExtensionCommit = ::commit,
                     modifier = Modifier
                         .verticalScroll(menuScrollState)
                         .padding(
@@ -430,6 +436,8 @@ private fun BrowserMainMenuContent(
     lastItemShape: Shape,
     onCommand: (BrowserFeatureMenuItem) -> Unit,
     onToggle: (BrowserFeatureMenuItem) -> Unit,
+    extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit,
+    onExtensionCommit: (() -> Unit) -> Unit,
     modifier: Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -513,6 +521,8 @@ private fun BrowserMainMenuContent(
             contentColor = colors.onTertiaryContainer,
             modifier = Modifier.testTag(BrowserMainMenuTestTags.CandyGroup),
         )
+
+        extensionContent(onExtensionCommit)
 
         val browserItems = groupedItems[BrowserFeatureMenuSection.Browser].orEmpty()
         if (browserItems.isNotEmpty()) {

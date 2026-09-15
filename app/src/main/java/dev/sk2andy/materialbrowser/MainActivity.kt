@@ -62,7 +62,6 @@ import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinator
-import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerPresentation
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnActivityDelegate
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineProcessRestart
@@ -550,23 +549,9 @@ class MainActivity : AppCompatActivity() {
                             loadReleaseNotesContent()
                             releaseNotesVisible = releaseNotesContent != null
                         },
-                        onOpenFirefoxExtensions = if (
-                            browserController.usesGeckoEngine &&
-                            !browserController.selectedTab.isIncognito
-                        ) {
-                            {
-                                openFirefoxExtensions(
-                                    GeckoExtensionManagerPresentation.Options,
-                                )
-                            }
-                        } else {
-                            null
-                        },
                         onManageFirefoxExtensions = if (browserController.usesGeckoEngine) {
                             {
-                                openFirefoxExtensions(
-                                    GeckoExtensionManagerPresentation.Management,
-                                )
+                                openFirefoxExtensions()
                             }
                         } else {
                             null
@@ -1042,7 +1027,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun openFirefoxExtensions(presentation: GeckoExtensionManagerPresentation) {
+    private fun openFirefoxExtensions() {
         if (!::browserController.isInitialized) return
         val selectedTab = browserController.selectedTab
         val manager = firefoxExtensionManager ?: GeckoExtensionManagerCoordinator.create(
@@ -1056,7 +1041,6 @@ class MainActivity : AppCompatActivity() {
                 profileId = selectedTab.profileId,
                 isPrivate = selectedTab.isIncognito,
             ),
-            presentation = presentation,
         )
         firefoxExtensionsVisible = true
     }

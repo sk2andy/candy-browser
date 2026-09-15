@@ -410,6 +410,11 @@ browser.runtime.onMessage.addListener((message) => {
   if (self === top && message.type === "reader-extract") {
     return Promise.resolve(extractCandyReaderPayload());
   }
+  if (self === top && message.type === "text-input-occlusion-probe") {
+    return Promise.resolve(
+      globalThis.CandyTextInputOcclusion?.probe(message.viewportRect) === true,
+    );
+  }
   if (self === top && message.type === "dom-probe" &&
       globalThis.CandyContentTopInset?.domDiagnosticsEnabled?.() === true &&
       globalThis.CandyContentTopInset.policyRevision() === message.revision &&
