@@ -17,6 +17,7 @@ class IncomingBrowserIntentInstrumentedTest {
         )
 
         assertEquals("https://example.com/article", request?.url)
+        assertEquals(IncomingBrowserRequestKind.View, request?.kind)
     }
 
     @Test
@@ -30,6 +31,7 @@ class IncomingBrowserIntentInstrumentedTest {
             )
 
             assertEquals("https://example.com/shared", request?.url)
+            assertEquals(IncomingBrowserRequestKind.Share, request?.kind)
         }
     }
 

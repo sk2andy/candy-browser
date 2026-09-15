@@ -151,10 +151,13 @@ import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryResult
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.integration.DefaultBrowserRole
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
+import dev.sk2andy.materialbrowser.browser.integration.ExternalAppHandoff
+import dev.sk2andy.materialbrowser.browser.integration.ExternalAppHandoffRules
 import dev.sk2andy.materialbrowser.browser.integration.ExternalLaunchResult
 import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationGrant
 import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationGrantRules
 import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationPolicy
+import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationRollbackRules
 import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGrant
 import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGrantRules
 import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
@@ -406,6 +409,34 @@ private data class GeckoLinkPeekBinding(
     var title: String? = null,
     var progress: Int = 0,
     var isLoading: Boolean = true,
+)
+
+private data class ExternalNavigationRollback(
+    val tabId: String,
+    val session: AndroidBrowserEngineSessionPort,
+    val navigationGeneration: Int,
+    val sourceUrl: String,
+)
+
+private sealed interface ExternalAppHandoffSource {
+    data class Tab(
+        val tabId: String,
+        val profileId: String,
+        val isPrivate: Boolean,
+        val session: AndroidBrowserEngineSessionPort,
+    ) : ExternalAppHandoffSource
+
+    data class Preview(
+        val sessionId: Long,
+        val generation: Int,
+        val profileId: String,
+        val session: AndroidBrowserEngineSessionPort,
+    ) : ExternalAppHandoffSource
+}
+
+private data class PendingExternalAppHandoff(
+    val match: ExternalAppHandoff,
+    val source: ExternalAppHandoffSource,
 )
 
 class BrowserController(
@@ -839,6 +870,17 @@ class BrowserController(
         onGeckoPrivacyEvent(selectedTabId, event)
     }
 
+    @VisibleForTesting
+    internal fun dispatchExternalLinkPreviewPrivacyEventForTesting(event: GeckoPrivacyEvent) {
+        val runtime = requireNotNull(externalLinkPreviewRuntime)
+        onExternalLinkPreviewPrivacyEvent(
+            sessionId = runtime.sessionId,
+            generation = runtime.generation,
+            session = runtime.geckoBinding.session,
+            event = event,
+        )
+    }
+
     /** Routes a main-frame Gecko request through the production navigation callback. */
     @VisibleForTesting
     internal fun dispatchSelectedGeckoNavigationRequestForTesting(
@@ -907,6 +949,8 @@ class BrowserController(
     private val externalNavigationGrants = mutableMapOf<String, ExternalNavigationGrant>()
     private val pendingInitialExternalNavigationGrants =
         mutableMapOf<String, ExternalNavigationGrant>()
+    private var pendingExternalAppHandoff: PendingExternalAppHandoff? = null
+    private var pendingExternalNavigationRollback: ExternalNavigationRollback? = null
     private var webContentRequestGeneration = 0L
     private var userScriptMutationPending = false
     private var toppingCatalogRefreshGeneration = 0
@@ -3231,7 +3275,16 @@ class BrowserController(
                 topInsetPx = externalLinkPreviewContentTopInsetPx(),
                 navigationGeneration = state.generation,
             ),
-            privacyEventSink = GeckoPrivacyEventSink { },
+            privacyEventSink = GeckoPrivacyEventSink { event ->
+                mainHandler.post {
+                    onExternalLinkPreviewPrivacyEvent(
+                        sessionId = state.sessionId,
+                        generation = state.generation,
+                        session = session,
+                        event = event,
+                    )
+                }
+            },
             eventSink = { event ->
                 mainHandler.post {
                     onExternalLinkPreviewGeckoEvent(
@@ -3410,6 +3463,12 @@ class BrowserController(
                 canGoBack = false,
             )
         }
+        if (
+            event.type == BrowserEngineEventType.NavigationCommitted ||
+            event.type == BrowserEngineEventType.NavigationFailed
+        ) {
+            completeExternalNavigationRollback(runtime.policyTab.id)
+        }
         if (wasSafeAreaForced != isExternalLinkPreviewSafeAreaForced(runtime.binding.view)) {
             dispatchCurrentWindowInsets(runtime.binding.view, tabId = null)
         }
@@ -3453,6 +3512,7 @@ class BrowserController(
             updateExternalNavigationGrant(
                 tabId = runtime.policyTab.id,
                 url = safeHttpUrl,
+                sourceUrl = externalLinkPreviewState?.currentUrl ?: runtime.policyTab.url,
                 isForMainFrame = true,
                 hasGesture = request.hasUserGesture,
                 isRedirect = request.isRedirect,
@@ -3462,6 +3522,7 @@ class BrowserController(
                 externalNavigationGrants[runtime.policyTab.id],
                 nowElapsedRealtime,
             )
+            val handoffGrant = externalNavigationGrants[runtime.policyTab.id]
             if (
                 ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                     scheme = scheme,
@@ -3475,8 +3536,27 @@ class BrowserController(
                 ) && externalApps.openWebUrlExternally(safeHttpUrl) ==
                 ExternalLaunchResult.Launched
             ) {
+                pendingExternalAppHandoff = ExternalAppHandoffRules.start(
+                    targetUrl = safeHttpUrl,
+                    nowElapsedRealtime = nowElapsedRealtime,
+                )?.let { handoff ->
+                    PendingExternalAppHandoff(
+                        match = handoff,
+                        source = ExternalAppHandoffSource.Preview(
+                            sessionId = runtime.sessionId,
+                            generation = runtime.generation,
+                            profileId = runtime.policyTab.profileId,
+                            session = runtime.geckoBinding.session,
+                        ),
+                    )
+                }
                 externalNavigationGrants.remove(runtime.policyTab.id)
                 clearExternalLinkPreviewAppHandoff(sessionId)
+                restoreExternalPreviewSourceAfterAppHandoff(
+                    runtime = runtime,
+                    grant = handoffGrant,
+                    isRedirect = request.isRedirect,
+                )
                 showExternalAppOpenedToast()
                 return GeckoNavigationRequestDecision.Deny
             }
@@ -3487,6 +3567,7 @@ class BrowserController(
             externalNavigationGrants[runtime.policyTab.id],
             nowElapsedRealtime,
         )
+        val handoffGrant = externalNavigationGrants[runtime.policyTab.id]
         if (
             !ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = scheme,
@@ -3498,8 +3579,29 @@ class BrowserController(
         ) return GeckoNavigationRequestDecision.Deny
         externalNavigationGrants.remove(runtime.policyTab.id)
         clearExternalLinkPreviewAppHandoff(sessionId)
-        return when (val result = externalApps.open(Uri.parse(request.url))) {
+        val requestUri = Uri.parse(request.url)
+        val webTargetUrl = externalApps.webTargetUrl(requestUri)
+        return when (val result = externalApps.open(requestUri)) {
             ExternalLaunchResult.Launched -> {
+                pendingExternalAppHandoff = ExternalAppHandoffRules.start(
+                    targetUrl = webTargetUrl,
+                    nowElapsedRealtime = nowElapsedRealtime,
+                )?.let { handoff ->
+                    PendingExternalAppHandoff(
+                        match = handoff,
+                        source = ExternalAppHandoffSource.Preview(
+                            sessionId = runtime.sessionId,
+                            generation = runtime.generation,
+                            profileId = runtime.policyTab.profileId,
+                            session = runtime.geckoBinding.session,
+                        ),
+                    )
+                }
+                restoreExternalPreviewSourceAfterAppHandoff(
+                    runtime = runtime,
+                    grant = handoffGrant,
+                    isRedirect = request.isRedirect,
+                )
                 showExternalAppOpenedToast()
                 GeckoNavigationRequestDecision.Deny
             }
@@ -3536,6 +3638,26 @@ class BrowserController(
         return runtime
     }
 
+    private fun onExternalLinkPreviewPrivacyEvent(
+        sessionId: Long,
+        generation: Int,
+        session: AndroidBrowserEngineSessionPort,
+        event: GeckoPrivacyEvent,
+    ) {
+        if (!event.isCloudflareChallengeResponse) return
+        val runtime = currentExternalLinkPreviewGeckoRuntime(
+            sessionId = sessionId,
+            generation = generation,
+            session = session,
+        ) ?: return
+        val state = externalLinkPreviewState ?: return
+        val currentHost = PrivacyRequestSanitizer.webHost(state.currentUrl) ?: return
+        val responseHost = PrivacyRequestSanitizer.webHost(event.requestUrl) ?: return
+        val observedPageHost = event.pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: return
+        if (responseHost != currentHost || observedPageHost != currentHost) return
+        commitExternalLinkPreview(runtime.sessionId) { }
+    }
+
     private fun navigateExternalLinkPreviewGecko(
         runtime: ExternalLinkPreviewRuntime,
         url: String,
@@ -3547,6 +3669,20 @@ class BrowserController(
         binding.session.setDesktopMode(isDesktopView(runtime.policyTab, safeUrl))
         binding.session.execute(BrowserEngineCommands.stop())
         binding.session.execute(BrowserEngineCommands.load(safeUrl))
+    }
+
+    private fun restoreExternalPreviewSourceAfterAppHandoff(
+        runtime: ExternalLinkPreviewRuntime,
+        grant: ExternalNavigationGrant?,
+        isRedirect: Boolean,
+    ) {
+        scheduleExternalNavigationRollback(
+            tabId = runtime.policyTab.id,
+            session = runtime.geckoBinding.session,
+            navigationGeneration = runtime.generation,
+            grant = grant,
+            isRedirect = isRedirect,
+        )
     }
 
     private fun startExternalLinkPreviewIfReady(runtime: ExternalLinkPreviewRuntime) {
@@ -3590,6 +3726,9 @@ class BrowserController(
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
             externalNavigationGrants.remove(policyTabId)
+            if (pendingExternalNavigationRollback?.tabId == policyTabId) {
+                pendingExternalNavigationRollback = null
+            }
             synchronized(privacyEventLock) {
                 protectionRequestContexts.remove(policyTabId)?.let(::flushPendingFilterHits)
             }
@@ -3710,6 +3849,7 @@ class BrowserController(
         searchMode: SearchMode = SearchMode.Web,
     ) {
         bottomBarCompactStates[selectedTabId] = false
+        pendingExternalAppHandoff = null
         clearExternalNavigationAuthorization(selectedTabId)
         val externalUri = BrowserUriPolicy.normalizeExternalUri(input)?.let(Uri::parse)
         val target = when (val result = externalUri?.let(externalApps::open)) {
@@ -4937,6 +5077,7 @@ class BrowserController(
                 browserEngineSessions[selectedTabId]?.setActive(true)
             }
             externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(true)
+            retryExternalNavigationRollbackAfterResume()
         }
     }
 
@@ -5613,13 +5754,18 @@ class BrowserController(
     private fun updateExternalNavigationGrant(
         tabId: String,
         url: String,
+        sourceUrl: String?,
         isForMainFrame: Boolean,
         hasGesture: Boolean,
         isRedirect: Boolean,
         nowElapsedRealtime: Long,
     ) {
         val updatedGrant = if (isForMainFrame && hasGesture) {
-            ExternalNavigationGrantRules.start(url, nowElapsedRealtime)
+            ExternalNavigationGrantRules.start(
+                url = url,
+                nowElapsedRealtime = nowElapsedRealtime,
+                sourceUrl = sourceUrl,
+            )
         } else {
             externalNavigationGrants[tabId]?.let { grant ->
                 ExternalNavigationGrantRules.followRedirect(
@@ -5633,6 +5779,68 @@ class BrowserController(
         }
         if (updatedGrant == null) externalNavigationGrants.remove(tabId)
         else externalNavigationGrants[tabId] = updatedGrant
+    }
+
+    private fun scheduleExternalNavigationRollback(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        navigationGeneration: Int,
+        grant: ExternalNavigationGrant?,
+        isRedirect: Boolean,
+    ) {
+        val sourceUrl = grant?.sourceUrl?.takeIf { isRedirect } ?: return
+        val rollback = ExternalNavigationRollback(
+            tabId = tabId,
+            session = session,
+            navigationGeneration = navigationGeneration,
+            sourceUrl = sourceUrl,
+        )
+        pendingExternalNavigationRollback = rollback
+        mainHandler.post { completeExternalNavigationRollback(rollback) }
+    }
+
+    private fun completeExternalNavigationRollback(rollback: ExternalNavigationRollback) {
+        if (pendingExternalNavigationRollback !== rollback) return
+        val regularSessionIsCurrent = browserEngineSessions[rollback.tabId] === rollback.session &&
+            navigationGenerations.getOrDefault(rollback.tabId, 0) == rollback.navigationGeneration
+        val previewSessionIsCurrent = externalLinkPreviewRuntime?.let { runtime ->
+            runtime.policyTab.id == rollback.tabId &&
+                runtime.geckoBinding.session === rollback.session &&
+                runtime.generation == rollback.navigationGeneration
+        } == true
+        if (!regularSessionIsCurrent && !previewSessionIsCurrent) {
+            pendingExternalNavigationRollback = null
+            return
+        }
+        val previousUrl = rollback.session.historyUrlAtOffset(-1)
+        if (
+            ExternalNavigationRollbackRules.canGoBackToSource(
+                sourceUrl = rollback.sourceUrl,
+                previousUrl = previousUrl,
+            )
+        ) {
+            pendingExternalNavigationRollback = null
+            rollback.session.execute(BrowserEngineCommands.stop())
+            rollback.session.execute(BrowserEngineCommands.back())
+        }
+    }
+
+    private fun retryExternalNavigationRollbackAfterResume() {
+        val rollback = pendingExternalNavigationRollback ?: return
+        mainHandler.post {
+            completeExternalNavigationRollback(rollback)
+        }
+        EXTERNAL_NAVIGATION_ROLLBACK_RESUME_RETRY_DELAYS_MILLIS.forEach { delayMillis ->
+            mainHandler.postDelayed(
+                { completeExternalNavigationRollback(rollback) },
+                delayMillis,
+            )
+        }
+    }
+
+    private fun completeExternalNavigationRollback(tabId: String) {
+        val rollback = pendingExternalNavigationRollback?.takeIf { it.tabId == tabId } ?: return
+        completeExternalNavigationRollback(rollback)
     }
 
     private fun clearExternalNavigationGrantForCallback(
@@ -5659,6 +5867,9 @@ class BrowserController(
     private fun clearExternalNavigationAuthorization(tabId: String) {
         externalNavigationGrants.remove(tabId)
         pendingInitialExternalNavigationGrants.remove(tabId)
+        if (pendingExternalNavigationRollback?.tabId == tabId) {
+            pendingExternalNavigationRollback = null
+        }
     }
 
     private fun activatePendingInitialExternalNavigationGrant(
@@ -5687,6 +5898,58 @@ class BrowserController(
                 activity.getString(R.string.toast_no_external_app),
                 Toast.LENGTH_SHORT,
             ).show()
+        }
+    }
+
+    internal fun openReturnedExternalAppLink(url: String): Boolean {
+        val pending = pendingExternalAppHandoff ?: return false
+        pendingExternalAppHandoff = null
+        val nowElapsedRealtime = SystemClock.elapsedRealtime()
+        val returnedUrl = ExternalAppHandoffRules.returnedUrl(
+            handoff = pending.match,
+            url = url,
+            nowElapsedRealtime = nowElapsedRealtime,
+        ) ?: return false
+        return when (val source = pending.source) {
+            is ExternalAppHandoffSource.Preview -> {
+                val runtime = externalLinkPreviewRuntime?.takeIf { candidate ->
+                    candidate.sessionId == source.sessionId &&
+                        candidate.generation == source.generation &&
+                        candidate.policyTab.profileId == source.profileId &&
+                        candidate.geckoBinding.session === source.session
+                } ?: return true
+                if (
+                    pendingExternalNavigationRollback?.let { rollback ->
+                        rollback.tabId == runtime.policyTab.id &&
+                            rollback.session === source.session
+                    } == true
+                ) {
+                    pendingExternalNavigationRollback = null
+                }
+                externalNavigationGrants.remove(runtime.policyTab.id)
+                clearExternalLinkPreviewAppHandoff(runtime.sessionId)
+                navigateExternalLinkPreviewGecko(runtime, returnedUrl)
+                true
+            }
+            is ExternalAppHandoffSource.Tab -> {
+                val tab = tabs.firstOrNull { candidate -> candidate.id == source.tabId }
+                val sourceIsCurrent = tab?.profileId == source.profileId &&
+                    tab.isIncognito == source.isPrivate &&
+                    selectedTabId == source.tabId &&
+                    activeProfileId == source.profileId &&
+                    externalLinkPreviewState == null &&
+                    browserEngineSessions[source.tabId] === source.session
+                if (!sourceIsCurrent) return true
+                if (
+                    pendingExternalNavigationRollback?.let { rollback ->
+                        rollback.tabId == source.tabId && rollback.session === source.session
+                    } == true
+                ) {
+                    pendingExternalNavigationRollback = null
+                }
+                submitAddress(returnedUrl)
+                true
+            }
         }
     }
 
@@ -8220,6 +8483,7 @@ class BrowserController(
                 ?.takeIf { binding -> binding.view.isAttachedToWindow }
                 ?.session
                 ?.setActive(true)
+            retryExternalNavigationRollbackAfterResume()
         }
         if (isActiveProfileLocked) retryActiveProfileAuthentication()
     }
@@ -8418,6 +8682,8 @@ class BrowserController(
         committedRecallPages.clear()
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
+        pendingExternalAppHandoff = null
+        pendingExternalNavigationRollback = null
 
         pageUrls.clear()
         bottomBarCompactStates.clear()
@@ -8660,10 +8926,13 @@ class BrowserController(
             return GeckoNavigationRequestDecision.Deny
         }
         val nowElapsedRealtime = SystemClock.elapsedRealtime()
+        val currentPageUrl = pageUrls[tabId]
+            ?: tabs.firstOrNull { tab -> tab.id == tabId }?.url
         if (safeHttpUrl != null) {
             updateExternalNavigationGrant(
                 tabId = tabId,
                 url = safeHttpUrl,
+                sourceUrl = currentPageUrl,
                 isForMainFrame = true,
                 hasGesture = request.hasUserGesture,
                 isRedirect = request.isRedirect,
@@ -8674,6 +8943,7 @@ class BrowserController(
             externalNavigationGrants[tabId],
             nowElapsedRealtime,
         )
+        val handoffGrant = externalNavigationGrants[tabId]
         if (
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = scheme,
@@ -8681,19 +8951,44 @@ class BrowserController(
                 hasGesture = request.hasUserGesture,
                 isRedirect = request.isRedirect,
                 hasUserNavigationGrant = hasGrant,
-                currentPageUrl = pageUrls[tabId]
-                    ?: tabs.firstOrNull { tab -> tab.id == tabId }?.url,
+                currentPageUrl = currentPageUrl,
                 targetUrl = safeHttpUrl,
             )
         ) {
+            val requestUri = Uri.parse(request.url)
+            val webTargetUrl = externalApps.webTargetUrl(requestUri)
             val result = if (safeHttpUrl != null) {
                 externalApps.openWebUrlExternally(safeHttpUrl)
             } else {
-                externalApps.open(Uri.parse(request.url))
+                externalApps.open(requestUri)
             }
             when (result) {
                 ExternalLaunchResult.Launched -> {
+                    val sourceTab = tabs.firstOrNull { tab -> tab.id == tabId }
+                    pendingExternalAppHandoff = ExternalAppHandoffRules.start(
+                        targetUrl = webTargetUrl,
+                        nowElapsedRealtime = nowElapsedRealtime,
+                    )?.let { handoff ->
+                        sourceTab?.let { tab ->
+                            PendingExternalAppHandoff(
+                                match = handoff,
+                                source = ExternalAppHandoffSource.Tab(
+                                    tabId = tab.id,
+                                    profileId = tab.profileId,
+                                    isPrivate = tab.isIncognito,
+                                    session = session,
+                                ),
+                            )
+                        }
+                    }
                     externalNavigationGrants.remove(tabId)
+                    scheduleExternalNavigationRollback(
+                        tabId = tabId,
+                        session = session,
+                        navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
+                        grant = handoffGrant,
+                        isRedirect = request.isRedirect,
+                    )
                     showExternalAppOpenedToast()
                     return GeckoNavigationRequestDecision.Deny
                 }
@@ -9466,6 +9761,12 @@ class BrowserController(
             return
         }
         val context = protectionRequestContexts[tabId] ?: return
+        if (event.isCloudflareChallengeResponse) {
+            val observedPageHost = event.pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: return
+            if (observedPageHost != context.pageHost) return
+            offerCloudflareMainFrameChallenge(tabId, event.requestUrl, context)
+            return
+        }
         if (event.isCompatibilityObservation) {
             val observedPageHost = event.pageUrl?.let(PrivacyRequestSanitizer::webHost) ?: return
             if (observedPageHost != context.pageHost) return
@@ -9730,6 +10031,12 @@ class BrowserController(
                 geckoContentFullscreenTabIds.remove(event.tabId)
                 browserEngineSessions.remove(event.tabId)
             }
+        }
+        if (
+            event.type == BrowserEngineEventType.NavigationCommitted ||
+            event.type == BrowserEngineEventType.NavigationFailed
+        ) {
+            completeExternalNavigationRollback(event.tabId)
         }
         handlePageTranslationEngineEvent(event)
         engineViewRevision++
@@ -12382,22 +12689,59 @@ class BrowserController(
                 isFederatedLoginCompatibilityEnabled(tab, pageUrl) ||
                 isCaptchaCompatibilityEnabled(tab, pageUrl)
             ) return@post
-            val offerKey = "${requestContext.navigationGeneration}:$pageHost:${provider.name}"
-            val tabOfferKeys = captchaCompatibilityOfferKeys.computeIfAbsent(tabId) {
-                ConcurrentHashMap.newKeySet()
-            }
-            if (!tabOfferKeys.add(offerKey)) return@post
-            captchaCompatibilityOfferSequence++
-            captchaCompatibilityOffer = CaptchaCompatibilityOffer(
-                token = captchaCompatibilityOfferSequence,
-                tabId = tabId,
-                profileId = tab.profileId,
-                pageHost = pageHost,
-                provider = provider,
-                isPrivate = tab.isIncognito,
-                navigationGeneration = requestContext.navigationGeneration,
-            )
+            queueCaptchaCompatibilityOffer(tabId, tab, pageHost, provider, requestContext)
         }
+    }
+
+    private fun offerCloudflareMainFrameChallenge(
+        tabId: String,
+        responseUrl: String,
+        requestContext: ProtectionRequestContext,
+    ) {
+        if (!workerSettings.blockThirdPartyCookies) return
+        val pageHost = requestContext.pageHost ?: return
+        if (PrivacyRequestSanitizer.webHost(responseUrl) != pageHost) return
+        if (destroyed || selectedTabId != tabId) return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        if (PrivacyRequestSanitizer.webHost(pageUrl) != pageHost) return
+        if (tab.profileId != requestContext.profileId) return
+        if (navigationGenerations[tabId] != requestContext.navigationGeneration) return
+        if (isSiteProtectionPaused(tabId, pageUrl) ||
+            isFederatedLoginCompatibilityEnabled(tab, pageUrl) ||
+            isCaptchaCompatibilityEnabled(tab, pageUrl)
+        ) return
+        queueCaptchaCompatibilityOffer(
+            tabId = tabId,
+            tab = tab,
+            pageHost = pageHost,
+            provider = CaptchaProvider.Cloudflare,
+            requestContext = requestContext,
+        )
+    }
+
+    private fun queueCaptchaCompatibilityOffer(
+        tabId: String,
+        tab: BrowserTab,
+        pageHost: String,
+        provider: CaptchaProvider,
+        requestContext: ProtectionRequestContext,
+    ) {
+        val offerKey = "${requestContext.navigationGeneration}:$pageHost:${provider.name}"
+        val tabOfferKeys = captchaCompatibilityOfferKeys.computeIfAbsent(tabId) {
+            ConcurrentHashMap.newKeySet()
+        }
+        if (!tabOfferKeys.add(offerKey)) return
+        captchaCompatibilityOfferSequence++
+        captchaCompatibilityOffer = CaptchaCompatibilityOffer(
+            token = captchaCompatibilityOfferSequence,
+            tabId = tabId,
+            profileId = tab.profileId,
+            pageHost = pageHost,
+            provider = provider,
+            isPrivate = tab.isIncognito,
+            navigationGeneration = requestContext.navigationGeneration,
+        )
     }
 
     private fun isCurrentCaptchaCompatibilityOffer(
@@ -12806,6 +13150,8 @@ class BrowserController(
         const val PICTURE_IN_PICTURE_FALLBACK_GRACE_MILLIS = 900L
         const val PICTURE_IN_PICTURE_EXIT_GUARD_DELAY_MILLIS = 350L
         val PICTURE_IN_PICTURE_PLAY_RETRY_DELAYS_MILLIS = longArrayOf(250L, 1_000L, 2_000L)
+        val EXTERNAL_NAVIGATION_ROLLBACK_RESUME_RETRY_DELAYS_MILLIS =
+            longArrayOf(250L, 1_000L)
         const val PICTURE_IN_PICTURE_TRANSITION_TIMEOUT_MILLIS = 5_000L
         const val WEB_PICTURE_IN_PICTURE_FULLSCREEN_CLEANUP_DELAY_MILLIS = 250L
         const val WEB_PICTURE_IN_PICTURE_REQUEST_TIMEOUT_MILLIS = 5_000L

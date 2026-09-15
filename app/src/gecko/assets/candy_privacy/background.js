@@ -209,6 +209,12 @@ browser.webRequest.onHeadersReceived.addListener((details) => {
   const request = mainFrameRequestsById.get(details.requestId);
   mainFrameRequestsById.delete(details.requestId);
   if (!request) return;
+  const cloudflareChallenge = (details.responseHeaders || []).some((header) =>
+    typeof header.name === "string" &&
+    header.name.toLowerCase() === "cf-mitigated" &&
+    typeof header.value === "string" &&
+    header.value.trim().toLowerCase() === "challenge"
+  );
   nativePort.postMessage({
     type: "main-frame-response",
     protocolVersion: PROTOCOL_VERSION,
@@ -217,8 +223,9 @@ browser.webRequest.onHeadersReceived.addListener((details) => {
     navigationGeneration: request.navigationGeneration,
     url: details.url,
     statusCode: details.statusCode,
+    ...(cloudflareChallenge ? { cloudflareChallenge: true } : {}),
   });
-}, { urls: ["http://*/*", "https://*/*"] });
+}, { urls: ["http://*/*", "https://*/*"] }, ["responseHeaders"]);
 
 browser.webRequest.onErrorOccurred.addListener((details) => {
   if (details.type === "main_frame") mainFrameRequestsById.delete(details.requestId);

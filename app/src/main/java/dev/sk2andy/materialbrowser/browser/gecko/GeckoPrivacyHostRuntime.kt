@@ -586,8 +586,22 @@ internal class GeckoViewPrivacyHostRuntime(
             url = value.optString("url"),
             statusCode = value.optInt("statusCode", -1),
             navigationGeneration = value.optInt("navigationGeneration", -1),
+            isCloudflareChallenge = value.optBoolean("cloudflareChallenge", false),
         ) ?: return
         if (response.navigationGeneration != binding.policy.navigationGeneration) return
+        if (response.isCloudflareChallenge) {
+            binding.sink.onEvent(
+                GeckoPrivacyEvent(
+                    requestUrl = response.url,
+                    pageUrl = response.url,
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    isCloudflareChallengeResponse = true,
+                ),
+            )
+        }
         binding.onMainFrameResponse(response)
     }
 

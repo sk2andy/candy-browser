@@ -12,6 +12,16 @@ sealed interface ExternalLaunchResult {
 }
 
 class ExternalAppLauncher(private val context: Context) {
+    internal fun webTargetUrl(uri: Uri): String? {
+        val scheme = uri.scheme?.lowercase() ?: return null
+        if (scheme == "http" || scheme == "https") {
+            return BrowserUriPolicy.normalizeHttpUrl(uri.toString())
+        }
+        if (scheme != "intent") return null
+        val parsed = parseIntentUri(uri) ?: return null
+        return BrowserUriPolicy.normalizeHttpUrl(parsed.dataString)
+    }
+
     fun openWebUrlExternally(url: String): ExternalLaunchResult {
         val normalized = BrowserUriPolicy.normalizeHttpUrl(url)
             ?: return ExternalLaunchResult.Unsupported
@@ -52,9 +62,7 @@ class ExternalAppLauncher(private val context: Context) {
     }
 
     private fun openIntentUri(uri: Uri): ExternalLaunchResult {
-        val parsed = runCatching {
-            Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME)
-        }.getOrNull() ?: return ExternalLaunchResult.Unsupported
+        val parsed = parseIntentUri(uri) ?: return ExternalLaunchResult.Unsupported
         val fallbackUrl = parsed.getStringExtra("browser_fallback_url")
         val data = parsed.data ?: return fallback(fallbackUrl)
         val scheme = data.scheme?.lowercase()
@@ -93,6 +101,10 @@ class ExternalAppLauncher(private val context: Context) {
         BrowserUriPolicy.normalizeHttpUrl(url)
             ?.let(ExternalLaunchResult::OpenInBrowser)
             ?: ExternalLaunchResult.Unsupported
+
+    private fun parseIntentUri(uri: Uri): Intent? = runCatching {
+        Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME)
+    }.getOrNull()
 
     private companion object {
         const val GOOGLE_PLAY_PACKAGE = "com.android.vending"
