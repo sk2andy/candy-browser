@@ -83,6 +83,38 @@ abstract class GenerateGeckoContentTopInsetScript : DefaultTask() {
     }
 }
 
+abstract class GenerateSystemWebViewThirdPartyNotices : DefaultTask() {
+    @get:InputFile
+    abstract val sourceFile: RegularFileProperty
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @TaskAction
+    fun generate() {
+        val source = sourceFile.get().asFile.readText(Charsets.UTF_8)
+        val geckoSectionStart = "\nGecko default extensions\n------------------------\n"
+        val apacheLicenseStart = "\n\n                                 Apache License"
+        val startIndex = source.indexOf(geckoSectionStart)
+        val endIndex = source.indexOf(apacheLicenseStart, startIndex + geckoSectionStart.length)
+        check(startIndex >= 0 && endIndex > startIndex) {
+            "Gecko extension notice section boundaries were not found."
+        }
+        val generated = source
+            .removeRange(startIndex, endIndex)
+            .replace(
+                "This inventory reflects the full release runtime classpath for Candy Browser.",
+                "This inventory reflects the System WebView release runtime classpath for Candy Browser.",
+            )
+        check("Gecko default extensions" !in generated && ".xpi" !in generated.lowercase()) {
+            "System WebView notices still describe Gecko extension packages."
+        }
+        val destination = outputFile.get().asFile
+        destination.parentFile.mkdirs()
+        destination.writeText(generated, Charsets.UTF_8)
+    }
+}
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -303,7 +335,9 @@ android {
         getByName("full").assets.srcDir("src/gecko/assets")
         getByName("foss").assets.srcDir("src/gecko/assets")
         getByName("systemwebview").java.srcDir("src/full/java")
-        getByName("systemwebview").assets.srcDir("src/full/assets")
+        getByName("systemwebview").assets.srcDir(
+            layout.buildDirectory.dir("generated/systemWebViewNotices/assets").get().asFile,
+        )
         getByName("userCaDebug").res.srcDir("src/userCa/res")
         getByName("userCaRelease").res.srcDir("src/userCa/res")
     }
@@ -352,6 +386,23 @@ val generateCandySyncDeviceIconAsset by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("generated/candySyncIcons/assets"))
     rename { "candy_sync_device_icons_v1.json" }
     duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+
+val generateSystemWebViewThirdPartyNotices by tasks.registering(
+    GenerateSystemWebViewThirdPartyNotices::class,
+) {
+    sourceFile.set(layout.projectDirectory.file("src/full/assets/third_party_notices.txt"))
+    outputFile.set(
+        layout.buildDirectory.file(
+            "generated/systemWebViewNotices/assets/third_party_notices.txt",
+        ),
+    )
+}
+
+tasks.matching { task ->
+    task.name.endsWith("Build") && task.name.startsWith("preSystemwebview")
+}.configureEach {
+    dependsOn(generateSystemWebViewThirdPartyNotices)
 }
 
 val generateGeckoPrivacyRuleAssets by tasks.registering(Sync::class) {

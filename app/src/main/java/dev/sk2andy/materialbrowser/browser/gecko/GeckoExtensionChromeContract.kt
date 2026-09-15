@@ -2,6 +2,9 @@ package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.graphics.Bitmap
 
+/** Opaque, engine-owned unopened renderer session used for popup and extension hand-off. */
+internal interface BrowserEnginePreparedSession
+
 internal enum class GeckoExtensionActionKind {
     Browser,
     Page,

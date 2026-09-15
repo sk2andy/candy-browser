@@ -22,7 +22,7 @@ internal interface GeckoExtensionChromeHost {
      */
     fun createTab(
         request: GeckoExtensionCreateTabRequest,
-        session: GeckoSession,
+        session: BrowserEnginePreparedSession,
     ): String?
 
     fun updateTab(request: GeckoExtensionUpdateTabRequest): Boolean
@@ -31,7 +31,7 @@ internal interface GeckoExtensionChromeHost {
 
     fun openPopup(
         popup: GeckoExtensionPopupIdentity,
-        session: GeckoSession,
+        session: BrowserEnginePreparedSession,
         toggle: Boolean,
     ): Boolean
 
@@ -264,7 +264,7 @@ internal class GeckoViewExtensionChrome(
                     .usePrivateMode(owner.isPrivate)
                     .build(),
             )
-            val tabId = host.createTab(allowed.value, created)
+            val tabId = host.createTab(allowed.value, GeckoPreparedSession(created))
                 ?: return deniedSessionResult("Candy could not create extension tab")
             val bound = sessions.values.firstOrNull { binding ->
                 binding.identity.tabId == tabId && host.isCurrentSession(binding.identity)
@@ -511,7 +511,7 @@ internal class GeckoViewExtensionChrome(
                 .usePrivateMode(owner.isPrivate)
                 .build(),
         ).also { session -> session.open(runtime) }
-        if (!host.openPopup(popup, popupSession, toggle)) {
+        if (!host.openPopup(popup, GeckoPreparedSession(popupSession), toggle)) {
             popupSession.close()
             return deniedSessionResult("Candy could not present extension popup")
         }

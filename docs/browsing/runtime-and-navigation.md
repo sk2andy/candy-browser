@@ -532,7 +532,7 @@ before the retained emergency fallback. No scroll event starts a new discovery o
   controls Android requests; `GeckoRuntimeSettingsFactory` passes `BuildConfig.TRUST_USER_CERTIFICATES`
   to Gecko's `enterpriseRootsEnabled`. Gecko owns a separate root store, so the XML configuration
   alone is insufficient. Broader trust requires installing the explicitly labeled User CA APK.
-- Separate application IDs isolate app data and allow both channels to stay installed. Update
+- Separate application IDs isolate app data and allow all channels to stay installed. Update
   selection preserves the installed channel and rejects a release that contains only the other
   channel's asset.
 - The System WebView channel is fixed to Android's installed WebView provider and contains no
