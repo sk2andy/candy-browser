@@ -98,9 +98,8 @@ class AddressBarAutoDockRulesTest {
     }
 
     @Test
-    fun `result requires unchanged page session and chrome geometry`() {
-        val accepted = AddressBarAutoDockRules.shouldApplyResult(
-            occluded = true,
+    fun `probe requires unchanged page session and chrome geometry`() {
+        val accepted = AddressBarAutoDockRules.isProbeContextCurrent(
             dockingEnabled = true,
             addressBarDocked = false,
             selectedTabMatches = true,
@@ -110,8 +109,7 @@ class AddressBarAutoDockRulesTest {
             viewportRectMatches = true,
             isPrivatePage = false,
         )
-        val staleGeometry = AddressBarAutoDockRules.shouldApplyResult(
-            occluded = true,
+        val staleGeometry = AddressBarAutoDockRules.isProbeContextCurrent(
             dockingEnabled = true,
             addressBarDocked = false,
             selectedTabMatches = true,
@@ -124,5 +122,41 @@ class AddressBarAutoDockRulesTest {
 
         assertTrue(accepted)
         assertFalse(staleGeometry)
+    }
+
+    @Test
+    fun `focused probe burst has four bounded retries`() {
+        assertEquals(150L, AddressBarAutoDockRules.focusedProbeRetryDelayMillis(0))
+        assertEquals(200L, AddressBarAutoDockRules.focusedProbeRetryDelayMillis(1))
+        assertEquals(350L, AddressBarAutoDockRules.focusedProbeRetryDelayMillis(2))
+        assertEquals(500L, AddressBarAutoDockRules.focusedProbeRetryDelayMillis(3))
+        assertNull(AddressBarAutoDockRules.focusedProbeRetryDelayMillis(4))
+    }
+
+    @Test
+    fun `focused probe burst stops after focus loss or overlap`() {
+        assertTrue(
+            AddressBarAutoDockRules.shouldRetryFocusedProbe(
+                TextInputOcclusionProbeResult.FocusedTextInputClear,
+            ),
+        )
+        assertFalse(
+            AddressBarAutoDockRules.shouldRetryFocusedProbe(
+                TextInputOcclusionProbeResult.NoFocusedTextInput,
+            ),
+        )
+        assertFalse(
+            AddressBarAutoDockRules.shouldRetryFocusedProbe(
+                TextInputOcclusionProbeResult.Occluded,
+            ),
+        )
+    }
+
+    @Test
+    fun `unknown probe result fails closed`() {
+        assertEquals(
+            TextInputOcclusionProbeResult.NoFocusedTextInput,
+            TextInputOcclusionProbeResult.fromWireValue(99),
+        )
     }
 }

@@ -15,6 +15,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.PageTranslationContentOutcome
 import dev.sk2andy.materialbrowser.browser.PageTranslationRecoveryRules
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionScript
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
@@ -268,7 +270,10 @@ class SystemWebViewBrowserEngineInstrumentedTest {
                         <div id="editor"></div>
                         <script>
                           const root = document.getElementById('editor').attachShadow({mode:'open'});
-                          root.innerHTML = '<textarea style="position:fixed;left:10%;right:10%;bottom:20px;height:80px"></textarea>';
+                          const editor = document.createElement('div');
+                          editor.contentEditable = 'true';
+                          editor.style = 'position:fixed;left:10%;right:10%;bottom:20px;height:80px';
+                          root.appendChild(editor);
                         </script>
                       </body>
                     </html>
@@ -282,10 +287,32 @@ class SystemWebViewBrowserEngineInstrumentedTest {
             browserController.selectedTab.title == "Input probe ready"
         }
         assertTrue(evaluateTextInputOcclusion(webView))
+        assertFalse(
+            evaluateTextInputOcclusion(
+                webView,
+                TextInputOcclusionProbeMode.FocusedTextInput,
+            ),
+        )
 
         composeRule.runOnIdle {
             webView.evaluateJavascript(
-                "document.body.style.height='200vh';document.title='Scrollable input probe';",
+                """
+                    (() => {
+                      document.body.style.height='200vh';
+                      const root = document.getElementById('editor').shadowRoot;
+                      const editor = root.querySelector('[contenteditable]');
+                      let parent = root;
+                      for (let depth = 0; depth < 28; depth += 1) {
+                        const child = document.createElement('div');
+                        parent.appendChild(child);
+                        parent = child;
+                      }
+                      parent.appendChild(editor);
+                      editor.style.bottom='-120px';
+                      editor.focus();
+                      document.title='Scrollable input probe';
+                    })();
+                """.trimIndent(),
                 null,
             )
         }
@@ -293,6 +320,12 @@ class SystemWebViewBrowserEngineInstrumentedTest {
             browserController.selectedTab.title == "Scrollable input probe"
         }
         assertFalse(evaluateTextInputOcclusion(webView))
+        assertTrue(
+            evaluateTextInputOcclusion(
+                webView,
+                TextInputOcclusionProbeMode.FocusedTextInput,
+            ),
+        )
     }
 
     private fun extractContentOutcome(webView: WebView): PageTranslationContentOutcome {
@@ -308,18 +341,22 @@ class SystemWebViewBrowserEngineInstrumentedTest {
         return PageTranslationRecoveryRules.contentOutcome(result.get())
     }
 
-    private fun evaluateTextInputOcclusion(webView: WebView): Boolean {
+    private fun evaluateTextInputOcclusion(
+        webView: WebView,
+        mode: TextInputOcclusionProbeMode = TextInputOcclusionProbeMode.AllEditors,
+    ): Boolean {
         val result = AtomicReference<String?>()
         val completed = CountDownLatch(1)
         composeRule.runOnIdle {
             webView.evaluateJavascript(
                 TextInputOcclusionScript.javascript(
-                    BrowserViewportRect(
+                    viewportRect = BrowserViewportRect(
                         leftFraction = 0.05f,
                         topFraction = 0.8f,
                         rightFraction = 0.95f,
                         bottomFraction = 0.98f,
                     ),
+                    mode = mode,
                 ),
             ) { value ->
                 result.set(value)
@@ -327,7 +364,7 @@ class SystemWebViewBrowserEngineInstrumentedTest {
             }
         }
         assertTrue(completed.await(5, TimeUnit.SECONDS))
-        return result.get() == "true"
+        return result.get() == TextInputOcclusionProbeResult.Occluded.wireValue.toString()
     }
 
     private fun createControllerWithView(): Pair<BrowserController, WebView> {

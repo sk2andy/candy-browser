@@ -39,6 +39,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEventSource
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetKind
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
@@ -2473,13 +2475,14 @@ private class GeckoViewBrowserSession(
 
     override fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onComplete: (Boolean) -> Unit,
+        mode: TextInputOcclusionProbeMode,
+        onComplete: (TextInputOcclusionProbeResult) -> Unit,
     ) {
         if (closed) {
-            onComplete(false)
+            onComplete(TextInputOcclusionProbeResult.NoFocusedTextInput)
             return
         }
-        privacyBinding.probeTextInputOcclusion(viewportRect, onComplete)
+        privacyBinding.probeTextInputOcclusion(viewportRect, mode, onComplete)
     }
 
     override fun printPage(): Boolean {

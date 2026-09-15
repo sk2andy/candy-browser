@@ -61,7 +61,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             session = ReentrantAttachSession(
                 tabId = tabId,
                 onFirstAttach = {},
-                textInputOccluded = true,
+                textInputOcclusionProbeResults = listOf(
+                    TextInputOcclusionProbeResult.Occluded,
+                ),
             )
             browserController.installGeckoEngineSessionForTesting(session)
             browserController.dispatchGeckoEngineEventForTesting(
@@ -125,8 +127,124 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 ),
                 session.lastTextInputOcclusionViewportRect,
             )
+            assertEquals(
+                TextInputOcclusionProbeMode.FocusedTextInput,
+                session.lastTextInputOcclusionProbeMode,
+            )
             assertTrue(requireNotNull(controller).isAddressBarDocked)
             requireNotNull(controller).updateAddressBarDocked(false)
+        }
+    }
+
+    @Test
+    fun webpageImeProbeBurstCatchesFocusedInputMovement() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            session = ReentrantAttachSession(
+                tabId = tabId,
+                onFirstAttach = {},
+                textInputOcclusionProbeResults = listOf(
+                    TextInputOcclusionProbeResult.FocusedTextInputClear,
+                    TextInputOcclusionProbeResult.FocusedTextInputClear,
+                    TextInputOcclusionProbeResult.Occluded,
+                ),
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://animated-input.test/",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.setAddressBarBoundsInViewport(
+                leftPx = 50f,
+                topPx = 700f,
+                rightPx = 950f,
+                bottomPx = 800f,
+                viewportWidthPx = 1_000f,
+                viewportHeightPx = 1_000f,
+            )
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 600))
+                    .setVisible(WindowInsetsCompat.Type.ime(), true)
+                    .build(),
+            )
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 3 &&
+                requireNotNull(controller).isAddressBarDocked
+        }
+        composeRule.runOnIdle {
+            assertEquals(
+                TextInputOcclusionProbeMode.FocusedTextInput,
+                session.lastTextInputOcclusionProbeMode,
+            )
+            requireNotNull(controller).updateAddressBarDocked(false)
+        }
+    }
+
+    @Test
+    fun webpageImeProbeBurstStopsWhenAppPauses() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            session = ReentrantAttachSession(
+                tabId = tabId,
+                onFirstAttach = {},
+                textInputOcclusionProbeResults = List(5) {
+                    TextInputOcclusionProbeResult.FocusedTextInputClear
+                },
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://blurred-input.test/",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.setAddressBarBoundsInViewport(
+                leftPx = 50f,
+                topPx = 700f,
+                rightPx = 950f,
+                bottomPx = 800f,
+                viewportWidthPx = 1_000f,
+                viewportHeightPx = 1_000f,
+            )
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 600))
+                    .setVisible(WindowInsetsCompat.Type.ime(), true)
+                    .build(),
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 1
+        }
+        composeRule.runOnIdle {
+            requireNotNull(controller).onPause()
+        }
+
+        Thread.sleep(700L)
+        composeRule.runOnIdle {
+            assertEquals(1, session.textInputOcclusionProbeCount)
+            assertFalse(requireNotNull(controller).isAddressBarDocked)
         }
     }
 
@@ -924,10 +1042,12 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         private val onFirstDetach: (() -> Unit)? = null,
         private val onFirstRelease: (() -> Unit)? = null,
         private val presentContentImmediately: Boolean = false,
-        private val textInputOccluded: Boolean = false,
+        textInputOcclusionProbeResults: List<TextInputOcclusionProbeResult> = emptyList(),
         historyUrls: Map<Int, String> = emptyMap(),
     ) : AndroidBrowserEngineSessionPort {
         private val historyUrls = historyUrls.toMutableMap()
+        private val textInputOcclusionProbeResults =
+            textInputOcclusionProbeResults.toMutableList()
         val commands = mutableListOf<BrowserEngineCommand>()
         val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
         var deferPolicyReadyCallbacks = false
@@ -942,6 +1062,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             private set
         @Volatile
         var lastTextInputOcclusionViewportRect: BrowserViewportRect? = null
+            private set
+        @Volatile
+        var lastTextInputOcclusionProbeMode: TextInputOcclusionProbeMode? = null
             private set
         private var attachDispatched = false
         private var detachDispatched = false
@@ -1035,11 +1158,19 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
         override fun probeTextInputOcclusion(
             viewportRect: BrowserViewportRect,
-            onComplete: (Boolean) -> Unit,
+            mode: TextInputOcclusionProbeMode,
+            onComplete: (TextInputOcclusionProbeResult) -> Unit,
         ) {
             textInputOcclusionProbeCount++
             lastTextInputOcclusionViewportRect = viewportRect
-            onComplete(textInputOccluded)
+            lastTextInputOcclusionProbeMode = mode
+            onComplete(
+                if (textInputOcclusionProbeResults.isEmpty()) {
+                    TextInputOcclusionProbeResult.NoFocusedTextInput
+                } else {
+                    textInputOcclusionProbeResults.removeAt(0)
+                },
+            )
         }
 
         override fun updatePrivacyPolicy(

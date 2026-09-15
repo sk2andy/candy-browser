@@ -1,12 +1,12 @@
 "use strict";
 
-function candyTextInputOccludes(viewportRect) {
+function candyTextInputOccludes(viewportRect, focusedOnly = false) {
   const values = [viewportRect?.left, viewportRect?.top, viewportRect?.right, viewportRect?.bottom];
   if (!values.every(Number.isFinite) || viewportRect.left < 0 || viewportRect.top < 0 ||
       viewportRect.right > 1 || viewportRect.bottom > 1 ||
-      viewportRect.right <= viewportRect.left || viewportRect.bottom <= viewportRect.top) return false;
+      viewportRect.right <= viewportRect.left || viewportRect.bottom <= viewportRect.top) return 0;
   const root = document.scrollingElement || document.documentElement;
-  if (!root) return false;
+  if (!root) return 0;
   const visualViewport = globalThis.visualViewport;
   const viewportHeight = Math.max(0, visualViewport?.height || globalThis.innerHeight || 0);
   const viewportWidth = Math.max(0, visualViewport?.width || globalThis.innerWidth || 0);
@@ -25,16 +25,35 @@ function candyTextInputOccludes(viewportRect) {
     const overflowY = globalThis.getComputedStyle(element).overflowY;
     return overflowY === "hidden" || overflowY === "clip";
   });
-  if (!scrollingDisabled && scrollHeight - viewportPageTop - viewportHeight > 1) return false;
+  const textInputTypes = new Set([
+    "", "email", "number", "password", "search", "tel", "text", "url",
+  ]);
+  const isTextInput = (element) => {
+    if (!(element instanceof Element) || element.matches(":disabled") || element.readOnly ||
+        element.getAttribute("aria-disabled") === "true") return false;
+    if (element.tagName === "TEXTAREA") return true;
+    if (element.tagName === "INPUT") {
+      return textInputTypes.has((element.type || "").toLowerCase());
+    }
+    return element.isContentEditable || ["", "true", "plaintext-only"].includes(
+      element.getAttribute("contenteditable"),
+    );
+  };
+  let activeElement = document.activeElement;
+  for (let depth = 0; activeElement?.shadowRoot && depth < 12; depth += 1) {
+    const nested = activeElement.shadowRoot.activeElement;
+    if (!nested || nested === activeElement) break;
+    activeElement = nested;
+  }
+  const focusedTextInput = isTextInput(activeElement) ? activeElement : null;
+  if (!focusedOnly && !scrollingDisabled &&
+      scrollHeight - viewportPageTop - viewportHeight > 1) return focusedTextInput ? 1 : 0;
   const blocked = {
     left: viewportLeft + viewportRect.left * viewportWidth,
     top: viewportTop + viewportRect.top * viewportHeight,
     right: viewportLeft + viewportRect.right * viewportWidth,
     bottom: viewportTop + viewportRect.bottom * viewportHeight,
   };
-  const textInputTypes = new Set([
-    "", "email", "number", "password", "search", "tel", "text", "url",
-  ]);
   const parentOrHost = (element) =>
     element.assignedSlot || element.parentElement || element.getRootNode?.().host || null;
   const isEditable = (element) => {
@@ -47,9 +66,9 @@ function candyTextInputOccludes(viewportRect) {
       element.getAttribute("contenteditable"),
     );
   };
-  const isHidden = (element) => {
+  const isHidden = (element, maximumDepth = 24) => {
     let current = element;
-    for (let depth = 0; current && depth < 24; depth += 1) {
+    for (let depth = 0; current && depth < maximumDepth; depth += 1) {
       if (current.matches('[hidden],[inert],[aria-hidden="true"]')) return true;
       const style = globalThis.getComputedStyle(current);
       const opacity = Number.parseFloat(style.opacity);
@@ -104,6 +123,19 @@ function candyTextInputOccludes(viewportRect) {
       return composedContains(element, topElementAtPoint(x, y));
     });
   };
+  if (focusedOnly) {
+    if (!focusedTextInput) return 0;
+    if (isHidden(focusedTextInput, 64)) return 0;
+    const style = globalThis.getComputedStyle(focusedTextInput);
+    if (
+      style.pointerEvents === "none" || style.visibility === "hidden" ||
+      style.visibility === "collapse"
+    ) return 0;
+    const rect = focusedTextInput.getBoundingClientRect();
+    const horizontallyAligned = rect.right > blocked.left && rect.left < blocked.right;
+    const reachesOrFallsBelowChrome = rect.bottom > blocked.top;
+    return rect.width > 0 && rect.height > 0 && horizontallyAligned && reachesOrFallsBelowChrome ? 2 : 1;
+  }
   const selector = "textarea,input,[contenteditable]";
   const roots = [document];
   let visitedElements = 0;
@@ -119,7 +151,7 @@ function candyTextInputOccludes(viewportRect) {
       visitedElements += 1;
       if (element.matches(selector) && visitedCandidates < 512) {
         visitedCandidates += 1;
-        if (overlaps(element)) return true;
+        if (overlaps(element)) return 2;
       }
       if (element.shadowRoot) roots.push(element.shadowRoot);
       if (roots.length >= 64) break;
@@ -130,7 +162,7 @@ function candyTextInputOccludes(viewportRect) {
     [0.1, 0.5], [0.5, 0.5], [0.9, 0.5],
     [0.1, 0.75], [0.5, 0.75], [0.9, 0.75],
   ];
-  return points.some(([xFraction, yFraction]) => {
+  const occluded = points.some(([xFraction, yFraction]) => {
     const x = blocked.left + (blocked.right - blocked.left) * xFraction;
     const y = blocked.top + (blocked.bottom - blocked.top) * yFraction;
     const hit = topElementAtPoint(x, y);
@@ -143,6 +175,8 @@ function candyTextInputOccludes(viewportRect) {
       return false;
     });
   });
+  if (occluded) return 2;
+  return focusedTextInput ? 1 : 0;
 }
 
 globalThis.CandyTextInputOcclusion = Object.freeze({ probe: candyTextInputOccludes });
