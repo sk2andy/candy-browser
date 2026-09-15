@@ -134,11 +134,13 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperTarget
+import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.data.TabAutoSortingRules
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.data.TabReorderingRules
+import dev.sk2andy.materialbrowser.data.TabStackRules
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
@@ -262,6 +264,7 @@ internal fun TabOverview(
     var lastHapticPage by remember { mutableStateOf<Int?>(null) }
     var pagerSessionEndJob by remember { mutableStateOf<Job?>(null) }
     var tabActionsTabId by remember { mutableStateOf<String?>(null) }
+    var tabStackEditorTabId by remember { mutableStateOf<String?>(null) }
     var overviewBlurTarget by remember { mutableStateOf<BlurTarget?>(null) }
     var profileActionsProfileId by remember { mutableStateOf<String?>(null) }
     var profileIsolationChange by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
@@ -1815,6 +1818,18 @@ internal fun TabOverview(
         val actionTab = tabActionsTabId?.let { tabId ->
             controller.activeTabs.firstOrNull { it.id == tabId }
         }
+        val actionTabStack = actionTab?.let { tab -> controller.tabStackFor(tab.id) }
+        val actionTabCandidates = actionTab?.let { target ->
+            controller.activeTabs.filter { candidate ->
+                candidate.profileId == target.profileId &&
+                    candidate.isIncognito == target.isIncognito &&
+                    candidate.isPinned == target.isPinned
+            }
+        }.orEmpty()
+        val actionCandidateIds = actionTabCandidates.mapTo(hashSetOf(), BrowserTab::id)
+        val availableActionStacks = controller.activeTabStacks.filter { stack ->
+            stack.id != actionTabStack?.id && stack.tabIds.any(actionCandidateIds::contains)
+        }
         TabActionsFloatingMenu(
             tab = actionTab,
             backdropSource = overviewBlurTarget.asCandyChromeBackdropSource(),
@@ -1972,6 +1987,34 @@ internal fun TabOverview(
                 tabActionsTabId = null
                 if (controller.closeAllTabs() > 0) rootView.performConfirmHaptic()
             },
+            stackContent = {
+                TabStackMenuSection(
+                    currentStack = actionTabStack,
+                    availableStacks = availableActionStacks,
+                    canCreate = actionTabStack != null ||
+                        (actionTabCandidates.size >= TabStackRules.MIN_MEMBER_COUNT &&
+                            controller.tabStacks.size < TabStackRules.MAX_STACKS),
+                    onCreate = {
+                        val target = actionTab ?: return@TabStackMenuSection
+                        tabActionsTabId = null
+                        tabStackEditorTabId = target.id
+                    },
+                    onAddToStack = { stackId ->
+                        val target = actionTab ?: return@TabStackMenuSection
+                        tabActionsTabId = null
+                        if (controller.addTabToStack(target.id, stackId)) {
+                            rootView.performConfirmHaptic()
+                        }
+                    },
+                    onRemoveFromStack = {
+                        val target = actionTab ?: return@TabStackMenuSection
+                        tabActionsTabId = null
+                        if (controller.removeTabFromStack(target.id)) {
+                            rootView.performConfirmHaptic()
+                        }
+                    },
+                )
+            },
             onDismiss = { tabActionsTabId = null },
             extensionActions = if (actionTab?.id == controller.selectedTabId) {
                 controller.firefoxExtensionActions
@@ -1982,6 +2025,50 @@ internal fun TabOverview(
                 tabActionsTabId = null
                 controller.clickFirefoxExtensionAction(actionKey)
             },
+        )
+
+        val stackEditorTab = tabStackEditorTabId?.let { tabId ->
+            controller.activeTabs.firstOrNull { tab -> tab.id == tabId }
+        }
+        val editedStack = stackEditorTab?.let { tab -> controller.tabStackFor(tab.id) }
+        val stackEditorCandidates = stackEditorTab?.let { target ->
+            controller.activeTabs.filter { candidate ->
+                candidate.profileId == target.profileId &&
+                    candidate.isIncognito == target.isIncognito &&
+                    candidate.isPinned == target.isPinned
+            }
+        }.orEmpty()
+        TabStackCreateDialog(
+            initialTabId = stackEditorTab?.id,
+            candidates = stackEditorCandidates,
+            preselectedTabIds = editedStack?.tabIds?.toSet().orEmpty(),
+            initialPreviewTabId = editedStack?.previewTabId,
+            initialName = editedStack?.name.orEmpty(),
+            initialColor = editedStack?.color ?: TabStackColor.Grape,
+            editing = editedStack != null,
+            onCreate = { tabIds, name, color, previewTabId ->
+                val changed = if (editedStack == null) {
+                    controller.createTabStack(
+                        tabIds = tabIds,
+                        name = name,
+                        color = color,
+                        previewTabId = previewTabId,
+                    ) != null
+                } else {
+                    controller.updateTabStack(
+                        stackId = editedStack.id,
+                        tabIds = tabIds,
+                        name = name,
+                        color = color,
+                        previewTabId = previewTabId,
+                    )
+                }
+                if (changed) {
+                    tabStackEditorTabId = null
+                    rootView.performConfirmHaptic()
+                }
+            },
+            onDismiss = { tabStackEditorTabId = null },
         )
 
         val actionProfile = profileActionsProfileId?.let { profileId ->
