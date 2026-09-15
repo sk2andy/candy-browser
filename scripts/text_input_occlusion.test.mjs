@@ -4,7 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 const asset = (name) => fs.readFileSync(
-  new URL(`../app/src/main/assets/candy_privacy/${name}`, import.meta.url),
+  new URL(`../app/src/gecko/assets/candy_privacy/${name}`, import.meta.url),
   "utf8",
 );
 

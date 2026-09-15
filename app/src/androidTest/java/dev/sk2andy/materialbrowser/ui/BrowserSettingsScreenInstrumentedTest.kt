@@ -18,6 +18,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -96,7 +97,9 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.ScrollBar).performClick()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ScrollBar)
+            .performScrollTo()
+            .performClick()
 
         assertTrue(enabled)
     }
@@ -128,6 +131,41 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(BrowserSettingsTestTags.StartupAnimation).performClick()
 
         assertFalse(enabled)
+    }
+
+    @Test
+    fun startupAddressFocusChoiceUpdatesSetting() {
+        var mode by mutableStateOf(StartupAddressFocusMode.WhenStartupAnimationDisabled)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    startupAddressFocusMode = mode,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onStartupAddressFocusModeChanged = { mode = it },
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.StartupAddressFocus)
+            .performClick()
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_startup_address_focus_never),
+        ).performClick()
+
+        assertEquals(StartupAddressFocusMode.Never, mode)
     }
 
     @Test

@@ -12,7 +12,7 @@ const context = vm.createContext({
   atob,
 });
 const source = fs.readFileSync(
-  new URL("../app/src/main/assets/candy_privacy/rules.js", import.meta.url),
+  new URL("../app/src/gecko/assets/candy_privacy/rules.js", import.meta.url),
   "utf8",
 );
 vm.runInContext(source, context);
@@ -122,11 +122,11 @@ test("Candy cookie defaults parse before the Gecko privacy host becomes ready", 
 
 test("safe-area policy push has a bounded content-side race fallback", () => {
   const bridge = fs.readFileSync(
-    new URL("../app/src/main/assets/candy_privacy/content_top_inset_bridge.js", import.meta.url),
+    new URL("../app/src/gecko/assets/candy_privacy/content_top_inset_bridge.js", import.meta.url),
     "utf8",
   );
   const background = fs.readFileSync(
-    new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+    new URL("../app/src/gecko/assets/candy_privacy/background.js", import.meta.url),
     "utf8",
   );
 
@@ -154,7 +154,7 @@ test("safe-area policy push has a bounded content-side race fallback", () => {
 
 test("privacy host uses required MV2 web origins for document-start scripts", () => {
   const manifest = JSON.parse(fs.readFileSync(
-    new URL("../app/src/main/assets/candy_privacy/manifest.json", import.meta.url),
+    new URL("../app/src/gecko/assets/candy_privacy/manifest.json", import.meta.url),
     "utf8",
   ));
 
@@ -236,7 +236,7 @@ test("WebRTC policies use fail-closed ordering and acknowledge verified settings
   });
   vm.runInContext(
     fs.readFileSync(
-      new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+      new URL("../app/src/gecko/assets/candy_privacy/background.js", import.meta.url),
       "utf8",
     ),
     backgroundContext,
@@ -332,7 +332,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   });
   vm.runInContext(
     fs.readFileSync(
-      new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+      new URL("../app/src/gecko/assets/candy_privacy/background.js", import.meta.url),
       "utf8",
     ),
     backgroundContext,

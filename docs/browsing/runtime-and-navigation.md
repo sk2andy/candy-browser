@@ -525,6 +525,7 @@ before the retained emergency fallback. No scroll event starts a new discovery o
 | Build | Application ID | Trust anchors | Release asset |
 | --- | --- | --- | --- |
 | Standard | `dev.sk2andy.materialbrowser` | Gecko built-in roots for page/engine requests; Android system roots for Android networking | `CandyBrowser-v<version>-release.apk` |
+| System WebView | `dev.sk2andy.materialbrowser.systemwebview` | Android system roots for page and app networking | `CandyBrowser-v<version>-systemwebview-release.apk` |
 | User CA | `dev.sk2andy.materialbrowser.ca` | Standard roots plus user-installed Android CA roots | `CandyBrowser-v<version>-ca-release.apk` |
 
 - The build channel controls trust for both networking stacks: Android Network Security Config
@@ -534,6 +535,8 @@ before the retained emergency fallback. No scroll event starts a new discovery o
 - Separate application IDs isolate app data and allow both channels to stay installed. Update
   selection preserves the installed channel and rejects a release that contains only the other
   channel's asset.
+- The System WebView channel is fixed to Android's installed WebView provider and contains no
+  GeckoView runtime or Firefox extensions.
 - User CA trust applies to all app HTTPS connections, not only rendered pages or a selected profile.
   The settings warning must remain visible in User CA builds.
 - Gecko validates certificate chains; Candy does not bypass certificate errors. Only errors bound

@@ -46,6 +46,10 @@ call-site cutover are not complete.
 - Existing and new installs default to GeckoView. The Browser settings page can switch the whole
   Android app to System WebView; Candy checkpoints tab URLs, commits the choice and restarts into a
   fresh process so the inactive runtime does not remain in RAM.
+- The separately installed `systemwebview` distribution fixes the engine to Android System WebView,
+  removes the engine selector and ships no GeckoView runtime, Gecko native libraries, Privacy host,
+  or bundled Firefox extensions. It uses package `dev.sk2andy.materialbrowser.systemwebview` and a
+  dedicated GitHub release/update asset.
 - Tabs, bookmarks, history, profiles and Candy settings remain shared. Cookies, logins, native
   back-forward lists and engine-owned session state intentionally stay separate.
 - `AndroidBrowserEngineFactory` is the process-level seam. Concrete implementations live under

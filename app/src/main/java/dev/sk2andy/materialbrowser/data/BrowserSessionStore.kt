@@ -2,11 +2,13 @@ package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineRules
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
@@ -22,6 +24,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
 import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.ProfileProtectionRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
@@ -957,6 +960,15 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_STARTUP_ANIMATION_ENABLED, enabled).apply()
     }
 
+    fun loadStartupAddressFocusMode(): StartupAddressFocusMode =
+        StartupAddressFocusMode.fromStableId(
+            preferences.getString(KEY_STARTUP_ADDRESS_FOCUS_MODE, null),
+        )
+
+    fun saveStartupAddressFocusMode(mode: StartupAddressFocusMode) {
+        preferences.edit().putString(KEY_STARTUP_ADDRESS_FOCUS_MODE, mode.stableId).apply()
+    }
+
     fun loadHttpPasswordAutofillEnabled(): Boolean =
         preferences.getBoolean(KEY_HTTP_PASSWORD_AUTOFILL_ENABLED, false)
 
@@ -1137,12 +1149,15 @@ class BrowserSessionStore internal constructor(
     }
 
     fun loadAndroidBrowserEngineKind(): AndroidBrowserEngineKind =
-        AndroidBrowserEngineKind.fromStableId(
-            preferences.getString(KEY_ANDROID_BROWSER_ENGINE, null),
+        AndroidBrowserEngineRules.persistedKind(
+            stableId = preferences.getString(KEY_ANDROID_BROWSER_ENGINE, null),
+            systemWebViewOnly = BuildConfig.SYSTEM_WEBVIEW_ONLY,
         )
 
-    fun saveAndroidBrowserEngineKind(kind: AndroidBrowserEngineKind): Boolean =
-        preferences.edit().putString(KEY_ANDROID_BROWSER_ENGINE, kind.stableId).commit()
+    fun saveAndroidBrowserEngineKind(kind: AndroidBrowserEngineKind): Boolean {
+        if (!AndroidBrowserEngineRules.canSelect(kind, BuildConfig.SYSTEM_WEBVIEW_ONLY)) return false
+        return preferences.edit().putString(KEY_ANDROID_BROWSER_ENGINE, kind.stableId).commit()
+    }
 
     fun loadAppearanceSettings(): AppearanceSettings {
         val frostedTransparencyPercent = loadBoundedInt(
@@ -1375,6 +1390,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
         const val KEY_STARTUP_ANIMATION_ENABLED = "startup_animation_enabled"
+        const val KEY_STARTUP_ADDRESS_FOCUS_MODE = "startup_address_focus_mode"
         const val KEY_HTTP_PASSWORD_AUTOFILL_ENABLED = "http_password_autofill_enabled"
         const val KEY_FAVORITE_LAUNCH_ANIMATION_ENABLED =
             "favorite_launch_animation_enabled"

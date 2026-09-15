@@ -10,6 +10,7 @@ internal object StartupPresentationRules {
         isColdStart: Boolean,
         isLauncherLaunch: Boolean,
         isStartupAnimationEnabled: Boolean,
+        startupAddressFocusMode: StartupAddressFocusMode = StartupAddressFocusMode.Default,
         isOnboardingRequired: Boolean,
         isReleaseNotesRequired: Boolean = false,
     ): StartupPresentation {
@@ -19,6 +20,7 @@ internal object StartupPresentationRules {
             openAddressEditor = isColdStart && shouldOpenAddressEditor(
                 isLauncherLaunch = isLauncherLaunch,
                 isStartupAnimationEnabled = isStartupAnimationEnabled,
+                startupAddressFocusMode = startupAddressFocusMode,
                 isOnboardingRequired = isOnboardingRequired,
                 isReleaseNotesRequired = isReleaseNotesRequired,
             ),
@@ -28,12 +30,18 @@ internal object StartupPresentationRules {
     fun shouldOpenAddressEditor(
         isLauncherLaunch: Boolean,
         isStartupAnimationEnabled: Boolean,
+        startupAddressFocusMode: StartupAddressFocusMode = StartupAddressFocusMode.Default,
         isOnboardingRequired: Boolean,
         isReleaseNotesRequired: Boolean = false,
-    ): Boolean = isLauncherLaunch &&
-        !isStartupAnimationEnabled &&
-        !isOnboardingRequired &&
-        !isReleaseNotesRequired
+    ): Boolean {
+        if (!isLauncherLaunch || isOnboardingRequired || isReleaseNotesRequired) return false
+        return when (startupAddressFocusMode) {
+            StartupAddressFocusMode.WhenStartupAnimationDisabled ->
+                !isStartupAnimationEnabled
+            StartupAddressFocusMode.Always -> true
+            StartupAddressFocusMode.Never -> false
+        }
+    }
 
     fun shouldOpenHomePage(
         isLauncherLaunch: Boolean,

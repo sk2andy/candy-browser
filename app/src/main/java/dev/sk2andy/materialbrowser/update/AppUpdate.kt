@@ -32,6 +32,7 @@ internal enum class AppReleaseChannel(
     val assetSuffix: String,
 ) {
     Standard("release"),
+    SystemWebView("systemwebview-release"),
     UserCa("ca-release"),
 
     ;
@@ -39,6 +40,15 @@ internal enum class AppReleaseChannel(
     companion object {
         fun forUserCertificateTrust(enabled: Boolean): AppReleaseChannel =
             if (enabled) UserCa else Standard
+
+        fun forBuild(
+            systemWebViewOnly: Boolean,
+            trustsUserCertificates: Boolean,
+        ): AppReleaseChannel = when {
+            systemWebViewOnly -> SystemWebView
+            trustsUserCertificates -> UserCa
+            else -> Standard
+        }
     }
 }
 

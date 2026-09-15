@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
 
-const source = readFileSync(new URL('../app/src/main/assets/candy_privacy/content_safe_area_reddit.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_reddit.js', import.meta.url), 'utf8');
 
 function fixture({ hostname = 'reddit.com', topFrame = true } = {}) {
   const timers = new Map(); const observers = []; const definitions = new Map();

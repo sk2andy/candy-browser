@@ -29,6 +29,7 @@ import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -44,6 +45,66 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     private var controller: BrowserController? = null
     private var originalEngineKind: AndroidBrowserEngineKind? = null
+
+    @Test
+    fun webpageImeOpeningReprobesAndParksOccludingAddressBar() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            session = ReentrantAttachSession(
+                tabId = tabId,
+                onFirstAttach = {},
+                textInputOccluded = true,
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://chat.test/",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.setAddressBarBoundsInViewport(
+                leftPx = 50f,
+                topPx = 800f,
+                rightPx = 950f,
+                bottomPx = 900f,
+                viewportWidthPx = 1_000f,
+                viewportHeightPx = 1_000f,
+            )
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setVisible(WindowInsetsCompat.Type.ime(), false)
+                    .build(),
+            )
+
+            assertFalse(browserController.isAddressBarDocked)
+
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(
+                        WindowInsetsCompat.Type.ime(),
+                        Insets.of(0, 0, 0, 600),
+                    )
+                    .setVisible(WindowInsetsCompat.Type.ime(), true)
+                    .build(),
+            )
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 1
+        }
+        composeRule.runOnIdle {
+            assertTrue(requireNotNull(controller).isAddressBarDocked)
+            requireNotNull(controller).updateAddressBarDocked(false)
+        }
+    }
 
     @Test
     fun developerSafeAreaFallbackForcesNativePreviewInset() {
@@ -632,6 +693,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         private val onFirstDetach: (() -> Unit)? = null,
         private val onFirstRelease: (() -> Unit)? = null,
         private val presentContentImmediately: Boolean = false,
+        private val textInputOccluded: Boolean = false,
     ) : AndroidBrowserEngineSessionPort {
         val commands = mutableListOf<BrowserEngineCommand>()
         val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
@@ -641,6 +703,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         var createCount = 0
             private set
         var createdView: View? = null
+            private set
+        @Volatile
+        var textInputOcclusionProbeCount = 0
             private set
         private var attachDispatched = false
         private var detachDispatched = false
@@ -727,6 +792,14 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         override fun historyUrlAtOffset(offset: Int): String? = null
 
         override fun extractPageForReader(onComplete: (String?) -> Unit) = onComplete(null)
+
+        override fun probeTextInputOcclusion(
+            viewportRect: BrowserViewportRect,
+            onComplete: (Boolean) -> Unit,
+        ) {
+            textInputOcclusionProbeCount++
+            onComplete(textInputOccluded)
+        }
 
         override fun updatePrivacyPolicy(
             policy: GeckoPrivacyPolicy,

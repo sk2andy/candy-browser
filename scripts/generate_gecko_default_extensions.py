@@ -248,12 +248,12 @@ def main() -> None:
     parser.add_argument(
         "--catalog",
         type=Path,
-        default=Path("app/src/main/assets/gecko_default_extensions/catalog.json"),
+        default=Path("app/src/gecko/assets/gecko_default_extensions/catalog.json"),
     )
     parser.add_argument(
         "--assets-root",
         type=Path,
-        default=Path("app/src/main/assets"),
+        default=Path("app/src/gecko/assets"),
     )
     args = parser.parse_args()
     if args.action == "verify":
