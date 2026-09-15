@@ -9936,10 +9936,13 @@ class BrowserController(
                 }
                 val committedUrl = event.address ?: currentTab?.url
                 if (committedUrl != null) {
+                    val committedTitle = event.title.orEmpty()
+                        .ifBlank { currentTab?.title.orEmpty() }
+                    recordHistory(event.tabId, committedUrl, committedTitle)
                     refineGeckoCandyTrailTitle(
                         tabId = event.tabId,
                         url = committedUrl,
-                        title = event.title.orEmpty().ifBlank { currentTab?.title.orEmpty() },
+                        title = committedTitle,
                     )
                 }
                 scheduleSyncedTabNavigation(
