@@ -18,6 +18,9 @@ internal class BrowserPullToRefreshLayout(
     private var gestureOnRefresh: (() -> Boolean)? = null
     private var indicatorColor: Int? = null
     private var indicatorContainerColor: Int? = null
+    private val defaultIndicatorStartOffsetPx = progressViewStartOffset
+    private val defaultIndicatorEndOffsetPx = progressViewEndOffset
+    private var indicatorTopInsetPx = 0
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     private var downX = 0f
     private var downY = 0f
@@ -87,12 +90,14 @@ internal class BrowserPullToRefreshLayout(
         refreshing: Boolean,
         indicatorColor: Int,
         indicatorContainerColor: Int,
+        indicatorTopInsetPx: Int,
         canChildScrollUp: () -> Boolean,
         onRefresh: () -> Boolean,
     ) {
         canContentScrollUp = canChildScrollUp
         this.onRefresh = onRefresh
         isEnabled = enabled
+        updateIndicatorTopInset(indicatorTopInsetPx)
         val nextRefreshing = enabled && refreshing
         if (isRefreshing != nextRefreshing) isRefreshing = nextRefreshing
         if (this.indicatorColor != indicatorColor) {
@@ -103,6 +108,17 @@ internal class BrowserPullToRefreshLayout(
             this.indicatorContainerColor = indicatorContainerColor
             setProgressBackgroundColorSchemeColor(indicatorContainerColor)
         }
+    }
+
+    private fun updateIndicatorTopInset(topInsetPx: Int) {
+        val safeTopInsetPx = topInsetPx.coerceAtLeast(0)
+        if (indicatorTopInsetPx == safeTopInsetPx) return
+        indicatorTopInsetPx = safeTopInsetPx
+        setProgressViewOffset(
+            false,
+            defaultIndicatorStartOffsetPx + safeTopInsetPx,
+            defaultIndicatorStartOffsetPx + defaultIndicatorEndOffsetPx + safeTopInsetPx,
+        )
     }
 }
 

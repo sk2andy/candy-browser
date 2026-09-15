@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -572,6 +573,7 @@ private fun ActiveBrowserEngineView(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
         density = density.density,
     )
+    val refreshIndicatorTopInsetPx = WindowInsets.safeDrawing.getTop(density)
     val selectedTabId = controller.selectedTabId
     val engineViewRevision = controller.engineViewRevision
     var pullRefreshRequested by remember(selectedTabId) { mutableStateOf(false) }
@@ -617,6 +619,7 @@ private fun ActiveBrowserEngineView(
                     refreshing = pullRefreshRequested,
                     indicatorColor = indicatorColor,
                     indicatorContainerColor = indicatorContainerColor,
+                    indicatorTopInsetPx = refreshIndicatorTopInsetPx,
                     canChildScrollUp = {
                         BrowserPullToRefreshRules.canChildScrollUp(
                             controller.selectedBrowserEngineScrollMetrics(),

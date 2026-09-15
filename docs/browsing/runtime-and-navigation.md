@@ -130,8 +130,9 @@
 - Keep pull-to-refresh state transient and scoped to the selected engine view. Gecko scroll metrics stay
   enabled only for the selected tab, or for every tab when Candy's page scrollbar needs them, so both
   browser engines use the same top-of-document admission rule without background-tab scroll IPC.
-  Missing metrics fail closed. Normal navigation does not show the pull indicator, and the existing menu
-  reload remains the accessible non-gesture action.
+  Missing metrics fail closed. Offset the native refresh indicator below the top safe-drawing inset so it
+  stays clear of display cutouts. Normal navigation does not show the pull indicator, and the existing
+  menu reload remains the accessible non-gesture action.
 - Treat Android connectivity as a process-local observable effect. A default network counts as online
   only with both `NET_CAPABILITY_INTERNET` and `NET_CAPABILITY_VALIDATED`; close the registered callback
   with `BrowserController`. Do not issue Candy-owned probe requests or replace an already usable page
