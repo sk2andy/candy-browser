@@ -27,7 +27,258 @@ class BrowserControllerProfilesInstrumentedTest {
         activityRule.scenario.onActivity { activity ->
             controller?.destroy()
             controller = null
+            ProfileProtectionSession.forget("home")
+            ProfileProtectionSession.forget("work")
             clear(activity)
+        }
+    }
+
+    @Test
+    fun lockedProfileSwitchWaitsForStrongBiometricResult() {
+        activityRule.scenario.onActivity { activity ->
+            val profiles = profiles().map { profile ->
+                if (profile.id == "work") {
+                    profile.copy(
+                        protection = ProfileProtection(ProfileLockTrigger.AppBackgrounded),
+                    )
+                } else {
+                    profile
+                }
+            }
+            resetAndSeed(activity, profiles, activeProfileId = "home")
+            var purpose: ProfileAuthenticationPurpose? = null
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { requestedPurpose, onResult ->
+                    purpose = requestedPurpose
+                    authenticationResult = onResult
+                },
+            ).also { this.controller = it }
+
+            assertTrue("work" in controller.lockedProfileIds)
+            var selected = false
+            controller.requestProfileSelection("work") { success -> selected = success }
+            assertEquals("home", controller.activeProfileId)
+            assertEquals(ProfileAuthenticationPurpose.Unlock, purpose)
+
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertTrue(selected)
+            assertEquals("work", controller.activeProfileId)
+            assertFalse(controller.isActiveProfileLocked)
+        }
+    }
+
+    @Test
+    fun authenticationResultIsRejectedAfterAppBackgrounds() {
+        activityRule.scenario.onActivity { activity ->
+            val protected = profiles().map { profile ->
+                if (profile.id == "work") {
+                    profile.copy(
+                        protection = ProfileProtection(ProfileLockTrigger.AppBackgrounded),
+                    )
+                } else {
+                    profile
+                }
+            }
+            resetAndSeed(activity, protected, activeProfileId = "home")
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { _, onResult -> authenticationResult = onResult },
+            ).also { this.controller = it }
+            var selected = false
+
+            controller.requestProfileSelection("work") { success -> selected = success }
+            controller.onAppBackgrounded(nowElapsedRealtime = 1_000L)
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertFalse(selected)
+            assertEquals("home", controller.activeProfileId)
+            assertTrue("work" in controller.lockedProfileIds)
+        }
+    }
+
+    @Test
+    fun unavailableBiometricsCanLeaveLockedProfileAndExportRequiresAuthentication() {
+        activityRule.scenario.onActivity { activity ->
+            val protected = profiles().map { profile ->
+                if (profile.id == "work") {
+                    profile.copy(
+                        protection = ProfileProtection(ProfileLockTrigger.AppBackgrounded),
+                    )
+                } else {
+                    profile
+                }
+            }
+            resetAndSeed(activity, protected, activeProfileId = "work")
+            var biometricAvailable = false
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { biometricAvailable },
+                authenticateProfile = { _, onResult -> authenticationResult = onResult },
+            ).also { this.controller = it }
+
+            assertTrue(controller.isActiveProfileLocked)
+            assertTrue(controller.canLeaveLockedProfile)
+            assertTrue(controller.leaveLockedProfile())
+            assertEquals("home", controller.activeProfileId)
+
+            biometricAvailable = true
+            controller.onAppForegrounded(nowElapsedRealtime = 1_000L)
+            var exported = false
+            controller.authenticateProtectedProfilesForExport { success -> exported = success }
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertTrue(exported)
+        }
+    }
+
+    @Test
+    fun leavingLockedProfileReEnablesDisabledProfiles() {
+        activityRule.scenario.onActivity { activity ->
+            val protected = profiles().map { profile ->
+                if (profile.id == "home") {
+                    profile.copy(
+                        protection = ProfileProtection(ProfileLockTrigger.AppClosed),
+                    )
+                } else {
+                    profile
+                }
+            }
+            resetAndSeed(activity, protected, activeProfileId = "home")
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { false },
+            ).also { this.controller = it }
+            controller.updateProfilesEnabled(false)
+
+            assertTrue(controller.isActiveProfileLocked)
+            assertTrue(controller.canLeaveLockedProfile)
+            assertTrue(controller.leaveLockedProfile())
+
+            assertTrue(controller.profilesEnabled)
+            assertEquals("work", controller.activeProfileId)
+        }
+    }
+
+    @Test
+    fun profileActionsRequireAuthenticationWithoutSwitchingProfiles() {
+        activityRule.scenario.onActivity { activity ->
+            val protected = profiles().map { profile ->
+                if (profile.id == "work") {
+                    profile.copy(
+                        protection = ProfileProtection(ProfileLockTrigger.AppBackgrounded),
+                    )
+                } else {
+                    profile
+                }
+            }
+            resetAndSeed(activity, protected, activeProfileId = "home")
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { _, onResult -> authenticationResult = onResult },
+            ).also { this.controller = it }
+            var accessGranted = false
+
+            controller.requestProfileAccess("work") { granted -> accessGranted = granted }
+            assertFalse(accessGranted)
+            assertEquals("home", controller.activeProfileId)
+
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertTrue(accessGranted)
+            assertEquals("home", controller.activeProfileId)
+            assertFalse("work" in controller.lockedProfileIds)
+
+            controller.onAppBackgrounded(nowElapsedRealtime = 1_000L)
+
+            assertTrue("work" in controller.lockedProfileIds)
+            assertFalse(controller.updateProfileEmoji("work", "🔒"))
+            assertFalse(
+                controller.updateProfileWallpaper(
+                    profileId = "work",
+                    wallpaperTarget = ProfileWallpaperTarget.NewTab,
+                    wallpaper = null,
+                ),
+            )
+            assertFalse(controller.setProfileIsolation("work", enabled = true))
+            var deleted = true
+            controller.deleteProfileAsync("work") { success -> deleted = success }
+            assertFalse(deleted)
+        }
+    }
+
+    @Test
+    fun backgroundAndCooldownPoliciesLockOnlyAtTheirBoundary() {
+        activityRule.scenario.onActivity { activity ->
+            val protected = profiles().map { profile ->
+                if (profile.id == "work") {
+                    profile.copy(
+                        protection = ProfileProtection(
+                            lockTrigger = ProfileLockTrigger.Cooldown,
+                            cooldownMinutes = 2,
+                        ),
+                    )
+                } else {
+                    profile
+                }
+            }
+            ProfileProtectionSession.unlock("work")
+            resetAndSeed(activity, protected, activeProfileId = "work")
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+            ).also { this.controller = it }
+
+            assertFalse(controller.isActiveProfileLocked)
+            controller.onAppBackgrounded(nowElapsedRealtime = 1_000L)
+            controller.onAppForegrounded(nowElapsedRealtime = 120_999L)
+            assertFalse(controller.isActiveProfileLocked)
+
+            controller.onAppBackgrounded(nowElapsedRealtime = 1_000L)
+            controller.onAppForegrounded(nowElapsedRealtime = 121_000L)
+            assertTrue(controller.isActiveProfileLocked)
+        }
+    }
+
+    @Test
+    fun backgroundAndClosePoliciesUseDifferentLifecycleBoundaries() {
+        activityRule.scenario.onActivity { activity ->
+            val protected = profiles().map { profile ->
+                when (profile.id) {
+                    "home" -> profile.copy(
+                        protection = ProfileProtection(ProfileLockTrigger.AppBackgrounded),
+                    )
+                    "work" -> profile.copy(
+                        protection = ProfileProtection(ProfileLockTrigger.AppClosed),
+                    )
+                    else -> profile
+                }
+            }
+            ProfileProtectionSession.unlock("home")
+            ProfileProtectionSession.unlock("work")
+            resetAndSeed(activity, protected, activeProfileId = "home")
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+            ).also { this.controller = it }
+
+            controller.onAppBackgrounded(nowElapsedRealtime = 1_000L)
+
+            assertTrue("home" in controller.lockedProfileIds)
+            assertFalse("work" in controller.lockedProfileIds)
+
+            controller.destroy(lockClosedProfiles = true)
+
+            assertFalse(ProfileProtectionSession.isUnlocked("work"))
+            this.controller = null
         }
     }
 

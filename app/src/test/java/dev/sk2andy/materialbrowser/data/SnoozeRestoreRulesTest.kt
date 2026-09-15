@@ -2,6 +2,9 @@ package dev.sk2andy.materialbrowser.data
 
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
+import dev.sk2andy.materialbrowser.browser.ProfileProtection
+import dev.sk2andy.materialbrowser.browser.ProfileProtectionSession
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -12,6 +15,37 @@ class SnoozeRestoreRulesTest {
         BrowserProfile("candy", "🍬"),
         BrowserProfile("work", "💼"),
     )
+
+    @Test
+    fun `background notification hides cooldown profile while session is still unlocked`() {
+        val protectedProfiles = profiles.map { profile ->
+            if (profile.id == "work") {
+                profile.copy(
+                    protection = ProfileProtection(
+                        lockTrigger = ProfileLockTrigger.Cooldown,
+                        cooldownMinutes = 1,
+                    ),
+                )
+            } else {
+                profile
+            }
+        }
+        val candyTab = BrowserTab("candy-tab", 1L, profileId = "candy")
+        val workTab = BrowserTab("work-tab", 1L, profileId = "work")
+        ProfileProtectionSession.unlock("work")
+
+        try {
+            val visibleTabs = SnoozeRestoreCoordinator.restoredNotificationTabs(
+                tabs = listOf(candyTab, workTab),
+                restoredTabIds = setOf(candyTab.id, workTab.id),
+                profiles = protectedProfiles,
+            )
+
+            assertEquals(listOf(candyTab), visibleTabs)
+        } finally {
+            ProfileProtectionSession.forget("work")
+        }
+    }
 
     @Test
     fun `due tab restores once with profile and pin metadata`() {

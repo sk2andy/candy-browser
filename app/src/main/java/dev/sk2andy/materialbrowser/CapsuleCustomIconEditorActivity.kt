@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.lifecycleScope
+import dev.sk2andy.materialbrowser.browser.ProfileProtectionSession
 import dev.sk2andy.materialbrowser.capsule.CapsuleCustomIconEditorContract
 import dev.sk2andy.materialbrowser.capsule.CapsuleCustomIconProcessor
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconCrop
@@ -36,11 +37,16 @@ class CapsuleCustomIconEditorActivity : ComponentActivity() {
     private var persistBitmapInSavedState = false
     private var imageRevision = 0
     private var isFullImmersiveModeEnabled = false
+    private var protectedProfileIds: Set<String> = emptySet()
 
     private val imagePicker = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@registerForActivityResult
+        if (!areProfilesAccessible()) {
+            finish()
+            return@registerForActivityResult
+        }
         runCatching {
             contentResolver.takePersistableUriPermission(
                 uri,
@@ -54,6 +60,10 @@ class CapsuleCustomIconEditorActivity : ComponentActivity() {
         CapsuleIconPackPickerContract(),
     ) { icon ->
         if (icon == null) return@registerForActivityResult
+        if (!areProfilesAccessible()) {
+            finish()
+            return@registerForActivityResult
+        }
         candidateUri = null
         imageRevision++
         errorMessage = null
@@ -66,6 +76,12 @@ class CapsuleCustomIconEditorActivity : ComponentActivity() {
             finish()
             return
         }
+        protectedProfileIds = CapsuleCustomIconEditorContract.protectedProfileIdsFrom(intent)
+        if (!areProfilesAccessible()) {
+            finish()
+            return
+        }
+        setRecentsScreenshotEnabled(protectedProfileIds.isEmpty())
         val restoredBitmap = savedInstanceState
             ?.getByteArray(STATE_PACK_ICON)
             ?.let(CapsuleCustomIconEditorContract::decodeIcon)
@@ -106,6 +122,11 @@ class CapsuleCustomIconEditorActivity : ComponentActivity() {
         if (hasFocus) applyFullImmersiveMode(isFullImmersiveModeEnabled)
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (!areProfilesAccessible()) finish()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         candidateUri?.let { outState.putString(STATE_CANDIDATE_URI, it) }
@@ -118,6 +139,10 @@ class CapsuleCustomIconEditorActivity : ComponentActivity() {
     }
 
     private fun saveIcon(crop: CapsuleIconCrop) {
+        if (!areProfilesAccessible()) {
+            finish()
+            return
+        }
         val source = bitmap ?: return
         val icon = CapsuleCustomIconProcessor.crop(source, crop)
         if (icon == null) {
@@ -141,6 +166,10 @@ class CapsuleCustomIconEditorActivity : ComponentActivity() {
     }
 
     private fun loadCandidate(uri: Uri, newSelection: Boolean) {
+        if (!areProfilesAccessible()) {
+            finish()
+            return
+        }
         if (newSelection) {
             candidateUri = uri.toString()
             imageRevision++
@@ -159,6 +188,16 @@ class CapsuleCustomIconEditorActivity : ComponentActivity() {
             }
             candidateUri = uri.toString()
             replaceBitmap(candidate, persistInSavedState = false)
+        }
+    }
+
+    private fun areProfilesAccessible(): Boolean {
+        if (protectedProfileIds.isEmpty()) return true
+        val profiles = BrowserSessionStore(this).loadProfiles().first
+        return protectedProfileIds.all { profileId ->
+            ProfileProtectionSession.isAccessible(
+                profiles.firstOrNull { profile -> profile.id == profileId },
+            )
         }
     }
 

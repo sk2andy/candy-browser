@@ -9,10 +9,20 @@ import androidx.activity.result.contract.ActivityResultContract
 import dev.sk2andy.materialbrowser.CapsuleCustomIconEditorActivity
 import java.io.ByteArrayOutputStream
 
-class CapsuleCustomIconEditorContract : ActivityResultContract<Bitmap?, Bitmap?>() {
-    override fun createIntent(context: Context, input: Bitmap?): Intent =
+data class CapsuleCustomIconEditorRequest(
+    val icon: Bitmap?,
+    val protectedProfileIds: Set<String>,
+)
+
+class CapsuleCustomIconEditorContract :
+    ActivityResultContract<CapsuleCustomIconEditorRequest, Bitmap?>() {
+    override fun createIntent(context: Context, input: CapsuleCustomIconEditorRequest): Intent =
         Intent(context, CapsuleCustomIconEditorActivity::class.java).apply {
-            input?.let(::encodeIcon)?.let { putExtra(EXTRA_CURRENT_ICON, it) }
+            input.icon?.let(::encodeIcon)?.let { putExtra(EXTRA_CURRENT_ICON, it) }
+            putStringArrayListExtra(
+                EXTRA_PROTECTED_PROFILE_IDS,
+                ArrayList(input.protectedProfileIds),
+            )
         }
 
     override fun parseResult(resultCode: Int, intent: Intent?): Bitmap? {
@@ -23,10 +33,21 @@ class CapsuleCustomIconEditorContract : ActivityResultContract<Bitmap?, Bitmap?>
     companion object {
         private const val MAX_BYTES = 256 * 1_024
         private const val EXTRA_CURRENT_ICON = "capsule_custom_icon.current"
+        private const val EXTRA_PROTECTED_PROFILE_IDS =
+            "capsule_custom_icon.protected_profile_ids"
         private const val EXTRA_RESULT_ICON = "capsule_custom_icon.result"
 
         fun currentIconFrom(intent: Intent): Bitmap? =
             decodeIcon(intent.getByteArrayExtra(EXTRA_CURRENT_ICON))
+
+        fun protectedProfileIdsFrom(intent: Intent): Set<String> =
+            intent.getStringArrayListExtra(EXTRA_PROTECTED_PROFILE_IDS)
+                .orEmpty()
+                .filterTo(linkedSetOf()) { profileId ->
+                    profileId.isNotBlank() &&
+                        profileId.length <= SiteCapsuleRules.MAX_PROFILE_ID_LENGTH &&
+                        profileId.none(Char::isISOControl)
+                }
 
         fun resultIntent(icon: Bitmap): Intent = Intent().apply {
             encodeIcon(icon)?.let { putExtra(EXTRA_RESULT_ICON, it) }

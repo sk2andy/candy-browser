@@ -144,6 +144,7 @@ import dev.sk2andy.materialbrowser.data.TabStackRules
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -268,6 +269,7 @@ internal fun TabOverview(
     var overviewBlurTarget by remember { mutableStateOf<BlurTarget?>(null) }
     var profileActionsProfileId by remember { mutableStateOf<String?>(null) }
     var profileIsolationChange by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
+    var profileProtectionTargetId by remember { mutableStateOf<String?>(null) }
     var emojiPickerTargetId by remember { mutableStateOf<String?>(null) }
     var movingTabId by remember { mutableStateOf<String?>(null) }
     var profileSwitching by remember { mutableStateOf(false) }
@@ -307,6 +309,13 @@ internal fun TabOverview(
     }
     DisposableEffect(Unit) {
         onDispose { currentOnExitHeroVisibilityChanged(false) }
+    }
+    LaunchedEffect(controller.lockedProfileIds) {
+        val lockedProfileIds = controller.lockedProfileIds
+        if (profileActionsProfileId in lockedProfileIds) profileActionsProfileId = null
+        if (profileIsolationChange?.first in lockedProfileIds) profileIsolationChange = null
+        if (profileProtectionTargetId in lockedProfileIds) profileProtectionTargetId = null
+        if (emojiPickerTargetId in lockedProfileIds) emojiPickerTargetId = null
     }
     fun startExitHero(
         tab: BrowserTab,
@@ -1006,6 +1015,7 @@ internal fun TabOverview(
                         tabActionsTabId == null &&
                         profileActionsProfileId == null &&
                         profileIsolationChange == null &&
+                        profileProtectionTargetId == null &&
                         emojiPickerTargetId == null,
                     onSelect = { profileId ->
                         if (profileId == controller.activeProfileId) return@ProfileSwitcher
@@ -1025,7 +1035,9 @@ internal fun TabOverview(
                                 ) {
                                     pagerState.scrollToPage(0)
                                 }
-                                if (controller.selectProfile(profileId)) {
+                                val selection = CompletableDeferred<Boolean>()
+                                controller.requestProfileSelection(profileId, selection::complete)
+                                if (selection.await()) {
                                     controller.loadActiveProfileTabSwitcherWallpaper()
                                     val selectedIndex = controller.activeTabs
                                         .indexOfFirst { it.id == controller.selectedTabId }
@@ -1060,6 +1072,10 @@ internal fun TabOverview(
                         if (profile?.isSynced == true) {
                             onClose()
                             onOpenSyncSettings()
+                        } else if (profileId in controller.lockedProfileIds) {
+                            controller.requestProfileAccess(profileId) { authenticated ->
+                                if (authenticated) profileActionsProfileId = profileId
+                            }
                         } else {
                             profileActionsProfileId = profileId
                         }
@@ -2101,8 +2117,38 @@ internal fun TabOverview(
                 profileActionsProfileId = null
                 profileIsolationChange = target.id to enabled
             },
+            profileProtectionSupported = controller.isProfileProtectionSupported,
+            onConfigureProtection = {
+                val target = actionProfile ?: return@ProfileActionsSheet
+                profileActionsProfileId = null
+                profileProtectionTargetId = target.id
+            },
+            onDisableProtection = {
+                val target = actionProfile ?: return@ProfileActionsSheet
+                profileActionsProfileId = null
+                controller.updateProfileProtection(target.id, protection = null) { changed ->
+                    if (changed) rootView.performConfirmHaptic()
+                }
+            },
             onDismiss = { profileActionsProfileId = null },
         )
+
+        val protectionProfile = profileProtectionTargetId?.let { profileId ->
+            controller.localBrowserProfiles.firstOrNull { profile -> profile.id == profileId }
+        }
+        if (protectionProfile != null) {
+            ProfileProtectionDialog(
+                current = protectionProfile.protection,
+                onSave = { protection ->
+                    val profileId = protectionProfile.id
+                    profileProtectionTargetId = null
+                    controller.updateProfileProtection(profileId, protection) { changed ->
+                        if (changed) rootView.performConfirmHaptic()
+                    }
+                },
+                onDismiss = { profileProtectionTargetId = null },
+            )
+        }
 
         profileIsolationChange?.let { (profileId, enabled) ->
             AlertDialog(

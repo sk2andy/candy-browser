@@ -121,6 +121,7 @@ class CommandDispatcherTest {
     @Test
     fun `dispatch preserves dynamic profile target`() {
         val actions = RecordingActions()
+        val completedOutcomes = mutableListOf<CommandDispatchOutcome>()
 
         val moveOutcome = CommandDispatcher.dispatch(
             BrowserCommand(
@@ -139,7 +140,9 @@ class CommandDispatcherTest {
                 "3 · ✈️",
             ),
             actions,
+            completedOutcomes::add,
         )
+        actions.completeProfileSwitch(completed = true)
 
         assertEquals(listOf("move:work-42", "switch:travel-9"), actions.events)
         assertEquals(
@@ -147,8 +150,16 @@ class CommandDispatcherTest {
             moveOutcome,
         )
         assertEquals(
-            CommandDispatchOutcome.Succeeded(CommandResult.ProfileSwitched("3 · ✈️")),
+            CommandDispatchOutcome.Pending(BrowserCommandKind.SwitchProfile),
             switchOutcome,
+        )
+        assertEquals(
+            listOf(
+                CommandDispatchOutcome.Succeeded(
+                    CommandResult.ProfileSwitched("3 · ✈️"),
+                ),
+            ),
+            completedOutcomes,
         )
     }
 
@@ -183,6 +194,7 @@ class CommandDispatcherTest {
         val events = mutableListOf<String>()
         private var cacheCompletion: ((Boolean) -> Unit)? = null
         private var cookieCompletion: ((Boolean) -> Unit)? = null
+        private var profileSwitchCompletion: ((Boolean) -> Unit)? = null
         override fun clearCacheAndReload(onComplete: (Boolean) -> Unit): Boolean {
             events += "cache"
             if (succeeds) cacheCompletion = onComplete
@@ -201,7 +213,14 @@ class CommandDispatcherTest {
             return if (succeeds) confirmedTabIds.size else 0
         }
         override fun moveSelectedTabToProfile(profileId: String) = record("move:$profileId")
-        override fun switchProfile(profileId: String) = record("switch:$profileId")
+        override fun switchProfile(
+            profileId: String,
+            onComplete: (Boolean) -> Unit,
+        ): Boolean {
+            events += "switch:$profileId"
+            if (succeeds) profileSwitchCompletion = onComplete
+            return succeeds
+        }
         override fun createTab(isIncognito: Boolean) = record("new:$isIncognito")
         override fun openSettings() = record("settings")
         fun completeCookies(completed: Boolean) {
@@ -211,6 +230,10 @@ class CommandDispatcherTest {
         fun completeCache(completed: Boolean) {
             checkNotNull(cacheCompletion).invoke(completed)
             cacheCompletion = null
+        }
+        fun completeProfileSwitch(completed: Boolean) {
+            checkNotNull(profileSwitchCompletion).invoke(completed)
+            profileSwitchCompletion = null
         }
         private fun record(event: String): Boolean {
             events += event

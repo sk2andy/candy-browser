@@ -18,6 +18,9 @@ import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PopupSiteRules
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperRules
+import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
+import dev.sk2andy.materialbrowser.browser.ProfileProtection
+import dev.sk2andy.materialbrowser.browser.ProfileProtectionRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -221,6 +224,8 @@ class BrowserSessionStore internal constructor(
                                         selectedTabId = item.optString("selectedTabId")
                                             .takeIf(String::isNotBlank),
                                         isolationEnabled = item.optBoolean("isolationEnabled", false),
+                                        protection = item.optJSONObject("protection")
+                                            ?.toProfileProtection(),
                                         newTabWallpaper = if (hasTargetWallpapers) {
                                             item.optJSONObject("newTabWallpaper")
                                                 ?.toProfileWallpaper()
@@ -258,6 +263,7 @@ class BrowserSessionStore internal constructor(
                     .put("emoji", profile.emoji)
                     .put("selectedTabId", profile.selectedTabId)
                     .put("isolationEnabled", profile.isolationEnabled)
+                    .put("protection", profile.protection.toJson())
                     .put(
                         "newTabWallpaper",
                         profile.newTabWallpaper.toJson(),
@@ -1439,5 +1445,27 @@ private fun ProfileWallpaper?.toJson(): Any = this
             .put("zoom", wallpaper.zoom.toDouble())
             .put("normalizedPanX", wallpaper.normalizedPanX.toDouble())
             .put("normalizedPanY", wallpaper.normalizedPanY.toDouble())
+    }
+    ?: JSONObject.NULL
+
+private fun JSONObject.toProfileProtection(): ProfileProtection? {
+    val trigger = ProfileLockTrigger.fromWireValue(optString("lockTrigger")) ?: return null
+    return ProfileProtectionRules.normalize(
+        ProfileProtection(
+            lockTrigger = trigger,
+            cooldownMinutes = optInt(
+                "cooldownMinutes",
+                ProfileProtectionRules.DEFAULT_COOLDOWN_MINUTES,
+            ),
+        ),
+    )
+}
+
+private fun ProfileProtection?.toJson(): Any = this
+    ?.let(ProfileProtectionRules::normalize)
+    ?.let { protection ->
+        JSONObject()
+            .put("lockTrigger", protection.lockTrigger.wireValue)
+            .put("cooldownMinutes", protection.cooldownMinutes)
     }
     ?: JSONObject.NULL

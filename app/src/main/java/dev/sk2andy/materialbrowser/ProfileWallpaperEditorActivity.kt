@@ -20,6 +20,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperEditorContract
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperEditorSubmission
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperTarget
+import dev.sk2andy.materialbrowser.browser.ProfileProtectionSession
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.ProfileWallpaperStore
@@ -46,6 +47,10 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@registerForActivityResult
+        if (!isProfileAccessible()) {
+            finish()
+            return@registerForActivityResult
+        }
         loading = true
         errorMessage = null
         lifecycleScope.launch {
@@ -76,6 +81,13 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
         }
         profileId = request.profileId
         wallpaperTarget = request.target
+        val profile = BrowserSessionStore(this).loadProfiles().first
+            .firstOrNull { candidate -> candidate.id == profileId }
+        if (!ProfileProtectionSession.isAccessible(profile)) {
+            finish()
+            return
+        }
+        setRecentsScreenshotEnabled(profile?.protection == null)
         initialWallpaper = request.wallpaper ?: ProfileWallpaper()
         hasStoredWallpaper = request.wallpaper != null
         wallpaperStore = ProfileWallpaperStore(applicationContext)
@@ -128,6 +140,11 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
         if (hasFocus) applyFullImmersiveMode(isFullImmersiveModeEnabled)
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::profileId.isInitialized && !isProfileAccessible()) finish()
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         updateTargetAspectRatio()
@@ -139,6 +156,10 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
     }
 
     private fun saveWallpaper(wallpaper: ProfileWallpaper) {
+        if (!isProfileAccessible()) {
+            finish()
+            return
+        }
         val candidate = bitmap ?: return
         loading = true
         errorMessage = null
@@ -166,6 +187,10 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
     }
 
     private fun removeWallpaper() {
+        if (!isProfileAccessible()) {
+            finish()
+            return
+        }
         loading = true
         lifecycleScope.launch {
             withContext(Dispatchers.IO) { wallpaperStore.delete(profileId, wallpaperTarget) }
@@ -190,5 +215,12 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
     private fun updateTargetAspectRatio() {
         val bounds = windowManager.currentWindowMetrics.bounds
         targetAspectRatio = bounds.width().toFloat() / bounds.height().coerceAtLeast(1)
+    }
+
+    private fun isProfileAccessible(): Boolean {
+        if (!::profileId.isInitialized) return false
+        val profile = BrowserSessionStore(this).loadProfiles().first
+            .firstOrNull { candidate -> candidate.id == profileId }
+        return ProfileProtectionSession.isAccessible(profile)
     }
 }

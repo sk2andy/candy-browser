@@ -547,12 +547,14 @@ dependencies {
     implementation(project(":shared"))
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.core:core-ktx:1.18.0")
     // Gecko uses Android's framework Credential Manager for WebAuthn on API 34+. AndroidX keeps
     // password save/select available across system and Full-build Google providers.
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
     implementation("androidx.webkit:webkit:1.16.0")
     implementation("com.google.guava:guava:33.2.1-android")

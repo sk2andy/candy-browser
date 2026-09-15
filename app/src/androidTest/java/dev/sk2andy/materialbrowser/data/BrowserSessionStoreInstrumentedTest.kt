@@ -13,6 +13,8 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
+import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
+import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -232,6 +234,10 @@ class BrowserSessionStoreInstrumentedTest {
                 emoji = "💼",
                 selectedTabId = "work-tab",
                 isolationEnabled = true,
+                protection = ProfileProtection(
+                    lockTrigger = ProfileLockTrigger.Cooldown,
+                    cooldownMinutes = 17,
+                ),
                 newTabWallpaper = ProfileWallpaper(
                     zoom = 2.25f,
                     normalizedPanX = -0.4f,
@@ -262,6 +268,7 @@ class BrowserSessionStoreInstrumentedTest {
         assertEquals(listOf(DEFAULT_PROFILE_ID, "work"), restoredTabs.map(BrowserTab::profileId))
         assertEquals("work-tab", selectedTabId)
     }
+
 
     @Test
     fun profilesDefaultToEnabledAndRoundTripDisabledState() {

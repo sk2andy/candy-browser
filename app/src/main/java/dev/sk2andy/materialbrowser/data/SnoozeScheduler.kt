@@ -6,6 +6,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
 
 class SnoozeScheduler(context: Context) {
@@ -110,13 +112,31 @@ internal object SnoozeRestoreCoordinator {
             ?: return
         val remaining = snoozed.filterNot { it.tab.id in result.completedTabIds }
         if (sessionStore.saveTabsAndSnoozedImmediately(result.tabs, selection, remaining)) {
-            SnoozeWakeNotifier(context).notifyRestored(
-                result.tabs.filter { it.id in result.restoredTabIds },
+            val notificationTabs = restoredNotificationTabs(
+                tabs = result.tabs,
+                restoredTabIds = result.restoredTabIds,
+                profiles = profiles,
             )
+            if (notificationTabs.isNotEmpty()) {
+                SnoozeWakeNotifier(context).notifyRestored(notificationTabs)
+            }
             Log.i(
                 SnoozeScheduler.LOG_TAG,
                 "Background restore completed=${result.completedTabIds.size}",
             )
+        }
+    }
+
+    internal fun restoredNotificationTabs(
+        tabs: List<BrowserTab>,
+        restoredTabIds: Set<String>,
+        profiles: List<BrowserProfile>,
+    ): List<BrowserTab> {
+        val protectedProfileIds = profiles.asSequence()
+            .filter { profile -> profile.protection != null }
+            .mapTo(hashSetOf(), BrowserProfile::id)
+        return tabs.filter { tab ->
+            tab.id in restoredTabIds && tab.profileId !in protectedProfileIds
         }
     }
 }

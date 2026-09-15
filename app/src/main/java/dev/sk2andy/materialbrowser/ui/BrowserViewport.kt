@@ -206,11 +206,13 @@ private fun ExternalLinkPreviewChrome(
             }
         },
         onOpenInCandy = {
-            when (val result = controller.commitExternalLinkPreview(state.sessionId)) {
-                is ExternalLinkPreviewCommitResult.Opened -> onCommitted(result.tabId)
-                ExternalLinkPreviewCommitResult.MissingPreview,
-                ExternalLinkPreviewCommitResult.TabLimitReached,
-                -> Unit
+            controller.commitExternalLinkPreview(state.sessionId) { result ->
+                when (result) {
+                    is ExternalLinkPreviewCommitResult.Opened -> onCommitted(result.tabId)
+                    ExternalLinkPreviewCommitResult.MissingPreview,
+                    ExternalLinkPreviewCommitResult.TabLimitReached,
+                    -> Unit
+                }
             }
         },
         onSelectProfile = { profileId ->

@@ -23,13 +23,24 @@ internal data class AppDataImportPreview(
 
 @Composable
 internal fun AppDataExportWarningDialog(
+    hasProtectedProfiles: Boolean = false,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.data_archive_export_warning_title)) },
-        text = { Text(stringResource(R.string.data_archive_export_warning_message)) },
+        text = {
+            Text(
+                stringResource(
+                    if (hasProtectedProfiles) {
+                        R.string.data_archive_export_protected_warning_message
+                    } else {
+                        R.string.data_archive_export_warning_message
+                    },
+                ),
+            )
+        },
         confirmButton = {
             Button(onClick = onConfirm) {
                 Text(stringResource(R.string.data_archive_export_action))

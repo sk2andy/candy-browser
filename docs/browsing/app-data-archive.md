@@ -48,6 +48,10 @@ local Recall index so old page text cannot coexist with imported History.
 
 - Archives are plain ZIP files. They contain login sessions, browsing data, permission
   decisions, screenshots and executable userscripts. Export requires a sensitive-data warning.
+- If any profile uses biometric access protection, Candy requests strong biometric authentication
+  after the destination is selected and before transfer starts. The warning states explicitly that
+  protected Candy-owned profile data is readable in the ZIP and that the ZIP has no biometric or
+  cryptographic protection. The current profile lock is not per-profile encryption at rest.
 - Import stages and fully validates the ZIP before showing confirmation. Absolute paths,
   traversal, duplicate entries, symbolic links and bounded-size violations reject the whole
   archive.

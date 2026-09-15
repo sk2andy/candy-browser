@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
+import dev.sk2andy.materialbrowser.browser.ProfileProtectionSession
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingHistoryRepository
@@ -40,6 +41,7 @@ class HistoryActivity : ComponentActivity() {
     private var isMutationInProgress = false
     private var hasHistoryMutations = false
     private var isFullImmersiveModeEnabled = false
+    private var accessibleProfileIds: Set<String> = emptySet()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         BrowsingHistoryLifecycle.install(application)
@@ -53,12 +55,25 @@ class HistoryActivity : ComponentActivity() {
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
         applyFullImmersiveMode(isFullImmersiveModeEnabled)
         val (storedProfiles, storedActiveProfileId) = store.loadProfiles()
-        val profiles = if (store.loadProfilesEnabled()) storedProfiles else storedProfiles.take(1)
+        val configuredProfiles = if (store.loadProfilesEnabled()) {
+            storedProfiles
+        } else {
+            storedProfiles.take(1)
+        }
+        val profiles = configuredProfiles.filter { profile ->
+            profile.protection == null || ProfileProtectionSession.isUnlocked(profile.id)
+        }
+        if (profiles.isEmpty()) {
+            finish()
+            return
+        }
+        setRecentsScreenshotEnabled(profiles.none { profile -> profile.protection != null })
+        accessibleProfileIds = profiles.mapTo(hashSetOf()) { profile -> profile.id }
         val activeProfileId = storedActiveProfileId.takeIf { candidate ->
             profiles.any { profile -> profile.id == candidate }
         } ?: profiles.first().id
         clearRequests += HistoryActivityContract.clearRequestsFrom(savedInstanceState)
-        history = historyRepository.snapshot()
+        history = accessibleHistory()
         val appearanceSettings = store.loadAppearanceSettings()
         val recallEnabled = store.loadRecallEnabled()
 
@@ -98,7 +113,7 @@ class HistoryActivity : ComponentActivity() {
                                 val mutation = withContext(Dispatchers.IO) {
                                     historyRepository.remove(entries)
                                 }
-                                history = mutation.history
+                                history = mutation.history.filterAccessibleProfiles()
                                 if (!mutation.committed) {
                                     Toast.makeText(
                                         this@HistoryActivity,
@@ -134,7 +149,7 @@ class HistoryActivity : ComponentActivity() {
                                 val mutation = withContext(Dispatchers.IO) {
                                     historyRepository.clearRange(request, trailTabIds)
                                 }
-                                history = mutation.history
+                                history = mutation.history.filterAccessibleProfiles()
                                 if (!mutation.committed) {
                                     Toast.makeText(
                                         this@HistoryActivity,
@@ -188,7 +203,24 @@ class HistoryActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        history = historyRepository.snapshot()
+        val currentAccessibleProfileIds = BrowserSessionStore(this).let { store ->
+            val (storedProfiles) = store.loadProfiles()
+            val configuredProfiles = if (store.loadProfilesEnabled()) {
+                storedProfiles
+            } else {
+                storedProfiles.take(1)
+            }
+            configuredProfiles.asSequence()
+                .filter { profile ->
+                    profile.protection == null || ProfileProtectionSession.isUnlocked(profile.id)
+                }
+                .mapTo(hashSetOf()) { profile -> profile.id }
+        }
+        if (currentAccessibleProfileIds != accessibleProfileIds) {
+            recreate()
+            return
+        }
+        history = accessibleHistory()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -200,6 +232,12 @@ class HistoryActivity : ComponentActivity() {
         addAll(BrowserSessionStore(this@HistoryActivity).loadTabs().first)
         addAll(SnoozedTabStore(this@HistoryActivity).load().map { snoozed -> snoozed.tab })
     }.distinctBy { tab -> tab.id }
+
+    private fun accessibleHistory(): List<HistoryEntry> =
+        historyRepository.snapshot().filterAccessibleProfiles()
+
+    private fun List<HistoryEntry>.filterAccessibleProfiles(): List<HistoryEntry> =
+        filter { entry -> entry.profileId in accessibleProfileIds }
 
     private fun finishWithResult() {
         if (hasHistoryMutations || clearRequests.isNotEmpty()) {
