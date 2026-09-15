@@ -422,12 +422,13 @@ slot, prevents duplicate element-top protection and follows the same enable/inse
 There is no extra observer, network request, scroll scan or separate per-site setting.
 Source-discovery, opaque-CSS and LINK-race experiments are not included in this smaller follow-up.
 
-For google.com/google.de and their subdomains, the observed expanded-search state
-`:root #tsf .A7Yvie.emcav` receives the same early important zero-top-plus-inset rule.
-The stylesheet exists before a later focus changes the container from static to fixed; browser
-selector matching supplies protection without a delayed Candy repair. Normal static search layout
-is not offset by this state rule. The rule reserves a slot and skips duplicate element protection,
-using the same enable/inset/cleanup lifecycle. Other Google layout variants are not inferred.
+For google.com/google.de and their subdomains, the observed absolute compact-menu container
+`:root #navd` and expanded-search state `:root #tsf .A7Yvie.emcav` receive the same early important
+zero-top-plus-inset rule. The menu rule moves its hamburger below the status bar without shifting
+unrelated page flow. The stylesheet also exists before a later focus changes the search container
+from static to fixed; browser selector matching supplies protection without a delayed Candy repair.
+The rules reserve slots and skip duplicate element protection, using the same
+enable/inset/cleanup lifecycle. Other Google layout variants are not inferred.
 
 For reddit.com and its subdomains, `content_safe_area_reddit.js` owns one stylesheet per relevant
 scope: document rules are restricted to `shreddit-app`; open app roots receive local rules and

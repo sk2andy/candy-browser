@@ -10,7 +10,7 @@
   const knownTopSelectors = hostname === "amazon.de" || hostname.endsWith(".amazon.de") ?
     [":root #btf-sub-nav-top-navigation-bar.persistent-header"] :
     ["google.com", "google.de"].some((host) => hostname === host || hostname.endsWith(`.${host}`)) ?
-      [":root #tsf .A7Yvie.emcav"] : [];
+      [":root #navd", ":root #tsf .A7Yvie.emcav"] : [];
   const knownTopMatcher = knownTopSelectors.join(", ");
   const markerPrefix = `data-candy-safe-area-${Math.random().toString(36).slice(2)}`;
   let layerEpoch = 0;
