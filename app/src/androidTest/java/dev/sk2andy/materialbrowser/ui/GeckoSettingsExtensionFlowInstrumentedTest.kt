@@ -112,10 +112,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
             originalTabCount = controller.tabs.size
         }
 
-        openBrowserMenu()
-        composeRule.onNodeWithTag(BrowserMainMenuTestTags.FirefoxExtensions)
-            .performScrollTo()
-            .performClick()
+        openFirefoxExtensionSettings()
         composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
             composeRule.onAllNodesWithTag(
                 FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
@@ -123,7 +120,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
         }
         composeRule.onNodeWithContentDescription(
             context.getString(R.string.gecko_extension_install),
-        ).assertDoesNotExist()
+        ).assertIsDisplayed()
         composeRule.onNodeWithTag(
             FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
         ).assertIsDisplayed().performClick()
@@ -142,6 +139,8 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
         }
         composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.OptionsTopBar)
             .assertIsDisplayed()
+        composeRule.onNodeWithTag(FirefoxExtensionManagerTestTags.Overlay).assertDoesNotExist()
+        composeRule.onNodeWithText(context.getString(R.string.settings_title)).assertDoesNotExist()
         composeRule.onNodeWithText(FIXTURE_EXTENSION_NAME).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(context.getString(R.string.action_back))
             .assertIsDisplayed()
@@ -200,10 +199,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
     @Test
     fun externalNavigationFromExtensionOptionsRestoresNormalBrowserChrome() {
         ensureBuiltInExtensionFixture()
-        openBrowserMenu()
-        composeRule.onNodeWithTag(BrowserMainMenuTestTags.FirefoxExtensions)
-            .performScrollTo()
-            .performClick()
+        openFirefoxExtensionSettings()
         composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
             composeRule.onAllNodesWithTag(
                 FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
@@ -245,7 +241,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
     }
 
     @Test
-    fun privateMainMenuDoesNotExposeFirefoxExtensions() {
+    fun privateMainMenuDoesNotExposeFirefoxExtensionActions() {
         composeRule.activityRule.scenario.onActivity { activity ->
             val controller = activity.browserControllerForTesting()
             controller.createTab(isIncognito = true)
@@ -255,8 +251,16 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
 
         openBrowserMenu()
 
-        composeRule.onNodeWithTag(BrowserMainMenuTestTags.FirefoxExtensions)
+        composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.Actions)
             .assertDoesNotExist()
+    }
+
+    private fun openFirefoxExtensionSettings() {
+        openSettings()
+        composeRule.onNodeWithText(context.getString(R.string.gecko_extensions_title))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(FirefoxExtensionManagerTestTags.Overlay).assertIsDisplayed()
     }
 
     private fun openSettings() {

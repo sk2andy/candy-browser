@@ -35,12 +35,16 @@ import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKind
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import eightbitlab.com.blurview.BlurTarget
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -63,7 +67,12 @@ class BrowserMainMenuInstrumentedTest {
         val desktopViewChanges = AtomicInteger()
         val zoomChanges = AtomicInteger()
         val safeAreaChanges = AtomicInteger()
-        val firefoxExtensionActions = AtomicInteger()
+        val extensionActionKey = GeckoExtensionActionKey(
+            extensionId = "site-addon@example.test",
+            tabId = "tab",
+            kind = GeckoExtensionActionKind.Browser,
+        )
+        val firefoxExtensionAction = AtomicReference<GeckoExtensionActionKey>()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         var setMenuExpanded: (Boolean) -> Unit = {}
         composeRule.mainClock.autoAdvance = false
@@ -174,7 +183,17 @@ class BrowserMainMenuInstrumentedTest {
                             onDuplicateTab = duplicateActions::incrementAndGet,
                             onDockAddressBar = dockActions::incrementAndGet,
                             onHistory = {},
-                            onOpenFirefoxExtensions = firefoxExtensionActions::incrementAndGet,
+                            firefoxExtensionActions = listOf(
+                                GeckoExtensionActionState(
+                                    key = extensionActionKey,
+                                    title = "Site add-on",
+                                    enabled = true,
+                                    badgeText = null,
+                                    badgeBackgroundColor = null,
+                                    badgeTextColor = null,
+                                ),
+                            ),
+                            onFirefoxExtensionAction = firefoxExtensionAction::set,
                             onSettings = {},
                         )
                     }
@@ -236,12 +255,15 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasText(context.getString(R.string.favorites_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.downloads_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_history))) and
-                hasAnyDescendant(hasText(context.getString(R.string.gecko_extensions_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_settings))),
         ).assertExists()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.BrowserGroup)
             .onChildren()
-            .assertCountEquals(7)
+            .assertCountEquals(6)
+        composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.SectionTitle).assertExists()
+        composeRule.onNodeWithTag(
+            FirefoxExtensionChromeTestTags.action(extensionActionKey.saveableId),
+        ).assertExists()
 
         val menuHeight = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
             .fetchSemanticsNode().boundsInRoot.height
@@ -346,10 +368,10 @@ class BrowserMainMenuInstrumentedTest {
         assertTrue(downloadsTop < historyTop)
         assertTrue(historyTop < settingsTop)
         val firefoxExtensionsTop = composeRule
-            .onNodeWithTag(BrowserMainMenuTestTags.FirefoxExtensions)
+            .onNodeWithTag(FirefoxExtensionChromeTestTags.SectionTitle)
             .assertIsDisplayed()
             .fetchSemanticsNode().boundsInRoot.top
-        assertTrue(historyTop < firefoxExtensionsTop)
+        assertTrue(firefoxExtensionsTop < historyTop)
         assertTrue(firefoxExtensionsTop < settingsTop)
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings).assertIsDisplayed()
         composeRule.mainClock.autoAdvance = false
@@ -379,7 +401,16 @@ class BrowserMainMenuInstrumentedTest {
 
         assertEquals(2, dismissals.get())
         assertEquals(1, duplicateActions.get())
-        assertEquals(0, firefoxExtensionActions.get())
+        assertEquals(null, firefoxExtensionAction.get())
+
+        composeRule.runOnIdle { setMenuExpanded(true) }
+        composeRule.mainClock.advanceTimeBy(200L)
+        composeRule.onNodeWithTag(
+            FirefoxExtensionChromeTestTags.action(extensionActionKey.saveableId),
+        ).performScrollTo().performClick()
+
+        assertEquals(3, dismissals.get())
+        assertEquals(extensionActionKey, firefoxExtensionAction.get())
     }
 
     @Test

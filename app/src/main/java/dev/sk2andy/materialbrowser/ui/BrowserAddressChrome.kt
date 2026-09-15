@@ -109,7 +109,6 @@ internal fun BoxScope.BrowserAddressChrome(
     onOpenFavorites: () -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenHistory: () -> Unit,
-    onOpenFirefoxExtensions: (() -> Unit)?,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
@@ -428,11 +427,10 @@ internal fun BoxScope.BrowserAddressChrome(
             onAddressEditorDismiss()
             onOpenHistory()
         },
-        onOpenFirefoxExtensions = onOpenFirefoxExtensions?.let { openExtensions ->
-            {
-                onAddressEditorDismiss()
-                openExtensions()
-            }
+        firefoxExtensionActions = controller.firefoxExtensionActions,
+        onFirefoxExtensionAction = { actionKey ->
+            onAddressEditorDismiss()
+            controller.clickFirefoxExtensionAction(actionKey)
         },
         onSettings = {
             onAddressEditorDismiss()

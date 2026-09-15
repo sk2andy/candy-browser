@@ -174,8 +174,7 @@ internal fun BrowserScreen(
     onImportAppData: () -> Unit = {},
     onShowGestureOnboarding: () -> Unit = {},
     onShowReleaseNotes: () -> Unit = {},
-    onOpenFirefoxExtensions: (() -> Unit)? = null,
-    onManageFirefoxExtensions: (() -> Unit)? = onOpenFirefoxExtensions,
+    onManageFirefoxExtensions: (() -> Unit)? = null,
     openAddressEditorOnLaunch: Boolean = false,
     launcherAddressEditorRequestId: Int = 0,
     hardwareTabChangeRequestId: Int = 0,
@@ -1146,6 +1145,12 @@ internal fun BrowserScreen(
         ownsIme = addressEditorVisible || controller.findInPageState != null,
     )
     val firefoxExtensionOptionsTitle = controller.selectedFirefoxExtensionOptionsTitle
+    LaunchedEffect(selectedTab.id, firefoxExtensionOptionsTitle) {
+        if (firefoxExtensionOptionsTitle != null) {
+            settingsVisible = false
+            addressEditorVisible = false
+        }
+    }
     val showFirefoxExtensionOptionsChrome =
         firefoxExtensionOptionsTitle != null && !videoOnlyPresentation
     val showInteractiveBlankStart = addressEditorVisible &&
@@ -1327,7 +1332,6 @@ internal fun BrowserScreen(
             onOpenFavorites = onOpenFavorites,
             onOpenDownloads = onOpenDownloads,
             onOpenHistory = onOpenHistory,
-            onOpenFirefoxExtensions = onOpenFirefoxExtensions,
             onSettings = {
                 settingsDestination = SettingsDestination.Home
                 settingsVisible = true

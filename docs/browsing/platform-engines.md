@@ -392,19 +392,23 @@ Camera and microphone permissions remain separate and continue through Candy's p
 - Installing, enabling, disabling, updating or uninstalling an extension reloads the selected
   non-blank Gecko page so navigation-driven scripts and styles cannot miss an already open tab.
   Changing only private-browsing access does not reload a regular page.
-- Settings opens the reusable extension manager as an overlay in the normal `MainActivity` and
-  Candy chrome. Dismissing that overlay returns to Settings instead of exposing the browser tab.
-  The main browser menu opens a regular-only list of installed extensions; selecting an enabled
-  extension opens its own options page in a session-only Candy tab. That tab replaces the address
-  bar with a top app bar containing Back and the extension name. Extension content starts below
-  that bar and uses native side and bottom safe-area margins instead of edge-to-edge document
-  insets. Back closes the tab directly before returning to its opener; its initial `about:blank`
-  entry is never exposed. If the tab leaves the extension's exact `moz-extension://` origin, Candy
-  immediately restores the normal address chrome and browser-history Back behavior. The entry is
-  present only for Gecko and is absent in private browsing.
+- Settings opens the extension manager as an overlay in the normal `MainActivity` and Candy chrome.
+  Each installed extension with a valid options target exposes a Settings action beside its
+  management controls. Dismissing that overlay returns to Settings instead of exposing the browser
+  tab. Selecting that action opens the extension's options page in a session-only Candy tab. That
+  tab replaces the address bar with a top app bar containing Back and the extension name. Extension
+  content starts below that bar and uses native side and bottom safe-area margins instead of
+  edge-to-edge document insets. Back closes the tab directly before returning to its opener; its
+  initial `about:blank` entry is never exposed. If the tab leaves the extension's exact
+  `moz-extension://` origin, Candy immediately restores normal address chrome and browser-history
+  Back behavior.
+- The main browser menu lists the browser/page actions Gecko publishes for the selected tab instead
+  of linking to extension options. Selecting one delegates its tab-scoped action key to Gecko;
+  actions with a popup render that extension-owned, page-specific UI inside Candy's bounded dialog.
+  Private tabs only expose actions Gecko publishes for extensions with explicit private access.
 - Extension management and inventory loading are rejected from private management contexts.
   Private access is a separate, explicit switch for an extension installed from a regular context.
-  Menu-driven options clicks re-read Gecko's installed inventory instead of trusting the displayed
+  Settings-driven options clicks re-read Gecko's installed inventory instead of trusting displayed
   snapshot. The selected ID must still be installed and enabled, and its options URL must match that
   current extension's exact `moz-extension://` origin. The validated ID and URL stay paired through
   the browser-engine boundary.

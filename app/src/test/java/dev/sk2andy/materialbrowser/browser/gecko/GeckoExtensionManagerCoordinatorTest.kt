@@ -83,10 +83,7 @@ class GeckoExtensionManagerCoordinatorTest {
                 true
             },
         )
-        coordinator.open(
-            regularContext,
-            GeckoExtensionManagerPresentation.Options,
-        )?.join()
+        coordinator.open(regularContext)?.join()
 
         requireNotNull(coordinator.openOptionsPage(installed.id)).join()
 
@@ -118,16 +115,12 @@ class GeckoExtensionManagerCoordinatorTest {
                 true
             },
         )
-        coordinator.open(
-            regularContext,
-            GeckoExtensionManagerPresentation.Options,
-        )?.join()
+        coordinator.open(regularContext)?.join()
 
         requireNotNull(coordinator.openOptionsPage(installed.id)).join()
         requireNotNull(coordinator.openOptionsPage("missing@example.com")).join()
         coordinator.open(
             GeckoExtensionManagementContext(profileId = "private", isPrivate = true),
-            GeckoExtensionManagerPresentation.Options,
         )
         assertNull(coordinator.openOptionsPage(installed.id))
         assertEquals(0, openCount)
@@ -150,7 +143,7 @@ class GeckoExtensionManagerCoordinatorTest {
                 true
             },
         )
-        coordinator.open(regularContext, GeckoExtensionManagerPresentation.Options)?.join()
+        coordinator.open(regularContext)?.join()
         runtime.replaceInstalled(installed.copy(enabled = false))
 
         requireNotNull(coordinator.openOptionsPage(installed.id)).join()
@@ -176,7 +169,7 @@ class GeckoExtensionManagerCoordinatorTest {
                 true
             },
         )
-        coordinator.open(regularContext, GeckoExtensionManagerPresentation.Options)?.join()
+        coordinator.open(regularContext)?.join()
         runtime.removeInstalled(installed.id)
 
         requireNotNull(coordinator.openOptionsPage(installed.id)).join()
@@ -202,7 +195,7 @@ class GeckoExtensionManagerCoordinatorTest {
                 true
             },
         )
-        coordinator.open(regularContext, GeckoExtensionManagerPresentation.Options)?.join()
+        coordinator.open(regularContext)?.join()
         runtime.replaceInstalled(
             installed.copy(
                 baseUrl = "moz-extension://current-origin/",
