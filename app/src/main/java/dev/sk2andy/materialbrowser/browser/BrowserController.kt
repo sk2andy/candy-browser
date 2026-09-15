@@ -8923,7 +8923,11 @@ class BrowserController(
                     captchaCompatibilityEnabled,
             topInsetPx = topInsetPx,
             navigationGeneration = navigationGeneration,
-            scrollMetricsEnabled = isScrollBarEnabled,
+            scrollMetricsEnabled = BrowserPullToRefreshRules.shouldCollectScrollMetrics(
+                isScrollBarEnabled = isScrollBarEnabled,
+                tabId = tab.id,
+                selectedTabId = selectedTabId,
+            ),
             cssSafeAreaTopInsetPx = cssSafeAreaTopInsetPx,
             geckoSafeAreaSettings = developerSettings.geckoSafeAreaSettings,
             safeAreaLayoutQuietPeriodMillis =
@@ -8995,6 +8999,17 @@ class BrowserController(
             }
         }
         refreshExternalLinkPreviewSafeAreaPolicy(forceNativeChanged = false)
+    }
+
+    private fun refreshGeckoScrollMetricsPolicies(
+        previousTabId: String,
+        newSelectedTabId: String,
+    ) {
+        if (!usesGeckoEngine || isScrollBarEnabled) return
+        listOf(previousTabId, newSelectedTabId).distinct().forEach { tabId ->
+            val session = browserEngineSessions[tabId] ?: return@forEach
+            geckoPrivacyPolicyFor(tabId)?.let(session::updatePrivacyPolicy)
+        }
     }
 
     private fun refreshDeveloperSafeAreaConfiguration(forceNativeChanged: Boolean) {
@@ -12129,6 +12144,7 @@ class BrowserController(
         }
         selectedTabId = tabId
         if (previousTabId != tabId) {
+            refreshGeckoScrollMetricsPolicies(previousTabId, tabId)
             publishFullscreenVideoState()
             browserEngineSessions[tabId]?.setActive(
                 isActivityResumed && externalLinkPreviewState == null,

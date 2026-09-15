@@ -85,6 +85,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.BrowserPullToRefreshRules
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.FindInPageRules
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewCommitResult
@@ -424,10 +425,17 @@ internal fun BrowserViewport(
                 visible = webViewVideoOnlyPresentation ||
                     !tabOverviewVisible ||
                     selectedTab.isIncognito,
+                isLoading = selectedTab.isLoading,
+                pullToRefreshEnabled = !videoOnlyPresentation &&
+                    !tabOverviewVisible &&
+                    controller.selectedFirefoxExtensionOptionsTitle == null &&
+                    controller.findInPageState == null &&
+                    pageErrorFeedback is PageErrorFeedbackState.Hidden,
                 showStatusBarOverlay = !videoOnlyPresentation &&
                     !tabOverviewVisible &&
                     controller.selectedFirefoxExtensionOptionsTitle == null,
                 statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
+                onRefresh = controller::reload,
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
                 onBlurTargetReleased = onBlurTargetReleased,
@@ -546,8 +554,11 @@ private fun BrowserScrollBarOverlay(
 private fun ActiveBrowserEngineView(
     controller: BrowserController,
     visible: Boolean,
+    isLoading: Boolean,
+    pullToRefreshEnabled: Boolean,
     showStatusBarOverlay: Boolean,
     statusBarTint: Int,
+    onRefresh: () -> Unit,
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
@@ -561,13 +572,24 @@ private fun ActiveBrowserEngineView(
     )
     val selectedTabId = controller.selectedTabId
     val engineViewRevision = controller.engineViewRevision
+    var pullRefreshRequested by remember(selectedTabId) { mutableStateOf(false) }
+    LaunchedEffect(selectedTabId, isLoading) {
+        if (!isLoading) pullRefreshRequested = false
+    }
+    val indicatorColor = MaterialTheme.colorScheme.primary.toArgb()
+    val indicatorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.toArgb()
+    val currentOnRefresh by rememberUpdatedState(onRefresh)
     val currentOnLiveFrame by rememberUpdatedState(onLiveFrame)
     val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
     key(browserContentBlurEnabled) {
         AndroidView(
             factory = { context ->
-                StatusBarStaticOverlayHost(context, browserContentBlurEnabled).apply {
+                StatusBarStaticOverlayHost(
+                    context = context,
+                    browserContentBlurEnabled = browserContentBlurEnabled,
+                    pullToRefreshEnabled = true,
+                ).apply {
                     tag = BrowserEngineViewHostState(contentContainer)
                 }
             },
@@ -584,6 +606,31 @@ private fun ActiveBrowserEngineView(
                     geometry = statusBarGeometry,
                     tint = statusBarTint,
                     visible = showStatusBarOverlay,
+                )
+                hostView.updatePullToRefresh(
+                    enabled = visible &&
+                        !contentObscured &&
+                        pullToRefreshEnabled &&
+                        (!isLoading || pullRefreshRequested),
+                    refreshing = pullRefreshRequested,
+                    indicatorColor = indicatorColor,
+                    indicatorContainerColor = indicatorContainerColor,
+                    canChildScrollUp = {
+                        BrowserPullToRefreshRules.canChildScrollUp(
+                            controller.selectedBrowserEngineScrollMetrics(),
+                        )
+                    },
+                    onRefresh = refresh@{
+                        if (controller.selectedTabId != selectedTabId) return@refresh false
+                        val canStart = BrowserPullToRefreshRules.canStart(
+                            isLoading = controller.selectedTab.isLoading,
+                            scrollMetrics = controller.selectedBrowserEngineScrollMetrics(),
+                        )
+                        if (!canStart || pullRefreshRequested) return@refresh false
+                        pullRefreshRequested = true
+                        currentOnRefresh()
+                        true
+                    },
                 )
                 if (visible) {
                     val hostState = hostView.tag as BrowserEngineViewHostState
