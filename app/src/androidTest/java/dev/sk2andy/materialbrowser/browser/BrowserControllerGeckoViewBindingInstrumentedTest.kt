@@ -32,6 +32,8 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
+import dev.sk2andy.materialbrowser.data.HistoryEntry
+import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -50,6 +52,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     private var controller: BrowserController? = null
     private var originalEngineKind: AndroidBrowserEngineKind? = null
+    private var originalHistory: List<HistoryEntry>? = null
+    private var originalHistoryRecordingMode: HistoryRecordingMode? = null
 
     @Test
     fun webpageImeOpeningReprobesAndParksOccludingAddressBar() {
@@ -279,10 +283,51 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             try {
                 controller?.destroy()
             } finally {
+                val store = BrowserSessionStore(composeRule.activity)
                 originalEngineKind?.let { kind ->
-                    assertTrue(BrowserSessionStore(composeRule.activity).saveAndroidBrowserEngineKind(kind))
+                    assertTrue(store.saveAndroidBrowserEngineKind(kind))
+                }
+                originalHistoryRecordingMode?.let { mode ->
+                    assertTrue(store.saveHistoryRecordingMode(mode))
+                }
+                originalHistory?.let { history ->
+                    assertTrue(store.commitHistory(history))
                 }
             }
+        }
+    }
+
+    @Test
+    fun committedGeckoNavigationRecordsHistoryWhenSavingIsEnabled() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalHistory = store.loadHistory()
+            originalHistoryRecordingMode = store.loadHistoryRecordingMode()
+            assertTrue(store.commitHistory(emptyList()))
+            assertTrue(store.saveHistoryRecordingMode(HistoryRecordingMode.Enabled))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            )
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = "https://history.example/article",
+                    title = "Recorded article",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+
+            val entry = store.loadHistory().single()
+            assertEquals("https://history.example/article", entry.url)
+            assertEquals("Recorded article", entry.title)
+            assertEquals(browserController.selectedTabForTesting().profileId, entry.profileId)
         }
     }
 
