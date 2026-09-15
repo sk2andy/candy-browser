@@ -1077,7 +1077,7 @@ private class GeckoViewBrowserSession(
             ): GeckoResult<GeckoSession> {
                 val child = GeckoSession(GeckoSessionSettings.Builder(session.settings).build())
                 val accepted = newSessionListener?.onNewSession(
-                    GeckoNewSessionRequest(uri, child),
+                    GeckoNewSessionRequest(uri, GeckoPreparedSession(child)),
                 ) == true
                 return GeckoResult.fromValue(child.takeIf { accepted })
             }

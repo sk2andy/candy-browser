@@ -41,6 +41,25 @@ class AppUpdateRulesTest {
     }
 
     @Test
+    fun `does not downgrade System WebView install to Gecko release assets`() {
+        assertNull(
+            AppUpdateRules.findAvailableUpdate(
+                currentVersionName = "0.8",
+                release = release(
+                    "v0.9",
+                    assets = listOf(
+                        asset("v0.9", suffix = "release"),
+                        asset("v0.9", suffix = "arm64-v8a-release"),
+                        asset("v0.9", suffix = "ca-release"),
+                    ),
+                ),
+                channel = AppReleaseChannel.SystemWebView,
+                supportedAbis = listOf("arm64-v8a"),
+            ),
+        )
+    }
+
+    @Test
     fun `finds newer signed release APK`() {
         val update = AppUpdateRules.findAvailableUpdate(
             currentVersionName = "0.8",

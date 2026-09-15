@@ -52,13 +52,35 @@ def build_tools_version(path: Path) -> tuple[int, ...]:
     return tuple(int(part) for part in re.findall(r"\d+", path.parent.name))
 
 
+def android_sdk_root() -> Path:
+    configured_root = os.environ.get("ANDROID_HOME") or os.environ.get(
+        "ANDROID_SDK_ROOT",
+    )
+    if configured_root:
+        return Path(configured_root)
+
+    local_properties = PROJECT_ROOT / "local.properties"
+    if local_properties.is_file():
+        for line in local_properties.read_text(encoding="utf-8").splitlines():
+            key, separator, value = line.partition("=")
+            if separator and key.strip() == "sdk.dir":
+                return Path(value.strip().replace(r"\:", ":").replace(r"\\", "\\"))
+
+    default_root = Path.home() / "Library/Android/sdk"
+    if default_root.is_dir():
+        return default_root
+
+    raise RuntimeError(
+        "Android SDK not found via ANDROID_HOME, ANDROID_SDK_ROOT, "
+        "local.properties, or the macOS default path.",
+    )
+
+
 def find_aapt2() -> Path:
-    sdk_root = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
-    if not sdk_root:
-        raise RuntimeError("ANDROID_HOME or ANDROID_SDK_ROOT must point to an Android SDK.")
+    sdk_root = android_sdk_root()
     candidates = [
         path
-        for path in (Path(sdk_root) / "build-tools").glob("*/aapt2")
+        for path in (sdk_root / "build-tools").glob("*/aapt2")
         if path.is_file()
     ]
     if not candidates:
@@ -137,6 +159,11 @@ class SystemWebViewApkTest(unittest.TestCase):
 
     def test_manifest_contains_no_gecko_provider(self):
         self.assertNotIn("GeckoPerformanceDiagnosticsProvider", self.manifest)
+
+    def test_legal_notices_do_not_claim_gecko_extensions_are_bundled(self):
+        notices = self.archive.read("assets/third_party_notices.txt").decode("utf-8")
+        self.assertNotIn("Gecko default extensions", notices)
+        self.assertNotIn(".xpi", notices.lower())
 
 
 if __name__ == "__main__":

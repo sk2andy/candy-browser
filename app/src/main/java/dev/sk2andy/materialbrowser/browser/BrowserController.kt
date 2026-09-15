@@ -105,7 +105,7 @@ import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
-import dev.sk2andy.materialbrowser.browser.gecko.CandyGeckoView
+import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreparedSession
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowserEngineSessionFactory
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoProfileStorageRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowsingData
@@ -280,8 +280,6 @@ import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.sync.SyncTab
 import java.util.ArrayDeque
 import java.util.UUID
-import org.mozilla.geckoview.GeckoSession
-import org.mozilla.geckoview.GeckoView
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -873,15 +871,15 @@ class BrowserController(
     private val browserEngineSessionFactory: AndroidBrowserEngineFactory by lazy(
         LazyThreadSafetyMode.NONE,
     ) {
-        when (browserEngineKind) {
+        if (BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+            SystemWebViewBrowserEngineFactory(activity)
+        } else when (browserEngineKind) {
             AndroidBrowserEngineKind.GeckoView ->
                 GeckoBrowserEngineSessionFactory(activity.applicationContext)
             AndroidBrowserEngineKind.SystemWebView ->
                 SystemWebViewBrowserEngineFactory(activity)
         }
     }
-    private val geckoEngineSessionFactory: GeckoBrowserEngineSessionFactory
-        get() = browserEngineSessionFactory as GeckoBrowserEngineSessionFactory
     private val residentSessionAccessOrder = mutableMapOf<String, Long>()
     private var residentSessionAccessSequence = 0L
     private var residentSessionTrimScheduled = false
@@ -1821,20 +1819,20 @@ class BrowserController(
         )
         webRtcProtectionMode = store.loadWebRtcProtectionMode()
         browserEngineSessionFactory.setWebRtcProtectionMode(webRtcProtectionMode)
-        if (usesGeckoEngine) {
-            geckoEngineSessionFactory.setExtensionChromeHost(
+        if (!BuildConfig.SYSTEM_WEBVIEW_ONLY && usesGeckoEngine) {
+            browserEngineSessionFactory.setExtensionChromeHost(
                 object : GeckoExtensionChromeHost {
                     override fun currentSessionIdentity(): GeckoExtensionSessionIdentity? =
-                        geckoEngineSessionFactory.extensionSessionIdentity(selectedTabId)
+                        browserEngineSessionFactory.extensionSessionIdentity(selectedTabId)
                             ?.takeIf { browserEngineSessions.containsKey(it.tabId) }
 
                     override fun isCurrentSession(identity: GeckoExtensionSessionIdentity): Boolean =
                         browserEngineSessions.containsKey(identity.tabId) &&
-                            geckoEngineSessionFactory.extensionSessionIdentity(identity.tabId) == identity
+                            browserEngineSessionFactory.extensionSessionIdentity(identity.tabId) == identity
 
                     override fun createTab(
                         request: GeckoExtensionCreateTabRequest,
-                        session: GeckoSession,
+                        session: BrowserEnginePreparedSession,
                     ): String? {
                         val existingTabIds = tabs.mapTo(hashSetOf(), BrowserTab::id)
                         val source = request.source
@@ -1860,7 +1858,7 @@ class BrowserController(
                             this@BrowserController.closeTab(tabId)
                             return null
                         }
-                        if (!geckoEngineSessionFactory.prepareSession(tabId, session)) {
+                        if (!browserEngineSessionFactory.prepareSession(tabId, session)) {
                             this@BrowserController.closeTab(tabId)
                             return null
                         }
@@ -1897,14 +1895,15 @@ class BrowserController(
 
                     override fun openPopup(
                         popup: GeckoExtensionPopupIdentity,
-                        session: GeckoSession,
+                        session: BrowserEnginePreparedSession,
                         toggle: Boolean,
                     ): Boolean {
                         if (!isCurrentSession(popup.owner)) return false
                         this@BrowserController.releaseFirefoxExtensionPopupView()
-                        val view = GeckoView(activity).also { geckoView ->
-                            geckoView.setSession(session)
-                        }
+                        val view = browserEngineSessionFactory.createExtensionPopupView(
+                            activity,
+                            session,
+                        ) ?: return false
                         firefoxExtensionPopupIdentity = popup
                         firefoxExtensionPopupView = view
                         return true
@@ -2183,46 +2182,37 @@ class BrowserController(
 
     internal fun requestSelectedBrowserEngineFocus(): Boolean {
         if (browserChromeOwnsIme) return false
-        val selectedView = selectedAttachedBrowserEngineView() ?: return false
+        val binding = selectedAttachedBrowserEngineBinding() ?: return false
+        val selectedView = binding.view
         if (selectedView.hasFocus()) return false
-        return if (selectedView is CandyGeckoView) {
-            selectedView.requestEngineFocus()
-        } else {
-            selectedView.requestFocus()
-        }
+        return binding.session.requestEngineFocus(selectedView)
     }
 
     internal fun dispatchGenericMotionEventToSelectedBrowserEngine(
         event: MotionEvent,
     ): Boolean {
-        val selectedView = selectedAttachedBrowserEngineView() ?: return false
-        return if (selectedView is CandyGeckoView) {
-            selectedView.dispatchEngineGenericMotionEvent(event)
-        } else {
-            selectedView.dispatchGenericMotionEvent(event)
-        }
+        val binding = selectedAttachedBrowserEngineBinding() ?: return false
+        return binding.session.dispatchEngineGenericMotionEvent(binding.view, event)
     }
 
     internal fun replayFirstKeyStrokeToSelectedBrowserEngine(event: KeyEvent): Boolean {
-        val selectedView = selectedAttachedBrowserEngineView() ?: return false
+        val binding = selectedAttachedBrowserEngineBinding() ?: return false
+        val selectedView = binding.view
         val downEvent = KeyEvent(event)
         val upEvent = KeyEvent.changeAction(event, KeyEvent.ACTION_UP)
         selectedView.postOnAnimation {
-            if (selectedView is CandyGeckoView) {
-                selectedView.dispatchEngineKeyEvent(downEvent)
-                selectedView.dispatchEngineKeyEvent(upEvent)
-            } else {
-                selectedView.dispatchKeyEvent(downEvent)
-                selectedView.dispatchKeyEvent(upEvent)
-            }
+            binding.session.dispatchEngineKeyEvent(selectedView, downEvent)
+            binding.session.dispatchEngineKeyEvent(selectedView, upEvent)
         }
         return true
     }
 
-    private fun selectedAttachedBrowserEngineView(): View? = geckoViewBindings.values
+    private fun selectedAttachedBrowserEngineBinding(): GeckoViewBinding? = geckoViewBindings.values
         .firstOrNull { binding -> binding.tabId == selectedTabId }
-        ?.view
-        ?.takeIf(View::isAttachedToWindow)
+        ?.takeIf { binding -> binding.view.isAttachedToWindow }
+
+    private fun selectedAttachedBrowserEngineView(): View? =
+        selectedAttachedBrowserEngineBinding()?.view
 
     private fun attachSelectedGeckoView(
         container: FrameLayout,
@@ -5990,7 +5980,9 @@ class BrowserController(
     fun printSelectedPage() = printPage(selectedTabId)
 
     internal fun clickFirefoxExtensionAction(key: GeckoExtensionActionKey): Boolean =
-        usesGeckoEngine && geckoEngineSessionFactory.clickExtensionAction(key)
+        !BuildConfig.SYSTEM_WEBVIEW_ONLY &&
+            usesGeckoEngine &&
+            browserEngineSessionFactory.clickExtensionAction(key)
 
     internal fun openSelectedFirefoxExtensionOptionsPage(
         target: GeckoExtensionOptionsTarget,
@@ -6006,12 +5998,14 @@ class BrowserController(
     }
 
     internal fun dismissFirefoxExtensionPopup() {
-        if (usesGeckoEngine) geckoEngineSessionFactory.dismissExtensionPopup()
+        if (!BuildConfig.SYSTEM_WEBVIEW_ONLY && usesGeckoEngine) {
+            browserEngineSessionFactory.dismissExtensionPopup()
+        }
         releaseFirefoxExtensionPopupView()
     }
 
     private fun releaseFirefoxExtensionPopupView() {
-        (firefoxExtensionPopupView as? GeckoView)?.releaseSession()
+        firefoxExtensionPopupView?.let(browserEngineSessionFactory::releaseExtensionPopupView)
         firefoxExtensionPopupView = null
         firefoxExtensionPopupIdentity = null
     }
@@ -6023,7 +6017,7 @@ class BrowserController(
     ): String? {
         if (
             browserEngineSessions[owner.tabId] == null ||
-            geckoEngineSessionFactory.extensionSessionIdentity(owner.tabId) != owner
+            browserEngineSessionFactory.extensionSessionIdentity(owner.tabId) != owner
         ) {
             return null
         }
@@ -8330,9 +8324,9 @@ class BrowserController(
         downloadChoices.forEach { choice -> choice.releaseResponse?.invoke() }
         dismissClosedTabUndo()
         connectivityMonitor.close()
-        if (usesGeckoEngine) {
+        if (!BuildConfig.SYSTEM_WEBVIEW_ONLY && usesGeckoEngine) {
             // The runtime is process-scoped; do not let it retain this Activity via the listener.
-            geckoEngineSessionFactory.setExtensionChromeHost(null)
+            browserEngineSessionFactory.setExtensionChromeHost(null)
             releaseFirefoxExtensionPopupView()
         }
         browserEngineSessionFactory.setToppingHostStateListener {}
@@ -8744,7 +8738,7 @@ class BrowserController(
     private fun createGeckoPopup(
         openerTabId: String,
         targetUrl: String,
-        preparedSession: GeckoSession? = null,
+        preparedSession: BrowserEnginePreparedSession? = null,
     ): Boolean {
         val opener = tabs.firstOrNull { it.id == openerTabId } ?: return false
         val openerUrl = pageUrls[openerTabId] ?: opener.url
@@ -8758,7 +8752,7 @@ class BrowserController(
         ) ?: return false
         if (
             preparedSession != null &&
-            !geckoEngineSessionFactory.prepareSession(popupTabId, preparedSession)
+            !browserEngineSessionFactory.prepareSession(popupTabId, preparedSession)
         ) {
             closeTab(popupTabId)
             return false
@@ -12677,8 +12671,8 @@ class BrowserController(
             browserEngineSessions[tabId]?.setActive(
                 isActivityResumed && externalLinkPreviewState == null,
             )
-            if (usesGeckoEngine) {
-                geckoEngineSessionFactory.notifySelectedExtensionTabChanged()
+            if (!BuildConfig.SYSTEM_WEBVIEW_ONLY && usesGeckoEngine) {
+                browserEngineSessionFactory.notifySelectedExtensionTabChanged()
                 castMediaCandidate = geckoMediaStates[tabId]?.let { state ->
                     geckoCastMediaCandidate(tabId, state)
                 }

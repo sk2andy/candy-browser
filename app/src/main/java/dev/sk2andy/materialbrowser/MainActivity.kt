@@ -65,10 +65,9 @@ import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoActivityIntegration
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinator
-import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
-import dev.sk2andy.materialbrowser.browser.gecko.GeckoWebAuthnActivityDelegate
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineProcessRestart
 import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
 import dev.sk2andy.materialbrowser.browser.integration.FavoritesActivityContract
@@ -117,7 +116,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var userScriptImporter: UserScriptImporter
     private lateinit var favoriteBookmarksImporter: FavoriteBookmarksImporter
     private lateinit var launcherShortcutIntentHandler: LauncherShortcutIntentHandler
-    private lateinit var geckoWebAuthnActivityDelegate: GeckoWebAuthnActivityDelegate
+    private var geckoActivityIntegration: GeckoActivityIntegration? = null
     private lateinit var profileBiometricAuthenticator: ProfileBiometricAuthenticator
     private val profileProcessLifecycleObserver = object : DefaultLifecycleObserver {
         override fun onStart(owner: LifecycleOwner) {
@@ -172,9 +171,7 @@ class MainActivity : AppCompatActivity() {
     private val geckoWebAuthnLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
-        if (::geckoWebAuthnActivityDelegate.isInitialized) {
-            geckoWebAuthnActivityDelegate.onActivityResult(result.resultCode, result.data)
-        }
+        geckoActivityIntegration?.onActivityResult(result.resultCode, result.data)
     }
     private val userScriptImportLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -293,8 +290,12 @@ class MainActivity : AppCompatActivity() {
             ?: releaseNotesRequired
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
         val browserEngineKind = BrowserSessionStore(this).loadAndroidBrowserEngineKind()
-        if (browserEngineKind == AndroidBrowserEngineKind.GeckoView) {
-            geckoWebAuthnActivityDelegate = GeckoWebAuthnActivityDelegate(
+        if (
+            !BuildConfig.SYSTEM_WEBVIEW_ONLY &&
+            browserEngineKind == AndroidBrowserEngineKind.GeckoView
+        ) {
+            geckoActivityIntegration = GeckoActivityIntegration(
+                context = applicationContext,
                 launch = { pendingIntent ->
                     geckoWebAuthnLauncher.launch(IntentSenderRequest.Builder(pendingIntent).build())
                 },
@@ -312,10 +313,6 @@ class MainActivity : AppCompatActivity() {
                         geckoWebAuthnActivityIdentity
                             ?.let(browserController::isActivityResultIdentityCurrent) == true
                 },
-            )
-            GeckoRuntimeOwner.bindWebAuthnActivityDelegate(
-                context = applicationContext,
-                delegate = geckoWebAuthnActivityDelegate,
             )
         }
         profileBiometricAuthenticator = ProfileBiometricAuthenticator(this)
@@ -969,9 +966,7 @@ class MainActivity : AppCompatActivity() {
             super.onPause()
             return
         }
-        if (::geckoWebAuthnActivityDelegate.isInitialized) {
-            geckoWebAuthnActivityDelegate.onHostPaused()
-        }
+        geckoActivityIntegration?.onHostPaused()
         browserController.onPause()
         super.onPause()
     }
@@ -1054,20 +1049,16 @@ class MainActivity : AppCompatActivity() {
             pictureInPictureController.reconcileStateOnResume()
         }
         if (::browserController.isInitialized) browserController.onResume()
-        if (::geckoWebAuthnActivityDelegate.isInitialized) {
-            geckoWebAuthnActivityDelegate.onHostResumed()
-        }
+        geckoActivityIntegration?.onHostResumed()
         updatePictureInPictureParams()
     }
 
     override fun onDestroy() {
         activityDestroyed = true
-        firefoxExtensionManager?.close()
+        if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) firefoxExtensionManager?.close()
         firefoxExtensionManager = null
-        if (::geckoWebAuthnActivityDelegate.isInitialized) {
-            GeckoRuntimeOwner.unbindWebAuthnActivityDelegate(geckoWebAuthnActivityDelegate)
-            geckoWebAuthnActivityDelegate.close()
-        }
+        geckoActivityIntegration?.close()
+        geckoActivityIntegration = null
         if (appDataTransferActive) {
             super.onDestroy()
             return
@@ -1083,6 +1074,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openFirefoxExtensions() {
+        if (BuildConfig.SYSTEM_WEBVIEW_ONLY) return
         if (!::browserController.isInitialized) return
         val selectedTab = browserController.selectedTab
         val manager = firefoxExtensionManager ?: GeckoExtensionManagerCoordinator.create(

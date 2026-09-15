@@ -21,7 +21,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.geckoview.GeckoResult
-import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.WebExtension
 
@@ -222,12 +221,13 @@ class GeckoExtensionChromeInstrumentedTest {
 
         override fun createTab(
             request: GeckoExtensionCreateTabRequest,
-            session: GeckoSession,
+            session: BrowserEnginePreparedSession,
         ): String {
+            val geckoSession = (session as GeckoPreparedSession).session
             val tabId = "fixture-created-${++nextTab}"
             val adopted = checkNotNull(
                 runtime.adoptExtensionSession(
-                    session = session,
+                    session = geckoSession,
                     profileId = PROFILE_ID,
                     isPrivate = request.source?.isPrivate == true,
                 ),
@@ -260,10 +260,11 @@ class GeckoExtensionChromeInstrumentedTest {
 
         override fun openPopup(
             popup: GeckoExtensionPopupIdentity,
-            session: GeckoSession,
+            session: BrowserEnginePreparedSession,
             toggle: Boolean,
         ): Boolean {
-            popupView = GeckoView(context).also { view -> view.setSession(session) }
+            val geckoSession = (session as GeckoPreparedSession).session
+            popupView = GeckoView(context).also { view -> view.setSession(geckoSession) }
             popupLatch.countDown()
             return true
         }

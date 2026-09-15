@@ -75,8 +75,8 @@ internal fun interface GeckoNavigationRequestListener {
 
 internal data class GeckoNewSessionRequest(
     val url: String,
-    /** Unopened Gecko session that Candy must adopt before accepting the new window. */
-    val session: GeckoSession,
+    /** Unopened engine session that Candy must adopt before accepting the new window. */
+    val session: BrowserEnginePreparedSession,
 )
 
 internal fun interface GeckoNewSessionListener {
