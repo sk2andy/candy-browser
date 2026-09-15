@@ -223,13 +223,21 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
   };
 }
 
-test('known Google focus CSS is seeded before activation and removed when disabled', () => {
+test('known Google menu and focus CSS are seeded before activation and removed when disabled', () => {
   for (const hostname of ['www.google.com', 'google.de', 'www.google.de.']) {
     const f = fixture({ hostname, reparseStyles: true });
+    const navd = f.element('absolute', '0px'); navd.id = 'navd';
     f.start(false);
-    const layer = f.sheets.find((node) => node.textContent.includes(':root #tsf .A7Yvie.emcav'));
-    assert.ok(layer?.isConnected, 'Google state rule must exist before delayed classification');
+    const layer = f.sheets.find((node) => node.textContent.includes(':root #navd'));
+    assert.ok(layer?.isConnected, 'Google menu rule must exist before delayed classification');
+    assert.match(layer.textContent, /:root #navd/);
+    assert.match(layer.textContent, /:root #tsf \.A7Yvie\.emcav/);
     assert.match(layer.textContent, /top: calc\(0px \+ var\(--candy-safe-area-inset-top\)\) !important/);
+    assert.equal(
+      f.computed(navd).top,
+      'calc(0px + var(--candy-safe-area-inset-top))',
+      'Absolute Google menu must receive the early host-scoped inset rule',
+    );
     const before = { ...f.reads };
     f.event('scroll');
     assert.deepEqual(f.reads, before, 'Scrolling must not add style or geometry reads');
@@ -239,6 +247,7 @@ test('known Google focus CSS is seeded before activation and removed when disabl
   for (const hostname of ['google.com.example.org', 'notgoogle.de', 'example.org']) {
     const f = fixture({ hostname });
     f.start(false);
+    assert.equal(f.sheets.some((node) => node.textContent.includes('#navd')), false);
     assert.equal(f.sheets.some((node) => node.textContent.includes('.A7Yvie.emcav')), false);
   }
 });
