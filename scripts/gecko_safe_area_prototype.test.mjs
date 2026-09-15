@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
 
-function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '' } = {}) {
+function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '', viewportContent = null } = {}) {
   let clock = 0; let timerId = 0; let observer;
   const timers = new Map(); const listeners = new Map(); const mutations = []; const registrations = [];
   const reads = { style: 0, rect: 0, selector: 0 }; let writes = 0;
@@ -97,6 +97,9 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     getBoundingClientRect() { reads.rect++; return { top: 0, left: 0, width: 360, height: 40, right: 360, bottom: 40 }; }
   }
   const root = new Element('static', 'auto', 'html');
+  const viewport = viewportContent === null ? null : root.append(new Element('static', 'auto', 'meta'));
+  viewport?.setAttribute('name', 'viewport');
+  viewport?.setAttribute('content', viewportContent);
   const body = root.append(new Element('static', 'auto', 'body'));
   const config = { ready: true, enabled: true, cssSafeAreaTopInsetPx: nativeTop, navigationGeneration: 1, revision: 1,
     recheckAddedElements: true, recheckChangedElements: true, recheckOnResize: true,
@@ -113,6 +116,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     },
     createElement: (tag) => new Element('static', 'auto', tag),
     querySelector: (selector) => {
+      if (selector === 'meta[name="viewport" i]') return viewport;
       reads.selector++;
       assert.ok(['header', 'nav', '[role="banner"]'].includes(selector), 'Only bounded semantic fallback queries are expected');
       if (!document.documentElement) return null;
@@ -222,6 +226,18 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     diagnostics: () => context.CandyCssSafeAreaDiagnostics.sample(),
   };
 }
+
+test('viewport-fit cover leaves safe-area layout to Gecko', () => {
+  const f = fixture({ viewportContent: 'width=device-width, VIEWPORT-FIT = cover' });
+  f.body.style.setProperty('padding-top', '4px');
+  const fixed = f.element('fixed', '8px');
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+  assert.equal(f.computed(f.body).paddingTop, '4px');
+  assert.equal(f.computed(fixed).top, '8px');
+  assert.equal(f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'), '');
+  assert.equal(f.sheets.filter((sheet) => sheet.isConnected).length, 0);
+});
 
 test('known Google menu and focus CSS are seeded before activation and removed when disabled', () => {
   for (const hostname of ['www.google.com', 'google.de', 'www.google.de.']) {

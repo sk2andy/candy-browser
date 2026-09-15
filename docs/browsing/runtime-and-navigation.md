@@ -211,8 +211,11 @@
   `GeckoViewInsetRules` forwards all native safe areas to CSS, including the top edge, without
   native margins. Normal Gecko tabs and Link Peek disable the legacy document repair at the
   Gecko-only bridge before installing any of its observers or hooks. Gecko's separate bounded CSS
-  layer classifies suitable body flow and viewport-bound top anchors, then applies CSS `max()` safe
-  area protection once. It does not repeatedly measure correctly protected headers while scrolling.
+  layer stays inactive when the document declares `viewport-fit=cover`; Gecko remains the sole owner
+  of `env(safe-area-inset-*)`, and Candy does not add body or positioned-element offsets that could
+  distort the page's full-height or IME scroll geometry. Other documents classify suitable body flow
+  and viewport-bound top anchors, then add the inset to their original top positions once. It does not
+  repeatedly measure correctly protected headers while scrolling.
   Only authorized relevant mutations and configured resize/configuration changes reclassify.
   Unknown layouts retain verified emergency native top fallback rather than speculative CSS changes.
   Fullscreen and Compose safe-drawing hosts retain their duplicate-inset exclusions.
@@ -338,6 +341,7 @@ together. This prototype is not a compatibility claim for the layouts described 
 | Rule | Prototype behavior |
 | --- | --- |
 | Inset source | Existing native policy inset divided by device-pixel ratio, exposed as `--candy-safe-area-inset-top` |
+| `viewport-fit=cover` | Skip the complete Candy CSS layer, including body, fixed/sticky, known-site and Reddit rules; keep Gecko's native renderer safe-area delivery |
 | Normal page flow | A per-document stylesheet raises body top padding to at least the inset; larger initial padding is preserved |
 | Fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
 | Predeclared selectors | Initial and event-driven CSS-source scans protect full selectors with literal `fixed`/`sticky` and a finite pixel `top` in the same CSS declaration block, even before any element matches that state |
