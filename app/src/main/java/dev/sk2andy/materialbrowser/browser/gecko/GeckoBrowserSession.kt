@@ -14,6 +14,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
@@ -302,8 +304,9 @@ internal interface GeckoBrowserSession {
     /** Checks one committed document for a text editor hidden by browser chrome. */
     fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onComplete: (Boolean) -> Unit,
-    ) = onComplete(false)
+        mode: TextInputOcclusionProbeMode,
+        onComplete: (TextInputOcclusionProbeResult) -> Unit,
+    ) = onComplete(TextInputOcclusionProbeResult.NoFocusedTextInput)
 
     /** Opens Gecko's Android print flow for the current document. */
     fun printPage(): Boolean

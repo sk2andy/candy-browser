@@ -56,6 +56,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserEnginePermissionSetResponse
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionScript
 import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptResponse
@@ -769,14 +771,15 @@ private class SystemWebViewBrowserEngineSession(
 
     override fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onComplete: (Boolean) -> Unit,
+        mode: TextInputOcclusionProbeMode,
+        onComplete: (TextInputOcclusionProbeResult) -> Unit,
     ) {
         if (closed || currentPageUrl == null) {
-            onComplete(false)
+            onComplete(TextInputOcclusionProbeResult.NoFocusedTextInput)
             return
         }
-        webView.evaluateJavascript(TextInputOcclusionScript.javascript(viewportRect)) { result ->
-            onComplete(result == "true")
+        webView.evaluateJavascript(TextInputOcclusionScript.javascript(viewportRect, mode)) { result ->
+            onComplete(TextInputOcclusionProbeResult.fromWireValue(result.toIntOrNull() ?: 0))
         }
     }
 

@@ -12,6 +12,8 @@ import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
@@ -161,8 +163,9 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onComplete: (Boolean) -> Unit,
-    ) = onComplete(false)
+        mode: TextInputOcclusionProbeMode,
+        onComplete: (TextInputOcclusionProbeResult) -> Unit,
+    ) = onComplete(TextInputOcclusionProbeResult.NoFocusedTextInput)
 
     fun updatePrivacyPolicy(
         policy: GeckoPrivacyPolicy,
@@ -639,13 +642,14 @@ internal class GeckoBrowserEngineSessionAdapter(
 
     override fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onComplete: (Boolean) -> Unit,
+        mode: TextInputOcclusionProbeMode,
+        onComplete: (TextInputOcclusionProbeResult) -> Unit,
     ) {
         if (closed) {
-            onComplete(false)
+            onComplete(TextInputOcclusionProbeResult.NoFocusedTextInput)
             return
         }
-        session.probeTextInputOcclusion(viewportRect, onComplete)
+        session.probeTextInputOcclusion(viewportRect, mode, onComplete)
     }
 
     @UiThread
