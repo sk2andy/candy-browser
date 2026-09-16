@@ -51,6 +51,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
@@ -183,6 +184,12 @@ internal fun BrowserShapeStyle.displayName(): String = when (this) {
     BrowserShapeStyle.Angular -> stringResource(R.string.shape_style_angular)
     BrowserShapeStyle.Rounded -> stringResource(R.string.shape_style_rounded)
     BrowserShapeStyle.ExtraRounded -> stringResource(R.string.shape_style_extra_rounded)
+}
+
+@Composable
+internal fun BrowserAddressBarStyle.displayName(): String = when (this) {
+    BrowserAddressBarStyle.Classic -> stringResource(R.string.address_bar_style_classic)
+    BrowserAddressBarStyle.Segmented -> stringResource(R.string.address_bar_style_segmented)
 }
 
 @Composable

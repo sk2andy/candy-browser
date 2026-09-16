@@ -59,6 +59,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
 object BrowserMainMenuMotion {
     const val EXIT_DURATION_MILLIS = 160
     const val EXIT_SCALE = 0.9f
+    private const val POPUP_OFFSET_Y_DP = -10f
 
     fun surfaceScale(
         expansionProgress: Float,
@@ -91,6 +92,15 @@ object BrowserMainMenuMotion {
         1f
     } else {
         expansionProgress.coerceIn(0f, 1f)
+    }
+
+    fun popupOffsetYDp(
+        expansionProgress: Float,
+        hasMorphAnchor: Boolean,
+    ): Float = if (hasMorphAnchor) {
+        POPUP_OFFSET_Y_DP * expansionProgress.coerceIn(0f, 1f)
+    } else {
+        POPUP_OFFSET_Y_DP
     }
 }
 
@@ -250,7 +260,6 @@ fun BrowserMainMenu(
     val menuScrollState = rememberScrollState()
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
-    val popupOffset = with(density) { IntOffset(0, (-10).dp.roundToPx()) }
     val menuWidthPx = with(density) { menuWidth.toPx() }
     val menuHeightPx = with(density) { menuMaxHeight.toPx() }
     val anchorWidthPx = morphAnchorSize?.let { with(density) { it.width.toPx() } }
@@ -336,6 +345,11 @@ fun BrowserMainMenu(
 
     if (popupVisible) {
         val currentMorphProgress = morphProgress ?: exitProgress.value
+        val popupOffsetY = BrowserMainMenuMotion.popupOffsetYDp(
+            expansionProgress = currentMorphProgress,
+            hasMorphAnchor = morphAnchorSize != null,
+        ).dp
+        val popupOffset = with(density) { IntOffset(0, popupOffsetY.roundToPx()) }
         val morphRadii = if (anchorSizePx > 0f) {
             BrowserMainMenuMotion.surfaceCornerRadii(
                 expansionProgress = currentMorphProgress,

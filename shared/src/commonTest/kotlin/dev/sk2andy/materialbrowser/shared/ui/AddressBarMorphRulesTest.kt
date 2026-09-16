@@ -99,6 +99,30 @@ class AddressBarMorphRulesTest {
         )
         assertEquals(200f, collapsedRadii.horizontal, 0.001f)
         assertEquals(300f, collapsedRadii.vertical, 0.001f)
+        assertEquals(
+            0f,
+            BrowserMainMenuMotion.popupOffsetYDp(
+                expansionProgress = 0f,
+                hasMorphAnchor = true,
+            ),
+            0.001f,
+        )
+        assertEquals(
+            -5f,
+            BrowserMainMenuMotion.popupOffsetYDp(
+                expansionProgress = 0.5f,
+                hasMorphAnchor = true,
+            ),
+            0.001f,
+        )
+        assertEquals(
+            -10f,
+            BrowserMainMenuMotion.popupOffsetYDp(
+                expansionProgress = 1f,
+                hasMorphAnchor = true,
+            ),
+            0.001f,
+        )
     }
 
     @Test

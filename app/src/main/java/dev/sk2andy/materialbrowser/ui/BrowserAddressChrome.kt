@@ -225,6 +225,7 @@ internal fun BoxScope.BrowserAddressChrome(
         ),
         dockTargetEdge = controller.lastAddressBarDockEdge,
         editing = addressEditorVisible,
+        addressBarStyle = controller.appearanceSettings.addressBarStyle,
         actionLayout = controller.addressBarActionLayout,
         showCastButton = !BuildConfig.FOSS_DISTRIBUTION &&
             (controller.castMediaCandidate != null || castUiState.isConnected),

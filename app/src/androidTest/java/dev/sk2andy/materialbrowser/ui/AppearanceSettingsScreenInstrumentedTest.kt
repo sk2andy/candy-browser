@@ -15,6 +15,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
@@ -88,6 +89,12 @@ class AppearanceSettingsScreenInstrumentedTest {
             .performScrollTo()
             .performClick()
         composeRule.onNodeWithText(context.getString(R.string.shape_style_angular)).performClick()
+
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarStyle)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.address_bar_style_segmented))
+            .performClick()
         assertEquals(
             AppearanceSettings(
                 appearanceMode = BrowserAppearanceMode.Dark,
@@ -96,6 +103,7 @@ class AppearanceSettingsScreenInstrumentedTest {
                 colorPalette = BrowserColorPalette.Candy,
                 surfaceStyle = BrowserSurfaceStyle.Frosted,
                 shapeStyle = BrowserShapeStyle.Angular,
+                addressBarStyle = BrowserAddressBarStyle.Segmented,
                 frostedTransparencyPercent = 70,
                 frostedAddressBarTransparencyPercent = 50,
                 frostedBlurPercent = 90,

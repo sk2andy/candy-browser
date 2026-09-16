@@ -29,6 +29,7 @@
 | Color palette | Material You, Candy, neutral | Material You |
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
+| Address bar style | Classic, segmented | Classic |
 | Startup animation | Off, on | On |
 | Address focus on launch | When startup animation is off, every launch, never | When startup animation is off |
 | Open home page on startup | Off, on | Off |
@@ -101,6 +102,10 @@ Frosted exposes three persisted controls while selected:
   blank tab in the active profile is reused. External links, launcher shortcuts, Site Capsules, and
   activity recreation keep their own destinations.
 - Unknown stored values fall back per field; one corrupt value does not discard valid choices.
+- Address-bar style is global. Segmented groups expanded actions and the address field into one
+  primary pill, keeps the fixed trailing action in a separate pill, and replaces that action with
+  editor dismissal while focused. Compact, parked, overview, command-feedback, external-preview and
+  find-in-page chrome retain their existing geometry.
 - AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.
 - Frosted uses WebView blur sources while browsing and Compose-backed blur sources on the new-tab page and tab overview.

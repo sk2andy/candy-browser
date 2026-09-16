@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
@@ -20,6 +21,7 @@ internal object AppearanceSettingsTestTags {
     const val ColorPalette = "appearance_settings_palette"
     const val SurfaceStyle = "appearance_settings_surface"
     const val ShapeStyle = "appearance_settings_shape"
+    const val AddressBarStyle = "appearance_settings_address_bar_style"
     const val FrostedTransparency = "appearance_settings_frosted_transparency"
     const val FrostedAddressBarTransparency =
         "appearance_settings_frosted_address_bar_transparency"
@@ -61,6 +63,10 @@ internal fun AppearanceSettingsPage(
             frostedBlur = stringResource(R.string.settings_frosted_blur),
             shapeStyle = stringResource(R.string.settings_shape_style),
             shapeStyleNames = BrowserShapeStyle.entries.associateWith { it.displayName() },
+            addressBarStyle = stringResource(R.string.settings_address_bar_style),
+            addressBarStyleNames = BrowserAddressBarStyle.entries.associateWith {
+                it.displayName()
+            },
         ),
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         onSettingsChanged = onSettingsChanged,

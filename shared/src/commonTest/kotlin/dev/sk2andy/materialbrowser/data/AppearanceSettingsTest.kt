@@ -16,6 +16,7 @@ class AppearanceSettingsTest {
         assertEquals(BrowserColorPalette.Dynamic, settings.colorPalette)
         assertEquals(BrowserSurfaceStyle.Clear, settings.surfaceStyle)
         assertEquals(BrowserShapeStyle.Rounded, settings.shapeStyle)
+        assertEquals(BrowserAddressBarStyle.Classic, settings.addressBarStyle)
         assertEquals(40, settings.frostedTransparencyPercent)
         assertEquals(40, settings.frostedAddressBarTransparencyPercent)
         assertEquals(60, settings.frostedBlurPercent)
@@ -35,11 +36,18 @@ class AppearanceSettingsTest {
         BrowserShapeStyle.entries.forEach { style ->
             assertEquals(style, BrowserShapeStyle.fromStableId(style.stableId))
         }
+        BrowserAddressBarStyle.entries.forEach { style ->
+            assertEquals(style, BrowserAddressBarStyle.fromStableId(style.stableId))
+        }
 
         assertEquals(BrowserAppearanceMode.System, BrowserAppearanceMode.fromStableId("unknown"))
         assertEquals(BrowserColorPalette.Dynamic, BrowserColorPalette.fromStableId("unknown"))
         assertEquals(BrowserSurfaceStyle.Clear, BrowserSurfaceStyle.fromStableId("unknown"))
         assertEquals(BrowserShapeStyle.Rounded, BrowserShapeStyle.fromStableId("unknown"))
+        assertEquals(
+            BrowserAddressBarStyle.Classic,
+            BrowserAddressBarStyle.fromStableId("unknown"),
+        )
     }
 
     @Test

@@ -363,6 +363,9 @@
     <string name="shape_style_angular">Angular</string>
     <string name="shape_style_rounded">Rounded</string>
     <string name="shape_style_extra_rounded">Extra rounded</string>
+    <string name="settings_address_bar_style">Address bar style</string>
+    <string name="address_bar_style_classic">Classic</string>
+    <string name="address_bar_style_segmented">Segmented</string>
     <string name="settings_home_search_summary">Search engine and suggestions</string>
     <string name="settings_tabs_gestures_title">Tabs &amp; gestures</string>
     <string name="settings_home_tabs_gestures_summary">Tab layout, lifetime, profiles, and controls</string>

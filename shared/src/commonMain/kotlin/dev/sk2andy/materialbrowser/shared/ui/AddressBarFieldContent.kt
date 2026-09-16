@@ -45,6 +45,7 @@ fun AddressBarFieldContent(
     fieldHeight: Dp = 48.dp,
     editorModifier: Modifier = Modifier,
     displayTextModifier: Modifier = Modifier,
+    editorLeadingContent: @Composable () -> Unit = {},
     editorTrailingContent: @Composable () -> Unit = {},
     displayTrailingContent: @Composable () -> Unit = {},
 ) {
@@ -54,6 +55,7 @@ fun AddressBarFieldContent(
                 modifier = Modifier.padding(horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                editorLeadingContent()
                 BasicTextField(
                     value = editValue,
                     onValueChange = onEditValueChange,
