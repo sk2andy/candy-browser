@@ -121,6 +121,8 @@
     <string name="profile_new_tab_wallpaper_title">Fundo do novo separador</string>
     <string name="profile_tab_switcher_wallpaper_title">Fundo do seletor de separadores</string>
     <string name="profile_wallpaper_choose_image">Escolher imagem</string>
+    <string name="profile_creation_wallpaper_subtitle">Escolher imagem depois de criar o perfil</string>
+    <string name="profile_creation_protection_failed">O perfil foi criado, mas a proteção biométrica não foi ativada.</string>
     <string name="profile_wallpaper_replace">Substituir</string>
     <string name="profile_wallpaper_remove">Remover fundo</string>
     <string name="profile_wallpaper_zoom">Zoom</string>

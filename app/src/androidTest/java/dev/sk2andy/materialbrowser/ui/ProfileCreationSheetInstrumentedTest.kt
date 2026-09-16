@@ -4,6 +4,7 @@ import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -13,6 +14,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.ProfileProtection
+import dev.sk2andy.materialbrowser.browser.ProfileWallpaperTarget
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicReference
@@ -36,17 +39,25 @@ class ProfileCreationSheetInstrumentedTest {
 
     @Test
     fun createsProfileWithSelectedIconAndIsolationMode() {
-        val createdProfile = AtomicReference<Pair<String, Boolean>?>()
+        val createdProfile = AtomicReference<ProfileCreationSubmission?>()
         composeRule.setContent {
             MaterialTheme {
                 EmojiPickerSheet(
                     visible = true,
                     creatingProfile = true,
                     isolationSupported = true,
+                    profileProtectionSupported = true,
                     emojis = profileEmojis,
                     selectedEmoji = null,
-                    onCreate = { emoji, isolationEnabled ->
-                        createdProfile.set(emoji to isolationEnabled)
+                    onCreate = { emoji, isolationEnabled, options ->
+                        createdProfile.set(
+                            ProfileCreationSubmission(
+                                emoji,
+                                isolationEnabled,
+                                options.protection,
+                                options.wallpaperTargets,
+                            ),
+                        )
                     },
                     onSelect = {},
                     onDismiss = {},
@@ -63,22 +74,37 @@ class ProfileCreationSheetInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.settings_profile_isolation_title),
         ).performClick()
+        composeRule.onNodeWithTag(ProfileCreationOptionTestTags.Protection)
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.action_save)).performClick()
+        composeRule.onNodeWithTag(ProfileCreationOptionTestTags.NewTabWallpaper)
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.onNodeWithTag(ProfileCreationOptionTestTags.TabSwitcherWallpaper)
+            .assertIsDisplayed()
+            .performClick()
         createButton.assertIsEnabled().performClick()
 
-        assertEquals("💼" to true, createdProfile.get())
+        val submission = requireNotNull(createdProfile.get())
+        assertEquals("💼", submission.emoji)
+        assertTrue(submission.isolationEnabled)
+        assertTrue(submission.protection != null)
+        assertEquals(ProfileWallpaperTarget.entries.toSet(), submission.wallpaperTargets)
     }
 
     @Test
-    fun isolationAndCreateButtonStayOutsideScrollableIcons() {
+    fun creationOptionsScrollWhileCreateButtonStaysFixed() {
         composeRule.setContent {
             MaterialTheme {
                 EmojiPickerSheet(
                     visible = true,
                     creatingProfile = true,
                     isolationSupported = true,
+                    profileProtectionSupported = true,
                     emojis = profileEmojis,
                     selectedEmoji = null,
-                    onCreate = { _, _ -> },
+                    onCreate = { _, _, _ -> },
                     onSelect = {},
                     onDismiss = {},
                 )
@@ -101,6 +127,18 @@ class ProfileCreationSheetInstrumentedTest {
             .onNodeWithTag(ProfileCreationTestTags.IconScroll)
             .fetchSemanticsNode()
             .boundsInRoot
+        val protectionBounds = composeRule
+            .onNodeWithTag(ProfileCreationOptionTestTags.Protection)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val newTabWallpaperBounds = composeRule
+            .onNodeWithTag(ProfileCreationOptionTestTags.NewTabWallpaper)
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val tabSwitcherWallpaperBounds = composeRule
+            .onNodeWithTag(ProfileCreationOptionTestTags.TabSwitcherWallpaper)
+            .fetchSemanticsNode()
+            .boundsInRoot
         val createButton = composeRule.onNodeWithTag(ProfileCreationTestTags.CreateButton)
         val buttonBoundsBeforeScroll = createButton.fetchSemanticsNode().boundsInRoot
 
@@ -111,30 +149,42 @@ class ProfileCreationSheetInstrumentedTest {
         )
         assertTrue(
             "sheetHeight=${sheetBounds.height}, displayHeight=$displayHeight",
-            sheetBounds.height <= displayHeight * 0.66f + 1f,
+            sheetBounds.height <= displayHeight * 0.9f + 1f,
         )
         assertTrue(
             "buttonBottom=${createButtonScreenBounds.bottom}, " +
                 "displayHeight=$displayHeight, maxGap=$maxButtonBottomGap",
             displayHeight - createButtonScreenBounds.bottom <= maxButtonBottomGap + 1f,
         )
-        assertTrue(isolationBounds.bottom < titleBounds.top)
-        assertTrue(isolationBounds.bottom < iconScrollBounds.top)
+        assertTrue(iconScrollBounds.height > 0f)
+        assertTrue(iconScrollBounds.top <= isolationBounds.top)
+        assertTrue(isolationBounds.bottom <= protectionBounds.top)
+        assertTrue(protectionBounds.bottom <= newTabWallpaperBounds.top)
+        assertTrue(newTabWallpaperBounds.bottom <= tabSwitcherWallpaperBounds.top)
+        assertTrue(tabSwitcherWallpaperBounds.bottom < titleBounds.top)
+        assertTrue(titleBounds.bottom <= iconScrollBounds.bottom)
         assertTrue(iconScrollBounds.bottom <= buttonBoundsBeforeScroll.top)
 
         composeRule.onNodeWithText("📅").performScrollTo()
         composeRule.waitForIdle()
 
-        val isolationBoundsAfterScroll = composeRule
-            .onNodeWithTag(ProfileCreationTestTags.Isolation)
+        val iconScrollBoundsAfterScroll = composeRule
+            .onNodeWithTag(ProfileCreationTestTags.IconScroll)
             .fetchSemanticsNode()
             .boundsInRoot
         val buttonBoundsAfterScroll = createButton.fetchSemanticsNode().boundsInRoot
-        assertEquals(isolationBounds.top, isolationBoundsAfterScroll.top, 0.5f)
-        assertEquals(isolationBounds.bottom, isolationBoundsAfterScroll.bottom, 0.5f)
+        assertEquals(iconScrollBounds.top, iconScrollBoundsAfterScroll.top, 0.5f)
+        assertEquals(iconScrollBounds.bottom, iconScrollBoundsAfterScroll.bottom, 0.5f)
         assertEquals(buttonBoundsBeforeScroll.top, buttonBoundsAfterScroll.top, 0.5f)
         assertEquals(buttonBoundsBeforeScroll.bottom, buttonBoundsAfterScroll.bottom, 0.5f)
     }
+
+    private data class ProfileCreationSubmission(
+        val emoji: String,
+        val isolationEnabled: Boolean,
+        val protection: ProfileProtection?,
+        val wallpaperTargets: Set<ProfileWallpaperTarget>,
+    )
 
     private fun screenBoundsForText(text: String): Rect {
         var resolvedBounds: Rect? = null

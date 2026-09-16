@@ -121,6 +121,8 @@
     <string name="profile_new_tab_wallpaper_title">Wallpaper für neue Tabs</string>
     <string name="profile_tab_switcher_wallpaper_title">Wallpaper für Tab-Switcher</string>
     <string name="profile_wallpaper_choose_image">Bild auswählen</string>
+    <string name="profile_creation_wallpaper_subtitle">Bild nach dem Erstellen des Profils auswählen</string>
+    <string name="profile_creation_protection_failed">Profil erstellt, aber der biometrische Schutz wurde nicht aktiviert.</string>
     <string name="profile_wallpaper_replace">Ersetzen</string>
     <string name="profile_wallpaper_remove">Wallpaper entfernen</string>
     <string name="profile_wallpaper_zoom">Zoom</string>
