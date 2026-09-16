@@ -7,6 +7,8 @@ internal enum class AddressBarVerticalAction {
 
 internal object AddressBarGestureRules {
     const val OPEN_TABS_THRESHOLD_DP = 56f
+    const val PARKED_OPEN_TABS_THRESHOLD_DP = 24f
+    const val PARKED_REPOSITION_LONG_PRESS_MILLIS = 320L
 
     fun action(dragDistance: Float, threshold: Float): AddressBarVerticalAction = when {
         dragDistance <= -threshold -> AddressBarVerticalAction.OpenTabs

@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.ui.theme.CandyMotionScheme
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
+import kotlin.math.PI
+import kotlin.math.sin
 
 @Immutable
 internal data class AddressBarMotionState(
@@ -31,6 +33,7 @@ internal data class AddressBarMotionState(
 
 internal object AddressBarMotion {
     val OVERVIEW_WIDTH = 112.dp
+    const val DOCK_REPOSITION_FEEDBACK_MILLIS = 260
 
     fun containerAnimationSpec(motionScheme: CandyMotionScheme): SpringSpec<Dp> =
         spring(
@@ -49,6 +52,18 @@ internal object AddressBarMotion {
             dampingRatio = motionScheme.addressBarBreakawayDampingRatio,
             stiffness = motionScheme.addressBarBreakawayStiffness,
         )
+
+    fun dockRepositionFeedbackScale(progress: Float): Offset {
+        val boundedProgress = progress
+            .takeIf(Float::isFinite)
+            ?.coerceIn(0f, 1f)
+            ?: 1f
+        val wobble = sin(boundedProgress * PI.toFloat() * 3f) * (1f - boundedProgress)
+        return Offset(
+            x = 1f + wobble * 0.06f,
+            y = 1f - wobble * 0.09f,
+        )
+    }
 
     fun widthTarget(
         presentation: AddressBarPresentation,

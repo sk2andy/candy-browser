@@ -10,6 +10,7 @@ import android.view.HapticFeedbackConstants
 import android.view.WindowManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -19,7 +20,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
@@ -61,20 +61,21 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.testTag
@@ -98,13 +99,13 @@ import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
+import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
-import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.ui.OverviewAddressBarContent
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
-import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
@@ -349,6 +350,21 @@ internal fun BrowserBottomBar(
                 onExpand()
             },
         )
+        val dockRepositionFeedbackProgress = remember { Animatable(1f) }
+        LaunchedEffect(dockInteraction.repositionActivationNonce) {
+            if (dockInteraction.repositionActivationNonce == 0) return@LaunchedEffect
+            dockRepositionFeedbackProgress.snapTo(0f)
+            dockRepositionFeedbackProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = AddressBarMotion.DOCK_REPOSITION_FEEDBACK_MILLIS,
+                    easing = LinearEasing,
+                ),
+            )
+        }
+        val dockRepositionFeedbackScale = AddressBarMotion.dockRepositionFeedbackScale(
+            dockRepositionFeedbackProgress.value,
+        )
         val dockStretchProgress by animateFloatAsState(
             targetValue = dockInteraction.normalAnchorResistanceProgress,
             animationSpec = if (dockInteraction.normalAnchorResistanceProgress == 0f) {
@@ -416,7 +432,10 @@ internal fun BrowserBottomBar(
                     .graphicsLayer {
                         val stretch = dockStretchProgress.coerceIn(-0.12f, 1f)
                         scaleX = pulseScale.value * (1f - stretch * 0.04f)
-                        scaleY = pulseScale.value * (1f + stretch * 0.18f)
+                        scaleX *= dockRepositionFeedbackScale.x
+                        scaleY = pulseScale.value *
+                            (1f + stretch * 0.18f) *
+                            dockRepositionFeedbackScale.y
                         transformOrigin = if (stretch == 0f) {
                             TransformOrigin.Center
                         } else {
@@ -448,6 +467,12 @@ internal fun BrowserBottomBar(
                                 onDockDrag = dockInteraction.onDrag,
                                 onDockDragStopped = dockInteraction.onDragStopped,
                                 onDockDragCancelled = dockInteraction.onDragCancelled,
+                                overviewGestureEnabled = overviewGestureEnabled,
+                                overviewGestureProgress = overviewGestureProgress,
+                                onOverviewGestureProgress = onOverviewGestureProgress,
+                                onOverviewGestureStarted = onOverviewGestureStarted,
+                                onOverviewGestureCancelled = onOverviewGestureCancelled,
+                                onSwipeUp = onTabs,
                             )
                             AddressBarPresentation.Compact -> {
                                 Surface(
@@ -760,11 +785,17 @@ internal fun AddressBarEdgeTab(
     onDockDrag: (Offset) -> Unit,
     onDockDragStopped: () -> Unit,
     onDockDragCancelled: () -> Unit,
+    onSwipeUp: () -> Unit,
     modifier: Modifier = Modifier,
+    overviewGestureEnabled: Boolean = true,
+    overviewGestureProgress: FloatState? = null,
+    onOverviewGestureProgress: (Float) -> Unit = {},
+    onOverviewGestureStarted: () -> Unit = {},
+    onOverviewGestureCancelled: () -> Unit = {},
 ) {
     val restoreDescription = stringResource(R.string.cd_restore_address_bar)
+    val keyboard = LocalSoftwareKeyboardController.current
     var dragCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    var previousPointerInRoot by remember { mutableStateOf<Offset?>(null) }
     Surface(
         onClick = onRestore,
         modifier = modifier
@@ -773,32 +804,23 @@ internal fun AddressBarEdgeTab(
             .testTag(AddressBarDockTestTags.EdgeTab)
             .onGloballyPositioned { dragCoordinates = it }
             .semantics { contentDescription = restoreDescription }
-            .pointerInput(dockDragEnabled) {
-                if (!dockDragEnabled) return@pointerInput
-                detectDragGestures(
-                    onDragStart = { localPosition ->
-                        previousPointerInRoot = dragCoordinates?.localToRoot(localPosition)
-                        onDockDragStarted()
-                    },
-                    onDragEnd = {
-                        previousPointerInRoot = null
-                        onDockDragStopped()
-                    },
-                    onDragCancel = {
-                        previousPointerInRoot = null
-                        onDockDragCancelled()
-                    },
-                    onDrag = { change, dragAmount ->
-                        val pointerInRoot = dragCoordinates?.localToRoot(change.position)
-                        val rootDragAmount = previousPointerInRoot
-                            ?.let { previous -> pointerInRoot?.minus(previous) }
-                            ?: dragAmount
-                        previousPointerInRoot = pointerInRoot
-                        change.consume()
-                        onDockDrag(rootDragAmount)
-                    },
-                )
-            },
+            .addressBarParkedPillGesture(
+                dockDragEnabled = dockDragEnabled,
+                overviewGestureEnabled = overviewGestureEnabled,
+                initialProgress = overviewGestureProgress,
+                dragCoordinates = { dragCoordinates },
+                onDockDragStarted = onDockDragStarted,
+                onDockDrag = onDockDrag,
+                onDockDragStopped = onDockDragStopped,
+                onDockDragCancelled = onDockDragCancelled,
+                onOverviewGestureProgress = onOverviewGestureProgress,
+                onOverviewGestureStarted = onOverviewGestureStarted,
+                onOverviewGestureCancelled = onOverviewGestureCancelled,
+                onSwipeUp = {
+                    keyboard?.hide()
+                    onSwipeUp()
+                },
+            ),
         color = Color.Transparent,
     ) {
         Box(contentAlignment = Alignment.Center) {
