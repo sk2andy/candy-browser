@@ -144,12 +144,14 @@ internal fun BrowserSettingsOverlay(
     ) {
         SettingsScreen(
             browserEngineKind = controller.browserEngineKind,
-                destination = destination,
+            isDnsOverHttpsSupported = controller.isDnsOverHttpsSupported,
+            destination = destination,
             appearanceSettings = controller.appearanceSettings,
             downloadSettings = controller.downloadSettings,
             externalDownloadManagers = controller.externalDownloadManagers,
             blockerSettings = controller.blockerSettings,
             webRtcProtectionMode = controller.webRtcProtectionMode,
+            dnsOverHttpsSettings = controller.dnsOverHttpsSettings,
             inactiveTabLifetime = controller.inactiveTabLifetime,
             residentTabLimit = controller.residentTabLimit,
             searchEngine = controller.searchEngine,
@@ -227,6 +229,7 @@ internal fun BrowserSettingsOverlay(
             onDownloadSettingsChanged = controller::updateDownloadSettings,
             onBlockerSettingsChanged = controller::updateBlockerSettings,
             onWebRtcProtectionModeChanged = controller::updateWebRtcProtectionMode,
+            onDnsOverHttpsSettingsChanged = controller::updateDnsOverHttpsSettings,
             onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
             onResidentTabLimitChanged = controller::updateResidentTabLimit,
             onSearchEngineChanged = controller::updateSearchEngine,

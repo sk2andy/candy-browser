@@ -7,6 +7,7 @@
 | Request/cosmetic blocking, Candy Rules, validation and precedence | [`blocking-and-rules.md`](blocking-and-rules.md) | `blocking/ContentBlocker`, `RequestBlocker`, `CandyRule*` |
 | Privacy X-Ray, Permission Radar, asset maintenance and audits | [`xray-permissions-and-maintenance.md`](xray-permissions-and-maintenance.md) | `PrivacyXRay`, `browser/permissions`, `scripts/`, `docs/audits/` |
 | WebRTC IP protection and engine fallbacks | [`../browsing/platform-engines.md`](../browsing/platform-engines.md#webrtc-protection) | `WebRtcProtectionMode`, engine factories, Gecko Privacy host |
+| GeckoView encrypted DNS and System WebView boundary | [`../browsing/platform-engines.md`](../browsing/platform-engines.md#encrypted-dns) | `DnsOverHttpsSettings`, `BrowserSessionStore`, Gecko runtime settings |
 
 ## Test lookup
 
@@ -18,4 +19,5 @@
 | Federated-login cookie exception | `FederatedLoginRulesTest`, `FederatedLoginPromptInstrumentedTest`, `BrowserSessionStoreInstrumentedTest` |
 | CAPTCHA cookie exception | `CaptchaCompatibilityRulesTest`, `CaptchaCompatibilityPromptInstrumentedTest`, `BrowserControllerCaptchaCompatibilityInstrumentedTest` |
 | WebRTC protection | `WebRtcProtectionRulesTest`, `WebRtcBlockerScriptInstrumentedTest`, `WebRtcProtectionSettingsInstrumentedTest`, `GeckoWebRtcProtectionInstrumentedTest`, `SystemWebViewBrowserEngineInstrumentedTest`, `candy_privacy_rules.test.mjs` |
+| Encrypted DNS | `DnsOverHttpsSettingsTest`, `DnsOverHttpsSettingsInstrumentedTest`, `GeckoDnsOverHttpsSettingsInstrumentedTest`, `BrowserSessionStoreInstrumentedTest` |
 | Generated assets and audits | `scripts/test_*`, `scripts/*.test.mjs`, `blocking/*AssetInstrumentedTest` |

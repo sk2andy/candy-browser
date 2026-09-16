@@ -39,6 +39,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEventSource
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
@@ -55,6 +56,7 @@ import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
+import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import java.net.URI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -192,6 +194,11 @@ internal class GeckoViewRuntimeHandle private constructor(
     }
 
     @UiThread
+    override fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
+        runtime.settings.applyDnsOverHttpsSettings(settings)
+    }
+
+    @UiThread
     override fun setWebContentFontSizeFactor(factor: Float) {
         runtime.settings.automaticFontSizeAdjustment = false
         runtime.settings.fontSizeFactor = factor
@@ -225,6 +232,13 @@ internal class GeckoViewRuntimeHandle private constructor(
     fun preferredColorSchemeForTesting(): Int = runtime.settings.preferredColorScheme
 
     @VisibleForTesting
+    fun dnsOverHttpsModeForTesting(): Int = runtime.settings.getTrustedRecusiveResolverMode()
+
+    @VisibleForTesting
+    fun dnsOverHttpsEndpointForTesting(): String =
+        runtime.settings.trustedRecursiveResolverUri
+
+    @VisibleForTesting
     fun webAuthnActivityDelegateForTesting(): GeckoRuntime.ActivityDelegate? =
         runtime.activityDelegate
 
@@ -254,7 +268,10 @@ internal class GeckoViewRuntimeHandle private constructor(
                     ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY,
                 )
                 .build()
-            val runtimeSettings = GeckoRuntimeSettingsFactory.create(contentBlocking)
+            val runtimeSettings = GeckoRuntimeSettingsFactory.create(
+                contentBlocking = contentBlocking,
+                dnsOverHttpsSettings = BrowserSessionStore(appContext).loadDnsOverHttpsSettings(),
+            )
             val runtime = GeckoRuntime.create(appContext, runtimeSettings)
             val extensionController = runtime.webExtensionController
             val toppingHost = GeckoViewToppingHostRuntime(

@@ -489,6 +489,9 @@ class BrowserController(
     val usesGeckoEngine: Boolean
         get() = browserEngineCapabilities.firefoxExtensions
 
+    val isDnsOverHttpsSupported: Boolean
+        get() = browserEngineCapabilities.dnsOverHttps
+
     val supportsPageContentActions: Boolean
         get() = true
 
@@ -656,6 +659,8 @@ class BrowserController(
     var isVideoAutoplayBlocked by mutableStateOf(false)
         private set
     var webRtcProtectionMode by mutableStateOf(WebRtcProtectionMode.Default)
+        private set
+    var dnsOverHttpsSettings by mutableStateOf(DnsOverHttpsRules.Default)
         private set
     var externalLinkPreviewState by mutableStateOf<ExternalLinkPreviewState?>(null)
         private set
@@ -1892,6 +1897,8 @@ class BrowserController(
         )
         webRtcProtectionMode = store.loadWebRtcProtectionMode()
         browserEngineSessionFactory.setWebRtcProtectionMode(webRtcProtectionMode)
+        dnsOverHttpsSettings = store.loadDnsOverHttpsSettings()
+        browserEngineSessionFactory.setDnsOverHttpsSettings(dnsOverHttpsSettings)
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY && usesGeckoEngine) {
             browserEngineSessionFactory.setExtensionChromeHost(
                 object : GeckoExtensionChromeHost {
@@ -8108,6 +8115,15 @@ class BrowserController(
         webRtcProtectionMode = mode
         store.saveWebRtcProtectionMode(mode)
         browserEngineSessionFactory.setWebRtcProtectionMode(mode)
+    }
+
+    fun updateDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
+        if (!isDnsOverHttpsSupported) return
+        val sanitized = DnsOverHttpsRules.sanitize(settings)
+        if (dnsOverHttpsSettings == sanitized) return
+        dnsOverHttpsSettings = sanitized
+        store.saveDnsOverHttpsSettings(sanitized)
+        browserEngineSessionFactory.setDnsOverHttpsSettings(sanitized)
     }
 
     fun updateBrowserEngineKind(kind: AndroidBrowserEngineKind) {

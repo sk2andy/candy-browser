@@ -197,6 +197,7 @@ internal fun SettingsChoice(
     expanded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     dev.sk2andy.materialbrowser.shared.ui.settings.SettingsChoice(
         title = title,
@@ -205,6 +206,7 @@ internal fun SettingsChoice(
         onClick = onClick,
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         modifier = modifier,
+        enabled = enabled,
     )
 }
 

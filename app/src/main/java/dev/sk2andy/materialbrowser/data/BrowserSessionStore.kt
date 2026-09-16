@@ -14,6 +14,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
@@ -1158,6 +1161,24 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_WEBRTC_PROTECTION_MODE, mode.stableId).apply()
     }
 
+    fun loadDnsOverHttpsSettings(): DnsOverHttpsSettings = DnsOverHttpsRules.sanitize(
+        DnsOverHttpsSettings(
+            provider = DnsOverHttpsProvider.fromStableId(
+                preferences.getString(KEY_DNS_OVER_HTTPS_PROVIDER, null),
+            ),
+            customEndpoint = preferences.getString(KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT, "")
+                .orEmpty(),
+        ),
+    )
+
+    fun saveDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
+        val sanitized = DnsOverHttpsRules.sanitize(settings)
+        preferences.edit()
+            .putString(KEY_DNS_OVER_HTTPS_PROVIDER, sanitized.provider.stableId)
+            .putString(KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT, sanitized.customEndpoint)
+            .apply()
+    }
+
     fun loadAndroidBrowserEngineKind(): AndroidBrowserEngineKind =
         AndroidBrowserEngineRules.persistedKind(
             stableId = preferences.getString(KEY_ANDROID_BROWSER_ENGINE, null),
@@ -1434,6 +1455,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_GECKO_SAFE_AREA_MAX_INITIAL_ELEMENTS = "gecko_safe_area_max_initial_elements"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_WEBRTC_PROTECTION_MODE = "webrtc_protection_mode"
+        const val KEY_DNS_OVER_HTTPS_PROVIDER = "dns_over_https_provider"
+        const val KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT = "dns_over_https_custom_endpoint"
         const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
         const val KEY_FORCE_DARK_WEBSITES = "force_dark_websites"

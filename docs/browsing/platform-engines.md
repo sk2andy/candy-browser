@@ -67,6 +67,24 @@ call-site cutover are not complete.
 - WKWebView remains the fixed iOS adapter, making the product's three adapters GeckoView, Android
   System WebView and WKWebView while only Android presents an engine selector.
 
+### Encrypted DNS
+
+- Protection settings expose process-wide DNS-over-HTTPS choices for GeckoView: Android system DNS,
+  Cloudflare, Google, Quad9, or a validated custom HTTPS endpoint such as a profile-specific NextDNS
+  URL. The selected policy applies equally to regular and private tabs; private navigation never
+  persists separate resolver state.
+- Every configured HTTPS resolver uses GeckoView's strict `TRR_MODE_ONLY`. Page name lookups do not
+  silently fall back to native DNS when the resolver fails. Resolver-host bootstrap and Android
+  network services remain platform-owned and can still use system DNS. Choosing **System default**
+  explicitly selects `TRR_MODE_DISABLED` and restores native DNS resolution.
+- Persisted resolver policy is sanitized and installed while Candy creates its single Gecko runtime,
+  before the first session can navigate. A malformed persisted custom endpoint is reset to **System
+  default**. Live changes update the runtime for later resolutions without reloading open pages;
+  existing connections are not terminated.
+- Android System WebView exposes no supported per-WebView DNS configuration API. Candy therefore
+  keeps the encrypted-DNS control visible but disabled in that engine and explains that System
+  WebView continues to use Android system DNS.
+
 ### WebRTC protection
 
 The protection settings expose one process-wide WebRTC choice for regular and private browsing,
