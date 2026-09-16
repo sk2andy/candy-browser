@@ -121,6 +121,8 @@
     <string name="profile_new_tab_wallpaper_title">Fond du nouvel onglet</string>
     <string name="profile_tab_switcher_wallpaper_title">Fond du sélecteur d’onglets</string>
     <string name="profile_wallpaper_choose_image">Choisir une image</string>
+    <string name="profile_creation_wallpaper_subtitle">Choisir l’image après la création du profil</string>
+    <string name="profile_creation_protection_failed">Le profil a été créé, mais la protection biométrique n’a pas été activée.</string>
     <string name="profile_wallpaper_replace">Remplacer</string>
     <string name="profile_wallpaper_remove">Supprimer le fond</string>
     <string name="profile_wallpaper_zoom">Zoom</string>

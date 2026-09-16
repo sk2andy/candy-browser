@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
@@ -39,6 +40,11 @@ import dev.sk2andy.materialbrowser.shared.ui.SharedProfileActionsSheet
 import dev.sk2andy.materialbrowser.shared.ui.SharedProfileEmojiPickerSheet
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSwitch
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+
+internal data class ProfileCreationOptions(
+    val protection: ProfileProtection? = null,
+    val wallpaperTargets: Set<ProfileWallpaperTarget> = emptySet(),
+)
 
 @Composable
 internal fun ProfileActionsSheet(
@@ -110,12 +116,22 @@ internal fun EmojiPickerSheet(
     visible: Boolean,
     creatingProfile: Boolean,
     isolationSupported: Boolean,
+    profileProtectionSupported: Boolean,
     emojis: List<String>,
     selectedEmoji: String?,
-    onCreate: (String, Boolean) -> Unit,
+    onCreate: (
+        emoji: String,
+        isolationEnabled: Boolean,
+        options: ProfileCreationOptions,
+    ) -> Unit,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var draftProtection by remember(creatingProfile) { mutableStateOf<ProfileProtection?>(null) }
+    var configureDraftProtection by remember(creatingProfile) { mutableStateOf(false) }
+    var draftWallpaperTargets by remember(creatingProfile) {
+        mutableStateOf(emptySet<ProfileWallpaperTarget>())
+    }
     SharedProfileEmojiPickerSheet(
         visible = visible,
         creatingProfile = creatingProfile,
@@ -123,11 +139,105 @@ internal fun EmojiPickerSheet(
         emojis = emojis,
         selectedEmoji = selectedEmoji,
         copy = profileSheetCopy(),
-        onCreate = onCreate,
+        onCreate = { emoji, isolationEnabled ->
+            onCreate(
+                emoji,
+                isolationEnabled,
+                ProfileCreationOptions(draftProtection, draftWallpaperTargets),
+            )
+        },
         onSelect = onSelect,
         onDismiss = onDismiss,
+        creationOptions = if (creatingProfile) {
+            {
+                SettingsSwitch(
+                    title = stringResource(R.string.profile_protection_title),
+                    subtitle = when {
+                        !profileProtectionSupported ->
+                            stringResource(R.string.profile_protection_unavailable)
+                        draftProtection == null ->
+                            stringResource(R.string.profile_protection_disabled)
+                        else -> profileProtectionSummary(requireNotNull(draftProtection))
+                    },
+                    checked = draftProtection != null,
+                    enabled = profileProtectionSupported,
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
+                            configureDraftProtection = true
+                        } else {
+                            draftProtection = null
+                        }
+                    },
+                    modifier = Modifier.testTag(ProfileCreationOptionTestTags.Protection),
+                )
+                if (draftProtection != null && profileProtectionSupported) {
+                    TextButton(
+                        onClick = { configureDraftProtection = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.profile_protection_configure))
+                    }
+                }
+                ProfileCreationWallpaperSwitch(
+                    target = ProfileWallpaperTarget.NewTab,
+                    title = stringResource(R.string.action_customize_new_tab_wallpaper),
+                    selectedTargets = draftWallpaperTargets,
+                    onSelectedTargetsChange = { draftWallpaperTargets = it },
+                )
+                ProfileCreationWallpaperSwitch(
+                    target = ProfileWallpaperTarget.TabSwitcher,
+                    title = stringResource(R.string.action_customize_tab_switcher_wallpaper),
+                    selectedTargets = draftWallpaperTargets,
+                    onSelectedTargetsChange = { draftWallpaperTargets = it },
+                )
+            }
+        } else {
+            null
+        },
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
     )
+    if (configureDraftProtection) {
+        ProfileProtectionDialog(
+            current = draftProtection,
+            onSave = { protection ->
+                draftProtection = protection
+                configureDraftProtection = false
+            },
+            onDismiss = { configureDraftProtection = false },
+        )
+    }
+}
+
+@Composable
+private fun ProfileCreationWallpaperSwitch(
+    target: ProfileWallpaperTarget,
+    title: String,
+    selectedTargets: Set<ProfileWallpaperTarget>,
+    onSelectedTargetsChange: (Set<ProfileWallpaperTarget>) -> Unit,
+) {
+    val selected = target in selectedTargets
+    SettingsSwitch(
+        title = title,
+        subtitle = stringResource(R.string.profile_creation_wallpaper_subtitle),
+        checked = selected,
+        onCheckedChange = { enabled ->
+            onSelectedTargetsChange(
+                if (enabled) selectedTargets + target else selectedTargets - target,
+            )
+        },
+        modifier = Modifier.testTag(ProfileCreationOptionTestTags.wallpaper(target)),
+    )
+}
+
+internal object ProfileCreationOptionTestTags {
+    const val Protection = "profile_creation_protection"
+    const val NewTabWallpaper = "profile_creation_new_tab_wallpaper"
+    const val TabSwitcherWallpaper = "profile_creation_tab_switcher_wallpaper"
+
+    fun wallpaper(target: ProfileWallpaperTarget): String = when (target) {
+        ProfileWallpaperTarget.NewTab -> NewTabWallpaper
+        ProfileWallpaperTarget.TabSwitcher -> TabSwitcherWallpaper
+    }
 }
 
 @Composable

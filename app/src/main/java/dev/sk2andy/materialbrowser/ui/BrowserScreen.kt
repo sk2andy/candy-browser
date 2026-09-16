@@ -44,6 +44,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -80,11 +81,14 @@ import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
+import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
+import dev.sk2andy.materialbrowser.browser.ProfileProtection
+import dev.sk2andy.materialbrowser.browser.ProfileProtectionRules
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperEditorContract
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperEditorRequest
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperTarget
-import dev.sk2andy.materialbrowser.browser.wallpaperFor
 import dev.sk2andy.materialbrowser.browser.RootTabBackDecision
+import dev.sk2andy.materialbrowser.browser.wallpaperFor
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionClient
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionRules
 import dev.sk2andy.materialbrowser.browser.commands.AddressAiModeRules
@@ -149,6 +153,50 @@ private data class PendingLinkSnooze(
         url = url,
     )
 }
+
+private data class PendingProfileConfiguration(
+    val profileId: String,
+    val remainingWallpaperTargets: List<ProfileWallpaperTarget>,
+    val protection: ProfileProtection?,
+    val activeWallpaperTarget: ProfileWallpaperTarget? = null,
+)
+
+private val PendingProfileConfigurationSaver =
+    Saver<PendingProfileConfiguration?, List<String>>(
+        save = { pending ->
+            pending?.let {
+                listOf(
+                    it.profileId,
+                    it.remainingWallpaperTargets.joinToString(",") { target ->
+                        target.wireValue
+                    },
+                    it.protection?.lockTrigger?.wireValue.orEmpty(),
+                    it.protection?.cooldownMinutes?.toString().orEmpty(),
+                    it.activeWallpaperTarget?.wireValue.orEmpty(),
+                )
+            }
+        },
+        restore = { saved ->
+            val protection = ProfileLockTrigger.fromWireValue(saved.getOrNull(2))?.let { trigger ->
+                ProfileProtectionRules.normalize(
+                    ProfileProtection(
+                        lockTrigger = trigger,
+                        cooldownMinutes = saved.getOrNull(3)?.toIntOrNull()
+                            ?: ProfileProtectionRules.DEFAULT_COOLDOWN_MINUTES,
+                    ),
+                )
+            }
+            PendingProfileConfiguration(
+                profileId = saved.first(),
+                remainingWallpaperTargets = saved.getOrNull(1)
+                    .orEmpty()
+                    .split(',')
+                    .mapNotNull(ProfileWallpaperTarget::fromWireValue),
+                protection = protection,
+                activeWallpaperTarget = ProfileWallpaperTarget.fromWireValue(saved.getOrNull(4)),
+            )
+        },
+    )
 
 @Composable
 internal fun BrowserScreen(
@@ -411,9 +459,31 @@ internal fun BrowserScreen(
             rootView.performConfirmHaptic()
         }
     }
+    var pendingProfileConfiguration by rememberSaveable(
+        stateSaver = PendingProfileConfigurationSaver,
+    ) {
+        mutableStateOf<PendingProfileConfiguration?>(null)
+    }
     val profileWallpaperEditorLauncher = rememberLauncherForActivityResult(
         contract = ProfileWallpaperEditorContract(),
     ) { submission ->
+        val pending = pendingProfileConfiguration
+        val activeTarget = pending?.activeWallpaperTarget
+        val submissionMatches = submission == null ||
+            pending != null &&
+            activeTarget != null &&
+            submission.profileId == pending.profileId &&
+            submission.target == activeTarget
+        if (!submissionMatches) {
+            pendingProfileConfiguration = null
+            controller.restoreActiveProfileWallpapersAfterEditing()
+            Toast.makeText(
+                context,
+                R.string.profile_wallpaper_save_failed,
+                Toast.LENGTH_LONG,
+            ).show()
+            return@rememberLauncherForActivityResult
+        }
         if (submission != null) {
             controller.updateProfileWallpaper(
                 submission.profileId,
@@ -421,18 +491,69 @@ internal fun BrowserScreen(
                 submission.wallpaper,
             )
         }
+        pendingProfileConfiguration = pending?.copy(activeWallpaperTarget = null)
+    }
+    LaunchedEffect(pendingProfileConfiguration) {
+        val pending = pendingProfileConfiguration ?: return@LaunchedEffect
+        if (pending.activeWallpaperTarget != null) return@LaunchedEffect
+        val wallpaperTarget = pending.remainingWallpaperTargets.firstOrNull()
+        if (wallpaperTarget != null) {
+            val profile = controller.localBrowserProfiles
+                .firstOrNull { profile -> profile.id == pending.profileId }
+            if (profile == null) {
+                pendingProfileConfiguration = null
+                controller.restoreActiveProfileWallpapersAfterEditing()
+                return@LaunchedEffect
+            }
+            pendingProfileConfiguration = pending.copy(
+                remainingWallpaperTargets = pending.remainingWallpaperTargets.drop(1),
+                activeWallpaperTarget = wallpaperTarget,
+            )
+            profileWallpaperEditorLauncher.launch(
+                ProfileWallpaperEditorRequest(
+                    profileId = profile.id,
+                    target = wallpaperTarget,
+                    wallpaper = profile.wallpaperFor(wallpaperTarget),
+                ),
+            )
+            return@LaunchedEffect
+        }
+        pendingProfileConfiguration = null
         controller.restoreActiveProfileWallpapersAfterEditing()
+        pending.protection?.let { protection ->
+            controller.updateProfileProtection(pending.profileId, protection) { changed ->
+                if (changed) {
+                    rootView.performConfirmHaptic()
+                } else {
+                    Toast.makeText(
+                        context,
+                        R.string.profile_creation_protection_failed,
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        }
+    }
+    fun configureProfile(
+        profileId: String,
+        wallpaperTargets: List<ProfileWallpaperTarget>,
+        protection: ProfileProtection? = null,
+    ) {
+        if (controller.localBrowserProfiles.none { it.id == profileId }) return
+        if (pendingProfileConfiguration != null) return
+        val orderedTargets = ProfileWallpaperTarget.entries.filter(wallpaperTargets::contains)
+        if (orderedTargets.isEmpty() && protection == null) return
+        if (orderedTargets.isNotEmpty()) {
+            controller.releaseActiveProfileWallpaperForEditing(profileId)
+        }
+        pendingProfileConfiguration = PendingProfileConfiguration(
+            profileId = profileId,
+            remainingWallpaperTargets = orderedTargets,
+            protection = protection,
+        )
     }
     fun openProfileWallpaperEditor(profileId: String, wallpaperTarget: ProfileWallpaperTarget) {
-        val profile = controller.localBrowserProfiles.firstOrNull { it.id == profileId } ?: return
-        controller.releaseActiveProfileWallpaperForEditing(profileId)
-        profileWallpaperEditorLauncher.launch(
-            ProfileWallpaperEditorRequest(
-                profileId = profile.id,
-                target = wallpaperTarget,
-                wallpaper = profile.wallpaperFor(wallpaperTarget),
-            ),
-        )
+        configureProfile(profileId, listOf(wallpaperTarget))
     }
     fun openSiteCapsuleEditor(existing: SiteCapsule?, sourceTab: BrowserTab?) {
         if (existing == null && sourceTab == null) return
@@ -1450,6 +1571,13 @@ internal fun BrowserScreen(
                     settingsVisible = true
                 },
                 onEditProfileWallpaper = ::openProfileWallpaperEditor,
+                onConfigureCreatedProfile = { profileId, options ->
+                    configureProfile(
+                        profileId = profileId,
+                        wallpaperTargets = options.wallpaperTargets.toList(),
+                        protection = options.protection,
+                    )
+                },
                 destinationChromeVisible = overviewDestinationChromeVisible,
                 onEntryHeroStarted = { animated ->
                     overviewMorphJob?.cancel()

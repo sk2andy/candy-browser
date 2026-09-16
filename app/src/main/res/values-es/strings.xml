@@ -121,6 +121,8 @@
     <string name="profile_new_tab_wallpaper_title">Fondo de pestaña nueva</string>
     <string name="profile_tab_switcher_wallpaper_title">Fondo del selector de pestañas</string>
     <string name="profile_wallpaper_choose_image">Elegir imagen</string>
+    <string name="profile_creation_wallpaper_subtitle">Elegir imagen después de crear el perfil</string>
+    <string name="profile_creation_protection_failed">El perfil se creó, pero la protección biométrica no se activó.</string>
     <string name="profile_wallpaper_replace">Reemplazar</string>
     <string name="profile_wallpaper_remove">Eliminar fondo</string>
     <string name="profile_wallpaper_zoom">Zoom</string>
