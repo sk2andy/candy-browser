@@ -739,9 +739,8 @@ class BrowserController(
     internal val canMinimizeFullscreenVideo: Boolean
         get() = presentationIsPrivate() == false
 
-    internal val isFullscreenVideoExpanded: Boolean
-        get() = fullscreenVideoPlacement(videoOnlyPresentation = false) ==
-            FullscreenVideoPlacement.Expanded
+    internal val isSelectedWebContentFullscreen: Boolean
+        get() = selectedTabId in browserEngineContentFullscreenTabIds
 
     internal val isPictureInPictureEligible: Boolean
         get() = GeckoPictureInPictureRules.isEligible(
@@ -770,6 +769,11 @@ class BrowserController(
     @VisibleForTesting
     internal fun reportSelectedGeckoMediaStateForTesting(state: GeckoMediaSessionState) {
         check(usesGeckoEngine)
+        reportSelectedBrowserEngineMediaStateForTesting(state)
+    }
+
+    @VisibleForTesting
+    internal fun reportSelectedBrowserEngineMediaStateForTesting(state: GeckoMediaSessionState) {
         val session = browserEngineSessionFor(selectedTabId)
         onGeckoMediaState(selectedTabId, session, state)
     }
@@ -777,6 +781,11 @@ class BrowserController(
     @VisibleForTesting
     internal fun reportSelectedGeckoFullscreenStateForTesting(fullscreen: Boolean) {
         check(usesGeckoEngine)
+        reportSelectedBrowserEngineFullscreenStateForTesting(fullscreen)
+    }
+
+    @VisibleForTesting
+    internal fun reportSelectedBrowserEngineFullscreenStateForTesting(fullscreen: Boolean) {
         val session = browserEngineSessionFor(selectedTabId)
         onGeckoFullscreenState(selectedTabId, session, fullscreen)
     }
@@ -787,7 +796,7 @@ class BrowserController(
         return "mediaActive=${media?.isActive}, mediaPlaying=${media?.isPlaying}, " +
             "mediaFullscreen=${media?.isFullscreen}, videoTracks=${media?.videoTrackCount}, " +
             "videoSize=${media?.videoWidth}x${media?.videoHeight}, " +
-            "contentFullscreen=${tabId in geckoContentFullscreenTabIds}, " +
+            "contentFullscreen=${tabId in browserEngineContentFullscreenTabIds}, " +
             "presentation=${geckoMediaPresentation?.tabId}, selected=$selectedTabId"
     }
 
@@ -967,7 +976,7 @@ class BrowserController(
     private var pictureInPicturePlaybackExpected = false
     private var isInPictureInPicture = false
     private val geckoMediaStates = mutableMapOf<String, GeckoMediaSessionState>()
-    private val geckoContentFullscreenTabIds = mutableSetOf<String>()
+    private val browserEngineContentFullscreenTabIds = mutableStateMapOf<String, Unit>()
     private val geckoLinkPeekBindings = mutableMapOf<View, GeckoLinkPeekBinding>()
     private var nextGeckoLinkPeekId = 0L
     private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
@@ -2821,7 +2830,7 @@ class BrowserController(
             pictureInPicturePlaybackExpected = false
             geckoMediaPresentation?.let { presentation ->
                 if (
-                    presentation.tabId !in geckoContentFullscreenTabIds ||
+                    presentation.tabId !in browserEngineContentFullscreenTabIds ||
                     !GeckoPictureInPictureRules.isFullscreenVideo(
                         geckoMediaStates[presentation.tabId],
                     )
@@ -3829,7 +3838,8 @@ class BrowserController(
                 it
             }
         }
-        val isFullscreenContent = tabId != null && fullscreenVideoState?.tabId == tabId
+        val isFullscreenContent = tabId != null &&
+            tabId in browserEngineContentFullscreenTabIds
         val forceNativeSafeArea = if (tabId != null) {
             usesNativeSafeArea(tabId)
         } else {
@@ -9824,7 +9834,7 @@ class BrowserController(
         if (destroyed || browserEngineSessions[tabId] !== session) return
         if (state.isActive) geckoMediaStates[tabId] = state else geckoMediaStates.remove(tabId)
         if (
-            tabId in geckoContentFullscreenTabIds &&
+            tabId in browserEngineContentFullscreenTabIds &&
             GeckoPictureInPictureRules.isFullscreenVideo(state)
         ) {
             startGeckoMediaPresentation(tabId, session)
@@ -9850,12 +9860,12 @@ class BrowserController(
     ) {
         if (destroyed || browserEngineSessions[tabId] !== session) return
         if (fullscreen) {
-            geckoContentFullscreenTabIds += tabId
+            browserEngineContentFullscreenTabIds[tabId] = Unit
             if (GeckoPictureInPictureRules.isFullscreenVideo(geckoMediaStates[tabId])) {
                 startGeckoMediaPresentation(tabId, session)
             }
         } else {
-            geckoContentFullscreenTabIds -= tabId
+            browserEngineContentFullscreenTabIds.remove(tabId)
             if (
                 geckoMediaPresentation?.tabId == tabId &&
                 !pictureInPictureTransitionPending &&
@@ -9910,7 +9920,7 @@ class BrowserController(
         if (!state.isActive) return null
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return null
         val video = state.videoTrackCount > 0 ||
-            tabId in geckoContentFullscreenTabIds ||
+            tabId in browserEngineContentFullscreenTabIds ||
             geckoMediaPresentation?.tabId == tabId
         return BrowserMediaState(
             tabId = tab.id,
@@ -10062,7 +10072,7 @@ class BrowserController(
             developerSettings.forceSafeAreaFallback ||
             usesNativeSafeArea(tabId) ||
             tabId in automaticNativeTopSafeAreaTabIds ||
-            fullscreenVideoState?.tabId == tabId
+            tabId in browserEngineContentFullscreenTabIds
         ) {
             return 0
         }
@@ -10076,7 +10086,7 @@ class BrowserController(
             usesNativeSafeArea(tab.id) ||
             PrivacyRequestSanitizer.webHost(pageUrl)?.let { host -> isSafeAreaForced(tab, host) } == true ||
             tab.id in automaticNativeTopSafeAreaTabIds ||
-            fullscreenVideoState?.tabId == tab.id
+            tab.id in browserEngineContentFullscreenTabIds
         ) {
             0
         } else {
@@ -10419,7 +10429,7 @@ class BrowserController(
                     clearGeckoMediaPresentation()
                 }
                 geckoMediaStates.remove(event.tabId)
-                geckoContentFullscreenTabIds.remove(event.tabId)
+                browserEngineContentFullscreenTabIds.remove(event.tabId)
                 val crashedBindings = geckoViewBindings.entries
                     .filter { (_, binding) -> binding.tabId == event.tabId }
                 crashedBindings.forEach { (host, _) -> geckoViewBindings.remove(host) }
@@ -10445,7 +10455,7 @@ class BrowserController(
                     clearGeckoMediaPresentation()
                 }
                 geckoMediaStates.remove(event.tabId)
-                geckoContentFullscreenTabIds.remove(event.tabId)
+                browserEngineContentFullscreenTabIds.remove(event.tabId)
                 browserEngineSessions.remove(event.tabId)
             }
         }
@@ -10830,7 +10840,7 @@ class BrowserController(
         pageTranslationAttempts.remove(tabId)
         if (geckoMediaPresentation?.tabId == tabId) clearGeckoMediaPresentation()
         geckoMediaStates.remove(tabId)
-        geckoContentFullscreenTabIds.remove(tabId)
+        browserEngineContentFullscreenTabIds.remove(tabId)
         val closingBindings = geckoViewBindings.entries
             .filter { (_, binding) -> binding.tabId == tabId }
         closingBindings.forEach { (host, _) -> geckoViewBindings.remove(host) }

@@ -464,6 +464,7 @@ class MainActivity : AppCompatActivity() {
                     mutableStateOf(startupPresentation.showSplash)
                 }
                 val fullscreenVideoState = browserController.fullscreenVideoState
+                val webContentFullscreen = browserController.isSelectedWebContentFullscreen
                 val selectedTabId = browserController.selectedTabId
                 val webViewVideoOnlyPresentation = videoOnlyPresentation &&
                     fullscreenVideoState?.let { state ->
@@ -501,6 +502,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(
                     fullscreenVideoState,
+                    webContentFullscreen,
                     browserController.systemMediaState,
                     selectedTabId,
                     videoOnlyPresentation,
@@ -1555,12 +1557,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyBrowserSystemUi() {
-        val fullscreenVideoExpanded = ::browserController.isInitialized &&
-            browserController.isFullscreenVideoExpanded
+        val hideBrowserChrome = ::browserController.isInitialized &&
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = browserController.isSelectedWebContentFullscreen,
+                placement = browserController.fullscreenVideoPlacement(
+                    videoOnlyPresentation = videoOnlyPresentation,
+                ),
+                videoOnlyPresentation = videoOnlyPresentation,
+            )
         val browserImmersive = ::browserController.isInitialized &&
             browserController.isFullImmersiveModeEnabled
         val state = BrowserWindowStateRules.resolve(
-            isWebContentFullscreen = fullscreenVideoExpanded || videoOnlyPresentation,
+            isWebContentFullscreen = hideBrowserChrome,
             isBrowserFullscreen = browserImmersive,
             isTabOverviewPortraitLocked = isTabOverviewPortraitLocked,
             supportsTabOverviewPortraitLock =

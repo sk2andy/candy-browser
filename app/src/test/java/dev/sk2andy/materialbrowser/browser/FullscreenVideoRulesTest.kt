@@ -8,6 +8,53 @@ import org.junit.Test
 
 class FullscreenVideoRulesTest {
     @Test
+    fun `web content fullscreen hides browser chrome without media presentation`() {
+        assertTrue(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = true,
+                placement = null,
+                videoOnlyPresentation = false,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = false,
+                placement = null,
+                videoOnlyPresentation = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `mini player restores browser chrome while DOM remains fullscreen`() {
+        assertFalse(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = true,
+                placement = FullscreenVideoPlacement.MiniPlayer,
+                videoOnlyPresentation = false,
+            ),
+        )
+        assertTrue(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = false,
+                placement = FullscreenVideoPlacement.Expanded,
+                videoOnlyPresentation = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `video only presentation hides browser chrome while state settles`() {
+        assertTrue(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = false,
+                placement = null,
+                videoOnlyPresentation = true,
+            ),
+        )
+    }
+
+    @Test
     fun `prepared auto enter requires the Android 15 transition callback`() {
         assertFalse(FullscreenVideoRules.supportsPreparedAutoEnter(sdkInt = 34))
         assertTrue(FullscreenVideoRules.supportsPreparedAutoEnter(sdkInt = 35))

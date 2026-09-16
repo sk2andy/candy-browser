@@ -77,6 +77,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.FindInPageRules
+import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
@@ -228,6 +229,11 @@ internal fun BrowserScreen(
     hardwareTabChangeRequestId: Int = 0,
 ) {
     if (controller.isActiveProfileLocked) return
+    val hideBrowserChrome = FullscreenVideoRules.hidesBrowserChrome(
+        isWebContentFullscreen = controller.isSelectedWebContentFullscreen,
+        placement = controller.fullscreenVideoPlacement(videoOnlyPresentation),
+        videoOnlyPresentation = videoOnlyPresentation,
+    )
     val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
         onTabOverviewPortraitLockChanged,
     )
@@ -239,7 +245,7 @@ internal fun BrowserScreen(
             controller = controller,
             capsule = capsule,
             webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
-            videoOnlyPresentation = videoOnlyPresentation,
+            videoOnlyPresentation = hideBrowserChrome,
         )
         return
     }
@@ -1281,7 +1287,7 @@ internal fun BrowserScreen(
         }
     }
     val showFirefoxExtensionOptionsChrome =
-        firefoxExtensionOptionsTitle != null && !videoOnlyPresentation
+        firefoxExtensionOptionsTitle != null && !hideBrowserChrome
     val showInteractiveBlankStart = addressEditorVisible &&
         selectedTab.url == BLANK_URL &&
         addressValue.text.isEmpty() &&
@@ -1325,7 +1331,7 @@ internal fun BrowserScreen(
                     BrowserViewport(
                         controller = controller,
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
-                        videoOnlyPresentation = videoOnlyPresentation,
+                        videoOnlyPresentation = hideBrowserChrome,
                         selectedTab = selectedTab,
                         dragOffset = browserDragOffset,
                         travelDistance = tabSwitchTravelPx,
@@ -1358,7 +1364,7 @@ internal fun BrowserScreen(
         }
 
         controller.findInPageState
-            ?.takeIf { firefoxExtensionOptionsTitle == null && !videoOnlyPresentation }
+            ?.takeIf { firefoxExtensionOptionsTitle == null && !hideBrowserChrome }
             ?.let { findState ->
             val matchPosition = FindInPageRules.displayPosition(findState)
             FindInPageBar(
@@ -1393,7 +1399,7 @@ internal fun BrowserScreen(
             )
         }
 
-        if (firefoxExtensionOptionsTitle == null && !videoOnlyPresentation) {
+        if (firefoxExtensionOptionsTitle == null && !hideBrowserChrome) {
             BrowserAddressChrome(
             controller = controller,
             selectedTab = selectedTab,
