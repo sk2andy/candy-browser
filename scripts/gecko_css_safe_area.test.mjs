@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL(
-  '../app/src/main/assets/candy_privacy/content_safe_area.js', import.meta.url,
+  '../app/src/gecko/assets/candy_privacy/content_safe_area.js', import.meta.url,
 ), 'utf8');
 
 const protectedTop = 'max(0px, env(safe-area-inset-top, 0px))';

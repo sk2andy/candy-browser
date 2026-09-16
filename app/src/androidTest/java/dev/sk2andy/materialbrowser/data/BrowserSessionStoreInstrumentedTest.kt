@@ -10,6 +10,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
@@ -18,6 +19,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
@@ -305,6 +307,27 @@ class BrowserSessionStoreInstrumentedTest {
 
         store.saveStartupAnimationEnabled(true)
         assertTrue(store.loadStartupAnimationEnabled())
+    }
+
+    @Test
+    fun startupAddressFocusModeDefaultsToCurrentBehaviorAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(
+            StartupAddressFocusMode.WhenStartupAnimationDisabled,
+            store.loadStartupAddressFocusMode(),
+        )
+
+        store.saveStartupAddressFocusMode(StartupAddressFocusMode.Always)
+        assertEquals(StartupAddressFocusMode.Always, store.loadStartupAddressFocusMode())
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_STARTUP_ADDRESS_FOCUS_MODE, "unknown")
+            .commit()
+        assertEquals(
+            StartupAddressFocusMode.WhenStartupAnimationDisabled,
+            store.loadStartupAddressFocusMode(),
+        )
     }
 
     @Test
@@ -1426,6 +1449,17 @@ class BrowserSessionStoreInstrumentedTest {
         assertEquals(true, store.loadExternalLinkPreviewEnabled())
         store.saveExternalLinkPreviewEnabled(false)
         assertEquals(false, store.loadExternalLinkPreviewEnabled())
+    }
+
+    @Test
+    fun externalAppLinkHandlingDefaultsAutomaticAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(ExternalAppLinkHandling.Automatic, store.loadExternalAppLinkHandling())
+        store.saveExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+        assertEquals(ExternalAppLinkHandling.AskEveryTime, store.loadExternalAppLinkHandling())
+        preferences.edit().putString("external_app_link_handling", "unknown").commit()
+        assertEquals(ExternalAppLinkHandling.Automatic, store.loadExternalAppLinkHandling())
     }
 
     @Test

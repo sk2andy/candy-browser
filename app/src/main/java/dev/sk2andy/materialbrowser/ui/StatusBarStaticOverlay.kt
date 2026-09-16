@@ -51,6 +51,7 @@ internal class StatusBarStaticOverlayHost(
         refreshing: Boolean,
         indicatorColor: Int,
         indicatorContainerColor: Int,
+        indicatorTopInsetPx: Int,
         canChildScrollUp: () -> Boolean,
         onRefresh: () -> Boolean,
     ) {
@@ -59,6 +60,7 @@ internal class StatusBarStaticOverlayHost(
             refreshing = refreshing,
             indicatorColor = indicatorColor,
             indicatorContainerColor = indicatorContainerColor,
+            indicatorTopInsetPx = indicatorTopInsetPx,
             canChildScrollUp = canChildScrollUp,
             onRefresh = onRefresh,
         )

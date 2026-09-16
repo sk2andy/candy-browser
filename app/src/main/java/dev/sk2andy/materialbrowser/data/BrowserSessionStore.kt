@@ -2,17 +2,20 @@ package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineRules
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PopupSiteRules
@@ -22,6 +25,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
 import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.ProfileProtectionRules
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
@@ -857,6 +861,15 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_EXTERNAL_LINK_PREVIEW_ENABLED, enabled).apply()
     }
 
+    fun loadExternalAppLinkHandling(): ExternalAppLinkHandling =
+        ExternalAppLinkHandling.fromStableId(
+            preferences.getString(KEY_EXTERNAL_APP_LINK_HANDLING, null),
+        )
+
+    fun saveExternalAppLinkHandling(handling: ExternalAppLinkHandling) {
+        preferences.edit().putString(KEY_EXTERNAL_APP_LINK_HANDLING, handling.stableId).apply()
+    }
+
     fun loadLinkLongPressAction(): LinkLongPressAction = LinkLongPressAction.fromStableId(
         preferences.getString(KEY_LINK_LONG_PRESS_ACTION, null),
     )
@@ -955,6 +968,15 @@ class BrowserSessionStore internal constructor(
 
     fun saveStartupAnimationEnabled(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_STARTUP_ANIMATION_ENABLED, enabled).apply()
+    }
+
+    fun loadStartupAddressFocusMode(): StartupAddressFocusMode =
+        StartupAddressFocusMode.fromStableId(
+            preferences.getString(KEY_STARTUP_ADDRESS_FOCUS_MODE, null),
+        )
+
+    fun saveStartupAddressFocusMode(mode: StartupAddressFocusMode) {
+        preferences.edit().putString(KEY_STARTUP_ADDRESS_FOCUS_MODE, mode.stableId).apply()
     }
 
     fun loadHttpPasswordAutofillEnabled(): Boolean =
@@ -1137,12 +1159,15 @@ class BrowserSessionStore internal constructor(
     }
 
     fun loadAndroidBrowserEngineKind(): AndroidBrowserEngineKind =
-        AndroidBrowserEngineKind.fromStableId(
-            preferences.getString(KEY_ANDROID_BROWSER_ENGINE, null),
+        AndroidBrowserEngineRules.persistedKind(
+            stableId = preferences.getString(KEY_ANDROID_BROWSER_ENGINE, null),
+            systemWebViewOnly = BuildConfig.SYSTEM_WEBVIEW_ONLY,
         )
 
-    fun saveAndroidBrowserEngineKind(kind: AndroidBrowserEngineKind): Boolean =
-        preferences.edit().putString(KEY_ANDROID_BROWSER_ENGINE, kind.stableId).commit()
+    fun saveAndroidBrowserEngineKind(kind: AndroidBrowserEngineKind): Boolean {
+        if (!AndroidBrowserEngineRules.canSelect(kind, BuildConfig.SYSTEM_WEBVIEW_ONLY)) return false
+        return preferences.edit().putString(KEY_ANDROID_BROWSER_ENGINE, kind.stableId).commit()
+    }
 
     fun loadAppearanceSettings(): AppearanceSettings {
         val frostedTransparencyPercent = loadBoundedInt(
@@ -1368,6 +1393,7 @@ class BrowserSessionStore internal constructor(
             "address_bar_dock_vertical_fraction"
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
+        const val KEY_EXTERNAL_APP_LINK_HANDLING = "external_app_link_handling"
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
         const val KEY_LINK_PEEK_ACTION_LAYOUT = "link_peek_action_layout"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"
@@ -1375,6 +1401,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_TAB_BUTTON_VISIBLE = "tab_button_visible"
         const val KEY_FULL_IMMERSIVE_MODE_ENABLED = "full_immersive_mode_enabled"
         const val KEY_STARTUP_ANIMATION_ENABLED = "startup_animation_enabled"
+        const val KEY_STARTUP_ADDRESS_FOCUS_MODE = "startup_address_focus_mode"
         const val KEY_HTTP_PASSWORD_AUTOFILL_ENABLED = "http_password_autofill_enabled"
         const val KEY_FAVORITE_LAUNCH_ANIMATION_ENABLED =
             "favorite_launch_animation_enabled"

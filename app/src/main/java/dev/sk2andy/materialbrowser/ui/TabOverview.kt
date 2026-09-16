@@ -176,6 +176,7 @@ internal fun TabOverview(
     onOpenSettings: () -> Unit,
     onOpenSyncSettings: () -> Unit = onOpenSettings,
     onEditProfileWallpaper: (String, ProfileWallpaperTarget) -> Unit = { _, _ -> },
+    onConfigureCreatedProfile: (String, ProfileCreationOptions) -> Unit = { _, _ -> },
     destinationChromeVisible: Boolean,
     onEntryHeroStarted: (Boolean) -> Unit,
     onEntryHeroCompleted: () -> Unit,
@@ -2187,16 +2188,18 @@ internal fun TabOverview(
             visible = emojiPickerTarget != null,
             creatingProfile = emojiPickerTarget == NEW_PROFILE_TARGET,
             isolationSupported = controller.isProfileIsolationSupported,
+            profileProtectionSupported = controller.isProfileProtectionSupported,
             emojis = controller.syncIconCatalog.icons.map { it.emoji },
             selectedEmoji = controller.localBrowserProfiles
                 .firstOrNull { it.id == emojiPickerTarget }
                 ?.emoji,
-            onCreate = { emoji, isolationEnabled ->
+            onCreate = { emoji, isolationEnabled, options ->
                 if (emojiPickerTarget != NEW_PROFILE_TARGET) return@EmojiPickerSheet
-                val changed = controller.createProfile(emoji, isolationEnabled) != null
-                if (changed) {
+                val profileId = controller.createProfile(emoji, isolationEnabled)
+                if (profileId != null) {
                     emojiPickerTargetId = null
                     rootView.performConfirmHaptic()
+                    onConfigureCreatedProfile(profileId, options)
                 }
             },
             onSelect = { emoji ->

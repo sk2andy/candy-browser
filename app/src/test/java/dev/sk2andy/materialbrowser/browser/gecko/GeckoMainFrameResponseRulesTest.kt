@@ -14,6 +14,33 @@ class GeckoMainFrameResponseRulesTest {
     }
 
     @Test
+    fun `verified cloudflare challenge is accepted only over HTTPS`() {
+        assertEquals(
+            GeckoMainFrameResponse(
+                url = "https://example.com/",
+                statusCode = 403,
+                navigationGeneration = 4,
+                isCloudflareChallenge = true,
+            ),
+            GeckoMainFrameResponseRules.resolve(
+                url = "https://example.com/",
+                statusCode = 403,
+                navigationGeneration = 4,
+                isCloudflareChallenge = true,
+            ),
+        )
+        assertEquals(
+            false,
+            GeckoMainFrameResponseRules.resolve(
+                url = "http://example.com/",
+                statusCode = 403,
+                navigationGeneration = 4,
+                isCloudflareChallenge = true,
+            )?.isCloudflareChallenge,
+        )
+    }
+
+    @Test
     fun `non-web URL is rejected`() {
         assertNull(GeckoMainFrameResponseRules.resolve("file:///secret", 404, 0))
     }

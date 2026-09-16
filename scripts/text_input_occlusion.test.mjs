@@ -4,7 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 const asset = (name) => fs.readFileSync(
-  new URL(`../app/src/main/assets/candy_privacy/${name}`, import.meta.url),
+  new URL(`../app/src/gecko/assets/candy_privacy/${name}`, import.meta.url),
   "utf8",
 );
 
@@ -63,13 +63,20 @@ class FakeElement {
   }
 }
 
-function probeHarness({ element, scrollHeight = 1000, scrollTop = 0, visualViewport } = {}) {
+function probeHarness({
+  element,
+  focused = false,
+  scrollHeight = 1000,
+  scrollTop = 0,
+  visualViewport,
+} = {}) {
   const root = { clientHeight: 1000, scrollHeight, scrollTop };
   const elements = element ? [element] : [];
   const document = {
     body: { scrollHeight },
     documentElement: { clientHeight: 1000, clientWidth: 1000, scrollHeight },
     scrollingElement: root,
+    activeElement: focused ? element : null,
     createTreeWalker: () => {
       let index = 0;
       return { nextNode: () => elements[index++] || null };
@@ -88,18 +95,20 @@ function probeHarness({ element, scrollHeight = 1000, scrollTop = 0, visualViewp
     getComputedStyle: (candidate) => candidate.style,
   });
   vm.runInContext(asset("text_input_occlusion.js"), context);
-  return (rect = { left: 0.1, top: 0.8, right: 0.9, bottom: 0.95 }) =>
-    context.CandyTextInputOcclusion.probe(rect);
+  return (
+    rect = { left: 0.1, top: 0.8, right: 0.9, bottom: 0.95 },
+    focusedOnly = false,
+  ) => context.CandyTextInputOcclusion.probe(rect, focusedOnly);
 }
 
 test("parks only for overlapping visible text editor at document bottom", () => {
-  assert.equal(probeHarness({ element: new FakeElement() })(), true);
-  assert.equal(probeHarness({ element: new FakeElement(), scrollHeight: 1100 })(), false);
+  assert.equal(probeHarness({ element: new FakeElement() })(), 2);
+  assert.equal(probeHarness({ element: new FakeElement(), scrollHeight: 1100 })(), 0);
   assert.equal(probeHarness({
     element: new FakeElement({
       rect: { left: 100, top: 700, right: 900, bottom: 790, width: 800, height: 90 },
     }),
-  })(), false);
+  })(), 0);
 });
 
 test("accepts plaintext contenteditable and rejects disabled hidden or non-text input", () => {
@@ -109,16 +118,16 @@ test("accepts plaintext contenteditable and rejects disabled hidden or non-text 
       attributes: { contenteditable: "plaintext-only" },
       isContentEditable: true,
     }),
-  })(), true);
+  })(), 2);
   assert.equal(probeHarness({
     element: new FakeElement({ attributes: { disabled: "" } }),
-  })(), false);
+  })(), 0);
   assert.equal(probeHarness({
     element: new FakeElement({ style: { opacity: "0.0" } }),
-  })(), false);
+  })(), 0);
   assert.equal(probeHarness({
     element: new FakeElement({ tagName: "INPUT", type: "checkbox" }),
-  })(), false);
+  })(), 0);
 });
 
 test("maps normalized chrome bounds through visual viewport offset", () => {
@@ -137,7 +146,47 @@ test("maps normalized chrome bounds through visual viewport offset", () => {
     },
   });
 
-  assert.equal(probe({ left: 0, top: 0.8, right: 1, bottom: 1 }), true);
+  assert.equal(probe({ left: 0, top: 0.8, right: 1, bottom: 1 }), 2);
+});
+
+test("focused probe starts only for text editor and follows movement", () => {
+  const textarea = new FakeElement({
+    rect: { left: 100, top: 700, right: 900, bottom: 790, width: 800, height: 90 },
+  });
+  const probe = probeHarness({ element: textarea, focused: true, scrollHeight: 2000 });
+
+  assert.equal(probe(undefined, true), 1);
+  textarea.rect = { left: 100, top: 960, right: 900, bottom: 1040, width: 800, height: 80 };
+  assert.equal(probe(undefined, true), 2);
+  assert.equal(probeHarness({ element: textarea })(undefined, true), 0);
+  assert.equal(probeHarness({
+    element: new FakeElement({
+      tagName: "DIV",
+      attributes: { contenteditable: "true" },
+      isContentEditable: true,
+    }),
+    focused: true,
+  })(undefined, true), 2);
+});
+
+test("focused probe accepts deeply nested editor below chrome without broadening full scan", () => {
+  const editor = new FakeElement({
+    tagName: "DIV",
+    attributes: { contenteditable: "true" },
+    isContentEditable: true,
+    rect: { left: 100, top: 960, right: 900, bottom: 1040, width: 800, height: 80 },
+  });
+  let current = editor;
+  for (let depth = 0; depth < 28; depth += 1) {
+    current.parentElement = new FakeElement({ tagName: "DIV" });
+    current = current.parentElement;
+  }
+  const probe = probeHarness({ element: editor, focused: true });
+
+  assert.equal(probe(undefined, true), 2);
+  assert.equal(probe(), 1);
+  current.style.opacity = "0";
+  assert.equal(probe(undefined, true), 0);
 });
 
 test("probe is one-shot and contains no observer or timer", () => {
@@ -180,6 +229,7 @@ test("background binds probe to top frame policy and navigation", async () => {
     revision: 4,
     navigationGeneration: 9,
     requestId: 3,
+    focusedOnly: true,
     viewportRect: { left: 0.1, top: 0.8, right: 0.9, bottom: 0.95 },
   };
   const harness = backgroundHarness(policy);
@@ -187,10 +237,11 @@ test("background binds probe to top frame policy and navigation", async () => {
   harness.context.probeTextInputOcclusion(request);
   assert.equal(harness.sent.length, 1);
   assert.equal(harness.sent[0][2].frameId, 0);
-  harness.complete(true);
+  assert.equal(harness.sent[0][1].focusedOnly, true);
+  harness.complete(2);
   await Promise.resolve();
   assert.equal(harness.posted[0].type, "text-input-occlusion-result");
-  assert.equal(harness.posted[0].occluded, true);
+  assert.equal(harness.posted[0].result, 2);
 });
 
 test("background rejects malformed or stale probe", () => {

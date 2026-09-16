@@ -1,13 +1,19 @@
 package dev.sk2andy.materialbrowser.browser.engine
 
+import android.content.Context
 import android.content.res.Configuration
+import android.view.View
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
+import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreparedSession
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowsingData
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoCandyTrailHistoryEventSink
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionChromeHost
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionSessionIdentity
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoToppingHostState
@@ -22,6 +28,25 @@ internal interface AndroidBrowserEngineFactory {
     val capabilities: AndroidBrowserEngineCapabilities
 
     val runtimeVersionName: String?
+
+    fun setExtensionChromeHost(host: GeckoExtensionChromeHost?) = Unit
+
+    fun clickExtensionAction(key: GeckoExtensionActionKey): Boolean = false
+
+    fun dismissExtensionPopup() = Unit
+
+    fun notifySelectedExtensionTabChanged() = Unit
+
+    fun extensionSessionIdentity(tabId: String): GeckoExtensionSessionIdentity? = null
+
+    fun prepareSession(tabId: String, session: BrowserEnginePreparedSession): Boolean = false
+
+    fun createExtensionPopupView(
+        context: Context,
+        session: BrowserEnginePreparedSession,
+    ): View? = null
+
+    fun releaseExtensionPopupView(view: View) = Unit
 
     fun reconcileToppings(scripts: List<UserScript>)
 

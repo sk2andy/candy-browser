@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
 
-const asset = (name) => readFileSync(new URL(`../app/src/main/assets/candy_privacy/${name}`, import.meta.url), 'utf8');
+const asset = (name) => readFileSync(new URL(`../app/src/gecko/assets/candy_privacy/${name}`, import.meta.url), 'utf8');
 
 function probeHarness({ failMeasurement = false, depth = 3, computedStyle = {}, flowDepth = 0,
   skippedSiblings = 0, configuration, diagnostics, box = {}, documentState = 'interactive', inert = false,

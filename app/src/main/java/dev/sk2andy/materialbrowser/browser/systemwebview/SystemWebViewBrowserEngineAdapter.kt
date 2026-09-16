@@ -56,6 +56,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserEnginePermissionSetResponse
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionScript
 import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptResponse
@@ -70,6 +72,7 @@ import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.systemwebview.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.systemwebview.commands.WebViewProfileCookies
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
@@ -439,6 +442,15 @@ private class SystemWebViewBrowserEngineSession(
         if (closed) return
         when (command.type) {
             BrowserEngineCommandType.Load -> webView.loadUrl(requireNotNull(command.address))
+            BrowserEngineCommandType.ReplaceHistory -> {
+                val safeUrl = BrowserUriPolicy.normalizeHttpUrl(
+                    requireNotNull(command.address),
+                ) ?: return
+                webView.evaluateJavascript(
+                    "window.location.replace(${org.json.JSONObject.quote(safeUrl)});",
+                    null,
+                )
+            }
             BrowserEngineCommandType.Back -> if (webView.canGoBack()) webView.goBack()
             BrowserEngineCommandType.Forward -> if (webView.canGoForward()) webView.goForward()
             BrowserEngineCommandType.Reload -> webView.reload()
@@ -769,14 +781,15 @@ private class SystemWebViewBrowserEngineSession(
 
     override fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onComplete: (Boolean) -> Unit,
+        mode: TextInputOcclusionProbeMode,
+        onComplete: (TextInputOcclusionProbeResult) -> Unit,
     ) {
         if (closed || currentPageUrl == null) {
-            onComplete(false)
+            onComplete(TextInputOcclusionProbeResult.NoFocusedTextInput)
             return
         }
-        webView.evaluateJavascript(TextInputOcclusionScript.javascript(viewportRect)) { result ->
-            onComplete(result == "true")
+        webView.evaluateJavascript(TextInputOcclusionScript.javascript(viewportRect, mode)) { result ->
+            onComplete(TextInputOcclusionProbeResult.fromWireValue(result.toIntOrNull() ?: 0))
         }
     }
 

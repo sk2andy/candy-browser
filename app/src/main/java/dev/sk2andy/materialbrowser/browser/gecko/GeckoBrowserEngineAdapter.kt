@@ -4,12 +4,16 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
@@ -26,6 +30,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineSessionPort
 import org.mozilla.geckoview.GeckoSession
+import org.mozilla.geckoview.GeckoView
 
 /** Android view-host edge kept separate from the engine-neutral shared session port. */
 internal interface BrowserEngineViewPort {
@@ -77,6 +82,14 @@ internal interface BrowserEngineViewPort {
     fun restoreTransientPlatformViewState(state: Bundle, expectedUrl: String): Boolean = false
 
     fun loadExtensionUrl(url: String): Boolean = false
+
+    fun requestEngineFocus(view: View): Boolean = view.requestFocus()
+
+    fun dispatchEngineGenericMotionEvent(view: View, event: MotionEvent): Boolean =
+        view.dispatchGenericMotionEvent(event)
+
+    fun dispatchEngineKeyEvent(view: View, event: KeyEvent): Boolean =
+        view.dispatchKeyEvent(event)
 }
 
 /** One Android browser tab: shared commands plus the platform renderer host. */
@@ -150,8 +163,9 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onComplete: (Boolean) -> Unit,
-    ) = onComplete(false)
+        mode: TextInputOcclusionProbeMode,
+        onComplete: (TextInputOcclusionProbeResult) -> Unit,
+    ) = onComplete(TextInputOcclusionProbeResult.NoFocusedTextInput)
 
     fun updatePrivacyPolicy(
         policy: GeckoPrivacyPolicy,
@@ -163,6 +177,10 @@ internal interface AndroidBrowserEngineSessionPort :
 internal fun interface BrowserEngineEventSink {
     fun onEngineEvent(event: BrowserEngineEvent)
 }
+
+internal class GeckoPreparedSession(
+    val session: GeckoSession,
+) : BrowserEnginePreparedSession
 
 /** Creates Gecko-backed ports without exposing GeckoRuntime or GeckoSession to browser chrome. */
 internal class GeckoBrowserEngineSessionFactory(
@@ -241,43 +259,56 @@ internal class GeckoBrowserEngineSessionFactory(
     }
 
     @UiThread
-    fun setExtensionChromeHost(host: GeckoExtensionChromeHost?) {
+    override fun setExtensionChromeHost(host: GeckoExtensionChromeHost?) {
         runtime.extensions.setChromeHost(host)
     }
 
     @UiThread
-    fun clickExtensionAction(key: GeckoExtensionActionKey): Boolean =
+    override fun clickExtensionAction(key: GeckoExtensionActionKey): Boolean =
         runtime.extensions.clickChromeAction(key)
 
     @UiThread
-    fun dismissExtensionPopup() {
+    override fun dismissExtensionPopup() {
         runtime.extensions.dismissChromePopup()
     }
 
     @UiThread
-    fun notifySelectedExtensionTabChanged() {
+    override fun notifySelectedExtensionTabChanged() {
         runtime.extensions.onSelectedChromeSessionChanged()
     }
 
-    fun extensionSessionIdentity(tabId: String): GeckoExtensionSessionIdentity? =
+    override fun extensionSessionIdentity(tabId: String): GeckoExtensionSessionIdentity? =
         extensionSessionIdentities[tabId]
 
     /** Prepares an unopened Gecko-owned session for the next [create] of this Candy tab. */
     @UiThread
-    fun prepareSession(
+    override fun prepareSession(
         tabId: String,
-        session: GeckoSession,
+        session: BrowserEnginePreparedSession,
     ): Boolean {
+        val geckoSession = (session as? GeckoPreparedSession)?.session ?: return false
         if (
             tabId.isBlank() ||
-            session.isOpen ||
+            geckoSession.isOpen ||
             extensionSessionIdentities.containsKey(tabId) ||
             preparedSessions.containsKey(tabId)
         ) {
             return false
         }
-        preparedSessions[tabId] = session
+        preparedSessions[tabId] = geckoSession
         return true
+    }
+
+    override fun createExtensionPopupView(
+        context: Context,
+        session: BrowserEnginePreparedSession,
+    ): View? {
+        val geckoSession = (session as? GeckoPreparedSession)?.session ?: return null
+        return GeckoView(context).also { view -> view.setSession(geckoSession) }
+    }
+
+    override fun releaseExtensionPopupView(view: View) {
+        (view as? GeckoView)?.releaseSession()
     }
 
     @UiThread
@@ -370,6 +401,9 @@ internal class GeckoBrowserEngineSessionAdapter(
         if (closed) return
         when (command.type) {
             BrowserEngineCommandType.Load -> load(requireNotNull(command.address))
+            BrowserEngineCommandType.ReplaceHistory -> replaceHistory(
+                requireNotNull(command.address),
+            )
             BrowserEngineCommandType.Back -> session.goBack()
             BrowserEngineCommandType.Forward -> session.goForward()
             BrowserEngineCommandType.Reload -> session.reload()
@@ -443,6 +477,16 @@ internal class GeckoBrowserEngineSessionAdapter(
     override fun setContentTargetListener(listener: BrowserContentTargetListener?) {
         session.setContentTargetListener(if (closed) null else listener)
     }
+
+    override fun requestEngineFocus(view: View): Boolean =
+        (view as? CandyGeckoView)?.requestEngineFocus() ?: view.requestFocus()
+
+    override fun dispatchEngineGenericMotionEvent(view: View, event: MotionEvent): Boolean =
+        (view as? CandyGeckoView)?.dispatchEngineGenericMotionEvent(event)
+            ?: view.dispatchGenericMotionEvent(event)
+
+    override fun dispatchEngineKeyEvent(view: View, event: KeyEvent): Boolean =
+        (view as? CandyGeckoView)?.dispatchEngineKeyEvent(event) ?: view.dispatchKeyEvent(event)
 
     @VisibleForTesting
     override fun dispatchContentTargetForTesting(target: WebContentTarget) {
@@ -601,13 +645,14 @@ internal class GeckoBrowserEngineSessionAdapter(
 
     override fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onComplete: (Boolean) -> Unit,
+        mode: TextInputOcclusionProbeMode,
+        onComplete: (TextInputOcclusionProbeResult) -> Unit,
     ) {
         if (closed) {
-            onComplete(false)
+            onComplete(TextInputOcclusionProbeResult.NoFocusedTextInput)
             return
         }
-        session.probeTextInputOcclusion(viewportRect, onComplete)
+        session.probeTextInputOcclusion(viewportRect, mode, onComplete)
     }
 
     @UiThread
@@ -637,6 +682,15 @@ internal class GeckoBrowserEngineSessionAdapter(
 
     private fun load(address: String) {
         if (session.loadUrl(address)) return
+        reportInvalidAddress()
+    }
+
+    private fun replaceHistory(address: String) {
+        if (session.replaceHistoryUrl(address)) return
+        reportInvalidAddress()
+    }
+
+    private fun reportInvalidAddress() {
         eventSink.onEngineEvent(
             previousState.toEngineEvent(
                 tabId = tabId,

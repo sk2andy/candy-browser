@@ -108,6 +108,67 @@ class StartupPresentationRulesTest {
     }
 
     @Test
+    fun `address focus modes control cold and warm launcher focus`() {
+        listOf(true, false).forEach { isStartupAnimationEnabled ->
+            assertEquals(
+                !isStartupAnimationEnabled,
+                StartupPresentationRules.shouldOpenAddressEditor(
+                    isLauncherLaunch = true,
+                    isStartupAnimationEnabled = isStartupAnimationEnabled,
+                    startupAddressFocusMode =
+                        StartupAddressFocusMode.WhenStartupAnimationDisabled,
+                    isOnboardingRequired = false,
+                ),
+            )
+            assertTrue(
+                StartupPresentationRules.shouldOpenAddressEditor(
+                    isLauncherLaunch = true,
+                    isStartupAnimationEnabled = isStartupAnimationEnabled,
+                    startupAddressFocusMode = StartupAddressFocusMode.Always,
+                    isOnboardingRequired = false,
+                ),
+            )
+            assertFalse(
+                StartupPresentationRules.shouldOpenAddressEditor(
+                    isLauncherLaunch = true,
+                    isStartupAnimationEnabled = isStartupAnimationEnabled,
+                    startupAddressFocusMode = StartupAddressFocusMode.Never,
+                    isOnboardingRequired = false,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `always mode waits behind startup presentation blockers`() {
+        assertFalse(
+            StartupPresentationRules.shouldOpenAddressEditor(
+                isLauncherLaunch = false,
+                isStartupAnimationEnabled = true,
+                startupAddressFocusMode = StartupAddressFocusMode.Always,
+                isOnboardingRequired = false,
+            ),
+        )
+        assertFalse(
+            StartupPresentationRules.shouldOpenAddressEditor(
+                isLauncherLaunch = true,
+                isStartupAnimationEnabled = true,
+                startupAddressFocusMode = StartupAddressFocusMode.Always,
+                isOnboardingRequired = true,
+            ),
+        )
+        assertFalse(
+            StartupPresentationRules.shouldOpenAddressEditor(
+                isLauncherLaunch = true,
+                isStartupAnimationEnabled = true,
+                startupAddressFocusMode = StartupAddressFocusMode.Always,
+                isOnboardingRequired = false,
+                isReleaseNotesRequired = true,
+            ),
+        )
+    }
+
+    @Test
     fun `home page opens only for enabled launcher launches`() {
         assertTrue(
             StartupPresentationRules.shouldOpenHomePage(

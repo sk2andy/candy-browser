@@ -109,6 +109,7 @@ object ExternalNavigationPolicy {
 
 internal data class ExternalNavigationGrant(
     val currentUrl: String,
+    val sourceUrl: String? = null,
     val expiresAtElapsedRealtime: Long,
 )
 
@@ -117,10 +118,12 @@ internal object ExternalNavigationGrantRules {
     fun start(
         url: String?,
         nowElapsedRealtime: Long,
+        sourceUrl: String? = null,
     ): ExternalNavigationGrant? {
         val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
         return ExternalNavigationGrant(
             currentUrl = safeUrl,
+            sourceUrl = BrowserUriPolicy.normalizeHttpUrl(sourceUrl),
             expiresAtElapsedRealtime = nowElapsedRealtime + MAX_LIFETIME_MILLIS,
         )
     }
@@ -156,6 +159,56 @@ internal object ExternalNavigationGrantRules {
     }
 
     internal const val MAX_LIFETIME_MILLIS = 15_000L
+}
+
+internal data class ExternalAppHandoff(
+    val targetUrl: String,
+    val expiresAtElapsedRealtime: Long,
+)
+
+/** Recognizes a web link immediately returned by the app Candy just opened. */
+internal object ExternalAppHandoffRules {
+    fun start(
+        targetUrl: String?,
+        nowElapsedRealtime: Long,
+    ): ExternalAppHandoff? {
+        val safeTargetUrl = BrowserUriPolicy.normalizeHttpUrl(targetUrl) ?: return null
+        return ExternalAppHandoff(
+            targetUrl = safeTargetUrl,
+            expiresAtElapsedRealtime = nowElapsedRealtime + MAX_LIFETIME_MILLIS,
+        )
+    }
+
+    fun returnedUrl(
+        handoff: ExternalAppHandoff?,
+        url: String?,
+        nowElapsedRealtime: Long,
+    ): String? {
+        if (handoff == null || handoff.expiresAtElapsedRealtime < nowElapsedRealtime) return null
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
+        val targetSite = SiteDomainRules.domainForUrl(handoff.targetUrl)
+        val returnedSite = SiteDomainRules.domainForUrl(safeUrl)
+        return safeUrl.takeIf {
+            safeUrl == handoff.targetUrl || targetSite != null && targetSite == returnedSite
+        }
+    }
+
+    private const val MAX_LIFETIME_MILLIS = 15_000L
+}
+
+/** Prevents a redirected app handoff from blindly skipping browser history entries. */
+internal object ExternalNavigationRollbackRules {
+    fun isAtSource(sourceUrl: String?, currentUrl: String?): Boolean {
+        val safeSourceUrl = BrowserUriPolicy.normalizeHttpUrl(sourceUrl) ?: return false
+        val safeCurrentUrl = BrowserUriPolicy.normalizeHttpUrl(currentUrl) ?: return false
+        return safeSourceUrl == safeCurrentUrl
+    }
+
+    fun canGoBackToSource(sourceUrl: String?, previousUrl: String?): Boolean {
+        val safeSourceUrl = BrowserUriPolicy.normalizeHttpUrl(sourceUrl) ?: return false
+        val safePreviousUrl = BrowserUriPolicy.normalizeHttpUrl(previousUrl) ?: return false
+        return safeSourceUrl == safePreviousUrl
+    }
 }
 
 /** Routes an explicit APK navigation to the download pipeline before the renderer displays it. */

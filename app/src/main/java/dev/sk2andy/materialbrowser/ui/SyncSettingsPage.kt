@@ -53,6 +53,16 @@ import dev.sk2andy.materialbrowser.sync.SyncStatus
 
 private val SYNC_ACCENT_HUES = listOf(0, 36, 72, 108, 144, 180, 216, 252, 288, 312)
 private const val SYNC_ACCENT_COLORS_PER_ROW = 5
+private const val SYNC_DOCUMENTATION_ROOT =
+    "https://github.com/sk2andy/candy-browser/blob/main/docs/sync"
+
+private object SyncDocumentationUrls {
+    const val Overview = "$SYNC_DOCUMENTATION_ROOT/README.md#documentation"
+    const val ServerQuickStart = "$SYNC_DOCUMENTATION_ROOT/server.md#quick-start"
+    const val ExtensionBuild = "$SYNC_DOCUMENTATION_ROOT/extension.md#build-and-load"
+    const val ExtensionSetup = "$SYNC_DOCUMENTATION_ROOT/extension.md#setup-flow"
+    const val AndroidSetup = "$SYNC_DOCUMENTATION_ROOT/app-integration.md#setup-and-secrets"
+}
 
 internal object SyncSettingsTestTags {
     const val Endpoint = "sync_settings_endpoint"
@@ -70,6 +80,11 @@ internal object SyncSettingsTestTags {
     const val AccentColors = "sync_settings_accent_colors"
     const val Enroll = "sync_settings_enroll"
     const val Refresh = "sync_settings_refresh"
+    const val ServerGuide = "sync_settings_server_guide"
+    const val ExtensionGuide = "sync_settings_extension_guide"
+    const val WorkspaceGuide = "sync_settings_workspace_guide"
+    const val AndroidGuide = "sync_settings_android_guide"
+    const val Documentation = "sync_settings_documentation"
 
     fun accentColor(hue: Int): String = "sync_settings_accent_color:$hue"
 }
@@ -83,6 +98,7 @@ internal fun SyncSettingsPage(
     onConfigure: (SyncConnectionSettings) -> Boolean,
     onEnroll: (CharArray, CharArray, (SyncEnrollmentOutcome) -> Unit) -> Unit,
     onRefresh: () -> Unit,
+    onOpenDocumentation: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
     val configured = state.settings
@@ -125,6 +141,7 @@ internal fun SyncSettingsPage(
         title = stringResource(R.string.sync_settings_title),
         onBack = onBack,
     ) {
+        SyncSetupGuide(onOpenDocumentation)
         SyncStatusCard(state)
         Text(
             text = stringResource(R.string.sync_connection_section),
@@ -398,6 +415,118 @@ internal fun SyncSettingsPage(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SyncSetupGuide(onOpenDocumentation: (String) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.sync_setup_guide_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.sync_setup_guide_summary),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SyncSetupGuideStep(
+                number = 1,
+                title = stringResource(R.string.sync_setup_server_title),
+                summary = stringResource(R.string.sync_setup_server_summary),
+                testTag = SyncSettingsTestTags.ServerGuide,
+                onClick = { onOpenDocumentation(SyncDocumentationUrls.ServerQuickStart) },
+            )
+            SyncSetupGuideStep(
+                number = 2,
+                title = stringResource(R.string.sync_setup_extension_title),
+                summary = stringResource(R.string.sync_setup_extension_summary),
+                testTag = SyncSettingsTestTags.ExtensionGuide,
+                onClick = { onOpenDocumentation(SyncDocumentationUrls.ExtensionBuild) },
+            )
+            SyncSetupGuideStep(
+                number = 3,
+                title = stringResource(R.string.sync_setup_workspace_title),
+                summary = stringResource(R.string.sync_setup_workspace_summary),
+                testTag = SyncSettingsTestTags.WorkspaceGuide,
+                onClick = { onOpenDocumentation(SyncDocumentationUrls.ExtensionSetup) },
+            )
+            SyncSetupGuideStep(
+                number = 4,
+                title = stringResource(R.string.sync_setup_android_title),
+                summary = stringResource(R.string.sync_setup_android_summary),
+                testTag = SyncSettingsTestTags.AndroidGuide,
+                onClick = { onOpenDocumentation(SyncDocumentationUrls.AndroidSetup) },
+            )
+            TextButton(
+                onClick = { onOpenDocumentation(SyncDocumentationUrls.Overview) },
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .testTag(SyncSettingsTestTags.Documentation),
+            ) {
+                Text(stringResource(R.string.sync_setup_all_documentation))
+                Icon(
+                    painter = painterResource(R.drawable.ic_symbol_open_in_new),
+                    contentDescription = null,
+                    modifier = Modifier.padding(start = 8.dp).size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncSetupGuideStep(
+    number: Int,
+    title: String,
+    summary: String,
+    testTag: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().testTag(testTag),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(number.toString(), fontWeight = FontWeight.Bold)
+                }
+            }
+            Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                painter = painterResource(R.drawable.ic_symbol_open_in_new),
+                contentDescription = null,
+                modifier = Modifier.padding(start = 8.dp).size(18.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

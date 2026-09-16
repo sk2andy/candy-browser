@@ -12,7 +12,7 @@ const context = vm.createContext({
   atob,
 });
 const source = fs.readFileSync(
-  new URL("../app/src/main/assets/candy_privacy/rules.js", import.meta.url),
+  new URL("../app/src/gecko/assets/candy_privacy/rules.js", import.meta.url),
   "utf8",
 );
 vm.runInContext(source, context);
@@ -122,11 +122,11 @@ test("Candy cookie defaults parse before the Gecko privacy host becomes ready", 
 
 test("safe-area policy push has a bounded content-side race fallback", () => {
   const bridge = fs.readFileSync(
-    new URL("../app/src/main/assets/candy_privacy/content_top_inset_bridge.js", import.meta.url),
+    new URL("../app/src/gecko/assets/candy_privacy/content_top_inset_bridge.js", import.meta.url),
     "utf8",
   );
   const background = fs.readFileSync(
-    new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+    new URL("../app/src/gecko/assets/candy_privacy/background.js", import.meta.url),
     "utf8",
   );
 
@@ -154,7 +154,7 @@ test("safe-area policy push has a bounded content-side race fallback", () => {
 
 test("privacy host uses required MV2 web origins for document-start scripts", () => {
   const manifest = JSON.parse(fs.readFileSync(
-    new URL("../app/src/main/assets/candy_privacy/manifest.json", import.meta.url),
+    new URL("../app/src/gecko/assets/candy_privacy/manifest.json", import.meta.url),
     "utf8",
   ));
 
@@ -236,7 +236,7 @@ test("WebRTC policies use fail-closed ordering and acknowledge verified settings
   });
   vm.runInContext(
     fs.readFileSync(
-      new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+      new URL("../app/src/gecko/assets/candy_privacy/background.js", import.meta.url),
       "utf8",
     ),
     backgroundContext,
@@ -286,6 +286,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   let nativeMessageListener;
   let beforeRequestListener;
   let headersReceivedListener;
+  let headersReceivedExtraInfoSpec;
   const runtimeMessageListeners = [];
   const postedNativeMessages = [];
   const backgroundContext = vm.createContext({
@@ -324,7 +325,10 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
           addListener: (listener) => { beforeRequestListener = listener; },
         },
         onHeadersReceived: {
-          addListener: (listener) => { headersReceivedListener = listener; },
+          addListener: (listener, _filter, extraInfoSpec) => {
+            headersReceivedListener = listener;
+            headersReceivedExtraInfoSpec = extraInfoSpec;
+          },
         },
         onErrorOccurred: { addListener: () => {} },
       },
@@ -332,11 +336,12 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   });
   vm.runInContext(
     fs.readFileSync(
-      new URL("../app/src/main/assets/candy_privacy/background.js", import.meta.url),
+      new URL("../app/src/gecko/assets/candy_privacy/background.js", import.meta.url),
       "utf8",
     ),
     backgroundContext,
   );
+  assert.equal(headersReceivedExtraInfoSpec.join(","), "responseHeaders");
 
   nativeMessageListener({
     type: "policy",
@@ -382,6 +387,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     requestId: "request-subresource",
     url: "https://example.com/missing-api",
     statusCode: 404,
+    responseHeaders: [{ name: "cf-mitigated", value: "challenge" }],
   });
   assert.equal(
     postedNativeMessages.some((message) => message.type === "main-frame-response"),
@@ -393,6 +399,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     requestId: "request-404",
     url: "https://example.com/missing",
     statusCode: 404,
+    responseHeaders: [{ name: "CF-Mitigated", value: " Challenge " }],
   });
   assert.deepEqual(
     JSON.parse(JSON.stringify(
@@ -406,7 +413,29 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
       navigationGeneration: 0,
       url: "https://example.com/missing",
       statusCode: 404,
+      cloudflareChallenge: true,
     },
+  );
+  beforeRequestListener({
+    type: "main_frame",
+    tabId: 7,
+    requestId: "request-not-challenge",
+    url: "https://example.com/ok",
+  });
+  headersReceivedListener({
+    type: "main_frame",
+    tabId: 7,
+    requestId: "request-not-challenge",
+    url: "https://example.com/ok",
+    statusCode: 200,
+    responseHeaders: [{ name: "cf-mitigated", value: "not-a-challenge" }],
+  });
+  assert.equal(
+    Object.hasOwn(
+      postedNativeMessages.filter((message) => message.type === "main-frame-response").at(-1),
+      "cloudflareChallenge",
+    ),
+    false,
   );
   const policy = await sendRuntimeMessage(
     { type: "content-policy-request" },
