@@ -14,6 +14,7 @@ interface BrowserEngineSessionPort {
 
 enum class BrowserEngineCommandType {
     Load,
+    ReplaceHistory,
     Back,
     Forward,
     Reload,
@@ -26,13 +27,20 @@ data class BrowserEngineCommand(
     val address: String?,
 ) {
     init {
-        require((type == BrowserEngineCommandType.Load) == (address != null))
+        val requiresAddress = type == BrowserEngineCommandType.Load ||
+            type == BrowserEngineCommandType.ReplaceHistory
+        require(requiresAddress == (address != null))
     }
 }
 
 object BrowserEngineCommands {
     fun load(address: String): BrowserEngineCommand = BrowserEngineCommand(
         type = BrowserEngineCommandType.Load,
+        address = address,
+    )
+
+    fun replaceHistory(address: String): BrowserEngineCommand = BrowserEngineCommand(
+        type = BrowserEngineCommandType.ReplaceHistory,
         address = address,
     )
 

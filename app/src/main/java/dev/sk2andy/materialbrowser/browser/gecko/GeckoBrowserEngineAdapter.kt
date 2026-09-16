@@ -401,6 +401,9 @@ internal class GeckoBrowserEngineSessionAdapter(
         if (closed) return
         when (command.type) {
             BrowserEngineCommandType.Load -> load(requireNotNull(command.address))
+            BrowserEngineCommandType.ReplaceHistory -> replaceHistory(
+                requireNotNull(command.address),
+            )
             BrowserEngineCommandType.Back -> session.goBack()
             BrowserEngineCommandType.Forward -> session.goForward()
             BrowserEngineCommandType.Reload -> session.reload()
@@ -679,6 +682,15 @@ internal class GeckoBrowserEngineSessionAdapter(
 
     private fun load(address: String) {
         if (session.loadUrl(address)) return
+        reportInvalidAddress()
+    }
+
+    private fun replaceHistory(address: String) {
+        if (session.replaceHistoryUrl(address)) return
+        reportInvalidAddress()
+    }
+
+    private fun reportInvalidAddress() {
         eventSink.onEngineEvent(
             previousState.toEngineEvent(
                 tabId = tabId,

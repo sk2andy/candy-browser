@@ -15,6 +15,7 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PopupSiteRules
@@ -860,6 +861,15 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_EXTERNAL_LINK_PREVIEW_ENABLED, enabled).apply()
     }
 
+    fun loadExternalAppLinkHandling(): ExternalAppLinkHandling =
+        ExternalAppLinkHandling.fromStableId(
+            preferences.getString(KEY_EXTERNAL_APP_LINK_HANDLING, null),
+        )
+
+    fun saveExternalAppLinkHandling(handling: ExternalAppLinkHandling) {
+        preferences.edit().putString(KEY_EXTERNAL_APP_LINK_HANDLING, handling.stableId).apply()
+    }
+
     fun loadLinkLongPressAction(): LinkLongPressAction = LinkLongPressAction.fromStableId(
         preferences.getString(KEY_LINK_LONG_PRESS_ACTION, null),
     )
@@ -1383,6 +1393,7 @@ class BrowserSessionStore internal constructor(
             "address_bar_dock_vertical_fraction"
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
+        const val KEY_EXTERNAL_APP_LINK_HANDLING = "external_app_link_handling"
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
         const val KEY_LINK_PEEK_ACTION_LAYOUT = "link_peek_action_layout"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"

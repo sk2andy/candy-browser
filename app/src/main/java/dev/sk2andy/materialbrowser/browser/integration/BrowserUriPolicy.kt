@@ -198,6 +198,12 @@ internal object ExternalAppHandoffRules {
 
 /** Prevents a redirected app handoff from blindly skipping browser history entries. */
 internal object ExternalNavigationRollbackRules {
+    fun isAtSource(sourceUrl: String?, currentUrl: String?): Boolean {
+        val safeSourceUrl = BrowserUriPolicy.normalizeHttpUrl(sourceUrl) ?: return false
+        val safeCurrentUrl = BrowserUriPolicy.normalizeHttpUrl(currentUrl) ?: return false
+        return safeSourceUrl == safeCurrentUrl
+    }
+
     fun canGoBackToSource(sourceUrl: String?, previousUrl: String?): Boolean {
         val safeSourceUrl = BrowserUriPolicy.normalizeHttpUrl(sourceUrl) ?: return false
         val safePreviousUrl = BrowserUriPolicy.normalizeHttpUrl(previousUrl) ?: return false

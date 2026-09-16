@@ -10,6 +10,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
@@ -1448,6 +1449,17 @@ class BrowserSessionStoreInstrumentedTest {
         assertEquals(true, store.loadExternalLinkPreviewEnabled())
         store.saveExternalLinkPreviewEnabled(false)
         assertEquals(false, store.loadExternalLinkPreviewEnabled())
+    }
+
+    @Test
+    fun externalAppLinkHandlingDefaultsAutomaticAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(ExternalAppLinkHandling.Automatic, store.loadExternalAppLinkHandling())
+        store.saveExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+        assertEquals(ExternalAppLinkHandling.AskEveryTime, store.loadExternalAppLinkHandling())
+        preferences.edit().putString("external_app_link_handling", "unknown").commit()
+        assertEquals(ExternalAppLinkHandling.Automatic, store.loadExternalAppLinkHandling())
     }
 
     @Test

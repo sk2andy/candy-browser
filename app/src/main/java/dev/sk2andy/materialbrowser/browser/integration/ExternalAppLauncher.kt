@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.integration
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 
 sealed interface ExternalLaunchResult {
@@ -11,7 +12,20 @@ sealed interface ExternalLaunchResult {
     data object Unsupported : ExternalLaunchResult
 }
 
-class ExternalAppLauncher(private val context: Context) {
+class ExternalAppLauncher(
+    private val context: Context,
+    private val canResolveExternalActivity: (Intent) -> Boolean = { target ->
+        val resolved = context.packageManager.resolveActivity(
+            target,
+            PackageManager.MATCH_DEFAULT_ONLY or PackageManager.GET_RESOLVED_FILTER,
+        )
+        val resolvedPackage = resolved?.activityInfo?.packageName
+        resolvedPackage != null &&
+            resolvedPackage != context.packageName &&
+            resolvedPackage != ANDROID_FRAMEWORK_PACKAGE &&
+            (target.`package` != null || resolved.filter?.countDataAuthorities()?.let { it > 0 } == true)
+    },
+) {
     internal fun webTargetUrl(uri: Uri): String? {
         val scheme = uri.scheme?.lowercase() ?: return null
         if (scheme == "http" || scheme == "https") {
@@ -25,18 +39,12 @@ class ExternalAppLauncher(private val context: Context) {
     fun openWebUrlExternally(url: String): ExternalLaunchResult {
         val normalized = BrowserUriPolicy.normalizeHttpUrl(url)
             ?: return ExternalLaunchResult.Unsupported
-        val target = Intent(Intent.ACTION_VIEW, Uri.parse(normalized))
-            .addCategory(Intent.CATEGORY_BROWSABLE)
-        if (GooglePlayAppLinkRules.shouldOpenInPlayStore(normalized)) {
-            target.setPackage(GOOGLE_PLAY_PACKAGE)
-            return launchDirect(target, fallbackUrl = null)
-        }
-        target
-            .addFlags(
-                Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER or
-                    Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT,
-            )
-        return launchDirect(target, fallbackUrl = null)
+        return launchDirect(webIntent(normalized), fallbackUrl = null)
+    }
+
+    fun canOpenWebUrlExternally(url: String): Boolean {
+        val normalized = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        return canResolveExternalActivity(webIntent(normalized))
     }
 
     fun open(
@@ -97,6 +105,20 @@ class ExternalAppLauncher(private val context: Context) {
         }
     }
 
+    private fun webIntent(normalizedUrl: String): Intent =
+        Intent(Intent.ACTION_VIEW, Uri.parse(normalizedUrl))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+            .apply {
+                if (GooglePlayAppLinkRules.shouldOpenInPlayStore(normalizedUrl)) {
+                    setPackage(GOOGLE_PLAY_PACKAGE)
+                } else {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER or
+                            Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT,
+                    )
+                }
+            }
+
     private fun fallback(url: String?): ExternalLaunchResult =
         BrowserUriPolicy.normalizeHttpUrl(url)
             ?.let(ExternalLaunchResult::OpenInBrowser)
@@ -107,6 +129,7 @@ class ExternalAppLauncher(private val context: Context) {
     }.getOrNull()
 
     private companion object {
+        const val ANDROID_FRAMEWORK_PACKAGE = "android"
         const val GOOGLE_PLAY_PACKAGE = "com.android.vending"
     }
 }

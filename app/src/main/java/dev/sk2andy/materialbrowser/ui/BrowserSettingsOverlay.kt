@@ -176,6 +176,7 @@ internal fun BrowserSettingsOverlay(
             browserMenuLayout = controller.browserMenuLayout,
             isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
             isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
+            externalAppLinkHandling = controller.externalAppLinkHandling,
             isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
             isStartupAnimationEnabled = controller.isStartupAnimationEnabled,
             startupAddressFocusMode = controller.startupAddressFocusMode,
@@ -251,6 +252,7 @@ internal fun BrowserSettingsOverlay(
                 controller::updateAddressBarDockingEnabled,
             onExternalLinkPreviewEnabledChanged =
                 controller::updateExternalLinkPreviewEnabled,
+            onExternalAppLinkHandlingChanged = controller::updateExternalAppLinkHandling,
             onFullImmersiveModeEnabledChanged =
                 controller::updateFullImmersiveModeEnabled,
             onStartupAnimationEnabledChanged =
