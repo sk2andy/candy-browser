@@ -138,7 +138,6 @@ internal fun ExpandedBottomBarContent(
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     menuExpanded: Boolean,
-    menuMorphProgress: Float,
     onMenuExpandedChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     onForward: () -> Unit,
@@ -568,7 +567,6 @@ internal fun ExpandedBottomBarContent(
                             BrowserMainMenu(
                                 expanded = menuExpanded,
                                 backdropSource = backdropSource,
-                                morphProgress = menuMorphProgress,
                                 onDismissRequest = { onMenuExpandedChange(false) },
                                 pageSubtitle = if (tab.url == BLANK_URL) {
                                     stringResource(R.string.new_tab_title)

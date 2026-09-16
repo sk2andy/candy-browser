@@ -142,4 +142,11 @@ class AddressBarMorphRulesTest {
             ),
         )
     }
+
+    @Test
+    fun `menu content follows the surface after a short delay`() {
+        assertEquals(0f, BrowserMainMenuMotion.contentProgress(0.18f), 0.001f)
+        assertEquals(0.5f, BrowserMainMenuMotion.contentProgress(0.59f), 0.001f)
+        assertEquals(1f, BrowserMainMenuMotion.contentProgress(1f), 0.001f)
+    }
 }

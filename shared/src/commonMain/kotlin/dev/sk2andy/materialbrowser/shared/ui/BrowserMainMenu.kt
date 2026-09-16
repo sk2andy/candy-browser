@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.shared.ui
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -55,11 +56,16 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuItem
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuItemKind
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 object BrowserMainMenuMotion {
     const val EXIT_DURATION_MILLIS = 160
-    const val EXIT_SCALE = 0.9f
+    const val COLLAPSED_SCALE_X = 0.94f
+    const val COLLAPSED_SCALE_Y = 0.84f
+    const val CONTENT_OFFSET_Y_DP = 14f
     private const val POPUP_OFFSET_Y_DP = -10f
+    private const val CONTENT_REVEAL_START = 0.18f
 
     fun surfaceScale(
         expansionProgress: Float,
@@ -93,6 +99,10 @@ object BrowserMainMenuMotion {
     } else {
         expansionProgress.coerceIn(0f, 1f)
     }
+
+    fun contentProgress(expansionProgress: Float): Float =
+        ((expansionProgress.coerceIn(0f, 1f) - CONTENT_REVEAL_START) /
+            (1f - CONTENT_REVEAL_START)).coerceIn(0f, 1f)
 
     fun popupOffsetYDp(
         expansionProgress: Float,
@@ -186,6 +196,18 @@ interface BrowserMainMenuEffects {
 
     @Composable
     fun sectionTitleColor(color: Color): Color = color
+
+    @Composable
+    fun spatialAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> = tween(
+        durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
+        easing = if (expanding) LinearOutSlowInEasing else FastOutLinearInEasing,
+    )
+
+    @Composable
+    fun effectsAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> = tween(
+        durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
+        easing = if (expanding) LinearOutSlowInEasing else FastOutLinearInEasing,
+    )
 
     /**
      * UIKit visual effects must stay fully opaque while their host view scales.
@@ -286,7 +308,12 @@ fun BrowserMainMenu(
     }
     var popupVisible by remember { mutableStateOf(expanded) }
     var actionCommitted by remember { mutableStateOf(false) }
-    val exitProgress = remember { Animatable(if (expanded) 1f else 0f) }
+    val spatialProgress = remember { Animatable(if (expanded) 1f else 0f) }
+    val effectsProgress = remember { Animatable(if (expanded) 1f else 0f) }
+    val openingSpatialAnimationSpec = effects.spatialAnimationSpec(expanding = true)
+    val closingSpatialAnimationSpec = effects.spatialAnimationSpec(expanding = false)
+    val openingEffectsAnimationSpec = effects.effectsAnimationSpec(expanding = true)
+    val closingEffectsAnimationSpec = effects.effectsAnimationSpec(expanding = false)
     val menuTransformOrigin = if (layoutDirection == LayoutDirection.Ltr) {
         TransformOrigin(1f, 1f)
     } else {
@@ -297,37 +324,40 @@ fun BrowserMainMenu(
             actionCommitted = false
             val reversingExit = popupVisible
             popupVisible = true
-            if (reversingExit) {
-                exitProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
-                        easing = LinearOutSlowInEasing,
-                    ),
-                )
-            } else {
+            if (!reversingExit) {
                 menuScrollState.scrollTo(0)
-                if (morphAnchorSize == null) {
-                    exitProgress.snapTo(1f)
-                } else {
-                    exitProgress.snapTo(0f)
-                    exitProgress.animateTo(
+                spatialProgress.snapTo(0f)
+                effectsProgress.snapTo(0f)
+            }
+            coroutineScope {
+                launch {
+                    spatialProgress.animateTo(
                         targetValue = 1f,
-                        animationSpec = tween(
-                            durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
-                            easing = LinearOutSlowInEasing,
-                        ),
+                        animationSpec = openingSpatialAnimationSpec,
+                    )
+                }
+                launch {
+                    effectsProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = openingEffectsAnimationSpec,
                     )
                 }
             }
         } else if (popupVisible) {
-            exitProgress.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(
-                    durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
-                    easing = FastOutLinearInEasing,
-                ),
-            )
+            coroutineScope {
+                launch {
+                    spatialProgress.animateTo(
+                        targetValue = 0f,
+                        animationSpec = closingSpatialAnimationSpec,
+                    )
+                }
+                launch {
+                    effectsProgress.animateTo(
+                        targetValue = 0f,
+                        animationSpec = closingEffectsAnimationSpec,
+                    )
+                }
+            }
             popupVisible = false
         }
     }
@@ -344,15 +374,19 @@ fun BrowserMainMenu(
     fun dismissThen(item: BrowserFeatureMenuItem) = commit { onAction(item) }
 
     if (popupVisible) {
-        val currentMorphProgress = morphProgress ?: exitProgress.value
+        val currentSpatialProgress = morphProgress ?: spatialProgress.value
+        val currentEffectsProgress = morphProgress ?: effectsProgress.value
+        val contentProgress = BrowserMainMenuMotion.contentProgress(
+            if (expanded) currentSpatialProgress else currentEffectsProgress,
+        )
         val popupOffsetY = BrowserMainMenuMotion.popupOffsetYDp(
-            expansionProgress = currentMorphProgress,
+            expansionProgress = currentSpatialProgress,
             hasMorphAnchor = morphAnchorSize != null,
         ).dp
         val popupOffset = with(density) { IntOffset(0, popupOffsetY.roundToPx()) }
         val morphRadii = if (anchorSizePx > 0f) {
             BrowserMainMenuMotion.surfaceCornerRadii(
-                expansionProgress = currentMorphProgress,
+                expansionProgress = currentSpatialProgress,
                 surfaceWidth = menuWidthPx,
                 surfaceHeight = menuHeightPx,
                 anchorSize = anchorSizePx,
@@ -381,7 +415,7 @@ fun BrowserMainMenu(
             alignment = Alignment.BottomEnd,
             offset = popupOffset,
             onDismissRequest = onDismissRequest,
-            properties = PopupProperties(focusable = true),
+            properties = PopupProperties(focusable = expanded),
         ) {
             effects.menuSurface(
                 modifier = Modifier
@@ -389,25 +423,27 @@ fun BrowserMainMenu(
                     .height(menuMaxHeight)
                     .graphicsLayer {
                         alpha = BrowserMainMenuMotion.surfaceAlpha(
-                            expansionProgress = currentMorphProgress,
+                            expansionProgress = currentEffectsProgress,
                             preservesVisualEffect = effects.preservesVisualEffectDuringMorph(),
                         )
                         if (anchorWidthPx != null && anchorHeightPx != null) {
                             scaleX = BrowserMainMenuMotion.surfaceScale(
-                                expansionProgress = currentMorphProgress,
+                                expansionProgress = currentSpatialProgress,
                                 surfaceSize = menuWidthPx,
                                 anchorSize = anchorWidthPx,
                             )
                             scaleY = BrowserMainMenuMotion.surfaceScale(
-                                expansionProgress = currentMorphProgress,
+                                expansionProgress = currentSpatialProgress,
                                 surfaceSize = menuHeightPx,
                                 anchorSize = anchorHeightPx,
                             )
                         } else {
-                            val scale = BrowserMainMenuMotion.EXIT_SCALE +
-                                (1f - BrowserMainMenuMotion.EXIT_SCALE) * exitProgress.value
-                            scaleX = scale
-                            scaleY = scale
+                            scaleX = BrowserMainMenuMotion.COLLAPSED_SCALE_X +
+                                (1f - BrowserMainMenuMotion.COLLAPSED_SCALE_X) *
+                                currentSpatialProgress
+                            scaleY = BrowserMainMenuMotion.COLLAPSED_SCALE_Y +
+                                (1f - BrowserMainMenuMotion.COLLAPSED_SCALE_Y) *
+                                currentSpatialProgress
                         }
                         transformOrigin = menuTransformOrigin
                     }
@@ -428,6 +464,13 @@ fun BrowserMainMenu(
                     extensionContent = extensionContent,
                     onExtensionCommit = ::commit,
                     modifier = Modifier
+                        .graphicsLayer {
+                            alpha = contentProgress
+                            translationY = with(density) {
+                                (BrowserMainMenuMotion.CONTENT_OFFSET_Y_DP *
+                                    (1f - contentProgress)).dp.toPx()
+                            }
+                        }
                         .verticalScroll(menuScrollState)
                         .padding(
                             horizontal = style.contentHorizontalPadding,
