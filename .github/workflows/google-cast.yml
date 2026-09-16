@@ -32,10 +32,18 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+
       - name: Install Android emulator
         shell: bash
         run: |
           set -euo pipefail
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/candy-cast-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
           sdkmanager \
             "emulator" \
             "platform-tools" \
@@ -47,12 +55,13 @@ jobs:
             --package "system-images;android-35;google_apis;x86_64" \
             --device pixel_6
           sudo chmod 666 /dev/kvm
+          echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
 
       - name: Start dedicated emulator
         shell: bash
         run: |
           set -euo pipefail
-          nohup emulator \
+          nohup "$ANDROID_HOME/emulator/emulator" \
             -avd candy_cast_ci \
             -port 5554 \
             -no-window \
@@ -60,7 +69,7 @@ jobs:
             -no-boot-anim \
             -gpu swiftshader_indirect \
             > "$RUNNER_TEMP/candy-cast-emulator.log" 2>&1 &
-          adb -s "$ANDROID_SERIAL" wait-for-device
+          timeout 180 adb -s "$ANDROID_SERIAL" wait-for-device
           timeout 180 bash -c '
             until [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d "\r")" == "1" ]]; do
               sleep 2
@@ -104,7 +113,12 @@ jobs:
       - name: Show emulator log after failure
         if: failure()
         shell: bash
-        run: sed -n '1,400p' "$RUNNER_TEMP/candy-cast-emulator.log"
+        run: |
+          if [[ -f "$RUNNER_TEMP/candy-cast-emulator.log" ]]; then
+            sed -n '1,400p' "$RUNNER_TEMP/candy-cast-emulator.log"
+          else
+            echo "Emulator log is unavailable."
+          fi
 
       - name: Stop dedicated emulator
         if: always()
