@@ -50,7 +50,9 @@
   canonical literal payload for both types, require the complete value to normalize as one HTTP(S)
   URL within 32,768 characters, and never select a URL from prose, `EXTRA_HTML_TEXT`, or
   `ACTION_SEND_MULTIPLE`.
-- Show Gecko fullscreen content above browser chrome and enable sensor rotation for its lifetime.
+- Show GeckoView and System WebView fullscreen content with Candy's address, tab, find and status
+  chrome hidden, and enable sensor rotation for its lifetime. In-app mini-player placement restores
+  normal browser chrome.
   Web-content fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
   the current browser orientation, system-bar policy and soft-input adjustment. While system bars
   are hidden, keep the Activity at full height and let Compose IME insets move browser chrome above
@@ -667,6 +669,7 @@ WebView request state.
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |
 | Pull to refresh | `BrowserPullGestureRulesTest`, `BrowserPullToRefreshRulesTest`, and `BrowserPullToRefreshLayoutInstrumentedTest` on an API 34+ emulator |
+| Android web-content fullscreen chrome | `FullscreenVideoRulesTest` plus `FullscreenVideoChromeInstrumentedTest` in the Full and System WebView builds on a dedicated API 34+ emulator |
 | Edge-to-edge window, safe web viewport, focused search, and representative site layouts | `SystemWebViewEdgeToEdgeInstrumentedTest` and `GeckoEdgeToEdgeInstrumentedTest` run deterministic layout profiles derived from YouTube, Google, ESPN, NYTimes, CNN, Reddit, Facebook, IKEA, GitHub, Discord, Instagram, TapTap, Vimeo, Wikipedia, Stack Overflow, and DuckDuckGo on API 34+; the TapTap profile asserts safety immediately in the scroll task so delayed post-scroll repair cannot mask a jumping sticky header; live sites remain manual/nightly smoke targets rather than merge gates |
 | Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `ExternalAppLauncherInstrumentedTest`, and `MainActivityIncomingNavigationInstrumentedTest` for cold/warm incoming links, initial redirects, and subsequent tapped handoffs |

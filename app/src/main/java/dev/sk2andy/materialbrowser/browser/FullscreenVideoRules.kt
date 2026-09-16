@@ -23,6 +23,16 @@ internal data class FullscreenVideoAspectRatio(
 )
 
 internal object FullscreenVideoRules {
+    fun hidesBrowserChrome(
+        isWebContentFullscreen: Boolean,
+        placement: FullscreenVideoPlacement?,
+        videoOnlyPresentation: Boolean,
+    ): Boolean = videoOnlyPresentation || when (placement) {
+        FullscreenVideoPlacement.Expanded -> true
+        FullscreenVideoPlacement.MiniPlayer -> false
+        null -> isWebContentFullscreen
+    }
+
     fun supportsPreparedAutoEnter(sdkInt: Int): Boolean = sdkInt >= 35
 
     fun pictureInPictureAspectRatio(
