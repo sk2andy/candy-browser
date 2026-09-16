@@ -10,6 +10,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
@@ -476,6 +479,7 @@ class BrowserSessionStoreInstrumentedTest {
             colorPalette = BrowserColorPalette.Candy,
             surfaceStyle = BrowserSurfaceStyle.Frosted,
             shapeStyle = BrowserShapeStyle.Angular,
+            addressBarStyle = BrowserAddressBarStyle.Segmented,
             frostedTransparencyPercent = 70,
             frostedAddressBarTransparencyPercent = 50,
             frostedBlurPercent = 90,
@@ -652,6 +656,7 @@ class BrowserSessionStoreInstrumentedTest {
             .putString("color_palette", "candy")
             .putString("surface_style", "unknown")
             .putString("shape_style", "extra_rounded")
+            .putString("address_bar_style", "unknown")
             .putInt("frosted_transparency_percent", 200)
             .putInt("frosted_address_bar_transparency_percent", -1)
             .putString("frosted_blur_percent", "invalid")
@@ -664,6 +669,7 @@ class BrowserSessionStoreInstrumentedTest {
                 colorPalette = BrowserColorPalette.Candy,
                 surfaceStyle = BrowserSurfaceStyle.Clear,
                 shapeStyle = BrowserShapeStyle.ExtraRounded,
+                addressBarStyle = BrowserAddressBarStyle.Classic,
                 frostedTransparencyPercent = 80,
                 frostedAddressBarTransparencyPercent = 0,
                 frostedBlurPercent = AppearanceSettings.DEFAULT_FROSTED_BLUR_PERCENT,
@@ -1188,6 +1194,52 @@ class BrowserSessionStoreInstrumentedTest {
             "future-mode",
         ).commit()
         assertEquals(WebRtcProtectionMode.ProtectIpAddresses, store.loadWebRtcProtectionMode())
+    }
+
+    @Test
+    fun dnsOverHttpsDefaultsToSystemAndSanitizesPersistedSettings() {
+        val store = BrowserSessionStore(context)
+        assertEquals(DnsOverHttpsRules.Default, store.loadDnsOverHttpsSettings())
+
+        DnsOverHttpsProvider.entries
+            .filterNot { provider -> provider == DnsOverHttpsProvider.Custom }
+            .forEach { provider ->
+                val settings = DnsOverHttpsSettings(provider)
+                store.saveDnsOverHttpsSettings(settings)
+                assertEquals(settings, store.loadDnsOverHttpsSettings())
+            }
+
+        val custom = DnsOverHttpsSettings(
+            provider = DnsOverHttpsProvider.Custom,
+            customEndpoint = " HTTPS://DNS.NextDNS.IO/abc123 ",
+        )
+        store.saveDnsOverHttpsSettings(custom)
+        assertEquals(
+            custom.copy(customEndpoint = "https://dns.nextdns.io/abc123"),
+            store.loadDnsOverHttpsSettings(),
+        )
+
+        val presetWithRememberedCustomEndpoint = store.loadDnsOverHttpsSettings().copy(
+            provider = DnsOverHttpsProvider.Quad9,
+        )
+        store.saveDnsOverHttpsSettings(presetWithRememberedCustomEndpoint)
+        assertEquals(presetWithRememberedCustomEndpoint, store.loadDnsOverHttpsSettings())
+        store.saveDnsOverHttpsSettings(
+            store.loadDnsOverHttpsSettings().copy(provider = DnsOverHttpsProvider.Custom),
+        )
+        assertEquals(
+            custom.copy(customEndpoint = "https://dns.nextdns.io/abc123"),
+            store.loadDnsOverHttpsSettings(),
+        )
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_DNS_OVER_HTTPS_PROVIDER, "custom")
+            .putString(
+                BrowserSessionStore.KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT,
+                "http://dns.example/dns-query",
+            )
+            .commit()
+        assertEquals(DnsOverHttpsRules.Default, store.loadDnsOverHttpsSettings())
     }
 
     @Test

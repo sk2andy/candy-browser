@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.view.View
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
@@ -67,6 +68,8 @@ internal interface AndroidBrowserEngineFactory {
     fun setBlockThirdPartyCookies(blocked: Boolean)
 
     fun setWebRtcProtectionMode(mode: WebRtcProtectionMode)
+
+    fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) = Unit
 
     fun setWebContentFontSizeFactor(factor: Float)
 

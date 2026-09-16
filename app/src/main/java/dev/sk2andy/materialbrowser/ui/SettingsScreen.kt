@@ -7,6 +7,8 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
@@ -44,11 +46,13 @@ import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 internal fun SettingsScreen(
     destination: SettingsDestination,
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
+    isDnsOverHttpsSupported: Boolean = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
     appearanceSettings: AppearanceSettings,
     downloadSettings: BrowserDownloadSettings,
     externalDownloadManagers: List<ExternalDownloadManagerApp>,
     blockerSettings: BlockerSettings,
     webRtcProtectionMode: WebRtcProtectionMode = WebRtcProtectionMode.Default,
+    dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
     searchEngine: SearchEngine,
@@ -105,6 +109,7 @@ internal fun SettingsScreen(
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onWebRtcProtectionModeChanged: (WebRtcProtectionMode) -> Unit = {},
+    onDnsOverHttpsSettingsChanged: (DnsOverHttpsSettings) -> Unit = {},
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
@@ -399,12 +404,15 @@ internal fun SettingsScreen(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
                     browserEngineKind = browserEngineKind,
+                    isDnsOverHttpsSupported = isDnsOverHttpsSupported,
                     webRtcProtectionMode = webRtcProtectionMode,
+                    dnsOverHttpsSettings = dnsOverHttpsSettings,
                     isRecallEnabled = isRecallEnabled,
                     historyRecordingMode = historyRecordingMode,
                     trustsUserCertificates = trustsUserCertificates,
                     onBlockerSettingsChanged = onBlockerSettingsChanged,
                     onWebRtcProtectionModeChanged = onWebRtcProtectionModeChanged,
+                    onDnsOverHttpsSettingsChanged = onDnsOverHttpsSettingsChanged,
                     onRecallEnabledChanged = onRecallEnabledChanged,
                     onHistoryRecordingModeChanged = onHistoryRecordingModeChanged,
                     onPrivacyXRay = onPrivacyXRay,

@@ -43,7 +43,13 @@ class AndroidBrowserEngineArchitectureTest {
 
         assertTrue(settings.contains("trustUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES"))
         assertTrue(settings.contains(".enterpriseRootsEnabled(trustUserCertificates)"))
-        assertTrue(runtime.contains("GeckoRuntimeSettingsFactory.create(contentBlocking)"))
+        assertTrue(runtime.contains("GeckoRuntimeSettingsFactory.create("))
+        assertTrue(runtime.contains("contentBlocking = contentBlocking"))
+        assertTrue(
+            runtime.contains(
+                "BrowserSessionStore(appContext).loadDnsOverHttpsSettings()",
+            ),
+        )
     }
 
     private fun source(relativePath: String): String {

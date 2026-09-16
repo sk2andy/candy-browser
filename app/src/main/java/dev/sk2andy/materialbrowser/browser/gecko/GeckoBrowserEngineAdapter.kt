@@ -20,6 +20,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
@@ -242,6 +243,11 @@ internal class GeckoBrowserEngineSessionFactory(
                 session.execute(BrowserEngineCommands.reload())
             }
         }
+    }
+
+    @UiThread
+    override fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
+        runtime.setDnsOverHttpsSettings(settings)
     }
 
     @UiThread
