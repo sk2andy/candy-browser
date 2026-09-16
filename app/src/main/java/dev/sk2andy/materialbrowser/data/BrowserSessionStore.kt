@@ -1219,6 +1219,9 @@ class BrowserSessionStore internal constructor(
             shapeStyle = BrowserShapeStyle.fromStableId(
                 preferences.getString(KEY_SHAPE_STYLE, null),
             ),
+            addressBarStyle = BrowserAddressBarStyle.fromStableId(
+                preferences.getString(KEY_ADDRESS_BAR_STYLE, null),
+            ),
             frostedTransparencyPercent = frostedTransparencyPercent,
             frostedAddressBarTransparencyPercent = loadBoundedInt(
                 key = KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT,
@@ -1244,6 +1247,7 @@ class BrowserSessionStore internal constructor(
             .putString(KEY_COLOR_PALETTE, normalized.colorPalette.stableId)
             .putString(KEY_SURFACE_STYLE, normalized.surfaceStyle.stableId)
             .putString(KEY_SHAPE_STYLE, normalized.shapeStyle.stableId)
+            .putString(KEY_ADDRESS_BAR_STYLE, normalized.addressBarStyle.stableId)
             .putInt(
                 KEY_FROSTED_TRANSPARENCY_PERCENT,
                 normalized.frostedTransparencyPercent,
@@ -1464,6 +1468,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_COLOR_PALETTE = "color_palette"
         const val KEY_SURFACE_STYLE = "surface_style"
         const val KEY_SHAPE_STYLE = "shape_style"
+        const val KEY_ADDRESS_BAR_STYLE = "address_bar_style"
         const val KEY_FROSTED_TRANSPARENCY_PERCENT = "frosted_transparency_percent"
         const val KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT =
             "frosted_address_bar_transparency_percent"

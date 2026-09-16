@@ -7,6 +7,7 @@ data class AppearanceSettings(
     val colorPalette: BrowserColorPalette = BrowserColorPalette.Dynamic,
     val surfaceStyle: BrowserSurfaceStyle = BrowserSurfaceStyle.Clear,
     val shapeStyle: BrowserShapeStyle = BrowserShapeStyle.Rounded,
+    val addressBarStyle: BrowserAddressBarStyle = BrowserAddressBarStyle.Classic,
     val frostedTransparencyPercent: Int = DEFAULT_FROSTED_TRANSPARENCY_PERCENT,
     val frostedAddressBarTransparencyPercent: Int =
         DEFAULT_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT,
@@ -103,5 +104,15 @@ enum class BrowserShapeStyle(val stableId: String) {
     companion object {
         fun fromStableId(value: String?): BrowserShapeStyle =
             entries.firstOrNull { it.stableId == value } ?: Rounded
+    }
+}
+
+enum class BrowserAddressBarStyle(val stableId: String) {
+    Classic("classic"),
+    Segmented("segmented");
+
+    companion object {
+        fun fromStableId(value: String?): BrowserAddressBarStyle =
+            entries.firstOrNull { it.stableId == value } ?: Classic
     }
 }

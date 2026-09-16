@@ -192,6 +192,7 @@ private class AndroidBrowserMainMenuEffects(
 internal fun BrowserMainMenu(
     expanded: Boolean,
     backdropSource: CandyChromeBackdropSource?,
+    morphProgress: Float? = null,
     onDismissRequest: () -> Unit,
     pageSubtitle: String,
     canGoBack: Boolean,
@@ -315,6 +316,8 @@ internal fun BrowserMainMenu(
         screenSize = DpSize(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp),
         resources = AndroidBrowserMainMenuResources,
         effects = rememberAndroidBrowserMainMenuEffects(backdropSource),
+        morphAnchorSize = DpSize(48.dp, 48.dp),
+        morphProgress = morphProgress,
         extensionContent = if (
             BrowserMenuLayoutRules.isVisible(
                 menuLayout,

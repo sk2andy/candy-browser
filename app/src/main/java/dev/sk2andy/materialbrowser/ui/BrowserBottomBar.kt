@@ -10,7 +10,9 @@ import android.view.HapticFeedbackConstants
 import android.view.WindowManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -38,6 +40,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -102,8 +105,10 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.ui.AddressMenuMorphRules
 import dev.sk2andy.materialbrowser.shared.ui.OverviewAddressBarContent
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
@@ -120,6 +125,7 @@ internal fun BrowserBottomBar(
     dockState: AddressBarDockState,
     dockTargetEdge: AddressBarDockEdge,
     editing: Boolean,
+    addressBarStyle: BrowserAddressBarStyle,
     actionLayout: AddressBarActionLayout,
     showCastButton: Boolean,
     showQrScanner: Boolean,
@@ -227,6 +233,7 @@ internal fun BrowserBottomBar(
     val docked = dockState.placement != null
     val dockingEnabled = dockState.enabled
     var menuExpanded by remember { mutableStateOf(false) }
+    val menuMorphProgress = remember { Animatable(0f) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val presentation = AddressBarPresentationRules.resolve(
         docked = docked,
@@ -250,7 +257,29 @@ internal fun BrowserBottomBar(
         .bounds
         .height()
     val chromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
+    val barCornerRadius = if (
+        addressBarStyle == BrowserAddressBarStyle.Segmented &&
+        presentation == AddressBarPresentation.Expanded
+    ) {
+        SegmentedAddressBarGeometry.outerCornerRadius(chromeTokens.cornerRadius)
+    } else {
+        chromeTokens.cornerRadius
+    }
     val motionScheme = LocalCandyMotionScheme.current
+    LaunchedEffect(menuExpanded) {
+        menuMorphProgress.animateTo(
+            targetValue = if (menuExpanded) 1f else 0f,
+            animationSpec = tween(
+                durationMillis = AddressMenuMorphRules.DURATION_MILLIS,
+                easing = if (menuExpanded) LinearOutSlowInEasing else FastOutLinearInEasing,
+            ),
+        )
+    }
+    val menuMorphFrame = AddressMenuMorphRules.frame(
+        animatedProgress = menuMorphProgress.value,
+        expanded = menuExpanded,
+        reduceMotion = false,
+    )
     LaunchedEffect(addressBarPulseNonce, motionScheme) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
         pulseScale.snapTo(1f)
@@ -383,6 +412,11 @@ internal fun BrowserBottomBar(
             maxWidth = maxWidth,
             feedbackWidth = feedbackWidth,
             edgeTabWidth = edgeTabWidth,
+            expandedHeight = if (addressBarStyle == BrowserAddressBarStyle.Segmented) {
+                SegmentedAddressBarGeometry.EXPANDED_HEIGHT
+            } else {
+                AddressBarMotion.EXPANDED_HEIGHT
+            },
             verticalTravel = verticalTravel,
             dockPosition = dockInteraction.position,
         )
@@ -396,6 +430,8 @@ internal fun BrowserBottomBar(
             CandyChromeSurface(
                 backdropSource = backdropSource,
                 tokens = chromeTokens,
+                shape = RoundedCornerShape(barCornerRadius),
+                blurCornerRadius = barCornerRadius,
                 modifier = Modifier
                     .offset(x = dockOffset.x, y = dockOffset.y)
                     .width(animatedBarWidth)
@@ -431,11 +467,14 @@ internal fun BrowserBottomBar(
                     }
                     .graphicsLayer {
                         val stretch = dockStretchProgress.coerceIn(-0.12f, 1f)
+                        alpha = menuMorphFrame.addressContentAlpha
                         scaleX = pulseScale.value * (1f - stretch * 0.04f)
                         scaleX *= dockRepositionFeedbackScale.x
+                        scaleX *= menuMorphFrame.addressSurfaceScale
                         scaleY = pulseScale.value *
                             (1f + stretch * 0.18f) *
-                            dockRepositionFeedbackScale.y
+                            dockRepositionFeedbackScale.y *
+                            menuMorphFrame.addressSurfaceScale
                         transformOrigin = if (stretch == 0f) {
                             TransformOrigin.Center
                         } else {
@@ -445,7 +484,7 @@ internal fun BrowserBottomBar(
                 containerColor = barColor,
                 backdropBlurEnabled = commandFeedback == null &&
                     blurSourceVisible &&
-                    !menuExpanded &&
+                    (!menuExpanded || menuMorphFrame.menuExpansionProgress < 1f) &&
                     chromeTokens.backdropBlurEnabled,
             ) {
                 Box {
@@ -521,11 +560,13 @@ internal fun BrowserBottomBar(
                                 userScriptMenuCommands = userScriptMenuCommands,
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 menuExpanded = menuExpanded,
+                                menuMorphProgress = menuMorphFrame.menuExpansionProgress,
                                 onMenuExpandedChange = { menuExpanded = it },
                                 onBack = onBack,
                                 onForward = onForward,
                                 onAddress = onAddress,
                                 editing = editing,
+                                addressBarStyle = addressBarStyle,
                                 editValue = editValue,
                                 onEditValueChange = onEditValueChange,
                                 ghostCompletion = ghostCompletion,
@@ -658,9 +699,7 @@ internal fun BrowserBottomBar(
                             progressPercent = tab.progress,
                             morphProgress = 0f,
                             morphTargetSizePx = with(density) { 56.dp.toPx() },
-                            sourceCornerRadiusPx = with(density) {
-                                chromeTokens.cornerRadius.toPx()
-                            },
+                            sourceCornerRadiusPx = with(density) { barCornerRadius.toPx() },
                             modifier = Modifier.matchParentSize(),
                         )
                     }

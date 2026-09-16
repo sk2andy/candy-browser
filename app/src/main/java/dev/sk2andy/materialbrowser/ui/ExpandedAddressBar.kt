@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,9 +54,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -80,6 +85,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
@@ -93,6 +99,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
@@ -101,6 +108,23 @@ import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import dev.sk2andy.materialbrowser.ui.theme.addressFieldContainerColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
+
+internal object SegmentedAddressBarGeometry {
+    val ACTION_SIZE = 48.dp
+    val INSET = 8.dp
+    val SEGMENT_GAP = INSET
+    val EXPANDED_HEIGHT = ACTION_SIZE + INSET * 2
+    private val MAX_INNER_CORNER_RADIUS = 24.dp
+    private val MAX_OUTER_CORNER_RADIUS = 32.dp
+
+    fun innerCornerRadius(configuredCornerRadius: Dp): Dp =
+        minOf(configuredCornerRadius, MAX_INNER_CORNER_RADIUS)
+
+    fun outerCornerRadius(configuredCornerRadius: Dp): Dp = minOf(
+        innerCornerRadius(configuredCornerRadius) + INSET,
+        MAX_OUTER_CORNER_RADIUS,
+    )
+}
 
 @Composable
 internal fun ExpandedBottomBarContent(
@@ -114,11 +138,13 @@ internal fun ExpandedBottomBarContent(
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     menuExpanded: Boolean,
+    menuMorphProgress: Float,
     onMenuExpandedChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     onForward: () -> Unit,
     onAddress: () -> Unit,
     editing: Boolean,
+    addressBarStyle: BrowserAddressBarStyle,
     editValue: TextFieldValue,
     onEditValueChange: (TextFieldValue) -> Unit,
     ghostCompletion: String?,
@@ -206,6 +232,13 @@ internal fun ExpandedBottomBarContent(
 ) {
     val motionScheme = LocalCandyMotionScheme.current
     val addressChromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
+    val segmentedAddressBar = addressBarStyle == BrowserAddressBarStyle.Segmented
+    val fieldCornerRadius = if (segmentedAddressBar) {
+        SegmentedAddressBarGeometry.innerCornerRadius(addressChromeTokens.cornerRadius)
+    } else {
+        addressChromeTokens.cornerRadius
+    }
+    val fieldContainerColor = addressFieldContainerColor()
     val tabDragState = rememberDraggableState(onTabDrag)
     val keyboard = LocalSoftwareKeyboardController.current
     val windowInfo = LocalWindowInfo.current
@@ -215,6 +248,8 @@ internal fun ExpandedBottomBarContent(
         addressFieldFocused = addressFieldFocused,
         imeVisible = WindowInsets.isImeVisible,
     )
+    val segmentedEditorActive = segmentedAddressBar && editing
+    val segmentedEditorFocused = segmentedEditorActive && addressFieldFocused
     val dynamicSlotCount = maxOf(
         if (showCastButton) 1 else 0,
         if (editing && tab.url == BLANK_URL) 1 else 0,
@@ -288,12 +323,27 @@ internal fun ExpandedBottomBarContent(
         }
     }
     Column {
-            Row(
-                modifier = Modifier.padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        Row(
+            modifier = Modifier
+                .then(
+                    if (segmentedAddressBar) {
+                        Modifier.testTag(AddressBarTestTags.SegmentedContainer)
+                    } else {
+                        Modifier
+                    },
+                )
+                .padding(if (segmentedAddressBar) SegmentedAddressBarGeometry.INSET else 4.dp)
+                .segmentedAddressBarBackground(
+                    enabled = segmentedAddressBar,
+                    color = fieldContainerColor,
+                    cornerRadius = fieldCornerRadius,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             AnimatedVisibility(
-                visible = visibleActionLayout.beforeAddress.isNotEmpty() && !editorUsesFullWidth,
+                visible = visibleActionLayout.beforeAddress.isNotEmpty() &&
+                    !editorUsesFullWidth &&
+                    !segmentedEditorActive,
                 enter = fadeIn(tween(motionScheme.addressBarActionFadeInMillis)) +
                     expandHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
                 exit = fadeOut(tween(motionScheme.addressBarActionFadeOutMillis)) +
@@ -312,6 +362,13 @@ internal fun ExpandedBottomBarContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
+                    .then(
+                        if (segmentedAddressBar) {
+                            Modifier.testTag(AddressBarTestTags.SegmentedPrimary)
+                        } else {
+                            Modifier
+                        },
+                    )
                     .addressBarVerticalGesture(
                         enabled = !editing && overviewGestureEnabled,
                         initialProgress = overviewGestureProgress,
@@ -326,8 +383,13 @@ internal fun ExpandedBottomBarContent(
                         enabled = !editing,
                         onDragStopped = { velocity -> onTabDragStopped(velocity) },
                     ),
-                shape = RoundedCornerShape(addressChromeTokens.cornerRadius),
-                color = addressFieldContainerColor(),
+                shape = RoundedCornerShape(fieldCornerRadius),
+                color = if (segmentedAddressBar) Color.Transparent else fieldContainerColor,
+                border = if (segmentedEditorFocused) {
+                    BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                } else {
+                    null
+                },
             ) {
                 AddressBarFieldContent(
                     editing = editing,
@@ -391,6 +453,18 @@ internal fun ExpandedBottomBarContent(
                         onReaderStudio = onReaderStudio,
                         readerLabel = stringResource(R.string.reader_open_action),
                     ),
+                    editorLeadingContent = {
+                        if (segmentedAddressBar) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(start = 8.dp)
+                                    .size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
                     editorTrailingContent = {
                         if (tab.url == BLANK_URL) {
                             BlankTabIncognitoModeButton(
@@ -406,11 +480,15 @@ internal fun ExpandedBottomBarContent(
                                 onSelectedChange = onAiModeSelectedChange,
                             )
                         }
-                        IconButton(onClick = onDismissEditor) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.cd_close_address_input),
-                            )
+                        if (!segmentedAddressBar) {
+                            IconButton(onClick = onDismissEditor) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(
+                                        R.string.cd_close_address_input,
+                                    ),
+                                )
+                            }
                         }
                     },
                     displayTrailingContent = {
@@ -431,13 +509,15 @@ internal fun ExpandedBottomBarContent(
                 )
             }
             AnimatedVisibility(
-                visible = !editorUsesFullWidth,
+                visible = !editorUsesFullWidth && !segmentedEditorActive,
                 enter = fadeIn(tween(motionScheme.addressBarActionFadeInMillis)) +
                     expandHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
                 exit = fadeOut(tween(motionScheme.addressBarActionFadeOutMillis)) +
                     shrinkHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     if (!editing || tab.url != BLANK_URL) {
                         visibleActionLayout.afterAddress.forEach { action ->
                             AddressBarActionButton(
@@ -448,10 +528,21 @@ internal fun ExpandedBottomBarContent(
                         }
                         if (showCastButton) CastRouteButton()
                     }
+                    if (segmentedAddressBar) {
+                        Box(modifier = Modifier.size(SegmentedAddressBarGeometry.SEGMENT_GAP))
+                    }
                     if (editing && tab.url == BLANK_URL && showQrScanner) {
                         IconButton(
                             onClick = onScanQrCode,
-                            modifier = Modifier.testTag(AddressBarTestTags.QrScanner),
+                            modifier = Modifier
+                                .testTag(AddressBarTestTags.QrScanner)
+                                .then(
+                                    if (segmentedAddressBar) {
+                                        Modifier.testTag(AddressBarTestTags.SegmentedSecondary)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                         ) {
                             Icon(
                                 painterResource(R.drawable.ic_qr_code_scanner),
@@ -459,7 +550,15 @@ internal fun ExpandedBottomBarContent(
                             )
                         }
                     } else {
-                        Box {
+                        Box(
+                            modifier = if (segmentedAddressBar) {
+                                Modifier
+                                    .size(SegmentedAddressBarGeometry.ACTION_SIZE)
+                                    .testTag(AddressBarTestTags.SegmentedSecondary)
+                            } else {
+                                Modifier
+                            },
+                        ) {
                             IconButton(onClick = { onMenuExpandedChange(true) }) {
                                 Icon(
                                     Icons.Default.MoreVert,
@@ -469,6 +568,7 @@ internal fun ExpandedBottomBarContent(
                             BrowserMainMenu(
                                 expanded = menuExpanded,
                                 backdropSource = backdropSource,
+                                morphProgress = menuMorphProgress,
                                 onDismissRequest = { onMenuExpandedChange(false) },
                                 pageSubtitle = if (tab.url == BLANK_URL) {
                                     stringResource(R.string.new_tab_title)
@@ -562,6 +662,32 @@ internal fun ExpandedBottomBarContent(
                     }
                 }
             }
+            AnimatedVisibility(
+                visible = segmentedEditorActive,
+                enter = fadeIn(tween(motionScheme.addressBarActionFadeInMillis)) +
+                    expandHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
+                exit = fadeOut(tween(motionScheme.addressBarActionFadeOutMillis)) +
+                    shrinkHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(SegmentedAddressBarGeometry.SEGMENT_GAP))
+                    Box(
+                        modifier = Modifier
+                            .size(SegmentedAddressBarGeometry.ACTION_SIZE)
+                            .testTag(AddressBarTestTags.SegmentedSecondary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        IconButton(onClick = onDismissEditor) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(
+                                    R.string.cd_close_address_input,
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -642,7 +768,37 @@ internal object AddressBarTestTags {
     const val Editor = "address_bar_editor"
     const val IncognitoToggle = "address_bar_incognito_toggle"
     const val QrScanner = "address_bar_qr_scanner"
+    const val SegmentedContainer = "address_bar_segmented_container"
     const val TabButton = "address_bar_tab_button"
+    const val SegmentedPrimary = "address_bar_segmented_primary"
+    const val SegmentedSecondary = "address_bar_segmented_secondary"
+}
+
+private fun Modifier.segmentedAddressBarBackground(
+    enabled: Boolean,
+    color: Color,
+    cornerRadius: Dp,
+): Modifier = if (!enabled) {
+    this
+} else {
+    drawBehind {
+        val gap = SegmentedAddressBarGeometry.SEGMENT_GAP.toPx()
+        val actionSize = size.height
+        val mainWidth = (size.width - actionSize - gap).coerceAtLeast(0f)
+        val radius = cornerRadius.toPx()
+        val roundedCorner = CornerRadius(radius, radius)
+        drawRoundRect(
+            color = color,
+            size = Size(mainWidth, size.height),
+            cornerRadius = roundedCorner,
+        )
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(mainWidth + gap, 0f),
+            size = Size(actionSize, actionSize),
+            cornerRadius = roundedCorner,
+        )
+    }
 }
 
 @Composable

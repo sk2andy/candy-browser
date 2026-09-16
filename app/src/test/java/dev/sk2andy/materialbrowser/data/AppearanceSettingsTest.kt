@@ -16,6 +16,7 @@ class AppearanceSettingsTest {
         assertTrue(settings.colorPalette == BrowserColorPalette.Dynamic)
         assertTrue(settings.surfaceStyle == BrowserSurfaceStyle.Clear)
         assertTrue(settings.shapeStyle == BrowserShapeStyle.Rounded)
+        assertTrue(settings.addressBarStyle == BrowserAddressBarStyle.Classic)
         assertEquals(40, settings.frostedTransparencyPercent)
         assertEquals(40, settings.frostedAddressBarTransparencyPercent)
         assertEquals(60, settings.frostedBlurPercent)
@@ -35,6 +36,9 @@ class AppearanceSettingsTest {
         BrowserShapeStyle.entries.forEach { style ->
             assertTrue(BrowserShapeStyle.fromStableId(style.stableId) == style)
         }
+        BrowserAddressBarStyle.entries.forEach { style ->
+            assertTrue(BrowserAddressBarStyle.fromStableId(style.stableId) == style)
+        }
     }
 
     @Test
@@ -52,6 +56,9 @@ class AppearanceSettingsTest {
         assertTrue(BrowserSurfaceStyle.fromStableId("unknown") == BrowserSurfaceStyle.Clear)
         assertTrue(BrowserSurfaceStyle.fromStableId("soft") == BrowserSurfaceStyle.Clear)
         assertTrue(BrowserShapeStyle.fromStableId("unknown") == BrowserShapeStyle.Rounded)
+        assertTrue(
+            BrowserAddressBarStyle.fromStableId("unknown") == BrowserAddressBarStyle.Classic,
+        )
     }
 
     @Test
