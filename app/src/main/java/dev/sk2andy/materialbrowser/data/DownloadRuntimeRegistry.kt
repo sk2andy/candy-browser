@@ -89,6 +89,16 @@ internal object DownloadRuntimeRegistry {
         return true
     }
 
+    fun cancelTransfer(transferId: Int): Boolean {
+        val control = synchronized(this) {
+            entries[transferId]
+                ?.takeIf { entry -> entry.status.isActive }
+                ?.let { controls[transferId] }
+        } ?: return false
+        control.cancel()
+        return true
+    }
+
     fun togglePause(entryId: Long): Boolean {
         val action = synchronized(this) {
             val (id, entry) = entries.entries.firstOrNull { (_, entry) ->
@@ -99,6 +109,24 @@ internal object DownloadRuntimeRegistry {
         } ?: return false
         return action()
     }
+
+    fun togglePauseTransfer(transferId: Int): Boolean {
+        val action = synchronized(this) {
+            val entry = entries[transferId]?.takeIf { it.status.isActive } ?: return false
+            val control = controls[transferId] ?: return false
+            if (entry.status == DownloadStatus.Paused) control.resume else control.pause
+        } ?: return false
+        return action()
+    }
+
+    @Synchronized
+    fun entryForTransfer(transferId: Int): DownloadEntry? = entries[transferId]
+
+    @Synchronized
+    fun activeTransferIds(): Set<Int> = entries.asSequence()
+        .filter { (_, entry) -> entry.status.isActive }
+        .map { (id, _) -> id }
+        .toSet()
 
     @Synchronized
     fun snapshot(): List<DownloadEntry> = entries.values.toList()

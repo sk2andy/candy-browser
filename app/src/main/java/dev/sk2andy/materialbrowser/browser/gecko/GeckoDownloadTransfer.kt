@@ -1,23 +1,15 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.downloads.CandyDownloadNotifier
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DownloadDirectoryRules
@@ -160,7 +152,7 @@ internal class GeckoDownloadTransferManager(
     context: Context,
     private val executor: GeckoWebExecutor,
     private val sink: GeckoDownloadStreamSink = MediaStoreDownloadStreamSink(context),
-    private val notifier: GeckoDownloadNotifier = GeckoDownloadNotifier(context),
+    private val notifier: CandyDownloadNotifier = CandyDownloadNotifier(context),
 ) : AutoCloseable {
     private class Operation(
         val ownerKey: Any,
@@ -326,11 +318,11 @@ internal class GeckoDownloadTransferManager(
                 startedAt = started.startedAtMillis,
                 mediaStoreId = runCatching { ContentUris.parseId(entry.uri) }.getOrNull(),
                 cancel = { cancel(id, operation, listener) },
-                pause = { setPaused(id, operation, paused = true) },
-                resume = { setPaused(id, operation, paused = false) },
+                pause = { setPaused(id, operation, started, paused = true) },
+                resume = { setPaused(id, operation, started, paused = false) },
             )
             dispatch { listener.onStarted(started) }
-            notifier.started(started)
+            notifier.started(started.id)
             io.execute { copy(id, operation, body, started, listener) }
         }
     }
@@ -371,7 +363,7 @@ internal class GeckoDownloadTransferManager(
                                 updatedAt = System.currentTimeMillis(),
                             )
                             dispatch { listener.onProgress(progress, started.totalBytes) }
-                            notifier.progress(started, received)
+                            notifier.progress(started.id)
                         }
                     }
                 }
@@ -390,7 +382,14 @@ internal class GeckoDownloadTransferManager(
                         operations.remove(id, operation)
                         DownloadRuntimeRegistry.completed(id)
                         dispatch { listener.onComplete(received) }
-                        operation.entry?.uri?.let { uri -> notifier.complete(started, uri) }
+                        operation.entry?.uri?.let { uri ->
+                            notifier.complete(
+                                transferId = started.id,
+                                fileName = started.fileName,
+                                mimeType = started.mimeType,
+                                uri = uri,
+                            )
+                        }
                     },
                     onFailure = {
                         finishFailure(id, operation, listener, GeckoDownloadFailure.Storage)
@@ -422,7 +421,12 @@ internal class GeckoDownloadTransferManager(
         }
     }
 
-    private fun setPaused(id: Int, operation: Operation, paused: Boolean): Boolean =
+    private fun setPaused(
+        id: Int,
+        operation: Operation,
+        started: GeckoDownloadTransferStart,
+        paused: Boolean,
+    ): Boolean =
         synchronized(operation) {
             if (operation.terminal.get()) return false
             operation.pauseLock.withLock {
@@ -430,6 +434,7 @@ internal class GeckoDownloadTransferManager(
                 operation.pauseChanged.signalAll()
             }
             DownloadRuntimeRegistry.paused(id, paused, System.currentTimeMillis())
+            notifier.paused(started.id)
             true
         }
 
@@ -489,88 +494,5 @@ internal class GeckoDownloadTransferManager(
 
     private companion object {
         const val COPY_BUFFER_BYTES = 32 * 1024
-    }
-}
-
-internal class GeckoDownloadNotifier(context: Context) {
-    private val appContext = context.applicationContext
-    private val manager = appContext.getSystemService(NotificationManager::class.java)
-
-    fun started(download: GeckoDownloadTransferStart) {
-        notify(
-            download.id,
-            builder(download.fileName)
-                .setOngoing(true)
-                .setProgress(0, 0, true)
-                .build(),
-        )
-    }
-
-    fun progress(download: GeckoDownloadTransferStart, received: Long) {
-        val total = download.totalBytes
-        val builder = builder(download.fileName).setOngoing(true)
-        if (total > 0L && total <= Int.MAX_VALUE) {
-            builder.setProgress(total.toInt(), received.coerceAtMost(total).toInt(), false)
-        } else {
-            builder.setProgress(0, 0, true)
-        }
-        notify(download.id, builder.build())
-    }
-
-    fun complete(download: GeckoDownloadTransferStart, uri: Uri) {
-        val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, download.mimeType)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        val pendingIntent = PendingIntent.getActivity(
-            appContext,
-            download.id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        notify(
-            download.id,
-            builder(download.fileName)
-                .setOngoing(false)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .setProgress(0, 0, false)
-                .build(),
-        )
-    }
-
-    fun cancel(id: Int) {
-        manager.cancel(id)
-    }
-
-    private fun builder(fileName: String): NotificationCompat.Builder {
-        ensureChannel()
-        return NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_reader_download)
-            .setContentTitle(fileName)
-            .setContentText(appContext.getString(R.string.download_notification_description))
-            .setOnlyAlertOnce(true)
-    }
-
-    private fun notify(id: Int, notification: android.app.Notification) {
-        if (
-            ContextCompat.checkSelfPermission(appContext, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            manager.notify(id, notification)
-        }
-    }
-
-    private fun ensureChannel() {
-        manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_ID,
-                appContext.getString(R.string.download_notification_description),
-                NotificationManager.IMPORTANCE_LOW,
-            ),
-        )
-    }
-
-    private companion object {
-        const val CHANNEL_ID = "candy_downloads"
     }
 }

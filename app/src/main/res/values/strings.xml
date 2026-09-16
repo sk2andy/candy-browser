@@ -327,6 +327,13 @@
     <string name="action_download_link">Download link</string>
     <string name="action_download_image">Download image</string>
     <string name="download_notification_description">Download</string>
+    <string name="download_notification_channel_name">Downloads</string>
+    <string name="download_notification_channel_description">Shows progress for downloads managed by Candy</string>
+    <string name="download_notification_running">Downloading · %1$s of %2$s · %3$d%%</string>
+    <string name="download_notification_running_unknown">Downloading · %1$s</string>
+    <string name="download_notification_paused">Paused · %1$s of %2$s</string>
+    <string name="download_notification_paused_unknown">Paused · %1$s</string>
+    <string name="download_notification_complete">Download complete</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

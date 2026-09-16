@@ -311,6 +311,13 @@
     <string name="action_download_link">Télécharger le lien</string>
     <string name="action_download_image">Télécharger l’image</string>
     <string name="download_notification_description">Téléchargement</string>
+    <string name="download_notification_channel_name">Téléchargements</string>
+    <string name="download_notification_channel_description">Affiche la progression des téléchargements gérés par Candy</string>
+    <string name="download_notification_running">Téléchargement · %1$s sur %2$s · %3$d%%</string>
+    <string name="download_notification_running_unknown">Téléchargement · %1$s</string>
+    <string name="download_notification_paused">En pause · %1$s sur %2$s</string>
+    <string name="download_notification_paused_unknown">En pause · %1$s</string>
+    <string name="download_notification_complete">Téléchargement terminé</string>
     <string name="settings_title">Paramètres</string>
     <string name="settings_appearance_title">Apparence</string>
     <string name="settings_home_appearance_summary">Couleurs, texte web, surfaces et formes</string>

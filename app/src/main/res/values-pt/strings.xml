@@ -311,6 +311,13 @@
     <string name="action_download_link">Transferir ligação</string>
     <string name="action_download_image">Transferir imagem</string>
     <string name="download_notification_description">Transferência</string>
+    <string name="download_notification_channel_name">Transferências</string>
+    <string name="download_notification_channel_description">Mostra o progresso das transferências geridas pelo Candy</string>
+    <string name="download_notification_running">A transferir · %1$s de %2$s · %3$d%%</string>
+    <string name="download_notification_running_unknown">A transferir · %1$s</string>
+    <string name="download_notification_paused">Em pausa · %1$s de %2$s</string>
+    <string name="download_notification_paused_unknown">Em pausa · %1$s</string>
+    <string name="download_notification_complete">Transferência concluída</string>
     <string name="settings_title">Definições</string>
     <string name="settings_appearance_title">Aspeto</string>
     <string name="settings_home_appearance_summary">Cores, texto dos sites, superfícies e formas</string>
