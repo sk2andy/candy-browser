@@ -31,6 +31,8 @@ class AddressBarGestureRulesTest {
     @Test
     fun `overview gesture uses deliberate travel distance`() {
         assertEquals(56f, AddressBarGestureRules.OPEN_TABS_THRESHOLD_DP, 0f)
+        assertEquals(24f, AddressBarGestureRules.PARKED_OPEN_TABS_THRESHOLD_DP, 0f)
+        assertEquals(320L, AddressBarGestureRules.PARKED_REPOSITION_LONG_PRESS_MILLIS)
     }
 
     @Test

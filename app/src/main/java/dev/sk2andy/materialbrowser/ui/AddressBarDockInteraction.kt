@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.animate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 internal data class AddressBarDockInteractionState(
     val position: Offset,
     val normalAnchorResistanceProgress: Float,
+    val repositionActivationNonce: Int,
     val onDragStarted: () -> Unit,
     val onDrag: (Offset) -> Unit,
     val onDragStopped: () -> Unit,
@@ -30,6 +32,7 @@ internal data class AddressBarDockInteractionState(
 )
 
 internal data class AddressBarDockHaptics(
+    val activate: () -> Unit,
     val startMovement: () -> Unit,
     val stopMovement: () -> Unit,
     val confirm: () -> Unit,
@@ -52,6 +55,9 @@ internal fun rememberAddressBarDockInteractionState(
     val hapticScope = rememberCoroutineScope()
     val platformHaptics = remember(hapticView) {
         AddressBarDockHaptics(
+            activate = {
+                hapticView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            },
             startMovement = hapticView::startRubberbandHaptic,
             stopMovement = hapticView::stopRubberbandHaptic,
             confirm = hapticView::performConfirmHaptic,
@@ -74,6 +80,7 @@ internal fun rememberAddressBarDockInteractionState(
     var normalAnchorReleased by remember { mutableStateOf(false) }
     var normalSnapZoneActive by remember { mutableStateOf(false) }
     var normalAnchorResistanceProgress by remember { mutableStateOf(0f) }
+    var repositionActivationNonce by remember { mutableStateOf(0) }
     var movementHapticActive by remember { mutableStateOf(false) }
     var movementHapticStopJob by remember { mutableStateOf<Job?>(null) }
     var breakawaySpringOffset by remember { mutableStateOf(Offset.Zero) }
@@ -151,6 +158,8 @@ internal fun rememberAddressBarDockInteractionState(
         normalSnapZoneActive = startedAtNormalAnchor
         normalAnchorResistanceProgress = 0f
         dragActive = true
+        repositionActivationNonce += 1
+        currentHaptics.activate()
     }
 
     fun dragBy(delta: Offset) {
@@ -267,6 +276,7 @@ internal fun rememberAddressBarDockInteractionState(
     return AddressBarDockInteractionState(
         position = position + breakawaySpringOffset,
         normalAnchorResistanceProgress = normalAnchorResistanceProgress,
+        repositionActivationNonce = repositionActivationNonce,
         onDragStarted = ::startDrag,
         onDrag = ::dragBy,
         onDragStopped = ::stopDrag,

@@ -3,22 +3,27 @@ package dev.sk2andy.materialbrowser.ui
 import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
@@ -76,6 +81,7 @@ class AddressBarDockInstrumentedTest {
                         onDockDrag = {},
                         onDockDragStopped = {},
                         onDockDragCancelled = {},
+                        onSwipeUp = {},
                     )
                 }
             }
@@ -114,6 +120,7 @@ class AddressBarDockInstrumentedTest {
                         onDockDrag = interaction.onDrag,
                         onDockDragStopped = interaction.onDragStopped,
                         onDockDragCancelled = interaction.onDragCancelled,
+                        onSwipeUp = {},
                     )
                 }
             }
@@ -125,8 +132,163 @@ class AddressBarDockInstrumentedTest {
     }
 
     @Test
+    fun quickSwipeUpOpensOverviewWithoutStartingRepositioning() {
+        val swipeUps = AtomicInteger()
+        val dragStarts = AtomicInteger()
+        val dragUpdates = AtomicInteger()
+        val dragStops = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                Box(Modifier.size(width = 52.dp, height = 48.dp)) {
+                    AddressBarEdgeTab(
+                        edge = AddressBarDockEdge.Right,
+                        onRestore = {},
+                        dockDragEnabled = true,
+                        onDockDragStarted = dragStarts::incrementAndGet,
+                        onDockDrag = { dragUpdates.incrementAndGet() },
+                        onDockDragStopped = dragStops::incrementAndGet,
+                        onDockDragCancelled = {},
+                        onSwipeUp = swipeUps::incrementAndGet,
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
+            .performTouchInput { swipeUp(durationMillis = 180L) }
+
+        assertEquals(1, swipeUps.get())
+        assertEquals(0, dragStarts.get())
+        assertEquals(0, dragUpdates.get())
+        assertEquals(0, dragStops.get())
+    }
+
+    @Test
+    fun parkedPillSwipeUpHidesKeyboard() {
+        val swipeUps = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                Column {
+                    BasicTextField(
+                        value = "Keyboard target",
+                        onValueChange = {},
+                        modifier = Modifier
+                            .size(width = 200.dp, height = 48.dp)
+                            .testTag(ImeTargetTag),
+                    )
+                    Box(Modifier.size(width = 52.dp, height = 48.dp)) {
+                        AddressBarEdgeTab(
+                            edge = AddressBarDockEdge.Right,
+                            onRestore = {},
+                            dockDragEnabled = true,
+                            onDockDragStarted = {},
+                            onDockDrag = {},
+                            onDockDragStopped = {},
+                            onDockDragCancelled = {},
+                            onSwipeUp = swipeUps::incrementAndGet,
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(ImeTargetTag).performClick()
+        assertImeVisible()
+        composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
+            .performTouchInput { swipeUp(durationMillis = 180L) }
+
+        assertImeHidden()
+        assertEquals(1, swipeUps.get())
+    }
+
+    @Test
+    fun quickDragDoesNotRepositionParkedPill() {
+        val dragStarts = AtomicInteger()
+        val dragUpdates = AtomicInteger()
+        val dragStops = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                Box(Modifier.size(width = 52.dp, height = 48.dp)) {
+                    AddressBarEdgeTab(
+                        edge = AddressBarDockEdge.Right,
+                        onRestore = {},
+                        dockDragEnabled = true,
+                        onDockDragStarted = dragStarts::incrementAndGet,
+                        onDockDrag = { dragUpdates.incrementAndGet() },
+                        onDockDragStopped = dragStops::incrementAndGet,
+                        onDockDragCancelled = {},
+                        onSwipeUp = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
+            .performTouchInput {
+                swipe(
+                    start = center,
+                    end = Offset(center.x - 220f, center.y - 80f),
+                    durationMillis = 200L,
+                )
+            }
+
+        assertEquals(0, dragStarts.get())
+        assertEquals(0, dragUpdates.get())
+        assertEquals(0, dragStops.get())
+    }
+
+    @Test
+    fun longPressWithoutMovementActivatesThenCancelsWithoutRestoringOrDropping() {
+        val activationHaptics = AtomicInteger()
+        val confirmHaptics = AtomicInteger()
+        val placementChanges = AtomicInteger()
+        val restores = AtomicInteger()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                val interaction = rememberAddressBarDockInteractionState(
+                    presentation = AddressBarPresentation.Docked,
+                    placement = AddressBarDockPlacement.Default,
+                    enabled = true,
+                    horizontalTravelPx = 200f,
+                    verticalTravelPx = 400f,
+                    density = Density(1f),
+                    onPlacementChanged = { placementChanges.incrementAndGet() },
+                    onRestore = restores::incrementAndGet,
+                    haptics = AddressBarDockHaptics(
+                        activate = { activationHaptics.incrementAndGet() },
+                        startMovement = {},
+                        stopMovement = {},
+                        confirm = { confirmHaptics.incrementAndGet() },
+                    ),
+                )
+                Box(Modifier.size(width = 52.dp, height = 48.dp)) {
+                    AddressBarEdgeTab(
+                        edge = AddressBarDockEdge.Right,
+                        onRestore = interaction.onRestoreClick,
+                        dockDragEnabled = true,
+                        onDockDragStarted = interaction.onDragStarted,
+                        onDockDrag = interaction.onDrag,
+                        onDockDragStopped = interaction.onDragStopped,
+                        onDockDragCancelled = interaction.onDragCancelled,
+                        onSwipeUp = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
+            .performTouchInput { longClick() }
+
+        assertEquals(1, activationHaptics.get())
+        assertEquals(0, confirmHaptics.get())
+        assertEquals(0, placementChanges.get())
+        assertEquals(0, restores.get())
+    }
+
+    @Test
     fun edgeTabDiagonalDragMovesToLeftEdgeAndPersistsVerticalPosition() {
         val settledPlacement = AtomicReference<AddressBarDockPlacement>()
+        val swipeUps = AtomicInteger()
         composeRule.setContent {
             MaterialBrowserTheme {
                 val interaction = rememberAddressBarDockInteractionState(
@@ -148,6 +310,7 @@ class AddressBarDockInstrumentedTest {
                         onDockDrag = interaction.onDrag,
                         onDockDragStopped = interaction.onDragStopped,
                         onDockDragCancelled = interaction.onDragCancelled,
+                        onSwipeUp = swipeUps::incrementAndGet,
                     )
                 }
             }
@@ -155,24 +318,26 @@ class AddressBarDockInstrumentedTest {
 
         composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
             .performTouchInput {
-                swipe(
-                    start = center,
-                    end = Offset(center.x - 220f, center.y - 120f),
-                    durationMillis = 300,
+                down(center)
+                advanceEventTime(
+                    AddressBarGestureRules.PARKED_REPOSITION_LONG_PRESS_MILLIS + 40L,
                 )
+                moveTo(Offset(center.x - 220f, center.y - 120f), delayMillis = 160L)
+                up()
             }
 
         assertEquals(AddressBarDockEdge.Left, settledPlacement.get().edge)
         assertTrue(settledPlacement.get().verticalFraction > 0.3f)
+        assertEquals(0, swipeUps.get())
     }
 
     @Test
     fun parkedPillSnapsVisiblyToNormalAddressBarAnchorOnDrag() {
         lateinit var interaction: AddressBarDockInteractionState
         val settledPlacement = AtomicReference<AddressBarDockPlacement>()
+        val activationHaptics = AtomicInteger()
         val confirmHaptics = AtomicInteger()
         val sessionStore = BrowserSessionStore(composeRule.activity)
-        composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             MaterialBrowserTheme {
                 interaction = rememberAddressBarDockInteractionState(
@@ -191,6 +356,7 @@ class AddressBarDockInstrumentedTest {
                     },
                     onRestore = {},
                     haptics = AddressBarDockHaptics(
+                        activate = { activationHaptics.incrementAndGet() },
                         startMovement = {},
                         stopMovement = {},
                         confirm = { confirmHaptics.incrementAndGet() },
@@ -205,27 +371,25 @@ class AddressBarDockInstrumentedTest {
                         onDockDrag = interaction.onDrag,
                         onDockDragStopped = interaction.onDragStopped,
                         onDockDragCancelled = interaction.onDragCancelled,
+                        onSwipeUp = {},
                     )
                 }
             }
         }
 
-        composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
-            .performTouchInput {
-                swipe(
-                    start = center,
-                    end = Offset(center.x, center.y + 260f),
-                    durationMillis = 300,
-                )
-            }
+        composeRule.runOnIdle {
+            interaction.onDragStarted()
+            interaction.onDrag(Offset(0f, 260f))
+            interaction.onDragStopped()
+        }
 
         composeRule.runOnIdle {
             assertEquals(0f, interaction.position.y, 0.001f)
             assertEquals(0f, settledPlacement.get().verticalFraction, 0.001f)
             assertEquals(settledPlacement.get(), sessionStore.loadAddressBarDockPlacement())
+            assertEquals(1, activationHaptics.get())
             assertEquals(2, confirmHaptics.get())
         }
-        composeRule.mainClock.autoAdvance = true
     }
 
     @Test
@@ -602,11 +766,12 @@ class AddressBarDockInstrumentedTest {
 
         composeRule.onNodeWithTag(AddressBarDockTestTags.EdgeTab)
             .performTouchInput {
-                swipe(
-                    start = center,
-                    end = Offset(center.x - 900f, center.y - 100f),
-                    durationMillis = 400,
+                down(center)
+                advanceEventTime(
+                    AddressBarGestureRules.PARKED_REPOSITION_LONG_PRESS_MILLIS + 40L,
                 )
+                moveTo(Offset(center.x - 900f, center.y - 100f), delayMillis = 200L)
+                up()
             }
 
         composeRule.waitForIdle()
@@ -672,5 +837,16 @@ class AddressBarDockInstrumentedTest {
             ViewCompat.getRootWindowInsets(composeRule.activity.window.decorView)
                 ?.isVisible(WindowInsetsCompat.Type.ime()) == true
         }
+    }
+
+    private fun assertImeHidden() {
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            ViewCompat.getRootWindowInsets(composeRule.activity.window.decorView)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) != true
+        }
+    }
+
+    private companion object {
+        const val ImeTargetTag = "address_bar_dock_ime_target"
     }
 }

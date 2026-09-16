@@ -196,4 +196,20 @@ class AddressBarMotionTest {
             assertEquals(end, animation.getValueFromNanos(animation.durationNanos))
         }
     }
+
+    @Test
+    fun `dock reposition feedback wobbles once and settles at identity`() {
+        assertEquals(Offset(1f, 1f), AddressBarMotion.dockRepositionFeedbackScale(0f))
+
+        val firstLobe = AddressBarMotion.dockRepositionFeedbackScale(1f / 6f)
+        assertTrue(firstLobe.x > 1f)
+        assertTrue(firstLobe.y < 1f)
+
+        val secondLobe = AddressBarMotion.dockRepositionFeedbackScale(0.5f)
+        assertTrue(secondLobe.x < 1f)
+        assertTrue(secondLobe.y > 1f)
+
+        assertEquals(Offset(1f, 1f), AddressBarMotion.dockRepositionFeedbackScale(1f))
+        assertEquals(Offset(1f, 1f), AddressBarMotion.dockRepositionFeedbackScale(Float.NaN))
+    }
 }
