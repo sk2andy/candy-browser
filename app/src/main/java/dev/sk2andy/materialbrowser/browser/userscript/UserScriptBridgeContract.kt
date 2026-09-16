@@ -27,6 +27,8 @@ internal sealed interface UserScriptBridgeRequest {
         val url: String,
         val active: Boolean,
     ) : UserScriptBridgeRequest
+
+    data object DisposeDocument : UserScriptBridgeRequest
 }
 
 internal object UserScriptBridgeContract {
@@ -46,6 +48,10 @@ internal object UserScriptBridgeContract {
         if (raw.toByteArray(Charsets.UTF_8).size !in 1..MAX_MESSAGE_BYTES) return null
         val value = runCatching { JSONObject(raw) }.getOrNull() ?: return null
         val type = value.opt("type") as? String ?: return null
+        if (type == "dispose-document") {
+            if (value.length() != 1) return null
+            return UserScriptBridgeRequest.DisposeDocument
+        }
         if (type == "register-menu") {
             if (value.length() != 3) return null
             val commandId = (value.opt("commandId") as? String)

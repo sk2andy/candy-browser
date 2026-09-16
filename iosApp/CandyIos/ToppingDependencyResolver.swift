@@ -75,6 +75,9 @@ actor ToppingDependencyResolver {
             id: id,
             source: source,
             enabled: enabled,
+            allowedFrameScope: StoredToppingFrameScope(
+                rawValue: accepted.script.declaredFrameScope.wireValue
+            ) ?? .top,
             requires: requires,
             resources: resources
         )

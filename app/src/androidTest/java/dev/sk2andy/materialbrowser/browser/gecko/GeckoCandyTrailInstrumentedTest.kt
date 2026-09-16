@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.CandyTrail
 import dev.sk2andy.materialbrowser.browser.CandyTrailHistoryBinding
 import dev.sk2andy.materialbrowser.browser.CandyTrailHistoryReconciler
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import java.net.InetAddress
@@ -35,6 +36,7 @@ class GeckoCandyTrailInstrumentedTest {
                 tabId = TAB_ID,
                 profileId = "trail-${UUID.randomUUID()}",
                 isPrivate = false,
+                contentKind = BrowserEngineContentKind.RegularTab,
                 trailHistoryEventSink = GeckoCandyTrailHistoryEventSink { _, event ->
                     recorder.onHistoryEvent(event)
                 },

@@ -70,6 +70,10 @@ class UserScriptBridgeContractTest {
                 """{"type":"open-tab","url":"https://example.com/path","active":true}""",
             ),
         )
+        assertEquals(
+            UserScriptBridgeRequest.DisposeDocument,
+            UserScriptBridgeContract.parse("""{"type":"dispose-document"}"""),
+        )
     }
 
     @Test
@@ -92,6 +96,11 @@ class UserScriptBridgeContractTest {
         assertNull(
             UserScriptBridgeContract.parse(
                 """{"type":"unregister-menu","commandId":"1","foreign":true}""",
+            ),
+        )
+        assertNull(
+            UserScriptBridgeContract.parse(
+                """{"type":"dispose-document","foreign":true}""",
             ),
         )
     }

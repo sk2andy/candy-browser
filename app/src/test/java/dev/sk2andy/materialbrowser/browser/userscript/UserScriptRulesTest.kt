@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.userscript
 
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -70,6 +71,24 @@ class UserScriptRulesTest {
         assertTrue(UserScriptRules.selectForRegistration(listOf(forged), isPrivate = false).isEmpty())
         assertFalse(UserScriptRules.matches(forged, "https://other.example/"))
         assertTrue(UserScriptRules.allowedOriginRules(forged).isEmpty())
+
+        val scoped = script(
+            "// @match https://example.com/*\n// @candy-frames same-origin",
+        )
+        assertTrue(
+            UserScriptRules.isCanonical(
+                scoped.copy(allowedFrameScope = ToppingFrameScope.Top),
+            ),
+        )
+        assertEquals(
+            ToppingFrameScope.Top,
+            scoped.copy(allowedFrameScope = ToppingFrameScope.Top).effectiveFrameScope,
+        )
+        assertFalse(
+            UserScriptRules.isCanonical(
+                scoped.copy(allowedFrameScope = ToppingFrameScope.AllMatching),
+            ),
+        )
     }
 
     @Test

@@ -22,6 +22,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
@@ -317,6 +318,7 @@ internal class GeckoBrowserEngineSessionFactory(
         profileId: String,
         isolationEnabled: Boolean,
         isPrivate: Boolean,
+        contentKind: BrowserEngineContentKind,
         privacyPolicy: GeckoPrivacyPolicy,
         privacyEventSink: GeckoPrivacyEventSink,
         trailHistoryEventSink: GeckoCandyTrailHistoryEventSink,
@@ -353,6 +355,7 @@ internal class GeckoBrowserEngineSessionFactory(
             )
             extensionSessionIdentities[tabId] = identity
             created.bindExtensionTab(tabId, generation)
+            created.bindToppingSession(tabId, contentKind)
         }
         return GeckoBrowserEngineSessionAdapter(
             tabId = tabId,

@@ -83,6 +83,8 @@ class UserScriptApiTest {
         assertTrue(source.contains("GM_unregisterMenuCommand"))
         assertTrue(source.contains("GM_openInTab"))
         assertTrue(source.contains("menu-invoke"))
+        assertTrue(source.contains("dispose-document"))
+        assertTrue(source.contains("pagehide"))
         assertTrue(source.contains("new URL(String(url), location.href)"))
         assertFalse(source.contains("GM_setValue"))
     }

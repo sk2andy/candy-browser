@@ -6,6 +6,7 @@ import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionState
@@ -50,6 +51,7 @@ class SystemWebViewMediaBridgeInstrumentedTest {
                 tabId = TAB_ID,
                 profileId = PROFILE_ID,
                 isPrivate = false,
+                contentKind = BrowserEngineContentKind.RegularTab,
                 eventSink = BrowserEngineEventSink {},
             )
             session = createdSession

@@ -31,6 +31,7 @@ import dev.sk2andy.materialbrowser.browser.LinkPeekAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRouter
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
@@ -150,6 +151,11 @@ internal fun SettingsScreen(
     onEditCapsule: (SiteCapsule) -> Unit,
     onDeleteCapsule: (SiteCapsule) -> Unit,
     onToggleUserScript: (id: String, enabled: Boolean, onResult: (String?) -> Unit) -> Unit,
+    onSetUserScriptFrameScope: (
+        id: String,
+        scope: ToppingFrameScope,
+        onResult: (String?) -> Unit,
+    ) -> Unit = { _, _, onResult -> onResult(null) },
     onSaveUserScript: (id: String?, source: String, onResult: (String?) -> Unit) -> Unit,
     onDeleteUserScript: (id: String, onResult: (String?) -> Unit) -> Unit,
     onImportUserScript: () -> Unit,
@@ -354,6 +360,7 @@ internal fun SettingsScreen(
                     scripts = userScripts,
                     isRuntimeSupported = isUserScriptSupported,
                     onToggle = onToggleUserScript,
+                    onSetFrameScope = onSetUserScriptFrameScope,
                     onSave = onSaveUserScript,
                     onDelete = onDeleteUserScript,
                     onImport = onImportUserScript,

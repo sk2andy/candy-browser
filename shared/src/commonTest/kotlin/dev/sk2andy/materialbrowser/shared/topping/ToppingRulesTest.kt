@@ -22,8 +22,34 @@ class ToppingRulesTest {
 
         assertEquals(ToppingRunAt.DocumentStart, plan.runAt)
         assertTrue(plan.forMainFrameOnly)
+        assertEquals(ToppingFrameScope.Top, plan.frameScope)
         assertEquals("candy.topping.example", plan.contentWorldName)
-        assertTrue("window.top !== window" in plan.source)
+        assertTrue("window.top === window" in plan.source)
+    }
+
+    @Test
+    fun frameScopeMetadataIsExplicitAndRestrictable() {
+        val source = """
+            // ==UserScript==
+            // @name Frames
+            // @match https://example.com/*
+            // @candy-frames all-matching
+            // ==/UserScript==
+        """.trimIndent()
+        val script = assertIs<ToppingParseResult.Accepted>(ToppingRules.parse("frames", source)).script
+
+        assertEquals(ToppingFrameScope.AllMatching, script.declaredFrameScope)
+        assertEquals(ToppingFrameScope.AllMatching, script.effectiveFrameScope)
+        assertEquals(
+            ToppingFrameScope.SameOrigin,
+            script.copy(allowedFrameScope = ToppingFrameScope.SameOrigin).effectiveFrameScope,
+        )
+        assertEquals(
+            "invalid_frame_scope",
+            assertIs<ToppingParseResult.Rejected>(
+                ToppingRules.parse("bad", source.replace("// @candy-frames all-matching", "// @noframes\n// @candy-frames all-matching")),
+            ).reason,
+        )
     }
 
     @Test

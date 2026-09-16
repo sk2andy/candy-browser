@@ -18,6 +18,7 @@ import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.WebRequestError
@@ -266,6 +267,9 @@ internal interface GeckoBrowserSession {
 
     /** Binds Gecko's session delegates to Candy's stable tab identity. */
     fun bindExtensionTab(tabId: String, generation: Long) = Unit
+
+    /** Binds Topping authorization to this exact renderer session and content purpose. */
+    fun bindToppingSession(tabId: String, contentKind: BrowserEngineContentKind) = Unit
 
     /** Uses a capture-compatible renderer only while Candy chrome needs backdrop blur. */
     fun setBackdropCaptureEnabled(enabled: Boolean) = Unit

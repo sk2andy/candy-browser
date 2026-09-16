@@ -102,6 +102,7 @@ import dev.sk2andy.materialbrowser.browser.commands.CommandMatcher
 import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPrompt
 import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPromptRules
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
@@ -193,6 +194,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptOpenTabRequest
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRejectionReason
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayoutRules
@@ -2942,6 +2944,7 @@ class BrowserController(
             profileId = sourceTab.profileId,
             isolationEnabled = profileForId(sourceTab.profileId)?.isolationEnabled == true,
             isPrivate = sourceTab.isIncognito,
+            contentKind = BrowserEngineContentKind.LinkPeek,
             privacyPolicy = geckoPrivacyPolicyFor(
                 tab = sourceTab,
                 pageUrl = url,
@@ -3301,6 +3304,7 @@ class BrowserController(
             profileId = policyTab.profileId,
             isolationEnabled = profileForId(policyTab.profileId)?.isolationEnabled == true,
             isPrivate = false,
+            contentKind = BrowserEngineContentKind.ExternalPreview,
             privacyPolicy = geckoPrivacyPolicyFor(
                 tab = policyTab,
                 pageUrl = state.currentUrl,
@@ -4469,6 +4473,9 @@ class BrowserController(
             val existing = userScripts.firstOrNull { script -> script.id == downloaded.id }
             val script = downloaded.copy(
                 enabled = if (preserveEnabled) existing?.enabled ?: true else true,
+                allowedFrameScope = existing?.allowedFrameScope
+                    ?.restrictedTo(downloaded.declaredFrameScope)
+                    ?: downloaded.declaredFrameScope,
             )
             userScriptRepository.resolveDependencies(script) { resolution ->
                 mainHandler.post {
@@ -4517,7 +4524,11 @@ class BrowserController(
             updatedAtMillis = System.currentTimeMillis(),
         )
         val script = when (result) {
-            is UserScriptParseResult.Accepted -> result.script
+            is UserScriptParseResult.Accepted -> result.script.copy(
+                allowedFrameScope = existing?.allowedFrameScope
+                    ?.restrictedTo(result.script.declaredFrameScope)
+                    ?: result.script.declaredFrameScope,
+            )
             is UserScriptParseResult.Rejected -> {
                 onComplete(UserScriptSaveOutcome.Rejected(result.reason))
                 return
@@ -4572,6 +4583,29 @@ class BrowserController(
             onComplete(false)
             return
         }
+        commitUserScripts(proposed = proposed, onComplete = onComplete)
+    }
+
+    internal fun setUserScriptFrameScope(
+        id: String,
+        allowedFrameScope: ToppingFrameScope,
+        onComplete: (Boolean) -> Unit = {},
+    ) {
+        val index = userScripts.indexOfFirst { it.id == id }
+        val script = userScripts.getOrNull(index)
+        if (script == null || !allowedFrameScope.isWithin(script.declaredFrameScope)) {
+            onComplete(false)
+            return
+        }
+        if (script.allowedFrameScope == allowedFrameScope) {
+            onComplete(true)
+            return
+        }
+        val proposed = userScripts.toMutableList()
+        proposed[index] = script.copy(
+            allowedFrameScope = allowedFrameScope,
+            updatedAtMillis = System.currentTimeMillis(),
+        )
         commitUserScripts(proposed = proposed, onComplete = onComplete)
     }
 
@@ -9089,6 +9123,7 @@ class BrowserController(
                 profileId = tab.profileId,
                 isolationEnabled = profileForId(tab.profileId)?.isolationEnabled == true,
                 isPrivate = tab.isIncognito,
+                contentKind = BrowserEngineContentKind.RegularTab,
                 privacyPolicy = requireNotNull(geckoPrivacyPolicyFor(tab.id)),
                 privacyEventSink = GeckoPrivacyEventSink { event ->
                     mainHandler.post { onGeckoPrivacyEvent(tab.id, event) }

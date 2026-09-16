@@ -140,16 +140,18 @@ class BrowserFeatureMenuRulesTest {
                         commandId = "focus",
                         caption = "Focus mode",
                         scriptName = "Reader Tools",
+                        documentId = "frame-7",
                     ),
                 ),
             ),
         ).single { it.section == BrowserFeatureMenuSection.Toppings }
 
-        assertEquals("topping:reader-tools:focus", item.stableId)
+        assertEquals("topping:reader-tools:focus:frame-7", item.stableId)
         assertEquals("Focus mode", item.dynamicLabel)
         assertEquals("Reader Tools", item.supportingText)
         assertEquals("reader-tools", item.toppingScriptId)
         assertEquals("focus", item.toppingCommandId)
+        assertEquals("frame-7", item.toppingDocumentId)
     }
 
     @Test

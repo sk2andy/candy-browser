@@ -114,6 +114,7 @@ data class BrowserFeatureMenuItem(
     val supportingText: String? = null,
     val toppingScriptId: String? = null,
     val toppingCommandId: String? = null,
+    val toppingDocumentId: String? = null,
 )
 
 data class BrowserToppingMenuCommand(
@@ -121,6 +122,7 @@ data class BrowserToppingMenuCommand(
     val commandId: String,
     val caption: String,
     val scriptName: String,
+    val documentId: String = "",
 )
 
 data class BrowserFeatureMenuState(
@@ -358,7 +360,10 @@ object BrowserFeatureMenuRules {
 
     private fun toppingItems(state: BrowserFeatureMenuState) = state.toppingCommands.map { command ->
         BrowserFeatureMenuItem(
-            stableId = "topping:${command.scriptId}:${command.commandId}",
+            stableId = buildString {
+                append("topping:${command.scriptId}:${command.commandId}")
+                if (command.documentId.isNotEmpty()) append(":${command.documentId}")
+            },
             action = BrowserFeatureMenuAction.InvokeToppingCommand,
             labelKey = BrowserFeatureMenuLabelKey.ToppingsCommand,
             section = BrowserFeatureMenuSection.Toppings,
@@ -368,6 +373,7 @@ object BrowserFeatureMenuRules {
             supportingText = command.scriptName,
             toppingScriptId = command.scriptId,
             toppingCommandId = command.commandId,
+            toppingDocumentId = command.documentId,
         )
     }
 
