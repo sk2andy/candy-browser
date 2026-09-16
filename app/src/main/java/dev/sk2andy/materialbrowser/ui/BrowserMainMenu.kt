@@ -2,7 +2,11 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -183,6 +187,24 @@ private class AndroidBrowserMainMenuEffects(
     ): Color =
         browserChromeColor(color, frostedAlpha)
 
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    override fun spatialAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> =
+        if (expanding) {
+            MotionScheme.expressive().slowSpatialSpec()
+        } else {
+            MaterialTheme.motionScheme.fastSpatialSpec()
+        }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    override fun effectsAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> =
+        if (expanding) {
+            MotionScheme.expressive().defaultEffectsSpec()
+        } else {
+            MaterialTheme.motionScheme.fastEffectsSpec()
+        }
+
     override fun popupState(expanded: Boolean, visible: Boolean) {
         BrowserInputDiagnostics.popupState(expanded, visible)
     }
@@ -192,7 +214,6 @@ private class AndroidBrowserMainMenuEffects(
 internal fun BrowserMainMenu(
     expanded: Boolean,
     backdropSource: CandyChromeBackdropSource?,
-    morphProgress: Float? = null,
     onDismissRequest: () -> Unit,
     pageSubtitle: String,
     canGoBack: Boolean,
@@ -316,8 +337,6 @@ internal fun BrowserMainMenu(
         screenSize = DpSize(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp),
         resources = AndroidBrowserMainMenuResources,
         effects = rememberAndroidBrowserMainMenuEffects(backdropSource),
-        morphAnchorSize = DpSize(48.dp, 48.dp),
-        morphProgress = morphProgress,
         extensionContent = if (
             BrowserMenuLayoutRules.isVisible(
                 menuLayout,

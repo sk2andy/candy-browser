@@ -10,9 +10,7 @@ import android.view.HapticFeedbackConstants
 import android.view.WindowManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -108,7 +106,6 @@ import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
-import dev.sk2andy.materialbrowser.shared.ui.AddressMenuMorphRules
 import dev.sk2andy.materialbrowser.shared.ui.OverviewAddressBarContent
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
@@ -233,7 +230,6 @@ internal fun BrowserBottomBar(
     val docked = dockState.placement != null
     val dockingEnabled = dockState.enabled
     var menuExpanded by remember { mutableStateOf(false) }
-    val menuMorphProgress = remember { Animatable(0f) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val presentation = AddressBarPresentationRules.resolve(
         docked = docked,
@@ -266,20 +262,6 @@ internal fun BrowserBottomBar(
         chromeTokens.cornerRadius
     }
     val motionScheme = LocalCandyMotionScheme.current
-    LaunchedEffect(menuExpanded) {
-        menuMorphProgress.animateTo(
-            targetValue = if (menuExpanded) 1f else 0f,
-            animationSpec = tween(
-                durationMillis = AddressMenuMorphRules.DURATION_MILLIS,
-                easing = if (menuExpanded) LinearOutSlowInEasing else FastOutLinearInEasing,
-            ),
-        )
-    }
-    val menuMorphFrame = AddressMenuMorphRules.frame(
-        animatedProgress = menuMorphProgress.value,
-        expanded = menuExpanded,
-        reduceMotion = false,
-    )
     LaunchedEffect(addressBarPulseNonce, motionScheme) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
         pulseScale.snapTo(1f)
@@ -467,14 +449,11 @@ internal fun BrowserBottomBar(
                     }
                     .graphicsLayer {
                         val stretch = dockStretchProgress.coerceIn(-0.12f, 1f)
-                        alpha = menuMorphFrame.addressContentAlpha
                         scaleX = pulseScale.value * (1f - stretch * 0.04f)
                         scaleX *= dockRepositionFeedbackScale.x
-                        scaleX *= menuMorphFrame.addressSurfaceScale
                         scaleY = pulseScale.value *
                             (1f + stretch * 0.18f) *
-                            dockRepositionFeedbackScale.y *
-                            menuMorphFrame.addressSurfaceScale
+                            dockRepositionFeedbackScale.y
                         transformOrigin = if (stretch == 0f) {
                             TransformOrigin.Center
                         } else {
@@ -484,7 +463,6 @@ internal fun BrowserBottomBar(
                 containerColor = barColor,
                 backdropBlurEnabled = commandFeedback == null &&
                     blurSourceVisible &&
-                    (!menuExpanded || menuMorphFrame.menuExpansionProgress < 1f) &&
                     chromeTokens.backdropBlurEnabled,
             ) {
                 Box {
@@ -560,7 +538,6 @@ internal fun BrowserBottomBar(
                                 userScriptMenuCommands = userScriptMenuCommands,
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 menuExpanded = menuExpanded,
-                                menuMorphProgress = menuMorphFrame.menuExpansionProgress,
                                 onMenuExpandedChange = { menuExpanded = it },
                                 onBack = onBack,
                                 onForward = onForward,
