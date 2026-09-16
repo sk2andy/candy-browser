@@ -54,6 +54,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var originalEngineKind: AndroidBrowserEngineKind? = null
     private var originalHistory: List<HistoryEntry>? = null
     private var originalHistoryRecordingMode: HistoryRecordingMode? = null
+    private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
 
     @Test
     fun webpageImeOpeningReprobesAndParksOccludingAddressBar() {
@@ -293,6 +294,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 originalHistory?.let { history ->
                     assertTrue(store.commitHistory(history))
                 }
+                originalExternalAppLinkHandling?.let(store::saveExternalAppLinkHandling)
             }
         }
     }
@@ -905,15 +907,19 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     fun redirectedAppHandoffRestoresSourceAndReturnedLinkSkipsPreview() {
         lateinit var browserController: BrowserController
         lateinit var session: ReentrantAttachSession
+        lateinit var recordingContext: RecordingContext
         composeRule.runOnIdle {
             val activity = composeRule.activity
             val store = BrowserSessionStore(activity)
             originalEngineKind = store.loadAndroidBrowserEngineKind()
             assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
-            val recordingContext = RecordingContext(activity)
+            recordingContext = RecordingContext(activity)
             browserController = BrowserController(
                 activity = activity,
-                externalApps = ExternalAppLauncher(recordingContext),
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    canResolveExternalActivity = { true },
+                ),
             )
             controller = browserController
             val tabId = browserController.selectedTabId
@@ -968,7 +974,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     ),
                 ),
             )
-            assertEquals(APP_HANDOFF_TARGET_URL, recordingContext.lastIntent?.dataString)
+            assertNull(recordingContext.lastIntent)
             browserController.dispatchGeckoEngineEventForTesting(
                 BrowserEngineEvent(
                     tabId = tabId,
@@ -981,15 +987,40 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     httpStatusCode = 302,
                 ),
             )
-            assertTrue(session.commands.isEmpty())
+            assertEquals(
+                listOf(BrowserEngineCommandType.Stop),
+                session.commands.map(BrowserEngineCommand::type),
+            )
             session.setHistoryUrl(-1, APP_HANDOFF_SOURCE_URL)
             browserController.onResume()
         }
 
         composeRule.waitForIdle()
         composeRule.runOnIdle {
+            assertEquals(APP_HANDOFF_TARGET_URL, recordingContext.lastIntent?.dataString)
             assertEquals(
                 listOf(BrowserEngineCommandType.Stop, BrowserEngineCommandType.Back),
+                session.commands.map(BrowserEngineCommand::type),
+            )
+
+            session.setHistoryUrl(0, APP_HANDOFF_SOURCE_URL)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = browserController.selectedTabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = "Search",
+                    canGoBack = true,
+                    canGoForward = true,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(
+                listOf(
+                    BrowserEngineCommandType.Stop,
+                    BrowserEngineCommandType.Back,
+                    BrowserEngineCommandType.ReplaceHistory,
+                ),
                 session.commands.map(BrowserEngineCommand::type),
             )
 
@@ -999,6 +1030,301 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals(APP_HANDOFF_RETURN_URL, browserController.selectedTab.url)
             assertEquals(
                 listOf(BrowserEngineCommandType.Load),
+                session.commands.map(BrowserEngineCommand::type),
+            )
+        }
+    }
+
+    @Test
+    fun askEveryTimeDefersNewWindowAppLinkUntilConfirmation() {
+        lateinit var browserController: BrowserController
+        lateinit var recordingContext: RecordingContext
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            recordingContext = RecordingContext(activity)
+            browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    canResolveExternalActivity = { true },
+                ),
+            )
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = "Search",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = APP_HANDOFF_TARGET_URL,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                        target = BrowserEngineNavigationTarget.New,
+                    ),
+                ),
+            )
+            assertNull(recordingContext.lastIntent)
+            val prompt = requireNotNull(browserController.externalAppPrompt)
+            assertEquals("chatgpt.com", prompt.destination)
+
+            browserController.confirmExternalAppPrompt(prompt.id)
+
+            assertEquals(APP_HANDOFF_TARGET_URL, recordingContext.lastIntent?.dataString)
+            assertNull(browserController.externalAppPrompt)
+        }
+    }
+
+    @Test
+    fun askEveryTimeAllowsWebLinkWhenNoExternalAppCanHandleIt() {
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val recordingContext = RecordingContext(activity)
+            val browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    canResolveExternalActivity = { false },
+                ),
+            )
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            )
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = "Search",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Allow,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = APP_HANDOFF_TARGET_URL,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+            assertNull(recordingContext.lastIntent)
+            assertNull(browserController.externalAppPrompt)
+        }
+    }
+
+    @Test
+    fun askEveryTimeDefersSpecialSchemeSubmittedFromAddressBar() {
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val recordingContext = RecordingContext(activity)
+            val browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(recordingContext),
+            )
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            )
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+
+            browserController.submitAddress("mailto:candy@example.com")
+
+            assertNull(recordingContext.lastIntent)
+            val prompt = requireNotNull(browserController.externalAppPrompt)
+            assertEquals("mailto", prompt.destination)
+
+            browserController.confirmExternalAppPrompt(prompt.id)
+
+            assertEquals("mailto:candy@example.com", recordingContext.lastIntent?.dataString)
+            assertNull(browserController.externalAppPrompt)
+        }
+    }
+
+    @Test
+    fun newNavigationInvalidatesPendingExternalAppPrompt() {
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val recordingContext = RecordingContext(activity)
+            val browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    canResolveExternalActivity = { true },
+                ),
+            )
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            )
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = "Search",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = APP_HANDOFF_TARGET_URL,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+            val promptId = requireNotNull(browserController.externalAppPrompt).id
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://example.com/new",
+                    title = null,
+                    canGoBack = true,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.confirmExternalAppPrompt(promptId)
+
+            assertNull(browserController.externalAppPrompt)
+            assertNull(recordingContext.lastIntent)
+        }
+    }
+
+    @Test
+    fun cancellingRedirectedAppPromptRestoresSourceWithoutLaunchingApp() {
+        lateinit var browserController: BrowserController
+        lateinit var session: ReentrantAttachSession
+        lateinit var recordingContext: RecordingContext
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            recordingContext = RecordingContext(activity)
+            browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    canResolveExternalActivity = { true },
+                ),
+            )
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            session = ReentrantAttachSession(
+                tabId = tabId,
+                onFirstAttach = {},
+                historyUrls = mapOf(-1 to APP_HANDOFF_EARLIER_URL),
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = "Search",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(
+                GeckoNavigationRequestDecision.Allow,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = APP_HANDOFF_REDIRECT_URL,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = APP_HANDOFF_REDIRECT_URL,
+                    title = null,
+                    canGoBack = true,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = APP_HANDOFF_TARGET_URL,
+                        isRedirect = true,
+                        hasUserGesture = false,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+            assertNull(recordingContext.lastIntent)
+            val prompt = requireNotNull(browserController.externalAppPrompt)
+            session.setHistoryUrl(-1, APP_HANDOFF_SOURCE_URL)
+
+            browserController.dismissExternalAppPrompt(prompt.id)
+        }
+
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertNull(recordingContext.lastIntent)
+            assertNull(browserController.externalAppPrompt)
+            assertEquals(
+                listOf(BrowserEngineCommandType.Stop, BrowserEngineCommandType.Back),
                 session.commands.map(BrowserEngineCommand::type),
             )
         }

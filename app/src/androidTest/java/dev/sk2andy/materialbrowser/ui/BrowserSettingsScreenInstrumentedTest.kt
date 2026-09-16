@@ -16,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
@@ -373,5 +374,41 @@ class BrowserSettingsScreenInstrumentedTest {
             .performClick()
 
         assertTrue(enabled)
+    }
+
+    @Test
+    fun externalAppLinkChoiceUpdatesSetting() {
+        var handling by mutableStateOf(ExternalAppLinkHandling.Automatic)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    externalAppLinkHandling = handling,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isDefaultBrowser = false,
+                    onExternalAppLinkHandlingChanged = { handling = it },
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalAppLinks)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_external_app_links_ask_every_time),
+        ).performClick()
+
+        assertEquals(ExternalAppLinkHandling.AskEveryTime, handling)
     }
 }

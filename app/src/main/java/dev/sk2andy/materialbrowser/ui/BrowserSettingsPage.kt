@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
@@ -39,6 +40,7 @@ internal object BrowserSettingsTestTags {
     const val ScrollBar = "browser_settings_scroll_bar"
     const val TranslationProvider = "browser_settings_translation_provider"
     const val ExternalLinkPreview = "browser_settings_external_link_preview"
+    const val ExternalAppLinks = "browser_settings_external_app_links"
     const val BrowserEngine = "browser_settings_engine"
 }
 
@@ -47,6 +49,7 @@ internal fun BrowserSettingsPage(
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     pageTranslationProvider: PageTranslationProvider,
     isExternalLinkPreviewEnabled: Boolean = false,
+    externalAppLinkHandling: ExternalAppLinkHandling = ExternalAppLinkHandling.Default,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
     startupAddressFocusMode: StartupAddressFocusMode = StartupAddressFocusMode.Default,
@@ -59,6 +62,7 @@ internal fun BrowserSettingsPage(
     isDefaultBrowser: Boolean,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
+    onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onStartupAddressFocusModeChanged: (StartupAddressFocusMode) -> Unit = {},
@@ -75,6 +79,7 @@ internal fun BrowserSettingsPage(
     var engineMenuExpanded by remember { mutableStateOf(false) }
     var startupAddressFocusMenuExpanded by remember { mutableStateOf(false) }
     var favoriteSpeedMenuExpanded by remember { mutableStateOf(false) }
+    var externalAppLinksMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
@@ -268,6 +273,39 @@ internal fun BrowserSettingsPage(
             modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
         )
         Spacer(Modifier.height(8.dp))
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_external_app_links_title),
+                value = externalAppLinkHandling.displayName(),
+                expanded = externalAppLinksMenuExpanded,
+                onClick = { externalAppLinksMenuExpanded = true },
+                modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalAppLinks),
+            )
+            SettingsDropdown(
+                expanded = externalAppLinksMenuExpanded,
+                onDismissRequest = { externalAppLinksMenuExpanded = false },
+            ) {
+                ExternalAppLinkHandling.entries.forEach { handling ->
+                    SettingsDropdownItem(
+                        label = handling.displayName(),
+                        selected = handling == externalAppLinkHandling,
+                        onClick = {
+                            externalAppLinksMenuExpanded = false
+                            if (handling != externalAppLinkHandling) {
+                                onExternalAppLinkHandlingChanged(handling)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        Text(
+            text = stringResource(R.string.settings_external_app_links_summary),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_external_link_preview_title),
             subtitle = stringResource(R.string.settings_external_link_preview_subtitle),
@@ -333,4 +371,12 @@ private fun StartupAddressFocusMode.displayName(): String = when (this) {
         stringResource(R.string.settings_startup_address_focus_always)
     StartupAddressFocusMode.Never ->
         stringResource(R.string.settings_startup_address_focus_never)
+}
+
+@Composable
+private fun ExternalAppLinkHandling.displayName(): String = when (this) {
+    ExternalAppLinkHandling.Automatic ->
+        stringResource(R.string.settings_external_app_links_automatic)
+    ExternalAppLinkHandling.AskEveryTime ->
+        stringResource(R.string.settings_external_app_links_ask_every_time)
 }

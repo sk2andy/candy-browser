@@ -346,6 +346,18 @@ class BrowserUriPolicyTest {
         val sourceUrl = "https://www.google.com/search?q=chatgpt"
 
         assertTrue(
+            ExternalNavigationRollbackRules.isAtSource(
+                sourceUrl = sourceUrl,
+                currentUrl = sourceUrl,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationRollbackRules.isAtSource(
+                sourceUrl = sourceUrl,
+                currentUrl = "https://www.google.com/redirect",
+            ),
+        )
+        assertTrue(
             ExternalNavigationRollbackRules.canGoBackToSource(
                 sourceUrl = sourceUrl,
                 previousUrl = sourceUrl,

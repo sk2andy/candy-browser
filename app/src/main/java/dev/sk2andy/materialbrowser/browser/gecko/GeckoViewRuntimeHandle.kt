@@ -2530,6 +2530,25 @@ private class GeckoViewBrowserSession(
         return loadValidatedUrl(safeUrl)
     }
 
+    override fun replaceHistoryUrl(url: String): Boolean {
+        if (closed) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        invalidateCredentialPrompts(recreateHost = false)
+        if (
+            toppingHost.state != GeckoToppingHostState.Initializing &&
+            trackingPermissions.isReady &&
+            privacyBound
+        ) {
+            session.load(
+                GeckoSession.Loader()
+                    .uri(safeUrl)
+                    .flags(GeckoSession.LOAD_FLAGS_REPLACE_HISTORY),
+            )
+            return true
+        }
+        return loadValidatedUrl(safeUrl)
+    }
+
     override fun loadExtensionUrl(url: String): Boolean {
         if (closed) return false
         val parsed = runCatching { URI(url) }.getOrNull() ?: return false

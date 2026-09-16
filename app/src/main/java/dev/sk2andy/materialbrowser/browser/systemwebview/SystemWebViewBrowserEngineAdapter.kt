@@ -72,6 +72,7 @@ import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.systemwebview.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.systemwebview.commands.WebViewProfileCookies
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
@@ -441,6 +442,15 @@ private class SystemWebViewBrowserEngineSession(
         if (closed) return
         when (command.type) {
             BrowserEngineCommandType.Load -> webView.loadUrl(requireNotNull(command.address))
+            BrowserEngineCommandType.ReplaceHistory -> {
+                val safeUrl = BrowserUriPolicy.normalizeHttpUrl(
+                    requireNotNull(command.address),
+                ) ?: return
+                webView.evaluateJavascript(
+                    "window.location.replace(${org.json.JSONObject.quote(safeUrl)});",
+                    null,
+                )
+            }
             BrowserEngineCommandType.Back -> if (webView.canGoBack()) webView.goBack()
             BrowserEngineCommandType.Forward -> if (webView.canGoForward()) webView.goForward()
             BrowserEngineCommandType.Reload -> webView.reload()

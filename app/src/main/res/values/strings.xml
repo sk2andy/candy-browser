@@ -454,6 +454,14 @@
     <string name="settings_browser_engine_gecko_summary">Toppings plus Firefox extensions such as uBlock Origin. Uses more memory.</string>
     <string name="settings_browser_engine_system_summary">Uses less memory and supports Toppings, but not Firefox extensions. Candy protection remains available.</string>
     <string name="settings_browser_engine_restart_warning">Changing the engine restarts Candy. Logins, cookies and page history stay separate for each engine.</string>
+    <string name="settings_external_app_links_title">Open links in apps</string>
+    <string name="settings_external_app_links_summary">Controls whether Candy opens supported links in other apps immediately or asks first.</string>
+    <string name="settings_external_app_links_automatic">Automatically</string>
+    <string name="settings_external_app_links_ask_every_time">Always ask</string>
+    <string name="external_app_prompt_title">Open in another app?</string>
+    <string name="external_app_prompt_message">This link wants to open %1$s in another app.</string>
+    <string name="external_app_prompt_confirm">Open</string>
+    <string name="external_app_prompt_fallback_destination">this link</string>
     <string name="settings_http_password_autofill_title">Password manager on HTTP sites</string>
     <string name="settings_http_password_autofill_gecko_summary">GeckoView only: After you tap a login field, Candy may open your default Android password manager. No automatic filling or saving on HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Unsupported. Its public API cannot enable password-manager selection on HTTP sites. Switch to GeckoView or use HTTPS.</string>

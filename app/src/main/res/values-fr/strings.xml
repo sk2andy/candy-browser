@@ -439,6 +439,14 @@
     <string name="settings_browser_engine_gecko_summary">Toppings et extensions Firefox comme uBlock Origin. Utilise plus de mémoire.</string>
     <string name="settings_browser_engine_system_summary">Utilise moins de mémoire et prend en charge les Toppings, mais pas les extensions Firefox. La protection Candy reste disponible.</string>
     <string name="settings_browser_engine_restart_warning">Changer de moteur redémarre Candy. Les connexions, cookies et l’historique de page restent séparés par moteur.</string>
+    <string name="settings_external_app_links_title">Ouvrir les liens dans les applications</string>
+    <string name="settings_external_app_links_summary">Détermine si Candy ouvre immédiatement les liens compatibles dans d’autres applications ou demande d’abord.</string>
+    <string name="settings_external_app_links_automatic">Automatiquement</string>
+    <string name="settings_external_app_links_ask_every_time">Toujours demander</string>
+    <string name="external_app_prompt_title">Ouvrir dans une autre application ?</string>
+    <string name="external_app_prompt_message">Ce lien souhaite ouvrir %1$s dans une autre application.</string>
+    <string name="external_app_prompt_confirm">Ouvrir</string>
+    <string name="external_app_prompt_fallback_destination">ce lien</string>
     <string name="settings_http_password_autofill_title">Gestionnaire de mots de passe sur les sites HTTP</string>
     <string name="settings_http_password_autofill_gecko_summary">GeckoView uniquement : après avoir touché un champ de connexion, Candy peut ouvrir le gestionnaire de mots de passe Android par défaut. Aucun remplissage ni enregistrement automatique sur HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView : non pris en charge. Son API publique ne permet pas la sélection du gestionnaire de mots de passe sur les sites HTTP. Utilisez GeckoView ou HTTPS.</string>

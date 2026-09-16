@@ -151,6 +151,14 @@ internal fun BoxScope.BrowserModalSurfaces(
         )
     }
 
+    controller.externalAppPrompt?.let { prompt ->
+        ExternalAppPromptDialog(
+            prompt = prompt,
+            onConfirm = { controller.confirmExternalAppPrompt(prompt.id) },
+            onCancel = { controller.dismissExternalAppPrompt(prompt.id) },
+        )
+    }
+
     controller.federatedLoginOffer
         ?.takeIf(FederatedLoginOffer::showDialog)
         ?.let { offer ->

@@ -433,6 +433,14 @@
     <string name="settings_browser_engine_gecko_summary">Toppings plus Firefox-Erweiterungen wie uBlock Origin. Benötigt mehr Arbeitsspeicher.</string>
     <string name="settings_browser_engine_system_summary">Benötigt weniger Arbeitsspeicher und unterstützt Toppings, aber keine Firefox-Erweiterungen. Candy-Schutz bleibt verfügbar.</string>
     <string name="settings_browser_engine_restart_warning">Ein Wechsel startet Candy neu. Logins, Cookies und Seitenverlauf bleiben pro Engine getrennt.</string>
+    <string name="settings_external_app_links_title">Links in Apps öffnen</string>
+    <string name="settings_external_app_links_summary">Legt fest, ob Candy unterstützte Links sofort in anderen Apps öffnet oder vorher nachfragt.</string>
+    <string name="settings_external_app_links_automatic">Automatisch</string>
+    <string name="settings_external_app_links_ask_every_time">Immer nachfragen</string>
+    <string name="external_app_prompt_title">In anderer App öffnen?</string>
+    <string name="external_app_prompt_message">Dieser Link möchte %1$s in einer anderen App öffnen.</string>
+    <string name="external_app_prompt_confirm">Öffnen</string>
+    <string name="external_app_prompt_fallback_destination">diesen Link</string>
     <string name="settings_http_password_autofill_title">Passwortmanager auf HTTP-Seiten</string>
     <string name="settings_http_password_autofill_gecko_summary">Nur GeckoView: Nach Tippen auf ein Anmeldefeld darf Candy deinen Standard-Passwortmanager öffnen. Kein automatisches Ausfüllen oder Speichern auf HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Nicht unterstützt. Dessen öffentliche API kann die Passwortmanager-Auswahl auf HTTP-Seiten nicht freischalten. Wechsle zu GeckoView oder HTTPS.</string>

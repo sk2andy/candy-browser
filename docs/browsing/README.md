@@ -30,6 +30,7 @@
 | Surface | Tests |
 | --- | --- |
 | URL, search, AI mode, URI policy | `AddressResolverTest`, `SearchEngineTest`, `AddressAiModeRulesTest`, `AddressAiModeToggleInstrumentedTest`, `BrowserUriPolicyTest` |
+| External app settings, availability, prompts, redirects and returned links | `ExternalAppLinkHandlingTest`, `ExternalAppLauncherInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `BrowserSettingsScreenInstrumentedTest`, focused `BrowserControllerGeckoViewBindingInstrumentedTest` methods |
 | Commands and suggestions | `browser/commands/*Test`, `SearchSuggestionProviderTest` |
 | Candy Recall rules, extraction, SQLite ranking and UI | `recall/*Test`, `RecallRepositoryInstrumentedTest`, focused address/History instrumented tests |
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |

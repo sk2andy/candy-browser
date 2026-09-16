@@ -8,6 +8,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
@@ -73,6 +74,7 @@ internal fun SettingsScreen(
     browserMenuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     isAddressBarDockingEnabled: Boolean,
     isExternalLinkPreviewEnabled: Boolean = false,
+    externalAppLinkHandling: ExternalAppLinkHandling = ExternalAppLinkHandling.Default,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
     startupAddressFocusMode: StartupAddressFocusMode = StartupAddressFocusMode.Default,
@@ -125,6 +127,7 @@ internal fun SettingsScreen(
     onBrowserMenuLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit = { _, _ -> },
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
+    onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onStartupAddressFocusModeChanged: (StartupAddressFocusMode) -> Unit = {},
@@ -309,6 +312,7 @@ internal fun SettingsScreen(
                     browserEngineKind = browserEngineKind,
                     pageTranslationProvider = pageTranslationProvider,
                     isExternalLinkPreviewEnabled = isExternalLinkPreviewEnabled,
+                    externalAppLinkHandling = externalAppLinkHandling,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
                     isStartupAnimationEnabled = isStartupAnimationEnabled,
                     startupAddressFocusMode = startupAddressFocusMode,
@@ -322,6 +326,7 @@ internal fun SettingsScreen(
                     onBrowserEngineKindChanged = onBrowserEngineKindChanged,
                     onExternalLinkPreviewEnabledChanged =
                         onExternalLinkPreviewEnabledChanged,
+                    onExternalAppLinkHandlingChanged = onExternalAppLinkHandlingChanged,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
                     onStartupAddressFocusModeChanged = onStartupAddressFocusModeChanged,
